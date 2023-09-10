@@ -27,7 +27,6 @@
  */
 declare module '$env/static/private' {
 	export const NVM_INC: string;
-	export const TERM_PROGRAM: string;
 	export const NODE: string;
 	export const INIT_CWD: string;
 	export const NVM_CD_FLAGS: string;
@@ -36,8 +35,6 @@ declare module '$env/static/private' {
 	export const npm_config_metrics_registry: string;
 	export const TMPDIR: string;
 	export const npm_config_global_prefix: string;
-	export const TERM_PROGRAM_VERSION: string;
-	export const npm_package_optional: string;
 	export const COLOR: string;
 	export const TERM_SESSION_ID: string;
 	export const npm_config_noproxy: string;
@@ -46,20 +43,19 @@ declare module '$env/static/private' {
 	export const ZSH: string;
 	export const NVM_DIR: string;
 	export const USER: string;
+	export const COMMAND_MODE: string;
 	export const npm_config_globalconfig: string;
 	export const SDKMAN_CANDIDATES_API: string;
-	export const npm_package_peer: string;
 	export const SSH_AUTH_SOCK: string;
 	export const __CF_USER_TEXT_ENCODING: string;
 	export const npm_execpath: string;
 	export const PAGER: string;
-	export const npm_package_integrity: string;
 	export const LSCOLORS: string;
 	export const MAVEN_HOME: string;
 	export const PATH: string;
+	export const TERMINAL_EMULATOR: string;
 	export const npm_package_json: string;
 	export const _: string;
-	export const LaunchInstanceID: string;
 	export const npm_config_userconfig: string;
 	export const npm_config_init_module: string;
 	export const KSCRIPT_HOME: string;
@@ -72,15 +68,11 @@ declare module '$env/static/private' {
 	export const npm_package_name: string;
 	export const SDKMAN_VERSION: string;
 	export const XPC_FLAGS: string;
-	export const npm_package_engines_node: string;
 	export const npm_config_node_gyp: string;
-	export const npm_package_dev: string;
 	export const npm_package_version: string;
 	export const XPC_SERVICE_NAME: string;
-	export const npm_package_resolved: string;
-	export const HOME: string;
 	export const SHLVL: string;
-	export const npm_package_dev_optional: string;
+	export const HOME: string;
 	export const npm_config_cache: string;
 	export const KOTLIN_HOME: string;
 	export const LESS: string;
@@ -91,9 +83,9 @@ declare module '$env/static/private' {
 	export const NVM_BIN: string;
 	export const npm_config_user_agent: string;
 	export const SDKMAN_CANDIDATES_DIR: string;
-	export const SECURITYSESSIONID: string;
 	export const npm_node_execpath: string;
 	export const npm_config_prefix: string;
+	export const NODE_ENV: string;
 }
 
 /**
@@ -124,7 +116,6 @@ declare module '$env/static/public' {
 declare module '$env/dynamic/private' {
 	export const env: {
 		NVM_INC: string;
-		TERM_PROGRAM: string;
 		NODE: string;
 		INIT_CWD: string;
 		NVM_CD_FLAGS: string;
@@ -133,8 +124,6 @@ declare module '$env/dynamic/private' {
 		npm_config_metrics_registry: string;
 		TMPDIR: string;
 		npm_config_global_prefix: string;
-		TERM_PROGRAM_VERSION: string;
-		npm_package_optional: string;
 		COLOR: string;
 		TERM_SESSION_ID: string;
 		npm_config_noproxy: string;
@@ -143,20 +132,19 @@ declare module '$env/dynamic/private' {
 		ZSH: string;
 		NVM_DIR: string;
 		USER: string;
+		COMMAND_MODE: string;
 		npm_config_globalconfig: string;
 		SDKMAN_CANDIDATES_API: string;
-		npm_package_peer: string;
 		SSH_AUTH_SOCK: string;
 		__CF_USER_TEXT_ENCODING: string;
 		npm_execpath: string;
 		PAGER: string;
-		npm_package_integrity: string;
 		LSCOLORS: string;
 		MAVEN_HOME: string;
 		PATH: string;
+		TERMINAL_EMULATOR: string;
 		npm_package_json: string;
 		_: string;
-		LaunchInstanceID: string;
 		npm_config_userconfig: string;
 		npm_config_init_module: string;
 		KSCRIPT_HOME: string;
@@ -169,15 +157,11 @@ declare module '$env/dynamic/private' {
 		npm_package_name: string;
 		SDKMAN_VERSION: string;
 		XPC_FLAGS: string;
-		npm_package_engines_node: string;
 		npm_config_node_gyp: string;
-		npm_package_dev: string;
 		npm_package_version: string;
 		XPC_SERVICE_NAME: string;
-		npm_package_resolved: string;
-		HOME: string;
 		SHLVL: string;
-		npm_package_dev_optional: string;
+		HOME: string;
 		npm_config_cache: string;
 		KOTLIN_HOME: string;
 		LESS: string;
@@ -188,9 +172,9 @@ declare module '$env/dynamic/private' {
 		NVM_BIN: string;
 		npm_config_user_agent: string;
 		SDKMAN_CANDIDATES_DIR: string;
-		SECURITYSESSIONID: string;
 		npm_node_execpath: string;
 		npm_config_prefix: string;
+		NODE_ENV: string;
 		[key: `PUBLIC_${string}`]: undefined;
 		[key: `${string}`]: string | undefined;
 	}

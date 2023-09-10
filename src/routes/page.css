@@ -1,0 +1,21 @@
+.container {
+    width: auto;
+    height: auto;
+    box-sizing: border-box;
+    display: grid;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(6, 1fr);
+    background-color: mediumvioletred;
+}
+
+.one{
+    text-align: left;
+    grid-column: 1/4;
+    background-color: burlywood;
+}
+
+.two {
+    text-align: right;
+    grid-column: 4/6;
+    background-color: blue;
+}
