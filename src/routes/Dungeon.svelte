@@ -4,15 +4,6 @@
   import { Side } from "./types.ts";
   export let state
 
-  const doors = []
-  const coordinates = []
-  state.dungeon.layout.doors.forEach((door) => doors[door.x + ',' + door.y] = door)
-  state.dungeon.layout.grid.forEach((row, y) => {
-    toArray(row).forEach((cell, x) => {
-      coordinates[x + ',' + y] = {x,y}
-    })
-  })
-
   onMount(() => {
     render();
     setInterval(render, 10)
@@ -20,8 +11,9 @@
 
   const render = () => {
     if (!state || !document) return;
-    const c = document.getElementById("canvas");
+    const c = document.getElementById("gameBoard");
     const ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, c.width, c.height);
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderFloor(ctx, cell, x, y))
     });
@@ -84,4 +76,4 @@
   const isEmpty = (cell) => cell === ' ' || !state.dungeon.discoveredRooms.includes(cell);
   const findDoor = (x, y) => state.dungeon.layout.doors.find((door) => door.x === x && door.y === y)
 </script>
-<canvas width="860" height="700" id="canvas"></canvas>
+<canvas width="860" height="700" id="gameBoard"></canvas>

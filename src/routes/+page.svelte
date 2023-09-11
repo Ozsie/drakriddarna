@@ -1,7 +1,7 @@
 <script>
   import { init, move, next } from "./game.ts";
   import Dungeon from "./Dungeon.svelte";
-  import CharacterCard from "./CharacterCard.svelte";
+  import Characters from "./Characters.svelte";
 
   let state = init()
 
@@ -26,22 +26,15 @@
     .two {
         margin-left: 15%;
         height: 800px;
-        background: gray;
+        background: black;
     }
 </style>
 
 <div class='container'>
   <div class='one'>
-    <ul>
-      {#each state.heroes as hero}
-        {#key hero}
-        <CharacterCard {hero} {state}/>
-        {/key}
-      {/each}
-    </ul>
+    <Characters {state}/>
   </div>
   <div class='two'>
-    <div>{state.dungeon.name}</div>
     <Dungeon bind:state={state}/>
   </div>
 </div>
