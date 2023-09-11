@@ -146,14 +146,15 @@ export const roll = (level: Level, dice: number) => {
 export const next = (state: GameState) => {
   if (state.currentActor === undefined) return;
   else {
+    state.actionLog.push(state.currentActor.name + ' ended their turn')
     let currentIndex = state.heroes.indexOf(state.currentActor!!)
     let nextIndex = currentIndex + 1;
     if (nextIndex === state.heroes.length) {
+      monsterActions(state);
       nextIndex = 0;
     }
     state.currentActor.actions = 2;
     state.currentActor.movement = 3;
-    state.actionLog.push(state.currentActor.name + ' ended their turn')
     state.currentActor = state.heroes[nextIndex];
     state.actionLog.push(state.currentActor.name + ' started their turn')
   }
@@ -210,4 +211,17 @@ export const findCell = (grid: string[], x: number, y: number): string | undefin
     })
   })
   return c
+}
+
+const monsterActions = (state: GameState) => {
+  const visibleMonsters = state.dungeon.layout.monsters.filter((monster) => {
+    const cell = findCell(state.dungeon.layout.grid, monster.position?.x, monster.position.y)
+    return state.dungeon.discoveredRooms.includes(cell);
+  })
+  if (visibleMonsters.length === 0) {
+    state.actionLog.push('No monsters can act')
+  }
+  visibleMonsters.forEach((monster) => (
+    state.actionLog.push(monster.name + ' acted ')
+  ))
 }
