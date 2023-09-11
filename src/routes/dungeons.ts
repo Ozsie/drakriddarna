@@ -36,7 +36,7 @@ const createMonster = (type: MonsterType, colour: string, x: number, y: number):
     defense,
     health,
     experience,
-    name: type.valueOf(),
+    name: type.valueOf() + ' (' + colour + ')',
     movement: 3,
     position: { x, y }
   }
