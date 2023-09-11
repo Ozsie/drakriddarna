@@ -58,8 +58,16 @@ export type Layout = {
 
 export type Secret = {
   name: string,
+  type: SecretType,
   position: Position,
   found: boolean,
+}
+
+export enum SecretType {
+  EQUIPMENT = 'Equipment',
+  MAGIC_ITEM = 'Magic Item',
+  DOOR = 'Door',
+  NOTE = 'Note'
 }
 
 export type Door = {

@@ -77,7 +77,7 @@ export const act = (direction: string, state: GameState) => {
   if (!blockedByHero && !blockedByWall) {
     const discovered = isDiscovered(state.dungeon, newX, newY)
     if (!discovered) {
-      const moved = moveOverDoor(state.dungeon, hero, newX, newY)
+      const moved = moveOverDoor(state, hero, newX, newY)
       if (moved) {
         openDoor(hero, state, newX, newY);
       }
@@ -125,7 +125,11 @@ const attack = (hero: Hero, state: GameState, targetX: number, targetY: number) 
       state.actionLog.push(hero.name + ' killed ' + monster.name)
       hero.experience += monster.experience
     }
-    hero.actions--;
+    if (hero?.actions > 1 && hero?.movement < 3) {
+      hero.actions -= 2
+    } else {
+      hero.actions--;
+    }
   }
 }
 
@@ -144,9 +148,34 @@ export const roll = (level: Level, dice: number) => {
   return results.length
 }
 
+export const pickLock = (state: GameState) => {
+  const hero = state.currentActor
+  if (!canAct(hero)) {
+    state.actionLog.push(hero.name + ' has no actions left to pick lock')
+    return;
+  }
+  const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y)
+  if (door && door.locked) {
+    const result = roll(hero.level, 1)
+    if (result >= 1) {
+      door.locked = false;
+      state.actionLog.push(hero.name + ' managed to pick the lock')
+    } else {
+      state.actionLog.push(hero.name + ' failed to pick the lock')
+    }
+    if (hero?.actions > 1 && hero?.movement < 3) {
+      hero.actions -= 2
+    } else {
+      hero.actions--;
+    }
+    hero.movement = 3;
+  }
+}
+
 export const search = (state: GameState) => {
   const hero = state.currentActor
-  if (!hero || hero.actions === 0) {
+  if (!canAct(hero)) {
+    state.actionLog.push(hero.name + ' has no actions left to search')
     return;
   }
   const result = roll(hero.level, 1)
@@ -163,7 +192,12 @@ export const search = (state: GameState) => {
   } else {
     state.actionLog.push(hero.name + ' searched (' + result +') but found nothing');
   }
-  hero.actions--;
+  if (hero?.actions > 1 && hero?.movement < 3) {
+    hero.actions -= 2
+  } else {
+    hero.actions--;
+  }
+  hero.movement = 3;
 }
 
 export const next = (state: GameState) => {
@@ -183,15 +217,18 @@ export const next = (state: GameState) => {
   }
 }
 
-const moveOverDoor = (dungeon: Dungeon, hero: Hero, newX: number, newY: number) => {
-  const door = dungeon.layout.doors.find((door) => door.x === hero.position?.x && door.y === hero.position.y)
+const moveOverDoor = (state: GameState, hero: Hero, newX: number, newY: number) => {
+  const door = state.dungeon.layout.doors.find((door) => door.x === hero.position?.x && door.y === hero.position.y)
 
-  if (door) {
+  if (door && !door.locked) {
     const side = openSide(hero.position.x, hero.position?.y, newX, newY)
     if (door.side === side) {
       door.open = true;
       return true
     }
+  }
+  if (door.locked) {
+    state.actionLog.push('Door is locked')
   }
   return false
 }
@@ -259,4 +296,11 @@ const monsterActions = (state: GameState) => {
   visibleMonsters.forEach((monster) => (
     state.actionLog.push(monster.name + ' acted ')
   ))
+}
+
+const canAct = (hero: Hero) => {
+  if (hero.movement < 3) {
+    return hero.actions > 1
+  }
+  return hero.actions > 0
 }

@@ -53,10 +53,38 @@
     if (door && !door.open && !isEmpty(cell)) {
       ctx.fillStyle = 'brown';
       switch (door.side) {
-        case Side.RIGHT: ctx.fillRect((x * 32) + 30, y * 32, 4, 32); break;
-        case Side.LEFT: ctx.fillRect((x * 32) - 34, y * 32, 4, 32); break;
-        case Side.UP: ctx.fillRect(x * 32, (y * 32) - 2, 32, 4); break;
-        case Side.DOWN: ctx.fillRect(x * 32, (y * 32) + 30, 32, 4); break;
+        case Side.RIGHT: {
+          ctx.fillRect((x * 32) + 30, y * 32, 4, 32);
+          if (door.locked) {
+            ctx.fillStyle = 'grey'
+            ctx.fillRect((x*32) + 28, (y*32)+12, 8, 8)
+          }
+          break;
+        }
+        case Side.LEFT: {
+          ctx.fillRect((x * 32)-2, y * 32, 4, 32);
+          if (door.locked) {
+            ctx.fillStyle = 'grey'
+            ctx.fillRect((x*32)-4, (y*32)+12, 8, 8)
+          }
+          break;
+        }
+        case Side.UP: {
+          ctx.fillRect(x * 32, (y * 32) - 2, 32, 4);
+          if (door.locked) {
+            ctx.fillStyle = 'grey'
+            ctx.fillRect((x*32)+12, (y*32)-4, 8, 8)
+          }
+          break;
+        }
+        case Side.DOWN: {
+          ctx.fillRect(x * 32, (y * 32) + 30, 32, 4);
+          if (door.locked) {
+            ctx.fillStyle = 'grey'
+            ctx.fillRect((x*32)+12, (y*32)+28, 8, 8)
+          }
+          break;
+        }
       }
     }
   }

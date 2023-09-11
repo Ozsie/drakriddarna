@@ -5,7 +5,7 @@
  - [ ] Monster movement
  - [ ] Monster attack
  - [ ] Trapped doors
- - [ ] Locked doors
+ - [X] Locked doors
  - [ ] Events
  - [ ] Secrets
  - [ ] Levelling up
