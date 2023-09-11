@@ -1,9 +1,20 @@
-import type { Dungeon, Monster } from "./types";
+import type { Door, Dungeon, Monster } from "./types";
 import { Level, MonsterType, Side } from "./types";
 
 export const PIT = '0'
 export const PILLAR = '#'
 export const EMPTY = ' '
+
+const createDoor = (side: Side, x: number, y: number): Door => {
+  return {
+    side,
+    x,
+    y,
+    locked: false,
+    trapped: false,
+    open: false,
+  }
+}
 
 const createMonster = (type: MonsterType, colour: string, x: number, y: number): Monster => {
   let level = Level.LORD;
@@ -65,38 +76,10 @@ export const tutorial: Dungeon = {
       'AAA   BB '
     ],
     doors: [
-      {
-        locked: false,
-        trapped: false,
-        open: false,
-        x: 2,
-        y: 8,
-        side: Side.RIGHT
-      },
-      {
-        locked: false,
-        trapped: false,
-        open: false,
-        x: 5,
-        y: 8,
-        side: Side.RIGHT
-      },
-      {
-        locked: false,
-        trapped: false,
-        open: false,
-        x: 6,
-        y: 6,
-        side: Side.UP
-      },
-      {
-        locked: false,
-        trapped: false,
-        open: false,
-        x: 6,
-        y: 3,
-        side: Side.UP
-      },
+      createDoor(Side.RIGHT, 2, 8),
+      createDoor(Side.RIGHT, 5, 8),
+      createDoor(Side.UP, 6, 6),
+      createDoor(Side.UP, 6, 3),
     ],
     monsters: [
       createMonster(MonsterType.ORCH, 'green', 5, 8)
