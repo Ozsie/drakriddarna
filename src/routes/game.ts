@@ -1,4 +1,4 @@
-import type { Actor, Dungeon, GameState, Hero, Layout } from "./types";
+import type { Actor, Dungeon, GameState, Hero, Layout, Position } from "./types";
 import { Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, tutorial } from "./dungeons";
 
@@ -52,7 +52,8 @@ const isBlockedByMonster = (state: GameState, newX, newY) => {
   });
 }
 
-export const act = (hero: Hero, direction: string, state: GameState) => {
+export const act = (direction: string, state: GameState) => {
+  const hero = state.currentActor
   if (hero.actions === 0) {
     return;
   }
@@ -143,6 +144,28 @@ export const roll = (level: Level, dice: number) => {
   return results.length
 }
 
+export const search = (state: GameState) => {
+  const hero = state.currentActor
+  if (!hero || hero.actions === 0) {
+    return;
+  }
+  const result = roll(hero.level, 1)
+  if (result >= 1) {
+    const secret = state.dungeon.layout.secrets.find((secret) => {
+      return isNeighbouring(secret.position, hero.position.x, hero.position.y);
+    })
+    if (secret) {
+      state.actionLog.push(hero.name + ' searched (' + result +') and found ' + secret.name);
+    } else {
+      state.actionLog.push(hero.name + ' searched (' + result +') but found nothing');
+      console.log('found no secret')
+    }
+  } else {
+    state.actionLog.push(hero.name + ' searched (' + result +') but found nothing');
+  }
+  hero.actions--;
+}
+
 export const next = (state: GameState) => {
   if (state.currentActor === undefined) return;
   else {
@@ -213,10 +236,22 @@ export const findCell = (grid: string[], x: number, y: number): string | undefin
   return c
 }
 
+export const isNeighbouring = (position: Position, x: number, y: number) => {
+  return (position.x === x && position.y === y) ||
+    (position.x === x - 1 && position.y === y) ||
+    (position.x === x - 1 && position.y === y - 1) ||
+    (position.x === x && position.y === y - 1) ||
+    (position.x === x + 1 && position.y === y - 1) ||
+    (position.x === x + 1 && position.y === y) ||
+    (position.x === x + 1 && position.y === y + 1) ||
+    (position.x === x && position.y === y + 1) ||
+    (position.x === x - 1 && position.y === y + 1);
+}
+
 const monsterActions = (state: GameState) => {
   const visibleMonsters = state.dungeon.layout.monsters.filter((monster) => {
     const cell = findCell(state.dungeon.layout.grid, monster.position?.x, monster.position.y)
-    return state.dungeon.discoveredRooms.includes(cell);
+    return state.dungeon.discoveredRooms.includes(cell) && monster.health > 0;
   })
   if (visibleMonsters.length === 0) {
     state.actionLog.push('No monsters can act')

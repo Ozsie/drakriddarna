@@ -53,6 +53,13 @@ export type Layout = {
   grid: string[],
   doors: Door[],
   monsters: Monster[],
+  secrets: Secret[],
+}
+
+export type Secret = {
+  name: string,
+  position: Position,
+  found: boolean,
 }
 
 export type Door = {

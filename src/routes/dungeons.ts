@@ -1,9 +1,17 @@
-import type { Door, Dungeon, Monster } from "./types";
+import type { Door, Dungeon, Monster, Secret } from "./types";
 import { Level, MonsterType, Side } from "./types";
 
 export const PIT = '0'
 export const PILLAR = '#'
 export const EMPTY = ' '
+
+const createSecret = (name: string, x: number, y: number): Secret => {
+  return {
+    name,
+    position: {x, y},
+    found: false
+  }
+}
 
 const createDoor = (side: Side, x: number, y: number): Door => {
   return {
@@ -82,7 +90,14 @@ export const tutorial: Dungeon = {
       createDoor(Side.UP, 6, 3),
     ],
     monsters: [
-      createMonster(MonsterType.ORCH, 'green', 5, 8)
+      createMonster(MonsterType.ORCH, 'green', 5, 8),
+      createMonster(MonsterType.ORCH, 'yellow', 7, 9),
+      createMonster(MonsterType.ORCH, 'red', 6, 4),
+      createMonster(MonsterType.ORCH, 'red', 8, 2),
+      createMonster(MonsterType.TROLL, 'green', 5, 0),
+    ],
+    secrets: [
+      createSecret('Welcome to Drakriddarna', 1, 8),
     ]
   }
 }

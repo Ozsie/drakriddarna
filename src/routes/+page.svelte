@@ -1,5 +1,5 @@
 <script>
-  import { act, init, next } from "./game.ts";
+  import { act, init, next, search } from "./game.ts";
   import Dungeon from "./Dungeon.svelte";
   import Characters from "./Characters.svelte";
   import { onMount } from "svelte";
@@ -73,21 +73,21 @@
   <div class="commands">
     <table>
       <tr>
-        <td><button on:click={act(state.currentActor, 'UL', state)}>UL</button></td>
-        <td><button on:click={act(state.currentActor, 'U', state)}>U</button></td>
-        <td><button on:click={act(state.currentActor, 'UR', state)}>UR</button></td>
+        <td><button on:click={act('UL', state)}>UL</button></td>
+        <td><button on:click={act('U', state)}>U</button></td>
+        <td><button on:click={act('UR', state)}>UR</button></td>
         <td><button on:click={next(state)}>Next</button></td>
       </tr>
       <tr>
-        <td><button on:click={act(state.currentActor, 'L', state)}>L</button></td>
+        <td><button on:click={act('L', state)}>L</button></td>
         <td></td>
-        <td><button on:click={act(state.currentActor, 'R', state)}>R</button></td>
-        <td><button>Search</button></td>
+        <td><button on:click={act('R', state)}>R</button></td>
+        <td><button on:click={search(state)}>Search</button></td>
       </tr>
       <tr>
-        <td><button on:click={act(state.currentActor, 'DL', state)}>DL</button></td>
-        <td><button on:click={act(state.currentActor, 'D', state)}>D</button></td>
-        <td><button on:click={act(state.currentActor, 'DR', state)}>DR</button></td>
+        <td><button on:click={act('DL', state)}>DL</button></td>
+        <td><button on:click={act('D', state)}>D</button></td>
+        <td><button on:click={act('DR', state)}>DR</button></td>
       </tr>
     </table>
   </div>
