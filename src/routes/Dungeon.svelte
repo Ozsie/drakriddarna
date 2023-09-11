@@ -78,7 +78,8 @@
         ctx.fill();
         ctx.font = "7px Arial";
         ctx.fillStyle = 'black';
-        ctx.fillText(monster.name[0], (x*32)+16, (y*32)+16)
+        const monsterText = monster.name[0] + '(' + monster.health + ')'
+        ctx.fillText(monsterText, (x*32)+8, (y*32)+16)
       }
     }
     ctx.stroke();
