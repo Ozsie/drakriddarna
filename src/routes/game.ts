@@ -1,25 +1,29 @@
-import type { Actor, Dungeon, GameState, Hero, Layout, Position } from "./types";
-import { Level, Side } from "./types";
+import type { Dungeon, GameState, Hero, Layout, Position } from "./types";
+import { ConditionType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, tutorial } from "./dungeons";
 
 
 export const init = (): GameState => {
-  const heroes: Actor[] = [
+  const heroes: Hero[] = [
     newHero('Fearik', 'orange'),
     newHero('Helbran', 'red'),
     newHero('Siedel', 'green'),
     newHero('Wulf', 'lightblue')
-  ]
+  ];
 
-  const dungeon = tutorial
-
-  heroes.forEach((hero, index) => hero.position = dungeon.startingPositions[index])
+  updateStartingPositions(heroes, tutorial);
 
   return {
     heroes: heroes,
     dungeon: tutorial,
     currentActor: heroes[0],
-    actionLog: ['Game Initialised']
+    actionLog: [
+      'Game Initialised',
+      'Each character has 2 actions. Move, Attack, Search or Pick Lock.',
+      'Each character can move 3 steps per action.',
+      'If another action is performed before moving 3 steps, the move is finished and both actions are consumed.',
+      'The rules of this game are harsh and unfair.'
+    ]
   }
 }
 
@@ -34,6 +38,10 @@ const newHero = (name: string, colour: string): Hero => {
     colour: colour,
     experience: 0
   }
+}
+
+export const updateStartingPositions = (heroes: Hero[], dungeon: Dungeon) => {
+  heroes.forEach((hero, index) => hero.position = dungeon.startingPositions[index])
 }
 
 export const toArray = (row: string): string[] => {
@@ -201,6 +209,7 @@ export const search = (state: GameState) => {
 }
 
 export const next = (state: GameState) => {
+  checkWinConditions(state)
   if (state.currentActor === undefined) return;
   else {
     state.actionLog.push(state.currentActor.name + ' ended their turn')
@@ -215,6 +224,31 @@ export const next = (state: GameState) => {
     state.currentActor = state.heroes[nextIndex];
     state.actionLog.push(state.currentActor.name + ' started their turn')
   }
+}
+
+const checkWinConditions = (state: GameState) => {
+  state.dungeon.winConditions.forEach((condition) => {
+    switch (condition.type) {
+      case ConditionType.KILL_ALL: const monsterHealth = state.dungeon.layout.monsters
+        .map((monster) => monster.health)
+        .reduce((partial, health) => partial + health, 0);
+        condition.fulfilled = monsterHealth <= 0;
+        break;
+      case ConditionType.REACH_CELL: condition.fulfilled = state.heroes
+        .some((hero) => {
+          hero.position.x === condition.targetCell?.x && hero.position.y === condition.targetCell.y
+        });
+        break;
+      case ConditionType.KILL_ONE: const target = state.dungeon.layout.monsters
+        .find((monster) => monster.name === condition.targetMonster)
+        condition.fulfilled = target.health === 0;
+        break;
+    }
+  })
+  state.dungeon.beaten = state.dungeon.winConditions
+    .map((condition) => condition.fulfilled)
+    .reduce((partial, fulfilled) => partial && fulfilled, true);
+  if (state.dungeon.beaten) state.actionLog.push('All win conditions have been fulfilled');
 }
 
 const moveOverDoor = (state: GameState, hero: Hero, newX: number, newY: number) => {

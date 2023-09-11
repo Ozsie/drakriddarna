@@ -1,5 +1,5 @@
 <script>
-  import { act, init, next, pickLock, search } from "./game.ts";
+  import { act, init, next, pickLock, search, updateStartingPositions } from "./game.ts";
   import Dungeon from "./Dungeon.svelte";
   import Characters from "./Characters.svelte";
   import { onMount } from "svelte";
@@ -8,8 +8,17 @@
 
   onMount(() => {
     render();
-    setInterval(render, 500)
+    setInterval(render, 500);
+    setInterval(hasWon, 1000)
   });
+
+  const hasWon = () => {
+    if (state.dungeon.beaten && state.dungeon.nextDungeon) {
+      state.dungeon = state.dungeon.nextDungeon;
+      updateStartingPositions(state.heroes, state.dungeon);
+    }
+  }
+
   const render = () => {
     if (!state || !document) return;
     const c = document.getElementById("logs");

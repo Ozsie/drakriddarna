@@ -1,5 +1,5 @@
 import type { Door, Dungeon, Monster, Secret } from "./types";
-import { Level, MonsterType, SecretType, Side } from "./types";
+import { ConditionType, Level, MonsterType, SecretType, Side } from "./types";
 
 export const PIT = '0'
 export const PILLAR = '#'
@@ -30,7 +30,7 @@ const createMonster = (type: MonsterType, colour: string, x: number, y: number):
   let actions = 2;
   let defense = 2;
   let health = 4;
-  let experience = 3;
+  let experience = 4;
   switch(type) {
     case MonsterType.ORCH: {
       level = Level.APPRENTICE;
@@ -62,8 +62,47 @@ const createMonster = (type: MonsterType, colour: string, x: number, y: number):
   }
 }
 
+const second: Dungeon = {
+  name: 'Second cave',
+  beaten: false,
+  winConditions: [
+    {
+      type: ConditionType.REACH_CELL,
+      targetCell: {x: 0, y: 0},
+      fulfilled: false
+    }
+  ],
+  startingPositions: [
+    {x:0,y:2},
+    {x:0,y:3},
+    {x:0,y:4},
+    {x:1,y:3}
+  ],
+  discoveredRooms: ['A'],
+  layout: {
+    grid: [
+      'AAA',
+      'A A',
+      'AAA',
+      'AAA',
+      'AAA'
+    ],
+    doors: [],
+    monsters: [],
+    secrets: []
+  }
+}
+
 export const tutorial: Dungeon = {
   name: 'Troll cave',
+  beaten: false,
+  winConditions: [
+    {
+      type: ConditionType.KILL_ALL,
+      fulfilled: false
+    }
+  ],
+  nextDungeon: second,
   startingPositions: [
     {x:0,y:7},
     {x:0,y:8},

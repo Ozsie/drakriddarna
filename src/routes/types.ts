@@ -47,6 +47,20 @@ export type Dungeon = {
   layout: Layout;
   startingPositions: Position[],
   discoveredRooms: string[],
+  winConditions: WinCondition[],
+  beaten: boolean,
+  nextDungeon?: Dungeon,
+}
+
+export type WinCondition = {
+  type: ConditionType,
+  targetCell?: Position,
+  targetMonster?: Monster,
+  fulfilled: boolean,
+}
+
+export enum ConditionType {
+  KILL_ALL, KILL_ONE, REACH_CELL
 }
 
 export type Layout = {
