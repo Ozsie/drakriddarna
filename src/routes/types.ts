@@ -1,7 +1,8 @@
 export type GameState = {
   heroes: Actor[];
   dungeon: Dungeon;
-  currentActor?: Actor
+  currentActor?: Actor;
+  actionLog: string[];
 }
 
 export type Actor = {
@@ -11,6 +12,7 @@ export type Actor = {
   defense: number;
   health: number;
   colour: string;
+  experience: number;
   position?: Position;
 }
 
@@ -18,7 +20,19 @@ export type Hero = Actor & {
   level: Level;
 };
 
-export type Monster = Actor & {}
+export type Monster = Actor & {
+  type: MonsterType;
+  level: Level;
+}
+
+export enum MonsterType {
+  ORCH = 'Orch',
+  TROLL = 'Troll',
+  GREEN_DARK_LORD = 'Green Dark Lord',
+  BLUE_DARK_LORD = 'Blue Dark Lord',
+  RED_DARK_LORD = 'Red Dark Lord',
+  YELLOW_DARK_LORD = 'Yellow Dark Lord',
+}
 
 export enum Level {
   APPRENTICE = 'Apprentice',
@@ -37,7 +51,8 @@ export type Dungeon = {
 
 export type Layout = {
   grid: string[],
-  doors: Door[]
+  doors: Door[],
+  monsters: Monster[],
 }
 
 export type Door = {

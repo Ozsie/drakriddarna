@@ -69,6 +69,17 @@
       ctx.arc((x*32)+16, (y*32)+16, 13, 0, 2 * Math.PI);
       ctx.fillStyle = hero.colour;
       ctx.fill();
+    } else {
+      const monster = state.dungeon.layout.monsters.find((monster) => monster.position.x === x && monster.position.y === y);
+      if (monster && monster.health > 0 && !isEmpty(cell)) {
+        ctx.beginPath();
+        ctx.fillStyle = monster.colour;
+        ctx.arc((x*32)+16, (y*32)+16, 10, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.font = "7px Arial";
+        ctx.fillStyle = 'black';
+        ctx.fillText(monster.name[0], (x*32)+16, (y*32)+16)
+      }
     }
     ctx.stroke();
   }
@@ -76,4 +87,4 @@
   const isEmpty = (cell) => cell === ' ' || !state.dungeon.discoveredRooms.includes(cell);
   const findDoor = (x, y) => state.dungeon.layout.doors.find((door) => door.x === x && door.y === y)
 </script>
-<canvas width="860" height="700" id="gameBoard"></canvas>
+<canvas width="860" height="750" id="gameBoard"></canvas>

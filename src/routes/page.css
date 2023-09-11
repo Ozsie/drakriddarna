@@ -8,13 +8,13 @@
     background-color: mediumvioletred;
 }
 
-.one{
+.characterSide{
     text-align: left;
     grid-column: 1/4;
     background-color: burlywood;
 }
 
-.two {
+.boardSide {
     text-align: right;
     grid-column: 4/6;
     background-color: blue;
