@@ -2,6 +2,7 @@ import type { Dungeon, GameState, Hero, Layout, Monster, Position } from "./type
 import { ConditionType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, tutorial } from "./dungeons";
 
+
 export const save = (state: GameState) => {
   state.actionLog.push('Game saved.')
   localStorage.setItem("state", JSON.stringify(state));
@@ -16,7 +17,6 @@ export const load = (): GameState | undefined => {
     return state
   }
 }
-
 
 export const init = (): GameState => {
   const heroes: Hero[] = [
@@ -54,6 +54,13 @@ const newHero = (name: string, colour: string): Hero => {
     experience: 0
   }
 }
+
+export const defaultHeroes: Hero[] = [
+  newHero('Fearik', 'orange'),
+  newHero('Helbran', 'red'),
+  newHero('Siedel', 'green'),
+  newHero('Wulf', 'lightblue')
+];
 
 export const updateStartingPositions = (heroes: Hero[], dungeon: Dungeon) => {
   heroes.forEach((hero, index) => hero.position = dungeon.startingPositions[index])

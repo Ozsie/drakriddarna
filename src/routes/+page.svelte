@@ -1,5 +1,5 @@
 <script>
-  import { act, init, load, next, pickLock, save, search, updateStartingPositions } from "./game.ts";
+  import { act, defaultHeroes, init, load, next, pickLock, save, search, updateStartingPositions } from "./game.ts";
   import Dungeon from "./Dungeon.svelte";
   import Characters from "./Characters.svelte";
   import { onMount } from "svelte";
@@ -15,7 +15,11 @@
   const hasWon = () => {
     if (state.dungeon.beaten && state.dungeon.nextDungeon) {
       state.dungeon = state.dungeon.nextDungeon;
+      const missingHeroes = defaultHeroes.filter((dh) => !state.heroes.find((h) => dh.name === h.name))
+      state.heroes.push(...missingHeroes)
       updateStartingPositions(state.heroes, state.dungeon);
+      state.actionLog = [];
+      state.actionLog.push('You have reached ' + state.dungeon.name);
     }
   }
 
