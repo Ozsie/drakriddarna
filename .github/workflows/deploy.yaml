@@ -19,8 +19,4 @@ jobs:
           node-version: 18.14
       - run: npm ci
       - run: npm run build
-      - name: Deploy 🚀
-        uses: JamesIves/github-pages-deploy-action@v4.4.1
-        with:
-          folder: ./storybook-static # The folder the action should deploy.
-          target-folder: ./
+      - run: npm run deploy
