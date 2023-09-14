@@ -1,4 +1,4 @@
-import type { Dungeon, GameState, Hero, Layout, Position } from "./types";
+import type { Dungeon, GameState, Hero, Layout, Position, Monster } from "./types";
 import { ConditionType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, tutorial } from "./dungeons";
 
@@ -327,9 +327,36 @@ const monsterActions = (state: GameState) => {
   if (visibleMonsters.length === 0) {
     state.actionLog.push('No monsters can act')
   }
-  visibleMonsters.forEach((monster) => (
-    state.actionLog.push(monster.name + ' acted ')
-  ))
+  visibleMonsters.forEach((monster) => {
+    state.actionLog.push(monster.name + " acted ");
+    const neighbouringHeroes: Hero[] = state.heroes.filter((hero: Hero) => isNeighbouring(monster.position, hero.position?.x, hero.position.y))
+    if (neighbouringHeroes.length > 0) {
+      const target = Math.floor(Math.random() * neighbouringHeroes.length)
+      monsterAttack(state, monster, neighbouringHeroes[target])
+    }
+  })
+}
+
+const monsterAttack = (state: GameState, monster: Monster, hero: Hero) => {
+  if (monster.actions === 1 && monster.movement !== 3) {
+    state.actionLog.push(hero.name + ' has no actions left to attack')
+    return;
+  }
+  if (hero) {
+    const hits = roll(monster.level, 3);
+    const damage = Math.max(hits - hero.defense, 0);
+    state.actionLog.push(monster.name + ' attacked ' + hero.name + ' for ' + damage + ' damage (' + hits + '-' + hero.defense + '=' + damage +')');
+    hero.health -= damage;
+    if (hero.health <= 0) {
+      state.actionLog.push(monster.name + ' killed ' + hero.name)
+      state.heroes = state.heroes.filter((h) => h !== hero)
+    }
+    if (monster?.actions > 1 && monster?.movement < 3) {
+      monster.actions -= 2
+    } else {
+      monster.actions--;
+    }
+  }
 }
 
 const canAct = (hero: Hero) => {
