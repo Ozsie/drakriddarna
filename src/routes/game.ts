@@ -328,12 +328,17 @@ const monsterActions = (state: GameState) => {
     state.actionLog.push('No monsters can act')
   }
   visibleMonsters.forEach((monster) => {
-    state.actionLog.push(monster.name + " acted ");
-    const neighbouringHeroes: Hero[] = state.heroes.filter((hero: Hero) => isNeighbouring(monster.position, hero.position?.x, hero.position.y))
-    if (neighbouringHeroes.length > 0) {
-      const target = Math.floor(Math.random() * neighbouringHeroes.length)
-      monsterAttack(state, monster, neighbouringHeroes[target])
+    const maxActions = monster.actions
+    while (monster.actions > 0) {
+      monster.actions--;
+      state.actionLog.push(monster.name + " acted ");
+      const neighbouringHeroes: Hero[] = state.heroes.filter((hero: Hero) => isNeighbouring(monster.position, hero.position?.x, hero.position.y));
+      if (neighbouringHeroes.length > 0) {
+        const target = Math.floor(Math.random() * neighbouringHeroes.length);
+        monsterAttack(state, monster, neighbouringHeroes[target]);
+      }
     }
+    monster.actions = maxActions
   })
 }
 
