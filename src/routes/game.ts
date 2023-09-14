@@ -1,6 +1,21 @@
-import type { Dungeon, GameState, Hero, Layout, Position, Monster } from "./types";
+import type { Dungeon, GameState, Hero, Layout, Monster, Position } from "./types";
 import { ConditionType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, tutorial } from "./dungeons";
+
+export const save = (state: GameState) => {
+  state.actionLog.push('Game saved.')
+  localStorage.setItem("state", JSON.stringify(state));
+}
+
+export const load = (): GameState | undefined => {
+  const stateString = localStorage.getItem("state")
+  if (stateString) {
+    const state: GameState = JSON.parse(stateString)
+    state.currentActor = state.heroes.find((hero) => hero.name === state.currentActor?.name)
+    state.actionLog.push('Game loaded.')
+    return state
+  }
+}
 
 
 export const init = (): GameState => {
@@ -130,6 +145,7 @@ const attack = (hero: Hero, state: GameState, targetX: number, targetY: number) 
     state.actionLog.push(hero.name + ' attacked ' + monster.name + ' for ' + damage + ' damage (' + hits + '-' + monster.defense + '=' + damage +')');
     monster.health -= damage;
     if (monster.health <= 0) {
+      state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter((m) => m != monster)
       state.actionLog.push(hero.name + ' killed ' + monster.name)
       hero.experience += monster.experience
     }
@@ -248,7 +264,10 @@ const checkWinConditions = (state: GameState) => {
   state.dungeon.beaten = state.dungeon.winConditions
     .map((condition) => condition.fulfilled)
     .reduce((partial, fulfilled) => partial && fulfilled, true);
-  if (state.dungeon.beaten) state.actionLog.push('All win conditions have been fulfilled');
+  if (state.dungeon.beaten) {
+    state.actionLog.push("All win conditions have been fulfilled");
+    state.actionLog.push('You have cleared ' + state.dungeon.name);
+  }
 }
 
 const moveOverDoor = (state: GameState, hero: Hero, newX: number, newY: number) => {
@@ -330,15 +349,74 @@ const monsterActions = (state: GameState) => {
   visibleMonsters.forEach((monster) => {
     const maxActions = monster.actions
     while (monster.actions > 0) {
-      monster.actions--;
       state.actionLog.push(monster.name + " acted ");
       const neighbouringHeroes: Hero[] = state.heroes.filter((hero: Hero) => isNeighbouring(monster.position, hero.position?.x, hero.position.y));
       if (neighbouringHeroes.length > 0) {
         const target = Math.floor(Math.random() * neighbouringHeroes.length);
         monsterAttack(state, monster, neighbouringHeroes[target]);
+      } else {
+        monsterMove(state, monster)
       }
     }
     monster.actions = maxActions
+  })
+}
+
+function getDist(a: Position, b: Position) {
+  return Math.sqrt(
+    Math.pow(a.x - b?.x, 2) +
+    Math.pow(a.y - b?.y, 2)
+  );
+}
+
+const monsterMove = (state: GameState, monster: Monster) => {
+  const closestHeroAndDistance = state.heroes.map((hero) => {
+    return {
+      hero,
+      dist: getDist(hero.position, monster.position)
+    }
+  }).sort((a, b) => {
+    return a.dist - b.dist
+  })[0]
+
+  const possibleMoves = findPossibleMoves(state, monster.position)
+  if (possibleMoves.length > 0) {
+    const newPosition = possibleMoves.map((pos) => {
+      return {
+        pos,
+        dist: getDist(pos, closestHeroAndDistance.hero.position)
+      };
+    }).sort((a, b) => {
+      return a.dist - b.dist;
+    })[0].pos;
+    monster.position = newPosition;
+    state.actionLog.push(monster.name + " moved towards " + closestHeroAndDistance.hero.name + " (" + newPosition.x + "," + newPosition.y + ")");
+  } else {
+    state.actionLog.push(monster.name + " could not move");
+  }
+  monster.actions--;
+}
+
+
+let findPossibleMoves = (state: GameState, position: Position): Position[] => {
+  const x = position.x;
+  const y = position.y;
+
+  const targets: Position[] = []
+  for (let tX = x-1; tX <= x+1; tX++) {
+    for (let tY = y-1; tY <= y+1; tY++) {
+      if (tX === x && tY === y) continue;
+      if (isWalkable(state.dungeon.layout, tX, tY) && isDiscovered(state.dungeon, tX, tY)) {
+        targets.push({x:tX,y:tY});
+      }
+    }
+  }
+
+  return targets.filter((pos) => {
+    return !state.heroes.find((hero) => hero.position.x === pos.x && hero.position.y === pos.y);
+  }).filter((pos) => {
+    const blocker = state.dungeon.layout.monsters.find((m) => m.position.x === pos.x && m.position.y === pos.y)
+    return !blocker
   })
 }
 

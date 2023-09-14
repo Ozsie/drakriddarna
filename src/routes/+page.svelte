@@ -1,5 +1,5 @@
 <script>
-  import { act, init, next, pickLock, search, updateStartingPositions } from "./game.ts";
+  import { act, init, load, next, pickLock, save, search, updateStartingPositions } from "./game.ts";
   import Dungeon from "./Dungeon.svelte";
   import Characters from "./Characters.svelte";
   import { onMount } from "svelte";
@@ -98,6 +98,10 @@
         <td><button on:click={act('D', state)}>D</button></td>
         <td><button on:click={act('DR', state)}>DR</button></td>
         <td><button on:click={pickLock(state)}>Pick lock</button></td>
+      </tr>
+      <tr>
+        <td><button on:click={save(state)}>Save</button></td>
+        <td><button on:click={() => state = load()}>Load</button></td>
       </tr>
     </table>
   </div>

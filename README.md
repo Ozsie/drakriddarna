@@ -2,14 +2,18 @@
 
 ## Todo
  - [ ] Moving through other heroes
- - [ ] Monster movement
- - [ ] Monster attack
+ - [X] Monster movement
+ - [X] Monster close combat attack
+ - [ ] Monster range attack
+ - [ ] Monster special attack
  - [ ] Trapped doors
  - [X] Locked doors
  - [ ] Events
  - [ ] Secrets
  - [ ] Levelling up
  - [ ] Clearing dungeon
+ - [X] Saving & loading
+ - [ ] Multiple saves
 
 ## Developing
 
