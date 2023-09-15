@@ -3,7 +3,6 @@
 ## Todo
 - [ ] Monster range attack
 - [ ] Monster special attack
-- [X] Trapped doors
 - [ ] Events
 - [ ] Secrets
 - [ ] Levelling up
@@ -12,6 +11,7 @@
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
+- [X] Trapped doors
 - [X] Monster movement
 - [X] Monster close combat attack
 - [X] Locked doors

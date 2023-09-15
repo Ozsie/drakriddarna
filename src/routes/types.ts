@@ -21,7 +21,7 @@ export type Actor = {
   maxHealth: number;
   colour: Colour;
   experience: number;
-  position?: Position;
+  position: Position;
 }
 
 export type Hero = Actor & {
@@ -58,17 +58,23 @@ export type Dungeon = {
   winConditions: WinCondition[],
   beaten: boolean,
   nextDungeon?: Dungeon,
+  killCount: number,
 }
 
 export type WinCondition = {
   type: ConditionType,
   targetCell?: Position,
-  targetMonster?: Monster,
+  targetMonsterType?: MonsterType,
+  killMinCount?: number,
   fulfilled: boolean,
 }
 
 export enum ConditionType {
-  KILL_ALL, KILL_ONE, REACH_CELL
+  KILL_ALL,
+  KILL_ALL_OF_TYPE,
+  REACH_CELL,
+  OPEN_DOOR,
+  KILL_AT_LEAST
 }
 
 export type Layout = {
@@ -96,6 +102,7 @@ export type Door = {
   locked: boolean,
   trapped: boolean,
   open: boolean,
+  hidden: boolean,
   x: number,
   y: number,
   side: Side,

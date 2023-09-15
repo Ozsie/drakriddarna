@@ -5,7 +5,7 @@ export const PIT = '0'
 export const PILLAR = '#'
 export const EMPTY = ' '
 
-const createSecret = (type: SecretType, name: string, x: number, y: number): Secret => {
+export const createSecret = (type: SecretType, name: string, x: number, y: number): Secret => {
   return {
     type,
     name,
@@ -14,7 +14,7 @@ const createSecret = (type: SecretType, name: string, x: number, y: number): Sec
   }
 }
 
-const createDoor = (side: Side, x: number, y: number): Door => {
+export const createDoor = (side: Side, x: number, y: number): Door => {
   return {
     side,
     x,
@@ -22,11 +22,12 @@ const createDoor = (side: Side, x: number, y: number): Door => {
     locked: false,
     trapped: false,
     open: false,
+    hidden: false,
     trapAttacks: 0
   }
 }
 
-const createTrappedDoor = (side: Side, x: number, y: number, trapAttacks: number): Door => {
+export const createTrappedDoor = (side: Side, x: number, y: number, trapAttacks: number): Door => {
   return {
     ...createDoor(side, x, y),
     trapped: true,
@@ -34,14 +35,21 @@ const createTrappedDoor = (side: Side, x: number, y: number, trapAttacks: number
   }
 }
 
-const createLockedDoor = (side: Side, x: number, y: number): Door => {
+export const createHiddenDoor = (side: Side, x: number, y: number): Door => {
+  return {
+    ...createDoor(side, x, y),
+    hidden: true,
+  }
+}
+
+export const createLockedDoor = (side: Side, x: number, y: number): Door => {
   return {
     ...createDoor(side, x, y),
     locked: true,
   }
 }
 
-const createTrappedLockedDoor = (side: Side, x: number, y: number, trapAttacks: number): Door => {
+export const createTrappedLockedDoor = (side: Side, x: number, y: number, trapAttacks: number): Door => {
   return {
     ...createDoor(side, x, y),
     locked: true,
@@ -50,7 +58,16 @@ const createTrappedLockedDoor = (side: Side, x: number, y: number, trapAttacks: 
   }
 }
 
-const createMonster = (type: MonsterType, colour: Colour, x: number, y: number): Monster => {
+export const createTrappedHiddenDoor = (side: Side, x: number, y: number, trapAttacks: number): Door => {
+  return {
+    ...createDoor(side, x, y),
+    hidden: true,
+    trapped: true,
+    trapAttacks
+  }
+}
+
+export const createMonster = (type: MonsterType, colour: Colour, x: number, y: number): Monster => {
   const indexOfColour = Object.values(Colour).indexOf(colour);
   const colourName = Object.keys(Colour)[indexOfColour];
 
@@ -94,7 +111,7 @@ const createMonster = (type: MonsterType, colour: Colour, x: number, y: number):
   }
 }
 
-const second: Dungeon = {
+export const second: Dungeon = {
   name: 'Second cave',
   beaten: false,
   winConditions: [
@@ -125,51 +142,4 @@ const second: Dungeon = {
   }
 }
 
-export const tutorial: Dungeon = {
-  name: 'Troll cave',
-  beaten: false,
-  winConditions: [
-    {
-      type: ConditionType.KILL_ALL,
-      fulfilled: false
-    }
-  ],
-  nextDungeon: second,
-  startingPositions: [
-    {x:0,y:7},
-    {x:0,y:8},
-    {x:0,y:9},
-    {x:1,y:8}
-  ],
-  discoveredRooms: ['A'],
-  layout: {
-    grid: [
-      '     CCCC',
-      '     CCCC',
-      '     CCCC',
-      '      E  ',
-      '      E  ',
-      '      E  ',
-      '      BB ',
-      'AAA   BB ',
-      'AAADDDBB ',
-      'AAA   BB '
-    ],
-    doors: [
-      createDoor(Side.RIGHT, 2, 8),
-      createDoor(Side.RIGHT, 5, 8),
-      createDoor(Side.UP, 6, 6),
-      createDoor(Side.UP, 6, 3),
-    ],
-    monsters: [
-      createMonster(MonsterType.ORCH, Colour.Green, 5, 8),
-      createMonster(MonsterType.ORCH, Colour.Yellow, 7, 9),
-      createMonster(MonsterType.ORCH, Colour.Red, 6, 4),
-      createMonster(MonsterType.ORCH, Colour.Red, 8, 2),
-      createMonster(MonsterType.TROLL, Colour.Green, 5, 0),
-    ],
-    secrets: [
-      createSecret(SecretType.NOTE, 'Welcome to Drakriddarna', 1, 8),
-    ]
-  }
-}
+

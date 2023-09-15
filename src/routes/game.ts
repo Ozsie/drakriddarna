@@ -1,6 +1,7 @@
 import type { Actor, Dungeon, GameState, Hero, Layout, Monster, Position } from "./types";
 import { Colour, ConditionType, Level, Side } from "./types";
-import { EMPTY, PILLAR, PIT, tutorial } from "./dungeons";
+import { EMPTY, PILLAR, PIT } from "./dungeons";
+import { e1m0 } from './dungeons/e1m0';
 
 
 export const save = (state: GameState) => {
@@ -21,11 +22,11 @@ export const load = (): GameState | undefined => {
 export const init = (): GameState => {
   const heroes: Hero[] = defaultHeroes;
 
-  updateStartingPositions(heroes, tutorial);
+  updateStartingPositions(heroes, e1m0);
 
   return {
     heroes: heroes,
-    dungeon: tutorial,
+    dungeon: e1m0,
     currentActor: heroes[0],
     actionLog: [
       'Game Initialised',
@@ -37,7 +38,7 @@ export const init = (): GameState => {
   }
 }
 
-const newHero = (name: string, colour: string): Hero => {
+const newHero = (name: string, colour: Colour): Hero => {
   return {
     name: name,
     actions: 2,
@@ -47,7 +48,8 @@ const newHero = (name: string, colour: string): Hero => {
     health: 7,
     maxHealth: 7,
     colour: colour,
-    experience: 0
+    experience: 0,
+    position: {x:-1,y:-1}
   }
 }
 
@@ -70,7 +72,7 @@ export const toArray = (row: string): string[] => {
   return array;
 }
 
-const isBlockedByMonster = (state: GameState, newX, newY) => {
+const isBlockedByMonster = (state: GameState, newX: number, newY: number) => {
   return state.dungeon.layout.monsters.some((monster) => {
     return monster.position.x === newX &&
       monster.position?.y === newY &&
@@ -80,7 +82,7 @@ const isBlockedByMonster = (state: GameState, newX, newY) => {
 
 export const act = (direction: string, state: GameState) => {
   const hero = state.currentActor
-  if (hero.actions === 0) {
+  if (!hero || hero.actions === 0) {
     return;
   }
   let newX = hero.position.x
@@ -156,9 +158,10 @@ const attack = (hero: Hero, state: GameState, targetX: number, targetY: number) 
     state.actionLog.push(`${hero.name} attacked ${monster.name} for ${getDamageString(damage, hits, monster)}`);
     monster.health -= damage;
     if (monster.health <= 0) {
-      state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter((m) => m != monster)
-      state.actionLog.push(`${hero.name} killed ${monster.name}`)
-      hero.experience += monster.experience
+      state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter((m) => m != monster);
+      state.actionLog.push(`${hero.name} killed ${monster.name}`);
+      state.dungeon.killCount++;
+      hero.experience += monster.experience;
     }
     if (hero?.actions > 1 && hero?.movement < 3) {
       hero.actions -= 2
@@ -264,20 +267,37 @@ export const next = (state: GameState) => {
 const checkWinConditions = (state: GameState) => {
   state.dungeon.winConditions.forEach((condition) => {
     switch (condition.type) {
-      case ConditionType.KILL_ALL: const monsterHealth = state.dungeon.layout.monsters
-        .map((monster) => monster.health)
-        .reduce((partial, health) => partial + health, 0);
+      case ConditionType.KILL_ALL: {
+        const monsterHealth = state.dungeon.layout.monsters
+          .map((monster) => monster.health)
+          .reduce((partial, health) => partial + health, 0);
         condition.fulfilled = monsterHealth <= 0;
         break;
-      case ConditionType.REACH_CELL: condition.fulfilled = state.heroes
-        .some((hero) => {
-          hero.position.x === condition.targetCell?.x && hero.position.y === condition.targetCell.y
-        });
+      }
+      case ConditionType.REACH_CELL: {
+        condition.fulfilled = state.heroes
+          .some((hero) => {
+            return hero.position.x === condition.targetCell?.x && hero.position.y === condition.targetCell.y;
+          });
         break;
-      case ConditionType.KILL_ONE: const target = state.dungeon.layout.monsters
-        .find((monster) => monster.name === condition.targetMonster)
-        condition.fulfilled = target.health === 0;
+      }
+      case ConditionType.KILL_ALL_OF_TYPE: {
+        condition.fulfilled = state.dungeon.layout.monsters
+          .filter((monster) => monster.type === condition.targetMonsterType)
+          .some((monster) => monster.health > 0);
         break;
+      }
+      case ConditionType.OPEN_DOOR: {
+        condition.fulfilled = state.dungeon.layout.doors
+          .find((door) => {
+            return door.x === condition.targetCell?.x && door.y === condition.targetCell?.y;
+          })?.open ?? false;
+        break;
+      }
+      case ConditionType.KILL_AT_LEAST: {
+        condition.fulfilled = (condition.killMinCount ? condition.killMinCount : 0) <= state.dungeon.killCount;
+        break;
+      }
     }
   })
   state.dungeon.beaten = state.dungeon.winConditions
