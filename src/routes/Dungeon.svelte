@@ -38,6 +38,8 @@
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderActors(ctx, cell, x, y, actors))
     });
+    renderWalkableArea(ctx, state.currentActor);
+    renderCurrentActor(ctx, state.currentActor);
   }
 
 
@@ -162,7 +164,37 @@
     ctx.stroke();
   }
 
-  const renderWalkableArea = (hero, ctx) => {
+  const renderCurrentActor = (ctx, hero) => {
+    if (hero === state.currentActor) {
+      ctx.beginPath();
+      ctx.strokeStyle = 'lightblue';
+      ctx.lineWidth = 2;
+
+      ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize);
+      ctx.lineTo(hero.position.x * cellSize + (cellSize/3), hero.position.y * cellSize);
+      ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize);
+      ctx.lineTo(hero.position.x * cellSize, hero.position.y * cellSize + (cellSize/3));
+
+      ctx.moveTo(hero.position.x * cellSize + cellSize, hero.position.y * cellSize);
+      ctx.lineTo(hero.position.x * cellSize + (cellSize/3)*2, hero.position.y * cellSize);
+      ctx.moveTo(hero.position.x * cellSize + cellSize, hero.position.y * cellSize);
+      ctx.lineTo(hero.position.x * cellSize + cellSize, hero.position.y * cellSize + (cellSize/3));
+
+      ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize + cellSize);
+      ctx.lineTo(hero.position.x * cellSize, hero.position.y * cellSize + (cellSize/3)*2);
+      ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize + cellSize);
+      ctx.lineTo(hero.position.x * cellSize + (cellSize/3), hero.position.y * cellSize + cellSize);
+
+      ctx.moveTo(hero.position.x * cellSize + cellSize, hero.position.y * cellSize + cellSize);
+      ctx.lineTo(hero.position.x * cellSize + cellSize, hero.position.y * cellSize + (cellSize/3)*2);
+      ctx.moveTo(hero.position.x * cellSize + cellSize, hero.position.y * cellSize + cellSize);
+      ctx.lineTo(hero.position.x * cellSize + (cellSize/3)*2, hero.position.y * cellSize + cellSize);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+    }
+  }
+
+  const renderWalkableArea = (ctx, hero) => {
     if (hero === state.currentActor && debugMode) {
       for (let pX = hero.position.x - hero.movement; pX <= hero.position.x + hero.movement; pX++) {
         for (let pY = hero.position.y - hero.movement; pY <= hero.position.y + hero.movement; pY++) {
@@ -186,7 +218,6 @@
     ctx.beginPath();
     const hero = state.heroes.find((hero) => hero.position.x === x && hero.position.y === y)
     if (hero) {
-      renderWalkableArea(hero, ctx);
       ctx.drawImage(actors, 4*16, 0, 16, 16, x*cellSize, y*cellSize, cellSize, cellSize);
       renderActorBar(ctx, hero, x, y);
       renderHealthBar(ctx, hero, x, y);
