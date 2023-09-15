@@ -6,20 +6,20 @@
 		<meta name="viewport" content="width=device-width" />
 		
 		<link href="./_app/immutable/assets/2.050e6e6e.css" rel="stylesheet">
-		<link rel="modulepreload" href="./_app/immutable/entry/start.ff2a96f9.js">
+		<link rel="modulepreload" href="./_app/immutable/entry/start.3e222d5b.js">
 		<link rel="modulepreload" href="./_app/immutable/chunks/scheduler.ba2ce6c0.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/singletons.90cf1d8a.js">
-		<link rel="modulepreload" href="./_app/immutable/entry/app.17aae7cb.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/singletons.acdd3ad7.js">
+		<link rel="modulepreload" href="./_app/immutable/entry/app.a51a2f8c.js">
 		<link rel="modulepreload" href="./_app/immutable/chunks/index.8040907f.js">
 		<link rel="modulepreload" href="./_app/immutable/nodes/0.d5cf7a58.js">
-		<link rel="modulepreload" href="./_app/immutable/nodes/2.24c52e60.js">
+		<link rel="modulepreload" href="./_app/immutable/nodes/2.d9d1c580.js">
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">  <div class="container svelte-60nygp"><div class="characterSide svelte-60nygp"><canvas id="characterBoard" height="750" width="260"></canvas></div> <div class="boardSide svelte-60nygp"><canvas width="860" height="750" id="gameBoard"></canvas></div></div> <div class="container svelte-60nygp"><div class="commands svelte-60nygp"><table><tr><td><button data-svelte-h="svelte-fw3uxo">UL</button></td> <td><button data-svelte-h="svelte-1jeoia6">U</button></td> <td><button data-svelte-h="svelte-1p8c8vc">UR</button></td> <td><button data-svelte-h="svelte-1rtxc14">Next</button></td></tr> <tr><td><button data-svelte-h="svelte-10dnpu6">L</button></td> <td></td> <td><button data-svelte-h="svelte-12287ni">R</button></td> <td><button data-svelte-h="svelte-cps1bu">Search</button></td></tr> <tr><td><button data-svelte-h="svelte-1ji074i">DL</button></td> <td><button data-svelte-h="svelte-li5tq6">D</button></td> <td><button data-svelte-h="svelte-3esmwe">DR</button></td> <td><button data-svelte-h="svelte-sacog4">Pick lock</button></td></tr> <tr><td><button data-svelte-h="svelte-1vr5zyk">Save</button></td> <td><button data-svelte-h="svelte-1m2jkw7">Load</button></td></tr></table></div> <div class="log svelte-60nygp" data-svelte-h="svelte-xcon9n"><canvas width="860" height="100" id="logs"></canvas></div></div> 
 			
 			<script>
 				{
-					__sveltekit_1ph8os2 = {
+					__sveltekit_1hojaik = {
 						assets: "/drakriddarna",
 						base: new URL(".", location).pathname.slice(0, -1),
 						env: {}
@@ -30,8 +30,8 @@
 					const data = [null,null];
 
 					Promise.all([
-						import("./_app/immutable/entry/start.ff2a96f9.js"),
-						import("./_app/immutable/entry/app.17aae7cb.js")
+						import("./_app/immutable/entry/start.3e222d5b.js"),
+						import("./_app/immutable/entry/app.a51a2f8c.js")
 					]).then(([kit, app]) => {
 						kit.start(app, element, {
 							node_ids: [0, 2],
