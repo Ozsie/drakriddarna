@@ -15,8 +15,11 @@
     const ctx = c.getContext("2d");
     ctx.clearRect(0, 0, c.width, c.height);
     ctx.stroke();
-    state.heroes.forEach((hero, index) => renderHeroCard(ctx, c, hero, index))
-    state.heroes.forEach((hero, index) => renderHeroStats(ctx, hero, index))
+    state.heroes.forEach((hero, index) => {
+      renderHeroCard(ctx, c, hero, index);
+      renderHeroStats(ctx, hero, index);
+      renderHeroEquipment(ctx, hero, index);
+    });
   }
 
   const renderHeroCard = (ctx, c, hero, index) => {
@@ -36,6 +39,22 @@
     ctx.fillText('Actions: ' + hero.actions, 16, (index*cardHeight) + 70)
     ctx.fillText('Moves: ' + hero.movement, 16, (index*cardHeight) + 90)
     ctx.stroke();
+  }
+
+  const renderHeroEquipment = (ctx, hero, index) => {
+    ctx.fillText('Equipment', 16, (index*cardHeight) + 110)
+    ctx.font = "12px Arial";
+    ctx.fillText('🗡️ ' + hero.weapon.name + ' (' + hero.weapon.dice + ')', 16, (index*cardHeight) + 125)
+    let armourString = 'None (0)';
+    let shieldString = 'None (0)';
+    if (hero.armour) {
+      armourString = hero.armour.name + ' (' + hero.armour.defense + ')';
+    }
+    if (hero.shield) {
+      shieldString = hero.shield.name + ' (' + hero.armour.dice + ')';
+    }
+    ctx.fillText('🧱 ' + armourString, 16, (index * cardHeight) + 142);
+    ctx.fillText('🛡️ ' + shieldString, 16, (index * cardHeight) + 159);
   }
 
 </script>

@@ -2,6 +2,7 @@
 
 ## Todo
 - [ ] Items
+- [ ] Monster cards
 - [ ] Monster range attack
 - [ ] Monster special attack
 - [ ] Events
@@ -18,6 +19,7 @@
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
+- [ ] Move render code to .ts files
 - [X] e1m0 - Troll Cave
 - [X] Hidden doors
 - [X] Trapped doors

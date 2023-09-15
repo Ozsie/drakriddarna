@@ -2,6 +2,7 @@ import type { Actor, Dungeon, GameState, Hero, Layout, Monster, Position } from 
 import { Colour, ConditionType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, WALL } from "./dungeons";
 import { e1m0 } from './dungeons/e1m0';
+import { weapons } from './items/weapons';
 
 
 export const save = (state: GameState) => {
@@ -39,6 +40,7 @@ export const init = (): GameState => {
 }
 
 const newHero = (name: string, colour: Colour): Hero => {
+  weapons[0].amountInDeck--;
   return {
     name: name,
     actions: 2,
@@ -49,7 +51,8 @@ const newHero = (name: string, colour: Colour): Hero => {
     maxHealth: 7,
     colour: colour,
     experience: 0,
-    position: {x:-1,y:-1}
+    position: {x:-1,y:-1},
+    weapon: weapons[0]
   }
 }
 
@@ -164,8 +167,9 @@ const attack = (hero: Actor, state: GameState, targetX: number, targetY: number)
   }
   const monster = state.dungeon.layout.monsters.find((monster) => monster.position.x === targetX && monster.position.y === targetY);
   if (monster) {
-    const hits = roll(hero.level, 3);
-    const damage = Math.max(hits - monster.defense, 0);
+    const defense = monster.armour?.defense ?? monster.defense
+    const hits = roll(hero.level, hero.weapon.dice);
+    const damage = Math.max(hits - defense, 0);
     state.actionLog.push(`${hero.name} attacked ${monster.name} for ${getDamageString(damage, hits, monster)}`);
     monster.health -= damage;
     if (monster.health <= 0) {
@@ -488,7 +492,8 @@ let findPossibleMoves = (state: GameState, position: Position): Position[] => {
 }
 
 const getDamageString = (damage: number, hits: number, target: Actor) => {
-  return `${damage} damage (${hits}-${target.defense}=${damage})`;
+  const defense = target.armour?.defense ?? target.defense
+  return `${damage} damage (${hits}-${defense}=${damage})`;
 }
 
 const monsterAttack = (state: GameState, monster: Monster, hero: Hero) => {
@@ -497,7 +502,7 @@ const monsterAttack = (state: GameState, monster: Monster, hero: Hero) => {
     return;
   }
   if (hero) {
-    const hits = roll(monster.level, 3);
+    const hits = roll(monster.level, monster.weapon.dice);
     const damage = Math.max(hits - hero.defense, 0);
     state.actionLog.push(`${monster.name} attacked ${hero.name} for ${getDamageString(damage, hits, hero)}`);
     hero.health -= damage;

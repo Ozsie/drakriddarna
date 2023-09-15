@@ -1,5 +1,7 @@
 import type { Door, Monster, Secret } from "./types";
 import { Colour, Level, MonsterType, SecretType, Side } from "./types";
+import { monsterWeapons } from './items/weapons';
+import { monsterArmour } from './items/armours';
 
 export const PIT = '0'
 export const PILLAR = '@'
@@ -78,6 +80,8 @@ export const createMonster = (type: MonsterType, colour: Colour, x: number, y: n
   let health = 4;
   let maxHealth = 4;
   let experience = 4;
+  let weapon = monsterWeapons[0];
+  let armour = monsterArmour[0];
   switch(type) {
     case MonsterType.ORCH: {
       level = Level.APPRENTICE;
@@ -93,6 +97,8 @@ export const createMonster = (type: MonsterType, colour: Colour, x: number, y: n
       health = 3;
       maxHealth = 3;
       experience = 2;
+      weapon = monsterWeapons[1];
+      armour = monsterArmour[1];
       break;
     }
   }
@@ -108,6 +114,8 @@ export const createMonster = (type: MonsterType, colour: Colour, x: number, y: n
     experience,
     name: type + ' (' + colourName + ')',
     movement: 3,
-    position: { x, y }
+    position: { x, y },
+    weapon,
+    armour
   }
 }

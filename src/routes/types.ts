@@ -23,6 +23,9 @@ export type Actor = {
   experience: number;
   position: Position;
   level: Level;
+  weapon: Weapon;
+  armour?: Armour;
+  shield?: Shield;
 }
 
 export type Hero = Actor & {
@@ -129,4 +132,21 @@ export type Position = {
 
 export type Item = {
   name: string,
+  amountInDeck: number,
+}
+
+export type Weapon = Item & {
+  dice: number,
+  range: number,
+  twoHanded: boolean,
+  useHearHeroes: boolean,
+}
+
+export type Shield = Item & {
+  dice: number,
+}
+
+export type Armour = Item & {
+  defense: number,
+  magicProtection: boolean,
 }
