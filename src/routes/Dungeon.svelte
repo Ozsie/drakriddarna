@@ -1,5 +1,5 @@
 <script>
-  import { toArray } from './game.ts';
+  import { isBlockedByHero, isBlockedByMonster, isDiscovered, isWalkable, toArray } from "./game.ts";
   import { onMount } from "svelte";
   import { MonsterType, Side } from "./types.ts";
   import groundSprites from '$lib/Dungeon_Tileset.png';
@@ -145,7 +145,7 @@
     }
   }
 
-  const  renderHealthBar = (ctx, actor, x, y) => {
+  const renderHealthBar = (ctx, actor, x, y) => {
     ctx.beginPath();
     ctx.strokeStyle = 'black';
     ctx.fillStyle = 'red';
@@ -156,14 +156,34 @@
     ctx.stroke();
   }
 
+  const renderWalkableArea = (hero, ctx) => {
+    if (hero === state.currentActor && debugMode) {
+      for (let pX = hero.position.x - hero.movement; pX <= hero.position.x + hero.movement; pX++) {
+        for (let pY = hero.position.y - hero.movement; pY <= hero.position.y + hero.movement; pY++) {
+          const discovered = isDiscovered(state.dungeon, pX, pY);
+          if (discovered) {
+            const blockedByMonster = isBlockedByMonster(state, pX, pY);
+            const blockedByHeroes = isBlockedByHero(state, pX, pY);
+            const walkable = isWalkable(state.dungeon.layout, pX, pY);
+            if (!blockedByHeroes && !blockedByMonster && walkable) {
+              ctx.fillStyle = "rgba(50, 50, 255, 0.08)";
+              ctx.fillRect((pX * cellSize), pY * cellSize, cellSize, cellSize);
+              ctx.stroke();
+            }
+          }
+        }
+      }
+    }
+  }
+
   const renderActors = (ctx, cell, x, y, actors) => {
     ctx.beginPath();
     const hero = state.heroes.find((hero) => hero.position.x === x && hero.position.y === y)
     if (hero) {
+      renderWalkableArea(hero, ctx);
       ctx.drawImage(actors, 4*16, 0, 16, 16, x*cellSize, y*cellSize, cellSize, cellSize);
       renderActorBar(ctx, hero, x, y);
       renderHealthBar(ctx, hero, x, y);
-      ctx.stroke();
     } else {
       const monster = state.dungeon.layout.monsters.find((monster) => monster.position.x === x && monster.position.y === y);
       if (monster && monster.health > 0 && !isEmpty(cell)) {
@@ -177,7 +197,6 @@
         renderLineOfSight(ctx, monster, state.heroes, state);
       }
     }
-    ctx.stroke();
   }
 
   const isEmpty = (cell) => cell === ' ' || !state.dungeon.discoveredRooms.includes(cell);

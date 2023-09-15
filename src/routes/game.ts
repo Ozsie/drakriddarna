@@ -72,11 +72,17 @@ export const toArray = (row: string): string[] => {
   return array;
 }
 
-const isBlockedByMonster = (state: GameState, newX: number, newY: number) => {
+export const isBlockedByMonster = (state: GameState, newX: number, newY: number) => {
   return state.dungeon.layout.monsters.some((monster) => {
     return monster.position.x === newX &&
       monster.position.y === newY &&
       monster.health > 0;
+  });
+}
+
+export const isBlockedByHero = (state: GameState, newX: number, newY: number) => {
+  return state.heroes.some((hero) => {
+    return hero.position.x === newX && hero.position.y === newY;
   });
 }
 
@@ -97,9 +103,7 @@ export const act = (direction: string, state: GameState) => {
     case 'D': newY = hero.position.y + 1; break;
     case 'DR': newX = hero.position.x + 1; newY = hero.position.y + 1; break;
   }
-  const blockedByHero = state.heroes.some((hero) => {
-    return hero.position.x === newX && hero.position.y === newY
-  });
+  const blockedByHero = isBlockedByHero(state, newX, newY);
   const blockedByWall = !isWalkable(state.dungeon.layout, newX, newY)
   const blockedByMonster = isBlockedByMonster(state, newX, newY)
   if (!blockedByHero && !blockedByWall) {
@@ -358,7 +362,7 @@ const openSide = (fromX: number, fromY: number, toX: number, toY: number): Side 
   }
 }
 
-const isWalkable = (layout: Layout, x: number, y: number): boolean => {
+export const isWalkable = (layout: Layout, x: number, y: number): boolean => {
   let walkable = true;
   if (x < 0 || x >= layout.grid[0].length || y < 0 || y >= layout.grid.length) {
     walkable = false;
@@ -371,7 +375,7 @@ const isWalkable = (layout: Layout, x: number, y: number): boolean => {
   return walkable;
 }
 
-const isDiscovered = (dungeon: Dungeon, x: number, y: number) => {
+export const isDiscovered = (dungeon: Dungeon, x: number, y: number) => {
   const cell = findCell(dungeon.layout.grid, x, y)
   if (!cell) return false
   else return dungeon.discoveredRooms.includes(cell)
