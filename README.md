@@ -7,10 +7,17 @@
 - [ ] Secrets
 - [ ] Levelling up
 - [ ] Clearing dungeon
+- [ ] e1m1 - The Three Gates of Power
+- [ ] e1m2 - Mines of Evil
+- [ ] e1m3 - Labyrinth of Horror
+- [ ] e1m4 - The Dark Citadel
+- [ ] e1m5 - The Ice Dragons Treasure
+- [ ] e1m6 - The Final Battle
 - [ ] Moving through other heroes
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
+- [X] e1m0 - Troll Cave
 - [X] Hidden doors
 - [X] Trapped doors
 - [X] Monster movement
