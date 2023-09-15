@@ -1,4 +1,4 @@
-import type { Dungeon, GameState, Hero, Layout, Monster, Position } from "./types";
+import type { Actor, Dungeon, GameState, Hero, Layout, Monster, Position } from "./types";
 import { Colour, ConditionType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, tutorial } from "./dungeons";
 
@@ -111,11 +111,11 @@ export const act = (direction: string, state: GameState) => {
       if (blockedByMonster) {
         attack(hero, state, newX, newY)
       } else {
-        move(hero, newX, newY, 1)
+        move(hero, state, newX, newY, 1)
       }
     }
   } else {
-    state.actionLog.push(hero.name + ' could not make that move')
+    state.actionLog.push(`${hero.name} could not make that move`)
   }
   if (hero.movement === 0) {
     hero.actions--;
@@ -123,33 +123,41 @@ export const act = (direction: string, state: GameState) => {
   }
 }
 
-const move = (hero: Hero, newX: number, newY: number, cost: number) => {
+const move = (hero: Hero, state: GameState, newX: number, newY: number, cost: number) => {
   hero.position.x = newX;
   hero.position.y = newY;
-  hero.movement -= cost;
+  const nextToMonster = state.dungeon.layout.monsters.some((monster) => {
+    return isNeighbouring(hero.position, monster.position.x, monster.position.y)
+  });
+  if (nextToMonster) {
+    state.actionLog.push(`${hero.name} walked by a monster and lost the momentum`)
+    hero.movement = 0;
+  } else {
+    hero.movement -= cost;
+  }
 }
 
 const openDoor = (hero: Hero, state: GameState, newX, newY) => {
   const target = findCell(state.dungeon.layout.grid, newX, newY);
   if (target) state.dungeon.discoveredRooms.push(target);
-  move(hero, hero.position.x, hero.position.y, 1);
-  state.actionLog.push(hero.name + ' opened a door')
+  move(hero, state, hero.position.x, hero.position.y, 1);
+  state.actionLog.push(`${hero.name} opened a door`)
 }
 
 const attack = (hero: Hero, state: GameState, targetX: number, targetY: number) => {
   if (hero.actions === 1 && hero.movement !== 3) {
-    state.actionLog.push(hero.name + ' has no actions left to attack')
+    state.actionLog.push(`${hero.name} has no actions left to attack`)
     return;
   }
   const monster = state.dungeon.layout.monsters.find((monster) => monster.position.x === targetX && monster.position?.y === targetY);
   if (monster) {
     const hits = roll(hero.level, 3);
     const damage = Math.max(hits - monster.defense, 0);
-    state.actionLog.push(hero.name + ' attacked ' + monster.name + ' for ' + damage + ' damage (' + hits + '-' + monster.defense + '=' + damage +')');
+    state.actionLog.push(`${hero.name} attacked ${monster.name} for ${getDamageString(damage, hits, monster)}`);
     monster.health -= damage;
     if (monster.health <= 0) {
       state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter((m) => m != monster)
-      state.actionLog.push(hero.name + ' killed ' + monster.name)
+      state.actionLog.push(`${hero.name} killed ${monster.name}`)
       hero.experience += monster.experience
     }
     if (hero?.actions > 1 && hero?.movement < 3) {
@@ -178,7 +186,7 @@ export const roll = (level: Level, dice: number) => {
 export const pickLock = (state: GameState) => {
   const hero = state.currentActor
   if (!canAct(hero)) {
-    state.actionLog.push(hero.name + ' has no actions left to pick lock')
+    state.actionLog.push(`${hero.name} has no actions left to pick lock`)
     return;
   }
   const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y)
@@ -186,9 +194,9 @@ export const pickLock = (state: GameState) => {
     const result = roll(hero.level, 1)
     if (result >= 1) {
       door.locked = false;
-      state.actionLog.push(hero.name + ' managed to pick the lock')
+      state.actionLog.push(`${hero.name} managed to pick the lock`)
     } else {
-      state.actionLog.push(hero.name + ' failed to pick the lock')
+      state.actionLog.push(`${hero.name} failed to pick the lock`)
     }
     if (hero?.actions > 1 && hero?.movement < 3) {
       hero.actions -= 2
@@ -202,22 +210,30 @@ export const pickLock = (state: GameState) => {
 export const search = (state: GameState) => {
   const hero = state.currentActor
   if (!canAct(hero)) {
-    state.actionLog.push(hero.name + ' has no actions left to search')
+    state.actionLog.push(`${hero.name} has no actions left to search`)
     return;
   }
   const result = roll(hero.level, 1)
   if (result >= 1) {
+    const trap = state.dungeon.layout.doors.find((door) => {
+      return door.trapped && door.x === hero?.position?.x && hero.position.y;
+    });
+    if (trap) {
+      state.actionLog.push(`${hero.name} searched (${result}) and found a trap in a door`);
+      trap.trapped = false;
+    } else {
+      state.actionLog.push(`${hero.name} searched (${result}) but found nothing`);
+    }
     const secret = state.dungeon.layout.secrets.find((secret) => {
       return isNeighbouring(secret.position, hero.position.x, hero.position.y);
-    })
-    if (secret) {
-      state.actionLog.push(hero.name + ' searched (' + result +') and found ' + secret.name);
+    });
+    if (secret && !trap) {
+      state.actionLog.push(`${hero.name} searched (${result}) and found ${secret.name}`);
     } else {
-      state.actionLog.push(hero.name + ' searched (' + result +') but found nothing');
-      console.log('found no secret')
+      state.actionLog.push(`${hero.name} searched (${result}) but found nothing`);
     }
   } else {
-    state.actionLog.push(hero.name + ' searched (' + result +') but found nothing');
+    state.actionLog.push(`${hero.name} searched (${result}) but found nothing`);
   }
   if (hero?.actions > 1 && hero?.movement < 3) {
     hero.actions -= 2
@@ -231,7 +247,7 @@ export const next = (state: GameState) => {
   checkWinConditions(state)
   if (state.currentActor === undefined) return;
   else {
-    state.actionLog.push(state.currentActor.name + ' ended their turn')
+    state.actionLog.push(`${state.currentActor.name} ended their turn`)
     let currentIndex = state.heroes.indexOf(state.currentActor!!)
     let nextIndex = currentIndex + 1;
     if (nextIndex === state.heroes.length) {
@@ -241,7 +257,7 @@ export const next = (state: GameState) => {
     state.currentActor.actions = 2;
     state.currentActor.movement = 3;
     state.currentActor = state.heroes[nextIndex];
-    state.actionLog.push(state.currentActor.name + ' started their turn')
+    state.actionLog.push(`${state.currentActor.name} started their turn`)
   }
 }
 
@@ -269,7 +285,7 @@ const checkWinConditions = (state: GameState) => {
     .reduce((partial, fulfilled) => partial && fulfilled, true);
   if (state.dungeon.beaten) {
     state.actionLog.push("All win conditions have been fulfilled");
-    state.actionLog.push('You have cleared ' + state.dungeon.name);
+    state.actionLog.push(`You have cleared ${state.dungeon.name}`);
   }
 }
 
@@ -280,6 +296,12 @@ const moveOverDoor = (state: GameState, hero: Hero, newX: number, newY: number) 
     const side = openSide(hero.position.x, hero.position?.y, newX, newY)
     if (door.side === side) {
       door.open = true;
+      if (door.trapped) {
+        const hits = roll(Level.APPRENTICE, door.trapAttacks);
+        const damage = Math.max(hits - hero.defense, 0);
+        state.actionLog.push(`Door was trapped. ${hero.name} took ${getDamageString(damage, hits, hero)}`);
+        hero.health -= damage;
+      }
       return true
     }
   }
@@ -352,7 +374,7 @@ const monsterActions = (state: GameState) => {
   visibleMonsters.forEach((monster) => {
     const maxActions = monster.actions
     while (monster.actions > 0) {
-      state.actionLog.push(monster.name + " acted ");
+      state.actionLog.push(`${monster.name} acted `);
       const neighbouringHeroes: Hero[] = state.heroes.filter((hero: Hero) => isNeighbouring(monster.position, hero.position?.x, hero.position.y));
       if (neighbouringHeroes.length > 0) {
         const target = Math.floor(Math.random() * neighbouringHeroes.length);
@@ -393,9 +415,9 @@ const monsterMove = (state: GameState, monster: Monster) => {
       return a.dist - b.dist;
     })[0].pos;
     monster.position = newPosition;
-    state.actionLog.push(monster.name + " moved towards " + closestHeroAndDistance.hero.name + " (" + newPosition.x + "," + newPosition.y + ")");
+    state.actionLog.push(`${monster.name} moved towards ${closestHeroAndDistance.hero.name} (${newPosition.x},${newPosition.y})`);
   } else {
-    state.actionLog.push(monster.name + " could not move");
+    state.actionLog.push(`${monster.name} could not move`);
   }
   monster.actions--;
 }
@@ -423,18 +445,22 @@ let findPossibleMoves = (state: GameState, position: Position): Position[] => {
   })
 }
 
+const getDamageString = (damage: number, hits: number, target: Actor) => {
+  return `${damage} damage (${hits}-${target.defense}=${damage})`;
+}
+
 const monsterAttack = (state: GameState, monster: Monster, hero: Hero) => {
   if (monster.actions === 1 && monster.movement !== 3) {
-    state.actionLog.push(hero.name + ' has no actions left to attack')
+    state.actionLog.push(`${hero.name} has no actions left to attack`)
     return;
   }
   if (hero) {
     const hits = roll(monster.level, 3);
     const damage = Math.max(hits - hero.defense, 0);
-    state.actionLog.push(monster.name + ' attacked ' + hero.name + ' for ' + damage + ' damage (' + hits + '-' + hero.defense + '=' + damage +')');
+    state.actionLog.push(`${monster.name} attacked ${hero.name} for ${getDamageString(damage, hits, hero)}`);
     hero.health -= damage;
     if (hero.health <= 0) {
-      state.actionLog.push(monster.name + ' killed ' + hero.name)
+      state.actionLog.push(`${monster.name} killed ${hero.name}`)
       state.heroes = state.heroes.filter((h) => h !== hero)
     }
     if (monster?.actions > 1 && monster?.movement < 3) {

@@ -7,7 +7,7 @@
   export let state
 
   const cellSize = 48;
-  export let debugMode = false;
+  export let debugMode = true;
 
   onMount(() => {
     const ground = new Image();
@@ -70,33 +70,49 @@
       switch (door.side) {
         case Side.RIGHT: {
           ctx.fillRect((x * cellSize) + (cellSize - 2), y * cellSize, 4, cellSize);
-          if (door.locked) {
+          if (door.locked && debugMode) {
             ctx.fillStyle = 'grey'
             ctx.fillRect((x*cellSize) + (cellSize - 4), (y*cellSize)+((cellSize/2) - 4), 8, 8)
+          }
+          if (door.trapped && debugMode) {
+            ctx.fillStyle = 'red'
+            ctx.fillRect((x*cellSize) + (cellSize - 4), (y*cellSize)+((cellSize/2) - 4), 4, 4)
           }
           break;
         }
         case Side.LEFT: {
           ctx.fillRect((x * cellSize)-2, y * cellSize, 4, cellSize);
-          if (door.locked) {
+          if (door.locked && debugMode) {
             ctx.fillStyle = 'grey'
             ctx.fillRect((x*cellSize)-4, (y*cellSize)+((cellSize/2) - 4), 8, 8)
+          }
+          if (door.trapped && debugMode) {
+            ctx.fillStyle = 'red'
+            ctx.fillRect((x*cellSize)-4, (y*cellSize)+((cellSize/2) - 4), 4, 4)
           }
           break;
         }
         case Side.UP: {
           ctx.fillRect(x * cellSize, (y * cellSize) - 2, cellSize, 4);
-          if (door.locked) {
+          if (door.locked && debugMode) {
             ctx.fillStyle = 'grey'
             ctx.fillRect((x*cellSize)+((cellSize/2) - 4), (y*cellSize)-4, 8, 8)
+          }
+          if (door.trapped && debugMode) {
+            ctx.fillStyle = 'red'
+            ctx.fillRect((x*cellSize)+((cellSize/2) - 4), (y*cellSize)-4, 4, 4)
           }
           break;
         }
         case Side.DOWN: {
           ctx.fillRect(x * cellSize, (y * cellSize) + (cellSize - 2), cellSize, 4);
-          if (door.locked) {
+          if (door.locked && debugMode) {
             ctx.fillStyle = 'grey'
             ctx.fillRect((x*cellSize)+((cellSize/2) - 4), (y*cellSize)+(cellSize - 4), 8, 8)
+          }
+          if (door.trapped && debugMode) {
+            ctx.fillStyle = 'red'
+            ctx.fillRect((x*cellSize)+((cellSize/2) - 4), (y*cellSize)+(cellSize - 4), 4, 4)
           }
           break;
         }
@@ -112,13 +128,18 @@
     ctx.stroke();
   }
 
-  const renderLineOfSight = (ctx, from, to) => {
+  const renderLineOfSight = (ctx, from, to, state) => {
     if (debugMode) {
       to.forEach((target) => {
+        const sX = from.position.x;
+        const sY = from.position.y;
+        const eX = target.position.x;
+        const eY = target.position.y;
+
         ctx.strokeStyle = from.colour;
         ctx.beginPath();
-        ctx.moveTo(from.position.x * cellSize + (cellSize / 2), from.position.y * cellSize + (cellSize / 2));
-        ctx.lineTo(target.position.x * cellSize + (cellSize / 2), target.position.y * cellSize + (cellSize / 2));
+        ctx.moveTo(sX * cellSize + (cellSize / 2), sY * cellSize + (cellSize / 2));
+        ctx.lineTo(eX * cellSize + (cellSize / 2), eY * cellSize + (cellSize / 2));
         ctx.stroke();
       });
     }
@@ -153,7 +174,7 @@
         }
         renderActorBar(ctx, monster, x, y);
         renderHealthBar(ctx, monster, x, y);
-        renderLineOfSight(ctx, monster, state.heroes);
+        renderLineOfSight(ctx, monster, state.heroes, state);
       }
     }
     ctx.stroke();

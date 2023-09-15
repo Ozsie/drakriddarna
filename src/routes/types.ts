@@ -99,6 +99,7 @@ export type Door = {
   x: number,
   y: number,
   side: Side,
+  trapAttacks: number,
 }
 
 export enum Side {

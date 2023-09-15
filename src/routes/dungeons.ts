@@ -1,5 +1,5 @@
 import type { Door, Dungeon, Monster, Secret } from "./types";
-import { ConditionType, Level, MonsterType, SecretType, Side, Colour } from "./types";
+import { Colour, ConditionType, Level, MonsterType, SecretType, Side } from "./types";
 
 export const PIT = '0'
 export const PILLAR = '#'
@@ -22,6 +22,31 @@ const createDoor = (side: Side, x: number, y: number): Door => {
     locked: false,
     trapped: false,
     open: false,
+    trapAttacks: 0
+  }
+}
+
+const createTrappedDoor = (side: Side, x: number, y: number, trapAttacks: number): Door => {
+  return {
+    ...createDoor(side, x, y),
+    trapped: true,
+    trapAttacks
+  }
+}
+
+const createLockedDoor = (side: Side, x: number, y: number): Door => {
+  return {
+    ...createDoor(side, x, y),
+    locked: true,
+  }
+}
+
+const createTrappedLockedDoor = (side: Side, x: number, y: number, trapAttacks: number): Door => {
+  return {
+    ...createDoor(side, x, y),
+    locked: true,
+    trapped: true,
+    trapAttacks
   }
 }
 

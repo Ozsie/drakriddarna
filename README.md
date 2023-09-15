@@ -1,19 +1,21 @@
 # Drakriddarna
 
 ## Todo
- - [ ] Moving through other heroes
- - [X] Monster movement
- - [X] Monster close combat attack
- - [ ] Monster range attack
- - [ ] Monster special attack
- - [ ] Trapped doors
- - [X] Locked doors
- - [ ] Events
- - [ ] Secrets
- - [ ] Levelling up
- - [ ] Clearing dungeon
- - [X] Saving & loading
- - [ ] Multiple saves
+- [ ] Monster range attack
+- [ ] Monster special attack
+- [X] Trapped doors
+- [ ] Events
+- [ ] Secrets
+- [ ] Levelling up
+- [ ] Clearing dungeon
+- [ ] Moving through other heroes
+- [ ] Multiple saves
+- [ ] Graphics
+- [ ] Responsive layout
+- [X] Monster movement
+- [X] Monster close combat attack
+- [X] Locked doors
+- [X] Saving & loading
 
 ## Developing
 
