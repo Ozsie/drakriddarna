@@ -7,6 +7,7 @@
   export let state
 
   const cellSize = 48;
+  export let debugMode = false;
 
   onMount(() => {
     const ground = new Image();
@@ -55,8 +56,10 @@
     ctx.beginPath();
     ctx.strokeStyle = 'black';
     ctx.rect(x * cellSize, y * cellSize, cellSize, cellSize);
-    ctx.font = "7px Arial";
-    ctx.fillText(x + ',' + y, (x * cellSize)+3, (y * cellSize)+(cellSize-3));
+    if (debugMode) {
+      ctx.font = "7px Arial";
+      ctx.fillText(x + "," + y, (x * cellSize) + 3, (y * cellSize) + (cellSize - 3));
+    }
     ctx.stroke();
   }
 
@@ -101,12 +104,24 @@
     }
   }
 
-  const  renderActorBar = (ctx, actor, x, y) => {
+  const renderActorBar = (ctx, actor, x, y) => {
     ctx.beginPath();
     ctx.strokeStyle = actor.colour;
     ctx.fillStyle = actor.colour;
     ctx.fillRect((x * cellSize) + 4, (y * cellSize) + (cellSize - 6), cellSize - 8, 4);
     ctx.stroke();
+  }
+
+  const renderLineOfSight = (ctx, from, to) => {
+    if (debugMode) {
+      to.forEach((target) => {
+        ctx.strokeStyle = from.colour;
+        ctx.beginPath();
+        ctx.moveTo(from.position.x * cellSize + (cellSize / 2), from.position.y * cellSize + (cellSize / 2));
+        ctx.lineTo(target.position.x * cellSize + (cellSize / 2), target.position.y * cellSize + (cellSize / 2));
+        ctx.stroke();
+      });
+    }
   }
 
   const  renderHealthBar = (ctx, actor, x, y) => {
@@ -138,6 +153,7 @@
         }
         renderActorBar(ctx, monster, x, y);
         renderHealthBar(ctx, monster, x, y);
+        renderLineOfSight(ctx, monster, state.heroes);
       }
     }
     ctx.stroke();
