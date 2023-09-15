@@ -2,7 +2,6 @@ import type { Actor, Dungeon, GameState, Hero, Layout, Monster, Position } from 
 import { Colour, ConditionType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT } from "./dungeons";
 import { e1m0 } from './dungeons/e1m0';
-import { e1m1 } from './dungeons/e1m1';
 
 
 export const save = (state: GameState) => {
@@ -23,11 +22,11 @@ export const load = (): GameState | undefined => {
 export const init = (): GameState => {
   const heroes: Hero[] = defaultHeroes;
 
-  updateStartingPositions(heroes, e1m1);
+  updateStartingPositions(heroes, e1m0);
 
   return {
     heroes: heroes,
-    dungeon: e1m1,
+    dungeon: e1m0,
     currentActor: heroes[0],
     actionLog: [
       'Game Initialised',
