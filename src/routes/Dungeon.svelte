@@ -4,6 +4,7 @@
   import { MonsterType, Side } from "./types.ts";
   import groundSprites from '$lib/Dungeon_Tileset.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
+  import { EMPTY, WALL } from "./dungeons.ts";
   export let state
 
   const cellSize = 48;
@@ -41,8 +42,12 @@
 
 
   const renderFloor = (ctx, cell, x, y, ground) => {
-    if (!isEmpty(cell)) {
-      ctx.drawImage(ground, 0, 7*16, 16, 16, x*cellSize, y*cellSize, cellSize, cellSize);
+    if (isWall(cell) || !state.dungeon.discoveredRooms.includes(cell) && cell !== EMPTY) {
+      if (state.dungeon.discoveredRooms.some((r) => neighbourOf(x, y, r))) {
+        ctx.drawImage(ground, 48, 0, 48, 48, x * cellSize, y * cellSize, cellSize, cellSize);
+      }
+    } else if (!isEmpty(cell)) {
+      ctx.drawImage(ground, 0, 0, 48, 48, x*cellSize, y*cellSize, cellSize, cellSize);
     } else {
       ctx.beginPath();
       ctx.strokeStyle = 'black';
@@ -53,6 +58,7 @@
   }
 
   const renderGrid = (ctx, cell, x, y) => {
+    if (cell === EMPTY || cell === WALL) return;
     ctx.beginPath();
     ctx.strokeStyle = 'black';
     ctx.rect(x * cellSize, y * cellSize, cellSize, cellSize);
@@ -199,7 +205,24 @@
     }
   }
 
-  const isEmpty = (cell) => cell === ' ' || !state.dungeon.discoveredRooms.includes(cell);
+  const isEmpty = (cell) => cell === EMPTY || !state.dungeon.discoveredRooms.includes(cell);
+  const isWall = (cell) => cell === WALL;
   const findDoor = (x, y) => state.dungeon.layout.doors.find((door) => door.x === x && door.y === y)
+
+  const neighbourOf = (x, y, value) => {
+    if (!state) return;
+    const xMin = Math.max(x-1, 0);
+    const yMin = Math.max(y-1, 0);
+    const xMax = Math.min(x+1, state.dungeon.layout.grid.length)
+    const yMax = Math.min(y+1, state.dungeon.layout.grid[0].length)
+    for (let pX = xMin; pX <= xMax; pX++) {
+      for (let pY = yMin; pY <= yMax; pY++) {
+        const row = state.dungeon.layout.grid[pY];
+        const valueAt = toArray(row)[pX];
+        if (valueAt === value) return true;
+      }
+    }
+    return false;
+  }
 </script>
 <canvas width="860" height="750" id="gameBoard"></canvas>

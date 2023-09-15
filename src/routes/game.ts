@@ -1,6 +1,6 @@
 import type { Actor, Dungeon, GameState, Hero, Layout, Monster, Position } from "./types";
 import { Colour, ConditionType, Level, Side } from "./types";
-import { EMPTY, PILLAR, PIT } from "./dungeons";
+import { EMPTY, PILLAR, PIT, WALL } from "./dungeons";
 import { e1m0 } from './dungeons/e1m0';
 
 
@@ -368,7 +368,7 @@ export const isWalkable = (layout: Layout, x: number, y: number): boolean => {
     walkable = false;
   } else {
     const cell = findCell(layout.grid, x, y)
-    if (cell === PIT || cell === PILLAR || cell === EMPTY) {
+    if (cell === PIT || cell === PILLAR || cell === EMPTY || cell === WALL) {
       walkable = false;
     }
   }

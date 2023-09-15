@@ -2,8 +2,9 @@ import type { Door, Monster, Secret } from "./types";
 import { Colour, Level, MonsterType, SecretType, Side } from "./types";
 
 export const PIT = '0'
-export const PILLAR = '#'
+export const PILLAR = '@'
 export const EMPTY = ' '
+export const WALL = '#'
 
 export const createSecret = (type: SecretType, name: string, x: number, y: number): Secret => {
   return {
