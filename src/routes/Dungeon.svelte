@@ -6,6 +6,8 @@
   import actorSprites from '$lib/Dungeon_Character_2.png';
   export let state
 
+  const cellSize = 48;
+
   onMount(() => {
     const ground = new Image();
     ground.src = groundSprites;
@@ -39,12 +41,12 @@
 
   const renderFloor = (ctx, cell, x, y, ground) => {
     if (!isEmpty(cell)) {
-      ctx.drawImage(ground, 0, 7*16, 16, 16, x*64, y*64, 64, 64);
+      ctx.drawImage(ground, 0, 7*16, 16, 16, x*cellSize, y*cellSize, cellSize, cellSize);
     } else {
       ctx.beginPath();
       ctx.strokeStyle = 'black';
       ctx.fillStyle = 'black'
-      ctx.fillRect(x * 64, y * 64, 64, 64);
+      ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
       ctx.stroke();
     }
   }
@@ -52,9 +54,9 @@
   const renderGrid = (ctx, cell, x, y) => {
     ctx.beginPath();
     ctx.strokeStyle = 'black';
-    ctx.rect(x * 64, y * 64, 64, 64);
+    ctx.rect(x * cellSize, y * cellSize, cellSize, cellSize);
     ctx.font = "7px Arial";
-    ctx.fillText(x + ',' + y, (x * 64)+1, (y * 64)+30);
+    ctx.fillText(x + ',' + y, (x * cellSize)+3, (y * cellSize)+(cellSize-3));
     ctx.stroke();
   }
 
@@ -64,34 +66,34 @@
       ctx.fillStyle = 'brown';
       switch (door.side) {
         case Side.RIGHT: {
-          ctx.fillRect((x * 64) + 62, y * 64, 4, 64);
+          ctx.fillRect((x * cellSize) + (cellSize - 2), y * cellSize, 4, cellSize);
           if (door.locked) {
             ctx.fillStyle = 'grey'
-            ctx.fillRect((x*64) + 60, (y*64)+28, 8, 8)
+            ctx.fillRect((x*cellSize) + (cellSize - 4), (y*cellSize)+((cellSize/2) - 4), 8, 8)
           }
           break;
         }
         case Side.LEFT: {
-          ctx.fillRect((x * 64)-2, y * 64, 4, 64);
+          ctx.fillRect((x * cellSize)-2, y * cellSize, 4, cellSize);
           if (door.locked) {
             ctx.fillStyle = 'grey'
-            ctx.fillRect((x*64)-4, (y*64)+28, 8, 8)
+            ctx.fillRect((x*cellSize)-4, (y*cellSize)+((cellSize/2) - 4), 8, 8)
           }
           break;
         }
         case Side.UP: {
-          ctx.fillRect(x * 64, (y * 64) - 2, 64, 4);
+          ctx.fillRect(x * cellSize, (y * cellSize) - 2, cellSize, 4);
           if (door.locked) {
             ctx.fillStyle = 'grey'
-            ctx.fillRect((x*64)+30, (y*64)-4, 8, 8)
+            ctx.fillRect((x*cellSize)+((cellSize/2) - 4), (y*cellSize)-4, 8, 8)
           }
           break;
         }
         case Side.DOWN: {
-          ctx.fillRect(x * 64, (y * 64) + 62, 64, 4);
+          ctx.fillRect(x * cellSize, (y * cellSize) + (cellSize - 2), cellSize, 4);
           if (door.locked) {
             ctx.fillStyle = 'grey'
-            ctx.fillRect((x*64)+28, (y*64)+60, 8, 8)
+            ctx.fillRect((x*cellSize)+((cellSize/2) - 4), (y*cellSize)+(cellSize - 4), 8, 8)
           }
           break;
         }
@@ -99,32 +101,43 @@
     }
   }
 
+  const  renderActorBar = (ctx, actor, x, y) => {
+    ctx.beginPath();
+    ctx.strokeStyle = actor.colour;
+    ctx.fillStyle = actor.colour;
+    ctx.fillRect((x * cellSize) + 4, (y * cellSize) + (cellSize - 6), cellSize - 8, 4);
+    ctx.stroke();
+  }
+
+  const  renderHealthBar = (ctx, actor, x, y) => {
+    ctx.beginPath();
+    ctx.strokeStyle = 'black';
+    ctx.fillStyle = 'red';
+    ctx.fillRect((x * cellSize) + 4, y*cellSize, (cellSize - 8), 4);
+    ctx.fillStyle = 'green';
+    ctx.fillRect((x * cellSize) + 4, y*cellSize, (cellSize - 8) * (actor.health/actor.maxHealth), 4);
+    ctx.rect((x * cellSize) + 4, y*cellSize, (cellSize - 8), 4);
+    ctx.stroke();
+  }
+
   const renderActors = (ctx, cell, x, y, actors) => {
     ctx.beginPath();
     const hero = state.heroes.find((hero) => hero.position.x === x && hero.position.y === y)
     if (hero) {
-      ctx.beginPath();
-      ctx.arc((x*64)+16, (y*64)+16, 13, 0, 2 * Math.PI);
-      ctx.strokeStyle = hero.colour;
+      ctx.drawImage(actors, 4*16, 0, 16, 16, x*cellSize, y*cellSize, cellSize, cellSize);
+      renderActorBar(ctx, hero, x, y);
+      renderHealthBar(ctx, hero, x, y);
       ctx.stroke();
-      ctx.drawImage(actors, 4*16, 0, 16, 16, x*64, y*64, 64, 64);
     } else {
       const monster = state.dungeon.layout.monsters.find((monster) => monster.position.x === x && monster.position.y === y);
       if (monster && monster.health > 0 && !isEmpty(cell)) {
-        ctx.beginPath();
-        ctx.strokeStyle = monster.colour;
-        ctx.fillStyle = monster.colour;
-        ctx.arc((x*64)+16, (y*64)+16, 10, 0, 2 * Math.PI);
-        ctx.stroke();
-        ctx.font = "7px Arial";
-        ctx.fillStyle = 'black';
-        const monsterText = monster.name[0] + '(' + monster.health + ')'
         switch (monster.type) {
-          case MonsterType.ORCH: ctx.drawImage(actors, 64, 16, 16, 16, x * 64, y * 64, 64, 64); break;
-          case MonsterType.TROLL: ctx.drawImage(actors, 48, 16, 16, 16, x * 64, y * 64, 64, 64); break;
-          default: ctx.drawImage(actors, 16, 16, 16, 16, x * 64, y * 64, 64, 64); break;
+          case MonsterType.ORCH: ctx.drawImage(actors, cellSize, 16, 16, 16, x * cellSize, y * cellSize, cellSize, cellSize); break;
+          case MonsterType.TROLL: ctx.drawImage(actors, cellSize, 16, 16, 16, x * cellSize, y * cellSize, cellSize, cellSize); break;
+          default: ctx.drawImage(actors, 16, 16, 16, 16, x * cellSize, y * cellSize, cellSize, cellSize); break;
         }
-        ctx.fillText(monsterText, (x*64)+8, (y*64)+16)
+        renderActorBar(ctx, monster, x, y);
+        renderHealthBar(ctx, monster, x, y);
       }
     }
     ctx.stroke();

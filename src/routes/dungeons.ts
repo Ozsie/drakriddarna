@@ -1,5 +1,5 @@
 import type { Door, Dungeon, Monster, Secret } from "./types";
-import { ConditionType, Level, MonsterType, SecretType, Side } from "./types";
+import { ConditionType, Level, MonsterType, SecretType, Side, Colour } from "./types";
 
 export const PIT = '0'
 export const PILLAR = '#'
@@ -25,17 +25,22 @@ const createDoor = (side: Side, x: number, y: number): Door => {
   }
 }
 
-const createMonster = (type: MonsterType, colour: string, x: number, y: number): Monster => {
+const createMonster = (type: MonsterType, colour: Colour, x: number, y: number): Monster => {
+  const indexOfColour = Object.values(Colour).indexOf(colour);
+  const colourName = Object.keys(Colour)[indexOfColour];
+
   let level = Level.LORD;
   let actions = 2;
   let defense = 2;
   let health = 4;
+  let maxHealth = 4;
   let experience = 4;
   switch(type) {
     case MonsterType.ORCH: {
       level = Level.APPRENTICE;
       defense = 0;
       health = 2
+      maxHealth = 2;
       experience = 1;
       break;
     }
@@ -43,6 +48,7 @@ const createMonster = (type: MonsterType, colour: string, x: number, y: number):
       level = Level.KNIGHT;
       defense = 1;
       health = 3;
+      maxHealth = 3;
       experience = 2;
       break;
     }
@@ -55,8 +61,9 @@ const createMonster = (type: MonsterType, colour: string, x: number, y: number):
     actions,
     defense,
     health,
+    maxHealth,
     experience,
-    name: type.valueOf() + ' (' + colour + ')',
+    name: type + ' (' + colourName + ')',
     movement: 3,
     position: { x, y }
   }
@@ -130,11 +137,11 @@ export const tutorial: Dungeon = {
       createDoor(Side.UP, 6, 3),
     ],
     monsters: [
-      createMonster(MonsterType.ORCH, 'green', 5, 8),
-      createMonster(MonsterType.ORCH, 'yellow', 7, 9),
-      createMonster(MonsterType.ORCH, 'red', 6, 4),
-      createMonster(MonsterType.ORCH, 'red', 8, 2),
-      createMonster(MonsterType.TROLL, 'green', 5, 0),
+      createMonster(MonsterType.ORCH, Colour.Green, 5, 8),
+      createMonster(MonsterType.ORCH, Colour.Yellow, 7, 9),
+      createMonster(MonsterType.ORCH, Colour.Red, 6, 4),
+      createMonster(MonsterType.ORCH, Colour.Red, 8, 2),
+      createMonster(MonsterType.TROLL, Colour.Green, 5, 0),
     ],
     secrets: [
       createSecret(SecretType.NOTE, 'Welcome to Drakriddarna', 1, 8),

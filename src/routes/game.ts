@@ -1,5 +1,5 @@
 import type { Dungeon, GameState, Hero, Layout, Monster, Position } from "./types";
-import { ConditionType, Level, Side } from "./types";
+import { Colour, ConditionType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, tutorial } from "./dungeons";
 
 
@@ -19,12 +19,7 @@ export const load = (): GameState | undefined => {
 }
 
 export const init = (): GameState => {
-  const heroes: Hero[] = [
-    newHero('Fearik', 'orange'),
-    newHero('Helbran', 'red'),
-    newHero('Siedel', 'green'),
-    newHero('Wulf', 'lightblue')
-  ];
+  const heroes: Hero[] = defaultHeroes;
 
   updateStartingPositions(heroes, tutorial);
 
@@ -50,16 +45,17 @@ const newHero = (name: string, colour: string): Hero => {
     defense: 0,
     level: Level.APPRENTICE,
     health: 7,
+    maxHealth: 7,
     colour: colour,
     experience: 0
   }
 }
 
 export const defaultHeroes: Hero[] = [
-  newHero('Fearik', 'orange'),
-  newHero('Helbran', 'red'),
-  newHero('Siedel', 'green'),
-  newHero('Wulf', 'lightblue')
+  newHero('Fearik', Colour.Yellow),
+  newHero('Helbran', Colour.Red),
+  newHero('Siedel', Colour.Green),
+  newHero('Wulf', Colour.Blue)
 ];
 
 export const updateStartingPositions = (heroes: Hero[], dungeon: Dungeon) => {

@@ -1,3 +1,10 @@
+export enum Colour {
+  Red = '#CD5C5C',
+  Blue = '#1E90FF',
+  Green = '#90EE90',
+  Yellow = '#FCFF4F'
+}
+
 export type GameState = {
   heroes: Actor[];
   dungeon: Dungeon;
@@ -11,7 +18,8 @@ export type Actor = {
   movement: number;
   defense: number;
   health: number;
-  colour: string;
+  maxHealth: number;
+  colour: Colour;
   experience: number;
   position?: Position;
 }
