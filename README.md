@@ -1,6 +1,7 @@
 # Drakriddarna
 
 ## Todo
+- [ ] Items
 - [ ] Monster range attack
 - [ ] Monster special attack
 - [ ] Events

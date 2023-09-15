@@ -125,7 +125,9 @@ export const act = (direction: string, state: GameState) => {
   }
   if (hero.movement === 0) {
     hero.actions--;
-    hero.movement = 3;
+    if (hero.actions !== 0) {
+      hero.movement = 3;
+    }
   }
 }
 
