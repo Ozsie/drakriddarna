@@ -1,6 +1,6 @@
-import type { Dungeon } from '../types';
-import { ConditionType, Side } from '../types';
-import { createDoor, createHiddenDoor } from '../dungeons';
+import type { Dungeon } from "../types";
+import { Colour, ConditionType, MonsterType, SecretType, Side } from "../types";
+import { createDoor, createHiddenDoor, createMonster } from "../dungeons";
 
 export const e1m1: Dungeon = {
   name: 'The Three Gates of Power',
@@ -45,10 +45,62 @@ export const e1m1: Dungeon = {
       createDoor(Side.RIGHT, 9, 8),
       createDoor(Side.RIGHT, 12, 8),
       createDoor(Side.RIGHT, 11, 2),
-      createHiddenDoor(Side.UP, 9, 3)
+      createHiddenDoor(Side.UP, 9, 3),
+      createHiddenDoor(Side.RIGHT, 15, 1)
     ],
-    monsters: [],
-    secrets: []
+    monsters: [
+      createMonster(MonsterType.ORCH, Colour.Blue, 9, 7),
+      createMonster(MonsterType.ORCH, Colour.Red, 12, 8),
+      createMonster(MonsterType.TROLL, Colour.Red, 15, 1),
+      createMonster(MonsterType.TROLL, Colour.Yellow, 13, 6),
+    ],
+    secrets: [
+      {
+        type: SecretType.EQUIPMENT,
+        position: {x:9,y:4},
+        found: false,
+        name: 'Random Equipment'
+      },
+      {
+        type: SecretType.EQUIPMENT,
+        position: {x:12,y:0},
+        found: false,
+        name: 'Random Equipment'
+      },
+      {
+        type: SecretType.MAGIC_ITEM,
+        position: {x:15,y:5},
+        found: false,
+        name: 'Random Magic Item',
+        item: {
+          name: 'Healing Herbs'
+        }
+      },
+      {
+        type: SecretType.EQUIPMENT,
+        position: {x:15,y:9},
+        found: false,
+        name: 'Random Equipment'
+      },
+    ],
+    notes: [
+      {
+        message: 'Beyond stone and fire you shall find the Dread tunnel, the road to the Ice Dragons treasure.',
+        position: {x:2,y:4}
+      },
+      {
+        message: 'The Gate of Water. <There is an image of a sea dragon under the text>',
+        position: {x:9,y:8}
+      },
+      {
+        message: 'The Gate of Air. <There is an image of a pegasus under the text>',
+        position: {x:9,y:5}
+      },
+      {
+        message: 'The Gate of Fire. <There is an image of a hippogriph under the text>',
+        position: {x:9,y:3}
+      },
+    ]
   },
   killCount: 0
 }

@@ -81,6 +81,12 @@ export type Layout = {
   doors: Door[],
   monsters: Monster[],
   secrets: Secret[],
+  notes: Note[],
+}
+
+export type Note = {
+  message: string,
+  position: Position,
 }
 
 export type Secret = {
@@ -88,6 +94,7 @@ export type Secret = {
   type: SecretType,
   position: Position,
   found: boolean,
+  item?: Item,
 }
 
 export enum SecretType {
@@ -118,4 +125,8 @@ export enum Side {
 export type Position = {
   x: number,
   y: number
+}
+
+export type Item = {
+  name: string,
 }

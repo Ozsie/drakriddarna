@@ -2,6 +2,7 @@ import type { Actor, Dungeon, GameState, Hero, Layout, Monster, Position } from 
 import { Colour, ConditionType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT } from "./dungeons";
 import { e1m0 } from './dungeons/e1m0';
+import { e1m1 } from './dungeons/e1m1';
 
 
 export const save = (state: GameState) => {
@@ -22,11 +23,11 @@ export const load = (): GameState | undefined => {
 export const init = (): GameState => {
   const heroes: Hero[] = defaultHeroes;
 
-  updateStartingPositions(heroes, e1m0);
+  updateStartingPositions(heroes, e1m1);
 
   return {
     heroes: heroes,
-    dungeon: e1m0,
+    dungeon: e1m1,
     currentActor: heroes[0],
     actionLog: [
       'Game Initialised',
@@ -128,6 +129,11 @@ export const act = (direction: string, state: GameState) => {
 const move = (hero: Actor, state: GameState, newX: number, newY: number, cost: number) => {
   hero.position.x = newX;
   hero.position.y = newY;
+  const note  = state.dungeon.layout.notes.find((note) => isSamePosition(note.position, hero.position));
+  if (note) {
+    const onHiddenDoor = state.dungeon.layout.doors.some((door) => door.hidden && isSamePosition(note.position, { x: door.x, y: door.y }))
+    if (!onHiddenDoor) state.actionLog.push(`${hero.name} reads: ${note.message}`);
+  }
   const nextToMonster = state.dungeon.layout.monsters.some((monster) => {
     return isNeighbouring(hero.position, monster.position.x, monster.position.y)
   });
@@ -226,8 +232,6 @@ export const search = (state: GameState) => {
     if (hiddenDoor) {
       state.actionLog.push(`${hero.name} searched (${result}) and found a hidden door`);
       hiddenDoor.hidden = false;
-    } else {
-      state.actionLog.push(`${hero.name} searched (${result}) but found nothing`);
     }
 
     const trap = state.dungeon.layout.doors.find((door) => {
@@ -236,8 +240,6 @@ export const search = (state: GameState) => {
     if (trap && !hiddenDoor) {
       state.actionLog.push(`${hero.name} searched (${result}) and found a trap in a door`);
       trap.trapped = false;
-    } else {
-      state.actionLog.push(`${hero.name} searched (${result}) but found nothing`);
     }
 
     const secret = state.dungeon.layout.secrets.find((secret) => {
@@ -245,7 +247,9 @@ export const search = (state: GameState) => {
     });
     if (secret && !trap && !hiddenDoor) {
       state.actionLog.push(`${hero.name} searched (${result}) and found ${secret.name}`);
-    } else {
+    }
+
+    if (!hiddenDoor && !trap && !secret) {
       state.actionLog.push(`${hero.name} searched (${result}) but found nothing`);
     }
   } else {
@@ -509,4 +513,8 @@ const canAct = (hero: Hero) => {
     return hero.actions > 1
   }
   return hero.actions > 0
+}
+
+const isSamePosition = (a: Position, b: Position) => {
+  return a.x === b.x && a.y === b.y;
 }
