@@ -1,5 +1,5 @@
-import type { Door, Dungeon, Monster, Secret } from "./types";
-import { Colour, ConditionType, Level, MonsterType, SecretType, Side } from "./types";
+import type { Door, Monster, Secret } from "./types";
+import { Colour, Level, MonsterType, SecretType, Side } from "./types";
 
 export const PIT = '0'
 export const PILLAR = '#'
@@ -110,36 +110,3 @@ export const createMonster = (type: MonsterType, colour: Colour, x: number, y: n
     position: { x, y }
   }
 }
-
-export const second: Dungeon = {
-  name: 'Second cave',
-  beaten: false,
-  winConditions: [
-    {
-      type: ConditionType.REACH_CELL,
-      targetCell: {x: 0, y: 0},
-      fulfilled: false
-    }
-  ],
-  startingPositions: [
-    {x:0,y:2},
-    {x:0,y:3},
-    {x:0,y:4},
-    {x:1,y:3}
-  ],
-  discoveredRooms: ['A'],
-  layout: {
-    grid: [
-      'AAA',
-      'A A',
-      'AAA',
-      'AAA',
-      'AAA'
-    ],
-    doors: [],
-    monsters: [],
-    secrets: []
-  }
-}
-
-

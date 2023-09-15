@@ -81,7 +81,7 @@ const isBlockedByMonster = (state: GameState, newX: number, newY: number) => {
 }
 
 export const act = (direction: string, state: GameState) => {
-  const hero = state.currentActor
+  const hero: Actor | undefined = state.currentActor
   if (!hero || hero.actions === 0) {
     return;
   }
@@ -125,7 +125,7 @@ export const act = (direction: string, state: GameState) => {
   }
 }
 
-const move = (hero: Hero, state: GameState, newX: number, newY: number, cost: number) => {
+const move = (hero: Actor, state: GameState, newX: number, newY: number, cost: number) => {
   hero.position.x = newX;
   hero.position.y = newY;
   const nextToMonster = state.dungeon.layout.monsters.some((monster) => {
@@ -139,14 +139,14 @@ const move = (hero: Hero, state: GameState, newX: number, newY: number, cost: nu
   }
 }
 
-const openDoor = (hero: Hero, state: GameState, newX, newY) => {
+const openDoor = (hero: Actor, state: GameState, newX: number, newY: number) => {
   const target = findCell(state.dungeon.layout.grid, newX, newY);
   if (target) state.dungeon.discoveredRooms.push(target);
   move(hero, state, hero.position.x, hero.position.y, 1);
   state.actionLog.push(`${hero.name} opened a door`)
 }
 
-const attack = (hero: Hero, state: GameState, targetX: number, targetY: number) => {
+const attack = (hero: Actor, state: GameState, targetX: number, targetY: number) => {
   if (hero.actions === 1 && hero.movement !== 3) {
     state.actionLog.push(`${hero.name} has no actions left to attack`)
     return;
@@ -188,6 +188,7 @@ export const roll = (level: Level, dice: number) => {
 
 export const pickLock = (state: GameState) => {
   const hero = state.currentActor
+  if (!hero) return;
   if (!canAct(hero)) {
     state.actionLog.push(`${hero.name} has no actions left to pick lock`)
     return;
@@ -211,7 +212,8 @@ export const pickLock = (state: GameState) => {
 }
 
 export const search = (state: GameState) => {
-  const hero = state.currentActor
+  const hero: Actor | undefined = state.currentActor
+  if (!hero) return;
   if (!canAct(hero)) {
     state.actionLog.push(`${hero.name} has no actions left to search`)
     return;
@@ -309,7 +311,7 @@ const checkWinConditions = (state: GameState) => {
   }
 }
 
-const moveOverDoor = (state: GameState, hero: Hero, newX: number, newY: number) => {
+const moveOverDoor = (state: GameState, hero: Actor, newX: number, newY: number) => {
   const door = state.dungeon.layout.doors.find((door) => door.x === hero.position?.x && door.y === hero.position.y)
 
   if (door && !door.locked) {
@@ -325,7 +327,7 @@ const moveOverDoor = (state: GameState, hero: Hero, newX: number, newY: number) 
       return true
     }
   }
-  if (door.locked) {
+  if (door && door.locked) {
     state.actionLog.push('Door is locked')
   }
   return false
@@ -386,7 +388,7 @@ export const isNeighbouring = (position: Position, x: number, y: number) => {
 const monsterActions = (state: GameState) => {
   const visibleMonsters = state.dungeon.layout.monsters.filter((monster) => {
     const cell = findCell(state.dungeon.layout.grid, monster.position?.x, monster.position.y)
-    return state.dungeon.discoveredRooms.includes(cell) && monster.health > 0;
+    return cell && state.dungeon.discoveredRooms.includes(cell) && monster.health > 0;
   })
   if (visibleMonsters.length === 0) {
     state.actionLog.push('No monsters can act')

@@ -22,15 +22,14 @@ export type Actor = {
   colour: Colour;
   experience: number;
   position: Position;
+  level: Level;
 }
 
 export type Hero = Actor & {
-  level: Level;
 };
 
 export type Monster = Actor & {
   type: MonsterType;
-  level: Level;
 }
 
 export enum MonsterType {
