@@ -11,6 +11,7 @@
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
+- [X] Hidden doors
 - [X] Trapped doors
 - [X] Monster movement
 - [X] Monster close combat attack

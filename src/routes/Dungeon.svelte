@@ -65,7 +65,7 @@
 
   const renderDoor = (ctx, cell, x, y) => {
     const door = findDoor(x, y)
-    if (door && !door.open && !isEmpty(cell)) {
+    if (door && !door.hidden && !door.open && !isEmpty(cell)) {
       ctx.fillStyle = 'brown';
       switch (door.side) {
         case Side.RIGHT: {
