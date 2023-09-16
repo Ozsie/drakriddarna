@@ -1,4 +1,4 @@
-import type { Door, Monster, Secret } from "./types";
+import type { Door, Monster, Position, Secret } from "./types";
 import { Colour, Level, MonsterType, SecretType, Side } from "./types";
 import { monsterWeapons } from './items/weapons';
 import { monsterArmour } from './items/armours';

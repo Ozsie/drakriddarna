@@ -1,6 +1,27 @@
-import type { Actor, GameState, Hero, Position, Secret } from '../types';
-import { Colour, Level, SecretType } from '../types';
-import { addLog, isNeighbouring, isSamePosition, roll, takeDamage } from '../game';
+import type {
+  Actor,
+  Armour,
+  GameState,
+  Hero,
+  Item,
+  Position,
+  Secret,
+  Shield,
+  Weapon
+} from "../types";
+import {
+  Colour,
+  ItemType,
+  Level,
+  SecretType
+} from "../types";
+import {
+  addLog,
+  isNeighbouring,
+  isSamePosition,
+  roll,
+  takeDamage
+} from "../game";
 
 export const searchForSecret = (state: GameState) => {
   const hero = state.currentActor as Hero;
@@ -61,31 +82,39 @@ const secretAsActor = (secret: Secret): Actor => {
       dice: 3,
       useHearHeroes: true,
       twoHanded: false,
-      range: 1
+      range: 1,
+      type: ItemType.WEAPON,
     }
   };
 }
 
 const findHiddenDoor = (state: GameState, pos: Position) => {
-  return state.dungeon.layout.doors.find((door) => {
-    return door.hidden && isNeighbouring({x: door.x, y: door.y}, pos.x, pos.y);
-  });
+  return state.dungeon.layout.doors
+    .filter((secret) => secret.hidden)
+    .find((door) => {
+      return isNeighbouring({x: door.x, y: door.y}, pos.x, pos.y);
+    });
 }
 
 const findTrap = (state: GameState, pos: Position) => {
-  return state.dungeon.layout.doors.find((door) => {
-    return door.trapped && door.x === pos.x && door.y === pos.y;
-  });
+  return state.dungeon.layout.doors
+    .filter((door) => door.trapped)
+    .find((door) => {
+      return door.x === pos.x && door.y === pos.y;
+    });
 }
 
 const findSecret = (state: GameState, pos: Position) => {
-  return state.dungeon.layout.secrets.find((secret) => {
-    return isNeighbouring(secret.position, pos.x, pos.y);
-  });
+  return state.dungeon.layout.secrets
+    .filter((secret) => !secret.found)
+    .find((secret) => {
+      return isNeighbouring(secret.position, pos.x, pos.y);
+    });
 }
 
 const findTrapDoor = (state: GameState, pos: Position) => {
   return state.dungeon.layout.secrets
+    .filter((secret) => !secret.found)
     .filter((secret) => secret.type === SecretType.TRAP_DOOR)
     .find((secret) => {
       return isNeighbouring(secret.position, pos.x, pos.y);
@@ -116,9 +145,34 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
   if (secret) {
     addLog(state, `${hero.name} searched (${result}) and found ${secret.name}`);
     secret.found = true;
+    switch (secret.type) {
+      case SecretType.EQUIPMENT: {
+        let item = secret.item ?? randomItem(state);
+        addLog(state, `${hero.name} equipped (${item.name})`);
+        switch (item.type) {
+          case ItemType.ARMOUR:
+            hero.armour = item as Armour;
+            break;
+          case ItemType.SHIELD:
+            hero.shield = item as Shield;
+            break;
+          case ItemType.WEAPON:
+            hero.weapon = item as Weapon;
+            break;
+        }
+      }
+    }
     return true;
   }
   return false;
+}
+
+const randomItem = (state: GameState): Item => {
+  const itemCount = state.itemDeck.length;
+  const index = Math.floor(Math.random() * itemCount)
+  const selectedItem = state.itemDeck[index];
+  state.itemDeck = state.itemDeck.splice(index, 1);
+  return selectedItem;
 }
 
 const lookForTrapDoor = (state: GameState, hero: Hero, result: number) => {

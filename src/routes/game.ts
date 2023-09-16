@@ -1,9 +1,27 @@
-import type { Actor, Door, Dungeon, GameState, Hero, Layout, Monster, Position } from "./types";
-import { Colour, ConditionType, Level, Side } from "./types";
+import type {
+  Actor,
+  Door,
+  Dungeon,
+  GameState,
+  Hero,
+  Layout,
+  Monster,
+  Position,
+  Item
+} from "./types";
+import {
+  Colour,
+  ConditionType,
+  ItemType,
+  Level,
+  Side
+} from "./types";
 import { EMPTY, PILLAR, PIT, WALL } from "./dungeons";
-import { e1m0 } from './dungeons/e1m0';
-import { weapons } from './items/weapons';
+import { weapons } from "./items/weapons";
 import { checkForTrapDoor, searchForSecret } from "./secrets/SecretsLogic";
+import { testingGrounds } from "./dungeons/testingGrounds";
+import { armour } from "./items/armours";
+import { shields } from "./items/shields";
 
 
 export const save = (state: GameState) => {
@@ -23,10 +41,26 @@ export const load = (): GameState | undefined => {
 
 export const init = (): GameState => {
   const heroes: Hero[] = defaultHeroes;
+  const itemDeck: Item[] = [];
+  weapons.forEach((weapon) => {
+    for (let i = 0; i < weapon.amountInDeck; i++) {
+      itemDeck.push(weapon);
+    }
+  });
+  armour.forEach((armour) => {
+    for (let i = 0; i < armour.amountInDeck; i++) {
+      itemDeck.push(armour);
+    }
+  });
+  shields.forEach((shield) => {
+    for (let i = 0; i < shield.amountInDeck; i++) {
+      itemDeck.push(shield);
+    }
+  });
 
   const state = {
     heroes: heroes,
-    dungeon: e1m0,
+    dungeon: testingGrounds,
     currentActor: heroes[0],
     actionLog: [
       'Game Initialised',
@@ -34,10 +68,23 @@ export const init = (): GameState => {
       'Each character can move 3 steps per action.',
       'If another action is performed before moving 3 steps, the move is finished and both actions are consumed.',
       'The rules of this game are harsh and unfair.'
-    ]
+    ],
+    itemDeck: shuffle(itemDeck)
   }
   updateStartingPositions(state);
   return state;
+}
+
+const shuffle = (array: any[]) => {
+  let currentIndex = array.length,  randomIndex;
+  while (currentIndex > 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex], array[currentIndex]];
+  }
+  return array;
 }
 
 const newHero = (name: string, colour: Colour): Hero => {
@@ -174,6 +221,15 @@ export const attack = (hero: Actor, state: GameState, targetX: number, targetY: 
   if (hero.actions === 1 && hero.movement !== 3) {
     addLog(state, `${hero.name} has no actions left to attack`);
     return;
+  }
+  if (!hero.weapon.useHearHeroes) {
+    const neighbouringHeroes: Hero[] = liveHeroes(state)
+      .filter((other) => other !== hero )
+      .filter((other: Hero) => isNeighbouring(hero.position, other.position.x, other.position.y));
+    if (neighbouringHeroes.length > 0) {
+      addLog(state, `${hero.name} could not use ${hero.weapon.name} near a friend.`);
+      return;
+    }
   }
   const monster = state.dungeon.layout.monsters.find((monster) => monster.position.x === targetX && monster.position.y === targetY);
   if (monster) {
@@ -348,7 +404,8 @@ const doorAsActor = (door: Door): Actor => {
       dice: door.trapAttacks,
       useHearHeroes: true,
       twoHanded: false,
-      range: 1
+      range: 1,
+      type: ItemType.WEAPON,
     }
   };
 }

@@ -10,6 +10,7 @@ export type GameState = {
   dungeon: Dungeon;
   currentActor?: Actor;
   actionLog: string[];
+  itemDeck: Item[];
 }
 
 export type Actor = {
@@ -104,7 +105,6 @@ export type Secret = {
 export enum SecretType {
   EQUIPMENT = 'Equipment',
   MAGIC_ITEM = 'Magic Item',
-  DOOR = 'Door',
   TRAP_DOOR = 'Trap Door',
   NOTE = 'Note'
 }
@@ -132,9 +132,14 @@ export type Position = {
   y: number
 }
 
+export enum ItemType {
+  WEAPON, ARMOUR, SHIELD
+}
+
 export type Item = {
   name: string,
   amountInDeck: number,
+  type: ItemType,
 }
 
 export type Weapon = Item & {
