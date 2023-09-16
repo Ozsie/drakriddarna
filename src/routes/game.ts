@@ -348,7 +348,11 @@ export const triggerTrap = (door: Door, hero: Actor, state: GameState) => {
   const hits = roll(Level.APPRENTICE, door.trapAttacks);
   const damage = Math.max(hits - hero.defense, 0);
   addLog(state, `Door was trapped. ${hero.name} took ${getDamageString(damage, hits, hero)}`);
-  takeDamage(state, {
+  takeDamage(state, doorAsActor(door), hero);
+}
+
+const doorAsActor = (door: Door): Actor => {
+  return {
     health: 0,
     position: { x: door.x, y: door.y },
     defense: 0,
@@ -357,18 +361,17 @@ export const triggerTrap = (door: Door, hero: Actor, state: GameState) => {
     movement: 0,
     colour: Colour.Red,
     maxHealth: 0,
-      name: 'Door',
-      level: Level.APPRENTICE,
-      weapon: {
-        name: 'Trap',
-        amountInDeck: 0,
-        dice: door.trapAttacks,
-        useHearHeroes: true,
-        twoHanded: false,
-        range: 1
-      }
-    },
-    hero);
+    name: "Door",
+    level: Level.APPRENTICE,
+    weapon: {
+      name: "Trap",
+      amountInDeck: 0,
+      dice: door.trapAttacks,
+      useHearHeroes: true,
+      twoHanded: false,
+      range: 1
+    }
+  };
 }
 
 const moveOverDoor = (state: GameState, hero: Actor, newX: number, newY: number) => {
