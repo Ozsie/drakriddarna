@@ -26,6 +26,7 @@ export type Actor = {
   weapon: Weapon;
   armour?: Armour;
   shield?: Shield;
+  incapacitated: boolean;
 }
 
 export type Hero = Actor & {

@@ -6,9 +6,10 @@ import {
   openDoor,
   pickLock, search,
   triggerTrap
-} from "../game";
-import { Side } from "../types";
+} from '../game';
+import { Side } from '../types';
 import type { Position, GameState, Hero } from '../types';
+import { checkForTrapDoor } from '../secrets/SecretsLogic';
 
 export const distanceInGrid = (a: Position, b: Position) =>{
   const dx = Math.abs(b.x - a.x);
@@ -84,6 +85,7 @@ const onTargetCell = (state: GameState, x: number, y: number) => {
     if (!blockedByHero && !blockedByMonster && distance <= hero.movement) {
       hero.position = { x, y };
       hero.movement -= distance;
+      checkForTrapDoor(state);
     } else if (blockedByMonster) {
       if (distance <= hero.weapon.range) {
         attack(hero, state, x, y);

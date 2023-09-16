@@ -3,7 +3,7 @@ import { Colour, ConditionType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, WALL } from "./dungeons";
 import { e1m0 } from './dungeons/e1m0';
 import { weapons } from './items/weapons';
-import { searchForSecret } from './secrets/SecretsLogic';
+import { checkForTrapDoor, searchForSecret } from "./secrets/SecretsLogic";
 
 
 export const save = (state: GameState) => {
@@ -53,7 +53,8 @@ const newHero = (name: string, colour: Colour): Hero => {
     colour: colour,
     experience: 0,
     position: {x:-1,y:-1},
-    weapon: weapons[0]
+    weapon: weapons[0],
+    incapacitated: false
   }
 }
 
@@ -145,6 +146,7 @@ export const act = (direction: string, state: GameState) => {
 const move = (hero: Actor, state: GameState, newX: number, newY: number, cost: number) => {
   hero.position.x = newX;
   hero.position.y = newY;
+  checkForTrapDoor(state);
   const note  = state.dungeon.layout.notes.find((note) => isSamePosition(note.position, hero.position));
   if (note) {
     const onHiddenDoor = state.dungeon.layout.doors.some((door) => door.hidden && isSamePosition(note.position, { x: door.x, y: door.y }))
@@ -262,6 +264,11 @@ export const next = (state: GameState) => {
       monsterActions(state);
       nextIndex = 0;
     }
+    if (liveHeroes(state)[nextIndex].incapacitated) {
+      addLog(state, `${liveHeroes(state)[nextIndex].name} is no longer incapacitated.`);
+      liveHeroes(state)[nextIndex].incapacitated = false;
+      nextIndex++;
+    }
     state.currentActor.actions = 2;
     state.currentActor.movement = 3;
     state.currentActor = liveHeroes(state)[nextIndex];
@@ -334,6 +341,7 @@ const doorAsActor = (door: Door): Actor => {
     maxHealth: 0,
     name: "Door",
     level: Level.APPRENTICE,
+    incapacitated: false,
     weapon: {
       name: "Trap",
       amountInDeck: 0,
@@ -532,7 +540,7 @@ export const canAct = (hero: Hero) => {
   return hero.actions > 0
 }
 
-const isSamePosition = (a: Position, b: Position) => {
+export const isSamePosition = (a: Position, b: Position) => {
   return a.x === b.x && a.y === b.y;
 }
 

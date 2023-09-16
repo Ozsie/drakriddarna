@@ -1,10 +1,70 @@
-import type {
-  GameState,
-  Hero,
-  Position
-} from "../types";
-import { SecretType } from "../types";
-import { addLog, isNeighbouring, roll } from "../game";
+import type { Actor, GameState, Hero, Position, Secret } from '../types';
+import { Colour, Level, SecretType } from '../types';
+import { addLog, isNeighbouring, isSamePosition, roll, takeDamage } from '../game';
+
+export const searchForSecret = (state: GameState) => {
+  const hero = state.currentActor as Hero;
+  const result = roll(hero.level, 1)
+  let trapDoor, hiddenDoor, trap, secret;
+  if (result >= 1) {
+    trapDoor = lookForTrapDoor(state, hero, result);
+    if (!trapDoor) {
+      hiddenDoor = lookForHiddenDoor(state, hero, result);
+    }
+    if (!trapDoor && !hiddenDoor) {
+      trap = lookForTrap(state, hero, result);
+    }
+    if (!trapDoor && !hiddenDoor && !trap) {
+      secret = lookForSecret(state, hero, result);
+    }
+    if (!trapDoor && !hiddenDoor && !trap && !secret) {
+      addLog(state, `${hero.name} searched but found nothing`);
+    }
+  } else {
+    addLog(state, `${hero.name} searched but found nothing`);
+  }
+}
+
+export const checkForTrapDoor = (state: GameState) => {
+  const actor = state.currentActor
+  if (!actor) return;
+  const trap = state.dungeon.layout.secrets
+    .filter((secret) => secret.type === SecretType.TRAP_DOOR)
+    .filter((secret) => !secret.found)
+    .find((secret) => isSamePosition(secret.position, actor.position));
+  if (trap) {
+    takeDamage(state, secretAsActor(trap), actor);
+    addLog(state, `${actor.name} fell into a pit and is incapacitated for one turn.`)
+    actor.movement = 0;
+    actor.actions = 0;
+    actor.incapacitated = true;
+    trap.found = true;
+  }
+}
+
+const secretAsActor = (secret: Secret): Actor => {
+  return {
+    health: 0,
+    position: secret.position,
+    defense: 0,
+    experience: 0,
+    actions: 0,
+    movement: 0,
+    colour: Colour.Red,
+    maxHealth: 0,
+    name: "Trap Door",
+    level: Level.APPRENTICE,
+    incapacitated: false,
+    weapon: {
+      name: "Falling",
+      amountInDeck: 0,
+      dice: 3,
+      useHearHeroes: true,
+      twoHanded: false,
+      range: 1
+    }
+  };
+}
 
 const findHiddenDoor = (state: GameState, pos: Position) => {
   return state.dungeon.layout.doors.find((door) => {
@@ -32,7 +92,7 @@ const findTrapDoor = (state: GameState, pos: Position) => {
     });
 }
 
-function lookForHiddenDoor(state: GameState, hero: Hero, result: number) {
+const lookForHiddenDoor = (state: GameState, hero: Hero, result: number) => {
   const hiddenDoor = findHiddenDoor(state, hero.position);
   if (hiddenDoor) {
     addLog(state, `${hero.name} searched (${result}) and found a hidden door`);
@@ -41,7 +101,7 @@ function lookForHiddenDoor(state: GameState, hero: Hero, result: number) {
   return false;
 }
 
-function lookForTrap(state: GameState, hero: Hero, result: number) {
+const lookForTrap = (state: GameState, hero: Hero, result: number) => {
   const trap = findTrap(state, hero.position);
   if (trap) {
     addLog(state, `${hero.name} searched (${result}) and found a trap in a door`);
@@ -51,7 +111,7 @@ function lookForTrap(state: GameState, hero: Hero, result: number) {
   return false;
 }
 
-function lookForSecret(state: GameState, hero: Hero, result: number) {
+const lookForSecret = (state: GameState, hero: Hero, result: number) => {
   const secret = findSecret(state, hero.position);
   if (secret) {
     addLog(state, `${hero.name} searched (${result}) and found ${secret.name}`);
@@ -61,7 +121,7 @@ function lookForSecret(state: GameState, hero: Hero, result: number) {
   return false;
 }
 
-function lookForTrapDoor(state: GameState, hero: Hero, result: number) {
+const lookForTrapDoor = (state: GameState, hero: Hero, result: number) => {
   const trapDoor = findTrapDoor(state, hero.position);
   if (trapDoor) {
     addLog(state, `${hero.name} searched (${result}) and found ${trapDoor.name}`);
@@ -69,27 +129,4 @@ function lookForTrapDoor(state: GameState, hero: Hero, result: number) {
     return true;
   }
   return false;
-}
-
-export const searchForSecret = (state: GameState) => {
-  const hero = state.currentActor as Hero;
-  const result = roll(hero.level, 1)
-  let trapDoor, hiddenDoor, trap, secret;
-  if (result >= 1) {
-    trapDoor = lookForTrapDoor(state, hero, result);
-    if (!trapDoor) {
-      hiddenDoor = lookForHiddenDoor(state, hero, result);
-    }
-    if (!trapDoor && !hiddenDoor) {
-      trap = lookForTrap(state, hero, result);
-    }
-    if (!trapDoor && !hiddenDoor && !trap) {
-      secret = lookForSecret(state, hero, result);
-    }
-    if (!trapDoor && !hiddenDoor && !trap && !secret) {
-      addLog(state, `${hero.name} searched but found nothing`);
-    }
-  } else {
-    addLog(state, `${hero.name} searched but found nothing`);
-  }
 }
