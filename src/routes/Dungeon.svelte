@@ -1,10 +1,17 @@
 <script>
-  import { isBlockedByHero, isBlockedByMonster, isDiscovered, isWalkable, toArray } from "./game.ts";
+  import {
+    isBlockedByHero,
+    isBlockedByMonster,
+    isDiscovered,
+    isWalkable,
+    toArray,
+  } from "./game.ts";
   import { onMount } from "svelte";
   import { MonsterType, Side } from "./types.ts";
   import groundSprites from '$lib/Dungeon_Tileset.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
   import { EMPTY, WALL } from "./dungeons.ts";
+  import { doMouseLogic } from "./hero/mouseLogic.ts";
   export let state
 
   const cellSize = 48;
@@ -289,6 +296,10 @@
     }
     return false;
   }
+
+  const onClick = (event) => {
+    doMouseLogic(event, cellSize, state);
+  }
 </script>
 <style>
   .dungeon {
@@ -298,5 +309,5 @@
   }
 </style>
 <div style="max-height: {cellSize * 20}px; max-width:{cellSize*15}px;" class="dungeon">
-  <canvas width="{cellSize * 20}" height="{cellSize * 15}" id="gameBoard"></canvas>
+  <canvas width="{cellSize * 20}" height="{cellSize * 15}" id="gameBoard" on:click="{onClick}"></canvas>
 </div>
