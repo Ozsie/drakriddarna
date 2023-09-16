@@ -1,5 +1,5 @@
 import {
-  addLog, attack, consumeActions,
+  addLog, attack, canAct, consumeActions,
   isBlockedByHero,
   isBlockedByMonster,
   isWalkable,
@@ -50,17 +50,31 @@ export const onTargetSelf = (state: GameState, x: number, y: number) => {
           openDoor(hero, state, x, y - 1);
           break;
       }
+      consumeActions(hero);
     } else if (door.locked && !door.hidden) {
+      if (!canAct(hero)) {
+        addLog(state, `${hero.name} has no actions left`);
+        return;
+      }
       addLog(state, "Door is locked");
       pickLock(state);
+      consumeActions(hero);
     }
   } else {
+    if (!canAct(hero)) {
+      addLog(state, `${hero.name} has no actions left`);
+      return;
+    }
     search(state);
   }
 }
 
 const onTargetCell = (state: GameState, x: number, y: number) => {
   const hero = state.currentActor as Hero;
+  if (hero.actions === 0) {
+    addLog(state, `${hero.name} has no actions left`);
+    return;
+  }
   const walkable = isWalkable(state.dungeon.layout, x, y);
   const distance = distanceInGrid(hero.position, { x, y });
   console.log("distance: " + distance);
@@ -78,6 +92,7 @@ const onTargetCell = (state: GameState, x: number, y: number) => {
       }
     }
   }
+  consumeActions(hero);
 }
 
 export const doMouseLogic = (event: PointerEvent, cellSize: number, state: GameState) => {
@@ -101,5 +116,4 @@ export const doMouseLogic = (event: PointerEvent, cellSize: number, state: GameS
   } else if (state.dungeon.discoveredRooms.includes(cell)) {
     onTargetCell(state, x, y);
   }
-  consumeActions(hero);
 }

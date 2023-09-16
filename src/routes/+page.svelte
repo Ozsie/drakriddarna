@@ -1,10 +1,19 @@
 <script>
-  import { act, defaultHeroes, init, load, next, pickLock, save, search, updateStartingPositions } from "./game.ts";
-  import Dungeon from "./Dungeon.svelte";
-  import Characters from "./Characters.svelte";
-  import Log from "./Log.svelte";
-  import { onMount } from "svelte";
-    import Stat from "./Stat.svelte";
+  import {
+    act,
+    defaultHeroes,
+    init,
+    load,
+    next,
+    pickLock,
+    save,
+    search,
+    updateStartingPositions
+  } from './game.ts';
+  import Dungeon from './Dungeon.svelte';
+  import Characters from './Characters.svelte';
+  import Log from './Log.svelte';
+  import { onMount } from 'svelte';
 
   let state = init();
 
