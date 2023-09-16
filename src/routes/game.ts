@@ -3,6 +3,7 @@ import { Colour, ConditionType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, WALL } from "./dungeons";
 import { e1m0 } from './dungeons/e1m0';
 import { weapons } from './items/weapons';
+import { searchForSecret } from './secrets/SecretsLogic';
 
 
 export const save = (state: GameState) => {
@@ -239,37 +240,7 @@ export const search = (state: GameState) => {
     addLog(state, `${hero.name} has no actions left to search`);
     return;
   }
-  const result = roll(hero.level, 1)
-  if (result >= 1) {
-    const hiddenDoor = state.dungeon.layout.doors.find((door) => {
-      return door.hidden && door.x === hero.position.x && door.y === hero.position.y;
-    });
-    if (hiddenDoor) {
-      addLog(state, `${hero.name} searched (${result}) and found a hidden door`);
-      hiddenDoor.hidden = false;
-    }
-
-    const trap = state.dungeon.layout.doors.find((door) => {
-      return door.trapped && door.x === hero.position.x && hero.position.y;
-    });
-    if (trap && !hiddenDoor) {
-      addLog(state, `${hero.name} searched (${result}) and found a trap in a door`);
-      trap.trapped = false;
-    }
-
-    const secret = state.dungeon.layout.secrets.find((secret) => {
-      return isNeighbouring(secret.position, hero.position.x, hero.position.y);
-    });
-    if (secret && !trap && !hiddenDoor) {
-      addLog(state, `${hero.name} searched (${result}) and found ${secret.name}`);
-    }
-
-    if (!hiddenDoor && !trap && !secret) {
-      addLog(state, `${hero.name} searched but found nothing`);
-    }
-  } else {
-    addLog(state, `${hero.name} searched but found nothing`);
-  }
+  searchForSecret(state);
   if (hero.actions > 1 && hero.movement < 3) {
     hero.actions -= 2
   } else {

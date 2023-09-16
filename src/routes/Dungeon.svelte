@@ -12,8 +12,9 @@
   import groundSprites from '$lib/Dungeon_Tileset.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
   import { EMPTY, WALL } from "./dungeons.ts";
-  import { doMouseLogic } from "./hero/mouseLogic.ts";
+  import { doMouseLogic } from "./hero/ClickInputLogic.ts";
   import { browser } from '$app/environment';
+  import { renderSecrets } from "./secrets/SecretsRendering.ts";
   export let state;
   export let debugMode = true;
 
@@ -56,6 +57,7 @@
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderFloor(ctx, cell, x, y, ground))
     });
+    renderSecrets(ctx, ground, cellSize, state);
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderGrid(ctx, cell, x, y))
     });

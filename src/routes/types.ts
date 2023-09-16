@@ -104,6 +104,7 @@ export enum SecretType {
   EQUIPMENT = 'Equipment',
   MAGIC_ITEM = 'Magic Item',
   DOOR = 'Door',
+  TRAP_DOOR = 'Trap Door',
   NOTE = 'Note'
 }
 
