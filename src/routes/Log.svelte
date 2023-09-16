@@ -27,7 +27,7 @@
   {#key actionLog}
     {#each actionLog as log, index}
       {#if index < 25}
-        <p>{log}</p>
+        <p>>{log}</p>
       {/if}
     {/each}
   {/key}

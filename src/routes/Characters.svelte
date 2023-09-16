@@ -58,4 +58,4 @@
   }
 
 </script>
-<canvas id="characterBoard" height="750" width="260"></canvas>
+<canvas id="characterBoard" height="720" width="260"></canvas>

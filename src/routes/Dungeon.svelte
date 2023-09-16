@@ -303,9 +303,9 @@
 </script>
 <style>
   .dungeon {
-      margin-left: 15%;
       background: yellow;
       overflow: scroll;
+      height: 60%;
   }
 </style>
 <div style="max-height: {cellSize * 20}px; max-width:{cellSize*15}px;" class="dungeon">

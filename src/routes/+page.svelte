@@ -83,17 +83,23 @@
         background: aqua;
         padding: 2px;
     }
-
+    @media screen and (max-width: 600px) {
+        .characterSide {
+            visibility: hidden;
+            clear: both;
+            float: left;
+            margin: 10px auto 5px 20px;
+            width: 28%;
+            display: none;
+        }
+    }
     .characterSide {
-        width: 15%;
-        height: 800px;
         background: gray;
         float: left;
         padding-right: 10px;
     }
 
     .commands {
-        width: 15%;
         height: 100px;
         background: gray;
         float: left;
