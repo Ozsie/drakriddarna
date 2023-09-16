@@ -1,15 +1,14 @@
 <script>
   import {
     act,
-    defaultHeroes,
+    hasWon,
     init,
     load,
     next,
     pickLock,
     save,
     search,
-    updateStartingPositions
-  } from './game.ts';
+  } from "./game.ts";
   import Dungeon from './Dungeon.svelte';
   import Characters from './Characters.svelte';
   import Log from './Log.svelte';
@@ -18,7 +17,9 @@
   let state = init();
 
   onMount(() => {
-    setInterval(hasWon, 1000)
+    setInterval(() => {
+      return hasWon(state);
+    }, 1000);
   });
 
   function onKeyDown(e)
@@ -72,17 +73,6 @@
         break;
     }
     
-  }
-
-
-  const hasWon = () => {
-    if (state.dungeon.beaten && state.dungeon.nextDungeon) {
-      state.dungeon = state.dungeon.nextDungeon;
-      const missingHeroes = defaultHeroes.filter((dh) => !state.heroes.find((h) => dh.name === h.name))
-      state.heroes.push(...missingHeroes)
-      updateStartingPositions(state.heroes, state.dungeon);
-      state.actionLog = ['You have reached ' + state.dungeon.name];
-    }
   }
 </script>
 

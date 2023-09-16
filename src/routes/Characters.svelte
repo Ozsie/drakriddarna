@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { liveHeroes } from "./game.ts";
 
   export let state
   const cardHeight = 180;
@@ -15,7 +16,7 @@
     const ctx = c.getContext("2d");
     ctx.clearRect(0, 0, c.width, c.height);
     ctx.stroke();
-    state.heroes.forEach((hero, index) => {
+    liveHeroes(state).forEach((hero, index) => {
       renderHeroCard(ctx, c, hero, index);
       renderHeroStats(ctx, hero, index);
       renderHeroEquipment(ctx, hero, index);

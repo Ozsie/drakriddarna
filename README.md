@@ -15,7 +15,7 @@
 - [ ] e1m4 - The Dark Citadel
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
-- [ ] Moving through other heroes
+- [X] Moving through other heroes
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout

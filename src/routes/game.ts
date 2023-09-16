@@ -174,11 +174,7 @@ export const attack = (hero: Actor, state: GameState, targetX: number, targetY: 
   }
   const monster = state.dungeon.layout.monsters.find((monster) => monster.position.x === targetX && monster.position.y === targetY);
   if (monster) {
-    const defense = monster.armour?.defense ?? monster.defense
-    const hits = roll(hero.level, hero.weapon.dice);
-    const damage = Math.max(hits - defense, 0);
-    addLog(state, `${hero.name} attacked ${monster.name} with ${hero.weapon.name} for ${getDamageString(damage, hits, monster)}`);
-    monster.health -= damage;
+    takeDamage(state, hero, monster);
     if (monster.health <= 0) {
       state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter((m) => m != monster);
       addLog(state, `${hero.name} killed ${monster.name}`);
@@ -344,6 +340,7 @@ const checkWinConditions = (state: GameState) => {
   if (state.dungeon.beaten) {
     addLog(state, "All win conditions have been fulfilled");
     addLog(state, `You have cleared ${state.dungeon.name}`);
+    addLog(state, `Press 'Next' to move on to the next level: ${state.dungeon.nextDungeon?.name}`)
   }
 }
 
@@ -351,7 +348,27 @@ export const triggerTrap = (door: Door, hero: Actor, state: GameState) => {
   const hits = roll(Level.APPRENTICE, door.trapAttacks);
   const damage = Math.max(hits - hero.defense, 0);
   addLog(state, `Door was trapped. ${hero.name} took ${getDamageString(damage, hits, hero)}`);
-  hero.health -= damage;
+  takeDamage(state, {
+    health: 0,
+    position: { x: door.x, y: door.y },
+    defense: 0,
+    experience: 0,
+    actions: 0,
+    movement: 0,
+    colour: Colour.Red,
+    maxHealth: 0,
+      name: 'Door',
+      level: Level.APPRENTICE,
+      weapon: {
+        name: 'Trap',
+        amountInDeck: 0,
+        dice: door.trapAttacks,
+        useHearHeroes: true,
+        twoHanded: false,
+        range: 1
+      }
+    },
+    hero);
 }
 
 const moveOverDoor = (state: GameState, hero: Actor, newX: number, newY: number) => {
@@ -435,17 +452,22 @@ const monsterActions = (state: GameState) => {
   }
   visibleMonsters.forEach((monster) => {
     const maxActions = monster.actions
+    addLog(state, `${monster.name} acted `);
     while (monster.actions > 0) {
-      addLog(state, `${monster.name} acted `);
       const neighbouringHeroes: Hero[] = state.heroes.filter((hero: Hero) => isNeighbouring(monster.position, hero.position.x, hero.position.y));
       if (neighbouringHeroes.length > 0) {
         const target = Math.floor(Math.random() * neighbouringHeroes.length);
         monsterAttack(state, monster, neighbouringHeroes[target]);
       } else {
-        monsterMove(state, monster)
+        while (monster.movement > 0) {
+          monsterMove(state, monster);
+        }
+        monster.actions--;
+        monster.movement = 3;
       }
     }
-    monster.actions = maxActions
+    monster.actions = maxActions;
+    monster.movement = 3;
   })
 }
 
@@ -466,22 +488,24 @@ const monsterMove = (state: GameState, monster: Monster) => {
     return a.dist - b.dist
   })[0]
 
-  const possibleMoves = findPossibleMoves(state, monster.position)
-  if (possibleMoves.length > 0) {
-    const newPosition = possibleMoves.map((pos) => {
-      return {
-        pos,
-        dist: getDist(pos, closestHeroAndDistance.hero.position)
-      };
-    }).sort((a, b) => {
-      return a.dist - b.dist;
-    })[0].pos;
-    monster.position = newPosition;
-    addLog(state, `${monster.name} moved towards ${closestHeroAndDistance.hero.name} (${newPosition.x},${newPosition.y})`);
-  } else {
-    addLog(state, `${monster.name} could not move`);
+  if (closestHeroAndDistance.dist > 1) {
+    const possibleMoves = findPossibleMoves(state, monster.position);
+    if (possibleMoves.length > 0) {
+      const newPosition = possibleMoves.map((pos) => {
+        return {
+          pos,
+          dist: getDist(pos, closestHeroAndDistance.hero.position)
+        };
+      }).sort((a, b) => {
+        return a.dist - b.dist;
+      })[0].pos;
+      monster.position = newPosition;
+      addLog(state, `${monster.name} moved towards ${closestHeroAndDistance.hero.name} (${newPosition.x},${newPosition.y})`);
+    } else {
+      addLog(state, `${monster.name} could not move`);
+    }
   }
-  monster.actions--;
+  monster.movement--;
 }
 
 
@@ -518,14 +542,7 @@ const monsterAttack = (state: GameState, monster: Monster, hero: Hero) => {
     return;
   }
   if (hero) {
-    const hits = roll(monster.level, monster.weapon.dice);
-    const damage = Math.max(hits - hero.defense, 0);
-    addLog(state, `${monster.name} attacked ${hero.name} with ${monster.weapon.name} for ${getDamageString(damage, hits, hero)}`);
-    hero.health -= damage;
-    if (hero.health <= 0) {
-      addLog(state, `${monster.name} killed ${hero.name}`);
-      state.heroes = state.heroes.filter((h) => h !== hero)
-    }
+    takeDamage(state, monster, hero);
     if (monster?.actions > 1 && monster?.movement < 3) {
       monster.actions -= 2
     } else {
@@ -547,4 +564,63 @@ const isSamePosition = (a: Position, b: Position) => {
 
 export const addLog = (state: GameState, logMessage: string) => {
   state.actionLog = [logMessage, ...state.actionLog];
+}
+
+export const liveHeroes = (state: GameState): Hero[] => {
+  return state.heroes.filter((hero) => hero.health > 0);
+}
+
+export const takeDamage = (state: GameState, source: Actor, target: Actor) => {
+  const defense = target.armour?.defense ?? target.defense
+  const hits = roll(source.level, source.weapon.dice);
+  const damage = Math.max(hits - defense, 0);
+  target.health -= damage;
+  addLog(state, `${source.name} attacked ${target.name} with ${source.weapon.name} for ${getDamageString(damage, hits, target)}`);
+  if (target.health <= 0) {
+    addLog(state, `${source.name} killed ${target.name}`);
+    target.health = 0;
+    target.level = Level.APPRENTICE;
+  }
+}
+
+export const levelUp = (state: GameState) => {
+  state.heroes.forEach((hero) => {
+    const currentLevel = hero.level
+    if (hero.experience >= 28) {
+      hero.level = Level.MASTER;
+    } else if (hero.experience >= 18) {
+      hero.level = Level.LORD;
+    } else if (hero.experience >= 10) {
+      hero.level = Level.HERO;
+    } else if (hero.experience >= 4) {
+      hero.level = Level.KNIGHT;
+    }
+    if (currentLevel !== hero.level) {
+      addLog(state, `${hero.name} leveled up to ${hero.level}`);
+    }
+  });
+}
+
+const rewardLiveHeroes = (state: GameState) => {
+  state.heroes.filter((hero) => hero.health > 0)
+    .forEach((hero) => hero.experience++);
+}
+
+const replaceDeadHeroes = (state: GameState) => {
+  state.heroes.forEach((hero) => {
+    hero.health = hero.maxHealth;
+    hero.actions = 2;
+    hero.experience = 0;
+  });
+}
+
+export const hasWon = (state: GameState) => {
+  if (state.dungeon.beaten && state.dungeon.nextDungeon) {
+    state.dungeon = state.dungeon.nextDungeon;
+    rewardLiveHeroes(state);
+    levelUp(state);
+    replaceDeadHeroes(state);
+    updateStartingPositions(state.heroes, state.dungeon);
+    state.actionLog = ['You have reached ' + state.dungeon.name];
+  }
 }
