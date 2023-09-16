@@ -23,9 +23,7 @@ export const load = (): GameState | undefined => {
 export const init = (): GameState => {
   const heroes: Hero[] = defaultHeroes;
 
-  updateStartingPositions(heroes, e1m0);
-
-  return {
+  const state = {
     heroes: heroes,
     dungeon: e1m0,
     currentActor: heroes[0],
@@ -37,6 +35,8 @@ export const init = (): GameState => {
       'The rules of this game are harsh and unfair.'
     ]
   }
+  updateStartingPositions(state);
+  return state;
 }
 
 const newHero = (name: string, colour: Colour): Hero => {
@@ -63,8 +63,8 @@ export const defaultHeroes: Hero[] = [
   newHero('Wulf', Colour.Blue)
 ];
 
-export const updateStartingPositions = (heroes: Hero[], dungeon: Dungeon) => {
-  heroes.forEach((hero, index) => hero.position = dungeon.startingPositions[index])
+export const updateStartingPositions = (state: GameState) => {
+  state.heroes.forEach((hero, index) => hero.position = state.dungeon.startingPositions[index])
 }
 
 export const toArray = (row: string): string[] => {
@@ -84,7 +84,7 @@ export const isBlockedByMonster = (state: GameState, newX: number, newY: number)
 }
 
 export const isBlockedByHero = (state: GameState, newX: number, newY: number) => {
-  return state.heroes.some((hero) => {
+  return liveHeroes(state).some((hero) => {
     return hero.position.x === newX && hero.position.y === newY;
   });
 }
@@ -285,15 +285,15 @@ export const next = (state: GameState) => {
   if (state.currentActor === undefined) return;
   else {
     addLog(state, `${state.currentActor.name} ended their turn`);
-    let currentIndex = state.heroes.indexOf(state.currentActor!!)
+    let currentIndex = liveHeroes(state).indexOf(state.currentActor!!)
     let nextIndex = currentIndex + 1;
-    if (nextIndex === state.heroes.length) {
+    if (nextIndex === liveHeroes(state).length) {
       monsterActions(state);
       nextIndex = 0;
     }
     state.currentActor.actions = 2;
     state.currentActor.movement = 3;
-    state.currentActor = state.heroes[nextIndex];
+    state.currentActor = liveHeroes(state)[nextIndex];
     addLog(state, `${state.currentActor.name} started their turn`);
   }
 }
@@ -309,7 +309,7 @@ const checkWinConditions = (state: GameState) => {
         break;
       }
       case ConditionType.REACH_CELL: {
-        condition.fulfilled = state.heroes
+        condition.fulfilled = liveHeroes(state)
           .some((hero) => {
             return hero.position.x === condition.targetCell?.x && hero.position.y === condition.targetCell.y;
           });
@@ -457,7 +457,7 @@ const monsterActions = (state: GameState) => {
     const maxActions = monster.actions
     addLog(state, `${monster.name} acted `);
     while (monster.actions > 0) {
-      const neighbouringHeroes: Hero[] = state.heroes.filter((hero: Hero) => isNeighbouring(monster.position, hero.position.x, hero.position.y));
+      const neighbouringHeroes: Hero[] = liveHeroes(state).filter((hero: Hero) => isNeighbouring(monster.position, hero.position.x, hero.position.y));
       if (neighbouringHeroes.length > 0) {
         const target = Math.floor(Math.random() * neighbouringHeroes.length);
         monsterAttack(state, monster, neighbouringHeroes[target]);
@@ -482,7 +482,7 @@ export const getDist = (a: Position, b: Position) => {
 }
 
 const monsterMove = (state: GameState, monster: Monster) => {
-  const closestHeroAndDistance = state.heroes.map((hero) => {
+  const closestHeroAndDistance = liveHeroes(state).map((hero) => {
     return {
       hero,
       dist: getDist(hero.position, monster.position)
@@ -527,7 +527,7 @@ let findPossibleMoves = (state: GameState, position: Position): Position[] => {
   }
 
   return targets.filter((pos) => {
-    return !state.heroes.find((hero) => hero.position.x === pos.x && hero.position.y === pos.y);
+    return !liveHeroes(state).find((hero) => hero.position.x === pos.x && hero.position.y === pos.y);
   }).filter((pos) => {
     const blocker = state.dungeon.layout.monsters.find((m) => m.position.x === pos.x && m.position.y === pos.y)
     return !blocker
@@ -573,6 +573,10 @@ export const liveHeroes = (state: GameState): Hero[] => {
   return state.heroes.filter((hero) => hero.health > 0);
 }
 
+export const deadHeroes = (state: GameState): Hero[] => {
+  return state.heroes.filter((hero) => hero.health <= 0);
+}
+
 export const takeDamage = (state: GameState, source: Actor, target: Actor) => {
   const defense = target.armour?.defense ?? target.defense
   const hits = roll(source.level, source.weapon.dice);
@@ -587,7 +591,7 @@ export const takeDamage = (state: GameState, source: Actor, target: Actor) => {
 }
 
 export const levelUp = (state: GameState) => {
-  state.heroes.forEach((hero) => {
+  liveHeroes(state).forEach((hero) => {
     const currentLevel = hero.level
     if (hero.experience >= 28) {
       hero.level = Level.MASTER;
@@ -605,25 +609,24 @@ export const levelUp = (state: GameState) => {
 }
 
 const rewardLiveHeroes = (state: GameState) => {
-  state.heroes.filter((hero) => hero.health > 0)
-    .forEach((hero) => hero.experience++);
+  liveHeroes(state).forEach((hero) => hero.experience += 4);
 }
 
 const replaceDeadHeroes = (state: GameState) => {
-  state.heroes.forEach((hero) => {
+  deadHeroes(state).forEach((hero) => {
+    hero.experience = 0;
     hero.health = hero.maxHealth;
     hero.actions = 2;
-    hero.experience = 0;
   });
 }
 
 export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
     state.dungeon = state.dungeon.nextDungeon;
+    state.actionLog = ['You have reached ' + state.dungeon.name];
     rewardLiveHeroes(state);
     levelUp(state);
     replaceDeadHeroes(state);
-    updateStartingPositions(state.heroes, state.dungeon);
-    state.actionLog = ['You have reached ' + state.dungeon.name];
+    updateStartingPositions(state);
   }
 }

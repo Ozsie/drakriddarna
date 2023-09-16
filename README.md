@@ -2,12 +2,12 @@
 
 ## Todo
 - [ ] Items
+- [ ] Monster blocking move on click move
 - [ ] Monster cards
 - [ ] Monster range attack
 - [ ] Monster special attack
 - [ ] Events
 - [ ] Secrets
-- [ ] Levelling up
 - [ ] Clearing dungeon
 - [ ] e1m1 - The Three Gates of Power
 - [ ] e1m2 - Mines of Evil
@@ -15,11 +15,12 @@
 - [ ] e1m4 - The Dark Citadel
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
-- [X] Moving through other heroes
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
 - [ ] Move render code to .ts files
+- [X] Moving through other heroes
+- [X] Levelling up
 - [X] e1m0 - Troll Cave
 - [X] Hidden doors
 - [X] Trapped doors
