@@ -122,7 +122,7 @@
   </div>
   <Dungeon bind:state={state}/>
 </div>
-<div class='container'>
+<div class='container' id='footer'>
   <div class="commands">
     <table>
       <tr>

@@ -12,11 +12,18 @@
   import actorSprites from '$lib/Dungeon_Character_2.png';
   import { EMPTY, WALL } from "./dungeons.ts";
   import { doMouseLogic } from "./hero/mouseLogic.ts";
+  import { browser } from '$app/environment';
   export let state;
-  let screenSize;
-
-  const cellSize = 48;
   export let debugMode = true;
+
+  let footerSize;
+  let screenSize;
+  const cellSize = 48;
+
+  if (browser) {
+    screenSize = window.innerHeight;
+    footerSize = document.getElementById('footer').offsetHeight;
+  }
 
   onMount(() => {
     const ground = new Image();
@@ -302,8 +309,10 @@
     doMouseLogic(event, cellSize, state);
   }
 
-  const desktop = `max-height: ${cellSize * 17}px; max-width: ${cellSize * 40}`;
-  const mobile = `max-height: ${cellSize * 15}px; max-width: ${cellSize * 40}`;
+  const getStyle = () => {
+    const maxHeight = screenSize - footerSize - 20;
+    return `max-height: ${maxHeight}px; max-width: ${cellSize * 40}`;
+  }
 </script>
 <style>
   .dungeon {
@@ -312,13 +321,6 @@
       height: 80%;
   }
 </style>
-<svelte:window bind:innerWidth={screenSize} />
-{#if screenSize < 600}
-  <div style="{mobile}" class="dungeon">
-    <canvas width="{cellSize * 40}" height="{cellSize * 30}" id="gameBoard" on:click="{onClick}"></canvas>
-  </div>
-{:else}
-  <div style="{desktop}" class="dungeon">
-    <canvas width="{cellSize * 40}" height="{cellSize * 30}" id="gameBoard" on:click="{onClick}"></canvas>
-  </div>
-{/if}
+<div style="{getStyle()}" class="dungeon">
+  <canvas width="{cellSize * 40}" height="{cellSize * 30}" id="gameBoard" on:click="{onClick}"></canvas>
+</div>
