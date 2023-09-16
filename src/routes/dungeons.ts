@@ -116,6 +116,7 @@ export const createMonster = (type: MonsterType, colour: Colour, x: number, y: n
     movement: 3,
     position: { x, y },
     weapon,
-    armour
+    armour,
+    incapacitated: false,
   }
 }

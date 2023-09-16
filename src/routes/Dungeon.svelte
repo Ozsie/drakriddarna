@@ -4,15 +4,17 @@
     isBlockedByMonster,
     isDiscovered,
     isWalkable,
-    toArray,
+    liveHeroes,
+    toArray
   } from "./game.ts";
   import { onMount } from "svelte";
   import { MonsterType, Side } from "./types.ts";
   import groundSprites from '$lib/Dungeon_Tileset.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
   import { EMPTY, WALL } from "./dungeons.ts";
-  import { doMouseLogic } from "./hero/mouseLogic.ts";
+  import { doMouseLogic } from "./hero/ClickInputLogic.ts";
   import { browser } from '$app/environment';
+  import { renderSecrets } from "./secrets/SecretsRendering.ts";
   export let state;
   export let debugMode = true;
 
@@ -36,6 +38,15 @@
     setInterval(() => render(ground, actors), 10);
   });
 
+  const renderHero = (ctx, hero, actors) => {
+    const x = hero.position.x;
+    const y = hero.position.y;
+    ctx.drawImage(actors, 4*16, 0, 16, 16, x*cellSize, y*cellSize, cellSize, cellSize);
+    renderActionOnActor(ctx, hero, x, y)
+    renderActorBar(ctx, hero, x, y);
+    renderHealthBar(ctx, hero, x, y);
+  }
+
   const render = (ground, actors) => {
     if (!state || !document) return;
     const c = document.getElementById("gameBoard");
@@ -46,6 +57,7 @@
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderFloor(ctx, cell, x, y, ground))
     });
+    renderSecrets(ctx, ground, cellSize, state);
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderGrid(ctx, cell, x, y))
     });
@@ -54,6 +66,10 @@
     });
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderActors(ctx, cell, x, y, actors))
+    });
+    const heroes = liveHeroes(state);
+    heroes.forEach((hero) => {
+      renderHero(ctx, hero, actors);
     });
     renderWalkableArea(ctx, state.currentActor);
     renderCurrentActor(ctx, state.currentActor);
@@ -265,12 +281,7 @@
   const renderActors = (ctx, cell, x, y, actors) => {
     ctx.beginPath();
     const hero = state.heroes.find((hero) => hero.position.x === x && hero.position.y === y)
-    if (hero) {
-      ctx.drawImage(actors, 4*16, 0, 16, 16, x*cellSize, y*cellSize, cellSize, cellSize);
-      renderActionOnActor(ctx, hero, x, y)
-      renderActorBar(ctx, hero, x, y);
-      renderHealthBar(ctx, hero, x, y);
-    } else {
+    if (!hero) {
       const monster = state.dungeon.layout.monsters.find((monster) => monster.position.x === x && monster.position.y === y);
       if (monster && monster.health > 0 && !isEmpty(cell)) {
         switch (monster.type) {

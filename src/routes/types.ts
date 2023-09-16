@@ -26,6 +26,7 @@ export type Actor = {
   weapon: Weapon;
   armour?: Armour;
   shield?: Shield;
+  incapacitated: boolean;
 }
 
 export type Hero = Actor & {
@@ -104,6 +105,7 @@ export enum SecretType {
   EQUIPMENT = 'Equipment',
   MAGIC_ITEM = 'Magic Item',
   DOOR = 'Door',
+  TRAP_DOOR = 'Trap Door',
   NOTE = 'Note'
 }
 
