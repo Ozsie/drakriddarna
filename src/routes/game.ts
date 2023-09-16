@@ -170,7 +170,7 @@ const attack = (hero: Actor, state: GameState, targetX: number, targetY: number)
     const defense = monster.armour?.defense ?? monster.defense
     const hits = roll(hero.level, hero.weapon.dice);
     const damage = Math.max(hits - defense, 0);
-    state.actionLog.push(`${hero.name} attacked ${monster.name} for ${getDamageString(damage, hits, monster)}`);
+    state.actionLog.push(`${hero.name} attacked ${monster.name} with ${hero.weapon.name} for ${getDamageString(damage, hits, monster)}`);
     monster.health -= damage;
     if (monster.health <= 0) {
       state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter((m) => m != monster);
@@ -504,7 +504,7 @@ const monsterAttack = (state: GameState, monster: Monster, hero: Hero) => {
   if (hero) {
     const hits = roll(monster.level, monster.weapon.dice);
     const damage = Math.max(hits - hero.defense, 0);
-    state.actionLog.push(`${monster.name} attacked ${hero.name} for ${getDamageString(damage, hits, hero)}`);
+    state.actionLog.push(`${monster.name} attacked ${hero.name} with ${monster.weapon.name} for ${getDamageString(damage, hits, hero)}`);
     hero.health -= damage;
     if (hero.health <= 0) {
       state.actionLog.push(`${monster.name} killed ${hero.name}`)
