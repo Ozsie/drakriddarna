@@ -1,15 +1,24 @@
 <script>
-  import { act, defaultHeroes, init, load, next, pickLock, save, search, updateStartingPositions } from './game.ts';
+  import {
+    act,
+    defaultHeroes,
+    init,
+    load,
+    next,
+    pickLock,
+    save,
+    search,
+    updateStartingPositions
+  } from './game.ts';
   import Dungeon from './Dungeon.svelte';
   import Characters from './Characters.svelte';
+  import Log from './Log.svelte';
   import { onMount } from 'svelte';
 
   let state = init();
 
   onMount(() => {
-    render();
-    setInterval(render, 500);
-    setInterval(hasWon, 1000);
+    setInterval(hasWon, 1000)
   });
 
   function onKeyDown(e)
@@ -72,59 +81,38 @@
       const missingHeroes = defaultHeroes.filter((dh) => !state.heroes.find((h) => dh.name === h.name))
       state.heroes.push(...missingHeroes)
       updateStartingPositions(state.heroes, state.dungeon);
-      state.actionLog = [];
-      state.actionLog.push('You have reached ' + state.dungeon.name);
+      state.actionLog = ['You have reached ' + state.dungeon.name];
     }
-  }
-
-  const render = () => {
-    if (!state || !document) return;
-    const c = document.getElementById("logs");
-    const ctx = c.getContext("2d");
-    ctx.clearRect(0, 0, c.width, c.height);
-    state.actionLog.slice(-10).reverse().forEach((log, i) => {
-      ctx.font = "12px Arial";
-      ctx.fillStyle = 'black'
-      ctx.fillText('> ' + log, 2, ((i+1) * 12) + 2);
-      ctx.stroke();
-    })
   }
 </script>
 
 <style>
     .container {
         width: 100%;
-        height: 800px;
         background: aqua;
         padding: 2px;
     }
-
+    @media screen and (max-width: 600px) {
+        .characterSide {
+            visibility: hidden;
+            clear: both;
+            float: left;
+            margin: 10px auto 5px 20px;
+            width: 28%;
+            display: none;
+        }
+    }
     .characterSide {
-        width: 15%;
-        height: 800px;
         background: gray;
         float: left;
         padding-right: 10px;
-    }
-
-    .boardSide {
-        margin-left: 15%;
-        height: 800px;
-        background: black;
     }
 
     .commands {
-        width: 15%;
         height: 100px;
         background: gray;
         float: left;
         padding-right: 10px;
-    }
-
-    .log {
-        margin-left: 15%;
-        height: 100px;
-        background: green;
     }
 </style>
 
@@ -132,9 +120,7 @@
   <div class="characterSide">
     <Characters {state}/>
   </div>
-  <div class="boardSide">
-    <Dungeon bind:state={state}/>
-  </div>
+  <Dungeon bind:state={state}/>
 </div>
 <div class='container'>
   <div class="commands">
@@ -163,10 +149,6 @@
       </tr>
     </table>
   </div>
-  {#key state.actionLog}
-  <div class="log">
-    <canvas width="860" height="100" id="logs"></canvas>
-  </div>
-  {/key}
+  <Log bind:state={state}/>
 </div>
 <svelte:window on:keydown|preventDefault={onKeyDown} />

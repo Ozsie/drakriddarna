@@ -1,11 +1,19 @@
 <script>
-  import { isBlockedByHero, isBlockedByMonster, isDiscovered, isWalkable, toArray } from "./game.ts";
+  import {
+    isBlockedByHero,
+    isBlockedByMonster,
+    isDiscovered,
+    isWalkable,
+    toArray,
+  } from "./game.ts";
   import { onMount } from "svelte";
   import { MonsterType, Side } from "./types.ts";
   import groundSprites from '$lib/Dungeon_Tileset.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
   import { EMPTY, WALL } from "./dungeons.ts";
-  export let state
+  import { doMouseLogic } from "./hero/mouseLogic.ts";
+  export let state;
+  let screenSize;
 
   const cellSize = 48;
   export let debugMode = true;
@@ -26,6 +34,8 @@
     const c = document.getElementById("gameBoard");
     const ctx = c.getContext("2d");
     ctx.clearRect(0, 0, c.width, c.height);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, c.width, c.height);
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderFloor(ctx, cell, x, y, ground))
     });
@@ -43,19 +53,25 @@
   }
 
 
+  const renderHiddenCell = (ctx, x, y) => {
+    ctx.beginPath();
+    ctx.strokeStyle = "black";
+    ctx.fillStyle = "black";
+    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+    ctx.stroke();
+  }
+
   const renderFloor = (ctx, cell, x, y, ground) => {
     if (isWall(cell) || !state.dungeon.discoveredRooms.includes(cell) && cell !== EMPTY) {
       if (state.dungeon.discoveredRooms.some((r) => neighbourOf(x, y, r))) {
         ctx.drawImage(ground, 48, 0, 48, 48, x * cellSize, y * cellSize, cellSize, cellSize);
+      } else {
+        renderHiddenCell(ctx, x, y);
       }
     } else if (!isEmpty(cell)) {
       ctx.drawImage(ground, 0, 0, 48, 48, x*cellSize, y*cellSize, cellSize, cellSize);
     } else {
-      ctx.beginPath();
-      ctx.strokeStyle = 'black';
-      ctx.fillStyle = 'black'
-      ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-      ctx.stroke();
+      renderHiddenCell(ctx, x, y);
     }
   }
 
@@ -281,5 +297,28 @@
     }
     return false;
   }
+
+  const onClick = (event) => {
+    doMouseLogic(event, cellSize, state);
+  }
+
+  const desktop = `max-height: ${cellSize * 17}px; max-width: ${cellSize * 40}`;
+  const mobile = `max-height: ${cellSize * 15}px; max-width: ${cellSize * 40}`;
 </script>
-<canvas width="860" height="750" id="gameBoard"></canvas>
+<style>
+  .dungeon {
+      background: yellow;
+      overflow: scroll;
+      height: 80%;
+  }
+</style>
+<svelte:window bind:innerWidth={screenSize} />
+{#if screenSize < 600}
+  <div style="{mobile}" class="dungeon">
+    <canvas width="{cellSize * 40}" height="{cellSize * 30}" id="gameBoard" on:click="{onClick}"></canvas>
+  </div>
+{:else}
+  <div style="{desktop}" class="dungeon">
+    <canvas width="{cellSize * 40}" height="{cellSize * 30}" id="gameBoard" on:click="{onClick}"></canvas>
+  </div>
+{/if}
