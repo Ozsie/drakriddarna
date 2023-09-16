@@ -6,3 +6,5 @@ node_modules/
 .svelte-kit/output
 .svelte-kit/types
 build/**
+
+**/.DS_Store
