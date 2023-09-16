@@ -8,7 +8,6 @@
 - [ ] Monster special attack
 - [ ] Events
 - [ ] Secrets
-- [ ] Clearing dungeon
 - [ ] e1m1 - The Three Gates of Power
 - [ ] e1m2 - Mines of Evil
 - [ ] e1m3 - Labyrinth of Horror
@@ -19,6 +18,8 @@
 - [ ] Graphics
 - [ ] Responsive layout
 - [ ] Move render code to .ts files
+- [X] Clearing dungeon
+- [X] Trap Doors
 - [X] Moving through other heroes
 - [X] Levelling up
 - [X] e1m0 - Troll Cave
