@@ -12,7 +12,8 @@
   import actorSprites from '$lib/Dungeon_Character_2.png';
   import { EMPTY, WALL } from "./dungeons.ts";
   import { doMouseLogic } from "./hero/mouseLogic.ts";
-  export let state
+  export let state;
+  let screenSize;
 
   const cellSize = 48;
   export let debugMode = true;
@@ -300,14 +301,24 @@
   const onClick = (event) => {
     doMouseLogic(event, cellSize, state);
   }
+
+  const desktop = `max-height: ${cellSize * 17}px; max-width: ${cellSize * 40}`;
+  const mobile = `max-height: ${cellSize * 15}px; max-width: ${cellSize * 40}`;
 </script>
 <style>
   .dungeon {
       background: yellow;
       overflow: scroll;
-      height: 60%;
+      height: 80%;
   }
 </style>
-<div style="max-height: {cellSize * 20}px; max-width:{cellSize*15}px;" class="dungeon">
-  <canvas width="{cellSize * 20}" height="{cellSize * 15}" id="gameBoard" on:click="{onClick}"></canvas>
-</div>
+<svelte:window bind:innerWidth={screenSize} />
+{#if screenSize < 600}
+  <div style="{mobile}" class="dungeon">
+    <canvas width="{cellSize * 40}" height="{cellSize * 30}" id="gameBoard" on:click="{onClick}"></canvas>
+  </div>
+{:else}
+  <div style="{desktop}" class="dungeon">
+    <canvas width="{cellSize * 40}" height="{cellSize * 30}" id="gameBoard" on:click="{onClick}"></canvas>
+  </div>
+{/if}
