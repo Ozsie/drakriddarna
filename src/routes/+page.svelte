@@ -1,16 +1,15 @@
 <script>
-  import { act, defaultHeroes, init, load, next, pickLock, save, search, updateStartingPositions } from "./game.ts";
-  import Dungeon from "./Dungeon.svelte";
-  import Characters from "./Characters.svelte";
-  import { onMount } from "svelte";
-    import Stat from "./Stat.svelte";
+  import { act, defaultHeroes, init, load, next, pickLock, save, search, updateStartingPositions } from './game.ts';
+  import Dungeon from './Dungeon.svelte';
+  import Characters from './Characters.svelte';
+  import { onMount } from 'svelte';
 
-  let state = init()
+  let state = init();
 
   onMount(() => {
     render();
     setInterval(render, 500);
-    setInterval(hasWon, 1000)
+    setInterval(hasWon, 1000);
   });
 
   function onKeyDown(e)
