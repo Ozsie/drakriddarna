@@ -1,0 +1,105 @@
+import {
+  addLog, attack, consumeActions,
+  isBlockedByHero,
+  isBlockedByMonster,
+  isWalkable,
+  openDoor,
+  pickLock, search,
+  triggerTrap
+} from "../game";
+import { Side } from "../types";
+import type { Position, GameState, Hero } from '../types';
+
+export const distanceInGrid = (a: Position, b: Position) =>{
+  const dx = Math.abs(b.x - a.x);
+  const dy = Math.abs(b.y - a.y);
+
+  const min = Math.min(dx, dy);
+  const max = Math.max(dx, dy);
+
+  const diagonalSteps = min;
+  const straightSteps = max - min;
+  let factor = Math.sqrt(2);
+  if (straightSteps === 0) {
+    factor = 1;
+  }
+
+  return Math.floor(factor * diagonalSteps + straightSteps);
+}
+
+export const onTargetSelf = (state: GameState, x: number, y: number) => {
+  const hero = state.currentActor as Hero;
+  const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y);
+  if (door) {
+    if (!door.open && !door.hidden && !door.locked) {
+      door.open = true;
+      if (door.trapped) {
+        triggerTrap(door, hero, state);
+      }
+      switch (door.side) {
+        case Side.RIGHT:
+          openDoor(hero, state, x + 1, y);
+          break;
+        case Side.LEFT:
+          openDoor(hero, state, x - 1, y);
+          break;
+        case Side.DOWN:
+          openDoor(hero, state, x, y + 1);
+          break;
+        case Side.UP:
+          openDoor(hero, state, x, y - 1);
+          break;
+      }
+    } else if (door.locked && !door.hidden) {
+      addLog(state, "Door is locked");
+      pickLock(state);
+    }
+  } else {
+    search(state);
+  }
+}
+
+const onTargetCell = (state: GameState, x: number, y: number) => {
+  const hero = state.currentActor as Hero;
+  const walkable = isWalkable(state.dungeon.layout, x, y);
+  const distance = distanceInGrid(hero.position, { x, y });
+  console.log("distance: " + distance);
+  if (walkable) {
+    const blockedByHero = isBlockedByHero(state, x, y);
+    const blockedByMonster = isBlockedByMonster(state, x, y);
+    if (!blockedByHero && !blockedByMonster && distance <= hero.movement) {
+      hero.position = { x, y };
+      hero.movement -= distance;
+    } else if (blockedByMonster) {
+      if (distance <= hero.weapon.range) {
+        attack(hero, state, x, y);
+      } else {
+        addLog(state, `Monster is out of range`);
+      }
+    }
+  }
+}
+
+export const doMouseLogic = (event: PointerEvent, cellSize: number, state: GameState) => {
+  const hero = state.currentActor as Hero;
+  const c = document.getElementById("gameBoard");
+  if (!c) return;
+  const rect = c.getBoundingClientRect();
+  const x = Math.min(
+    Math.floor((event.clientX - rect.left)/cellSize),
+    state.dungeon.layout.grid[0].length - 1
+  );
+  const y = Math.min(
+    Math.floor((event.clientY - rect.top)/cellSize),
+    state.dungeon.layout.grid.length - 1
+  );
+
+  const cell = state.dungeon.layout.grid[y][x]
+
+  if (x === hero.position.x && y === hero.position.y) {
+    onTargetSelf(state, x, y);
+  } else if (state.dungeon.discoveredRooms.includes(cell)) {
+    onTargetCell(state, x, y);
+  }
+  consumeActions(hero);
+}

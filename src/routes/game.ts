@@ -1,4 +1,4 @@
-import type { Actor, Dungeon, GameState, Hero, Layout, Monster, Position } from "./types";
+import type { Actor, Door, Dungeon, GameState, Hero, Layout, Monster, Position } from "./types";
 import { Colour, ConditionType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, WALL } from "./dungeons";
 import { e1m0 } from './dungeons/e1m0';
@@ -89,6 +89,18 @@ export const isBlockedByHero = (state: GameState, newX: number, newY: number) =>
   });
 }
 
+export const consumeActions = (hero: Actor) => {
+  if (hero.movement === 0) {
+    hero.actions--;
+    if (hero.actions !== 0) {
+      hero.movement = 3;
+    }
+  }
+  if (hero.actions == 0) {
+    hero.movement = 0;
+  }
+}
+
 export const act = (direction: string, state: GameState) => {
   const hero: Actor | undefined = state.currentActor
   if (!hero || hero.actions === 0) {
@@ -126,15 +138,7 @@ export const act = (direction: string, state: GameState) => {
   } else {
     addLog(state, `${hero.name} could not make that move`);
   }
-  if (hero.movement === 0) {
-    hero.actions--;
-    if (hero.actions !== 0) {
-      hero.movement = 3;
-    }
-  }
-  if (hero.actions == 0) {
-    hero.movement = 0;
-  }
+  consumeActions(hero);
 }
 
 const move = (hero: Actor, state: GameState, newX: number, newY: number, cost: number) => {
@@ -156,14 +160,14 @@ const move = (hero: Actor, state: GameState, newX: number, newY: number, cost: n
   }
 }
 
-const openDoor = (hero: Actor, state: GameState, newX: number, newY: number) => {
+export const openDoor = (hero: Actor, state: GameState, newX: number, newY: number) => {
   const target = findCell(state.dungeon.layout.grid, newX, newY);
   if (target) state.dungeon.discoveredRooms.push(target);
   move(hero, state, hero.position.x, hero.position.y, 1);
   addLog(state, `${hero.name} opened a door`);
 }
 
-const attack = (hero: Actor, state: GameState, targetX: number, targetY: number) => {
+export const attack = (hero: Actor, state: GameState, targetX: number, targetY: number) => {
   if (hero.actions === 1 && hero.movement !== 3) {
     addLog(state, `${hero.name} has no actions left to attack`);
     return;
@@ -265,10 +269,10 @@ export const search = (state: GameState) => {
     }
 
     if (!hiddenDoor && !trap && !secret) {
-      addLog(state, `${hero.name} searched (${result}) but found nothing`);
+      addLog(state, `${hero.name} searched but found nothing`);
     }
   } else {
-    addLog(state, `${hero.name} searched (${result}) but found nothing`);
+    addLog(state, `${hero.name} searched but found nothing`);
   }
   if (hero.actions > 1 && hero.movement < 3) {
     hero.actions -= 2
@@ -343,6 +347,13 @@ const checkWinConditions = (state: GameState) => {
   }
 }
 
+export const triggerTrap = (door: Door, hero: Actor, state: GameState) => {
+  const hits = roll(Level.APPRENTICE, door.trapAttacks);
+  const damage = Math.max(hits - hero.defense, 0);
+  addLog(state, `Door was trapped. ${hero.name} took ${getDamageString(damage, hits, hero)}`);
+  hero.health -= damage;
+}
+
 const moveOverDoor = (state: GameState, hero: Actor, newX: number, newY: number) => {
   const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y)
 
@@ -351,10 +362,7 @@ const moveOverDoor = (state: GameState, hero: Actor, newX: number, newY: number)
     if (door.side === side) {
       door.open = true;
       if (door.trapped) {
-        const hits = roll(Level.APPRENTICE, door.trapAttacks);
-        const damage = Math.max(hits - hero.defense, 0);
-        addLog(state, `Door was trapped. ${hero.name} took ${getDamageString(damage, hits, hero)}`);
-        hero.health -= damage;
+        triggerTrap(door, hero, state);
       }
       return true
     }
@@ -441,7 +449,7 @@ const monsterActions = (state: GameState) => {
   })
 }
 
-function getDist(a: Position, b: Position) {
+export const getDist = (a: Position, b: Position) => {
   return Math.sqrt(
     Math.pow(a.x - b?.x, 2) +
     Math.pow(a.y - b?.y, 2)
@@ -499,7 +507,7 @@ let findPossibleMoves = (state: GameState, position: Position): Position[] => {
   })
 }
 
-const getDamageString = (damage: number, hits: number, target: Actor) => {
+export const getDamageString = (damage: number, hits: number, target: Actor) => {
   const defense = target.armour?.defense ?? target.defense
   return `${damage} damage (${hits}-${defense}=${damage})`;
 }
@@ -537,6 +545,6 @@ const isSamePosition = (a: Position, b: Position) => {
   return a.x === b.x && a.y === b.y;
 }
 
-const addLog = (state: GameState, logMessage: string) => {
+export const addLog = (state: GameState, logMessage: string) => {
   state.actionLog = [logMessage, ...state.actionLog];
 }
