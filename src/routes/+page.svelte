@@ -3,6 +3,7 @@
   import Dungeon from "./Dungeon.svelte";
   import Characters from "./Characters.svelte";
   import { onMount } from "svelte";
+    import Stat from "./Stat.svelte";
 
   let state = init()
 
@@ -11,6 +12,49 @@
     setInterval(render, 500);
     setInterval(hasWon, 1000)
   });
+
+  function onKeyDown(e)
+  {
+    switch (e.key) {
+      case "6":
+        act('R', state);
+        break;
+      case "9":
+        act('UR', state);
+        break;
+      case "8":
+        act('U', state);
+        break;
+      case "7":
+        act('UL', state);
+        break;
+      case "4":
+        act('L', state);
+        break;
+      case "1":
+        act('DL', state);
+        break;
+      case "2":
+        act('D', state);
+        break;
+      case "3":
+        act('DR', state);
+        break;
+      case "0":
+        next(state);
+        break;
+      case "-":
+        pickLock(state);
+        break;
+      case "+":        
+        search(state);      
+        break;
+      default:
+        break;
+    }
+    
+  }
+
 
   const hasWon = () => {
     if (state.dungeon.beaten && state.dungeon.nextDungeon) {
@@ -115,3 +159,4 @@
   </div>
   {/key}
 </div>
+<svelte:window on:keydown|preventDefault={onKeyDown} />
