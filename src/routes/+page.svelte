@@ -40,7 +40,6 @@
 <style>
     .container {
         width: 100%;
-        height: 800px;
         background: aqua;
         padding: 2px;
     }
@@ -51,12 +50,6 @@
         background: gray;
         float: left;
         padding-right: 10px;
-    }
-
-    .boardSide {
-        margin-left: 15%;
-        height: 800px;
-        background: black;
     }
 
     .commands {
@@ -78,9 +71,7 @@
   <div class="characterSide">
     <Characters {state}/>
   </div>
-  <div class="boardSide">
     <Dungeon bind:state={state}/>
-  </div>
 </div>
 <div class='container'>
   <div class="commands">
