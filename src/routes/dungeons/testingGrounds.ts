@@ -4,10 +4,11 @@ import {
   createDoor,
   createLockedDoor,
   createMonster,
-  createSecret,
+  createSecret, createSecretWithItem,
   createTrappedDoor,
   createTrappedHiddenDoor
 } from "../dungeons";
+import { weapons } from '../items/weapons';
 import { e1m0 } from './e1m0';
 
 export const testingGrounds: Dungeon = {
@@ -54,7 +55,8 @@ export const testingGrounds: Dungeon = {
     ],
     secrets: [
       createSecret(SecretType.TRAP_DOOR, 'Welcome to Drakriddarna', 3, 9),
-      createSecret(SecretType.EQUIPMENT, 'Halberd', 1, 10),
+      createSecret(SecretType.EQUIPMENT, 'Random Equipment', 1, 10),
+      createSecretWithItem(SecretType.EQUIPMENT, 'Halberd', 5, 10, weapons[2]),
     ],
     notes: []
   },

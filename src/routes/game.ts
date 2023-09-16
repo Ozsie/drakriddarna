@@ -101,7 +101,8 @@ const newHero = (name: string, colour: Colour): Hero => {
     experience: 0,
     position: {x:-1,y:-1},
     weapon: weapons[0],
-    incapacitated: false
+    incapacitated: false,
+    inventory: [],
   }
 }
 
@@ -406,7 +407,8 @@ const doorAsActor = (door: Door): Actor => {
       twoHanded: false,
       range: 1,
       type: ItemType.WEAPON,
-    }
+    },
+    inventory: [],
   };
 }
 

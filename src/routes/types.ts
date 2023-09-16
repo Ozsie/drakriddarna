@@ -28,6 +28,7 @@ export type Actor = {
   armour?: Armour;
   shield?: Shield;
   incapacitated: boolean;
+  inventory: Item[];
 }
 
 export type Hero = Actor & {

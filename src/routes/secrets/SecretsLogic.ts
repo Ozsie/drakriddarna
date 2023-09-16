@@ -1,27 +1,6 @@
-import type {
-  Actor,
-  Armour,
-  GameState,
-  Hero,
-  Item,
-  Position,
-  Secret,
-  Shield,
-  Weapon
-} from "../types";
-import {
-  Colour,
-  ItemType,
-  Level,
-  SecretType
-} from "../types";
-import {
-  addLog,
-  isNeighbouring,
-  isSamePosition,
-  roll,
-  takeDamage
-} from "../game";
+import type { Actor, Armour, GameState, Hero, Item, Position, Secret, Shield, Weapon } from "../types";
+import { Colour, ItemType, Level, SecretType } from "../types";
+import { addLog, isNeighbouring, isSamePosition, roll, takeDamage } from "../game";
 
 export const searchForSecret = (state: GameState) => {
   const hero = state.currentActor as Hero;
@@ -84,7 +63,8 @@ const secretAsActor = (secret: Secret): Actor => {
       twoHanded: false,
       range: 1,
       type: ItemType.WEAPON,
-    }
+    },
+    inventory: [],
   };
 }
 
@@ -148,15 +128,19 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
     switch (secret.type) {
       case SecretType.EQUIPMENT: {
         let item = secret.item ?? randomItem(state);
+        removeFoundItemFromDeck(state, item);
         addLog(state, `${hero.name} equipped (${item.name})`);
         switch (item.type) {
           case ItemType.ARMOUR:
+            if (hero.armour) hero.inventory.push(hero.armour);
             hero.armour = item as Armour;
             break;
           case ItemType.SHIELD:
+            if (hero.shield) hero.inventory.push(hero.shield);
             hero.shield = item as Shield;
             break;
           case ItemType.WEAPON:
+            if (hero.weapon) hero.inventory.push(hero.weapon);
             hero.weapon = item as Weapon;
             break;
         }
@@ -170,9 +154,13 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
 const randomItem = (state: GameState): Item => {
   const itemCount = state.itemDeck.length;
   const index = Math.floor(Math.random() * itemCount)
-  const selectedItem = state.itemDeck[index];
-  state.itemDeck = state.itemDeck.splice(index, 1);
-  return selectedItem;
+  return state.itemDeck[index];
+}
+
+const removeFoundItemFromDeck = (state: GameState, item: Item) => {
+  const index = state.itemDeck
+    .findIndex((i) => i.type === item.type && i.name === item.name);
+  state.itemDeck.splice(index, 1);
 }
 
 const lookForTrapDoor = (state: GameState, hero: Hero, result: number) => {

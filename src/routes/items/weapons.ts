@@ -8,7 +8,7 @@ export const weapons: Weapon[] = [
     dice: 3,
     twoHanded: false,
     useHearHeroes: true,
-    amountInDeck: 4,
+    amountInDeck: 0,
     type: ItemType.WEAPON,
   },
   {
