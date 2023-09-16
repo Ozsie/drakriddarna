@@ -26,6 +26,8 @@
     const c = document.getElementById("gameBoard");
     const ctx = c.getContext("2d");
     ctx.clearRect(0, 0, c.width, c.height);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, c.width, c.height);
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderFloor(ctx, cell, x, y, ground))
     });
@@ -43,19 +45,25 @@
   }
 
 
+  const renderHiddenCell = (ctx, x, y) => {
+    ctx.beginPath();
+    ctx.strokeStyle = "black";
+    ctx.fillStyle = "black";
+    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+    ctx.stroke();
+  }
+
   const renderFloor = (ctx, cell, x, y, ground) => {
     if (isWall(cell) || !state.dungeon.discoveredRooms.includes(cell) && cell !== EMPTY) {
       if (state.dungeon.discoveredRooms.some((r) => neighbourOf(x, y, r))) {
         ctx.drawImage(ground, 48, 0, 48, 48, x * cellSize, y * cellSize, cellSize, cellSize);
+      } else {
+        renderHiddenCell(ctx, x, y);
       }
     } else if (!isEmpty(cell)) {
       ctx.drawImage(ground, 0, 0, 48, 48, x*cellSize, y*cellSize, cellSize, cellSize);
     } else {
-      ctx.beginPath();
-      ctx.strokeStyle = 'black';
-      ctx.fillStyle = 'black'
-      ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-      ctx.stroke();
+      renderHiddenCell(ctx, x, y);
     }
   }
 
@@ -282,4 +290,13 @@
     return false;
   }
 </script>
-<canvas width="860" height="750" id="gameBoard"></canvas>
+<style>
+  .dungeon {
+      margin-left: 15%;
+      background: yellow;
+      overflow: scroll;
+  }
+</style>
+<div style="max-height: {cellSize * 20}px; max-width:{cellSize*15}px;" class="dungeon">
+  <canvas width="{cellSize * 20}" height="{cellSize * 15}" id="gameBoard"></canvas>
+</div>
