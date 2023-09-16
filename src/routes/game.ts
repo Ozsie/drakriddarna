@@ -534,7 +534,7 @@ const monsterAttack = (state: GameState, monster: Monster, hero: Hero) => {
   }
 }
 
-const canAct = (hero: Hero) => {
+export const canAct = (hero: Hero) => {
   if (hero.movement < 3) {
     return hero.actions > 1
   }
