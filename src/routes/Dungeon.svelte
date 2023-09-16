@@ -164,6 +164,31 @@
     ctx.stroke();
   }
 
+  const renderActionOnActor = (ctx, hero,  x, y) => {
+      var prevFillStyle = ctx.fillStyle;
+      var prevStrokeStyle = ctx.strokeStyle;
+      
+      ctx.strokeStyle = "#080808";
+      ctx.fillStyle = "darkred";
+      for (let index = 0; index < hero.actions; index++) {
+        
+        ctx.fillRect((x * cellSize + 4 + 6*index) , y*cellSize + cellSize - 12, 5, 5);    
+        ctx.rect((x * cellSize + 4 + 6*index) , y*cellSize + cellSize - 12, 5, 5); 
+        ctx.stroke();
+      }
+        
+      ctx.fillStyle = "blue";
+      for (let index = 0; index < hero.movement; index++) {
+        
+        ctx.fillRect((x * cellSize + cellSize - 22 + 6*index) , y*cellSize + cellSize - 12, 5, 5);    
+        ctx.rect((x * cellSize + cellSize - 22 + 6*index) , y*cellSize + cellSize - 12, 5, 5);    
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = prevFillStyle;
+      ctx.strokeStyle = prevStrokeStyle;
+  }
+
   const renderCurrentActor = (ctx, hero) => {
     if (hero === state.currentActor) {
       ctx.beginPath();
@@ -219,6 +244,7 @@
     const hero = state.heroes.find((hero) => hero.position.x === x && hero.position.y === y)
     if (hero) {
       ctx.drawImage(actors, 4*16, 0, 16, 16, x*cellSize, y*cellSize, cellSize, cellSize);
+      renderActionOnActor(ctx, hero, x, y)
       renderActorBar(ctx, hero, x, y);
       renderHealthBar(ctx, hero, x, y);
     } else {

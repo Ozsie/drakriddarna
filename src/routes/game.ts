@@ -132,6 +132,9 @@ export const act = (direction: string, state: GameState) => {
       hero.movement = 3;
     }
   }
+  if (hero.actions == 0) {
+    hero.movement = 0;
+  }
 }
 
 const move = (hero: Actor, state: GameState, newX: number, newY: number, cost: number) => {
@@ -223,6 +226,9 @@ export const pickLock = (state: GameState) => {
       hero.actions--;
     }
     hero.movement = 3;
+    if(hero.actions == 0){
+      hero.movement = 0
+    }
   }
 }
 
@@ -269,7 +275,9 @@ export const search = (state: GameState) => {
   } else {
     hero.actions--;
   }
-  hero.movement = 3;
+  if(hero.actions == 0){
+    hero.movement = 0
+  }
 }
 
 export const next = (state: GameState) => {
