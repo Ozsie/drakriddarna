@@ -15,6 +15,7 @@
         margin-left: 15%;
         height: 100px;
         background: green;
+        overflow: scroll;
     }
     p {
         font-size: 10pt;
@@ -25,7 +26,7 @@
 <div class="log">
   {#key actionLog}
     {#each actionLog as log, index}
-      {#if index < 10}
+      {#if index < 25}
         <p>{log}</p>
       {/if}
     {/each}
