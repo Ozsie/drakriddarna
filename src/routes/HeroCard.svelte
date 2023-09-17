@@ -1,46 +1,66 @@
-<!-- export type Actor = {
-    name: string;
-    actions: number;
-    movement: number;
-    defense: number;
-    health: number;
-    maxHealth: number;
-    colour: Colour;
-    experience: number;
-    position: Position;
-    level: Level;
-    weapon: Weapon;
-    armour?: Armour;
-    shield?: Shield;
-  } -->
-<!-- <svelte:options tag="hero-card" /> -->
 <script lang="ts">
-    import type { Actor, Hero } from "./types";
-    
+    import type { Actor, Hero } from "./types";    
     export let hero: Hero;
-    // import { onMount } from "svelte";
-  
-    // export let state
-    // const cardHeight = 180;
-  
-    // onMount(() => {
-    //   render();
-    //   setInterval(render, 100)
-    // });
-
-
-    // const render = () => {
-    // if (!state || !document) return;
-   
-    // };
-  
 </script>
 
-
-<div>
-    <h3>{hero.name} - {hero.experience}</h3>
+<div class="hero-card" style="background-color: {hero.colour};">
+    <div class="hero-title">
+        <b>{hero.name} - </b>
+        <b> {hero.level} ({hero.experience})</b>
+    </div>
     <span>HP: {hero.health}</span>
     <span>Actions: {hero.actions}</span>
     <span>Moves: {hero.movement}</span>
     <span>Equipment: </span>
+    <div class="equipment">
+        <span>🗡️  {hero.weapon.name} ({hero.weapon.dice}) </span>
+        <span>
+            🧱
+        {#if hero.armour != undefined}
+            {hero.armour.name} ({hero.armour.defense})
+        {:else}
+            None (0)
+        {/if}
+        </span>
+        <span> 
+            🛡️
+            {#if hero.shield != undefined}
+                {hero.shield.name} ({hero.shield.dice})
+            {:else}
+                None (0)
+            {/if}
+        </span>
+    </div>
 </div>
+
+<style>
+    .hero-card{
+        font-size: 0.9em;
+        font-family: Arial, Helvetica, sans-serif;
+        margin: 4px;
+        padding: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        max-width: 235px;
+        border-radius: 5px;
+    }
+    .hero-title
+    {
+        display: inline-block;
+    }
+    .hero-title b {
+        float: left;
+    }
+
+    .hero-card span {
+        display: block;
+    }
+
+    .hero-card .equipment span{
+        float: left;
+        margin: 0px 4px;
+        font-size: 0.75em;
+    }
+
+
+</style>

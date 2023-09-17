@@ -102,6 +102,7 @@
 
     .characterSide {
         width: 15%;
+        max-width: 240px;
         height: 800px;
         background: gray;
         float: left;
