@@ -1,7 +1,10 @@
 <script>
-  import { onMount } from "svelte";
+  
+  import HeroCard from "./HeroCard.svelte";
 
-  export let state
+  import { onMount } from "svelte";
+  
+  export let state;
   const cardHeight = 180;
 
   onMount(() => {
@@ -13,12 +16,44 @@
     if (!state || !document) return;
     const c = document.getElementById("characterBoard");
     const ctx = c.getContext("2d");
+    
+    const heroCards = document.getElementById("heroCard");
+    
+    
+    heroCards.replaceChildren();
+    
+
     ctx.clearRect(0, 0, c.width, c.height);
     ctx.stroke();
+
     state.heroes.forEach((hero, index) => {
+      
+      const heroCard = document.createElement("div");
+
+      const heroName = document.createElement("span");
+      heroCard.appendChild(heroName);
+      const heroHP = document.createElement("span");
+      heroCard.appendChild(heroName);
+      const heroActions = document.createElement("span");
+      heroCard.appendChild(heroName);
+      const heroMoves = document.createElement("span");
+      heroCard.appendChild(heroName);
+      const heroEquipment = document.createElement("span");
+      heroCard.appendChild(heroName);
+      const heroWeapon = document.createElement("span");
+      heroCard.appendChild(heroName);
+      const heroArmor = document.createElement("span");
+      heroCard.appendChild(heroName);
+      const heroShield = document.createElement("span");
+      heroCard.appendChild(heroName);
+      
+      heroCard.innerHTML = "hej";
+      
       renderHeroCard(ctx, c, hero, index);
       renderHeroStats(ctx, hero, index);
       renderHeroEquipment(ctx, hero, index);
+
+      heroCards.appendChild(heroCard);
     });
   }
 
@@ -58,4 +93,5 @@
   }
 
 </script>
+<div id="heroCard"></div>
 <canvas id="characterBoard" height="750" width="260"></canvas>
