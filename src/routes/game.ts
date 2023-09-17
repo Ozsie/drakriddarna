@@ -1,11 +1,8 @@
-import type { Actor, Door, Dungeon, GameState, Hero, Item, Layout, Monster, Position } from "./types";
+import type { Actor, Door, Dungeon, GameState, Hero, Layout, Monster, Position } from "./types";
 import { Colour, ConditionType, ItemType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, WALL } from "./dungeons";
-import { weapons } from "./items/weapons";
 import { checkForTrapDoor, searchForSecret } from "./secrets/SecretsLogic";
-import { armour } from "./items/armours";
-import { shields } from "./items/shields";
-import { e1m0 } from "./dungeons/e1m0";
+import { campaignIceDragonTreasure } from "../campaigns/campaignIceDragonTreasure";
 
 
 export const save = (state: GameState) => {
@@ -24,36 +21,19 @@ export const load = (): GameState | undefined => {
 }
 
 export const init = (): GameState => {
-  const heroes: Hero[] = defaultHeroes;
-  const itemDeck: Item[] = [];
-  weapons.forEach((weapon) => {
-    for (let i = 0; i < weapon.amountInDeck; i++) {
-      itemDeck.push(weapon);
-    }
-  });
-  armour.forEach((armour) => {
-    for (let i = 0; i < armour.amountInDeck; i++) {
-      itemDeck.push(armour);
-    }
-  });
-  shields.forEach((shield) => {
-    for (let i = 0; i < shield.amountInDeck; i++) {
-      itemDeck.push(shield);
-    }
-  });
-
   const state = {
-    heroes: heroes,
-    dungeon: e1m0,
-    currentActor: heroes[0],
+    heroes: campaignIceDragonTreasure.heroes,
+    dungeon: campaignIceDragonTreasure.dungeons[0],
+    currentActor: campaignIceDragonTreasure.heroes[0],
     actionLog: [
+      `Playing '${campaignIceDragonTreasure.name}'`,
       'Game Initialised',
       'Each character has 2 actions. Move, Attack, Search or Pick Lock.',
       'Each character can move 3 steps per action.',
       'If another action is performed before moving 3 steps, the move is finished and both actions are consumed.',
       'The rules of this game are harsh and unfair.'
     ],
-    itemDeck: shuffle(itemDeck)
+    itemDeck: shuffle(campaignIceDragonTreasure.itemDeck)
   }
   resetLiveHeroes(state);
   return state;
@@ -70,33 +50,6 @@ const shuffle = (array: any[]) => {
   }
   return array;
 }
-
-const newHero = (name: string, colour: Colour): Hero => {
-  weapons[0].amountInDeck--;
-  return {
-    name: name,
-    actions: 2,
-    movement: 3,
-    maxMovement: 3,
-    defense: 0,
-    level: Level.APPRENTICE,
-    health: 7,
-    maxHealth: 7,
-    colour: colour,
-    experience: 0,
-    position: {x:-1,y:-1},
-    weapon: weapons[0],
-    incapacitated: false,
-    inventory: [],
-  }
-}
-
-export const defaultHeroes: Hero[] = [
-  newHero('Fearik', Colour.Yellow),
-  newHero('Helbran', Colour.Red),
-  newHero('Siedel', Colour.Green),
-  newHero('Wulf', Colour.Blue)
-];
 
 export const resetLiveHeroes = (state: GameState) => {
   state.heroes.forEach((hero, index) => {
@@ -375,10 +328,6 @@ const checkWinConditions = (state: GameState) => {
     addLog(state, `You have cleared ${state.dungeon.name}`);
     addLog(state, `Press 'Next' to move on to the next level: ${state.dungeon.nextDungeon?.name}`)
   }
-}
-
-export const triggerTrap = (door: Door, hero: Actor, state: GameState) => {
-  takeDamage(state, doorAsActor(door), hero);
 }
 
 export const doorAsActor = (door: Door): Actor => {

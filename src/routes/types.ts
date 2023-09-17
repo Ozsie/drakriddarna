@@ -13,6 +13,13 @@ export type GameState = {
   itemDeck: Item[];
 }
 
+export type Campaign = {
+  name: string
+  dungeons: Dungeon[];
+  heroes: Actor[];
+  itemDeck: Item[];
+}
+
 export type Actor = {
   name: string;
   actions: number;
