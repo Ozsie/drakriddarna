@@ -31,6 +31,10 @@ export const distanceInGrid = (a: Position, b: Position) =>{
 
 export const onTargetSelf = (state: GameState, x: number, y: number) => {
   const hero = state.currentActor as Hero;
+  if (!canAct(hero)) {
+    addLog(state, `${hero.name} has no actions left`);
+    return;
+  }
   const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y);
   if (door) {
     if (!door.open && !door.hidden && !door.locked) {
@@ -54,19 +58,11 @@ export const onTargetSelf = (state: GameState, x: number, y: number) => {
       }
       consumeActions(hero);
     } else if (door.locked && !door.hidden) {
-      if (!canAct(hero)) {
-        addLog(state, `${hero.name} has no actions left`);
-        return;
-      }
       addLog(state, "Door is locked");
       pickLock(state);
       consumeActions(hero);
     }
   } else {
-    if (!canAct(hero)) {
-      addLog(state, `${hero.name} has no actions left`);
-      return;
-    }
     search(state);
   }
 }

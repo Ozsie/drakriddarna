@@ -3,7 +3,7 @@
     toArray
   } from "./game.ts";
   import { onMount } from "svelte";
-  import { MonsterType, Side } from "./types.ts";
+  import { Side } from "./types.ts";
   import groundSprites from '$lib/Dungeon_Tileset.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
   import { EMPTY, WALL } from "./dungeons.ts";
@@ -11,6 +11,7 @@
   import { browser } from '$app/environment';
   import { renderSecrets } from "./secrets/SecretsRendering.ts";
   import { renderHeroes } from "../hero/HeroRendering";
+  import { renderMonsters } from "../monsters/MonsterRendering.ts";
   export let state;
   export let debugMode = true;
 
@@ -51,9 +52,7 @@
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderDoor(ctx, cell, x, y))
     });
-    state.dungeon.layout.grid.forEach((row, y) => {
-      toArray(row).forEach((cell, x) => renderActors(ctx, cell, x, y, actors))
-    });
+    renderMonsters(ctx, actors, cellSize, state, debugMode);
     renderHeroes(ctx, actors, cellSize, state, debugMode);
   }
 
@@ -145,85 +144,6 @@
           }
           break;
         }
-      }
-    }
-  }
-
-  const renderActorBar = (ctx, actor, x, y) => {
-    ctx.beginPath();
-    ctx.strokeStyle = actor.colour;
-    ctx.fillStyle = actor.colour;
-    ctx.fillRect((x * cellSize) + 4, (y * cellSize) + (cellSize - 6), cellSize - 8, 4);
-    ctx.stroke();
-  }
-
-  const renderLineOfSight = (ctx, from, to, state) => {
-    if (debugMode) {
-      to.forEach((target) => {
-        const sX = from.position.x;
-        const sY = from.position.y;
-        const eX = target.position.x;
-        const eY = target.position.y;
-
-        ctx.strokeStyle = from.colour;
-        ctx.beginPath();
-        ctx.moveTo(sX * cellSize + (cellSize / 2), sY * cellSize + (cellSize / 2));
-        ctx.lineTo(eX * cellSize + (cellSize / 2), eY * cellSize + (cellSize / 2));
-        ctx.stroke();
-      });
-    }
-  }
-
-  const renderHealthBar = (ctx, actor, x, y) => {
-    ctx.beginPath();
-    ctx.strokeStyle = 'black';
-    ctx.fillStyle = 'red';
-    ctx.fillRect((x * cellSize) + 4, y*cellSize, (cellSize - 8), 4);
-    ctx.fillStyle = 'green';
-    ctx.fillRect((x * cellSize) + 4, y*cellSize, (cellSize - 8) * (actor.health/actor.maxHealth), 4);
-    ctx.rect((x * cellSize) + 4, y*cellSize, (cellSize - 8), 4);
-    ctx.stroke();
-  }
-
-  const renderActionOnActor = (ctx, hero,  x, y) => {
-      var prevFillStyle = ctx.fillStyle;
-      var prevStrokeStyle = ctx.strokeStyle;
-      
-      ctx.strokeStyle = "#080808";
-      ctx.fillStyle = "darkred";
-      for (let index = 0; index < hero.actions; index++) {
-        
-        ctx.fillRect((x * cellSize + 4 + 6*index) , y*cellSize + cellSize - 12, 5, 5);    
-        ctx.rect((x * cellSize + 4 + 6*index) , y*cellSize + cellSize - 12, 5, 5); 
-        ctx.stroke();
-      }
-        
-      ctx.fillStyle = "blue";
-      for (let index = 0; index < hero.movement; index++) {
-        
-        ctx.fillRect((x * cellSize + cellSize - 22 + 6*index) , y*cellSize + cellSize - 12, 5, 5);    
-        ctx.rect((x * cellSize + cellSize - 22 + 6*index) , y*cellSize + cellSize - 12, 5, 5);    
-        ctx.stroke();
-      }
-
-      ctx.fillStyle = prevFillStyle;
-      ctx.strokeStyle = prevStrokeStyle;
-  }
-
-  const renderActors = (ctx, cell, x, y, actors) => {
-    ctx.beginPath();
-    const hero = state.heroes.find((hero) => hero.position.x === x && hero.position.y === y)
-    if (!hero) {
-      const monster = state.dungeon.layout.monsters.find((monster) => monster.position.x === x && monster.position.y === y);
-      if (monster && monster.health > 0 && !isEmpty(cell)) {
-        switch (monster.type) {
-          case MonsterType.ORCH: ctx.drawImage(actors, cellSize, 16, 16, 16, x * cellSize, y * cellSize, cellSize, cellSize); break;
-          case MonsterType.TROLL: ctx.drawImage(actors, cellSize, 16, 16, 16, x * cellSize, y * cellSize, cellSize, cellSize); break;
-          default: ctx.drawImage(actors, 16, 16, 16, 16, x * cellSize, y * cellSize, cellSize, cellSize); break;
-        }
-        renderActorBar(ctx, monster, x, y);
-        renderHealthBar(ctx, monster, x, y);
-        renderLineOfSight(ctx, monster, state.heroes, state);
       }
     }
   }

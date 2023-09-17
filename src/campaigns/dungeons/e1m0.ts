@@ -49,7 +49,7 @@ export const e1m0: Dungeon = {
       createMonster(MonsterType.TROLL, Colour.Green, 6, 1),
     ],
     secrets: [
-      createSecret(SecretType.TRAP_DOOR, 'Welcome to Drakriddarna', 3, 9),
+      createSecret(SecretType.NOTE, 'Welcome to Drakriddarna', 3, 9),
     ],
     notes: []
   },
