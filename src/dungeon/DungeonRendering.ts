@@ -12,7 +12,7 @@ export const renderDoors = (ctx: CanvasRenderingContext2D, ground: CanvasImageSo
 export const renderGrid = (ctx: CanvasRenderingContext2D, ground: CanvasImageSource, cellSize: number, state: GameState, debugMode: boolean) => {
   state.dungeon.layout.grid.forEach((row, y) => {
     toArray(row).forEach((cell: string, x: number) => {
-      renderFloor(ctx, ground, state, cell, x, y, cellSize, debugMode);
+      renderFloor(ctx, ground, state, cell, x, y, cellSize);
       renderGridLines(ctx, cell, state, x, y, cellSize, debugMode);
     });
   });
