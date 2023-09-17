@@ -2,3 +2,9 @@ node_modules/
 .idea/
 .gitignore/generated/
 .gitignore/output/
+.svelte-kit/generated
+.svelte-kit/output
+.svelte-kit/types
+build/**
+
+**/.DS_Store

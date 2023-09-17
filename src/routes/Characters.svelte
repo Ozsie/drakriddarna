@@ -4,18 +4,22 @@
   export let state: any ;
   let uglyUpdateToggle = false;;
   
+  import { liveHeroes } from "./game.ts";
+  
   onMount(() => {
     render();
     setInterval(render, 100)
   });
 
   const render = () => {
-    uglyUpdateToggle = !uglyUpdateToggle;
-    if (!state || !document) return;  
-  }
-  
+
+  uglyUpdateToggle = !uglyUpdateToggle;
+  if (!state || !document) return;  
+  };
+
+
 </script>
-{#each state.heroes as hero, i}
+{#each liveHeroes(state) as hero, i}
 
   {#key uglyUpdateToggle}
     {#if hero === state.currentActor}
@@ -47,3 +51,4 @@
     margin: 4px 4px -4px 4px;
   }
 </style>
+

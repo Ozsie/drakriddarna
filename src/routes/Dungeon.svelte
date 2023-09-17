@@ -1,14 +1,31 @@
 <script>
-  import { isBlockedByHero, isBlockedByMonster, isDiscovered, isWalkable, toArray } from "./game.ts";
+  import {
+    isBlockedByHero,
+    isBlockedByMonster,
+    isDiscovered,
+    isWalkable,
+    liveHeroes,
+    toArray
+  } from "./game.ts";
   import { onMount } from "svelte";
   import { MonsterType, Side } from "./types.ts";
   import groundSprites from '$lib/Dungeon_Tileset.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
   import { EMPTY, WALL } from "./dungeons.ts";
-  export let state
-
-  const cellSize = 48;
+  import { doMouseLogic } from "./hero/ClickInputLogic.ts";
+  import { browser } from '$app/environment';
+  import { renderSecrets } from "./secrets/SecretsRendering.ts";
+  export let state;
   export let debugMode = true;
+
+  let footerSize;
+  let screenSize;
+  const cellSize = 48;
+
+  if (browser) {
+    screenSize = window.innerHeight;
+    footerSize = document.getElementById('footer').offsetHeight;
+  }
 
   onMount(() => {
     const ground = new Image();
@@ -21,14 +38,26 @@
     setInterval(() => render(ground, actors), 10);
   });
 
+  const renderHero = (ctx, hero, actors) => {
+    const x = hero.position.x;
+    const y = hero.position.y;
+    ctx.drawImage(actors, 4*16, 0, 16, 16, x*cellSize, y*cellSize, cellSize, cellSize);
+    renderActionOnActor(ctx, hero, x, y)
+    renderActorBar(ctx, hero, x, y);
+    renderHealthBar(ctx, hero, x, y);
+  }
+
   const render = (ground, actors) => {
     if (!state || !document) return;
     const c = document.getElementById("gameBoard");
     const ctx = c.getContext("2d");
     ctx.clearRect(0, 0, c.width, c.height);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, c.width, c.height);
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderFloor(ctx, cell, x, y, ground))
     });
+    renderSecrets(ctx, ground, cellSize, state);
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderGrid(ctx, cell, x, y))
     });
@@ -38,24 +67,34 @@
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderActors(ctx, cell, x, y, actors))
     });
+    const heroes = liveHeroes(state);
+    heroes.forEach((hero) => {
+      renderHero(ctx, hero, actors);
+    });
     renderWalkableArea(ctx, state.currentActor);
     renderCurrentActor(ctx, state.currentActor);
   }
 
 
+  const renderHiddenCell = (ctx, x, y) => {
+    ctx.beginPath();
+    ctx.strokeStyle = "black";
+    ctx.fillStyle = "black";
+    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+    ctx.stroke();
+  }
+
   const renderFloor = (ctx, cell, x, y, ground) => {
     if (isWall(cell) || !state.dungeon.discoveredRooms.includes(cell) && cell !== EMPTY) {
       if (state.dungeon.discoveredRooms.some((r) => neighbourOf(x, y, r))) {
         ctx.drawImage(ground, 48, 0, 48, 48, x * cellSize, y * cellSize, cellSize, cellSize);
+      } else {
+        renderHiddenCell(ctx, x, y);
       }
     } else if (!isEmpty(cell)) {
       ctx.drawImage(ground, 0, 0, 48, 48, x*cellSize, y*cellSize, cellSize, cellSize);
     } else {
-      ctx.beginPath();
-      ctx.strokeStyle = 'black';
-      ctx.fillStyle = 'black'
-      ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-      ctx.stroke();
+      renderHiddenCell(ctx, x, y);
     }
   }
 
@@ -242,12 +281,7 @@
   const renderActors = (ctx, cell, x, y, actors) => {
     ctx.beginPath();
     const hero = state.heroes.find((hero) => hero.position.x === x && hero.position.y === y)
-    if (hero) {
-      ctx.drawImage(actors, 4*16, 0, 16, 16, x*cellSize, y*cellSize, cellSize, cellSize);
-      renderActionOnActor(ctx, hero, x, y)
-      renderActorBar(ctx, hero, x, y);
-      renderHealthBar(ctx, hero, x, y);
-    } else {
+    if (!hero) {
       const monster = state.dungeon.layout.monsters.find((monster) => monster.position.x === x && monster.position.y === y);
       if (monster && monster.health > 0 && !isEmpty(cell)) {
         switch (monster.type) {
@@ -281,5 +315,23 @@
     }
     return false;
   }
+
+  const onClick = (event) => {
+    doMouseLogic(event, cellSize, state);
+  }
+
+  const getStyle = () => {
+    const maxHeight = screenSize - footerSize - 20;
+    return `max-height: ${maxHeight}px; max-width: ${cellSize * 40}`;
+  }
 </script>
-<canvas width="860" height="750" id="gameBoard"></canvas>
+<style>
+  .dungeon {
+      background: yellow;
+      overflow: scroll;
+      height: 80%;
+  }
+</style>
+<div style="{getStyle()}" class="dungeon">
+  <canvas width="{cellSize * 40}" height="{cellSize * 30}" id="gameBoard" on:click="{onClick}"></canvas>
+</div>
