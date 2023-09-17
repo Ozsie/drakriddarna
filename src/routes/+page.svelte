@@ -93,11 +93,12 @@
         }
     }
     .characterSide {
+        width: 15%;
+        max-width: 240px;
         background: gray;
         float: left;
         padding-right: 10px;
     }
-
     .commands {
         height: 100px;
         background: gray;
