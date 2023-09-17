@@ -7,10 +7,10 @@ import {
   pickLock,
   search,
   takeDamage,
-} from "../game";
-import { Side } from '../types';
-import type { Position, GameState, Hero } from '../types';
-import { checkForTrapDoor } from '../secrets/SecretsLogic';
+} from "../routes/game";
+import { Side } from '../routes/types';
+import type { Position, GameState, Hero } from '../routes/types';
+import { checkForTrapDoor } from '../routes/secrets/SecretsLogic';
 
 export const distanceInGrid = (a: Position, b: Position) =>{
   const dx = Math.abs(b.x - a.x);
@@ -33,7 +33,7 @@ export const onTargetSelf = (state: GameState, x: number, y: number) => {
   const hero = state.currentActor as Hero;
   const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y);
   if (door) {
-    if (!door.open && !door.hidden && !door.locked) {
+    if (!door.open && !door.hidden && !door.locked && hero.movement > 0) {
       door.open = true;
       if (door.trapped) {
         takeDamage(state, doorAsActor(door), hero);

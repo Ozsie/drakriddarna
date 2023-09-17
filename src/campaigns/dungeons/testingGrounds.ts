@@ -1,5 +1,5 @@
-import { Colour, ConditionType, MonsterType, SecretType, Side } from 'src/routes/types';
-import type { Dungeon } from 'src/routes/types';
+import { Colour, ConditionType, MonsterType, SecretType, Side } from '../../routes/types';
+import type { Dungeon } from '../../routes/types';
 import {
   createDoor,
   createLockedDoor,
@@ -7,9 +7,9 @@ import {
   createSecret, createSecretWithItem,
   createTrappedDoor,
   createTrappedHiddenDoor
-} from "src/routes/dungeons";
-import { weapons } from 'src/routes/items/weapons';
-import { e1m0 } from 'src/campaigns/dungeons/e1m0';
+} from "../../routes/dungeons";
+import { weapons } from '../../routes/items/weapons';
+import { e1m0 } from '../../campaigns/dungeons/e1m0';
 
 export const testingGrounds: Dungeon = {
   name: 'Testing Grounds',
