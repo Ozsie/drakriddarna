@@ -6,7 +6,7 @@ export const renderHeroes = (ctx: CanvasRenderingContext2D, actors: CanvasImageS
   heroes.forEach((hero) => {
     renderHero(ctx, hero, actors, cellSize);
   });
-  renderWalkableArea(ctx, state, cellSize, debugMode);
+  renderWalkableArea(ctx, state, cellSize);
   renderCurrentActor(ctx, state, cellSize);
 }
 
@@ -61,9 +61,9 @@ const renderActorBar = (ctx: CanvasRenderingContext2D, hero: Hero,  x: number, y
   ctx.stroke();
 }
 
-const renderWalkableArea = (ctx: CanvasRenderingContext2D, state: GameState, cellSize: number, debugMode: boolean) => {
+const renderWalkableArea = (ctx: CanvasRenderingContext2D, state: GameState, cellSize: number) => {
   const hero = state.currentActor;
-  if (debugMode && hero) {
+  if (hero) {
     for (let pX = hero.position.x - hero.movement; pX <= hero.position.x + hero.movement; pX++) {
       for (let pY = hero.position.y - hero.movement; pY <= hero.position.y + hero.movement; pY++) {
         const discovered = isDiscovered(state.dungeon, pX, pY);
