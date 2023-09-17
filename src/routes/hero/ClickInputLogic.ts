@@ -1,12 +1,13 @@
 import {
-  addLog, attack, canAct, consumeActions,
+  addLog, attack, canAct, consumeActions, doorAsActor,
   isBlockedByHero,
   isBlockedByMonster,
   isWalkable,
   openDoor,
-  pickLock, search,
-  triggerTrap
-} from '../game';
+  pickLock,
+  search,
+  takeDamage,
+} from "../game";
 import { Side } from '../types';
 import type { Position, GameState, Hero } from '../types';
 import { checkForTrapDoor } from '../secrets/SecretsLogic';
@@ -35,7 +36,7 @@ export const onTargetSelf = (state: GameState, x: number, y: number) => {
     if (!door.open && !door.hidden && !door.locked) {
       door.open = true;
       if (door.trapped) {
-        triggerTrap(door, hero, state);
+        takeDamage(state, doorAsActor(door), hero);
       }
       switch (door.side) {
         case Side.RIGHT:
@@ -85,7 +86,9 @@ const onTargetCell = (state: GameState, x: number, y: number) => {
     if (!blockedByHero && !blockedByMonster && distance <= hero.movement) {
       hero.position = { x, y };
       hero.movement -= distance;
-      checkForTrapDoor(state);
+      if (checkForTrapDoor(state)) {
+        return;
+      }
     } else if (blockedByMonster) {
       if (distance <= hero.weapon.range) {
         attack(hero, state, x, y);

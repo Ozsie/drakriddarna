@@ -178,20 +178,24 @@ export const act = (direction: string, state: GameState) => {
   } else {
     addLog(state, `${hero.name} could not make that move`);
   }
-  consumeActions(hero);
+  if (!checkForTrapDoor(state)) {
+    consumeActions(hero);
+  }
 }
 
 const move = (hero: Actor, state: GameState, newX: number, newY: number, cost: number) => {
   hero.position.x = newX;
   hero.position.y = newY;
-  checkForTrapDoor(state);
-  const note  = state.dungeon.layout.notes.find((note) => isSamePosition(note.position, hero.position));
+  const note = state.dungeon.layout.notes.find((note) => isSamePosition(note.position, hero.position));
   if (note) {
-    const onHiddenDoor = state.dungeon.layout.doors.some((door) => door.hidden && isSamePosition(note.position, { x: door.x, y: door.y }))
+    const onHiddenDoor = state.dungeon.layout.doors.some((door) => door.hidden && isSamePosition(note.position, {
+      x: door.x,
+      y: door.y
+    }));
     if (!onHiddenDoor) addLog(state, `${hero.name} reads: ${note.message}`);
   }
   const nextToMonster = state.dungeon.layout.monsters.some((monster) => {
-    return isNeighbouring(hero.position, monster.position.x, monster.position.y)
+    return isNeighbouring(hero.position, monster.position.x, monster.position.y);
   });
   if (nextToMonster) {
     addLog(state, `${hero.name} walked by a monster and lost the momentum`);
@@ -374,13 +378,10 @@ const checkWinConditions = (state: GameState) => {
 }
 
 export const triggerTrap = (door: Door, hero: Actor, state: GameState) => {
-  const hits = roll(Level.APPRENTICE, door.trapAttacks);
-  const damage = Math.max(hits - hero.defense, 0);
-  addLog(state, `Door was trapped. ${hero.name} took ${getDamageString(damage, hits, hero)}`);
   takeDamage(state, doorAsActor(door), hero);
 }
 
-const doorAsActor = (door: Door): Actor => {
+export const doorAsActor = (door: Door): Actor => {
   return {
     health: 0,
     position: { x: door.x, y: door.y },
@@ -403,6 +404,8 @@ const doorAsActor = (door: Door): Actor => {
       range: 1,
       type: ItemType.WEAPON,
       value: 0,
+      ignoresShield: true,
+      ignoresArmour: false,
     },
     inventory: [],
   };
@@ -416,7 +419,7 @@ const moveOverDoor = (state: GameState, hero: Actor, newX: number, newY: number)
     if (door.side === side) {
       door.open = true;
       if (door.trapped) {
-        triggerTrap(door, hero, state);
+        takeDamage(state, doorAsActor(door), hero);
       }
       return true
     }
@@ -568,9 +571,9 @@ let findPossibleMoves = (state: GameState, position: Position): Position[] => {
   })
 }
 
-export const getDamageString = (damage: number, hits: number, target: Actor) => {
-  const defense = target.armour?.defense ?? target.defense
-  return `${damage} damage (${hits}-${defense}=${damage})`;
+export const getDamageString = (damage: number, hits: number, shield: number, target: Actor) => {
+  const defense = target.armour?.defense ?? target.defense;
+  return `${damage} damage (${hits}-(${defense}+${shield})=${damage})`;
 }
 
 const monsterAttack = (state: GameState, monster: Monster, hero: Hero) => {
@@ -612,11 +615,22 @@ export const deadHeroes = (state: GameState): Hero[] => {
 }
 
 export const takeDamage = (state: GameState, source: Actor, target: Actor) => {
-  const defense = target.armour?.defense ?? target.defense
+  let defense = 0;
+  let shield = 0;
+  if (!source.weapon.ignoresArmour) {
+    defense = target.armour?.defense ?? target.defense;
+  } else if (target.armour) {
+    addLog(state, `${target.name}'s armour was useless against ${source.weapon.name} `);
+  }
+  if (!source.weapon.ignoresShield) {
+    shield = roll(target.level, target.shield?.dice ?? 0);
+  } else if (target.shield) {
+    addLog(state, `${target.name}'s shield was useless against ${source.weapon.name} `);
+  }
   const hits = roll(source.level, source.weapon.dice);
-  const damage = Math.max(hits - defense, 0);
+  const damage = Math.max(hits - (defense + shield), 0);
   target.health -= damage;
-  addLog(state, `${source.name} attacked ${target.name} with ${source.weapon.name} for ${getDamageString(damage, hits, target)}`);
+  addLog(state, `${source.name} attacked ${target.name} with ${source.weapon.name} for ${getDamageString(damage, hits, shield, target)}`);
   if (target.health <= 0) {
     addLog(state, `${source.name} killed ${target.name}`);
     target.health = 0;

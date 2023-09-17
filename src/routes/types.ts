@@ -150,6 +150,8 @@ export type Weapon = Item & {
   range: number,
   twoHanded: boolean,
   useHearHeroes: boolean,
+  ignoresShield: boolean,
+  ignoresArmour: boolean,
 }
 
 export type Shield = Item & {

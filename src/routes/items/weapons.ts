@@ -11,6 +11,8 @@ export const weapons: Weapon[] = [
     amountInDeck: 0,
     type: ItemType.WEAPON,
     value: 0,
+    ignoresShield: false,
+    ignoresArmour: false,
   },
   {
     name: 'Two-handed Sword',
@@ -21,6 +23,8 @@ export const weapons: Weapon[] = [
     amountInDeck: 1,
     type: ItemType.WEAPON,
     value: 3,
+    ignoresShield: false,
+    ignoresArmour: false,
   },
   {
     name: 'Halberd',
@@ -31,6 +35,8 @@ export const weapons: Weapon[] = [
     amountInDeck: 1,
     type: ItemType.WEAPON,
     value: 2,
+    ignoresShield: false,
+    ignoresArmour: false,
   },
   {
     name: 'Flail',
@@ -41,6 +47,8 @@ export const weapons: Weapon[] = [
     amountInDeck: 1,
     type: ItemType.WEAPON,
     value: 4,
+    ignoresShield: false,
+    ignoresArmour: false,
   },
   {
     name: 'Double Headed Axe',
@@ -51,12 +59,14 @@ export const weapons: Weapon[] = [
     amountInDeck: 1,
     type: ItemType.WEAPON,
     value: 3,
+    ignoresShield: false,
+    ignoresArmour: false,
   },
 ]
 
 export const monsterWeapons: Weapon[] = [
   {
-    name: 'Orch Sword/Bow',
+    name: 'Orch Sword',
     range: 99,
     dice: 3,
     twoHanded: false,
@@ -64,6 +74,8 @@ export const monsterWeapons: Weapon[] = [
     amountInDeck: 4,
     type: ItemType.WEAPON,
     value: 0,
+    ignoresShield: false,
+    ignoresArmour: false,
   },
   {
     name: 'Troll Club',
@@ -74,5 +86,7 @@ export const monsterWeapons: Weapon[] = [
     amountInDeck: 4,
     type: ItemType.WEAPON,
     value: 0,
+    ignoresShield: false,
+    ignoresArmour: false,
   },
 ]

@@ -27,7 +27,7 @@ export const searchForSecret = (state: GameState) => {
 
 export const checkForTrapDoor = (state: GameState) => {
   const actor = state.currentActor
-  if (!actor) return;
+  if (!actor) return false;
   const trap = state.dungeon.layout.secrets
     .filter((secret) => secret.type === SecretType.TRAP_DOOR)
     .filter((secret) => !secret.found)
@@ -39,7 +39,9 @@ export const checkForTrapDoor = (state: GameState) => {
     actor.actions = 0;
     actor.incapacitated = true;
     trap.found = true;
+    return true;
   }
+  return false;
 }
 
 const secretAsActor = (secret: Secret): Actor => {
@@ -65,6 +67,8 @@ const secretAsActor = (secret: Secret): Actor => {
       range: 1,
       type: ItemType.WEAPON,
       value: 0,
+      ignoresShield: true,
+      ignoresArmour: true,
     },
     inventory: [],
   };
