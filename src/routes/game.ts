@@ -1,21 +1,5 @@
-import type {
-  Actor,
-  Door,
-  Dungeon,
-  GameState,
-  Hero,
-  Layout,
-  Monster,
-  Position,
-  Item
-} from "./types";
-import {
-  Colour,
-  ConditionType,
-  ItemType,
-  Level,
-  Side
-} from "./types";
+import type { Actor, Door, Dungeon, GameState, Hero, Item, Layout, Monster, Position } from "./types";
+import { Colour, ConditionType, ItemType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, WALL } from "./dungeons";
 import { weapons } from "./items/weapons";
 import { checkForTrapDoor, searchForSecret } from "./secrets/SecretsLogic";
@@ -71,7 +55,7 @@ export const init = (): GameState => {
     ],
     itemDeck: shuffle(itemDeck)
   }
-  updateStartingPositions(state);
+  resetLiveHeroes(state);
   return state;
 }
 
@@ -93,6 +77,7 @@ const newHero = (name: string, colour: Colour): Hero => {
     name: name,
     actions: 2,
     movement: 3,
+    maxMovement: 3,
     defense: 0,
     level: Level.APPRENTICE,
     health: 7,
@@ -113,8 +98,13 @@ export const defaultHeroes: Hero[] = [
   newHero('Wulf', Colour.Blue)
 ];
 
-export const updateStartingPositions = (state: GameState) => {
-  state.heroes.forEach((hero, index) => hero.position = state.dungeon.startingPositions[index])
+export const resetLiveHeroes = (state: GameState) => {
+  state.heroes.forEach((hero, index) => {
+    hero.position = state.dungeon.startingPositions[index];
+    hero.movement = getEffectiveMaxMovement(hero);
+    hero.actions = 2;
+    hero.health = hero.maxHealth;
+  })
 }
 
 export const toArray = (row: string): string[] => {
@@ -143,7 +133,7 @@ export const consumeActions = (hero: Actor) => {
   if (hero.movement === 0) {
     hero.actions--;
     if (hero.actions !== 0) {
-      hero.movement = 3;
+      hero.movement = getEffectiveMaxMovement(hero);
     }
   }
   if (hero.actions == 0) {
@@ -285,11 +275,15 @@ export const pickLock = (state: GameState) => {
     } else {
       hero.actions--;
     }
-    hero.movement = 3;
+    hero.movement = getEffectiveMaxMovement(hero);
     if(hero.actions == 0){
       hero.movement = 0
     }
   }
+}
+
+export const getEffectiveMaxMovement = (actor: Actor) => {
+  return actor.maxMovement - (actor.armour?.movementReduction ?? 0);
 }
 
 export const search = (state: GameState) => {
@@ -300,7 +294,7 @@ export const search = (state: GameState) => {
     return;
   }
   searchForSecret(state);
-  if (hero.actions > 1 && hero.movement < 3) {
+  if (hero.actions > 1 && hero.movement < getEffectiveMaxMovement(hero)) {
     hero.actions -= 2
   } else {
     hero.actions--;
@@ -327,7 +321,7 @@ export const next = (state: GameState) => {
       nextIndex++;
     }
     state.currentActor.actions = 2;
-    state.currentActor.movement = 3;
+    state.currentActor.movement = getEffectiveMaxMovement(state.currentActor);
     state.currentActor = liveHeroes(state)[nextIndex];
     addLog(state, `${state.currentActor.name} started their turn`);
   }
@@ -394,6 +388,7 @@ const doorAsActor = (door: Door): Actor => {
     experience: 0,
     actions: 0,
     movement: 0,
+    maxMovement: 0,
     colour: Colour.Red,
     maxHealth: 0,
     name: "Door",
@@ -504,12 +499,12 @@ const monsterActions = (state: GameState) => {
           monsterMove(state, monster);
         }
         monster.actions--;
-        monster.movement = 3;
+        monster.movement = getEffectiveMaxMovement(monster);
       }
     }
     monster.actions = maxActions;
-    monster.movement = 3;
-  })
+    monster.movement = getEffectiveMaxMovement(monster);
+  });
 }
 
 export const getDist = (a: Position, b: Position) => {
@@ -524,10 +519,10 @@ const monsterMove = (state: GameState, monster: Monster) => {
     return {
       hero,
       dist: getDist(hero.position, monster.position)
-    }
+    };
   }).sort((a, b) => {
-    return a.dist - b.dist
-  })[0]
+    return a.dist - b.dist;
+  })[0];
 
   if (closestHeroAndDistance.dist > 1) {
     const possibleMoves = findPossibleMoves(state, monster.position);
@@ -593,7 +588,7 @@ const monsterAttack = (state: GameState, monster: Monster, hero: Hero) => {
 }
 
 export const canAct = (hero: Hero) => {
-  if (hero.movement < 3) {
+  if (hero.movement < getEffectiveMaxMovement(hero)) {
     return hero.actions > 1
   }
   return hero.actions > 0
@@ -654,6 +649,7 @@ const replaceDeadHeroes = (state: GameState) => {
   deadHeroes(state).forEach((hero) => {
     hero.experience = 0;
     hero.health = hero.maxHealth;
+    hero.movement = hero.maxMovement;
     hero.actions = 2;
   });
 }
@@ -665,6 +661,6 @@ export const hasWon = (state: GameState) => {
     rewardLiveHeroes(state);
     levelUp(state);
     replaceDeadHeroes(state);
-    updateStartingPositions(state);
+    resetLiveHeroes(state);
   }
 }

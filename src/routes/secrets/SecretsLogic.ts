@@ -50,6 +50,7 @@ const secretAsActor = (secret: Secret): Actor => {
     experience: 0,
     actions: 0,
     movement: 0,
+    maxMovement: 0,
     colour: Colour.Red,
     maxHealth: 0,
     name: "Trap Door",

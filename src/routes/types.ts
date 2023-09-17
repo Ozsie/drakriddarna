@@ -17,6 +17,7 @@ export type Actor = {
   name: string;
   actions: number;
   movement: number;
+  maxMovement: number;
   defense: number;
   health: number;
   maxHealth: number;
@@ -157,4 +158,5 @@ export type Shield = Item & {
 export type Armour = Item & {
   defense: number,
   magicProtection: boolean,
+  movementReduction: number,
 }

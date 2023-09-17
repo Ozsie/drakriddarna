@@ -124,6 +124,7 @@ export const createMonster = (type: MonsterType, colour: Colour, x: number, y: n
     experience,
     name: type + ' (' + colourName + ')',
     movement: 3,
+    maxMovement: 3,
     position: { x, y },
     weapon,
     armour,
