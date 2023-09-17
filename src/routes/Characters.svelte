@@ -4,7 +4,10 @@
 
   import { onMount } from "svelte";
   
-  export let state;
+  /**
+     * @type {{ heroes: any[]; currentActor: any; }}
+     */
+   export let state;
   const cardHeight = 180;
 
   onMount(() => {
@@ -93,5 +96,15 @@
   }
 
 </script>
-<div id="heroCard"></div>
+<!-- {#key state.heroes} -->
+  {#each state.heroes as hero, i}
+    {#key hero.movement}
+      <HeroCard hero={hero} ></HeroCard>
+     {/key}
+  {/each}
+<!-- {/key} -->
+<div id="heroCard">
+
+
+</div>
 <canvas id="characterBoard" height="750" width="260"></canvas>
