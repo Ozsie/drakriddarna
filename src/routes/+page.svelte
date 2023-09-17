@@ -100,15 +100,6 @@
         float: left;
         padding-right: 10px;
     }
-
-    .boardSide {
-        position: fixed;
-        margin-left: 15%;
-        height: 800px;
-        background: black;
-        overflow-x:scroll;
-        overflow-y:scroll;
-    }
     .commands {
         height: 100px;
         background: gray;
