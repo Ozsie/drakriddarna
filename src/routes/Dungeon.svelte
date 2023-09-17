@@ -1,10 +1,5 @@
 <script>
   import {
-    isBlockedByHero,
-    isBlockedByMonster,
-    isDiscovered,
-    isWalkable,
-    liveHeroes,
     toArray
   } from "./game.ts";
   import { onMount } from "svelte";
@@ -12,9 +7,10 @@
   import groundSprites from '$lib/Dungeon_Tileset.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
   import { EMPTY, WALL } from "./dungeons.ts";
-  import { doMouseLogic } from "./hero/ClickInputLogic.ts";
+  import { doMouseLogic } from "../hero/ClickInputLogic.ts";
   import { browser } from '$app/environment';
   import { renderSecrets } from "./secrets/SecretsRendering.ts";
+  import { renderHeroes } from "../hero/HeroRendering";
   export let state;
   export let debugMode = true;
 
@@ -38,15 +34,6 @@
     setInterval(() => render(ground, actors), 10);
   });
 
-  const renderHero = (ctx, hero, actors) => {
-    const x = hero.position.x;
-    const y = hero.position.y;
-    ctx.drawImage(actors, 4*16, 0, 16, 16, x*cellSize, y*cellSize, cellSize, cellSize);
-    renderActionOnActor(ctx, hero, x, y)
-    renderActorBar(ctx, hero, x, y);
-    renderHealthBar(ctx, hero, x, y);
-  }
-
   const render = (ground, actors) => {
     if (!state || !document) return;
     const c = document.getElementById("gameBoard");
@@ -67,12 +54,7 @@
     state.dungeon.layout.grid.forEach((row, y) => {
       toArray(row).forEach((cell, x) => renderActors(ctx, cell, x, y, actors))
     });
-    const heroes = liveHeroes(state);
-    heroes.forEach((hero) => {
-      renderHero(ctx, hero, actors);
-    });
-    renderWalkableArea(ctx, state.currentActor);
-    renderCurrentActor(ctx, state.currentActor);
+    renderHeroes(ctx, actors, cellSize, state, debugMode);
   }
 
 
@@ -226,56 +208,6 @@
 
       ctx.fillStyle = prevFillStyle;
       ctx.strokeStyle = prevStrokeStyle;
-  }
-
-  const renderCurrentActor = (ctx, hero) => {
-    if (hero === state.currentActor) {
-      ctx.beginPath();
-      ctx.strokeStyle = 'lightblue';
-      ctx.lineWidth = 2;
-
-      ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize);
-      ctx.lineTo(hero.position.x * cellSize + (cellSize/3), hero.position.y * cellSize);
-      ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize);
-      ctx.lineTo(hero.position.x * cellSize, hero.position.y * cellSize + (cellSize/3));
-
-      ctx.moveTo(hero.position.x * cellSize + cellSize, hero.position.y * cellSize);
-      ctx.lineTo(hero.position.x * cellSize + (cellSize/3)*2, hero.position.y * cellSize);
-      ctx.moveTo(hero.position.x * cellSize + cellSize, hero.position.y * cellSize);
-      ctx.lineTo(hero.position.x * cellSize + cellSize, hero.position.y * cellSize + (cellSize/3));
-
-      ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize + cellSize);
-      ctx.lineTo(hero.position.x * cellSize, hero.position.y * cellSize + (cellSize/3)*2);
-      ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize + cellSize);
-      ctx.lineTo(hero.position.x * cellSize + (cellSize/3), hero.position.y * cellSize + cellSize);
-
-      ctx.moveTo(hero.position.x * cellSize + cellSize, hero.position.y * cellSize + cellSize);
-      ctx.lineTo(hero.position.x * cellSize + cellSize, hero.position.y * cellSize + (cellSize/3)*2);
-      ctx.moveTo(hero.position.x * cellSize + cellSize, hero.position.y * cellSize + cellSize);
-      ctx.lineTo(hero.position.x * cellSize + (cellSize/3)*2, hero.position.y * cellSize + cellSize);
-      ctx.stroke();
-      ctx.lineWidth = 1;
-    }
-  }
-
-  const renderWalkableArea = (ctx, hero) => {
-    if (hero === state.currentActor && debugMode) {
-      for (let pX = hero.position.x - hero.movement; pX <= hero.position.x + hero.movement; pX++) {
-        for (let pY = hero.position.y - hero.movement; pY <= hero.position.y + hero.movement; pY++) {
-          const discovered = isDiscovered(state.dungeon, pX, pY);
-          if (discovered) {
-            const blockedByMonster = isBlockedByMonster(state, pX, pY);
-            const blockedByHeroes = isBlockedByHero(state, pX, pY);
-            const walkable = isWalkable(state.dungeon.layout, pX, pY);
-            if (!blockedByHeroes && !blockedByMonster && walkable) {
-              ctx.fillStyle = "rgba(50, 50, 255, 0.08)";
-              ctx.fillRect((pX * cellSize), pY * cellSize, cellSize, cellSize);
-              ctx.stroke();
-            }
-          }
-        }
-      }
-    }
   }
 
   const renderActors = (ctx, cell, x, y, actors) => {

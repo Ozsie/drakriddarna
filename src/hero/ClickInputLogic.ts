@@ -7,10 +7,10 @@ import {
   pickLock,
   search,
   takeDamage,
-} from "../game";
-import { Side } from '../types';
-import type { Position, GameState, Hero } from '../types';
-import { checkForTrapDoor } from '../secrets/SecretsLogic';
+} from "../routes/game";
+import { Side } from '../routes/types';
+import type { Position, GameState, Hero } from '../routes/types';
+import { checkForTrapDoor } from '../routes/secrets/SecretsLogic';
 
 export const distanceInGrid = (a: Position, b: Position) =>{
   const dx = Math.abs(b.x - a.x);
