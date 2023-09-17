@@ -1,7 +1,7 @@
-import { Colour, ConditionType, MonsterType, SecretType, Side } from '../types';
-import type { Dungeon } from '../types';
-import { createDoor, createMonster, createSecret } from '../dungeons';
-import { e1m1 } from './e1m1';
+import { Colour, ConditionType, MonsterType, SecretType, Side } from '../../routes/types';
+import type { Dungeon } from '../../routes/types';
+import { createDoor, createMonster, createSecret } from '../../routes/dungeons';
+import { e1m1 } from '../../campaigns/dungeons/e1m1';
 
 export const e1m0: Dungeon = {
   name: 'Troll cave',

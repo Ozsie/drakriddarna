@@ -1,6 +1,6 @@
-import type { Dungeon } from "../types";
-import { Colour, ConditionType, MonsterType, SecretType, Side } from "../types";
-import { createDoor, createHiddenDoor, createMonster } from "../dungeons";
+import type { Dungeon } from "../../routes/types";
+import { Colour, ConditionType, MonsterType, SecretType, Side } from "../../routes/types";
+import { createDoor, createHiddenDoor, createMonster } from "../../routes/dungeons";
 
 export const e1m1: Dungeon = {
   name: 'The Three Gates of Power',
@@ -72,9 +72,6 @@ export const e1m1: Dungeon = {
         position: {x:15,y:5},
         found: false,
         name: 'Random Magic Item',
-        item: {
-          name: 'Healing Herbs'
-        }
       },
       {
         type: SecretType.EQUIPMENT,
