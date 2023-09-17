@@ -9,7 +9,7 @@
   import { renderDoors, renderGrid, renderSecrets } from "../dungeon/DungeonRendering.ts";
 
   export let state;
-  export let debugMode = true;
+  export let debugMode;
 
   let footerSize;
   let screenSize;
