@@ -10,12 +10,14 @@ export type GameState = {
   dungeon: Dungeon;
   currentActor?: Actor;
   actionLog: string[];
+  itemDeck: Item[];
 }
 
 export type Actor = {
   name: string;
   actions: number;
   movement: number;
+  maxMovement: number;
   defense: number;
   health: number;
   maxHealth: number;
@@ -27,6 +29,7 @@ export type Actor = {
   armour?: Armour;
   shield?: Shield;
   incapacitated: boolean;
+  inventory: Item[];
 }
 
 export type Hero = Actor & {
@@ -104,7 +107,6 @@ export type Secret = {
 export enum SecretType {
   EQUIPMENT = 'Equipment',
   MAGIC_ITEM = 'Magic Item',
-  DOOR = 'Door',
   TRAP_DOOR = 'Trap Door',
   NOTE = 'Note'
 }
@@ -132,9 +134,15 @@ export type Position = {
   y: number
 }
 
+export enum ItemType {
+  WEAPON, ARMOUR, SHIELD
+}
+
 export type Item = {
   name: string,
   amountInDeck: number,
+  type: ItemType,
+  value: number,
 }
 
 export type Weapon = Item & {
@@ -142,6 +150,8 @@ export type Weapon = Item & {
   range: number,
   twoHanded: boolean,
   useHearHeroes: boolean,
+  ignoresShield: boolean,
+  ignoresArmour: boolean,
 }
 
 export type Shield = Item & {
@@ -151,4 +161,5 @@ export type Shield = Item & {
 export type Armour = Item & {
   defense: number,
   magicProtection: boolean,
+  movementReduction: number,
 }
