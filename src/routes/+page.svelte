@@ -1,13 +1,13 @@
 <script>
   import {
-    act,
+    act, endAction,
     hasWon,
     init,
     load,
     next,
     pickLock,
     save,
-    search,
+    search
   } from "./game.ts";
   import Dungeon from './Dungeon.svelte';
   import Characters from './Characters.svelte';
@@ -139,6 +139,7 @@
         <td><button on:click={save(state)}>Save</button></td>
         <td><button on:click={() => state = load()}>Load</button></td>
         <td><button on:click={() => debugMode = !debugMode}>Debug</button></td>
+        <td><button on:click={endAction(state)}>End action</button></td>
       </tr>
     </table>
   </div>

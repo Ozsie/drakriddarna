@@ -211,6 +211,16 @@ export const roll = (level: Level, dice: number) => {
   return results.length
 }
 
+export const endAction = (state: GameState) => {
+  const hero = state.currentActor
+  if (!hero) return;
+  hero.actions--;
+  hero.movement = getEffectiveMaxMovement(hero);
+  if (hero.actions === 0) {
+    next(state);
+  }
+}
+
 export const pickLock = (state: GameState) => {
   const hero = state.currentActor
   if (!hero) return;
