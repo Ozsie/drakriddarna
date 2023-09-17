@@ -10,6 +10,7 @@ export const weapons: Weapon[] = [
     useHearHeroes: true,
     amountInDeck: 0,
     type: ItemType.WEAPON,
+    value: 0,
   },
   {
     name: 'Two-handed Sword',
@@ -19,6 +20,7 @@ export const weapons: Weapon[] = [
     useHearHeroes: false,
     amountInDeck: 1,
     type: ItemType.WEAPON,
+    value: 3,
   },
   {
     name: 'Halberd',
@@ -28,6 +30,7 @@ export const weapons: Weapon[] = [
     useHearHeroes: true,
     amountInDeck: 1,
     type: ItemType.WEAPON,
+    value: 2,
   },
   {
     name: 'Flail',
@@ -37,6 +40,7 @@ export const weapons: Weapon[] = [
     useHearHeroes: true,
     amountInDeck: 1,
     type: ItemType.WEAPON,
+    value: 4,
   },
   {
     name: 'Double Headed Axe',
@@ -46,6 +50,7 @@ export const weapons: Weapon[] = [
     useHearHeroes: true,
     amountInDeck: 1,
     type: ItemType.WEAPON,
+    value: 3,
   },
 ]
 
@@ -58,6 +63,7 @@ export const monsterWeapons: Weapon[] = [
     useHearHeroes: true,
     amountInDeck: 4,
     type: ItemType.WEAPON,
+    value: 0,
   },
   {
     name: 'Troll Club',
@@ -67,5 +73,6 @@ export const monsterWeapons: Weapon[] = [
     useHearHeroes: true,
     amountInDeck: 4,
     type: ItemType.WEAPON,
+    value: 0,
   },
 ]

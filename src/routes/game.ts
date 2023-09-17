@@ -402,6 +402,7 @@ const doorAsActor = (door: Door): Actor => {
       twoHanded: false,
       range: 1,
       type: ItemType.WEAPON,
+      value: 0,
     },
     inventory: [],
   };

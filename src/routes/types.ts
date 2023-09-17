@@ -142,6 +142,7 @@ export type Item = {
   name: string,
   amountInDeck: number,
   type: ItemType,
+  value: number,
 }
 
 export type Weapon = Item & {

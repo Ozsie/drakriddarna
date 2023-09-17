@@ -9,6 +9,7 @@ export const armour: Armour[] = [
     defense: 1,
     magicProtection: false,
     movementReduction: 0,
+    value: 2,
   },
   {
     name: 'Plate mail',
@@ -17,6 +18,7 @@ export const armour: Armour[] = [
     defense: 2,
     magicProtection: false,
     movementReduction: 1,
+    value: 3,
   },
   {
     name: 'Dragon Skin mail',
@@ -25,6 +27,7 @@ export const armour: Armour[] = [
     defense: 2,
     magicProtection: true,
     movementReduction: 0,
+    value: 4,
   },
 ];
 
@@ -36,6 +39,7 @@ export const monsterArmour: Armour[] = [
     amountInDeck: 4,
     type: ItemType.ARMOUR,
     movementReduction: 0,
+    value: 0,
   },
   {
     name: 'Troll Skin',
@@ -44,5 +48,6 @@ export const monsterArmour: Armour[] = [
     amountInDeck: 4,
     type: ItemType.ARMOUR,
     movementReduction: 0,
+    value: 0,
   },
 ]
