@@ -1,13 +1,13 @@
 # Drakriddarna
 
 ## Todo
-- [ ] Items
 - [ ] Monster blocking move on click move
 - [ ] Monster cards
 - [ ] Monster range attack
 - [ ] Monster special attack
 - [ ] Events
 - [ ] Secrets
+- [ ] Magic Items
 - [ ] e1m1 - The Three Gates of Power
 - [ ] e1m2 - Mines of Evil
 - [ ] e1m3 - Labyrinth of Horror
@@ -18,6 +18,7 @@
 - [ ] Graphics
 - [ ] Responsive layout
 - [ ] Move render code to .ts files
+- [X] Items
 - [X] Clearing dungeon
 - [X] Trap Doors
 - [X] Moving through other heroes

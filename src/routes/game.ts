@@ -3,9 +3,9 @@ import { Colour, ConditionType, ItemType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, WALL } from "./dungeons";
 import { weapons } from "./items/weapons";
 import { checkForTrapDoor, searchForSecret } from "./secrets/SecretsLogic";
-import { testingGrounds } from "./dungeons/testingGrounds";
 import { armour } from "./items/armours";
 import { shields } from "./items/shields";
+import { e1m0 } from "./dungeons/e1m0";
 
 
 export const save = (state: GameState) => {
@@ -44,7 +44,7 @@ export const init = (): GameState => {
 
   const state = {
     heroes: heroes,
-    dungeon: testingGrounds,
+    dungeon: e1m0,
     currentActor: heroes[0],
     actionLog: [
       'Game Initialised',
