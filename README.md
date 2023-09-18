@@ -3,7 +3,7 @@
 ## Todo
 - [ ] Monster blocking move on click move
 - [ ] Monster cards
-- [ ] Monster range attack
+- [X] Monster range attack
 - [ ] Monster special attack
 - [ ] Events
 - [ ] Secrets
