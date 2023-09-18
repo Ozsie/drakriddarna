@@ -1,4 +1,4 @@
-import type { Actor, Door, Dungeon, GameState, Hero, Layout, Monster, Position } from "./types";
+import type { Actor, Door, Dungeon, GameState, Hero, Layout, Monster, Position, Weapon } from "./types";
 import { Colour, ConditionType, ItemType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, WALL } from "./dungeons";
 import { checkForTrapDoor, searchForSecret } from "./secrets/SecretsLogic";
@@ -181,7 +181,7 @@ export const attack = (hero: Actor, state: GameState, targetX: number, targetY: 
   }
   const monster = state.dungeon.layout.monsters.find((monster) => monster.position.x === targetX && monster.position.y === targetY);
   if (monster) {
-    takeDamage(state, hero, monster);
+    takeDamage(state, hero, monster, false);
     if (monster.health <= 0) {
       state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter((m) => m != monster);
       addLog(state, `${hero.name} killed ${monster.name}`);
@@ -378,7 +378,7 @@ const moveOverDoor = (state: GameState, hero: Actor, newX: number, newY: number)
     if (door.side === side) {
       door.open = true;
       if (door.trapped) {
-        takeDamage(state, doorAsActor(door), hero);
+        takeDamage(state, doorAsActor(door), hero, false);
       }
       return true
     }
@@ -456,25 +456,29 @@ const monsterActions = (state: GameState) => {
       const neighbouringHeroes: Hero[] = liveHeroes(state).filter((hero: Hero) => isNeighbouring(monster.position, hero.position.x, hero.position.y));
       if (neighbouringHeroes.length > 0) {
         const target = Math.floor(Math.random() * neighbouringHeroes.length);
-        monsterAttack(state, monster, neighbouringHeroes[target]);
+        monsterAttack(state, monster, neighbouringHeroes[target], false);
       } else {
-        while (monster.movement > 0) {
-          monsterMove(state, monster);
+        const visibleHeroes = liveHeroes(state).filter((hero) => {
+          const startPixelPos = { x: (monster.position.x * 48) - 24, y: (monster.position.y * 48) - 24 };
+          const targetPixelPos = { x: (hero.position.x * 48) - 24, y: (hero.position.y * 48) - 24 };
+          return stepAlongLine(startPixelPos, monster.position, targetPixelPos, hero.position, state, []);
+        });
+        if (visibleHeroes.length > 0 && monster.rangedWeapon) {
+          console.log(`${monster.name} sees: ${visibleHeroes.map((h) => h.name).join(', ')}`)
+          const target = Math.floor(Math.random() * visibleHeroes.length);
+          monsterAttack(state, monster, visibleHeroes[target], true);
+        } else {
+          while (monster.movement > 0) {
+            monsterMove(state, monster);
+          }
+          monster.actions--;
+          monster.movement = getEffectiveMaxMovement(monster);
         }
-        monster.actions--;
-        monster.movement = getEffectiveMaxMovement(monster);
       }
     }
     monster.actions = maxActions;
     monster.movement = getEffectiveMaxMovement(monster);
   });
-}
-
-export const getDist = (a: Position, b: Position) => {
-  return Math.sqrt(
-    Math.pow(a.x - b?.x, 2) +
-    Math.pow(a.y - b?.y, 2)
-  );
 }
 
 const monsterMove = (state: GameState, monster: Monster) => {
@@ -535,13 +539,13 @@ export const getDamageString = (damage: number, hits: number, shield: number, ta
   return `${damage} damage (${hits}-(${defense}+${shield})=${damage})`;
 }
 
-const monsterAttack = (state: GameState, monster: Monster, hero: Hero) => {
+const monsterAttack = (state: GameState, monster: Monster, hero: Hero, ranged: boolean) => {
   if (monster.actions === 1 && monster.movement !== 3) {
-    addLog(state, `${hero.name} has no actions left to attack`);
+    addLog(state, `${monster.name} has no actions left to attack`);
     return;
   }
   if (hero) {
-    takeDamage(state, monster, hero);
+    takeDamage(state, monster, hero, ranged);
     if (monster?.actions > 1 && monster?.movement < 3) {
       monster.actions -= 2
     } else {
@@ -573,23 +577,27 @@ export const deadHeroes = (state: GameState): Hero[] => {
   return state.heroes.filter((hero) => hero.health <= 0);
 }
 
-export const takeDamage = (state: GameState, source: Actor, target: Actor) => {
+export const takeDamage = (state: GameState, source: Actor & { rangedWeapon?: Weapon }, target: Actor, ranged: boolean) => {
+  let weapon = source.weapon;
+  if (ranged && source.rangedWeapon) {
+    weapon = source.rangedWeapon;
+  }
   let defense = 0;
   let shield = 0;
-  if (!source.weapon.ignoresArmour) {
+  if (!weapon.ignoresArmour) {
     defense = target.armour?.defense ?? target.defense;
   } else if (target.armour) {
-    addLog(state, `${target.name}'s armour was useless against ${source.weapon.name} `);
+    addLog(state, `${target.name}'s armour was useless against ${weapon.name} `);
   }
-  if (!source.weapon.ignoresShield) {
+  if (!weapon.ignoresShield) {
     shield = roll(target.level, target.shield?.dice ?? 0);
   } else if (target.shield) {
-    addLog(state, `${target.name}'s shield was useless against ${source.weapon.name} `);
+    addLog(state, `${target.name}'s shield was useless against ${weapon.name} `);
   }
-  const hits = roll(source.level, source.weapon.dice);
+  const hits = roll(source.level, weapon.dice);
   const damage = Math.max(hits - (defense + shield), 0);
   target.health -= damage;
-  addLog(state, `${source.name} attacked ${target.name} with ${source.weapon.name} for ${getDamageString(damage, hits, shield, target)}`);
+  addLog(state, `${source.name} attacked ${target.name} with ${weapon.name} for ${getDamageString(damage, hits, shield, target)}`);
   if (target.health <= 0) {
     addLog(state, `${source.name} killed ${target.name}`);
     target.health = 0;
@@ -637,4 +645,44 @@ export const hasWon = (state: GameState) => {
     replaceDeadHeroes(state);
     resetLiveHeroes(state);
   }
+}
+
+export const getDist = (a: Position, b: Position) => {
+  return Math.sqrt(
+    Math.pow(a.x - b?.x, 2) +
+    Math.pow(a.y - b?.y, 2)
+  );
+}
+
+export const stepAlongLine = (startPixelPos: Position, source: Position, targetPixelPos: Position, target: Position, state: GameState, seenCells: Position[]): boolean => {
+  const nextPixelPosition = normaliseVector(startPixelPos, targetPixelPos);
+  const nextCellPosition = { x: Math.round((nextPixelPosition.x + 24)/48), y: Math.round((nextPixelPosition.y + 24) / 48) };
+  const nextCell = findCell(state.dungeon.layout.grid, nextCellPosition.x, nextCellPosition.y);
+  if (nextCellPosition.x === target.x && nextCellPosition.y === target.y) {
+    seenCells.push(nextCellPosition);
+    return true;
+  } else if (nextCell === WALL || nextCell === PILLAR) {
+    return false;
+  } else {
+    if (!(nextCellPosition.x === source.x && nextCellPosition.y === source.y)) {
+      if (!seenCells.some((c) => c.x === nextCellPosition.x && c.y === nextCellPosition.y)) {
+        seenCells.push(nextCellPosition);
+      }
+    }
+    return stepAlongLine(nextPixelPosition, source, targetPixelPos, target, state, seenCells);
+  }
+}
+
+export const normaliseVector = (start: Position, target: Position): Position => {
+  const xOffset = start.x;
+  const yOffset = start.y;
+  const x = (target.x-xOffset);
+  const y = (target.y-yOffset);
+  const nX = x/Math.pow(Math.pow(x,2) + Math.pow(y,2), (1/2));
+  const nY = y/Math.pow(Math.pow(x,2) + Math.pow(y,2), (1/2));
+
+  let newX = Math.round(nX + xOffset);
+  let newY = Math.round(nY + yOffset);
+
+  return { x: newX, y: newY };
 }

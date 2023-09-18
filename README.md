@@ -6,9 +6,7 @@
 
 ## Todo
 - [ ] Monster blocking move on click move
-- [ ] Line of sight
 - [ ] Monster cards?
-- [ ] Monster range attack
 - [ ] Monster special attack
 - [ ] Split game.ts, move code out of routes
 - [ ] Events
@@ -27,6 +25,8 @@
 - [ ] Responsive layout
 - [ ] Support for additional campaigns
 - [ ] Menu system
+- [X] Line of sight
+- [X] Monster range attack
 - [X] Move render code to .ts files
 - [X] Items
 - [X] Clearing dungeon

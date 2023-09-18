@@ -1,6 +1,6 @@
-import type { Hero, GameState, Monster } from "../routes/types";
+import type { Hero, GameState, Monster, Position } from "../routes/types";
 import { MonsterType } from "../routes/types";
-
+import { stepAlongLine } from "../routes/game";
 
 export const renderMonsters = (ctx: CanvasRenderingContext2D, actors: CanvasImageSource, cellSize: number, state: GameState, debugMode: boolean) => {
   state.dungeon.layout.monsters.forEach((monster) => {
@@ -40,6 +40,8 @@ const renderActorBar = (ctx: CanvasRenderingContext2D, monster: Monster, cellSiz
   ctx.fillStyle = monster.colour;
   ctx.fillRect((monster.position.x * cellSize) + 4, (monster.position.y * cellSize) + (cellSize - 6), cellSize - 8, 4);
   ctx.stroke();
+  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'black';
 }
 
 const renderHealthBar = (ctx: CanvasRenderingContext2D, monster: Monster, cellSize: number) => {
@@ -51,21 +53,31 @@ const renderHealthBar = (ctx: CanvasRenderingContext2D, monster: Monster, cellSi
   ctx.fillRect((monster.position.x * cellSize) + 4, monster.position.y*cellSize, (cellSize - 8) * (monster.health/monster.maxHealth), 4);
   ctx.rect((monster.position.x * cellSize) + 4, monster.position.y*cellSize, (cellSize - 8), 4);
   ctx.stroke();
+  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'black';
 }
 
 const renderLineOfSight = (ctx: CanvasRenderingContext2D, from: Monster, to: Hero[], state: GameState, cellSize: number, debugMode: boolean) => {
   if (debugMode) {
     to.forEach((target) => {
-      const sX = from.position.x;
-      const sY = from.position.y;
-      const eX = target.position.x;
-      const eY = target.position.y;
+      const seenCells: Position[] = [];
+      const startPixelPos = { x: (from.position.x * 48) - 24, y: (from.position.y * 48) - 24 };
+      const targetPixelPos = { x: (target.position.x * 48) - 24, y: (target.position.y * 48) - 24 };
+      const seen = stepAlongLine(startPixelPos, from.position, targetPixelPos, target.position, state, seenCells);
+      if (seen) {
+        const sX = from.position.x;
+        const sY = from.position.y;
+        const eX = target.position.x;
+        const eY = target.position.y;
 
-      ctx.strokeStyle = from.colour;
-      ctx.beginPath();
-      ctx.moveTo(sX * cellSize + (cellSize / 2), sY * cellSize + (cellSize / 2));
-      ctx.lineTo(eX * cellSize + (cellSize / 2), eY * cellSize + (cellSize / 2));
-      ctx.stroke();
+        ctx.beginPath();
+        ctx.strokeStyle = from.colour;
+        ctx.lineWidth = 2;
+        ctx.moveTo(sX * cellSize + (cellSize / 2), sY * cellSize + (cellSize / 2));
+        ctx.lineTo(eX * cellSize + (cellSize / 2), eY * cellSize + (cellSize / 2));
+        ctx.stroke();
+        ctx.lineWidth = 1;
+      }
     });
   }
 }

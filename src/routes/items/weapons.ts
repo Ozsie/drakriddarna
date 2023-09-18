@@ -67,7 +67,7 @@ export const weapons: Weapon[] = [
 export const monsterWeapons: Weapon[] = [
   {
     name: 'Orch Sword',
-    range: 99,
+    range: 1,
     dice: 3,
     twoHanded: false,
     useHearHeroes: true,
@@ -75,6 +75,18 @@ export const monsterWeapons: Weapon[] = [
     type: ItemType.WEAPON,
     value: 0,
     ignoresShield: false,
+    ignoresArmour: false,
+  },
+  {
+    name: 'Orch Bow',
+    range: 999,
+    dice: 3,
+    twoHanded: false,
+    useHearHeroes: true,
+    amountInDeck: 4,
+    type: ItemType.WEAPON,
+    value: 0,
+    ignoresShield: true,
     ignoresArmour: false,
   },
   {

@@ -44,6 +44,7 @@ export type Hero = Actor & {
 
 export type Monster = Actor & {
   type: MonsterType;
+  rangedWeapon?: Weapon;
 }
 
 export enum MonsterType {
