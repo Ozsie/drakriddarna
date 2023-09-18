@@ -49,19 +49,19 @@
 * If within range of a monster, click it to attack
 
 ### Keyboard
-| Action     |   |       |   |   |
-|------------|---|-------|---|---|
-| Up         | 8 | W     |   |   |
-| Left       | 4 | A     |   |   |
-| Down       | 2 | X     |   |   |
-| Right      | 6 | D     |   |   |
-| Up Left    | 7 | Q     |   |   |
-| Down Left  | 1 | Z     |   |   |
-| Up Right   | 9 | E     |   |   |
-| Down Right | 3 | C     |   |   |
-| Pick lock  | - | R     |   |   |
-| Search     | + | F     |   |   |
-| Next       | 0 | space |   |   |
+| Action     | Numpad | Keyboard |   |   |
+|------------|--------|----------|---|---|
+| Up         | 8      | W        |   |   |
+| Left       | 4      | A        |   |   |
+| Down       | 2      | X        |   |   |
+| Right      | 6      | D        |   |   |
+| Up Left    | 7      | Q        |   |   |
+| Down Left  | 1      | Z        |   |   |
+| Up Right   | 9      | E        |   |   |
+| Down Right | 3      | C        |   |   |
+| Pick lock  | -      | R        |   |   |
+| Search     | +      | F        |   |   |
+| Next       | 0      | space    |   |   |
 
 ## Developing
 
