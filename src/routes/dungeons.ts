@@ -1,4 +1,4 @@
-import type { Door, Item, Monster, Position, Secret } from "./types";
+import type { Door, Item, Monster, Secret } from "./types";
 import { Colour, Level, MonsterType, SecretType, Side } from "./types";
 import { monsterWeapons } from './items/weapons';
 import { monsterArmour } from './items/armours';
@@ -91,6 +91,7 @@ export const createMonster = (type: MonsterType, colour: Colour, x: number, y: n
   let maxHealth = 4;
   let experience = 4;
   let weapon = monsterWeapons[0];
+  let rangedWeapon = undefined;
   let armour = monsterArmour[0];
   switch(type) {
     case MonsterType.ORCH: {
@@ -99,6 +100,7 @@ export const createMonster = (type: MonsterType, colour: Colour, x: number, y: n
       health = 2
       maxHealth = 2;
       experience = 1;
+      rangedWeapon = monsterWeapons[1]
       break;
     }
     case MonsterType.TROLL: {
@@ -107,7 +109,7 @@ export const createMonster = (type: MonsterType, colour: Colour, x: number, y: n
       health = 3;
       maxHealth = 3;
       experience = 2;
-      weapon = monsterWeapons[1];
+      weapon = monsterWeapons[2];
       armour = monsterArmour[1];
       break;
     }
@@ -130,5 +132,6 @@ export const createMonster = (type: MonsterType, colour: Colour, x: number, y: n
     armour,
     incapacitated: false,
     inventory: [],
+    rangedWeapon: rangedWeapon,
   }
 }

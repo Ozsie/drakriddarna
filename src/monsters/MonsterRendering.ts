@@ -1,6 +1,7 @@
-import type { Hero, GameState, Monster } from "../routes/types";
+import type { Hero, GameState, Monster, Position } from "../routes/types";
 import { MonsterType } from "../routes/types";
-import { normaliseVector } from "../routes/game";
+import { findCell, normaliseVector } from "../routes/game";
+import { PILLAR, WALL } from "../routes/dungeons";
 
 export const renderMonsters = (ctx: CanvasRenderingContext2D, actors: CanvasImageSource, cellSize: number, state: GameState, debugMode: boolean) => {
   state.dungeon.layout.monsters.forEach((monster) => {
@@ -68,17 +69,30 @@ const renderLineOfSight = (ctx: CanvasRenderingContext2D, from: Monster, to: Her
       ctx.lineTo(eX * cellSize + (cellSize / 2), eY * cellSize + (cellSize / 2));
       ctx.stroke();
 
-      const nPos = normaliseVector(from.position, target.position);
-      const nX = nPos.x;
-      const nY = nPos.y;
+      const seenCells: Position[] = [];
+      stepAlongLine(from.position, target.position, state, seenCells);
 
-      ctx.strokeStyle = 'black';
-      ctx.beginPath();
-      ctx.moveTo(sX * cellSize + (cellSize / 2), sY * cellSize + (cellSize / 2));
-      ctx.lineTo(nX * cellSize + (cellSize / 2), nY * cellSize + (cellSize / 2));
-      ctx.stroke();
+      seenCells.forEach((cell) => {
+        ctx.fillStyle = "rgba(255, 50, 255, 0.3)";
+        ctx.fillRect((cell.x * cellSize), cell.y * cellSize, cellSize, cellSize);
+        ctx.stroke();
+      })
     });
   }
 }
 
 const isInDiscoveredRoom = (cell: string, state: GameState) => state.dungeon.discoveredRooms.includes(cell);
+
+const stepAlongLine = (start: Position, target: Position, state: GameState, seenCells: Position[]): void => {
+  const nextCellPosition = normaliseVector(start, target);
+  const nextCell = findCell(state.dungeon.layout.grid, nextCellPosition.x, nextCellPosition.y);
+  if (nextCellPosition.x === target.x && nextCellPosition.y === target.y) {
+    seenCells.push(nextCellPosition);
+    return;
+  } else if (nextCell === WALL || nextCell === PILLAR) {
+    return;
+  } else {
+    seenCells.push(nextCellPosition);
+    return stepAlongLine(nextCellPosition, target, state, seenCells);
+  }
+}
