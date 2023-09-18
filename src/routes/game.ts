@@ -459,7 +459,9 @@ const monsterActions = (state: GameState) => {
         monsterAttack(state, monster, neighbouringHeroes[target], false);
       } else {
         const visibleHeroes = liveHeroes(state).filter((hero) => {
-          return stepAlongLine(monster.position, hero.position, state);
+          const startPixelPos = { x: (monster.position.x * 48) - 24, y: (monster.position.y * 48) - 24 };
+          const targetPixelPos = { x: (hero.position.x * 48) - 24, y: (hero.position.y * 48) - 24 };
+          return stepAlongLine(startPixelPos, targetPixelPos, hero.position, state);
         });
         if (visibleHeroes.length > 0 && monster.rangedWeapon) {
           const target = Math.floor(Math.random() * visibleHeroes.length);
@@ -651,8 +653,9 @@ export const getDist = (a: Position, b: Position) => {
   );
 }
 
-export const stepAlongLine = (start: Position, target: Position, state: GameState): boolean => {
-  const nextCellPosition = normaliseVector(start, target);
+export const stepAlongLine = (startPixelPos: Position, targetPixelPos: Position, target: Position, state: GameState): boolean => {
+  const nextPixelPosition = normaliseVector(startPixelPos, targetPixelPos);
+  const nextCellPosition = { x: Math.round((nextPixelPosition.x + 24)/48), y: Math.round((nextPixelPosition.y + 24) / 48) };
   const nextCell = findCell(state.dungeon.layout.grid, nextCellPosition.x, nextCellPosition.y);
   if (nextCellPosition.x === target.x && nextCellPosition.y === target.y) {
     return true;
@@ -660,7 +663,7 @@ export const stepAlongLine = (start: Position, target: Position, state: GameStat
   if (nextCell === WALL || nextCell === PILLAR) {
     return false;
   } else {
-    return stepAlongLine(nextCellPosition, target, state);
+    return stepAlongLine(nextPixelPosition, targetPixelPos, target, state);
   }
 }
 
@@ -672,5 +675,8 @@ export const normaliseVector = (start: Position, target: Position): Position => 
   const nX = x/Math.pow(Math.pow(x,2) + Math.pow(y,2), (1/2));
   const nY = y/Math.pow(Math.pow(x,2) + Math.pow(y,2), (1/2));
 
-  return { x: Math.floor(nX + xOffset), y: Math.floor(nY + yOffset) };
+  let newX = Math.round(nX + xOffset);
+  let newY = Math.round(nY + yOffset);
+
+  return { x: newX, y: newY };
 }
