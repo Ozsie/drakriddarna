@@ -10,6 +10,7 @@
 - [ ] Monster cards?
 - [ ] Monster range attack
 - [ ] Monster special attack
+- [ ] Split game.ts, move code out of routes
 - [ ] Events
 - [ ] Secrets
 - [ ] Magic Items
