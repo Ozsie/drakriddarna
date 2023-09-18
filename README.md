@@ -1,13 +1,20 @@
 # Drakriddarna
 
+[Board Game Geek](https://boardgamegeek.com/image/4326455/dragonfire)
+
+[Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
+
 ## Todo
 - [ ] Monster blocking move on click move
-- [ ] Monster cards
+- [ ] Line of sight
+- [ ] Monster cards?
 - [ ] Monster range attack
 - [ ] Monster special attack
 - [ ] Events
 - [ ] Secrets
 - [ ] Magic Items
+- [ ] Centering on spawn
+- [ ] Dungeon intro screen
 - [ ] e1m1 - The Three Gates of Power
 - [ ] e1m2 - Mines of Evil
 - [ ] e1m3 - Labyrinth of Horror
@@ -17,7 +24,9 @@
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
-- [ ] Move render code to .ts files
+- [ ] Support for additional campaigns
+- [ ] Menu system
+- [X] Move render code to .ts files
 - [X] Items
 - [X] Clearing dungeon
 - [X] Trap Doors
@@ -30,6 +39,29 @@
 - [X] Monster close combat attack
 - [X] Locked doors
 - [X] Saving & loading
+
+## Controls
+### Mouse/touch
+* Click in the tile you want to move to
+* CLick the active hero to open a door, if next to one
+* CLick the active hero to pick a lock, if next to locked door
+* Click the active hero to search
+* If within range of a monster, click it to attack
+
+### Keyboard
+| Action     |   |       |   |   |
+|------------|---|-------|---|---|
+| Up         | 8 | W     |   |   |
+| Left       | 4 | A     |   |   |
+| Down       | 2 | X     |   |   |
+| Right      | 6 | D     |   |   |
+| Up Left    | 7 | Q     |   |   |
+| Down Left  | 1 | Z     |   |   |
+| Up Right   | 9 | E     |   |   |
+| Down Right | 3 | C     |   |   |
+| Pick lock  | - | R     |   |   |
+| Search     | + | F     |   |   |
+| Next       | 0 | space |   |   |
 
 ## Developing
 
