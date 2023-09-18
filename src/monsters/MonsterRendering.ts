@@ -1,7 +1,6 @@
 import type { Hero, GameState, Monster, Position } from "../routes/types";
 import { MonsterType } from "../routes/types";
-import { findCell, normaliseVector } from "../routes/game";
-import { PILLAR, WALL } from "../routes/dungeons";
+import { stepAlongLine } from "../routes/game";
 
 export const renderMonsters = (ctx: CanvasRenderingContext2D, actors: CanvasImageSource, cellSize: number, state: GameState, debugMode: boolean) => {
   state.dungeon.layout.monsters.forEach((monster) => {
@@ -41,6 +40,8 @@ const renderActorBar = (ctx: CanvasRenderingContext2D, monster: Monster, cellSiz
   ctx.fillStyle = monster.colour;
   ctx.fillRect((monster.position.x * cellSize) + 4, (monster.position.y * cellSize) + (cellSize - 6), cellSize - 8, 4);
   ctx.stroke();
+  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'black';
 }
 
 const renderHealthBar = (ctx: CanvasRenderingContext2D, monster: Monster, cellSize: number) => {
@@ -52,52 +53,33 @@ const renderHealthBar = (ctx: CanvasRenderingContext2D, monster: Monster, cellSi
   ctx.fillRect((monster.position.x * cellSize) + 4, monster.position.y*cellSize, (cellSize - 8) * (monster.health/monster.maxHealth), 4);
   ctx.rect((monster.position.x * cellSize) + 4, monster.position.y*cellSize, (cellSize - 8), 4);
   ctx.stroke();
+  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'black';
 }
 
 const renderLineOfSight = (ctx: CanvasRenderingContext2D, from: Monster, to: Hero[], state: GameState, cellSize: number, debugMode: boolean) => {
   if (debugMode) {
     to.forEach((target) => {
-      const sX = from.position.x;
-      const sY = from.position.y;
-      const eX = target.position.x;
-      const eY = target.position.y;
-
-
-      ctx.strokeStyle = from.colour;
-      ctx.beginPath();
-      ctx.moveTo(sX * cellSize + (cellSize / 2), sY * cellSize + (cellSize / 2));
-      ctx.lineTo(eX * cellSize + (cellSize / 2), eY * cellSize + (cellSize / 2));
-      ctx.stroke();
-
       const seenCells: Position[] = [];
       const startPixelPos = { x: (from.position.x * 48) - 24, y: (from.position.y * 48) - 24 };
       const targetPixelPos = { x: (target.position.x * 48) - 24, y: (target.position.y * 48) - 24 };
-      stepAlongLine(startPixelPos, from.position, targetPixelPos, target.position, state, seenCells);
+      const seen = stepAlongLine(startPixelPos, from.position, targetPixelPos, target.position, state, seenCells);
+      if (seen) {
+        const sX = from.position.x;
+        const sY = from.position.y;
+        const eX = target.position.x;
+        const eY = target.position.y;
 
-      seenCells.forEach((cell) => {
-        ctx.fillStyle = "rgba(255, 50, 255, 0.09)";
-        ctx.fillRect((cell.x * cellSize), cell.y * cellSize, cellSize, cellSize);
+        ctx.beginPath();
+        ctx.strokeStyle = from.colour;
+        ctx.lineWidth = 2;
+        ctx.moveTo(sX * cellSize + (cellSize / 2), sY * cellSize + (cellSize / 2));
+        ctx.lineTo(eX * cellSize + (cellSize / 2), eY * cellSize + (cellSize / 2));
         ctx.stroke();
-      })
+        ctx.lineWidth = 1;
+      }
     });
   }
 }
 
 const isInDiscoveredRoom = (cell: string, state: GameState) => state.dungeon.discoveredRooms.includes(cell);
-
-const stepAlongLine = (startPixelPos: Position, source: Position, targetPixelPos: Position, target: Position, state: GameState, seenCells: Position[]): void => {
-  const nextPixelPosition = normaliseVector(startPixelPos, targetPixelPos);
-  const nextCellPosition = { x: Math.round((nextPixelPosition.x + 24)/48), y: Math.round((nextPixelPosition.y + 24) / 48) };
-  const nextCell = findCell(state.dungeon.layout.grid, nextCellPosition.x, nextCellPosition.y);
-  if (nextCellPosition.x === target.x && nextCellPosition.y === target.y) {
-    seenCells.push(nextCellPosition);
-    return;
-  } else if (nextCell === WALL || nextCell === PILLAR) {
-    return;
-  } else {
-    if (!(nextCellPosition.x === source.x && nextCellPosition.y === source.y)) {
-      seenCells.push(nextCellPosition);
-    }
-    return stepAlongLine(nextPixelPosition, source, targetPixelPos, target, state, seenCells);
-  }
-}

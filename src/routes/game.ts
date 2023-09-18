@@ -461,9 +461,10 @@ const monsterActions = (state: GameState) => {
         const visibleHeroes = liveHeroes(state).filter((hero) => {
           const startPixelPos = { x: (monster.position.x * 48) - 24, y: (monster.position.y * 48) - 24 };
           const targetPixelPos = { x: (hero.position.x * 48) - 24, y: (hero.position.y * 48) - 24 };
-          return stepAlongLine(startPixelPos, targetPixelPos, hero.position, state);
+          return stepAlongLine(startPixelPos, monster.position, targetPixelPos, hero.position, state, []);
         });
         if (visibleHeroes.length > 0 && monster.rangedWeapon) {
+          console.log(`${monster.name} sees: ${visibleHeroes.map((h) => h.name).join(', ')}`)
           const target = Math.floor(Math.random() * visibleHeroes.length);
           monsterAttack(state, monster, visibleHeroes[target], true);
         } else {
@@ -653,17 +654,22 @@ export const getDist = (a: Position, b: Position) => {
   );
 }
 
-export const stepAlongLine = (startPixelPos: Position, targetPixelPos: Position, target: Position, state: GameState): boolean => {
+export const stepAlongLine = (startPixelPos: Position, source: Position, targetPixelPos: Position, target: Position, state: GameState, seenCells: Position[]): boolean => {
   const nextPixelPosition = normaliseVector(startPixelPos, targetPixelPos);
   const nextCellPosition = { x: Math.round((nextPixelPosition.x + 24)/48), y: Math.round((nextPixelPosition.y + 24) / 48) };
   const nextCell = findCell(state.dungeon.layout.grid, nextCellPosition.x, nextCellPosition.y);
   if (nextCellPosition.x === target.x && nextCellPosition.y === target.y) {
+    seenCells.push(nextCellPosition);
     return true;
-  }
-  if (nextCell === WALL || nextCell === PILLAR) {
+  } else if (nextCell === WALL || nextCell === PILLAR) {
     return false;
   } else {
-    return stepAlongLine(nextPixelPosition, targetPixelPos, target, state);
+    if (!(nextCellPosition.x === source.x && nextCellPosition.y === source.y)) {
+      if (!seenCells.some((c) => c.x === nextCellPosition.x && c.y === nextCellPosition.y)) {
+        seenCells.push(nextCellPosition);
+      }
+    }
+    return stepAlongLine(nextPixelPosition, source, targetPixelPos, target, state, seenCells);
   }
 }
 
