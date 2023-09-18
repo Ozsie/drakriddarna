@@ -638,3 +638,14 @@ export const hasWon = (state: GameState) => {
     resetLiveHeroes(state);
   }
 }
+
+export const normaliseVector = (start: Position, target: Position): Position => {
+  const xOffset = start.x;
+  const yOffset = start.y;
+  const x = (target.x-xOffset);
+  const y = (target.y-yOffset);
+  const nX = x/Math.pow(Math.pow(x,2) + Math.pow(y,2), (1/2));
+  const nY = y/Math.pow(Math.pow(x,2) + Math.pow(y,2), (1/2));
+
+  return { x: (nX + xOffset), y: (nY + yOffset) };
+}

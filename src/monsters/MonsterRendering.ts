@@ -1,6 +1,6 @@
 import type { Hero, GameState, Monster } from "../routes/types";
 import { MonsterType } from "../routes/types";
-
+import { normaliseVector } from "../routes/game";
 
 export const renderMonsters = (ctx: CanvasRenderingContext2D, actors: CanvasImageSource, cellSize: number, state: GameState, debugMode: boolean) => {
   state.dungeon.layout.monsters.forEach((monster) => {
@@ -61,10 +61,21 @@ const renderLineOfSight = (ctx: CanvasRenderingContext2D, from: Monster, to: Her
       const eX = target.position.x;
       const eY = target.position.y;
 
+
       ctx.strokeStyle = from.colour;
       ctx.beginPath();
       ctx.moveTo(sX * cellSize + (cellSize / 2), sY * cellSize + (cellSize / 2));
       ctx.lineTo(eX * cellSize + (cellSize / 2), eY * cellSize + (cellSize / 2));
+      ctx.stroke();
+
+      const nPos = normaliseVector(from.position, target.position);
+      const nX = nPos.x;
+      const nY = nPos.y;
+
+      ctx.strokeStyle = 'black';
+      ctx.beginPath();
+      ctx.moveTo(sX * cellSize + (cellSize / 2), sY * cellSize + (cellSize / 2));
+      ctx.lineTo(nX * cellSize + (cellSize / 2), nY * cellSize + (cellSize / 2));
       ctx.stroke();
     });
   }
