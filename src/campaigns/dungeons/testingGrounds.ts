@@ -1,5 +1,11 @@
-import { Colour, ConditionType, MonsterType, SecretType, Side } from '../../routes/types';
-import type { Dungeon } from '../../routes/types';
+import {
+  Colour,
+  ConditionType,
+  MonsterType,
+  SecretType,
+  Side
+} from '../../types';
+import type { Dungeon } from '../../types';
 import {
   createDoor,
   createLockedDoor,

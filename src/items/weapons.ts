@@ -1,5 +1,5 @@
-import type { Weapon } from "../routes/types";
-import { ItemType } from "../routes/types";
+import type { Weapon } from "../types";
+import { ItemType } from "../types";
 
 export const weapons: Weapon[] = [
   {

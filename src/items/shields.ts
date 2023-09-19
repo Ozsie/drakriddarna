@@ -1,5 +1,5 @@
-import type { Shield } from "../routes/types";
-import { ItemType } from "../routes/types";
+import type { Shield } from "../types";
+import { ItemType } from "../types";
 
 export const shields: Shield[] = [
   {

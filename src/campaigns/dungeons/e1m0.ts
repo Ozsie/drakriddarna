@@ -1,5 +1,5 @@
-import { Colour, ConditionType, MonsterType, SecretType, Side } from '../../routes/types';
-import type { Dungeon } from '../../routes/types';
+import { Colour, ConditionType, MonsterType, SecretType, Side } from '../../types';
+import type { Dungeon } from '../../types';
 import { createDoor, createMonster, createSecret } from '../../dungeon/DungeonLogic';
 import { e1m1 } from '../../campaigns/dungeons/e1m1';
 

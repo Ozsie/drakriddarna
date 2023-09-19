@@ -1,5 +1,16 @@
-import type { Door, Item, Monster, Secret } from "../routes/types";
-import { Colour, Level, MonsterType, SecretType, Side } from "../routes/types";
+import type {
+  Door,
+  Item,
+  Monster,
+  Secret
+} from "../types";
+import {
+  Colour,
+  Level,
+  MonsterType,
+  SecretType,
+  Side
+} from "../types";
 import { monsterWeapons } from '../items/weapons';
 import { monsterArmour } from '../items/armours';
 

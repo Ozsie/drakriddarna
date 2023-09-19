@@ -1,10 +1,13 @@
-import type { Campaign, Item } from "../routes/types";
+import type {
+  Campaign,
+  Item
+} from "../types";
 import { e1m0 } from "./dungeons/e1m0";
 import { e1m1 } from "./dungeons/e1m1";
 import { weapons } from "../items/weapons";
 import { armour } from "../items/armours";
 import { shields } from "../items/shields";
-import { Colour } from "../routes/types";
+import { Colour } from "../types";
 import { newHero } from "../hero/HeroLogic";
 
 const getItemDeck = (): Item[] => {

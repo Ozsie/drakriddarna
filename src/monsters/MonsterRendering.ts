@@ -1,6 +1,11 @@
-import type { Hero, GameState, Monster, Position } from "../routes/types";
-import { MonsterType } from "../routes/types";
-import { stepAlongLine } from "../routes/game";
+import type {
+  Hero,
+  GameState,
+  Monster,
+  Position
+} from "../types";
+import { MonsterType } from "../types";
+import { stepAlongLine } from "../game";
 
 export const renderMonsters = (ctx: CanvasRenderingContext2D, actors: CanvasImageSource, cellSize: number, state: GameState, debugMode: boolean) => {
   state.dungeon.layout.monsters.forEach((monster) => {

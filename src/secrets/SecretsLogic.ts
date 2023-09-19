@@ -8,20 +8,20 @@ import type {
   Secret,
   Shield,
   Weapon
-} from "../routes/types";
+} from "../types";
 import {
   Colour,
   ItemType,
   Level,
   SecretType
-} from "../routes/types";
+} from "../types";
 import {
   addLog,
   isNeighbouring,
   isSamePosition,
   roll,
   takeDamage
-} from "../routes/game";
+} from "../game";
 
 export const searchForSecret = (state: GameState) => {
   const hero = state.currentActor as Hero;

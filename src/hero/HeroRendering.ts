@@ -1,11 +1,11 @@
 import type {
   GameState,
   Hero
-} from "../routes/types";
+} from "../types";
 import {
   isDiscovered,
   isWalkable
-} from "../routes/game";
+} from "../game";
 import {
   isBlockedByHero,
   isBlockedByMonster,

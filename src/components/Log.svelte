@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import type { GameState } from "../routes/types";
+  import type { GameState } from "../types";
 
-  let actionLog = [];
+  let actionLog: string[] = [];
   export let state: GameState;
 
   onMount(() => {

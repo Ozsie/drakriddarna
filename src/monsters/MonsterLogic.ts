@@ -3,7 +3,7 @@ import type {
   Hero,
   Monster,
   Position
-} from "../routes/types";
+} from "../types";
 import {
   addLog,
   findCell,
@@ -14,7 +14,7 @@ import {
   isWalkable,
   stepAlongLine,
   takeDamage
-} from "../routes/game";
+} from "../game";
 import { liveHeroes } from "../hero/HeroLogic";
 
 enum MonsterAction {
