@@ -1,18 +1,20 @@
 <script>
   import {
-    act, endAction,
     hasWon,
     init,
     load,
     next,
-    pickLock,
-    save,
-    search
+    save
   } from "./game.ts";
   import Dungeon from './Dungeon.svelte';
   import Characters from './Characters.svelte';
   import Log from './Log.svelte';
   import { onMount } from 'svelte';
+  import {
+    search,
+    endAction,
+    act,
+    pickLock } from "../hero/HeroLogic.ts";
 
   let state = init();
   let debugMode = false;
@@ -118,28 +120,28 @@
   <div class="commands">
     <table>
       <tr>
-        <td><button on:click={act('UL', state)}>UL</button></td>
-        <td><button on:click={act('U', state)}>U</button></td>
-        <td><button on:click={act('UR', state)}>UR</button></td>
-        <td><button on:click={next(state)}>Next</button></td>
+        <td><button on:click={() => act('UL', state)}>UL</button></td>
+        <td><button on:click={() => act('U', state)}>U</button></td>
+        <td><button on:click={() => act('UR', state)}>UR</button></td>
+        <td><button on:click={() => next(state)}>Next</button></td>
       </tr>
       <tr>
-        <td><button on:click={act('L', state)}>L</button></td>
+        <td><button on:click={() => act('L', state)}>L</button></td>
         <td></td>
-        <td><button on:click={act('R', state)}>R</button></td>
-        <td><button on:click={search(state)}>Search</button></td>
+        <td><button on:click={() => act('R', state)}>R</button></td>
+        <td><button on:click={() => search(state)}>Search</button></td>
       </tr>
       <tr>
-        <td><button on:click={act('DL', state)}>DL</button></td>
-        <td><button on:click={act('D', state)}>D</button></td>
-        <td><button on:click={act('DR', state)}>DR</button></td>
-        <td><button on:click={pickLock(state)}>Pick lock</button></td>
+        <td><button on:click={() => act('DL', state)}>DL</button></td>
+        <td><button on:click={() => act('D', state)}>D</button></td>
+        <td><button on:click={() => act('DR', state)}>DR</button></td>
+        <td><button on:click={() => pickLock(state)}>Pick lock</button></td>
       </tr>
       <tr>
-        <td><button on:click={save(state)}>Save</button></td>
+        <td><button on:click={() => save(state)}>Save</button></td>
         <td><button on:click={() => state = load()}>Load</button></td>
         <td><button on:click={() => debugMode = !debugMode}>Debug</button></td>
-        <td><button on:click={endAction(state)}>End action</button></td>
+        <td><button on:click={() => endAction(state)}>End action</button></td>
       </tr>
     </table>
   </div>

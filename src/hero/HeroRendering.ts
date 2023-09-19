@@ -1,5 +1,16 @@
-import type { GameState, Hero } from "../routes/types";
-import { isBlockedByHero, isBlockedByMonster, isDiscovered, isWalkable, liveHeroes } from "../routes/game";
+import type {
+  GameState,
+  Hero
+} from "../routes/types";
+import {
+  isDiscovered,
+  isWalkable
+} from "../routes/game";
+import {
+  isBlockedByHero,
+  isBlockedByMonster,
+  liveHeroes
+} from "./HeroLogic";
 
 export const renderHeroes = (ctx: CanvasRenderingContext2D, actors: CanvasImageSource, cellSize: number, state: GameState, debugMode: boolean) => {
   const heroes = liveHeroes(state);

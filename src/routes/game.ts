@@ -1,10 +1,34 @@
-import type { Actor, Door, Dungeon, GameState, Hero, Layout, Position, Weapon } from "./types";
-import { Colour, ConditionType, ItemType, Level, Side } from "./types";
-import { EMPTY, PILLAR, PIT, WALL } from "./dungeons";
-import { checkForTrapDoor, searchForSecret } from "./secrets/SecretsLogic";
+import type {
+  Actor,
+  Door,
+  Dungeon,
+  GameState,
+  Hero,
+  Layout,
+  Position,
+  Weapon
+} from "./types";
+import {
+  Colour,
+  ConditionType,
+  ItemType,
+  Level
+} from "./types";
+import {
+  EMPTY,
+  PILLAR,
+  PIT,
+  WALL
+} from "./dungeons";
 import { campaignIceDragonTreasure } from "../campaigns/campaignIceDragonTreasure";
 import { monsterActions } from "../monsters/MonsterLogic";
-
+import {
+  levelUp,
+  liveHeroes,
+  replaceDeadHeroes,
+  resetLiveHeroes,
+  rewardLiveHeroes
+} from "../hero/HeroLogic";
 
 export const save = (state: GameState) => {
   addLog(state, 'Game saved.');
@@ -52,149 +76,12 @@ const shuffle = (array: any[]) => {
   return array;
 }
 
-export const resetLiveHeroes = (state: GameState) => {
-  state.heroes.forEach((hero, index) => {
-    hero.position = state.dungeon.startingPositions[index];
-    hero.movement = getEffectiveMaxMovement(hero);
-    hero.actions = 2;
-    hero.health = hero.maxHealth;
-  })
-}
-
 export const toArray = (row: string): string[] => {
   let array: string[] = []
   for (let i = 0; i < row.length; i++) {
     array.push(row[i]);
   }
   return array;
-}
-
-export const isBlockedByMonster = (state: GameState, newX: number, newY: number) => {
-  return state.dungeon.layout.monsters.some((monster) => {
-    return monster.position.x === newX &&
-      monster.position.y === newY &&
-      monster.health > 0;
-  });
-}
-
-export const isBlockedByHero = (state: GameState, newX: number, newY: number) => {
-  return liveHeroes(state).some((hero) => {
-    return hero.position.x === newX && hero.position.y === newY;
-  });
-}
-
-export const consumeActions = (hero: Actor) => {
-  if (hero.movement === 0) {
-    hero.actions--;
-    if (hero.actions !== 0) {
-      hero.movement = getEffectiveMaxMovement(hero);
-    }
-  }
-  if (hero.actions == 0) {
-    hero.movement = 0;
-  }
-}
-
-export const act = (direction: string, state: GameState) => {
-  const hero: Actor | undefined = state.currentActor
-  if (!hero || hero.actions === 0) {
-    return;
-  }
-  let newX = hero.position.x
-  let newY = hero.position.y
-  switch (direction) {
-    case 'UL': newX = hero.position.x - 1; newY = hero.position.y - 1; break;
-    case 'U': newY = hero.position.y - 1; break;
-    case 'UR': newX = hero.position.x + 1; newY = hero.position.y - 1; break;
-    case 'L': newX = hero.position.x - 1; break;
-    case 'R': newX = hero.position.x + 1; break;
-    case 'DL': newX = hero.position.x - 1; newY = hero.position.y + 1; break;
-    case 'D': newY = hero.position.y + 1; break;
-    case 'DR': newX = hero.position.x + 1; newY = hero.position.y + 1; break;
-  }
-  const blockedByHero = isBlockedByHero(state, newX, newY);
-  const blockedByWall = !isWalkable(state.dungeon.layout, newX, newY)
-  const blockedByMonster = isBlockedByMonster(state, newX, newY)
-  if (!blockedByHero && !blockedByWall) {
-    const discovered = isDiscovered(state.dungeon, newX, newY)
-    if (!discovered) {
-      const moved = moveOverDoor(state, hero, newX, newY)
-      if (moved) {
-        openDoor(hero, state, newX, newY);
-      }
-    } else if (discovered) {
-      if (blockedByMonster) {
-        attack(hero, state, newX, newY)
-      } else {
-        move(hero, state, newX, newY, 1)
-      }
-    }
-  } else {
-    addLog(state, `${hero.name} could not make that move`);
-  }
-  if (!checkForTrapDoor(state)) {
-    consumeActions(hero);
-  }
-}
-
-const move = (hero: Actor, state: GameState, newX: number, newY: number, cost: number) => {
-  hero.position.x = newX;
-  hero.position.y = newY;
-  const note = state.dungeon.layout.notes.find((note) => isSamePosition(note.position, hero.position));
-  if (note) {
-    const onHiddenDoor = state.dungeon.layout.doors.some((door) => door.hidden && isSamePosition(note.position, {
-      x: door.x,
-      y: door.y
-    }));
-    if (!onHiddenDoor) addLog(state, `${hero.name} reads: ${note.message}`);
-  }
-  const nextToMonster = state.dungeon.layout.monsters.some((monster) => {
-    return isNeighbouring(hero.position, monster.position.x, monster.position.y);
-  });
-  if (nextToMonster) {
-    addLog(state, `${hero.name} walked by a monster and lost the momentum`);
-    hero.movement = 0;
-  } else {
-    hero.movement -= cost;
-  }
-}
-
-export const openDoor = (hero: Actor, state: GameState, newX: number, newY: number) => {
-  const target = findCell(state.dungeon.layout.grid, newX, newY);
-  if (target) state.dungeon.discoveredRooms.push(target);
-  move(hero, state, hero.position.x, hero.position.y, 1);
-  addLog(state, `${hero.name} opened a door`);
-}
-
-export const attack = (hero: Actor, state: GameState, targetX: number, targetY: number) => {
-  if (hero.actions === 1 && hero.movement !== 3) {
-    addLog(state, `${hero.name} has no actions left to attack`);
-    return;
-  }
-  if (!hero.weapon.useHearHeroes) {
-    const neighbouringHeroes: Hero[] = liveHeroes(state)
-      .filter((other) => other !== hero )
-      .filter((other: Hero) => isNeighbouring(hero.position, other.position.x, other.position.y));
-    if (neighbouringHeroes.length > 0) {
-      addLog(state, `${hero.name} could not use ${hero.weapon.name} near a friend.`);
-      return;
-    }
-  }
-  const monster = state.dungeon.layout.monsters.find((monster) => monster.position.x === targetX && monster.position.y === targetY);
-  if (monster) {
-    takeDamage(state, hero, monster, false);
-    if (monster.health <= 0) {
-      state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter((m) => m != monster);
-      addLog(state, `${hero.name} killed ${monster.name}`);
-      state.dungeon.killCount++;
-      hero.experience += monster.experience;
-    }
-    if (hero.actions > 1 && hero.movement < 3) {
-      hero.actions -= 2
-    } else {
-      hero.actions--;
-    }
-  }
 }
 
 export const roll = (level: Level, dice: number) => {
@@ -212,64 +99,8 @@ export const roll = (level: Level, dice: number) => {
   return results.length
 }
 
-export const endAction = (state: GameState) => {
-  const hero = state.currentActor
-  if (!hero) return;
-  hero.actions--;
-  hero.movement = getEffectiveMaxMovement(hero);
-  if (hero.actions === 0) {
-    next(state);
-  }
-}
-
-export const pickLock = (state: GameState) => {
-  const hero = state.currentActor
-  if (!hero) return;
-  if (!canAct(hero)) {
-    addLog(state, `${hero.name} has no actions left to pick lock`);
-    return;
-  }
-  const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y)
-  if (door && door.locked) {
-    const result = roll(hero.level, 1)
-    if (result >= 1) {
-      door.locked = false;
-      addLog(state, `${hero.name} managed to pick the lock`);
-    } else {
-      addLog(state, `${hero.name} failed to pick the lock`);
-    }
-    if (hero.actions > 1 && hero.movement < 3) {
-      hero.actions -= 2
-    } else {
-      hero.actions--;
-    }
-    hero.movement = getEffectiveMaxMovement(hero);
-    if(hero.actions == 0){
-      hero.movement = 0
-    }
-  }
-}
-
 export const getEffectiveMaxMovement = (actor: Actor) => {
   return actor.maxMovement - (actor.armour?.movementReduction ?? 0);
-}
-
-export const search = (state: GameState) => {
-  const hero: Actor | undefined = state.currentActor
-  if (!hero) return;
-  if (!canAct(hero)) {
-    addLog(state, `${hero.name} has no actions left to search`);
-    return;
-  }
-  searchForSecret(state);
-  if (hero.actions > 1 && hero.movement < getEffectiveMaxMovement(hero)) {
-    hero.actions -= 2
-  } else {
-    hero.actions--;
-  }
-  if(hero.actions == 0){
-    hero.movement = 0
-  }
 }
 
 export const next = (state: GameState) => {
@@ -371,36 +202,6 @@ export const doorAsActor = (door: Door): Actor => {
   };
 }
 
-const moveOverDoor = (state: GameState, hero: Actor, newX: number, newY: number) => {
-  const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y)
-
-  if (door && !door.locked) {
-    const side = openSide(hero.position.x, hero.position.y, newX, newY)
-    if (door.side === side) {
-      door.open = true;
-      if (door.trapped) {
-        takeDamage(state, doorAsActor(door), hero, false);
-      }
-      return true
-    }
-  }
-  if (door && door.locked) {
-    addLog(state, 'Door is locked');
-  }
-  return false
-}
-
-const openSide = (fromX: number, fromY: number, toX: number, toY: number): Side | undefined => {
-  if (fromX === toX) {
-    if (fromY > toY) return Side.UP
-    if (fromY < toY) return Side.DOWN
-  }
-  if (fromY === toY) {
-    if (fromX > toX) return Side.LEFT
-    if (fromX < toX) return Side.RIGHT
-  }
-}
-
 export const isWalkable = (layout: Layout, x: number, y: number): boolean => {
   let walkable = true;
   if (x < 0 || x >= layout.grid[0].length || y < 0 || y >= layout.grid.length) {
@@ -447,27 +248,12 @@ export const getDamageString = (damage: number, hits: number, shield: number, ta
   return `${damage} damage (${hits}-(${defense}+${shield})=${damage})`;
 }
 
-export const canAct = (hero: Hero) => {
-  if (hero.movement < getEffectiveMaxMovement(hero)) {
-    return hero.actions > 1
-  }
-  return hero.actions > 0
-}
-
 export const isSamePosition = (a: Position, b: Position) => {
   return a.x === b.x && a.y === b.y;
 }
 
 export const addLog = (state: GameState, logMessage: string) => {
   state.actionLog = [logMessage, ...state.actionLog];
-}
-
-export const liveHeroes = (state: GameState): Hero[] => {
-  return state.heroes.filter((hero) => hero.health > 0);
-}
-
-export const deadHeroes = (state: GameState): Hero[] => {
-  return state.heroes.filter((hero) => hero.health <= 0);
 }
 
 export const takeDamage = (state: GameState, source: Actor & { rangedWeapon?: Weapon }, target: Actor, ranged: boolean) => {
@@ -496,37 +282,6 @@ export const takeDamage = (state: GameState, source: Actor & { rangedWeapon?: We
     target.health = 0;
     target.level = Level.APPRENTICE;
   }
-}
-
-export const levelUp = (state: GameState) => {
-  liveHeroes(state).forEach((hero) => {
-    const currentLevel = hero.level
-    if (hero.experience >= 28) {
-      hero.level = Level.MASTER;
-    } else if (hero.experience >= 18) {
-      hero.level = Level.LORD;
-    } else if (hero.experience >= 10) {
-      hero.level = Level.HERO;
-    } else if (hero.experience >= 4) {
-      hero.level = Level.KNIGHT;
-    }
-    if (currentLevel !== hero.level) {
-      addLog(state, `${hero.name} leveled up to ${hero.level}`);
-    }
-  });
-}
-
-const rewardLiveHeroes = (state: GameState) => {
-  liveHeroes(state).forEach((hero) => hero.experience += 4);
-}
-
-const replaceDeadHeroes = (state: GameState) => {
-  deadHeroes(state).forEach((hero) => {
-    hero.experience = 0;
-    hero.health = hero.maxHealth;
-    hero.movement = hero.maxMovement;
-    hero.actions = 2;
-  });
 }
 
 export const hasWon = (state: GameState) => {
@@ -578,4 +333,8 @@ export const normaliseVector = (start: Position, target: Position): Position => 
   let newY = Math.round(nY + yOffset);
 
   return { x: newX, y: newY };
+}
+
+export const findNeighbouringHeroes = (state: GameState, actor: Actor): Hero[] => {
+  return liveHeroes(state).filter((hero: Hero) => isNeighbouring(actor.position, hero.position.x, hero.position.y));
 }
