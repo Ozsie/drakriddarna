@@ -1,6 +1,27 @@
-import type { Actor, Armour, GameState, Hero, Item, Position, Secret, Shield, Weapon } from "../types";
-import { Colour, ItemType, Level, SecretType } from "../types";
-import { addLog, isNeighbouring, isSamePosition, roll, takeDamage } from "../game";
+import type {
+  Actor,
+  Armour,
+  GameState,
+  Hero,
+  Item,
+  Position,
+  Secret,
+  Shield,
+  Weapon
+} from "../types";
+import {
+  Colour,
+  ItemType,
+  Level,
+  SecretType
+} from "../types";
+import {
+  addLog,
+  isNeighbouring,
+  isSamePosition,
+  roll,
+  takeDamage
+} from "../game";
 
 export const searchForSecret = (state: GameState) => {
   const hero = state.currentActor as Hero;
@@ -33,7 +54,7 @@ export const checkForTrapDoor = (state: GameState) => {
     .filter((secret) => !secret.found)
     .find((secret) => isSamePosition(secret.position, actor.position));
   if (trap) {
-    takeDamage(state, secretAsActor(trap), actor);
+    takeDamage(state, secretAsActor(trap), actor, false);
     addLog(state, `${actor.name} fell into a pit and is incapacitated for one turn.`)
     actor.movement = 0;
     actor.actions = 0;

@@ -2,11 +2,11 @@
   import { onMount } from "svelte";
   import groundSprites from '$lib/Dungeon_Tileset.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
-  import { doMouseLogic } from "../hero/ClickInputLogic.ts";
+  import { doMouseLogic } from "../hero/ClickInputLogic";
   import { browser } from '$app/environment';
   import { renderHeroes } from "../hero/HeroRendering";
-  import { renderMonsters } from "../monsters/MonsterRendering.ts";
-  import { renderDoors, renderGrid, renderSecrets } from "../dungeon/DungeonRendering.ts";
+  import { renderMonsters } from "../monsters/MonsterRendering";
+  import { renderDoors, renderGrid, renderSecrets } from "../dungeon/DungeonRendering";
 
   export let state;
   export let debugMode;

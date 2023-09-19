@@ -4,13 +4,13 @@ import type {
   Hero,
   Monster,
   Position
-} from "../routes/types";
+} from "../types";
 import {
   Colour,
   Level,
   Side
-} from "../routes/types";
-import { weapons } from "../routes/items/weapons";
+} from "../types";
+import { weapons } from "../items/weapons";
 import {
   addLog,
   doorAsActor,
@@ -24,8 +24,11 @@ import {
   next,
   roll,
   takeDamage
-} from "../routes/game";
-import { checkForTrapDoor, searchForSecret } from "../routes/secrets/SecretsLogic";
+} from "../game";
+import {
+  checkForTrapDoor,
+  searchForSecret
+} from "../secrets/SecretsLogic";
 
 export const newHero = (name: string, colour: Colour): Hero => {
   weapons[0].amountInDeck--;

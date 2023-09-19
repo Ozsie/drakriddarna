@@ -3,13 +3,13 @@ import {
   doorAsActor,
   isWalkable,
   takeDamage,
-} from "../routes/game";
-import { Side } from '../routes/types';
+} from "../game";
+import { Side } from '../types';
 import type {
   Position,
   GameState,
-  Hero } from '../routes/types';
-import { checkForTrapDoor } from '../routes/secrets/SecretsLogic';
+  Hero } from '../types';
+import { checkForTrapDoor } from '../secrets/SecretsLogic';
 import {
   canAct,
   attack,

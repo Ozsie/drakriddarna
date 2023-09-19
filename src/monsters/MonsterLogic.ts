@@ -3,15 +3,18 @@ import type {
   Hero,
   Monster,
   Position
-} from "../routes/types";
+} from "../types";
 import {
   addLog,
-  findCell, findNeighbouringHeroes, getDist,
-  getEffectiveMaxMovement, isDiscovered,
+  findCell,
+  findNeighbouringHeroes,
+  getDist,
+  getEffectiveMaxMovement,
+  isDiscovered,
   isWalkable,
   stepAlongLine,
   takeDamage
-} from "../routes/game";
+} from "../game";
 import { liveHeroes } from "../hero/HeroLogic";
 
 enum MonsterAction {

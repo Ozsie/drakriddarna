@@ -5,16 +5,17 @@
     load,
     next,
     save
-  } from "./game.ts";
-  import Dungeon from './Dungeon.svelte';
-  import Characters from './Characters.svelte';
-  import Log from './Log.svelte';
+  } from "../game.ts";
+  import Dungeon from '../components/Dungeon.svelte';
+  import Characters from '../components/Characters.svelte';
+  import Log from '../components/Log.svelte';
   import { onMount } from 'svelte';
   import {
     search,
     endAction,
     act,
-    pickLock } from "../hero/HeroLogic.ts";
+    pickLock
+  } from "../hero/HeroLogic.ts";
 
   let state = init();
   let debugMode = false;

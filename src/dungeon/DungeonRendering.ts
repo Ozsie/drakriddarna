@@ -1,7 +1,17 @@
-import { SecretType, Side } from "../routes/types";
-import type { Secret, GameState, Door } from "../routes/types";
-import { EMPTY, WALL } from "../routes/dungeons";
-import { toArray } from "../routes/game";
+import {
+  SecretType,
+  Side
+} from "../types";
+import type {
+  Secret,
+  GameState,
+  Door
+} from "../types";
+import {
+  EMPTY,
+  WALL
+} from "../dungeon/DungeonLogic";
+import { toArray } from "../game";
 
 export const renderDoors = (ctx: CanvasRenderingContext2D, ground: CanvasImageSource, cellSize: number, state: GameState, debugMode: boolean) => {
   state.dungeon.layout.doors.forEach((door) => {

@@ -1,13 +1,14 @@
-<script>
+<script lang="ts">
   import { onMount } from "svelte";
+  import type { GameState } from "../types";
 
-  let actionLog = [];
-  export let state
+  let actionLog: string[] = [];
+  export let state: GameState;
 
   onMount(() => {
     setInterval(() => {
       actionLog = state.actionLog
-    }, 1000);
+    }, 500);
   });
 </script>
 <style>

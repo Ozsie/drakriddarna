@@ -19,16 +19,16 @@ import {
   PILLAR,
   PIT,
   WALL
-} from "./dungeons";
-import { campaignIceDragonTreasure } from "../campaigns/campaignIceDragonTreasure";
-import { monsterActions } from "../monsters/MonsterLogic";
+} from "./dungeon/DungeonLogic";
+import { campaignIceDragonTreasure } from "./campaigns/campaignIceDragonTreasure";
+import { monsterActions } from "./monsters/MonsterLogic";
 import {
   levelUp,
   liveHeroes,
   replaceDeadHeroes,
   resetLiveHeroes,
   rewardLiveHeroes
-} from "../hero/HeroLogic";
+} from "./hero/HeroLogic";
 
 export const save = (state: GameState) => {
   addLog(state, 'Game saved.');
