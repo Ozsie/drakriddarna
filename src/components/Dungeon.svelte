@@ -4,7 +4,7 @@
   import actorSprites from '$lib/Dungeon_Character_2.png';
   import { doMouseLogic } from "../hero/ClickInputLogic.ts";
   import { browser } from '$app/environment';
-  import { renderHeroes } from "../hero/HeroRendering";
+  import { renderHeroes } from "../hero/HeroRendering.js";
   import { renderMonsters } from "../monsters/MonsterRendering.ts";
   import { renderDoors, renderGrid, renderSecrets } from "../dungeon/DungeonRendering.ts";
 

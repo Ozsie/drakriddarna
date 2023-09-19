@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Actor, Hero } from "./types";    
+    import type { Hero } from "src/routes/types";
     export let hero: Hero;
 </script>
 
