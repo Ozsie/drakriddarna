@@ -1,7 +1,7 @@
 import type { Door, Item, Monster, Secret } from "./types";
 import { Colour, Level, MonsterType, SecretType, Side } from "./types";
-import { monsterWeapons } from './items/weapons';
-import { monsterArmour } from './items/armours';
+import { monsterWeapons } from '../items/weapons';
+import { monsterArmour } from '../items/armours';
 
 export const PIT = '0'
 export const PILLAR = '@'

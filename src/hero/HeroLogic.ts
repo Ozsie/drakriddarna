@@ -10,7 +10,7 @@ import {
   Level,
   Side
 } from "../routes/types";
-import { weapons } from "../routes/items/weapons";
+import { weapons } from "../items/weapons";
 import {
   addLog,
   doorAsActor,

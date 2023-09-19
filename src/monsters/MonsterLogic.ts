@@ -6,8 +6,11 @@ import type {
 } from "../routes/types";
 import {
   addLog,
-  findCell, findNeighbouringHeroes, getDist,
-  getEffectiveMaxMovement, isDiscovered,
+  findCell,
+  findNeighbouringHeroes,
+  getDist,
+  getEffectiveMaxMovement,
+  isDiscovered,
   isWalkable,
   stepAlongLine,
   takeDamage

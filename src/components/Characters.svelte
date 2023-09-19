@@ -1,5 +1,5 @@
 <script lang="ts">
-  import HeroCard from "HeroCard.svelte";
+  import HeroCard from "./HeroCard.svelte";
   import { onMount } from "svelte";
   import { liveHeroes } from "../hero/HeroLogic";
   import type { GameState } from "../routes/types";

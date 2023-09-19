@@ -8,7 +8,7 @@ import {
   createTrappedDoor,
   createTrappedHiddenDoor
 } from "../../routes/dungeons";
-import { weapons } from '../../routes/items/weapons';
+import { weapons } from '../../items/weapons';
 import { e1m0 } from '../../campaigns/dungeons/e1m0';
 
 export const testingGrounds: Dungeon = {

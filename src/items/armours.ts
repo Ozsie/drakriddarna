@@ -1,5 +1,5 @@
-import type { Armour } from "../types";
-import { ItemType } from "../types";
+import type { Armour } from "../routes/types";
+import { ItemType } from "../routes/types";
 
 export const armour: Armour[] = [
   {

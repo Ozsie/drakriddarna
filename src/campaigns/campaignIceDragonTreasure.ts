@@ -1,9 +1,9 @@
 import type { Campaign, Item } from "../routes/types";
 import { e1m0 } from "./dungeons/e1m0";
 import { e1m1 } from "./dungeons/e1m1";
-import { weapons } from "../routes/items/weapons";
-import { armour } from "../routes/items/armours";
-import { shields } from "../routes/items/shields";
+import { weapons } from "../items/weapons";
+import { armour } from "../items/armours";
+import { shields } from "../items/shields";
 import { Colour } from "../routes/types";
 import { newHero } from "../hero/HeroLogic";
 
