@@ -1,10 +1,11 @@
 <script lang="ts">
   import HeroCard from "./HeroCard.svelte";
   import { onMount } from "svelte";
-  export let state: any ;
-  let uglyUpdateToggle = false;;
-  
-  import { liveHeroes } from "./game.ts";
+  import { liveHeroes } from "../hero/HeroLogic";
+  import type { GameState } from "./types";
+
+  export let state: GameState;
+  let uglyUpdateToggle = false;
   
   onMount(() => {
     render();
@@ -12,28 +13,10 @@
   });
 
   const render = () => {
-
-  uglyUpdateToggle = !uglyUpdateToggle;
-  if (!state || !document) return;  
+    uglyUpdateToggle = !uglyUpdateToggle;
+    if (!state || !document) return;
   };
-
-
 </script>
-{#each liveHeroes(state) as hero, i}
-
-  {#key uglyUpdateToggle}
-    {#if hero === state.currentActor}
-    <div class="is-current-actor">
-      <HeroCard hero={hero} />
-    </div>
-    {:else}
-    <div class="not-current-actor">
-      <HeroCard hero={hero} />
-    </div>
-    {/if}
-  {/key}
-{/each}
-
 <style>
   .is-current-actor{
     border-color: lightblue;
@@ -51,4 +34,16 @@
     margin: 4px 4px -4px 4px;
   }
 </style>
-
+{#each liveHeroes(state) as hero, i}
+  {#key uglyUpdateToggle}
+    {#if hero === state.currentActor}
+    <div class="is-current-actor">
+      <HeroCard hero={hero} />
+    </div>
+    {:else}
+    <div class="not-current-actor">
+      <HeroCard hero={hero} />
+    </div>
+    {/if}
+  {/key}
+{/each}

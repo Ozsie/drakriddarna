@@ -1,13 +1,18 @@
-import type { GameState, Hero, Monster, Position } from "../routes/types";
+import type {
+  GameState,
+  Hero,
+  Monster,
+  Position
+} from "../routes/types";
 import {
   addLog,
-  findCell, getDist,
+  findCell, findNeighbouringHeroes, getDist,
   getEffectiveMaxMovement, isDiscovered,
-  isNeighbouring, isWalkable,
-  liveHeroes,
+  isWalkable,
   stepAlongLine,
   takeDamage
 } from "../routes/game";
+import { liveHeroes } from "../hero/HeroLogic";
 
 enum MonsterAction {
   RANGED_ATTACK = 'RANGED_ATTACK',
@@ -83,10 +88,6 @@ const selectMeleeTarget = (possibleTargets: Hero[]): Hero => {
   return possibleTargets.sort((a, b) => {
     return b.health - a.health;
   })[0];
-}
-
-const findNeighbouringHeroes = (state: GameState, monster: Monster): Hero[] => {
-  return liveHeroes(state).filter((hero: Hero) => isNeighbouring(monster.position, hero.position.x, hero.position.y));
 }
 
 const findVisibleHeroes = (state: GameState, monster: Monster): Hero[] => {
