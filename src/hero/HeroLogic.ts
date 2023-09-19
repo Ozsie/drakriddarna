@@ -25,7 +25,7 @@ import {
   roll,
   takeDamage
 } from "../routes/game";
-import { checkForTrapDoor, searchForSecret } from "../routes/secrets/SecretsLogic";
+import { checkForTrapDoor, searchForSecret } from "../secrets/SecretsLogic";
 
 export const newHero = (name: string, colour: Colour): Hero => {
   weapons[0].amountInDeck--;

@@ -9,7 +9,7 @@ import type {
   Position,
   GameState,
   Hero } from '../routes/types';
-import { checkForTrapDoor } from '../routes/secrets/SecretsLogic';
+import { checkForTrapDoor } from '../secrets/SecretsLogic';
 import {
   canAct,
   attack,
