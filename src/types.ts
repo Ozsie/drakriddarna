@@ -11,6 +11,7 @@ export type GameState = {
   currentActor?: Actor;
   actionLog: string[];
   itemDeck: Item[];
+  settings: Record<string, any>;
 }
 
 export type Campaign = {

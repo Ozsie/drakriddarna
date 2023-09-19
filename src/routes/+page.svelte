@@ -21,9 +21,7 @@
   let debugMode = false;
 
   onMount(() => {
-    setInterval(() => {
-      return hasWon(state);
-    }, 1000);
+    setInterval(() => hasWon(state), 1000);
   });
 
   function onKeyDown(e)
