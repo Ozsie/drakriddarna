@@ -1,8 +1,9 @@
-import type { Actor, Door, Dungeon, GameState, Hero, Layout, Monster, Position, Weapon } from "./types";
+import type { Actor, Door, Dungeon, GameState, Hero, Layout, Position, Weapon } from "./types";
 import { Colour, ConditionType, ItemType, Level, Side } from "./types";
 import { EMPTY, PILLAR, PIT, WALL } from "./dungeons";
 import { checkForTrapDoor, searchForSecret } from "./secrets/SecretsLogic";
 import { campaignIceDragonTreasure } from "../campaigns/campaignIceDragonTreasure";
+import { monsterActions } from "../monsters/MonsterLogic";
 
 
 export const save = (state: GameState) => {
@@ -441,117 +442,9 @@ export const isNeighbouring = (position: Position, x: number, y: number) => {
     (position.x === x - 1 && position.y === y + 1);
 }
 
-const monsterActions = (state: GameState) => {
-  const visibleMonsters = state.dungeon.layout.monsters.filter((monster) => {
-    const cell = findCell(state.dungeon.layout.grid, monster.position.x, monster.position.y)
-    return cell && state.dungeon.discoveredRooms.includes(cell) && monster.health > 0;
-  })
-  if (visibleMonsters.length === 0) {
-    addLog(state, 'No monsters can act');
-  }
-  visibleMonsters.forEach((monster) => {
-    const maxActions = monster.actions
-    addLog(state, `${monster.name} acted `);
-    while (monster.actions > 0) {
-      const neighbouringHeroes: Hero[] = liveHeroes(state).filter((hero: Hero) => isNeighbouring(monster.position, hero.position.x, hero.position.y));
-      if (neighbouringHeroes.length > 0) {
-        const target = Math.floor(Math.random() * neighbouringHeroes.length);
-        monsterAttack(state, monster, neighbouringHeroes[target], false);
-      } else {
-        const visibleHeroes = liveHeroes(state).filter((hero) => {
-          const startPixelPos = { x: (monster.position.x * 48) - 24, y: (monster.position.y * 48) - 24 };
-          const targetPixelPos = { x: (hero.position.x * 48) - 24, y: (hero.position.y * 48) - 24 };
-          return stepAlongLine(startPixelPos, monster.position, targetPixelPos, hero.position, state, []);
-        });
-        if (visibleHeroes.length > 0 && monster.rangedWeapon) {
-          console.log(`${monster.name} sees: ${visibleHeroes.map((h) => h.name).join(', ')}`)
-          const target = Math.floor(Math.random() * visibleHeroes.length);
-          monsterAttack(state, monster, visibleHeroes[target], true);
-        } else {
-          while (monster.movement > 0) {
-            monsterMove(state, monster);
-          }
-          monster.actions--;
-          monster.movement = getEffectiveMaxMovement(monster);
-        }
-      }
-    }
-    monster.actions = maxActions;
-    monster.movement = getEffectiveMaxMovement(monster);
-  });
-}
-
-const monsterMove = (state: GameState, monster: Monster) => {
-  const closestHeroAndDistance = liveHeroes(state).map((hero) => {
-    return {
-      hero,
-      dist: getDist(hero.position, monster.position)
-    };
-  }).sort((a, b) => {
-    return a.dist - b.dist;
-  })[0];
-
-  if (closestHeroAndDistance.dist > 1) {
-    const possibleMoves = findPossibleMoves(state, monster.position);
-    if (possibleMoves.length > 0) {
-      const newPosition = possibleMoves.map((pos) => {
-        return {
-          pos,
-          dist: getDist(pos, closestHeroAndDistance.hero.position)
-        };
-      }).sort((a, b) => {
-        return a.dist - b.dist;
-      })[0].pos;
-      monster.position = newPosition;
-      addLog(state, `${monster.name} moved towards ${closestHeroAndDistance.hero.name} (${newPosition.x},${newPosition.y})`);
-    } else {
-      addLog(state, `${monster.name} could not move`);
-    }
-  }
-  monster.movement--;
-}
-
-
-let findPossibleMoves = (state: GameState, position: Position): Position[] => {
-  const x = position.x;
-  const y = position.y;
-
-  const targets: Position[] = []
-  for (let tX = x-1; tX <= x+1; tX++) {
-    for (let tY = y-1; tY <= y+1; tY++) {
-      if (tX === x && tY === y) continue;
-      if (isWalkable(state.dungeon.layout, tX, tY) && isDiscovered(state.dungeon, tX, tY)) {
-        targets.push({x:tX,y:tY});
-      }
-    }
-  }
-
-  return targets.filter((pos) => {
-    return !liveHeroes(state).find((hero) => hero.position.x === pos.x && hero.position.y === pos.y);
-  }).filter((pos) => {
-    const blocker = state.dungeon.layout.monsters.find((m) => m.position.x === pos.x && m.position.y === pos.y)
-    return !blocker
-  })
-}
-
 export const getDamageString = (damage: number, hits: number, shield: number, target: Actor) => {
   const defense = target.armour?.defense ?? target.defense;
   return `${damage} damage (${hits}-(${defense}+${shield})=${damage})`;
-}
-
-const monsterAttack = (state: GameState, monster: Monster, hero: Hero, ranged: boolean) => {
-  if (monster.actions === 1 && monster.movement !== 3) {
-    addLog(state, `${monster.name} has no actions left to attack`);
-    return;
-  }
-  if (hero) {
-    takeDamage(state, monster, hero, ranged);
-    if (monster?.actions > 1 && monster?.movement < 3) {
-      monster.actions -= 2
-    } else {
-      monster.actions--;
-    }
-  }
 }
 
 export const canAct = (hero: Hero) => {
