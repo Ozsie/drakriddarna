@@ -7,7 +7,7 @@ import {
   createSecret, createSecretWithItem,
   createTrappedDoor,
   createTrappedHiddenDoor
-} from "../../routes/dungeons";
+} from "../../dungeon/DungeonLogic";
 import { weapons } from '../../items/weapons';
 import { e1m0 } from '../../campaigns/dungeons/e1m0';
 

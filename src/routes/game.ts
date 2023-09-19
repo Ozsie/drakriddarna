@@ -19,7 +19,7 @@ import {
   PILLAR,
   PIT,
   WALL
-} from "./dungeons";
+} from "../dungeon/DungeonLogic";
 import { campaignIceDragonTreasure } from "../campaigns/campaignIceDragonTreasure";
 import { monsterActions } from "../monsters/MonsterLogic";
 import {

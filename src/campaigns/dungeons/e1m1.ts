@@ -1,6 +1,6 @@
 import type { Dungeon } from "../../routes/types";
 import { Colour, ConditionType, MonsterType, SecretType, Side } from "../../routes/types";
-import { createDoor, createHiddenDoor, createMonster } from "../../routes/dungeons";
+import { createDoor, createHiddenDoor, createMonster } from "../../dungeon/DungeonLogic";
 
 export const e1m1: Dungeon = {
   name: 'The Three Gates of Power',

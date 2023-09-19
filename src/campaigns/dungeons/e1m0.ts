@@ -1,6 +1,6 @@
 import { Colour, ConditionType, MonsterType, SecretType, Side } from '../../routes/types';
 import type { Dungeon } from '../../routes/types';
-import { createDoor, createMonster, createSecret } from '../../routes/dungeons';
+import { createDoor, createMonster, createSecret } from '../../dungeon/DungeonLogic';
 import { e1m1 } from '../../campaigns/dungeons/e1m1';
 
 export const e1m0: Dungeon = {
