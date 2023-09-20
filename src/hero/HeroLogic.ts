@@ -3,6 +3,7 @@ import type {
   GameState,
   Hero,
   Monster,
+  Door,
   Position
 } from "../types";
 import {
@@ -29,6 +30,7 @@ import {
   checkForTrapDoor,
   searchForSecret
 } from "../secrets/SecretsLogic";
+import { BREAK_LOCK } from "../items/magicItems";
 
 export const newHero = (name: string, colour: Colour): Hero => {
   weapons[0].amountInDeck--;
@@ -255,6 +257,10 @@ export const replaceDeadHeroes = (state: GameState) => {
   });
 }
 
+export const canOpenDoor = (hero: Hero, canBreakDoor: boolean, door: Door) => {
+  return !door.open && !door.hidden && (!door.locked || (door.locked && canBreakDoor)) && hero.movement > 0;
+}
+
 const move = (hero: Hero, state: GameState, newX: number, newY: number, cost: number) => {
   hero.position.x = newX;
   hero.position.y = newY;
@@ -278,22 +284,24 @@ const move = (hero: Hero, state: GameState, newX: number, newY: number, cost: nu
 }
 
 const moveOverDoor = (state: GameState, hero: Actor, newX: number, newY: number) => {
-  const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y)
+  const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y);
+  const canBreakLock = hero.inventory.some((item) => item.properties?.[BREAK_LOCK]);
 
-  if (door && !door.locked) {
-    const side = openSide(hero.position.x, hero.position.y, newX, newY)
+  if (door && canOpenDoor(hero, canBreakLock, door)) {
+    if (door.locked && canBreakLock) addLog(state, `${hero.name} broke the locked door`);
+    const side = openSide(hero.position.x, hero.position.y, newX, newY);
     if (door.side === side) {
       door.open = true;
       if (door.trapped) {
         takeDamage(state, doorAsActor(door), hero, false);
       }
-      return true
+      return true;
     }
   }
   if (door && door.locked) {
     addLog(state, 'Door is locked');
   }
-  return false
+  return false;
 }
 
 const openSide = (fromX: number, fromY: number, toX: number, toY: number): Side | undefined => {
