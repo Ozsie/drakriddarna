@@ -60,7 +60,8 @@ export const init = (): GameState => {
     ],
     itemDeck: shuffle(campaignIceDragonTreasure.itemDeck),
     settings: {
-      'cellSize': 48
+      'cellSize': 48,
+      'debug': false
     }
   }
   resetLiveHeroes(state);

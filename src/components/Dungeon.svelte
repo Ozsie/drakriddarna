@@ -10,7 +10,7 @@
   import type { GameState } from "../types";
 
   export let state: GameState;
-  export let debugMode;
+  export let debugMode: boolean;
 
   let footerSize;
   let screenSize;
