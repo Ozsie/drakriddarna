@@ -4,6 +4,7 @@ import type {
   Dungeon,
   GameState,
   Hero,
+  Item,
   Layout,
   Position,
   Weapon
@@ -29,6 +30,7 @@ import {
   resetLiveHeroes,
   rewardLiveHeroes
 } from "./hero/HeroLogic";
+import { testingGrounds } from "./campaigns/dungeons/testingGrounds";
 
 export const save = (state: GameState) => {
   addLog(state, 'Game saved.');
@@ -46,9 +48,9 @@ export const load = (): GameState | undefined => {
 }
 
 export const init = (): GameState => {
-  const state = {
+  const state: GameState = {
     heroes: campaignIceDragonTreasure.heroes,
-    dungeon: campaignIceDragonTreasure.dungeons[0],
+    dungeon: testingGrounds,
     currentActor: campaignIceDragonTreasure.heroes[0],
     actionLog: [
       `Playing '${campaignIceDragonTreasure.name}'`,
@@ -58,13 +60,14 @@ export const init = (): GameState => {
       'If another action is performed before moving 3 steps, the move is finished and both actions are consumed.',
       'The rules of this game are harsh and unfair.'
     ],
-    itemDeck: shuffle(campaignIceDragonTreasure.itemDeck)
+    itemDeck: shuffle(campaignIceDragonTreasure.itemDeck),
+    magicItemDeck: shuffle(campaignIceDragonTreasure.magicItemDeck),
   }
   resetLiveHeroes(state);
   return state;
 }
 
-const shuffle = (array: any[]) => {
+const shuffle = (array: Item[]): Item[] => {
   let currentIndex = array.length,  randomIndex;
   while (currentIndex > 0) {
     randomIndex = Math.floor(Math.random() * currentIndex);

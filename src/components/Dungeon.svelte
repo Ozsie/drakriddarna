@@ -7,6 +7,7 @@
   import { renderHeroes } from "../hero/HeroRendering";
   import { renderMonsters } from "../monsters/MonsterRendering";
   import { renderDoors, renderGrid, renderSecrets } from "../dungeon/DungeonRendering";
+  import { renderItems } from "../items/ItemRendering.ts";
 
   export let state;
   export let debugMode;
@@ -39,6 +40,7 @@
     ctx.fillRect(0, 0, c.width, c.height);
     renderGrid(ctx, ground, cellSize, state, debugMode);
     renderSecrets(ctx, ground, cellSize, state);
+    renderItems(ctx, ground, cellSize, state)
     renderDoors(ctx, ground, cellSize, state, debugMode)
     renderMonsters(ctx, actors, cellSize, state, debugMode);
     renderHeroes(ctx, actors, cellSize, state, debugMode);

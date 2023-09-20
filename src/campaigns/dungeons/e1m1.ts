@@ -107,7 +107,8 @@ export const e1m1: Dungeon = {
         message: 'The Gate of Fire. <There is an image of a hippogriph under the text>',
         position: {x:9,y:3}
       },
-    ]
+    ],
+    items: [],
   },
   killCount: 0
 }

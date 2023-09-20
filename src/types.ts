@@ -11,6 +11,7 @@ export type GameState = {
   currentActor?: Actor;
   actionLog: string[];
   itemDeck: Item[];
+  magicItemDeck: Item[];
 }
 
 export type Campaign = {
@@ -18,6 +19,7 @@ export type Campaign = {
   dungeons: Dungeon[];
   heroes: Actor[];
   itemDeck: Item[];
+  magicItemDeck: Item[];
 }
 
 export type Actor = {
@@ -97,6 +99,12 @@ export type Layout = {
   monsters: Monster[],
   secrets: Secret[],
   notes: Note[],
+  items: ItemLocation[],
+}
+
+export type ItemLocation = {
+  item: Item,
+  position: Position,
 }
 
 export type Note = {
@@ -143,7 +151,7 @@ export type Position = {
 }
 
 export enum ItemType {
-  WEAPON, ARMOUR, SHIELD
+  WEAPON, ARMOUR, SHIELD, MAGIC
 }
 
 export type Item = {
@@ -151,6 +159,11 @@ export type Item = {
   amountInDeck: number,
   type: ItemType,
   value: number,
+  properties?: Record<string, any>,
+  effect?: (state: GameState, self: Item, user: Actor, target?: Actor) => void,
+  reset?: (state: GameState, self: Item) => void,
+  pickup?: (state: GameState, self: Item, user: Actor) => void,
+  drop?: (state: GameState, self: Item, user: Actor) => void,
 }
 
 export type Weapon = Item & {

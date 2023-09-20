@@ -1,18 +1,28 @@
 import {
   addLog,
   doorAsActor,
+  isSamePosition,
   isWalkable,
-  takeDamage,
+  takeDamage
 } from "../game";
-import { Side } from '../types';
 import type {
-  Position,
+  ItemLocation,
   GameState,
-  Hero } from '../types';
-import { checkForTrapDoor } from '../secrets/SecretsLogic';
+  Hero,
+  Position
+} from "../types";
 import {
-  canAct,
+  ItemType,
+  Side
+} from "../types";
+import {
+  checkForTrapDoor,
+  removeFoundItemFromDeck,
+  removeFoundMagicItemFromDeck
+} from "../secrets/SecretsLogic";
+import {
   attack,
+  canAct,
   consumeActions,
   isBlockedByHero,
   isBlockedByMonster,
@@ -40,6 +50,23 @@ export const distanceInGrid = (a: Position, b: Position) =>{
 
 export const onTargetSelf = (state: GameState, target: Position) => {
   const hero = state.currentActor as Hero;
+
+  const itemLocation = state.dungeon.layout.items.find((item: ItemLocation) => isSamePosition(item.position, hero.position));
+  if (itemLocation) {
+    const item = itemLocation.item;
+    if (item.type === ItemType.MAGIC) {
+      removeFoundMagicItemFromDeck(state, item);
+    } else {
+      removeFoundItemFromDeck(state, item);
+    }
+    const index = state.dungeon.layout.items.indexOf(itemLocation);
+    state.dungeon.layout.items.splice(index, 1);
+    addLog(state, `${hero.name} picked up ${item.name}`);
+    hero.inventory.push(item);
+    if (item.pickup) item.pickup(state, item,  hero);
+    return;
+  }
+
   const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y);
   if (door) {
     if (!door.open && !door.hidden && !door.locked && hero.movement > 0) {

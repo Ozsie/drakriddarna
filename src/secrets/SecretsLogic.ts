@@ -65,6 +65,18 @@ export const checkForTrapDoor = (state: GameState) => {
   return false;
 }
 
+export const removeFoundItemFromDeck = (state: GameState, item: Item) => {
+  const index = state.itemDeck
+    .findIndex((i) => i.type === item.type && i.name === item.name);
+  state.itemDeck.splice(index, 1);
+}
+
+export const removeFoundMagicItemFromDeck = (state: GameState, item: Item) => {
+  const index = state.magicItemDeck
+    .findIndex((i) => i.type === item.type && i.name === item.name);
+  state.magicItemDeck.splice(index, 1);
+}
+
 const secretAsActor = (secret: Secret): Actor => {
   return {
     health: 0,
@@ -155,22 +167,35 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
     switch (secret.type) {
       case SecretType.EQUIPMENT: {
         let item = secret.item ?? randomItem(state);
-        removeFoundItemFromDeck(state, item);
-        addLog(state, `${hero.name} equipped (${item.name})`);
-        switch (item.type) {
-          case ItemType.ARMOUR:
-            if (hero.armour) hero.inventory.push(hero.armour);
-            hero.armour = item as Armour;
-            break;
-          case ItemType.SHIELD:
-            if (hero.shield) hero.inventory.push(hero.shield);
-            hero.shield = item as Shield;
-            break;
-          case ItemType.WEAPON:
-            if (hero.weapon) hero.inventory.push(hero.weapon);
-            hero.weapon = item as Weapon;
-            break;
+        if (item.amountInDeck > 0) {
+          removeFoundItemFromDeck(state, item);
+          addLog(state, `${hero.name} equipped (${item.name})`);
+          switch (item.type) {
+            case ItemType.ARMOUR:
+              if (hero.armour) hero.inventory.push(hero.armour);
+              hero.armour = item as Armour;
+              break;
+            case ItemType.SHIELD:
+              if (hero.shield) hero.inventory.push(hero.shield);
+              hero.shield = item as Shield;
+              break;
+            case ItemType.WEAPON:
+              if (hero.weapon) hero.inventory.push(hero.weapon);
+              hero.weapon = item as Weapon;
+              break;
+          }
         }
+        break;
+      }
+      case SecretType.MAGIC_ITEM: {
+        let item = secret.item ?? randomMagicItem(state);
+        if (item.amountInDeck > 0) {
+          removeFoundMagicItemFromDeck(state, item);
+          addLog(state, `${hero.name} found (${item.name})`);
+          hero.inventory.push(item);
+          if (item.pickup) item.pickup(state, item, hero);
+        }
+        break;
       }
     }
     return true;
@@ -184,10 +209,10 @@ const randomItem = (state: GameState): Item => {
   return state.itemDeck[index];
 }
 
-const removeFoundItemFromDeck = (state: GameState, item: Item) => {
-  const index = state.itemDeck
-    .findIndex((i) => i.type === item.type && i.name === item.name);
-  state.itemDeck.splice(index, 1);
+const randomMagicItem = (state: GameState): Item => {
+  const itemCount = state.magicItemDeck.length;
+  const index = Math.floor(Math.random() * itemCount)
+  return state.magicItemDeck[index];
 }
 
 const lookForTrapDoor = (state: GameState, hero: Hero, result: number) => {

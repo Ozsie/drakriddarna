@@ -9,6 +9,18 @@ import { armour } from "../items/armours";
 import { shields } from "../items/shields";
 import { Colour } from "../types";
 import { newHero } from "../hero/HeroLogic";
+import { magicItems } from "../items/magicItems";
+
+
+const getMagicItemDeck = (): Item[] => {
+  const itemDeck: Item[] = [];
+  magicItems.forEach((item) => {
+    for (let i = 0; i < item.amountInDeck; i++) {
+      itemDeck.push(item);
+    }
+  });
+  return itemDeck;
+}
 
 const getItemDeck = (): Item[] => {
   const itemDeck: Item[] = [];
@@ -37,6 +49,7 @@ export const campaignIceDragonTreasure: Campaign = {
     e1m1
   ],
   itemDeck: getItemDeck(),
+  magicItemDeck: getMagicItemDeck(),
   heroes: [
     newHero('Fearik', Colour.Yellow),
     newHero('Helbran', Colour.Red),
