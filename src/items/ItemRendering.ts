@@ -14,5 +14,5 @@ export const renderItems = (ctx: CanvasRenderingContext2D, ground: CanvasImageSo
 const renderMagicItem = (ctx: CanvasRenderingContext2D, ground: CanvasImageSource, cellSize: number, itemLocation: ItemLocation) => {
   const x = itemLocation.position.x;
   const y = itemLocation.position.y;
-  ctx.drawImage(ground, 4*48, 0, 48, 48, x*cellSize, y*cellSize, cellSize, cellSize);
+  ctx.drawImage(ground, 0, 48, 48, 48, x*cellSize, y*cellSize, cellSize, cellSize);
 }

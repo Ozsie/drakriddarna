@@ -31,6 +31,7 @@ import {
   rewardLiveHeroes
 } from "./hero/HeroLogic";
 import { testingGrounds } from "./campaigns/dungeons/testingGrounds";
+import { ATTACK_BONUS } from "./items/magicItems";
 
 export const save = (state: GameState) => {
   addLog(state, 'Game saved.');
@@ -276,7 +277,10 @@ export const takeDamage = (state: GameState, source: Actor & { rangedWeapon?: We
   } else if (target.shield) {
     addLog(state, `${target.name}'s shield was useless against ${weapon.name} `);
   }
-  const hits = roll(source.level, weapon.dice);
+  const attackBonus = source.inventory
+    .filter((item) => item?.properties?.[ATTACK_BONUS])
+    .map((item) => item.properties?.[ATTACK_BONUS] as number).reduce((partial, bonus) => partial + bonus, 0)
+  const hits = roll(source.level, weapon.dice + attackBonus);
   const damage = Math.max(hits - (defense + shield), 0);
   target.health -= damage;
   addLog(state, `${source.name} attacked ${target.name} with ${weapon.name} for ${getDamageString(damage, hits, shield, target)}`);

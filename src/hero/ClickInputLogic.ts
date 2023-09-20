@@ -9,7 +9,7 @@ import type {
   ItemLocation,
   GameState,
   Hero,
-  Position
+  Position, Door
 } from "../types";
 import {
   ItemType,
@@ -30,6 +30,7 @@ import {
   pickLock,
   search
 } from "../hero/HeroLogic";
+import { BREAK_LOCK } from "../items/magicItems";
 
 export const distanceInGrid = (a: Position, b: Position) =>{
   const dx = Math.abs(b.x - a.x);
@@ -69,7 +70,11 @@ export const onTargetSelf = (state: GameState, target: Position) => {
 
   const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y);
   if (door) {
-    if (!door.open && !door.hidden && !door.locked && hero.movement > 0) {
+    const canBreakDoor = hero.inventory.some((item) => {
+      return item.properties?.[BREAK_LOCK];
+    });
+    if (canOpenDoor(hero, canBreakDoor, door)) {
+      if (door.locked && canBreakDoor) addLog(state, `${hero.name} broke the locked door`);
       door.open = true;
       if (door.trapped) {
         takeDamage(state, doorAsActor(door), hero, false);
@@ -158,4 +163,8 @@ export const doMouseLogic = (event: PointerEvent, cellSize: number, state: GameS
   } else if (state.dungeon.discoveredRooms.includes(cell)) {
     onTargetCell(state, { x, y });
   }
+}
+
+const canOpenDoor = (hero: Hero, canBreakDoor: boolean, door: Door) => {
+  return !door.open && !door.hidden && (!door.locked || (door.locked && canBreakDoor)) && hero.movement > 0;
 }
