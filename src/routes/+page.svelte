@@ -18,13 +18,16 @@
   } from "../hero/HeroLogic.ts";
 
   let state = init();
-  let debugMode = false;
+  let debugMode = state.settings['debug'];
 
   onMount(() => {
-    setInterval(() => {
-      return hasWon(state);
-    }, 1000);
+    setInterval(() => hasWon(state), 1000);
   });
+
+  const setDebugMode = () => {
+    debugMode = !debugMode;
+    state.settings['debug'] = debugMode;
+  }
 
   function onKeyDown(e)
   {
@@ -115,7 +118,7 @@
   <div class="characterSide">
     <Characters {state}/>
   </div>
-  <Dungeon bind:state={state} bind:debugMode={debugMode}/>
+  <Dungeon bind:state={state} bind:debugMode={debugMode} />
 </div>
 <div class='container' id='footer'>
   <div class="commands">
@@ -141,7 +144,7 @@
       <tr>
         <td><button on:click={() => save(state)}>Save</button></td>
         <td><button on:click={() => state = load()}>Load</button></td>
-        <td><button on:click={() => debugMode = !debugMode}>Debug</button></td>
+        <td><button on:click={() => setDebugMode()}>Debug</button></td>
         <td><button on:click={() => endAction(state)}>End action</button></td>
       </tr>
     </table>

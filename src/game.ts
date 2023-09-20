@@ -58,7 +58,11 @@ export const init = (): GameState => {
       'If another action is performed before moving 3 steps, the move is finished and both actions are consumed.',
       'The rules of this game are harsh and unfair.'
     ],
-    itemDeck: shuffle(campaignIceDragonTreasure.itemDeck)
+    itemDeck: shuffle(campaignIceDragonTreasure.itemDeck),
+    settings: {
+      'cellSize': 48,
+      'debug': false
+    }
   }
   resetLiveHeroes(state);
   return state;
@@ -284,6 +288,20 @@ export const takeDamage = (state: GameState, source: Actor & { rangedWeapon?: We
   }
 }
 
+const scrollTo = (pos: Position, cellSize: number) => {
+  const container = document.getElementById("gameBoardContainer");
+  const canvas = document.getElementById("gameBoard");
+  if (container && canvas) {
+    const x = pos.x * cellSize;
+    const y = pos.y * cellSize;
+    const xMax = canvas.offsetWidth;
+    const yMax = canvas.offsetHeight;
+    container.scrollLeft = Math.round(x / xMax);
+    container.scrollTop = Math.round(y / yMax);
+    console.log(`scrolling to ${container.scrollLeft} x ${container.scrollTop}`);
+  }
+}
+
 export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
     state.dungeon = state.dungeon.nextDungeon;
@@ -292,6 +310,10 @@ export const hasWon = (state: GameState) => {
     levelUp(state);
     replaceDeadHeroes(state);
     resetLiveHeroes(state);
+    scrollTo({
+      x: state.dungeon.startingPositions[0].x,
+      y: state.dungeon.startingPositions[0].y
+    }, state.settings['cellSize']);
   }
 }
 
