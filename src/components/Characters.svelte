@@ -38,11 +38,11 @@
   {#key uglyUpdateToggle}
     {#if hero === state.currentActor}
     <div class="is-current-actor">
-      <HeroCard hero={hero} />
+      <HeroCard hero={hero} state={state}/>
     </div>
     {:else}
     <div class="not-current-actor">
-      <HeroCard hero={hero} />
+      <HeroCard hero={hero} state={state}/>
     </div>
     {/if}
   {/key}

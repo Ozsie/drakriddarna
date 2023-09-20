@@ -7,6 +7,8 @@ export const ATTACK_BONUS = 'ATTACK_BONUS';
 export const SEARCH_BONUS = 'SEARCH_BONUS';
 export const BREAK_LOCK = 'BREAK_LOCK';
 export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
+export const DESCRIPTION = 'DESCRIPTION';
+export const ACTIVE = 'ACTIVE';
 
 export const magicItems: Item[] = [
   {
@@ -14,7 +16,11 @@ export const magicItems: Item[] = [
     type: ItemType.MAGIC,
     value: 0,
     amountInDeck: 1,
-    properties: { USED: false },
+    properties: {
+      USED: false,
+      ACTIVE: true,
+      DESCRIPTION: 'Chance to heal up to 3 wounds on one hero.',
+    },
     effect: (state: GameState, self: Item, user: Actor, target?: Actor) => {
       if (self.properties && target) {
         if (self.properties[USED]) return;
@@ -31,6 +37,9 @@ export const magicItems: Item[] = [
     type: ItemType.MAGIC,
     value: 0,
     amountInDeck: 1,
+    properties: {
+      DESCRIPTION: 'Gives one additional step for each move action.',
+    },
     pickup: (state: GameState, self: Item, user: Actor) => {
       user.maxMovement++;
       user.movement++;
@@ -46,6 +55,7 @@ export const magicItems: Item[] = [
     value: 0,
     amountInDeck: 1,
     properties: {
+      DESCRIPTION: 'One additional attack die. Breaks locked doors.',
       BREAK_DOOR: true,
       ATTACK_BONUS: 1
     },
@@ -56,6 +66,7 @@ export const magicItems: Item[] = [
     value: 0,
     amountInDeck: 1,
     properties: {
+      DESCRIPTION: 'May re-roll one completely missed attack.',
       RE_ROLL_ATTACK: true,
     },
   },
@@ -65,6 +76,7 @@ export const magicItems: Item[] = [
     value: 0,
     amountInDeck: 1,
     properties: {
+      DESCRIPTION: 'One additional die roll when searching.',
       SEARCH_BONUS: 1,
     },
   },

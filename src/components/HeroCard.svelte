@@ -1,6 +1,8 @@
 <script lang="ts">
-  import type { Hero } from "../types";
+  import type { GameState, Hero } from "../types";
+  import Inventory from "./Inventory.svelte";
   export let hero: Hero;
+  export let state: GameState;
 </script>
 <style>
     .hero-card{
@@ -60,4 +62,9 @@
       {/if}
     </span>
   </div>
+  {#if hero === state.currentActor}
+    <div class="equipment">
+      <Inventory bind:inventory={hero.inventory}/>
+    </div>
+  {/if}
 </div>
