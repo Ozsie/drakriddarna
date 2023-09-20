@@ -22,10 +22,18 @@ import {
   roll,
   takeDamage
 } from "../game";
+import { SEARCH_BONUS } from "../items/magicItems";
 
 export const searchForSecret = (state: GameState) => {
   const hero = state.currentActor as Hero;
-  const result = roll(hero.level, 1)
+  const searchBonus = hero.inventory
+    .filter((item) => item.properties?.[SEARCH_BONUS])
+    .map((item) => {
+      addLog(state, `${hero.name} used the effect of ${item.name} when searching`);
+      return item.properties?.[SEARCH_BONUS] as number;
+    })
+    .reduce((partial, bonus) => partial + bonus, 0)
+  const result = roll(hero.level, 1 + searchBonus);
   let trapDoor, hiddenDoor, trap, secret;
   if (result >= 1) {
     trapDoor = lookForTrapDoor(state, hero, result);

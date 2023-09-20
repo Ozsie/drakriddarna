@@ -4,7 +4,9 @@ import { roll } from "../game";
 
 export const USED = 'USED';
 export const ATTACK_BONUS = 'ATTACK_BONUS';
+export const SEARCH_BONUS = 'SEARCH_BONUS';
 export const BREAK_LOCK = 'BREAK_LOCK';
+export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
 
 export const magicItems: Item[] = [
   {
@@ -47,5 +49,23 @@ export const magicItems: Item[] = [
       BREAK_DOOR: true,
       ATTACK_BONUS: 1
     },
-  }
+  },
+  {
+    name: 'Ring of Precision',
+    type: ItemType.MAGIC,
+    value: 0,
+    amountInDeck: 1,
+    properties: {
+      RE_ROLL_ATTACK: true,
+    },
+  },
+  {
+    name: 'Crown of Wisdom',
+    type: ItemType.MAGIC,
+    value: 0,
+    amountInDeck: 1,
+    properties: {
+      SEARCH_BONUS: 1,
+    },
+  },
 ];
