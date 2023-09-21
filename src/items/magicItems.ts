@@ -1,6 +1,7 @@
 import type { Actor, GameState, Item } from "../types";
 import { ItemType } from "../types";
-import { roll } from "../game";
+import { addLog, roll } from "../game";
+import { canAct } from "../hero/HeroLogic";
 
 export const USED = 'USED';
 export const ATTACK_BONUS = 'ATTACK_BONUS';
@@ -10,6 +11,7 @@ export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
 export const DESCRIPTION = 'DESCRIPTION';
 export const ACTIVE = 'ACTIVE';
 export const MOVEMENT_BONUS = 'MOVEMENT_BONUS';
+export const ACTIONS_BONUS = 'ACTIONS_BONUS';
 
 export const magicItems: Item[] = [
   {
@@ -20,7 +22,7 @@ export const magicItems: Item[] = [
     properties: {
       USED: false,
       ACTIVE: true,
-      DESCRIPTION: 'Chance to heal up to 3 wounds on one hero.',
+      DESCRIPTION: 'Chance to heal up to 3 wounds on one hero.'
     },
     effect: 'magicHerbsOnUse',
     reset: 'magicHerbsOnReset',
@@ -68,6 +70,29 @@ export const magicItems: Item[] = [
       SEARCH_BONUS: 1,
     },
   },
+  {
+    name: 'Sword of Chaos',
+    type: ItemType.MAGIC,
+    value: 0,
+    amountInDeck: 1,
+    properties: {
+      DESCRIPTION: `A sword with a will of it's own. Use at your own peril.`
+    },
+    effect: 'chaosSwordOnUse'
+  },
+  {
+    name: 'Potion of Speed',
+    type: ItemType.MAGIC,
+    value: 0,
+    amountInDeck: 1,
+    properties: {
+      DESCRIPTION: 'Gives 2 additional actions. Can only be used once.',
+      USED: false,
+      ACTIONS_BONUS: 2,
+      ACTIVE: true,
+    },
+    effect: 'potionOfSpeedOnUse'
+  },
 ];
 
 export const onPickup: {[index: string]:(state: GameState, self: Item, user: Actor) => void} = {
@@ -86,10 +111,37 @@ export const onDrop: {[index: string]:(state: GameState, self: Item, user: Actor
 
 export const onUse: {[index: string]: (state: GameState, self: Item, user: Actor, target?: Actor) => void} = {
   magicHerbsOnUse: (state: GameState, self: Item, user: Actor, target?: Actor) => {
-    if (self.properties && target) {
-      if (self.properties[USED]) return;
+    if (!target) {
+      addLog(state, `No target was selected.`);
+      return;
+    }
+    if (!canAct(user)) {
+      addLog(state, `${user.name} has no actions left.`);
+      return;
+    }
+    if (self.properties) {
+      if (self.properties[USED]) {
+        addLog(state, `${self.name} has no uses left.`);
+        return;
+      }
       self.properties[USED] = true;
-      target.health += roll(user.level, 3);
+      let addedHealth = Math.min(roll(user.level, 3), target.maxHealth - target.health);
+      target.health += addedHealth;
+      addLog(state, `${user.name} used ${self.name} on ${target.name}, restoring ${addedHealth} HP`);
+      user.actions--;
+      user.movement = user.maxMovement;
+    }
+  },
+  chaosSwordOnUse: (state: GameState, self: Item, user: Actor, target?: Actor) => {
+
+  },
+  potionOfSpeedOnUse: (state: GameState, self: Item, user: Actor) => {
+    if (!self.properties?.[USED]) {
+      user.actions += self.properties?.[ACTIONS_BONUS];
+      if (self.properties) self.properties[USED] = true;
+      addLog(state, `${user.name} used ${self.name}, adding ${self.properties?.[ACTIONS_BONUS]} actions`);
+    } else {
+      addLog(state, `${self.name} has been consumed.`);
     }
   }
 }

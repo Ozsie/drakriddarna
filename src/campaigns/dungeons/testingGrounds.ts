@@ -76,6 +76,10 @@ export const testingGrounds: Dungeon = {
         position: {x: 4, y: 10 }
       },
       {
+        item: magicItems[6],
+        position: {x: 5, y: 10 }
+      },
+      {
         item: magicItems[2],
         position: {x: 6, y: 10 }
       },

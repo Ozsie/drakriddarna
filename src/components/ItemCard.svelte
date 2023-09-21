@@ -1,8 +1,10 @@
 <script lang="ts">
-  import type { Item } from "../types";
-  import { DESCRIPTION, ACTIVE } from "../items/magicItems";
+  import type { GameState, Item } from "../types";
+  import { DESCRIPTION, ACTIVE, USED } from "../items/magicItems";
+  import { useItem } from "../items/ItemLogic";
 
   export let item: Item
+  export let state: GameState
 </script>
 <style>
   .item-card span {
@@ -19,8 +21,8 @@
 </style>
 <div class="item-card">
   <span>
-    {#if item.properties?.[ACTIVE]}
-      <button on:click={() => console.log('used ' + item.name)}>Use</button>
+    {#if item.properties?.[ACTIVE] && !item.properties?.[USED]}
+      <button on:click={() => useItem(state, item)}>Use</button>
     {/if}
     {item.name}
   </span>

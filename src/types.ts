@@ -12,6 +12,7 @@ export type GameState = {
   actionLog: string[];
   itemDeck: Item[];
   magicItemDeck: Item[];
+  targetActor?: Actor;
 }
 
 export type Campaign = {
