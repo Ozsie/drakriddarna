@@ -8,10 +8,8 @@
 - [ ] Monster blocking move on click move
 - [ ] Monster cards?
 - [ ] Monster special attack
-- [ ] Split game.ts, move code out of routes
 - [ ] Events
 - [ ] Secrets
-- [ ] Centering on spawn
 - [ ] Dungeon intro screen
 - [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] e1m2 - Mines of Evil
@@ -28,6 +26,8 @@
 - [ ] Trade Items
 - [X] e1m1 - The Three Gates of Power
 - [X] Magic Items
+- [X] Centering on spawn
+- [X] Split game.ts, move code out of routes
 - [X] Line of sight
 - [X] Monster range attack
 - [X] Move render code to .ts files

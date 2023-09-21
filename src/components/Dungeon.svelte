@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { onMount } from "svelte";
   import groundSprites from '$lib/Dungeon_Tileset.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
@@ -7,14 +7,15 @@
   import { renderHeroes } from "../hero/HeroRendering";
   import { renderMonsters } from "../monsters/MonsterRendering";
   import { renderDoors, renderGrid, renderSecrets } from "../dungeon/DungeonRendering";
+  import type { GameState } from "../types";
   import { renderItems } from "../items/ItemRendering.ts";
 
-  export let state;
-  export let debugMode;
+  export let state: GameState;
+  export let debugMode: boolean;
 
   let footerSize;
   let screenSize;
-  const cellSize = 48;
+  const cellSize = state?.settings['cellSize'] ?? 48;
 
   if (browser) {
     screenSize = window.innerHeight;
@@ -33,8 +34,8 @@
 
   const render = (ground, actors) => {
     if (!state || !document) return;
-    const c = document.getElementById("gameBoard");
-    const ctx = c.getContext("2d");
+    const c: HTMLCanvasElement = document.getElementById("gameBoard") as HTMLCanvasElement;
+    const ctx: CanvasRenderingContext2D = c.getContext("2d");
     ctx.clearRect(0, 0, c.width, c.height);
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, c.width, c.height);
@@ -62,6 +63,6 @@
       height: 80%;
   }
 </style>
-<div style="{getStyle()}" class="dungeon">
+<div style="{getStyle()}" class="dungeon" id="gameBoardContainer">
   <canvas width="{cellSize * 40}" height="{cellSize * 30}" id="gameBoard" on:click="{onClick}"></canvas>
 </div>
