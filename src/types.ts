@@ -160,10 +160,10 @@ export type Item = {
   type: ItemType,
   value: number,
   properties?: Record<string, any>,
-  effect?: (state: GameState, self: Item, user: Actor, target?: Actor) => void,
-  reset?: (state: GameState, self: Item) => void,
-  pickup?: (state: GameState, self: Item, user: Actor) => void,
-  drop?: (state: GameState, self: Item, user: Actor) => void,
+  effect?: string,
+  reset?: string,
+  pickup?: string,
+  drop?: string,
 }
 
 export type Weapon = Item & {

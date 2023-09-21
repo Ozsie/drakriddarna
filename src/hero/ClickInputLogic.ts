@@ -31,7 +31,7 @@ import {
   pickLock,
   search
 } from "../hero/HeroLogic";
-import { BREAK_LOCK } from "../items/magicItems";
+import { BREAK_LOCK, onPickup } from "../items/magicItems";
 
 export const distanceInGrid = (a: Position, b: Position) =>{
   const dx = Math.abs(b.x - a.x);
@@ -65,7 +65,10 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     state.dungeon.layout.items.splice(index, 1);
     addLog(state, `${hero.name} picked up ${item.name}`);
     hero.inventory.push(item);
-    if (item.pickup) item.pickup(state, item,  hero);
+    if (item.pickup) {
+      const pickup = onPickup[item.pickup];
+      pickup(state, item, hero);
+    }
     return;
   }
 
