@@ -51,7 +51,8 @@ export const e1m0: Dungeon = {
     secrets: [
       createSecret(SecretType.NOTE, 'Welcome to Drakriddarna', 3, 9),
     ],
-    notes: []
+    notes: [],
+    items: [],
   },
   killCount: 0
 }

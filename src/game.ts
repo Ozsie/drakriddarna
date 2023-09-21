@@ -4,6 +4,7 @@ import type {
   Dungeon,
   GameState,
   Hero,
+  Item,
   Layout,
   Position,
   Weapon
@@ -29,6 +30,14 @@ import {
   resetLiveHeroes,
   rewardLiveHeroes
 } from "./hero/HeroLogic";
+import {
+  ATTACK_BONUS,
+  RE_ROLL_ATTACK
+} from "./items/magicItems";
+import {
+  resetOnNext,
+  resetOnNextDungeon
+} from "./items/ItemLogic";
 
 export const save = (state: GameState) => {
   addLog(state, 'Game saved.');
@@ -46,7 +55,7 @@ export const load = (): GameState | undefined => {
 }
 
 export const init = (): GameState => {
-  const state = {
+  const state: GameState = {
     heroes: campaignIceDragonTreasure.heroes,
     dungeon: campaignIceDragonTreasure.dungeons[0],
     currentActor: campaignIceDragonTreasure.heroes[0],
@@ -59,16 +68,17 @@ export const init = (): GameState => {
       'The rules of this game are harsh and unfair.'
     ],
     itemDeck: shuffle(campaignIceDragonTreasure.itemDeck),
+    magicItemDeck: shuffle(campaignIceDragonTreasure.magicItemDeck),
     settings: {
       'cellSize': 48,
       'debug': false
-    }
+    },
   }
   resetLiveHeroes(state);
   return state;
 }
 
-const shuffle = (array: any[]) => {
+const shuffle = (array: Item[]): Item[] => {
   let currentIndex = array.length,  randomIndex;
   while (currentIndex > 0) {
     randomIndex = Math.floor(Math.random() * currentIndex);
@@ -117,6 +127,7 @@ export const next = (state: GameState) => {
     if (nextIndex === liveHeroes(state).length) {
       monsterActions(state);
       nextIndex = 0;
+      resetOnNext(state);
     }
     if (liveHeroes(state)[nextIndex].incapacitated) {
       addLog(state, `${liveHeroes(state)[nextIndex].name} is no longer incapacitated.`);
@@ -277,8 +288,23 @@ export const takeDamage = (state: GameState, source: Actor & { rangedWeapon?: We
   } else if (target.shield) {
     addLog(state, `${target.name}'s shield was useless against ${weapon.name} `);
   }
-  const hits = roll(source.level, weapon.dice);
-  const damage = Math.max(hits - (defense + shield), 0);
+  const canReRoll = source.inventory.some((item) => {
+    addLog(state, `${source.name} used the effect of ${item.name} when attacking`);
+    return item.properties?.[RE_ROLL_ATTACK];
+  });
+  const attackBonus = source.inventory
+    .filter((item) => item?.properties?.[ATTACK_BONUS])
+    .map((item) => {
+      addLog(state, `${source.name} used the effect of ${item.name} when attacking`);
+      return item.properties?.[ATTACK_BONUS] as number;
+    })
+    .reduce((partial, bonus) => partial + bonus, 0)
+  const hits = roll(source.level, weapon.dice + attackBonus);
+  let damage = Math.max(hits - (defense + shield), 0);
+  if (damage === 0 && canReRoll) {
+    addLog(state, `${source.name} missed but got another chance`);
+    damage = Math.max(hits - (defense + shield), 0);
+  }
   target.health -= damage;
   addLog(state, `${source.name} attacked ${target.name} with ${weapon.name} for ${getDamageString(damage, hits, shield, target)}`);
   if (target.health <= 0) {
@@ -310,6 +336,7 @@ export const hasWon = (state: GameState) => {
     levelUp(state);
     replaceDeadHeroes(state);
     resetLiveHeroes(state);
+    resetOnNextDungeon(state);
     scrollTo({
       x: state.dungeon.startingPositions[0].x,
       y: state.dungeon.startingPositions[0].y

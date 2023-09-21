@@ -16,6 +16,7 @@ import {
 } from "../../dungeon/DungeonLogic";
 import { weapons } from '../../items/weapons';
 import { e1m0 } from '../../campaigns/dungeons/e1m0';
+import { magicItems } from "../../items/magicItems";
 
 export const testingGrounds: Dungeon = {
   name: 'Testing Grounds',
@@ -64,7 +65,33 @@ export const testingGrounds: Dungeon = {
       createSecret(SecretType.EQUIPMENT, 'Random Equipment', 1, 10),
       createSecretWithItem(SecretType.EQUIPMENT, 'Halberd', 5, 10, weapons[2]),
     ],
-    notes: []
+    notes: [],
+    items: [
+      {
+        item: magicItems[0],
+        position: {x: 3, y: 10 }
+      },
+      {
+        item: magicItems[1],
+        position: {x: 4, y: 10 }
+      },
+      {
+        item: magicItems[6],
+        position: {x: 5, y: 10 }
+      },
+      {
+        item: magicItems[2],
+        position: {x: 6, y: 10 }
+      },
+      {
+        item: magicItems[3],
+        position: {x: 7, y: 10 }
+      },
+      {
+        item: magicItems[4],
+        position: {x: 8, y: 10 }
+      },
+    ],
   },
   killCount: 0
 }

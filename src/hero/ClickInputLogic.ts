@@ -1,18 +1,29 @@
 import {
   addLog,
   doorAsActor,
+  isSamePosition,
   isWalkable,
-  takeDamage,
+  takeDamage
 } from "../game";
-import { Side } from '../types';
 import type {
-  Position,
+  ItemLocation,
   GameState,
-  Hero } from '../types';
-import { checkForTrapDoor } from '../secrets/SecretsLogic';
+  Hero,
+  Position
+} from "../types";
 import {
-  canAct,
+  ItemType,
+  Side
+} from "../types";
+import {
+  checkForTrapDoor,
+  removeFoundItemFromDeck,
+  removeFoundMagicItemFromDeck
+} from "../secrets/SecretsLogic";
+import {
   attack,
+  canAct,
+  canOpenDoor,
   consumeActions,
   isBlockedByHero,
   isBlockedByMonster,
@@ -20,6 +31,7 @@ import {
   pickLock,
   search
 } from "../hero/HeroLogic";
+import { BREAK_LOCK, onPickup } from "../items/magicItems";
 
 export const distanceInGrid = (a: Position, b: Position) =>{
   const dx = Math.abs(b.x - a.x);
@@ -40,9 +52,33 @@ export const distanceInGrid = (a: Position, b: Position) =>{
 
 export const onTargetSelf = (state: GameState, target: Position) => {
   const hero = state.currentActor as Hero;
+
+  const itemLocation = state.dungeon.layout.items.find((item: ItemLocation) => isSamePosition(item.position, hero.position));
+  if (itemLocation) {
+    const item = itemLocation.item;
+    if (item.type === ItemType.MAGIC) {
+      removeFoundMagicItemFromDeck(state, item);
+    } else {
+      removeFoundItemFromDeck(state, item);
+    }
+    const index = state.dungeon.layout.items.indexOf(itemLocation);
+    state.dungeon.layout.items.splice(index, 1);
+    addLog(state, `${hero.name} picked up ${item.name}`);
+    hero.inventory.push(item);
+    if (item.pickup) {
+      const pickup = onPickup[item.pickup];
+      pickup(state, item, hero);
+    }
+    return;
+  }
+
   const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y);
   if (door) {
-    if (!door.open && !door.hidden && !door.locked && hero.movement > 0) {
+    const canBreakLock = hero.inventory.some((item) => {
+      return item.properties?.[BREAK_LOCK];
+    });
+    if (canOpenDoor(hero, canBreakLock, door)) {
+      if (door.locked && canBreakLock) addLog(state, `${hero.name} broke the locked door`);
       door.open = true;
       if (door.trapped) {
         takeDamage(state, doorAsActor(door), hero, false);

@@ -10,9 +10,8 @@
 - [ ] Monster special attack
 - [ ] Events
 - [ ] Secrets
-- [ ] Magic Items
 - [ ] Dungeon intro screen
-- [ ] e1m1 - The Three Gates of Power
+- [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] e1m2 - Mines of Evil
 - [ ] e1m3 - Labyrinth of Horror
 - [ ] e1m4 - The Dark Citadel
@@ -23,6 +22,10 @@
 - [ ] Responsive layout
 - [ ] Support for additional campaigns
 - [ ] Menu system
+- [ ] Drop Items
+- [ ] Trade Items
+- [X] e1m1 - The Three Gates of Power
+- [X] Magic Items
 - [X] Centering on spawn
 - [X] Split game.ts, move code out of routes
 - [X] Line of sight
