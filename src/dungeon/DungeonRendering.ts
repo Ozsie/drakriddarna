@@ -141,8 +141,8 @@ const neighbourOf = (x: number, y: number, value: string, state: GameState) => {
   if (!state) return;
   const xMin = Math.max(x-1, 0);
   const yMin = Math.max(y-1, 0);
-  const xMax = Math.min(x+1, state.dungeon.layout.grid.length)
-  const yMax = Math.min(y+1, state.dungeon.layout.grid[0].length)
+  const yMax = Math.min(y+1, state.dungeon.layout.grid.length - 1);
+  const xMax = Math.min(x+1, state.dungeon.layout.grid[0].length - 1);
   for (let pX = xMin; pX <= xMax; pX++) {
     for (let pY = yMin; pY <= yMax; pY++) {
       const row = state.dungeon.layout.grid[pY];

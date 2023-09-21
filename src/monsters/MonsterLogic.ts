@@ -30,11 +30,11 @@ export const monsterActions = (state: GameState) => {
   }
 
   visibleMonsters.forEach((monster) => {
-    state.currentActor = monster;
     const maxActions = monster.actions
     addLog(state, `${monster.name} acted `);
     while (monster.actions > 0) {
-      const neighbouringHeroes: Hero[] = findNeighbouringHeroes(state, monster);
+      const neighbouringHeroes: Hero[] = findNeighbouringHeroes(state, monster)
+        .filter((hero: Hero) => !hero.ignoredByMonsters);
       const visibleHeroes: Hero[] = findVisibleHeroes(state, monster);
       const action = selectAction(state, monster, neighbouringHeroes, visibleHeroes);
       switch (action) {
@@ -94,11 +94,13 @@ const selectMeleeTarget = (possibleTargets: Hero[]): Hero => {
 }
 
 const findVisibleHeroes = (state: GameState, monster: Monster): Hero[] => {
-  return liveHeroes(state).filter((hero) => {
-    const startPixelPos = { x: (monster.position.x * 48) - 24, y: (monster.position.y * 48) - 24 };
-    const targetPixelPos = { x: (hero.position.x * 48) - 24, y: (hero.position.y * 48) - 24 };
-    return stepAlongLine(startPixelPos, monster.position, targetPixelPos, hero.position, state, []);
-  });
+  return liveHeroes(state)
+    .filter((hero: Hero) => !hero.ignoredByMonsters)
+    .filter((hero) => {
+      const startPixelPos = { x: (monster.position.x * 48) - 24, y: (monster.position.y * 48) - 24 };
+      const targetPixelPos = { x: (hero.position.x * 48) - 24, y: (hero.position.y * 48) - 24 };
+      return stepAlongLine(startPixelPos, monster.position, targetPixelPos, hero.position, state, []);
+    });
 }
 
 const findVisibleMonsters = (state: GameState) => {

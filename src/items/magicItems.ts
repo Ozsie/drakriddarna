@@ -12,6 +12,11 @@ export const DESCRIPTION = 'DESCRIPTION';
 export const ACTIVE = 'ACTIVE';
 export const MOVEMENT_BONUS = 'MOVEMENT_BONUS';
 export const ACTIONS_BONUS = 'ACTIONS_BONUS';
+export const RESET_ON = 'RESET_ON';
+
+export const NEXT_TURN = 'NEXT_TURN';
+export const TRADE = 'TRADE';
+export const NEXT_DUNGEON = 'NEXT_SCENARIO';
 
 export const magicItems: Item[] = [
   {
@@ -22,7 +27,8 @@ export const magicItems: Item[] = [
     properties: {
       USED: false,
       ACTIVE: true,
-      DESCRIPTION: 'Chance to heal up to 3 wounds on one hero.'
+      DESCRIPTION: 'Chance to heal up to 3 wounds on one hero.',
+      RESET_ON: [TRADE, NEXT_DUNGEON]
     },
     effect: 'magicHerbsOnUse',
     reset: 'magicHerbsOnReset',
@@ -93,6 +99,18 @@ export const magicItems: Item[] = [
     },
     effect: 'potionOfSpeedOnUse'
   },
+  {
+    name: 'Necklace of Light',
+    type: ItemType.MAGIC,
+    value: 0,
+    amountInDeck: 1,
+    properties: {
+      USED: false,
+      RESET_ON: [NEXT_TURN]
+    },
+    effect: 'necklaceOfLightOnUse',
+    reset: 'necklaceOfLightOnReset'
+  }
 ];
 
 export const onPickup: {[index: string]:(state: GameState, self: Item, user: Actor) => void} = {
@@ -143,11 +161,30 @@ export const onUse: {[index: string]: (state: GameState, self: Item, user: Actor
     } else {
       addLog(state, `${self.name} has been consumed.`);
     }
+  },
+  necklaceOfLightOnUse: (state: GameState, self: Item, user: Actor, target?: Actor) => {
+    if (!target) {
+      addLog(state, `No target was selected.`);
+      return;
+    }
+    if (!canAct(user)) {
+      addLog(state, `${user.name} has no actions left.`);
+      return;
+    }
+    if (self.properties && !self.properties?.[USED]) {
+      self.properties[USED] = true;
+      target.ignoredByMonsters = true;
+      user.actions--;
+    }
   }
 }
 
 export const onReset: {[index: string]: (state: GameState, self: Item) => void} = {
   magicHerbsOnReset: (state: GameState, self: Item) => {
     if (self.properties) self.properties[USED] = false;
+  },
+  necklaceOfLightOnUse: (state: GameState, self: Item) => {
+    if (self.properties) self.properties[USED] = false;
+    state.heroes.forEach((hero) => hero.ignoredByMonsters = false);
   }
 }

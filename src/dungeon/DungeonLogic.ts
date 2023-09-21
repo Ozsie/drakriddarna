@@ -28,10 +28,10 @@ export const createSecret = (type: SecretType, name: string, x: number, y: numbe
   }
 }
 
-export const createSecretWithItem = (type: SecretType, name: string, x: number, y: number, item: Item): Secret => {
+export const createSecretWithItem = (type: SecretType, x: number, y: number, item: Item): Secret => {
   return {
     type,
-    name,
+    name: item.name,
     position: {x, y},
     found: false,
     item,

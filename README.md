@@ -11,10 +11,9 @@
 - [ ] Split game.ts, move code out of routes
 - [ ] Events
 - [ ] Secrets
-- [ ] Magic Items
 - [ ] Centering on spawn
 - [ ] Dungeon intro screen
-- [ ] e1m1 - The Three Gates of Power
+- [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] e1m2 - Mines of Evil
 - [ ] e1m3 - Labyrinth of Horror
 - [ ] e1m4 - The Dark Citadel
@@ -25,6 +24,10 @@
 - [ ] Responsive layout
 - [ ] Support for additional campaigns
 - [ ] Menu system
+- [ ] Drop Items
+- [ ] Trade Items
+- [X] e1m1 - The Three Gates of Power
+- [X] Magic Items
 - [X] Line of sight
 - [X] Monster range attack
 - [X] Move render code to .ts files

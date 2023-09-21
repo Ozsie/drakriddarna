@@ -30,8 +30,14 @@ import {
   resetLiveHeroes,
   rewardLiveHeroes
 } from "./hero/HeroLogic";
-import { testingGrounds } from "./campaigns/dungeons/testingGrounds";
-import { ATTACK_BONUS, RE_ROLL_ATTACK } from "./items/magicItems";
+import {
+  ATTACK_BONUS,
+  RE_ROLL_ATTACK
+} from "./items/magicItems";
+import {
+  resetOnNext,
+  resetOnNextDungeon
+} from "./items/ItemLogic";
 
 export const save = (state: GameState) => {
   addLog(state, 'Game saved.');
@@ -51,7 +57,7 @@ export const load = (): GameState | undefined => {
 export const init = (): GameState => {
   const state: GameState = {
     heroes: campaignIceDragonTreasure.heroes,
-    dungeon: testingGrounds,
+    dungeon: campaignIceDragonTreasure.dungeons[0],
     currentActor: campaignIceDragonTreasure.heroes[0],
     actionLog: [
       `Playing '${campaignIceDragonTreasure.name}'`,
@@ -117,6 +123,7 @@ export const next = (state: GameState) => {
     if (nextIndex === liveHeroes(state).length) {
       monsterActions(state);
       nextIndex = 0;
+      resetOnNext(state);
     }
     if (liveHeroes(state)[nextIndex].incapacitated) {
       addLog(state, `${liveHeroes(state)[nextIndex].name} is no longer incapacitated.`);
@@ -311,6 +318,7 @@ export const hasWon = (state: GameState) => {
     levelUp(state);
     replaceDeadHeroes(state);
     resetLiveHeroes(state);
+    resetOnNextDungeon(state);
   }
 }
 
@@ -355,5 +363,6 @@ export const normaliseVector = (start: Position, target: Position): Position => 
 }
 
 export const findNeighbouringHeroes = (state: GameState, actor: Actor): Hero[] => {
-  return liveHeroes(state).filter((hero: Hero) => isNeighbouring(actor.position, hero.position.x, hero.position.y));
+  return liveHeroes(state)
+    .filter((hero: Hero) => isNeighbouring(actor.position, hero.position.x, hero.position.y));
 }

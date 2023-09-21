@@ -1,16 +1,13 @@
 import type { Dungeon } from "../../types";
-import {
-  Colour,
-  ConditionType,
-  MonsterType,
-  SecretType,
-  Side
-} from "../../types";
+import { Colour, ConditionType, MonsterType, SecretType, Side } from "../../types";
 import {
   createDoor,
   createHiddenDoor,
-  createMonster
+  createMonster,
+  createSecret,
+  createSecretWithItem
 } from "../../dungeon/DungeonLogic";
+import { magicItems } from "../../items/magicItems";
 
 export const e1m1: Dungeon = {
   name: 'The Three Gates of Power',
@@ -27,68 +24,50 @@ export const e1m1: Dungeon = {
 }
   ],
   startingPositions: [
+    {x:2,y:5},
     {x:1,y:4},
-    {x:0,y:3},
-    {x:0,y:4},
-    {x:0,y:5},
+    {x:1,y:5},
+    {x:1,y:6},
   ],
   discoveredRooms: ['A'],
   layout: {
     grid: [
-      '            EEEE',
-      '            EEEE',
-      '         DDDEEEE',
-      'AAA   CCCC',
-      'AAABBBCCCC   GGG',
-      'AAA   CCCCFFFGGG',
-      '      CCCC   GGG',
-      '      CCCC',
-      '      CCCCHHHIII',
-      '             III',
-      '             III',
+      '            ######',
+      '            #EEEE#',
+      '         ####EEEE#',
+      '##### ####DDDEEEE#',
+      '#AAA###CCCC#######',
+      '#AAABBBCCCC###GGG#',
+      '#AAA###CCCCFFFGGG#',
+      '##### #CCCC###GGG#',
+      '      #CCCC#######',
+      '      #CCCCHHHIII#',
+      '      ########III#',
+      '             #III#',
+      '             #####'
     ],
     doors: [
-      createDoor(Side.RIGHT, 2, 4),
-      createDoor(Side.RIGHT, 5, 4),
-      createDoor(Side.RIGHT, 9, 5),
-      createDoor(Side.RIGHT, 12, 5),
-      createDoor(Side.RIGHT, 9, 8),
-      createDoor(Side.RIGHT, 12, 8),
-      createDoor(Side.RIGHT, 11, 2),
-      createHiddenDoor(Side.UP, 9, 3),
-      createHiddenDoor(Side.RIGHT, 15, 1)
+      createDoor(Side.RIGHT, 3, 5),
+      createDoor(Side.RIGHT, 6, 5),
+      createDoor(Side.RIGHT, 10, 6),
+      createDoor(Side.RIGHT, 13, 6),
+      createDoor(Side.RIGHT, 10, 9),
+      createDoor(Side.RIGHT, 13, 9),
+      createDoor(Side.RIGHT, 12, 3),
+      createHiddenDoor(Side.UP, 9, 4),
+      createHiddenDoor(Side.RIGHT, 15, 2)
     ],
     monsters: [
-      createMonster(MonsterType.ORCH, Colour.Blue, 9, 7),
-      createMonster(MonsterType.ORCH, Colour.Red, 12, 8),
-      createMonster(MonsterType.TROLL, Colour.Red, 15, 1),
-      createMonster(MonsterType.TROLL, Colour.Yellow, 13, 6),
+      createMonster(MonsterType.ORCH, Colour.Blue, 10, 8),
+      createMonster(MonsterType.ORCH, Colour.Red, 13, 9),
+      createMonster(MonsterType.TROLL, Colour.Red, 16, 2),
+      createMonster(MonsterType.TROLL, Colour.Yellow, 14, 7),
     ],
     secrets: [
-      {
-        type: SecretType.EQUIPMENT,
-        position: {x:9,y:4},
-        found: false,
-        name: 'Random Equipment'
-      },
-      {
-        type: SecretType.EQUIPMENT,
-        position: {x:12,y:0},
-        found: false,
-        name: 'Random Equipment'
-      },
-      {
-        type: SecretType.MAGIC_ITEM,
-        position: {x:15,y:5},
-        found: false,
-        name: 'Random Magic Item',
-      },
-      {
-        type: SecretType.EQUIPMENT,
-        position: {x:15,y:9},
-        found: false,
-        name: 'Random Equipment'
-      },
+      createSecret(SecretType.EQUIPMENT, 'Random Equipment', 10, 5),
+      createSecret(SecretType.EQUIPMENT, 'Random Equipment', 13, 1),
+      createSecret(SecretType.EQUIPMENT, 'Random Equipment', 16, 10),
+      createSecretWithItem(SecretType.MAGIC_ITEM, 16, 6, magicItems[0]),
     ],
     notes: [
       {

@@ -40,6 +40,7 @@ export type Actor = {
   shield?: Shield;
   incapacitated: boolean;
   inventory: Item[];
+  ignoredByMonsters?: boolean;
 }
 
 export type Hero = Actor & {
