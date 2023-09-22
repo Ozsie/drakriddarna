@@ -18,21 +18,45 @@
   };
 </script>
 <style>
-  .is-current-actor{
-    border-color: lightblue;
-    border-width: 4px;
-    border-style: solid;
-    border-radius: 10px;
-    margin: 4px 4px -4px 4px;
-  }
+    @media screen and (max-width: 600px) {
+        .is-current-actor{
+            border-color: lightblue;
+            border-width: 4px;
+            border-style: solid;
+            border-radius: 10px;
+            margin: 4px 4px -4px 4px;
+            width: 20%;
+            float: left;
+        }
 
-  .not-current-actor{
-    border-color: transparent;
-    border-width: 4px;
-    border-style: solid;
-    border-radius: 10px;
-    margin: 4px 4px -4px 4px;
-  }
+        .not-current-actor{
+            border-color: transparent;
+            border-width: 4px;
+            border-style: solid;
+            border-radius: 10px;
+            margin: 4px 4px -4px 4px;
+            width: 20%;
+            float: left;
+        }
+    }
+
+    @media screen and (min-width: 601px) {
+        .is-current-actor {
+            border-color: lightblue;
+            border-width: 4px;
+            border-style: solid;
+            border-radius: 10px;
+            margin: 4px 4px -4px 4px;
+        }
+
+        .not-current-actor {
+            border-color: transparent;
+            border-width: 4px;
+            border-style: solid;
+            border-radius: 10px;
+            margin: 4px 4px -4px 4px;
+        }
+    }
 </style>
 {#each liveHeroes(state) as hero, i}
   {#key uglyUpdateToggle}
