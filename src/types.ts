@@ -81,6 +81,7 @@ export type Dungeon = {
   nextDungeon?: Dungeon,
   killCount: number,
   events?: number[],
+  collapsedCorridor?: string,
 }
 
 export type WinCondition = {
@@ -106,6 +107,7 @@ export type Layout = {
   secrets: Secret[],
   notes: Note[],
   items: ItemLocation[],
+  corridors: string[],
 }
 
 export type ItemLocation = {

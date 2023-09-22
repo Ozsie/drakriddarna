@@ -163,7 +163,7 @@ export const openDoor = (hero: Hero, state: GameState, newX: number, newY: numbe
 }
 
 export const attack = (hero: Actor, state: GameState, target: Position) => {
-  if (hero.actions === 1 && hero.movement !== 3) {
+  if (hero.actions === 1 && hero.movement < hero.maxMovement) {
     addLog(state, `${hero.name} has no actions left to attack`);
     return;
   }

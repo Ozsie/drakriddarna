@@ -16,6 +16,7 @@ import {
   Level
 } from "./types";
 import {
+  COLLAPSED,
   EMPTY,
   PILLAR,
   PIT,
@@ -123,6 +124,18 @@ export const getEffectiveMaxMovement = (actor: Actor) => {
   return actor.maxMovement - (actor.armour?.movementReduction ?? 0);
 }
 
+const restoreCorridor = (state: GameState) => {
+  const unUsedEvents = state.eventDeck.filter((event) => !event.used);
+  if (unUsedEvents.length === 0) {
+    addLog(state, `The collapsed corridor cleared up.`);
+    const collapsed = state.dungeon.collapsedCorridor;
+    if (collapsed) {
+      state.dungeon.layout.grid = state.dungeon.layout.grid
+        .map((row) => row.replaceAll(COLLAPSED, collapsed));
+    }
+  }
+}
+
 const restoreBlinded = (state: GameState) => {
   if (liveHeroes(state).some((hero) => hero.blinded)) {
     addLog(state, `You light your torches again.`);
@@ -152,6 +165,7 @@ export const next = (state: GameState) => {
     state.currentActor = liveHeroes(state)[nextIndex];
     if (nextIndex === 0) {
       restoreBlinded(state);
+      restoreCorridor(state);
       const event = drawNextEvent(state);
       eventEffects[event.effect](state, event);
     }

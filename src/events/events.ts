@@ -49,5 +49,12 @@ export const events: TurnEvent[] = [
     description: 'The flames of your torches start to flicker and soon the dungeon is completely dark.',
     effect: 'theDragonsBreath',
     used: false,
+  },
+  {
+    name: 'Earthquake',
+    number: 8,
+    description: 'The ground starts shaking, and you hear a loud crash, as if the ceiling had fallen down.',
+    effect: 'earthQuake',
+    used: false,
   }
 ]

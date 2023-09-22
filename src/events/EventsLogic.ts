@@ -18,7 +18,10 @@ import {
   roll,
   toArray
 } from "../game";
-import { createMonster } from "../dungeon/DungeonLogic";
+import {
+  COLLAPSED,
+  createMonster
+} from "../dungeon/DungeonLogic";
 import { events } from "../events/events";
 
 export const getEventsForDungeon = (dungeon: Dungeon): TurnEvent[] => {
@@ -94,6 +97,18 @@ export const eventEffects: {[index: string]: (state: GameState, event: TurnEvent
     liveHeroes(state).forEach((hero) => hero.blinded = true);
     event.used = true;
   },
+  earthQuake: (state: GameState, event: TurnEvent) => {
+    eventDescriptionLog(state, event);
+    const discoveredCorridors = state.dungeon.layout.corridors
+      .filter((corridor) => !isRoomBlocked(state, corridor))
+      .filter((corridor) => state.dungeon.discoveredRooms.includes(corridor));
+    const maxCorridorIndex = discoveredCorridors.length - 1;
+    const randomCorridor = state.dungeon.layout.corridors[maxCorridorIndex];
+    state.dungeon.collapsedCorridor = randomCorridor;
+    state.dungeon.layout.grid = state.dungeon.layout.grid
+      .map((row) => row.replaceAll(randomCorridor, COLLAPSED));
+    event.used = true;
+  }
 }
 
 const spawnRandomMonster = (state: GameState, monsterType: MonsterType) => {
@@ -144,4 +159,16 @@ const shuffleEvents = (array: TurnEvent[]): TurnEvent[] => {
   }
   array.forEach((event) => event.used = false);
   return array;
+}
+
+const isRoomBlocked = (state: GameState, roomKey: string) => {
+  const isBlocked: boolean[] = [];
+  state.dungeon.layout.grid.forEach((row, y) => {
+    toArray(row).forEach((cell, x) => {
+      if (cell === roomKey) {
+        isBlocked.push(isBlockedByHero(state, x, y) || isBlockedByMonster(state, x, y));
+      }
+    });
+  });
+  return isBlocked.some((blocked) => blocked);
 }

@@ -53,6 +53,7 @@ export const e1m0: Dungeon = {
     ],
     notes: [],
     items: [],
+    corridors: ['D','E']
   },
   killCount: 0,
   events: [1,2,3,4,5,6]
