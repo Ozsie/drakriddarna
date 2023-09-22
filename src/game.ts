@@ -78,7 +78,7 @@ export const init = (): GameState => {
       'cellSize': 48,
       'debug': false
     },
-    eventDeck: getEventsForDungeon(campaignIceDragonTreasure, campaignIceDragonTreasure.dungeons[0])
+    eventDeck: getEventsForDungeon(campaignIceDragonTreasure.dungeons[0])
   }
   resetLiveHeroes(state);
   return state;
@@ -344,6 +344,7 @@ export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
     state.dungeon = state.dungeon.nextDungeon;
     state.actionLog = ['You have reached ' + state.dungeon.name];
+    state.eventDeck = getEventsForDungeon(state.dungeon);
     rewardLiveHeroes(state);
     levelUp(state);
     replaceDeadHeroes(state);

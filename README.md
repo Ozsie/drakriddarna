@@ -6,9 +6,7 @@
 
 ## Todo
 - [ ] Monster blocking move on click move
-- [ ] Monster cards?
 - [ ] Monster special attack
-- [ ] Events
 - [ ] Secrets
 - [ ] Dungeon intro screen
 - [ ] Magic Item/Weapon: Sword of Chaos
@@ -22,8 +20,12 @@
 - [ ] Responsive layout
 - [ ] Support for additional campaigns
 - [ ] Menu system
+- [ ] Doors blocking monsters?
 - [ ] Drop Items
 - [ ] Trade Items
+- [ ] Linting
+- [ ] Monster cards?
+- [X] Events
 - [X] e1m1 - The Three Gates of Power
 - [X] Magic Items
 - [X] Centering on spawn

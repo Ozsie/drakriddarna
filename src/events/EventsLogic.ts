@@ -1,16 +1,33 @@
-import type { Campaign, Dungeon, GameState, TurnEvent } from "../types";
-import { Colour, MonsterType } from "../types";
-import { isBlockedByHero, isBlockedByMonster, liveHeroes } from "../hero/HeroLogic";
-import { addLog, findCell, roll, toArray } from "../game";
+import type {
+  Dungeon,
+  GameState,
+  TurnEvent
+} from "../types";
+import {
+  Colour,
+  MonsterType
+} from "../types";
+import {
+  isBlockedByHero,
+  isBlockedByMonster,
+  liveHeroes
+} from "../hero/HeroLogic";
+import {
+  addLog,
+  findCell,
+  roll,
+  toArray
+} from "../game";
 import { createMonster } from "../dungeon/DungeonLogic";
+import { events } from "../events/events";
 
-export const getEventsForDungeon = (campaign: Campaign, dungeon: Dungeon): TurnEvent[] => {
+export const getEventsForDungeon = (dungeon: Dungeon): TurnEvent[] => {
   if (dungeon.events) {
     return shuffleEvents(
-      campaign.eventDeck.filter((event) => dungeon?.events?.includes(event.number))
+      events.filter((event) => dungeon?.events?.includes(event.number))
     );
   } else {
-    return shuffleEvents(campaign.eventDeck);
+    return shuffleEvents(events);
   }
 }
 
