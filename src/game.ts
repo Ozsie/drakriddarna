@@ -38,6 +38,11 @@ import {
   resetOnNext,
   resetOnNextDungeon
 } from "./items/ItemLogic";
+import {
+  drawNextEvent,
+  getEventsForDungeon,
+  eventEffects
+} from "./events/EventsLogic";
 
 export const save = (state: GameState) => {
   addLog(state, 'Game saved.');
@@ -73,6 +78,7 @@ export const init = (): GameState => {
       'cellSize': 48,
       'debug': false
     },
+    eventDeck: getEventsForDungeon(campaignIceDragonTreasure, campaignIceDragonTreasure.dungeons[0])
   }
   resetLiveHeroes(state);
   return state;
@@ -137,6 +143,10 @@ export const next = (state: GameState) => {
     state.currentActor.actions = 2;
     state.currentActor.movement = getEffectiveMaxMovement(state.currentActor);
     state.currentActor = liveHeroes(state)[nextIndex];
+    if (nextIndex === 0) {
+      const event = drawNextEvent(state);
+      eventEffects[event.effect](state, event);
+    }
     addLog(state, `${state.currentActor.name} started their turn`);
   }
 }
@@ -288,10 +298,12 @@ export const takeDamage = (state: GameState, source: Actor & { rangedWeapon?: We
   } else if (target.shield) {
     addLog(state, `${target.name}'s shield was useless against ${weapon.name} `);
   }
-  const canReRoll = source.inventory.some((item) => {
-    addLog(state, `${source.name} used the effect of ${item.name} when attacking`);
-    return item.properties?.[RE_ROLL_ATTACK];
-  });
+  const canReRoll = source.inventory
+    .filter((item) => item?.properties?.[RE_ROLL_ATTACK])
+    .some((item) => {
+      addLog(state, `${source.name} used the effect of ${item.name} when attacking`);
+      return item.properties?.[RE_ROLL_ATTACK];
+    });
   const attackBonus = source.inventory
     .filter((item) => item?.properties?.[ATTACK_BONUS])
     .map((item) => {

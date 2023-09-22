@@ -14,6 +14,7 @@ export type GameState = {
   magicItemDeck: Item[];
   targetActor?: Actor;
   settings: Record<string, any>;
+  eventDeck: TurnEvent[];
 }
 
 export type Campaign = {
@@ -22,6 +23,7 @@ export type Campaign = {
   heroes: Actor[];
   itemDeck: Item[];
   magicItemDeck: Item[];
+  eventDeck: TurnEvent[];
 }
 
 export type Actor = {
@@ -78,6 +80,7 @@ export type Dungeon = {
   beaten: boolean,
   nextDungeon?: Dungeon,
   killCount: number,
+  events?: number[],
 }
 
 export type WinCondition = {
@@ -186,4 +189,12 @@ export type Armour = Item & {
   defense: number,
   magicProtection: boolean,
   movementReduction: number,
+}
+
+export type TurnEvent = {
+  number: number,
+  name: string,
+  description: string,
+  effect: string,
+  used: boolean,
 }

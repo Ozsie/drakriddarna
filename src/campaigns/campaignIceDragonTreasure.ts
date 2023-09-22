@@ -10,6 +10,7 @@ import { shields } from "../items/shields";
 import { Colour } from "../types";
 import { newHero } from "../hero/HeroLogic";
 import { magicItems } from "../items/magicItems";
+import { events } from "../events/events";
 
 
 const getMagicItemDeck = (): Item[] => {
@@ -56,4 +57,5 @@ export const campaignIceDragonTreasure: Campaign = {
     newHero('Siedel', Colour.Green),
     newHero('Wulf', Colour.Blue)
   ],
+  eventDeck: events
 }
