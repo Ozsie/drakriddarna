@@ -32,6 +32,7 @@ export const magicItems: Item[] = [
     },
     effect: 'magicHerbsOnUse',
     reset: 'magicHerbsOnReset',
+    spritePos: { x: 1, y: 0 },
   },
   {
     name: 'Thousand League Boots',
@@ -44,6 +45,7 @@ export const magicItems: Item[] = [
     },
     pickup: 'movementBonusOnPickup',
     drop: 'movementBonusOnDrop',
+    spritePos: { x: 2, y: 0 },
   },
   {
     name: 'Giants Glove',
@@ -52,9 +54,10 @@ export const magicItems: Item[] = [
     amountInDeck: 1,
     properties: {
       DESCRIPTION: 'One additional attack die. Breaks locked doors.',
-      BREAK_DOOR: true,
+      BREAK_LOCK: true,
       ATTACK_BONUS: 1
     },
+    spritePos: { x: 3, y: 0 },
   },
   {
     name: 'Ring of Precision',

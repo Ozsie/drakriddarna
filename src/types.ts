@@ -167,6 +167,7 @@ export type Item = {
   reset?: string,
   pickup?: string,
   drop?: string,
+  spritePos?: Position,
 }
 
 export type Weapon = Item & {
