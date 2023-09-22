@@ -19,6 +19,7 @@ export const PILLAR = '@'
 export const EMPTY = ' '
 export const WALL = '#'
 
+
 export const createSecret = (type: SecretType, name: string, x: number, y: number): Secret => {
   return {
     type,

@@ -72,7 +72,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     return;
   }
 
-  const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y);
+  const door = findDoor(state, hero);
   if (door) {
     const canBreakLock = hero.inventory.some((item) => {
       return item.properties?.[BREAK_LOCK];
@@ -105,7 +105,6 @@ export const onTargetSelf = (state: GameState, target: Position) => {
       }
       addLog(state, "Door is locked");
       pickLock(state);
-      consumeActions(hero);
     }
   } else {
     if (!canAct(hero)) {
@@ -167,4 +166,17 @@ export const doMouseLogic = (event: PointerEvent, cellSize: number, state: GameS
   } else if (state.dungeon.discoveredRooms.includes(cell)) {
     onTargetCell(state, { x, y });
   }
+}
+
+const findDoor = (state: GameState, hero: Hero) => {
+  const doorInCell = state.dungeon.layout.doors
+    .find((door) => door.x === hero.position.x && door.y === hero.position.y)
+  return doorInCell ?? state.dungeon.layout.doors.find((door) => {
+    switch (door.side) {
+      case Side.LEFT: return door.x - 1 === hero.position.x && door.y === hero.position.y;
+      case Side.RIGHT: return door.x + 1 === hero.position.x && door.y === hero.position.y;
+      case Side.DOWN: return door.x === hero.position.x && door.y + 1 === hero.position.y;
+      case Side.UP: return door.x === hero.position.x && door.y - 1 === hero.position.y;
+    }
+  });
 }

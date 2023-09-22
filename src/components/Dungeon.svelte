@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import groundSprites from '$lib/Dungeon_Tileset.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
+  import itemSprites from '$lib/items.png';
   import { doMouseLogic } from "../hero/ClickInputLogic";
   import { browser } from '$app/environment';
   import { renderHeroes } from "../hero/HeroRendering";
@@ -29,10 +30,13 @@
     const actors = new Image();
     actors.src = actorSprites;
 
-    setInterval(() => render(ground, actors), 10);
+    const items = new Image();
+    items.src = itemSprites;
+
+    setInterval(() => render(ground, actors, items), 10);
   });
 
-  const render = (ground, actors) => {
+  const render = (ground, actors, items) => {
     if (!state || !document) return;
     const c: HTMLCanvasElement = document.getElementById("gameBoard") as HTMLCanvasElement;
     const ctx: CanvasRenderingContext2D = c.getContext("2d");
@@ -41,7 +45,7 @@
     ctx.fillRect(0, 0, c.width, c.height);
     renderGrid(ctx, ground, cellSize, state, debugMode);
     renderSecrets(ctx, ground, cellSize, state);
-    renderItems(ctx, ground, cellSize, state)
+    renderItems(ctx, items, cellSize, state)
     renderDoors(ctx, ground, cellSize, state, debugMode)
     renderMonsters(ctx, actors, cellSize, state, debugMode);
     renderHeroes(ctx, actors, cellSize, state, debugMode);

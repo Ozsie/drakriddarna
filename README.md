@@ -18,6 +18,7 @@
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
 - [ ] Multiple saves
+- [ ] Select wall tile based on surrounding tiles
 - [ ] Graphics
 - [ ] Responsive layout
 - [ ] Support for additional campaigns

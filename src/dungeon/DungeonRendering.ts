@@ -87,10 +87,12 @@ const renderGridLines = (ctx: CanvasRenderingContext2D, cell: string, state: Gam
 
 const renderDoor = (ctx: CanvasRenderingContext2D, ground: CanvasImageSource, cellSize: number, state: GameState, door: Door, debugMode: boolean) => {
   const cell = state.dungeon.layout.grid[door.y][door.x]
-  if (door && !door.hidden && !door.open && !isEmpty(cell, state)) {
+  if (door && !door.hidden && !door.open) {
     ctx.fillStyle = 'brown';
     switch (door.side) {
       case Side.RIGHT: {
+        const otherSideCell = state.dungeon.layout.grid[door.y][door.x + 1]
+        if (isEmpty(cell, state) && isEmpty(otherSideCell, state)) return;
         ctx.fillRect((door.x * cellSize) + (cellSize - 2), door.y * cellSize, 4, cellSize);
         if (door.locked && debugMode) {
           ctx.fillStyle = 'grey'
@@ -99,6 +101,8 @@ const renderDoor = (ctx: CanvasRenderingContext2D, ground: CanvasImageSource, ce
         break;
       }
       case Side.LEFT: {
+        const otherSideCell = state.dungeon.layout.grid[door.y][door.x - 1]
+        if (isEmpty(cell, state) && isEmpty(otherSideCell, state)) return;
         ctx.fillRect((door.x * cellSize)-2, door.y * cellSize, 4, cellSize);
         if (door.locked && debugMode) {
           ctx.fillStyle = 'grey'
@@ -107,6 +111,8 @@ const renderDoor = (ctx: CanvasRenderingContext2D, ground: CanvasImageSource, ce
         break;
       }
       case Side.UP: {
+        const otherSideCell = state.dungeon.layout.grid[door.y - 1][door.x]
+        if (isEmpty(cell, state) && isEmpty(otherSideCell, state)) return;
         ctx.fillRect(door.x * cellSize, (door.y * cellSize) - 2, cellSize, 4);
         if (door.locked && debugMode) {
           ctx.fillStyle = 'grey'
@@ -115,6 +121,8 @@ const renderDoor = (ctx: CanvasRenderingContext2D, ground: CanvasImageSource, ce
         break;
       }
       case Side.DOWN: {
+        const otherSideCell = state.dungeon.layout.grid[door.y + 1][door.x]
+        if (isEmpty(cell, state) && isEmpty(otherSideCell, state)) return;
         ctx.fillRect(door.x * cellSize, (door.y * cellSize) + (cellSize - 2), cellSize, 4);
         if (door.locked && debugMode) {
           ctx.fillStyle = 'grey'
@@ -127,9 +135,36 @@ const renderDoor = (ctx: CanvasRenderingContext2D, ground: CanvasImageSource, ce
   if (debugMode && !isEmpty(cell, state)) {
     ctx.fillStyle = 'black';
     ctx.font = "12px Arial";
-    ctx.fillText(`[${door.hidden ? 'H' : '-'}/${door.trapped ? 'T'+door.trapAttacks : '-'}/${door.locked ? 'L' : '-'}]`, door.x*cellSize, door.y*cellSize + 10);
+    const doorText = `[${door.hidden ? 'H' : '-'}/${door.trapped ? 'T'+door.trapAttacks : '-'}/${door.locked ? 'L' : '-'}]`;
+    ctx.fillText(doorText, door.x*cellSize, door.y*cellSize + 10);
     ctx.fillStyle = "rgba(50, 255, 255, 0.28)";
     ctx.fillRect(door.x*cellSize, door.y*cellSize, cellSize, cellSize);
+    switch (door.side) {
+      case Side.LEFT: {
+        ctx.fillText(doorText, door.x*cellSize, door.y*cellSize + 10);
+        ctx.fillStyle = "rgba(50, 255, 255, 0.28)";
+        ctx.fillRect((door.x - 1)*cellSize, door.y*cellSize, cellSize, cellSize);
+        break;
+      }
+      case Side.RIGHT: {
+        ctx.fillText(doorText, door.x*cellSize, door.y*cellSize + 10);
+        ctx.fillStyle = "rgba(50, 255, 255, 0.28)";
+        ctx.fillRect((door.x + 1)*cellSize, door.y*cellSize, cellSize, cellSize);
+        break;
+      }
+      case Side.UP: {
+        ctx.fillText(doorText, door.x*cellSize, door.y*cellSize + 10);
+        ctx.fillStyle = "rgba(50, 255, 255, 0.28)";
+        ctx.fillRect(door.x*cellSize, (door.y - 1)*cellSize, cellSize, cellSize);
+        break;
+      }
+      case Side.DOWN: {
+        ctx.fillText(doorText, door.x*cellSize, door.y*cellSize + 10);
+        ctx.fillStyle = "rgba(50, 255, 255, 0.28)";
+        ctx.fillRect(door.x*cellSize, (door.y + 1)*cellSize, cellSize, cellSize);
+        break;
+      }
+    }
   }
 }
 
