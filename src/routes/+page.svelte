@@ -16,13 +16,20 @@
     act,
     pickLock
   } from "../hero/HeroLogic.ts";
+  import { browser } from "$app/environment";
 
   let state = init();
   let debugMode = state.settings['debug'];
+  let screenSize;
 
   onMount(() => {
     setInterval(() => hasWon(state), 1000);
   });
+
+  if (browser) {
+    screenSize = window.innerWidth;
+    console.log(screenSize)
+  }
 
   const setDebugMode = () => {
     debugMode = !debugMode;
@@ -84,33 +91,42 @@
 </script>
 
 <style>
-    .container {
-        width: 100%;
-        background: aqua;
-        padding: 2px;
-    }
     @media screen and (max-width: 600px) {
+        .container {
+            width: 100%;
+            background: aqua;
+        }
         .characterSide {
-            visibility: hidden;
-            clear: both;
+            width: 100%;
+            height: 10%;
+            position: fixed;
+        }
+        .commands {
+            width: 40%;
+            height: 100px;
+            background: gray;
             float: left;
-            margin: 10px auto 5px 20px;
-            width: 28%;
-            display: none;
         }
     }
-    .characterSide {
-        width: 15%;
-        max-width: 240px;
-        background: gray;
-        float: left;
-        padding-right: 10px;
-    }
-    .commands {
-        height: 100px;
-        background: gray;
-        float: left;
-        padding-right: 10px;
+    @media screen and (min-width: 601px) {
+        .container {
+            width: 100%;
+            background: aqua;
+            padding: 2px;
+        }
+        .characterSide {
+            width: 15%;
+            max-width: 240px;
+            background: gray;
+            float: left;
+            padding-right: 10px;
+        }
+        .commands {
+            height: 100px;
+            background: gray;
+            float: left;
+            padding-right: 10px;
+        }
     }
 </style>
 
@@ -122,32 +138,48 @@
 </div>
 <div class='container' id='footer'>
   <div class="commands">
-    <table>
-      <tr>
-        <td><button on:click={() => act('UL', state)}>UL</button></td>
-        <td><button on:click={() => act('U', state)}>U</button></td>
-        <td><button on:click={() => act('UR', state)}>UR</button></td>
-        <td><button on:click={() => next(state)}>Next</button></td>
-      </tr>
-      <tr>
-        <td><button on:click={() => act('L', state)}>L</button></td>
-        <td></td>
-        <td><button on:click={() => act('R', state)}>R</button></td>
-        <td><button on:click={() => search(state)}>Search</button></td>
-      </tr>
-      <tr>
-        <td><button on:click={() => act('DL', state)}>DL</button></td>
-        <td><button on:click={() => act('D', state)}>D</button></td>
-        <td><button on:click={() => act('DR', state)}>DR</button></td>
-        <td><button on:click={() => pickLock(state)}>Pick lock</button></td>
-      </tr>
-      <tr>
-        <td><button on:click={() => save(state)}>Save</button></td>
-        <td><button on:click={() => state = load()}>Load</button></td>
-        <td><button on:click={() => setDebugMode()}>Debug</button></td>
-        <td><button on:click={() => endAction(state)}>End action</button></td>
-      </tr>
-    </table>
+    {#if screenSize < 600}
+      <table>
+        <tr>
+          <td><button on:click={() => next(state)}>Next</button></td>
+          <td><button on:click={() => endAction(state)}>End action</button></td>
+        </tr>
+        <tr>
+          <td><button on:click={() => save(state)}>Save</button></td>
+          <td><button on:click={() => state = load()}>Load</button></td>
+        </tr>
+        <tr>
+          <td><button on:click={() => setDebugMode()}>Debug</button></td>
+        </tr>
+      </table>
+    {:else}
+      <table>
+        <tr>
+          <td><button on:click={() => act('UL', state)}>UL</button></td>
+          <td><button on:click={() => act('U', state)}>U</button></td>
+          <td><button on:click={() => act('UR', state)}>UR</button></td>
+          <td><button on:click={() => next(state)}>Next</button></td>
+        </tr>
+        <tr>
+          <td><button on:click={() => act('L', state)}>L</button></td>
+          <td></td>
+          <td><button on:click={() => act('R', state)}>R</button></td>
+          <td><button on:click={() => search(state)}>Search</button></td>
+        </tr>
+        <tr>
+          <td><button on:click={() => act('DL', state)}>DL</button></td>
+          <td><button on:click={() => act('D', state)}>D</button></td>
+          <td><button on:click={() => act('DR', state)}>DR</button></td>
+          <td><button on:click={() => pickLock(state)}>Pick lock</button></td>
+        </tr>
+        <tr>
+          <td><button on:click={() => save(state)}>Save</button></td>
+          <td><button on:click={() => state = load()}>Load</button></td>
+          <td><button on:click={() => setDebugMode()}>Debug</button></td>
+          <td><button on:click={() => endAction(state)}>End action</button></td>
+        </tr>
+      </table>
+    {/if}
   </div>
   <Log bind:state={state}/>
 </div>
