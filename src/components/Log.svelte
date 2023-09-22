@@ -12,16 +12,34 @@
   });
 </script>
 <style>
-    .log {
-        margin-left: 15%;
-        height: 100px;
-        background: green;
-        overflow: scroll;
+    @media screen and (max-width: 600px) {
+        .log {
+            width: 60%;
+            margin-left: 15%;
+            height: 100px;
+            background: green;
+            overflow: scroll;
+        }
+
+        p {
+            font-size: 10pt;
+            margin-top: 0;
+            margin-bottom: 1px;
+        }
     }
-    p {
-        font-size: 10pt;
-        margin-top: 0;
-        margin-bottom: 1px;
+    @media screen and (min-width: 601px) {
+        .log {
+            margin-left: 15%;
+            height: 100px;
+            background: green;
+            overflow: scroll;
+        }
+
+        p {
+            font-size: 10pt;
+            margin-top: 0;
+            margin-bottom: 1px;
+        }
     }
 </style>
 <div class="log">
