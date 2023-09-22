@@ -42,5 +42,12 @@ export const events: TurnEvent[] = [
     description: 'You hear a snarling filled with rage somewhere behind you. You quickly realise there were more monsters here than you thought.',
     effect: 'theLostOrch',
     used: false,
+  },
+  {
+    name: 'The Dragons Breath',
+    number: 7,
+    description: 'The flames of your torches start to flicker and soon the dungeon is completely dark.',
+    effect: 'theDragonsBreath',
+    used: false,
   }
 ]

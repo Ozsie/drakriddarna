@@ -89,6 +89,11 @@ export const eventEffects: {[index: string]: (state: GameState, event: TurnEvent
     spawnRandomMonster(state, MonsterType.ORCH);
     event.used = true;
   },
+  theDragonsBreath: (state: GameState, event: TurnEvent) => {
+    eventDescriptionLog(state, event);
+    liveHeroes(state).forEach((hero) => hero.blinded = true);
+    event.used = true;
+  },
 }
 
 const spawnRandomMonster = (state: GameState, monsterType: MonsterType) => {

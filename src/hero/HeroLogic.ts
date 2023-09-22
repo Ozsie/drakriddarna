@@ -94,8 +94,12 @@ export const act = (direction: string, state: GameState) => {
 }
 
 export const pickLock = (state: GameState) => {
-  const hero = state.currentActor
+  const hero = state.currentActor;
   if (!hero) return;
+  if (hero.blinded) {
+    addLog(state, `${hero.name} is blinded and may not search.`);
+    return
+  }
   if (!canAct(hero)) {
     addLog(state, `${hero.name} has no actions left to pick lock`);
     return;
@@ -185,6 +189,10 @@ export const attack = (hero: Actor, state: GameState, target: Position) => {
 export const search = (state: GameState) => {
   const hero: Actor | undefined = state.currentActor
   if (!hero) return;
+  if (hero.blinded) {
+    addLog(state, `${hero.name} is blinded and may not search.`);
+    return
+  }
   if (!canAct(hero)) {
     addLog(state, `${hero.name} has no actions left to search`);
     return;

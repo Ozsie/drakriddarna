@@ -22,10 +22,14 @@ import {
   roll,
   takeDamage
 } from "../game";
-import { SEARCH_BONUS } from "../items/magicItems";
+import { onPickup, SEARCH_BONUS } from "../items/magicItems";
 
 export const searchForSecret = (state: GameState) => {
   const hero = state.currentActor as Hero;
+  if (hero.blinded) {
+    addLog(state, `${hero.name} is blinded and may not search.`);
+    return
+  }
   const searchBonus = hero.inventory
     .filter((item) => item.properties?.[SEARCH_BONUS])
     .map((item) => {
@@ -201,7 +205,7 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
           removeFoundMagicItemFromDeck(state, item);
           addLog(state, `${hero.name} found (${item.name})`);
           hero.inventory.push(item);
-          if (item.pickup) item.pickup(state, item, hero);
+          if (item.pickup) onPickup[item.pickup](state, item, hero);
         }
         break;
       }

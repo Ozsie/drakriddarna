@@ -123,6 +123,13 @@ export const getEffectiveMaxMovement = (actor: Actor) => {
   return actor.maxMovement - (actor.armour?.movementReduction ?? 0);
 }
 
+const restoreBlinded = (state: GameState) => {
+  if (liveHeroes(state).some((hero) => hero.blinded)) {
+    addLog(state, `You light your torches again.`);
+    liveHeroes(state).forEach((hero) => hero.blinded = false);
+  }
+}
+
 export const next = (state: GameState) => {
   checkWinConditions(state)
   if (state.currentActor === undefined) return;
@@ -144,6 +151,7 @@ export const next = (state: GameState) => {
     state.currentActor.movement = getEffectiveMaxMovement(state.currentActor);
     state.currentActor = liveHeroes(state)[nextIndex];
     if (nextIndex === 0) {
+      restoreBlinded(state);
       const event = drawNextEvent(state);
       eventEffects[event.effect](state, event);
     }
@@ -311,7 +319,8 @@ export const takeDamage = (state: GameState, source: Actor & { rangedWeapon?: We
       return item.properties?.[ATTACK_BONUS] as number;
     })
     .reduce((partial, bonus) => partial + bonus, 0)
-  const hits = roll(source.level, weapon.dice + attackBonus);
+  let blindedSubtraction = source.blinded ? 1 : 0;
+  const hits = roll(source.level, weapon.dice + attackBonus - blindedSubtraction);
   let damage = Math.max(hits - (defense + shield), 0);
   if (damage === 0 && canReRoll) {
     addLog(state, `${source.name} missed but got another chance`);
