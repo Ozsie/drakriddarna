@@ -231,15 +231,17 @@ export const eventEffects: {[index: string]: (state: GameState, event: TurnEvent
 }
 
 const restoreDisabledItems = (state: GameState) => {
-  addLog(state, `The magic storm calmed down`);
-  liveHeroes(state).forEach((hero) => {
-    hero.inventory.forEach((item) => {
-      if (!item.properties?.[ACTIVE] && item.pickup) {
-        onPickup[item.pickup](state, item, hero);
-      }
-      item.disabled = false;
+  if (liveHeroes(state).some((hero) => hero.weapon.elemental)) {
+    addLog(state, `The magic storm calmed down`);
+    liveHeroes(state).forEach((hero) => {
+      hero.inventory.forEach((item) => {
+        if (!item.properties?.[ACTIVE] && item.pickup) {
+          onPickup[item.pickup](state, item, hero);
+        }
+        item.disabled = false;
+      });
     });
-  });
+  }
 }
 
 export const resetEventEffects = (state: GameState) => {
@@ -259,6 +261,7 @@ const restoreCorridor = (state: GameState) => {
     addLog(state, `The collapsed corridor cleared up.`);
     state.dungeon.layout.grid = state.dungeon.layout.grid
       .map((row) => row.replaceAll(COLLAPSED, collapsed));
+    state.dungeon.collapsedCorridor = undefined;
   }
 }
 
@@ -270,8 +273,10 @@ const restoreBlinded = (state: GameState) => {
 }
 
 const restoreElementalWeapon = (state: GameState) => {
-  addLog(state, `The elemental magic died off.`);
-  liveHeroes(state).forEach((hero) => hero.weapon.elemental = false);
+  if (liveHeroes(state).some((hero) => hero.weapon.elemental)) {
+    addLog(state, `The elemental magic died off.`);
+    liveHeroes(state).forEach((hero) => hero.weapon.elemental = false);
+  }
 }
 
 const restoreWeakened = (state: GameState) => {

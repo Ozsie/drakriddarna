@@ -8,6 +8,7 @@ import type {
   Door
 } from "../types";
 import {
+  COLLAPSED,
   EMPTY,
   WALL
 } from "../dungeon/DungeonLogic";
@@ -41,10 +42,18 @@ export const renderSecrets = (ctx: CanvasRenderingContext2D, ground: CanvasImage
 
 const renderFloor = (ctx: CanvasRenderingContext2D, ground: CanvasImageSource, state: GameState, cell: string, x: number, y: number, cellSize: number) => {
   if (isWall(cell) || !state.dungeon.discoveredRooms.includes(cell) && cell !== EMPTY) {
-    if (state.dungeon.discoveredRooms.some((r) => neighbourOf(x, y, r, state))) {
-      ctx.drawImage(ground, 48, 0, 48, 48, x * cellSize, y * cellSize, cellSize, cellSize);
+    if (cell === COLLAPSED) {
+      ctx.drawImage(ground, 0, 0, 48, 48, x * cellSize, y * cellSize, cellSize, cellSize);
+      ctx.drawImage(ground, 5*48, 0, 48, 48, x * cellSize, y * cellSize, cellSize, cellSize);
+
     } else {
-      renderHiddenCell(ctx, x, y, cellSize);
+      if (state.dungeon.discoveredRooms.some((r) => neighbourOf(x, y, r, state)) ||
+        neighbourOf(x, y, COLLAPSED, state)
+      ) {
+        ctx.drawImage(ground, 48, 0, 48, 48, x * cellSize, y * cellSize, cellSize, cellSize);
+      } else {
+        renderHiddenCell(ctx, x, y, cellSize);
+      }
     }
   } else if (!isEmpty(cell, state)) {
     ctx.drawImage(ground, 0, 0, 48, 48, x*cellSize, y*cellSize, cellSize, cellSize);
