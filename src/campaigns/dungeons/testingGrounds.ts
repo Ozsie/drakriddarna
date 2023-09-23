@@ -1,3 +1,4 @@
+import type { Dungeon } from "../../types";
 import {
   Colour,
   ConditionType,
@@ -5,9 +6,9 @@ import {
   SecretType,
   Side,
 } from "../../types";
-import type { Dungeon } from "../../types";
 import {
   createDoor,
+  createHiddenDoor,
   createLockedDoor,
   createMonster,
   createSecret,
@@ -35,7 +36,7 @@ export const testingGrounds: Dungeon = {
     { x: 1, y: 9 },
     { x: 1, y: 10 },
   ],
-  discoveredRooms: ["A", "G"],
+  discoveredRooms: ["A"],
   layout: {
     grid: [
       "###########",
@@ -60,6 +61,7 @@ export const testingGrounds: Dungeon = {
       createLockedDoor(Side.LEFT, 7, 6),
       createTrappedDoor(Side.UP, 7, 7, 1),
       createDoor(Side.UP, 7, 4),
+      createHiddenDoor(Side.DOWN, 2, 10),
     ],
     monsters: [
       createMonster(MonsterType.ORCH, Colour.Green, 1, 1),

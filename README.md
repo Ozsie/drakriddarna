@@ -10,7 +10,6 @@
 - [ ] Monster special attack
 - [ ] Secrets
 - [ ] Dungeon intro screen
-- [ ] e1m2 - Mines of Evil
 - [ ] e1m3 - Labyrinth of Horror
 - [ ] e1m4 - The Dark Citadel
 - [ ] e1m5 - The Ice Dragons Treasure
@@ -28,7 +27,7 @@
 - [ ] Trade Items
 - [ ] Linting
 - [ ] Monster cards?
-- [ ] Fix landslide, can select not discovered corridor
+- [X] e1m2 - Mines of Evil
 - [X] Events
 - [X] e1m1 - The Three Gates of Power
 - [X] Magic Items
