@@ -1,28 +1,8 @@
-import type {
-  Dungeon,
-  GameState,
-  TurnEvent
-} from "../types";
-import {
-  Colour,
-  MonsterType,
-  SecretType
-} from "../types";
-import {
-  isBlockedByHero,
-  isBlockedByMonster,
-  liveHeroes
-} from "../hero/HeroLogic";
-import {
-  addLog,
-  findCell,
-  roll,
-  toArray
-} from "../game";
-import {
-  COLLAPSED,
-  createMonster
-} from "../dungeon/DungeonLogic";
+import type { Actor, Dungeon, GameState, TurnEvent, Weapon } from "../types";
+import { Colour, ItemType, Level, MonsterType, SecretType } from "../types";
+import { isBlockedByHero, isBlockedByMonster, liveHeroes } from "../hero/HeroLogic";
+import { addLog, findCell, roll, takeDamage, toArray } from "../game";
+import { COLLAPSED, createMonster } from "../dungeon/DungeonLogic";
 import { events } from "../events/events";
 
 export const getEventsForDungeon = (dungeon: Dungeon): TurnEvent[] => {
@@ -104,7 +84,8 @@ export const eventEffects: {[index: string]: (state: GameState, event: TurnEvent
       .filter((corridor) => !isRoomBlocked(state, corridor))
       .filter((corridor) => state.dungeon.discoveredRooms.includes(corridor));
     const maxCorridorIndex = discoveredCorridors.length - 1;
-    const randomCorridor = state.dungeon.layout.corridors[maxCorridorIndex];
+    const randomCorridorIndex = Math.floor(Math.random() * maxCorridorIndex);
+    const randomCorridor = state.dungeon.layout.corridors[randomCorridorIndex];
     state.dungeon.collapsedCorridor = randomCorridor;
     state.dungeon.layout.grid = state.dungeon.layout.grid
       .map((row) => row.replaceAll(randomCorridor, COLLAPSED));
@@ -131,7 +112,53 @@ export const eventEffects: {[index: string]: (state: GameState, event: TurnEvent
       }
     }
     event.used = true;
+  },
+  earthquake: (state: GameState, event: TurnEvent) => {
+    eventDescriptionLog(state, event);
+    const room = getRandomRoom(state);
+    const earthquakeWeapon: Weapon = {
+      name: 'boulder',
+      type: ItemType.WEAPON,
+      value: 0,
+      dice: 3,
+      useHearHeroes: true,
+      twoHanded: false,
+      range: 1,
+      properties: [],
+      amountInDeck: 0,
+      ignoresShield: false,
+      ignoresArmour: false,
+    };
+    const earthQuakeActor: Actor = {
+      name: 'Earthquake',
+      actions: 0,
+      health: 0,
+      maxMovement: 0,
+      position: {x: 0, y: 0},
+      weapon: earthquakeWeapon,
+      level: Level.APPRENTICE,
+      maxHealth: 0,
+      movement: 0,
+      experience: 0,
+      colour: Colour.Red,
+      inventory: [],
+      defense: 0
+    };
+    state.dungeon.layout.monsters
+      .filter((monster) => monster.type === MonsterType.TROLL)
+      .filter((monster) => findCell(state.dungeon.layout.grid, monster.position.x, monster.position.y) === room)
+      .forEach((monster) => takeDamage(state, earthQuakeActor, monster, false));
+    liveHeroes(state)
+      .filter((hero) => findCell(state.dungeon.layout.grid, hero.position.x, hero.position.y) === room)
+      .forEach((hero) => takeDamage(state, earthQuakeActor, hero, false));
+    event.used = true;
   }
+}
+
+const getRandomRoom = (state: GameState) => {
+  const maxRoomIndex = state.dungeon.discoveredRooms.length - 1;
+  const randomIndex = Math.floor(Math.random() * maxRoomIndex);
+  return state.dungeon.discoveredRooms[randomIndex];
 }
 
 const spawnRandomMonster = (state: GameState, monsterType: MonsterType) => {
@@ -139,9 +166,7 @@ const spawnRandomMonster = (state: GameState, monsterType: MonsterType) => {
     .filter((monster) => monster.type === monsterType);
   const monsterCount = activeMonsters.length;
   if (monsterCount === 4) return;
-  const maxRoomIndex = state.dungeon.discoveredRooms.length - 1;
-  const randomIndex = Math.floor(Math.random() * maxRoomIndex);
-  const randomRoom = state.dungeon.discoveredRooms[randomIndex];
+  const randomRoom = getRandomRoom(state);
   const colours = [Colour.Red, Colour.Green, Colour.Yellow, Colour.Blue];
   activeMonsters.forEach((monster) => {
     const colourIndex = colours.indexOf(monster.colour);

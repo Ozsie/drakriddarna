@@ -70,5 +70,12 @@ export const events: TurnEvent[] = [
     description: 'You see before you a powerful object, hidden behind thick walls.',
     effect: 'foresight',
     used: false,
+  },
+  {
+    name: 'Earthquake',
+    number: 11,
+    description: 'The whole room starts shaking and you are thrown to the ground. Stones fall from the ceiling and walls and with terror you realise that you ar caught in an earhtquake.',
+    effect: 'earthquake',
+    used: false,
   }
 ]
