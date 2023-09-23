@@ -1,7 +1,4 @@
-import type {
-  Campaign,
-  Item
-} from "../types";
+import type { Campaign, Item } from "../types";
 import { e1m0 } from "./dungeons/e1m0";
 import { e1m1 } from "./dungeons/e1m1";
 import { weapons } from "../items/weapons";
@@ -10,7 +7,7 @@ import { shields } from "../items/shields";
 import { Colour } from "../types";
 import { newHero } from "../hero/HeroLogic";
 import { magicItems } from "../items/magicItems";
-
+import { e1m2 } from "./dungeons/e1m2";
 
 const getMagicItemDeck = (): Item[] => {
   const itemDeck: Item[] = [];
@@ -20,7 +17,7 @@ const getMagicItemDeck = (): Item[] => {
     }
   });
   return itemDeck;
-}
+};
 
 const getItemDeck = (): Item[] => {
   const itemDeck: Item[] = [];
@@ -40,20 +37,17 @@ const getItemDeck = (): Item[] => {
     }
   });
   return itemDeck;
-}
+};
 
 export const campaignIceDragonTreasure: Campaign = {
-  name: 'Treasure of the Ice Dragon',
-  dungeons: [
-    e1m0,
-    e1m1
-  ],
+  name: "Treasure of the Ice Dragon",
+  dungeons: [e1m0, e1m1, e1m2],
   itemDeck: getItemDeck(),
   magicItemDeck: getMagicItemDeck(),
   heroes: [
-    newHero('Fearik', Colour.Yellow),
-    newHero('Helbran', Colour.Red),
-    newHero('Siedel', Colour.Green),
-    newHero('Wulf', Colour.Blue)
+    newHero("Fearik", Colour.Yellow),
+    newHero("Helbran", Colour.Red),
+    newHero("Siedel", Colour.Green),
+    newHero("Wulf", Colour.Blue),
   ],
-}
+};
