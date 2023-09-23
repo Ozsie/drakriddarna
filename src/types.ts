@@ -45,6 +45,7 @@ export type Actor = {
 }
 
 export type Hero = Actor & {
+  isInventoryOpen: boolean;
 };
 
 export type Monster = Actor & {
