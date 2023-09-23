@@ -38,6 +38,12 @@ import {
   resetOnNext,
   resetOnNextDungeon
 } from "./items/ItemLogic";
+import {
+  drawNextEvent,
+  getEventsForDungeon,
+  eventEffects,
+  resetEventEffects
+} from "./events/EventsLogic";
 
 export const save = (state: GameState) => {
   addLog(state, 'Game saved.');
@@ -73,6 +79,7 @@ export const init = (): GameState => {
       'cellSize': 48,
       'debug': false
     },
+    eventDeck: getEventsForDungeon(campaignIceDragonTreasure.dungeons[0])
   }
   resetLiveHeroes(state);
   return state;
@@ -137,6 +144,11 @@ export const next = (state: GameState) => {
     state.currentActor.actions = 2;
     state.currentActor.movement = getEffectiveMaxMovement(state.currentActor);
     state.currentActor = liveHeroes(state)[nextIndex];
+    if (nextIndex === 0) {
+      resetEventEffects(state);
+      const event = drawNextEvent(state);
+      eventEffects[event.effect](state, event);
+    }
     addLog(state, `${state.currentActor.name} started their turn`);
   }
 }
@@ -288,10 +300,12 @@ export const takeDamage = (state: GameState, source: Actor & { rangedWeapon?: We
   } else if (target.shield) {
     addLog(state, `${target.name}'s shield was useless against ${weapon.name} `);
   }
-  const canReRoll = source.inventory.some((item) => {
-    addLog(state, `${source.name} used the effect of ${item.name} when attacking`);
-    return item.properties?.[RE_ROLL_ATTACK];
-  });
+  const canReRoll = source.inventory
+    .filter((item) => item?.properties?.[RE_ROLL_ATTACK])
+    .some((item) => {
+      addLog(state, `${source.name} used the effect of ${item.name} when attacking`);
+      return item.properties?.[RE_ROLL_ATTACK];
+    });
   const attackBonus = source.inventory
     .filter((item) => item?.properties?.[ATTACK_BONUS])
     .map((item) => {
@@ -299,7 +313,12 @@ export const takeDamage = (state: GameState, source: Actor & { rangedWeapon?: We
       return item.properties?.[ATTACK_BONUS] as number;
     })
     .reduce((partial, bonus) => partial + bonus, 0)
-  const hits = roll(source.level, weapon.dice + attackBonus);
+  let blindedSubtraction = source.blinded ? 1 : 0;
+  let weakenedSubtraction = source.weakened ? 1 : 0;
+  let elementalAddition = source.weapon.elemental ? 1 : 0;
+  const buff = attackBonus + elementalAddition;
+  const deBuff = blindedSubtraction + weakenedSubtraction;
+  const hits = roll(source.level, weapon.dice + buff - deBuff);
   let damage = Math.max(hits - (defense + shield), 0);
   if (damage === 0 && canReRoll) {
     addLog(state, `${source.name} missed but got another chance`);
@@ -332,6 +351,7 @@ export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
     state.dungeon = state.dungeon.nextDungeon;
     state.actionLog = ['You have reached ' + state.dungeon.name];
+    state.eventDeck = getEventsForDungeon(state.dungeon);
     rewardLiveHeroes(state);
     levelUp(state);
     replaceDeadHeroes(state);

@@ -6,24 +6,27 @@
 
 ## Todo
 - [ ] Monster blocking move on click move
-- [ ] Monster cards?
 - [ ] Monster special attack
-- [ ] Events
 - [ ] Secrets
 - [ ] Dungeon intro screen
-- [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] e1m2 - Mines of Evil
 - [ ] e1m3 - Labyrinth of Horror
 - [ ] e1m4 - The Dark Citadel
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
+- [ ] Magic Item/Weapon: Sword of Chaos
+- [ ] Event #16 - The Hexagram
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
 - [ ] Support for additional campaigns
 - [ ] Menu system
+- [ ] Doors blocking monsters?
 - [ ] Drop Items
 - [ ] Trade Items
+- [ ] Linting
+- [ ] Monster cards?
+- [X] Events
 - [X] e1m1 - The Three Gates of Power
 - [X] Magic Items
 - [X] Centering on spawn

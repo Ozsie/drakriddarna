@@ -46,6 +46,7 @@ export const e1m1: Dungeon = {
       '             #III#',
       '             #####'
     ],
+    corridors: ['B','D','F','H'],
     doors: [
       createDoor(Side.RIGHT, 3, 5),
       createDoor(Side.RIGHT, 6, 5),

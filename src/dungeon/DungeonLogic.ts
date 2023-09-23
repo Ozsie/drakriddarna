@@ -17,6 +17,7 @@ import { monsterArmour } from '../items/armours';
 export const PIT = '0'
 export const PILLAR = '@'
 export const EMPTY = ' '
+export const COLLAPSED = '?'
 export const WALL = '#'
 
 export const createSecret = (type: SecretType, name: string, x: number, y: number): Secret => {

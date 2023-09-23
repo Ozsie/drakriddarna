@@ -34,7 +34,7 @@ export const testingGrounds: Dungeon = {
     {x:1,y:9},
     {x:1,y:10},
   ],
-  discoveredRooms: ['A'],
+  discoveredRooms: ['A','G'],
   layout: {
     grid: [
       '###########',
@@ -48,8 +48,12 @@ export const testingGrounds: Dungeon = {
       '#AAAAAAAA# ',
       '#AAAAAAAA# ',
       '#AAAAAAAA# ',
-      '########## '
+      '##G####### ',
+      ' #G#       ',
+      ' #G#       ',
+      ' ###       '
     ],
+    corridors: ['G','E','F'],
     doors: [
       createTrappedHiddenDoor(Side.UP, 3, 8, 1),
       createLockedDoor(Side.LEFT, 7, 6),
@@ -63,7 +67,7 @@ export const testingGrounds: Dungeon = {
     secrets: [
       createSecret(SecretType.TRAP_DOOR, 'Welcome to Drakriddarna', 3, 9),
       createSecret(SecretType.EQUIPMENT, 'Random Equipment', 1, 10),
-      createSecretWithItem(SecretType.EQUIPMENT, 'Halberd', 5, 10, weapons[2]),
+      createSecretWithItem(SecretType.EQUIPMENT, 5, 10, weapons[2]),
     ],
     notes: [],
     items: [

@@ -1,6 +1,13 @@
-import type { Actor, GameState, Item } from "../types";
+import type {
+  Actor,
+  GameState,
+  Item
+} from "../types";
 import { ItemType } from "../types";
-import { addLog, roll } from "../game";
+import {
+  addLog,
+  roll
+} from "../game";
 import { canAct } from "../hero/HeroLogic";
 
 export const USED = 'USED';
@@ -106,7 +113,8 @@ export const magicItems: Item[] = [
     amountInDeck: 1,
     properties: {
       USED: false,
-      RESET_ON: [NEXT_TURN]
+      RESET_ON: [NEXT_TURN],
+      ACTIVE: true,
     },
     effect: 'necklaceOfLightOnUse',
     reset: 'necklaceOfLightOnReset'
@@ -129,6 +137,10 @@ export const onDrop: {[index: string]:(state: GameState, self: Item, user: Actor
 
 export const onUse: {[index: string]: (state: GameState, self: Item, user: Actor, target?: Actor) => void} = {
   magicHerbsOnUse: (state: GameState, self: Item, user: Actor, target?: Actor) => {
+    if (self.disabled) {
+      addLog(state, `${self.name} cannot be used at this moment.`);
+      return;
+    }
     if (!target) {
       addLog(state, `No target was selected.`);
       return;
@@ -151,9 +163,17 @@ export const onUse: {[index: string]: (state: GameState, self: Item, user: Actor
     }
   },
   chaosSwordOnUse: (state: GameState, self: Item, user: Actor, target?: Actor) => {
+    if (self.disabled) {
+      addLog(state, `${self.name} cannot be used at this moment.`);
+      return;
+    }
 
   },
   potionOfSpeedOnUse: (state: GameState, self: Item, user: Actor) => {
+    if (self.disabled) {
+      addLog(state, `${self.name} cannot be used at this moment.`);
+      return;
+    }
     if (!self.properties?.[USED]) {
       user.actions += self.properties?.[ACTIONS_BONUS];
       if (self.properties) self.properties[USED] = true;
@@ -163,6 +183,10 @@ export const onUse: {[index: string]: (state: GameState, self: Item, user: Actor
     }
   },
   necklaceOfLightOnUse: (state: GameState, self: Item, user: Actor, target?: Actor) => {
+    if (self.disabled) {
+      addLog(state, `${self.name} cannot be used at this moment.`);
+      return;
+    }
     if (!target) {
       addLog(state, `No target was selected.`);
       return;
