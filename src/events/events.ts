@@ -91,5 +91,12 @@ export const events: TurnEvent[] = [
     description: 'A flame suddenly shoots from a silver clad stone in the ceiling, moving towards one of your weapons. The weapon becomes engulfed in flames, feeling more powerful than before.',
     effect: 'theElementalWeapon',
     used: false,
+  },
+  {
+    name: 'The Orch Drums',
+    number: 14,
+    description: 'You hear the sound of drums from deep below you. As the sound draws nearer, you realise the orchs are on the march.',
+    effect: 'theOrchDrums',
+    used: false,
   }
 ]

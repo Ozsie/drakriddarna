@@ -186,7 +186,14 @@ export const eventEffects: {[index: string]: (state: GameState, event: TurnEvent
     const hero = heroes[randomHeroIndex];
     hero.weapon.elemental = true;
     event.used = true;
-  }
+  },
+  theOrchDrums: (state: GameState, event: TurnEvent) => {
+    eventDescriptionLog(state, event);
+    state.dungeon.layout.monsters
+      .filter((monster) => monster.type === MonsterType.ORCH)
+      .forEach((monster) => monster.actions = 3);
+    event.used = true;
+  },
 }
 
 const getRandomRoom = (state: GameState) => {

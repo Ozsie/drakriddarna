@@ -32,7 +32,9 @@ import {
   rewardLiveHeroes
 } from "./hero/HeroLogic";
 import {
+  ACTIVE,
   ATTACK_BONUS,
+  onPickup,
   RE_ROLL_ATTACK
 } from "./items/magicItems";
 import {
@@ -125,29 +127,23 @@ export const getEffectiveMaxMovement = (actor: Actor) => {
 }
 
 const restoreDisabledItems = (state: GameState) => {
-  const unUsedEvents = state.eventDeck.filter((event) => !event.used);
-  if (unUsedEvents.length === 0) {
-    addLog(state, `The magic storm calmed down`);
-    liveHeroes(state).forEach((hero) => {
-      hero.inventory.forEach((item) => {
-        if (!item.properties?.[ACTIVE] && item.pickup) {
-          onPickup[item.pickup](state, item, hero);
-        }
-        item.disabled = false;
-      });
+  addLog(state, `The magic storm calmed down`);
+  liveHeroes(state).forEach((hero) => {
+    hero.inventory.forEach((item) => {
+      if (!item.properties?.[ACTIVE] && item.pickup) {
+        onPickup[item.pickup](state, item, hero);
+      }
+      item.disabled = false;
     });
-  }
+  });
 }
 
 const restoreCorridor = (state: GameState) => {
-  const unUsedEvents = state.eventDeck.filter((event) => !event.used);
-  if (unUsedEvents.length === 0) {
+  const collapsed = state.dungeon.collapsedCorridor;
+  if (collapsed) {
     addLog(state, `The collapsed corridor cleared up.`);
-    const collapsed = state.dungeon.collapsedCorridor;
-    if (collapsed) {
-      state.dungeon.layout.grid = state.dungeon.layout.grid
-        .map((row) => row.replaceAll(COLLAPSED, collapsed));
-    }
+    state.dungeon.layout.grid = state.dungeon.layout.grid
+      .map((row) => row.replaceAll(COLLAPSED, collapsed));
   }
 }
 
@@ -156,6 +152,21 @@ const restoreBlinded = (state: GameState) => {
     addLog(state, `You light your torches again.`);
     liveHeroes(state).forEach((hero) => hero.blinded = false);
   }
+}
+
+const restoreElementalWeapon = (state: GameState) => {
+  addLog(state, `The elemental magic died off.`);
+  liveHeroes(state).forEach((hero) => hero.weapon.elemental = false);
+}
+
+function resetEventEffects(state: GameState) {
+  const unUsedEvents = state.eventDeck.filter((event) => !event.used);
+  if (unUsedEvents.length === 0) {
+    restoreElementalWeapon(state);
+    restoreCorridor(state);
+    restoreDisabledItems(state);
+  }
+  restoreBlinded(state);
 }
 
 export const next = (state: GameState) => {
@@ -179,9 +190,7 @@ export const next = (state: GameState) => {
     state.currentActor.movement = getEffectiveMaxMovement(state.currentActor);
     state.currentActor = liveHeroes(state)[nextIndex];
     if (nextIndex === 0) {
-      restoreBlinded(state);
-      restoreCorridor(state);
-      restoreDisabledItems(state);
+      resetEventEffects(state);
       const event = drawNextEvent(state);
       eventEffects[event.effect](state, event);
     }
@@ -350,7 +359,8 @@ export const takeDamage = (state: GameState, source: Actor & { rangedWeapon?: We
     })
     .reduce((partial, bonus) => partial + bonus, 0)
   let blindedSubtraction = source.blinded ? 1 : 0;
-  const hits = roll(source.level, weapon.dice + attackBonus - blindedSubtraction);
+  let elementalAddition = source.weapon.elemental ? 1 : 0;
+  const hits = roll(source.level, weapon.dice + attackBonus - blindedSubtraction + elementalAddition);
   let damage = Math.max(hits - (defense + shield), 0);
   if (damage === 0 && canReRoll) {
     addLog(state, `${source.name} missed but got another chance`);
