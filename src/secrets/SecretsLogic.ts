@@ -123,27 +123,40 @@ const secretAsActor = (secret: Secret): Actor => ({
 const findHiddenDoor = (state: GameState, pos: Position) =>
   state.dungeon.layout.doors
     .filter((secret) => secret.hidden)
-    .find((door) => isNeighbouring({ x: door.x, y: door.y }, pos.x, pos.y));
+    .find((door) => {
+      return isNeighbouring({ x: door.x, y: door.y }, pos.x, pos.y);
+    });
+};
 
 const findTrap = (state: GameState, pos: Position) =>
   state.dungeon.layout.doors
     .filter((door) => door.trapped)
-    .find((door) => door.x === pos.x && door.y === pos.y);
+    .find((door) => {
+      return door.x === pos.x && door.y === pos.y;
+    });
+};
 
 const findSecret = (state: GameState, pos: Position) =>
   state.dungeon.layout.secrets
     .filter((secret) => !secret.found)
-    .find((secret) => isNeighbouring(secret.position, pos.x, pos.y));
+    .find((secret) => {
+      return isNeighbouring(secret.position, pos.x, pos.y);
+    });
+};
 
 const findTrapDoor = (state: GameState, pos: Position) =>
   state.dungeon.layout.secrets
     .filter((secret) => !secret.found)
     .filter((secret) => secret.type === SecretType.TRAP_DOOR)
-    .find((secret) => isNeighbouring(secret.position, pos.x, pos.y));
+    .find((secret) => {
+      return isNeighbouring(secret.position, pos.x, pos.y);
+    });
+};
 
 const lookForHiddenDoor = (state: GameState, hero: Hero, result: number) => {
   const hiddenDoor = findHiddenDoor(state, hero.position);
   if (hiddenDoor) {
+    hiddenDoor.hidden = false;
     addLog(state, `${hero.name} searched (${result}) and found a hidden door`);
     return true;
   }

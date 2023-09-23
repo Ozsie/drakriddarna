@@ -3,37 +3,30 @@ import {
   doorAsActor,
   isSamePosition,
   isWalkable,
-  takeDamage
+  takeDamage,
 } from "../game";
-import type {
-  ItemLocation,
-  GameState,
-  Hero,
-  Position
-} from "../types";
-import {
-  ItemType,
-  Side
-} from "../types";
+import type { ItemLocation, GameState, Hero, Position } from "../types";
+import { ItemType, Side } from "../types";
 import {
   checkForTrapDoor,
   removeFoundItemFromDeck,
-  removeFoundMagicItemFromDeck
+  removeFoundMagicItemFromDeck,
 } from "../secrets/SecretsLogic";
 import {
   attack,
   canAct,
   canOpenDoor,
+  checkForNote,
   consumeActions,
   isBlockedByHero,
   isBlockedByMonster,
   openDoor,
   pickLock,
-  search
+  search,
 } from "../hero/HeroLogic";
 import { BREAK_LOCK, onPickup } from "../items/magicItems";
 
-export const distanceInGrid = (a: Position, b: Position) =>{
+export const distanceInGrid = (a: Position, b: Position) => {
   const dx = Math.abs(b.x - a.x);
   const dy = Math.abs(b.y - a.y);
 
@@ -48,12 +41,14 @@ export const distanceInGrid = (a: Position, b: Position) =>{
   }
 
   return Math.floor(factor * diagonalSteps + straightSteps);
-}
+};
 
 export const onTargetSelf = (state: GameState, target: Position) => {
   const hero = state.currentActor as Hero;
 
-  const itemLocation = state.dungeon.layout.items.find((item: ItemLocation) => isSamePosition(item.position, hero.position));
+  const itemLocation = state.dungeon.layout.items.find((item: ItemLocation) =>
+    isSamePosition(item.position, hero.position),
+  );
   if (itemLocation) {
     const item = itemLocation.item;
     if (item.type === ItemType.MAGIC) {
@@ -72,13 +67,16 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     return;
   }
 
-  const door = state.dungeon.layout.doors.find((door) => door.x === hero.position.x && door.y === hero.position.y);
-  if (door) {
+  const door = state.dungeon.layout.doors.find(
+    (door) => door.x === hero.position.x && door.y === hero.position.y,
+  );
+  if (door && !door.hidden) {
     const canBreakLock = hero.inventory.some((item) => {
       return item.properties?.[BREAK_LOCK];
     });
     if (canOpenDoor(hero, canBreakLock, door)) {
-      if (door.locked && canBreakLock) addLog(state, `${hero.name} broke the locked door`);
+      if (door.locked && canBreakLock)
+        addLog(state, `${hero.name} broke the locked door`);
       door.open = true;
       if (door.trapped) {
         takeDamage(state, doorAsActor(door), hero, false);
@@ -105,7 +103,6 @@ export const onTargetSelf = (state: GameState, target: Position) => {
       }
       addLog(state, "Door is locked");
       pickLock(state);
-      consumeActions(hero);
     }
   } else {
     if (!canAct(hero)) {
@@ -114,7 +111,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     }
     search(state);
   }
-}
+};
 
 const onTargetCell = (state: GameState, target: Position) => {
   const hero = state.currentActor as Hero;
@@ -131,6 +128,7 @@ const onTargetCell = (state: GameState, target: Position) => {
     if (!blockedByHero && !blockedByMonster && distance <= hero.movement) {
       hero.position = target;
       hero.movement -= distance;
+      checkForNote(state, hero);
       if (checkForTrapDoor(state)) {
         return;
       }
@@ -143,20 +141,24 @@ const onTargetCell = (state: GameState, target: Position) => {
     }
   }
   consumeActions(hero);
-}
+};
 
-export const doMouseLogic = (event: PointerEvent, cellSize: number, state: GameState) => {
+export const doMouseLogic = (
+  event: PointerEvent,
+  cellSize: number,
+  state: GameState,
+) => {
   const c = document.getElementById("gameBoard");
   if (!c) return;
 
   const rect = c.getBoundingClientRect();
   const x = Math.min(
-    Math.floor((event.clientX - rect.left)/cellSize),
-    state.dungeon.layout.grid[0].length - 1
+    Math.floor((event.clientX - rect.left) / cellSize),
+    state.dungeon.layout.grid[0].length - 1,
   );
   const y = Math.min(
-    Math.floor((event.clientY - rect.top)/cellSize),
-    state.dungeon.layout.grid.length - 1
+    Math.floor((event.clientY - rect.top) / cellSize),
+    state.dungeon.layout.grid.length - 1,
   );
 
   const cell = state.dungeon.layout.grid[y][x];
@@ -167,4 +169,4 @@ export const doMouseLogic = (event: PointerEvent, cellSize: number, state: GameS
   } else if (state.dungeon.discoveredRooms.includes(cell)) {
     onTargetCell(state, { x, y });
   }
-}
+};
