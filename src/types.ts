@@ -14,6 +14,7 @@ export type GameState = {
   magicItemDeck: Item[];
   targetActor?: Actor;
   settings: Record<string, any>;
+  eventDeck: TurnEvent[];
 }
 
 export type Campaign = {
@@ -39,9 +40,11 @@ export type Actor = {
   weapon: Weapon;
   armour?: Armour;
   shield?: Shield;
-  incapacitated: boolean;
+  incapacitated?: boolean;
   inventory: Item[];
   ignoredByMonsters?: boolean;
+  blinded?: boolean;
+  weakened?: boolean;
 }
 
 export type Hero = Actor & {
@@ -79,6 +82,8 @@ export type Dungeon = {
   beaten: boolean,
   nextDungeon?: Dungeon,
   killCount: number,
+  events?: number[],
+  collapsedCorridor?: string,
 }
 
 export type WinCondition = {
@@ -104,6 +109,7 @@ export type Layout = {
   secrets: Secret[],
   notes: Note[],
   items: ItemLocation[],
+  corridors: string[],
 }
 
 export type ItemLocation = {
@@ -168,6 +174,7 @@ export type Item = {
   reset?: string,
   pickup?: string,
   drop?: string,
+  disabled?: boolean,
 }
 
 export type Weapon = Item & {
@@ -177,6 +184,7 @@ export type Weapon = Item & {
   useHearHeroes: boolean,
   ignoresShield: boolean,
   ignoresArmour: boolean,
+  elemental?: boolean,
 }
 
 export type Shield = Item & {
@@ -187,4 +195,12 @@ export type Armour = Item & {
   defense: number,
   magicProtection: boolean,
   movementReduction: number,
+}
+
+export type TurnEvent = {
+  number: number,
+  name: string,
+  description: string,
+  effect: string,
+  used: boolean,
 }

@@ -1,0 +1,27 @@
+# Basic `dependabot.yml` file with
+# minimum configuration for two package managers
+
+version: 2
+updates:
+  # Enable version updates for npm
+  - package-ecosystem: "npm"
+    # Look for `package.json` and `lock` files in the `root` directory
+    directory: "/"
+    # Check the npm registry for updates every day (weekdays)
+    schedule:
+      interval: "weekly"
+      # Disable all pull requests for Docker dependencies
+    open-pull-requests-limit: 5
+    rebase-strategy: "disabled"
+    target-branch: "develop"
+    pull-request-branch-name:
+      separator: "-"
+    groups:
+      minor:
+        update-types:
+          - "patch"
+        exclude-patterns:
+          - "@typescript-eslint"
+      eslint:
+        patterns:
+          - "@typescript-eslint"
