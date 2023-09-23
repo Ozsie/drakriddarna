@@ -5,6 +5,8 @@
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
 ## Todo
+- [ ] Search when no secret, but hidden door
+- [ ] Found hidden door should no longer be hidden
 - [ ] Monster blocking move on click move
 - [ ] Monster special attack
 - [ ] Secrets
@@ -16,6 +18,7 @@
 - [ ] e1m6 - The Final Battle
 - [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] Event #16 - The Hexagram
+- [ ] Render pillars
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
@@ -26,6 +29,7 @@
 - [ ] Trade Items
 - [ ] Linting
 - [ ] Monster cards?
+- [ ] Fix landslide, can select not discovered corridor
 - [X] Events
 - [X] e1m1 - The Three Gates of Power
 - [X] Magic Items
