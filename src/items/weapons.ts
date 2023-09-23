@@ -1,5 +1,5 @@
-import type { Weapon } from "../types";
-import { ItemType } from "../types";
+import type { Weapon } from '../types';
+import { ItemType } from '../types';
 
 export const weapons: Weapon[] = [
   {
@@ -62,7 +62,7 @@ export const weapons: Weapon[] = [
     ignoresShield: false,
     ignoresArmour: false,
   },
-]
+];
 
 export const monsterWeapons: Weapon[] = [
   {
@@ -101,4 +101,4 @@ export const monsterWeapons: Weapon[] = [
     ignoresShield: false,
     ignoresArmour: false,
   },
-]
+];

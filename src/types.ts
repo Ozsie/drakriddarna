@@ -170,7 +170,7 @@ export type Item = {
   amountInDeck: number;
   type: ItemType;
   value: number;
-  properties?: Record<string, string | number | boolean>;
+  properties?: Record<string, string | number | boolean | string[]>;
   effect?: string;
   reset?: string;
   pickup?: string;

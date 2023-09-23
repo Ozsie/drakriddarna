@@ -1,5 +1,5 @@
-import type { Armour } from "../types";
-import { ItemType } from "../types";
+import type { Armour } from '../types';
+import { ItemType } from '../types';
 
 export const armour: Armour[] = [
   {
@@ -50,4 +50,4 @@ export const monsterArmour: Armour[] = [
     movementReduction: 0,
     value: 0,
   },
-]
+];
