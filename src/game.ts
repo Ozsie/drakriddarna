@@ -124,6 +124,21 @@ export const getEffectiveMaxMovement = (actor: Actor) => {
   return actor.maxMovement - (actor.armour?.movementReduction ?? 0);
 }
 
+const restoreDisabledItems = (state: GameState) => {
+  const unUsedEvents = state.eventDeck.filter((event) => !event.used);
+  if (unUsedEvents.length === 0) {
+    addLog(state, `The magic storm calmed down`);
+    liveHeroes(state).forEach((hero) => {
+      hero.inventory.forEach((item) => {
+        if (!item.properties?.[ACTIVE] && item.pickup) {
+          onPickup[item.pickup](state, item, hero);
+        }
+        item.disabled = false;
+      });
+    });
+  }
+}
+
 const restoreCorridor = (state: GameState) => {
   const unUsedEvents = state.eventDeck.filter((event) => !event.used);
   if (unUsedEvents.length === 0) {
@@ -166,6 +181,7 @@ export const next = (state: GameState) => {
     if (nextIndex === 0) {
       restoreBlinded(state);
       restoreCorridor(state);
+      restoreDisabledItems(state);
       const event = drawNextEvent(state);
       eventEffects[event.effect](state, event);
     }

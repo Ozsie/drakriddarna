@@ -4,6 +4,7 @@ import { isBlockedByHero, isBlockedByMonster, liveHeroes } from "../hero/HeroLog
 import { addLog, findCell, roll, takeDamage, toArray } from "../game";
 import { COLLAPSED, createMonster } from "../dungeon/DungeonLogic";
 import { events } from "../events/events";
+import { ACTIVE, onDrop } from "../items/magicItems";
 
 export const getEventsForDungeon = (dungeon: Dungeon): TurnEvent[] => {
   if (dungeon.events) {
@@ -151,6 +152,32 @@ export const eventEffects: {[index: string]: (state: GameState, event: TurnEvent
     liveHeroes(state)
       .filter((hero) => findCell(state.dungeon.layout.grid, hero.position.x, hero.position.y) === room)
       .forEach((hero) => takeDamage(state, earthQuakeActor, hero, false));
+    event.used = true;
+  },
+  theMagicStorm: (state: GameState, event: TurnEvent) => {
+    eventDescriptionLog(state, event);
+
+    const heroesWithMagicalItems = liveHeroes(state)
+      .filter((hero) => hero.inventory
+        .filter((item) => !item.disabled)
+        .some((item) => item.type === ItemType.MAGIC));
+
+    if (heroesWithMagicalItems.length > 0) {
+      const maxHeroIndex = heroesWithMagicalItems.length - 1;
+      const randomHeroIndex = Math.floor(Math.random() * maxHeroIndex);
+      const hero = heroesWithMagicalItems[randomHeroIndex];
+      const magicItems = hero.inventory.filter((item) => item.type === ItemType.MAGIC)
+      if (magicItems.length > 0) {
+        const magicItemMaxIndex = magicItems.length - 1;
+        const randomMagicItemIndex = Math.floor(Math.random() * magicItemMaxIndex);
+        const item = magicItems[randomMagicItemIndex];
+        item.disabled = true;
+        if (!item.properties?.[ACTIVE] && item.pickup && item.drop) {
+          onDrop[item.drop](state, item, hero);
+        }
+      }
+    }
+
     event.used = true;
   }
 }

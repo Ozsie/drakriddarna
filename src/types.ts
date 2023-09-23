@@ -172,6 +172,7 @@ export type Item = {
   reset?: string,
   pickup?: string,
   drop?: string,
+  disabled?: boolean,
 }
 
 export type Weapon = Item & {

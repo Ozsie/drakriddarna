@@ -77,5 +77,12 @@ export const events: TurnEvent[] = [
     description: 'The whole room starts shaking and you are thrown to the ground. Stones fall from the ceiling and walls and with terror you realise that you ar caught in an earhtquake.',
     effect: 'earthquake',
     used: false,
+  },
+  {
+    name: 'The Magic Storm',
+    number: 12,
+    description: 'An unsettling wind blows through the dungeon. You freeze as a green glow emanates from one of your magical items',
+    effect: 'theMagicStorm',
+    used: false,
   }
 ]
