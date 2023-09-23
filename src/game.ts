@@ -49,7 +49,7 @@ export const load = (): GameState | undefined => {
 export const init = (): GameState => {
   const state: GameState = {
     heroes: campaignIceDragonTreasure.heroes,
-    dungeon: campaignIceDragonTreasure.dungeons[2],
+    dungeon: campaignIceDragonTreasure.dungeons[0],
     currentActor: campaignIceDragonTreasure.heroes[0],
     actionLog: [
       `Playing '${campaignIceDragonTreasure.name}'`,
@@ -65,7 +65,7 @@ export const init = (): GameState => {
       cellSize: 48,
       debug: false,
     },
-    eventDeck: getEventsForDungeon(campaignIceDragonTreasure.dungeons[2]),
+    eventDeck: getEventsForDungeon(campaignIceDragonTreasure.dungeons[0]),
   };
   resetLiveHeroes(state);
   return state;
