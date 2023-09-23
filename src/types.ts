@@ -182,6 +182,7 @@ export type Weapon = Item & {
   useHearHeroes: boolean,
   ignoresShield: boolean,
   ignoresArmour: boolean,
+  elemental?: boolean,
 }
 
 export type Shield = Item & {

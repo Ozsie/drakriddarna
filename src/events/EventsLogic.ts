@@ -156,7 +156,6 @@ export const eventEffects: {[index: string]: (state: GameState, event: TurnEvent
   },
   theMagicStorm: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
-
     const heroesWithMagicalItems = liveHeroes(state)
       .filter((hero) => hero.inventory
         .filter((item) => !item.disabled)
@@ -177,7 +176,15 @@ export const eventEffects: {[index: string]: (state: GameState, event: TurnEvent
         }
       }
     }
-
+    event.used = true;
+  },
+  theElementalWeapon: (state: GameState, event: TurnEvent) => {
+    eventDescriptionLog(state, event);
+    const heroes = liveHeroes(state)
+    const maxHeroIndex = heroes.length - 1;
+    const randomHeroIndex = Math.floor(Math.random() * maxHeroIndex);
+    const hero = heroes[randomHeroIndex];
+    hero.weapon.elemental = true;
     event.used = true;
   }
 }

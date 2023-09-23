@@ -84,5 +84,12 @@ export const events: TurnEvent[] = [
     description: 'An unsettling wind blows through the dungeon. You freeze as a green glow emanates from one of your magical items',
     effect: 'theMagicStorm',
     used: false,
+  },
+  {
+    name: 'The Elemental Weapon',
+    number: 13,
+    description: 'A flame suddenly shoots from a silver clad stone in the ceiling, moving towards one of your weapons. The weapon becomes engulfed in flames, feeling more powerful than before.',
+    effect: 'theElementalWeapon',
+    used: false,
   }
 ]
