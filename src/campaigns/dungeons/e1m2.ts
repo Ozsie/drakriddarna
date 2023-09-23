@@ -37,7 +37,7 @@ export const e1m2: Dungeon = {
       "#AAA###CCCCCC###EEE#",
       "#AAABBBC@CC@CDDDEEE#",
       "#AAA###CCCCCC###EEE#",
-      "      ##H##### #EEE#",
+      "##### ##H##### #EEE#",
       "       #H#     #EEE#",
       "##### ##H##### #EEE#",
       "#KKK###IIIIII# #EEE#",
