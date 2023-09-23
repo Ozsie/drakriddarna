@@ -5,9 +5,8 @@
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
 ## Todo
-- [ ] Search when no secret, but hidden door
-- [ ] Found hidden door should no longer be hidden
 - [ ] Monster blocking move on click move
+- [ ] Click movement must take LoS into account for range
 - [ ] Monster special attack
 - [ ] Secrets
 - [ ] Dungeon intro screen

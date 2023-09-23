@@ -70,7 +70,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
   const door = state.dungeon.layout.doors.find(
     (door) => door.x === hero.position.x && door.y === hero.position.y,
   );
-  if (door) {
+  if (door && !door.hidden) {
     const canBreakLock = hero.inventory.some((item) => {
       return item.properties?.[BREAK_LOCK];
     });
@@ -103,7 +103,6 @@ export const onTargetSelf = (state: GameState, target: Position) => {
       }
       addLog(state, "Door is locked");
       pickLock(state);
-      consumeActions(hero);
     }
   } else {
     if (!canAct(hero)) {
