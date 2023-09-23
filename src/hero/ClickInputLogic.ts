@@ -4,14 +4,14 @@ import {
   isSamePosition,
   isWalkable,
   takeDamage,
-} from "../game";
-import type { ItemLocation, GameState, Hero, Position } from "../types";
-import { ItemType, Side } from "../types";
+} from '../game';
+import type { ItemLocation, GameState, Hero, Position } from '../types';
+import { ItemType, Side } from '../types';
 import {
   checkForTrapDoor,
   removeFoundItemFromDeck,
   removeFoundMagicItemFromDeck,
-} from "../secrets/SecretsLogic";
+} from '../secrets/SecretsLogic';
 import {
   attack,
   canAct,
@@ -23,8 +23,8 @@ import {
   openDoor,
   pickLock,
   search,
-} from "../hero/HeroLogic";
-import { BREAK_LOCK, onPickup } from "../items/magicItems";
+} from '../hero/HeroLogic';
+import { BREAK_LOCK, onPickup } from '../items/magicItems';
 
 export const distanceInGrid = (a: Position, b: Position) => {
   const dx = Math.abs(b.x - a.x);
@@ -71,9 +71,9 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     (door) => door.x === hero.position.x && door.y === hero.position.y,
   );
   if (door && !door.hidden) {
-    const canBreakLock = hero.inventory.some((item) => {
-      return item.properties?.[BREAK_LOCK];
-    });
+    const canBreakLock = hero.inventory.some(
+      (item) => item.properties?.[BREAK_LOCK],
+    );
     if (canOpenDoor(hero, canBreakLock, door)) {
       if (door.locked && canBreakLock)
         addLog(state, `${hero.name} broke the locked door`);
@@ -101,7 +101,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
         addLog(state, `${hero.name} has no actions left`);
         return;
       }
-      addLog(state, "Door is locked");
+      addLog(state, 'Door is locked');
       pickLock(state);
     }
   } else {
@@ -121,7 +121,6 @@ const onTargetCell = (state: GameState, target: Position) => {
   }
   const walkable = isWalkable(state.dungeon.layout, target.x, target.y);
   const distance = distanceInGrid(hero.position, target);
-  console.log("distance: " + distance);
   if (walkable) {
     const blockedByHero = isBlockedByHero(state, target.x, target.y);
     const blockedByMonster = isBlockedByMonster(state, target.x, target.y);
@@ -136,7 +135,7 @@ const onTargetCell = (state: GameState, target: Position) => {
       if (distance <= hero.weapon.range) {
         attack(hero, state, target);
       } else {
-        addLog(state, `Monster is out of range`);
+        addLog(state, 'Monster is out of range');
       }
     }
   }
@@ -148,7 +147,7 @@ export const doMouseLogic = (
   cellSize: number,
   state: GameState,
 ) => {
-  const c = document.getElementById("gameBoard");
+  const c = document.getElementById('gameBoard');
   if (!c) return;
 
   const rect = c.getBoundingClientRect();

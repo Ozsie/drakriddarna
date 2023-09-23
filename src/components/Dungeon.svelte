@@ -15,7 +15,7 @@
 
   let footerSize;
   let screenSize;
-  const cellSize = state?.settings['cellSize'] ?? 48;
+  const cellSize: number = state?.settings['cellSize'] as number ?? 48;
 
   if (browser) {
     screenSize = window.innerHeight;
@@ -44,7 +44,7 @@
     renderItems(ctx, ground, cellSize, state)
     renderDoors(ctx, ground, cellSize, state, debugMode)
     renderMonsters(ctx, actors, cellSize, state, debugMode);
-    renderHeroes(ctx, actors, cellSize, state, debugMode);
+    renderHeroes(ctx, actors, cellSize, state);
   }
 
   const onClick = (event) => {
