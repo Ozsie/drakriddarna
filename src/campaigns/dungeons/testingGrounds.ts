@@ -97,6 +97,5 @@ export const testingGrounds: Dungeon = {
       },
     ],
   },
-  events: [8,2,3,4],
   killCount: 0
 }

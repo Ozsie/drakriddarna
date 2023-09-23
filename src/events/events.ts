@@ -98,5 +98,12 @@ export const events: TurnEvent[] = [
     description: 'You hear the sound of drums from deep below you. As the sound draws nearer, you realise the orchs are on the march.',
     effect: 'theOrchDrums',
     used: false,
+  },
+  {
+    name: 'The Symbol of Weakness',
+    number: 15,
+    description: 'You walk past a strange symbol on the wall. An evil, yellow glow emanates from it. All of you suddenly feel weaker.',
+    effect: 'theSymbolOfWeakness',
+    used: false,
   }
 ]

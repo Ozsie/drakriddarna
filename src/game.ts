@@ -16,7 +16,6 @@ import {
   Level
 } from "./types";
 import {
-  COLLAPSED,
   EMPTY,
   PILLAR,
   PIT,
@@ -32,9 +31,7 @@ import {
   rewardLiveHeroes
 } from "./hero/HeroLogic";
 import {
-  ACTIVE,
   ATTACK_BONUS,
-  onPickup,
   RE_ROLL_ATTACK
 } from "./items/magicItems";
 import {
@@ -44,7 +41,8 @@ import {
 import {
   drawNextEvent,
   getEventsForDungeon,
-  eventEffects
+  eventEffects,
+  resetEventEffects
 } from "./events/EventsLogic";
 
 export const save = (state: GameState) => {
@@ -124,49 +122,6 @@ export const roll = (level: Level, dice: number) => {
 
 export const getEffectiveMaxMovement = (actor: Actor) => {
   return actor.maxMovement - (actor.armour?.movementReduction ?? 0);
-}
-
-const restoreDisabledItems = (state: GameState) => {
-  addLog(state, `The magic storm calmed down`);
-  liveHeroes(state).forEach((hero) => {
-    hero.inventory.forEach((item) => {
-      if (!item.properties?.[ACTIVE] && item.pickup) {
-        onPickup[item.pickup](state, item, hero);
-      }
-      item.disabled = false;
-    });
-  });
-}
-
-const restoreCorridor = (state: GameState) => {
-  const collapsed = state.dungeon.collapsedCorridor;
-  if (collapsed) {
-    addLog(state, `The collapsed corridor cleared up.`);
-    state.dungeon.layout.grid = state.dungeon.layout.grid
-      .map((row) => row.replaceAll(COLLAPSED, collapsed));
-  }
-}
-
-const restoreBlinded = (state: GameState) => {
-  if (liveHeroes(state).some((hero) => hero.blinded)) {
-    addLog(state, `You light your torches again.`);
-    liveHeroes(state).forEach((hero) => hero.blinded = false);
-  }
-}
-
-const restoreElementalWeapon = (state: GameState) => {
-  addLog(state, `The elemental magic died off.`);
-  liveHeroes(state).forEach((hero) => hero.weapon.elemental = false);
-}
-
-function resetEventEffects(state: GameState) {
-  const unUsedEvents = state.eventDeck.filter((event) => !event.used);
-  if (unUsedEvents.length === 0) {
-    restoreElementalWeapon(state);
-    restoreCorridor(state);
-    restoreDisabledItems(state);
-  }
-  restoreBlinded(state);
 }
 
 export const next = (state: GameState) => {
@@ -359,8 +314,11 @@ export const takeDamage = (state: GameState, source: Actor & { rangedWeapon?: We
     })
     .reduce((partial, bonus) => partial + bonus, 0)
   let blindedSubtraction = source.blinded ? 1 : 0;
+  let weakenedSubtraction = source.weakened ? 1 : 0;
   let elementalAddition = source.weapon.elemental ? 1 : 0;
-  const hits = roll(source.level, weapon.dice + attackBonus - blindedSubtraction + elementalAddition);
+  const buff = attackBonus + elementalAddition;
+  const deBuff = blindedSubtraction + weakenedSubtraction;
+  const hits = roll(source.level, weapon.dice + buff - deBuff);
   let damage = Math.max(hits - (defense + shield), 0);
   if (damage === 0 && canReRoll) {
     addLog(state, `${source.name} missed but got another chance`);

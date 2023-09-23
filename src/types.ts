@@ -44,6 +44,7 @@ export type Actor = {
   inventory: Item[];
   ignoredByMonsters?: boolean;
   blinded?: boolean;
+  weakened?: boolean;
 }
 
 export type Hero = Actor & {

@@ -1,10 +1,39 @@
-import type { Actor, Dungeon, GameState, TurnEvent, Weapon } from "../types";
-import { Colour, ItemType, Level, MonsterType, SecretType } from "../types";
-import { isBlockedByHero, isBlockedByMonster, liveHeroes } from "../hero/HeroLogic";
-import { addLog, findCell, roll, takeDamage, toArray } from "../game";
-import { COLLAPSED, createMonster } from "../dungeon/DungeonLogic";
+import type {
+  Actor,
+  Dungeon,
+  GameState,
+  TurnEvent,
+  Weapon
+} from "../types";
+import {
+  Colour,
+  ItemType,
+  Level,
+  MonsterType,
+  SecretType
+} from "../types";
+import {
+  isBlockedByHero,
+  isBlockedByMonster,
+  liveHeroes
+} from "../hero/HeroLogic";
+import {
+  addLog,
+  findCell,
+  roll,
+  takeDamage,
+  toArray
+} from "../game";
+import {
+  COLLAPSED,
+  createMonster
+} from "../dungeon/DungeonLogic";
 import { events } from "../events/events";
-import { ACTIVE, onDrop } from "../items/magicItems";
+import {
+  ACTIVE,
+  onDrop,
+  onPickup
+} from "../items/magicItems";
 
 export const getEventsForDungeon = (dungeon: Dungeon): TurnEvent[] => {
   if (dungeon.events) {
@@ -194,6 +223,62 @@ export const eventEffects: {[index: string]: (state: GameState, event: TurnEvent
       .forEach((monster) => monster.actions = 3);
     event.used = true;
   },
+  theSymbolOfWeakness: (state: GameState, event: TurnEvent) => {
+    eventDescriptionLog(state, event);
+    liveHeroes(state).forEach((hero) => hero.weakened = true);
+    event.used = true;
+  }
+}
+
+const restoreDisabledItems = (state: GameState) => {
+  addLog(state, `The magic storm calmed down`);
+  liveHeroes(state).forEach((hero) => {
+    hero.inventory.forEach((item) => {
+      if (!item.properties?.[ACTIVE] && item.pickup) {
+        onPickup[item.pickup](state, item, hero);
+      }
+      item.disabled = false;
+    });
+  });
+}
+
+export const resetEventEffects = (state: GameState) => {
+  const unUsedEvents = state.eventDeck.filter((event) => !event.used);
+  if (unUsedEvents.length === 0) {
+    restoreElementalWeapon(state);
+    restoreCorridor(state);
+    restoreDisabledItems(state);
+  }
+  restoreWeakened(state);
+  restoreBlinded(state);
+}
+
+const restoreCorridor = (state: GameState) => {
+  const collapsed = state.dungeon.collapsedCorridor;
+  if (collapsed) {
+    addLog(state, `The collapsed corridor cleared up.`);
+    state.dungeon.layout.grid = state.dungeon.layout.grid
+      .map((row) => row.replaceAll(COLLAPSED, collapsed));
+  }
+}
+
+const restoreBlinded = (state: GameState) => {
+  if (liveHeroes(state).some((hero) => hero.blinded)) {
+    addLog(state, `You light your torches again.`);
+    liveHeroes(state).forEach((hero) => hero.blinded = false);
+  }
+}
+
+const restoreElementalWeapon = (state: GameState) => {
+  addLog(state, `The elemental magic died off.`);
+  liveHeroes(state).forEach((hero) => hero.weapon.elemental = false);
+}
+
+const restoreWeakened = (state: GameState) => {
+  if (liveHeroes(state).some((hero) => hero.weakened)) {
+    addLog(state, `Your strength returns to you.`);
+    liveHeroes(state).forEach((hero) => hero.weakened = false);
+  }
 }
 
 const getRandomRoom = (state: GameState) => {
