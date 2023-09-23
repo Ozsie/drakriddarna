@@ -14,9 +14,11 @@ import {
   createSecretWithItem,
 } from "../../dungeon/DungeonLogic";
 import { magicItems } from "../../items/magicItems";
+import { e1m2 } from "./e1m2";
 
 export const e1m1: Dungeon = {
   name: "The Three Gates of Power",
+  nextDungeon: e1m2,
   beaten: false,
   winConditions: [
     {
