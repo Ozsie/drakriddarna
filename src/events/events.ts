@@ -51,10 +51,24 @@ export const events: TurnEvent[] = [
     used: false,
   },
   {
-    name: 'Earthquake',
+    name: 'Landslide',
     number: 8,
     description: 'The ground starts shaking, and you hear a loud crash, as if the ceiling had fallen down.',
-    effect: 'earthQuake',
+    effect: 'landslide',
+    used: false,
+  },
+  {
+    name: 'The Magic Node',
+    number: 9,
+    description: 'You feel a strange, powerful magic course through you. You feel invigorated by it as you press on.',
+    effect: 'fountainOfYouth',
+    used: false,
+  },
+  {
+    name: 'Foresight',
+    number: 10,
+    description: 'You see before you a powerful object, hidden behind thick walls.',
+    effect: 'foresight',
     used: false,
   }
 ]

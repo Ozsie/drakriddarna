@@ -5,7 +5,8 @@ import type {
 } from "../types";
 import {
   Colour,
-  MonsterType
+  MonsterType,
+  SecretType
 } from "../types";
 import {
   isBlockedByHero,
@@ -97,7 +98,7 @@ export const eventEffects: {[index: string]: (state: GameState, event: TurnEvent
     liveHeroes(state).forEach((hero) => hero.blinded = true);
     event.used = true;
   },
-  earthQuake: (state: GameState, event: TurnEvent) => {
+  landslide: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     const discoveredCorridors = state.dungeon.layout.corridors
       .filter((corridor) => !isRoomBlocked(state, corridor))
@@ -107,6 +108,28 @@ export const eventEffects: {[index: string]: (state: GameState, event: TurnEvent
     state.dungeon.collapsedCorridor = randomCorridor;
     state.dungeon.layout.grid = state.dungeon.layout.grid
       .map((row) => row.replaceAll(randomCorridor, COLLAPSED));
+    event.used = true;
+  },
+  foreSight: (state: GameState, event: TurnEvent) => {
+    eventDescriptionLog(state, event);
+    const notDiscoveredSecret = state.dungeon.layout.secrets
+      .filter((secret) => secret.type === SecretType.EQUIPMENT || secret.type === SecretType.MAGIC_ITEM)
+      .filter((secret) => !secret.found)
+      .filter((secret) => secret.item)
+      .filter((secret) => {
+        const secretRoom: string = findCell(state.dungeon.layout.grid, secret.position.x, secret.position.y) ?? '';
+        return !state.dungeon.discoveredRooms.includes(secretRoom);
+      });
+    if (notDiscoveredSecret.length > 0) {
+      const secret = state.dungeon.layout.secrets.pop();
+      if (secret && secret.item) {
+        addLog(state, `You sense the object is close to (${secret.position.x+2},${secret.position.y-1})`)
+        state.dungeon.layout.items.push({
+          item: secret.item,
+          position: secret.position
+        });
+      }
+    }
     event.used = true;
   }
 }
