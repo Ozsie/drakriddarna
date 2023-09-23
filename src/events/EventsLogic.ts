@@ -1,14 +1,14 @@
-import type { Actor, Dungeon, GameState, TurnEvent, Weapon } from "../types";
-import { Colour, ItemType, Level, MonsterType, SecretType } from "../types";
+import type { Actor, Dungeon, GameState, TurnEvent, Weapon } from '../types';
+import { Colour, ItemType, Level, MonsterType, SecretType } from '../types';
 import {
   isBlockedByHero,
   isBlockedByMonster,
   liveHeroes,
-} from "../hero/HeroLogic";
-import { addLog, findCell, roll, takeDamage, toArray } from "../game";
-import { COLLAPSED, createMonster } from "../dungeon/DungeonLogic";
-import { events } from "../events/events";
-import { ACTIVE, onDrop, onPickup } from "../items/magicItems";
+} from '../hero/HeroLogic';
+import { addLog, findCell, roll, takeDamage, toArray } from '../game';
+import { COLLAPSED, createMonster } from '../dungeon/DungeonLogic';
+import { events } from '../events/events';
+import { ACTIVE, onDrop, onPickup } from '../items/magicItems';
 
 export const getEventsForDungeon = (dungeon: Dungeon): TurnEvent[] => {
   if (dungeon.events) {
@@ -126,7 +126,7 @@ export const eventEffects: {
             state.dungeon.layout.grid,
             secret.position.x,
             secret.position.y,
-          ) ?? "";
+          ) ?? '';
         return !state.dungeon.discoveredRooms.includes(secretRoom);
       });
     if (notDiscoveredSecret.length > 0) {
@@ -150,7 +150,7 @@ export const eventEffects: {
     eventDescriptionLog(state, event);
     const room = getRandomRoom(state);
     const earthquakeWeapon: Weapon = {
-      name: "boulder",
+      name: 'boulder',
       type: ItemType.WEAPON,
       value: 0,
       dice: 3,
@@ -162,7 +162,7 @@ export const eventEffects: {
       ignoresArmour: false,
     };
     const earthQuakeActor: Actor = {
-      name: "Earthquake",
+      name: 'Earthquake',
       actions: 0,
       health: 0,
       maxMovement: 0,
@@ -253,7 +253,7 @@ export const eventEffects: {
 
 const restoreDisabledItems = (state: GameState) => {
   if (liveHeroes(state).some((hero) => hero.weapon.elemental)) {
-    addLog(state, `The magic storm calmed down`);
+    addLog(state, 'The magic storm calmed down');
     liveHeroes(state).forEach((hero) => {
       hero.inventory.forEach((item) => {
         if (!item.properties?.[ACTIVE] && item.pickup) {
@@ -279,7 +279,7 @@ export const resetEventEffects = (state: GameState) => {
 const restoreCorridor = (state: GameState) => {
   const collapsed = state.dungeon.collapsedCorridor;
   if (collapsed) {
-    addLog(state, `The collapsed corridor cleared up.`);
+    addLog(state, 'The collapsed corridor cleared up.');
     state.dungeon.layout.grid = state.dungeon.layout.grid.map((row) =>
       row.replaceAll(COLLAPSED, collapsed),
     );
@@ -289,21 +289,21 @@ const restoreCorridor = (state: GameState) => {
 
 const restoreBlinded = (state: GameState) => {
   if (liveHeroes(state).some((hero) => hero.blinded)) {
-    addLog(state, `You light your torches again.`);
+    addLog(state, 'You light your torches again.');
     liveHeroes(state).forEach((hero) => (hero.blinded = false));
   }
 };
 
 const restoreElementalWeapon = (state: GameState) => {
   if (liveHeroes(state).some((hero) => hero.weapon.elemental)) {
-    addLog(state, `The elemental magic died off.`);
+    addLog(state, 'The elemental magic died off.');
     liveHeroes(state).forEach((hero) => (hero.weapon.elemental = false));
   }
 };
 
 const restoreWeakened = (state: GameState) => {
   if (liveHeroes(state).some((hero) => hero.weakened)) {
-    addLog(state, `Your strength returns to you.`);
+    addLog(state, 'Your strength returns to you.');
     liveHeroes(state).forEach((hero) => (hero.weakened = false));
   }
 };
@@ -327,9 +327,9 @@ const spawnRandomMonster = (state: GameState, monsterType: MonsterType) => {
     if (colourIndex !== -1) colours.splice(colourIndex, 1);
   });
   let hasSpawned = false;
-  for (let y: number = 0; y < state.dungeon.layout.grid.length; y++) {
+  for (let y = 0; y < state.dungeon.layout.grid.length; y++) {
     const row = toArray(state.dungeon.layout.grid[y]);
-    for (let x: number = 0; x < row.length; x++) {
+    for (let x = 0; x < row.length; x++) {
       const cell = row[x];
       if (cell === randomRoom) {
         if (!isBlockedByHero(state, x, y) && !isBlockedByMonster(state, x, y)) {
