@@ -98,7 +98,7 @@
     .hero-stats-and-equipmnet{
 
     }
-    .hero-action-bittons{
+    .hero-action-buttons{
       
     }
 </style>
@@ -109,7 +109,7 @@
     <b> {hero.level} ({hero.experience})</b>
   </div>
   {#if state.currentActor == hero}
-  <div class="hero-action-bittons">
+  <div class="hero-action-buttons">
 
     <button on:click={() => selectTarget(hero)} title="select target hero">
       {#if state.targetActor !== hero}
@@ -120,20 +120,22 @@
     </button>
     <button on:click={() => toggleInventory(hero)} title="Open inventory">🎒</button>
   </div>
-
+  {/if}
   
   <div class="hero-information">
-  
+    {#if state.currentActor == hero}
     <div class="hero-inventory" id="{hero.name}s-inventory" style="display: {inventoryDisplayType};">
       
       <Inventory bind:inventory={hero.inventory} state={state}/>
       
     </div>
-    
+    {/if}
   </div>
 
   <div class="hero-stats-and-equipmnet">
     <span>HP: {hero.health}</span>
+
+    {#if state.currentActor == hero}
     <span>Actions: {hero.actions}</span>
     <span>Moves: {hero.movement}</span>
     <span>Equipment: </span>
@@ -156,8 +158,9 @@
         {/if}
       </span>
     </div>
+    {/if}
   </div>
-  {/if}
+  
 </div>
 
 {/key}
