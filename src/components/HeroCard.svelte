@@ -75,26 +75,42 @@
     .hero-information{
       position: relative
     }
-    .hero-inventory
-    {
-      position: absolute;
-      opacity: 90%;
-      background-color: bisque;
-      padding: 2px;
-      border-radius: 3px;
-      border: 1px solid black;
-      width: calc(100% - 6px);
-      min-height: 50px;
-      margin-top: 4px;
-      word-wrap: break-word;      
+    @media screen and (max-width: 600px) {
+      .hero-inventory
+      {
+        position: fixed;
+        opacity: 90%;
+        background-color: burlywood;
+        top: 205px;
+        left: 15px;
+        padding: 2px;
+        border-radius: 4px;
+        border: 2px solid #5C4033;
+        width: calc(92% - 6px);
+        min-height: 50px;
+        word-wrap: break-word;      
 
+      }
     }
-    .hero-inventory > *{
-      position:relative;
-      float: left;
-      margin: 1px;
-      word-wrap: break-word;
+    @media screen and (min-width: 601px) {
+      .hero-inventory
+      {
+        position: fixed;
+        opacity: 90%;
+        background-color: burlywood;
+        top: 15px;
+        left: 20%;
+        padding: 2px;
+        border-radius: 4px;
+        border: 2px solid #5C4033;
+        width: calc(60%);
+        min-height: 50px;
+        margin-top: 4px;
+        word-wrap: break-word;      
+
+      }
     }
+
     .hero-stats-and-equipmnet{
 
     }
@@ -103,12 +119,12 @@
     }
 </style>
 {#key state.targetActor}
-<div class="hero-card" style="background-color: {hero.colour};">
+<div class="hero-card" style="background-color: {hero.colour};" >
   <div class="hero-title">
     <b>{#if state.targetActor === hero}*{/if}{hero.name} - </b>
     <b> {hero.level} ({hero.experience})</b>
   </div>
-  {#if state.currentActor == hero}
+  <!-- {#if state.currentActor == hero} -->
   <div class="hero-action-buttons">
 
     <button on:click={() => selectTarget(hero)} title="select target hero">
@@ -120,7 +136,7 @@
     </button>
     <button on:click={() => toggleInventory(hero)} title="Open inventory">🎒</button>
   </div>
-  {/if}
+  <!-- {/if} -->
   
   <div class="hero-information">
     {#if state.currentActor == hero}
