@@ -16,6 +16,7 @@
 - [ ] e1m6 - The Final Battle
 - [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] Event #16 - The Hexagram
+- [ ] Fix linting issues
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
@@ -24,8 +25,8 @@
 - [ ] Doors blocking monsters?
 - [ ] Drop Items
 - [ ] Trade Items
-- [ ] Linting
 - [ ] Monster cards?
+- [X] Linting rules
 - [X] Events
 - [X] e1m1 - The Three Gates of Power
 - [X] Magic Items
