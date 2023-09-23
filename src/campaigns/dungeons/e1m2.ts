@@ -1,10 +1,9 @@
-import type { Colour, Dungeon, MonsterType, SecretType } from "../../types";
-import { ConditionType, Side } from "../../types";
+import type { Dungeon } from "../../types";
+import { ConditionType, SecretType, Side } from "../../types";
 import {
   createDoor,
   createHiddenDoor,
   createLockedDoor,
-  createMonster,
   createSecret,
   createSecretWithItem,
 } from "../../dungeon/DungeonLogic";
@@ -68,7 +67,13 @@ export const e1m2: Dungeon = {
       createHiddenDoor(Side.DOWN, 17, 14),
     ],
     monsters: [],
-    secrets: [],
+    secrets: [
+      createSecret(SecretType.EQUIPMENT, "Equipment", 1, 3),
+      createSecret(SecretType.EQUIPMENT, "Equipment", 3, 3),
+      createSecret(SecretType.EQUIPMENT, "Equipment", 15, 2),
+      createSecretWithItem(SecretType.MAGIC_ITEM, 2, 3, magicItems[1]),
+      createSecretWithItem(SecretType.MAGIC_ITEM, 16, 11, magicItems[6]),
+    ],
     notes: [
       {
         message: "Guard room",
