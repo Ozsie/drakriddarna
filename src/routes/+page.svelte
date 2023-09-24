@@ -74,7 +74,7 @@
         break;
       case "0":
       case " ":
-        next(state);
+        state = next(state);
         break;
       case "-":
       case "r":
@@ -159,7 +159,7 @@
           <td><button on:click={() => act('UL', state)}>UL</button></td>
           <td><button on:click={() => act('U', state)}>U</button></td>
           <td><button on:click={() => act('UR', state)}>UR</button></td>
-          <td><button on:click={() => next(state)}>Next</button></td>
+          <td><button on:click={() => state = next(state)}>Next</button></td>
         </tr>
         <tr>
           <td><button on:click={() => act('L', state)}>L</button></td>

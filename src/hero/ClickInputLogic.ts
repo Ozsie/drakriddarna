@@ -119,6 +119,7 @@ const onTargetCell = (state: GameState, target: Position) => {
   state.reRender = true;
   const hero = state.currentActor as Hero;
   if (hero.actions === 0) {
+    hero.movement = 0;
     addLog(state, `${hero.name} has no actions left`);
     return;
   }
