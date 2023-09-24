@@ -1,5 +1,16 @@
-import type { Actor, GameState, Hero, Monster, Door, Position } from "../types";
-import { Colour, Level, Side } from "../types";
+import type {
+  Shield,
+  Armour,
+  Actor,
+  GameState,
+  Hero,
+  Monster,
+  Door,
+  Position,
+  Item,
+  Weapon,
+} from "../types";
+import { Colour, ItemType, Level, Side } from "../types";
 import { weapons } from "../items/weapons";
 import {
   addLog,
@@ -16,7 +27,7 @@ import {
   takeDamage,
 } from "../game";
 import { checkForTrapDoor, searchForSecret } from "../secrets/SecretsLogic";
-import { BREAK_LOCK } from "../items/magicItems";
+import { BREAK_LOCK, onDrop, onPickup } from "../items/ItemLogic";
 
 export const newHero = (name: string, colour: Colour): Hero => {
   weapons[0].amountInDeck--;
@@ -352,6 +363,40 @@ export const checkForNextToMonster = (
     addLog(state, `${hero.name} walked by a monster and lost the momentum`);
   }
   return nextToMonster;
+};
+
+export const dropItem = (state: GameState, item: Item, actor: Actor) => {
+  state.dungeon.layout.items.push({
+    item,
+    position: actor.position,
+  });
+  if (item.drop) {
+    onDrop[item.drop](state, item, actor);
+  }
+};
+
+export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
+  switch (item.type) {
+    case ItemType.ARMOUR:
+      if (hero.armour) dropItem(state, hero.armour, hero);
+      hero.armour = item as Armour;
+      break;
+    case ItemType.SHIELD:
+      if (hero.shield) dropItem(state, hero.shield, hero);
+      hero.shield = item as Shield;
+      break;
+    case ItemType.WEAPON:
+      if (hero.weapon) dropItem(state, hero.weapon, hero);
+      hero.weapon = item as Weapon;
+      break;
+    default:
+      hero.inventory.push(item);
+      break;
+  }
+  if (item.pickup) {
+    const pickup = onPickup[item.pickup];
+    pickup(state, item, hero);
+  }
 };
 
 const move = (

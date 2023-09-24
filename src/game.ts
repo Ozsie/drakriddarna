@@ -20,8 +20,12 @@ import {
   resetLiveHeroes,
   rewardLiveHeroes,
 } from "./hero/HeroLogic";
-import { ATTACK_BONUS, RE_ROLL_ATTACK } from "./items/magicItems";
-import { resetOnNext, resetOnNextDungeon } from "./items/ItemLogic";
+import {
+  ATTACK_BONUS,
+  RE_ROLL_ATTACK,
+  resetOnNext,
+  resetOnNextDungeon,
+} from "./items/ItemLogic";
 import {
   drawNextEvent,
   getEventsForDungeon,

@@ -14,8 +14,8 @@ import {
   toArray,
 } from "../game";
 import { COLLAPSED, createMonster } from "../dungeon/DungeonLogic";
-import { events } from "../events/events";
-import { ACTIVE, onDrop, onPickup } from "../items/magicItems";
+import { events } from "./events";
+import { ACTIVE, onDrop, onPickup } from "../items/ItemLogic";
 
 export const getEventsForDungeon = (dungeon: Dungeon): TurnEvent[] => {
   if (dungeon.events) {
