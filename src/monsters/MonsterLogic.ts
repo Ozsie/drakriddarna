@@ -7,6 +7,7 @@ import {
   getEffectiveMaxMovement,
   hasLineOfSight,
   isDiscovered,
+  isRoomDiscovered,
   isWalkable,
   takeDamage,
 } from "../game";
@@ -115,7 +116,7 @@ const findVisibleHeroes = (state: GameState, monster: Monster): Hero[] => {
   return liveHeroes(state)
     .filter((hero: Hero) => !hero.ignoredByMonsters)
     .filter((hero) =>
-      hasLineOfSight(monster.position, hero.position, 48, state),
+      hasLineOfSight(monster.position, hero.position, 48, state, false),
     );
 };
 
@@ -126,9 +127,7 @@ const findVisibleMonsters = (state: GameState) => {
       monster.position.x,
       monster.position.y,
     );
-    return (
-      cell && state.dungeon.discoveredRooms.includes(cell) && monster.health > 0
-    );
+    return cell && isRoomDiscovered(state.dungeon, cell) && monster.health > 0;
   });
 };
 

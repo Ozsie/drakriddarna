@@ -2,6 +2,7 @@ import {
   addLog,
   doorAsActor,
   hasLineOfSight,
+  isRoomDiscovered,
   isSamePosition,
   isWalkable,
   takeDamage,
@@ -127,7 +128,7 @@ const onTargetCell = (state: GameState, target: Position) => {
     const blockedByHero = isBlockedByHero(state, target.x, target.y);
     const blockedByMonster = isBlockedByMonster(state, target.x, target.y);
     const distance = distanceInGrid(hero.position, target);
-    const los = hasLineOfSight(hero.position, target, 2, state);
+    const los = hasLineOfSight(hero.position, target, 2, state, true);
     if (
       !blockedByHero &&
       !blockedByMonster &&
@@ -174,7 +175,7 @@ export const doMouseLogic = (
   const hero = state.currentActor as Hero;
   if (x === hero.position.x && y === hero.position.y) {
     onTargetSelf(state, { x, y });
-  } else if (state.dungeon.discoveredRooms.includes(cell)) {
+  } else if (isRoomDiscovered(state.dungeon, cell)) {
     onTargetCell(state, { x, y });
   }
 };

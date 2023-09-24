@@ -424,6 +424,7 @@ export const hasLineOfSight = (
   targetPosition: Position,
   resolution: number,
   state: GameState,
+  walking: boolean,
 ): boolean => {
   const startPixelPos = {
     x: startPosition.x * resolution - Math.floor(resolution / 2),
@@ -440,6 +441,7 @@ export const hasLineOfSight = (
     targetPosition,
     resolution,
     state,
+    walking,
     [],
   );
 };

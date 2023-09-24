@@ -11,7 +11,7 @@ export const renderHeroes = (
 ) => {
   const heroes = liveHeroes(state);
   heroes.forEach((hero) => {
-    renderHero(ctx, hero, actors, cellSize);
+    renderHero(ctx, hero, actors, cellSize, debugMode);
   });
   renderWalkableArea(ctx, state, cellSize);
   renderCurrentActor(ctx, state, cellSize);
@@ -22,6 +22,7 @@ const renderHero = (
   hero: Hero,
   actors: CanvasImageSource,
   cellSize: number,
+  debugMode: boolean,
 ) => {
   const x = hero.position.x;
   const y = hero.position.y;
@@ -39,6 +40,12 @@ const renderHero = (
   renderActionOnActor(ctx, hero, x, y, cellSize);
   renderActorBar(ctx, hero, x, y, cellSize);
   renderHealthBar(ctx, hero, x, y, cellSize);
+  if (debugMode) {
+    const debugText = `(${x},${y})`;
+    ctx.fillStyle = "black";
+    ctx.font = "8px Arial";
+    ctx.fillText(debugText, x * cellSize + 3, y * cellSize + 10);
+  }
 };
 
 const renderActionOnActor = (
@@ -151,7 +158,13 @@ const renderWalkableArea = (
           const blockedByMonster = isBlockedByMonster(state, pX, pY);
           const blockedByHeroes = isBlockedByHero(state, pX, pY);
           const walkable = isWalkable(state.dungeon.layout, pX, pY);
-          const los = hasLineOfSight(hero.position, { x: pX, y: pY }, 2, state);
+          const los = hasLineOfSight(
+            hero.position,
+            { x: pX, y: pY },
+            2,
+            state,
+            true,
+          );
           if (!blockedByHeroes && !blockedByMonster && walkable && los) {
             ctx.fillStyle = "rgba(50, 50, 255, 0.08)";
             ctx.fillRect(pX * cellSize, pY * cellSize, cellSize, cellSize);

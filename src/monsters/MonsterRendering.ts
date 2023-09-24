@@ -1,6 +1,6 @@
 import type { Hero, GameState, Monster, Position } from "../types";
 import { MonsterType } from "../types";
-import { stepAlongLine } from "../game";
+import { isRoomDiscovered, stepAlongLine } from "../game";
 
 export const renderMonsters = (
   ctx: CanvasRenderingContext2D,
@@ -24,7 +24,7 @@ const renderMonster = (
 ) => {
   const cell =
     state.dungeon.layout.grid[monster.position.y][monster.position.x];
-  if (monster && monster.health > 0 && isInDiscoveredRoom(cell, state)) {
+  if (monster && monster.health > 0 && isRoomDiscovered(state.dungeon, cell)) {
     switch (monster.type) {
       case MonsterType.ORCH:
         renderOrch(ctx, actors, cellSize, monster);
@@ -174,6 +174,7 @@ const renderLineOfSight = (
         from.position,
         targetPixelPos,
         target.position,
+        48,
         state,
         false,
         seenCells,
@@ -195,6 +196,3 @@ const renderLineOfSight = (
     });
   }
 };
-
-const isInDiscoveredRoom = (cell: string, state: GameState) =>
-  state.dungeon.discoveredRooms.includes(cell);
