@@ -6,7 +6,6 @@
 
 ## Todo
 - [ ] Monster special attack
-- [ ] Secrets
 - [ ] Dungeon intro screen
 - [ ] e1m3 - Labyrinth of Horror
 - [ ] e1m4 - The Dark Citadel
@@ -20,10 +19,11 @@
 - [ ] Support for additional campaigns
 - [ ] Menu system
 - [ ] Doors blocking monsters?
-- [ ] Drop Items
 - [ ] Trade Items
 - [ ] Linting
 - [ ] Monster cards?
+- [X] Secrets
+- [X] Drop Items
 - [X] Monster blocking move on click move
 - [X] Render pillars & pits
 - [X] Render on demand
