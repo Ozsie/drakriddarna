@@ -5,7 +5,6 @@
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
 ## Todo
-- [ ] Monster blocking move on click move
 - [ ] Monster special attack
 - [ ] Secrets
 - [ ] Dungeon intro screen
@@ -25,6 +24,7 @@
 - [ ] Trade Items
 - [ ] Linting
 - [ ] Monster cards?
+- [X] Monster blocking move on click move
 - [X] Render pillars & pits
 - [X] Render on demand
 - [X] Click movement must take LoS into account for range

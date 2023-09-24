@@ -28,7 +28,6 @@ import {
   eventEffects,
   resetEventEffects,
 } from "./events/EventsLogic";
-import { testingGrounds } from "./campaigns/dungeons/testingGrounds";
 
 export const save = (state: GameState) => {
   state.reRender = true;
@@ -479,12 +478,20 @@ export const stepAlongLine = (
   const pillar = state.dungeon.layout.pillars?.some((pit) =>
     isSamePosition(pit, nextCellPosition),
   );
+  const monster = state.dungeon.layout.monsters.some((monster) =>
+    isSamePosition(monster.position, nextCellPosition),
+  );
+  const hero = liveHeroes(state)
+    .filter((hero) => !isSamePosition(hero.position, source))
+    .some((hero) => isSamePosition(hero.position, nextCellPosition));
   if (nextCellPosition.x === target.x && nextCellPosition.y === target.y) {
     seenCells.push(nextCellPosition);
     return true;
   } else if (
-    nextCell === WALL ||
     pillar ||
+    monster ||
+    (!walking && hero) ||
+    nextCell === WALL ||
     nextCell === COLLAPSED ||
     (walking && (pit || nextCell === EMPTY))
   ) {

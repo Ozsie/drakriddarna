@@ -73,6 +73,7 @@ export const testingGrounds: Dungeon = {
     ],
     monsters: [
       createMonster(MonsterType.ORCH, Colour.Green, 1, 1),
+      createMonster(MonsterType.ORCH, Colour.Red, 4, 9),
       createMonster(MonsterType.TROLL, Colour.Green, 5, 1),
     ],
     secrets: [

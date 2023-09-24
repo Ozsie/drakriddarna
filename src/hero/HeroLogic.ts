@@ -337,6 +337,23 @@ export const checkForNote = (state: GameState, hero: Hero) => {
   }
 };
 
+export const checkForNextToMonster = (
+  state: GameState,
+  hero: Hero,
+): boolean => {
+  const nextToMonster = state.dungeon.layout.monsters.some((monster) => {
+    return isNeighbouring(
+      hero.position,
+      monster.position.x,
+      monster.position.y,
+    );
+  });
+  if (nextToMonster) {
+    addLog(state, `${hero.name} walked by a monster and lost the momentum`);
+  }
+  return nextToMonster;
+};
+
 const move = (
   hero: Hero,
   state: GameState,
@@ -347,15 +364,8 @@ const move = (
   hero.position.x = newX;
   hero.position.y = newY;
   checkForNote(state, hero);
-  const nextToMonster = state.dungeon.layout.monsters.some((monster) => {
-    return isNeighbouring(
-      hero.position,
-      monster.position.x,
-      monster.position.y,
-    );
-  });
+  const nextToMonster = checkForNextToMonster(state, hero);
   if (nextToMonster) {
-    addLog(state, `${hero.name} walked by a monster and lost the momentum`);
     hero.movement = 0;
   } else {
     hero.movement -= cost;
