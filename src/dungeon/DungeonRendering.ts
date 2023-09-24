@@ -1,7 +1,7 @@
 import { SecretType, Side } from "../types";
 import type { Secret, GameState, Door } from "../types";
 import { COLLAPSED, EMPTY, WALL } from "../dungeon/DungeonLogic";
-import { findCell, toArray } from "../game";
+import { isDiscovered, isRoomDiscovered, toArray } from "../game";
 
 export const renderDoors = (
   ctx: CanvasRenderingContext2D,
@@ -37,6 +37,7 @@ export const renderSecrets = (
   ground: CanvasImageSource,
   cellSize: number,
   state: GameState,
+  debugMode: boolean,
 ) => {
   state.dungeon.layout.secrets
     .filter((secret) => secret.found)
@@ -50,6 +51,27 @@ export const renderSecrets = (
           break;
       }
     });
+  if (debugMode) {
+    state.dungeon.layout.secrets
+      .filter((secret) => !secret.found)
+      .forEach((secret) => {
+        const secretText = `${secret.type}`;
+        ctx.fillStyle = "rgba(255, 50, 50, 0.28)";
+        ctx.fillRect(
+          secret.position.x * cellSize,
+          secret.position.y * cellSize,
+          cellSize,
+          cellSize,
+        );
+        ctx.fillStyle = "black";
+        ctx.font = "12px Arial";
+        ctx.fillText(
+          secretText,
+          secret.position.x * cellSize,
+          secret.position.y * cellSize + 10,
+        );
+      });
+  }
 };
 
 const drawTile = (
@@ -90,12 +112,7 @@ const renderPits = (
   debugMode: boolean,
 ) => {
   state.dungeon.layout.pits
-    ?.filter(
-      (pit) =>
-        state.dungeon.discoveredRooms.includes(
-          findCell(state.dungeon.layout.grid, pit.x, pit.y),
-        ) || debugMode,
-    )
+    ?.filter((pit) => isDiscovered(state.dungeon, pit.x, pit.y) || debugMode)
     ?.forEach((pit) => {
       drawTile(ctx, ground, 7, 0, cellSize, pit.x, pit.y, state);
     });
@@ -110,10 +127,7 @@ const renderPillars = (
 ) => {
   state.dungeon.layout.pillars
     ?.filter(
-      (pillar) =>
-        state.dungeon.discoveredRooms.includes(
-          findCell(state.dungeon.layout.grid, pillar.x, pillar.y),
-        ) || debugMode,
+      (pillar) => isDiscovered(state.dungeon, pillar.x, pillar.y) || debugMode,
     )
     ?.forEach((pillar) => {
       drawTile(ctx, ground, 6, 0, cellSize, pillar.x, pillar.y, state);
@@ -145,8 +159,7 @@ const renderFloor = (
 
 const notGround = (cell: string, state: GameState) => {
   return (
-    isWall(cell) ||
-    (!state.dungeon.discoveredRooms.includes(cell) && cell !== EMPTY)
+    isWall(cell) || (!isRoomDiscovered(state.dungeon, cell) && cell !== EMPTY)
   );
 };
 
@@ -319,7 +332,7 @@ const renderDoor = (
 const isWall = (cell: string) => cell === WALL;
 
 const isEmpty = (cell: string, state: GameState) =>
-  cell === EMPTY || !state.dungeon.discoveredRooms.includes(cell);
+  cell === EMPTY || !isRoomDiscovered(state.dungeon, cell);
 
 const neighbourOf = (x: number, y: number, value: string, state: GameState) => {
   if (!state) return;

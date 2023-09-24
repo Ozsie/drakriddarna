@@ -39,6 +39,7 @@ export const newHero = (name: string, colour: Colour): Hero => {
 };
 
 export const act = (direction: string, state: GameState) => {
+  state.reRender = true;
   const hero: Actor | undefined = state.currentActor;
   if (!hero || hero.actions === 0) {
     return;
@@ -112,6 +113,7 @@ export const act = (direction: string, state: GameState) => {
 };
 
 export const pickLock = (state: GameState) => {
+  state.reRender = true;
   const hero = state.currentActor;
   if (!hero) return;
   if (hero.blinded) {
@@ -146,6 +148,7 @@ export const pickLock = (state: GameState) => {
 };
 
 export const resetLiveHeroes = (state: GameState) => {
+  state.reRender = true;
   state.heroes.forEach((hero, index) => {
     hero.position = state.dungeon.startingPositions[index];
     hero.movement = getEffectiveMaxMovement(hero);
@@ -159,6 +162,7 @@ export const liveHeroes = (state: GameState): Hero[] => {
 };
 
 export const endAction = (state: GameState) => {
+  state.reRender = true;
   const hero = state.currentActor;
   if (!hero) return;
   hero.actions--;
@@ -181,6 +185,7 @@ export const openDoor = (
   newX: number,
   newY: number,
 ) => {
+  state.reRender = true;
   const target = findCell(state.dungeon.layout.grid, newX, newY);
   if (target) state.dungeon.discoveredRooms.push(target);
   move(hero, state, hero.position.x, hero.position.y, 1);
@@ -188,6 +193,7 @@ export const openDoor = (
 };
 
 export const attack = (hero: Actor, state: GameState, target: Position) => {
+  state.reRender = true;
   if (hero.actions === 1 && hero.movement < hero.maxMovement) {
     addLog(state, `${hero.name} has no actions left to attack`);
     return;
@@ -215,6 +221,7 @@ export const attack = (hero: Actor, state: GameState, target: Position) => {
 };
 
 export const search = (state: GameState) => {
+  state.reRender = true;
   const hero: Actor | undefined = state.currentActor;
   if (!hero) return;
   if (hero.blinded) {
@@ -273,6 +280,7 @@ export const consumeActions = (hero: Actor) => {
 };
 
 export const levelUp = (state: GameState) => {
+  state.reRender = true;
   liveHeroes(state).forEach((hero) => {
     const currentLevel = hero.level;
     if (hero.experience >= 28) {

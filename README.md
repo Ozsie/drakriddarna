@@ -6,7 +6,6 @@
 
 ## Todo
 - [ ] Monster blocking move on click move
-- [ ] Click movement must take LoS into account for range
 - [ ] Monster special attack
 - [ ] Secrets
 - [ ] Dungeon intro screen
@@ -27,6 +26,8 @@
 - [ ] Linting
 - [ ] Monster cards?
 - [X] Render pillars & pits
+- [X] Render on demand
+- [X] Click movement must take LoS into account for range
 - [X] e1m2 - Mines of Evil
 - [X] Events
 - [X] e1m1 - The Three Gates of Power

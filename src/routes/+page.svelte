@@ -28,12 +28,12 @@
 
   if (browser) {
     screenSize = window.innerWidth;
-    console.log(screenSize)
   }
 
   const setDebugMode = () => {
     debugMode = !debugMode;
     state.settings['debug'] = debugMode;
+    state.reRender = true;
   }
 
   function onKeyDown(e)

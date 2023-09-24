@@ -28,8 +28,10 @@ import {
   eventEffects,
   resetEventEffects,
 } from "./events/EventsLogic";
+import { testingGrounds } from "./campaigns/dungeons/testingGrounds";
 
 export const save = (state: GameState) => {
+  state.reRender = true;
   addLog(state, "Game saved.");
   localStorage.setItem("state", JSON.stringify(state));
 };
@@ -42,6 +44,7 @@ export const load = (): GameState | undefined => {
       (hero) => hero.name === state.currentActor?.name,
     );
     addLog(state, "Game loaded.");
+    state.reRender = true;
     return state;
   }
 };
@@ -66,6 +69,7 @@ export const init = (): GameState => {
       debug: false,
     },
     eventDeck: getEventsForDungeon(campaignIceDragonTreasure.dungeons[0]),
+    reRender: true,
   };
   resetLiveHeroes(state);
   return state;
@@ -120,11 +124,12 @@ export const getEffectiveMaxMovement = (actor: Actor) => {
 };
 
 export const next = (state: GameState) => {
+  state.reRender = true;
   checkWinConditions(state);
   if (state.currentActor === undefined) return;
   else {
     addLog(state, `${state.currentActor.name} ended their turn`);
-    let currentIndex = liveHeroes(state).indexOf(state.currentActor!!);
+    let currentIndex = liveHeroes(state).indexOf(state.currentActor);
     let nextIndex = currentIndex + 1;
     if (nextIndex === liveHeroes(state).length) {
       monsterActions(state);
@@ -255,8 +260,11 @@ export const isWalkable = (layout: Layout, x: number, y: number): boolean => {
 export const isDiscovered = (dungeon: Dungeon, x: number, y: number) => {
   const cell = findCell(dungeon.layout.grid, x, y);
   if (!cell) return false;
-  else return dungeon.discoveredRooms.includes(cell);
+  else return isRoomDiscovered(dungeon, cell);
 };
+
+export const isRoomDiscovered = (dungeon: Dungeon, cell: string) =>
+  dungeon.discoveredRooms.includes(cell);
 
 export const findCell = (grid: string[], x: number, y: number): string => {
   let c = "";
@@ -298,6 +306,7 @@ export const isSamePosition = (a: Position, b: Position) => {
 
 export const addLog = (state: GameState, logMessage: string) => {
   state.actionLog = [logMessage, ...state.actionLog];
+  state.reRender = true;
 };
 
 export const takeDamage = (
@@ -393,6 +402,7 @@ export const hasWon = (state: GameState) => {
     state.dungeon = state.dungeon.nextDungeon;
     state.actionLog = ["You have reached " + state.dungeon.name];
     state.eventDeck = getEventsForDungeon(state.dungeon);
+    state.reRender = true;
     rewardLiveHeroes(state);
     levelUp(state);
     replaceDeadHeroes(state);
@@ -412,19 +422,51 @@ export const getDist = (a: Position, b: Position) => {
   return Math.sqrt(Math.pow(a.x - b?.x, 2) + Math.pow(a.y - b?.y, 2));
 };
 
+export const hasLineOfSight = (
+  startPosition: Position,
+  targetPosition: Position,
+  resolution: number,
+  state: GameState,
+  walking: boolean,
+): boolean => {
+  const startPixelPos = {
+    x: startPosition.x * resolution - Math.floor(resolution / 2),
+    y: startPosition.y * resolution - Math.floor(resolution / 2),
+  };
+  const targetPixelPos = {
+    x: targetPosition.x * resolution - Math.floor(resolution / 2),
+    y: targetPosition.y * resolution - Math.floor(resolution / 2),
+  };
+  return stepAlongLine(
+    startPixelPos,
+    startPosition,
+    targetPixelPos,
+    targetPosition,
+    resolution,
+    state,
+    walking,
+    [],
+  );
+};
+
 export const stepAlongLine = (
   startPixelPos: Position,
   source: Position,
   targetPixelPos: Position,
   target: Position,
+  resolution: number,
   state: GameState,
   walking: boolean,
   seenCells: Position[],
 ): boolean => {
   const nextPixelPosition = normaliseVector(startPixelPos, targetPixelPos);
   const nextCellPosition = {
-    x: Math.round((nextPixelPosition.x + 24) / 48),
-    y: Math.round((nextPixelPosition.y + 24) / 48),
+    x: Math.round(
+      (nextPixelPosition.x + Math.floor(resolution / 2)) / resolution,
+    ),
+    y: Math.round(
+      (nextPixelPosition.y + Math.floor(resolution / 2)) / resolution,
+    ),
   };
   const nextCell = findCell(
     state.dungeon.layout.grid,
@@ -462,6 +504,7 @@ export const stepAlongLine = (
       source,
       targetPixelPos,
       target,
+      resolution,
       state,
       walking,
       seenCells,
