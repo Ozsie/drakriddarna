@@ -10,7 +10,7 @@ import type {
   Weapon,
 } from "./types";
 import { Colour, ConditionType, ItemType, Level } from "./types";
-import { EMPTY, PILLAR, PIT, WALL } from "./dungeon/DungeonLogic";
+import { COLLAPSED, EMPTY, WALL } from "./dungeon/DungeonLogic";
 import { campaignIceDragonTreasure } from "./campaigns/campaignIceDragonTreasure";
 import { monsterActions } from "./monsters/MonsterLogic";
 import {
@@ -242,8 +242,10 @@ export const isWalkable = (layout: Layout, x: number, y: number): boolean => {
   if (x < 0 || x >= layout.grid[0].length || y < 0 || y >= layout.grid.length) {
     walkable = false;
   } else {
+    const pit = layout.pits?.some((pit) => isSamePosition(pit, { x, y }));
+    const pillar = layout.pillars?.some((pit) => isSamePosition(pit, { x, y }));
     const cell = findCell(layout.grid, x, y);
-    if (cell === PIT || cell === PILLAR || cell === EMPTY || cell === WALL) {
+    if (pit || pillar || cell === EMPTY || cell === WALL) {
       walkable = false;
     }
   }
@@ -256,12 +258,8 @@ export const isDiscovered = (dungeon: Dungeon, x: number, y: number) => {
   else return dungeon.discoveredRooms.includes(cell);
 };
 
-export const findCell = (
-  grid: string[],
-  x: number,
-  y: number,
-): string | undefined => {
-  let c;
+export const findCell = (grid: string[], x: number, y: number): string => {
+  let c = "";
   grid.forEach((row, gY) => {
     toArray(row).forEach((cell, gX) => {
       if (gY === y && gX === x) c = cell;
@@ -420,6 +418,7 @@ export const stepAlongLine = (
   targetPixelPos: Position,
   target: Position,
   state: GameState,
+  walking: boolean,
   seenCells: Position[],
 ): boolean => {
   const nextPixelPosition = normaliseVector(startPixelPos, targetPixelPos);
@@ -432,10 +431,21 @@ export const stepAlongLine = (
     nextCellPosition.x,
     nextCellPosition.y,
   );
+  const pit = state.dungeon.layout.pits?.some((pit) =>
+    isSamePosition(pit, nextCellPosition),
+  );
+  const pillar = state.dungeon.layout.pillars?.some((pit) =>
+    isSamePosition(pit, nextCellPosition),
+  );
   if (nextCellPosition.x === target.x && nextCellPosition.y === target.y) {
     seenCells.push(nextCellPosition);
     return true;
-  } else if (nextCell === WALL || nextCell === PILLAR) {
+  } else if (
+    nextCell === WALL ||
+    pillar ||
+    nextCell === COLLAPSED ||
+    (walking && (pit || nextCell === EMPTY))
+  ) {
     return false;
   } else {
     if (!(nextCellPosition.x === source.x && nextCellPosition.y === source.y)) {
@@ -453,6 +463,7 @@ export const stepAlongLine = (
       targetPixelPos,
       target,
       state,
+      walking,
       seenCells,
     );
   }
