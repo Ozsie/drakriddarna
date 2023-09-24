@@ -25,9 +25,11 @@ import {
   isBlockedByMonster,
   openDoor,
   pickLock,
+  pickupItem,
   search,
-} from "../hero/HeroLogic";
-import { BREAK_LOCK, onPickup } from "../items/magicItems";
+} from "./HeroLogic";
+
+import { BREAK_LOCK } from "../items/ItemLogic";
 
 export const distanceInGrid = (a: Position, b: Position) => {
   const dx = Math.abs(b.x - a.x);
@@ -63,11 +65,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     const index = state.dungeon.layout.items.indexOf(itemLocation);
     state.dungeon.layout.items.splice(index, 1);
     addLog(state, `${hero.name} picked up ${item.name}`);
-    hero.inventory.push(item);
-    if (item.pickup) {
-      const pickup = onPickup[item.pickup];
-      pickup(state, item, hero);
-    }
+    pickupItem(state, item, hero);
     return;
   }
 
