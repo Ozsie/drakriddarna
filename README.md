@@ -5,23 +5,23 @@
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
 ## Todo
+- [ ] Linting
 - [ ] Monster special attack
 - [ ] Dungeon intro screen
 - [ ] e1m3 - Labyrinth of Horror
 - [ ] e1m4 - The Dark Citadel
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
-- [ ] Magic Item/Weapon: Sword of Chaos
-- [ ] Event #16 - The Hexagram
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
-- [ ] Support for additional campaigns
 - [ ] Menu system
 - [ ] Doors blocking monsters?
 - [ ] Trade Items
-- [ ] Linting
+- [ ] Support for additional campaigns
 - [ ] Monster cards?
+- [ ] Magic Item/Weapon: Sword of Chaos
+- [ ] Event #16 - The Hexagram
 - [X] Secrets
 - [X] Drop Items
 - [X] Monster blocking move on click move

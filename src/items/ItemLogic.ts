@@ -20,7 +20,9 @@ export const onPickup: {
 } = {
   movementBonusOnPickup: (state: GameState, self: Item, user: Actor) => {
     user.maxMovement += self.properties?.[MOVEMENT_BONUS];
-    user.movement += self.properties?.[MOVEMENT_BONUS];
+    if (user.actions > 0) {
+      user.movement += self.properties?.[MOVEMENT_BONUS];
+    }
   },
 };
 export const onDrop: {

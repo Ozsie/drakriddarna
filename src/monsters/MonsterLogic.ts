@@ -165,7 +165,7 @@ const monsterMove = (state: GameState, monster: Monster) => {
   const closestHeroAndDistance = findClosestHeroAndDistance(state, monster);
 
   while (monster.movement > 0) {
-    if (closestHeroAndDistance.dist > 1) {
+    if (closestHeroAndDistance && closestHeroAndDistance.dist > 1) {
       const possibleMoves = findPossibleMoves(state, monster.position);
       if (possibleMoves.length > 0) {
         const newPosition = possibleMoves

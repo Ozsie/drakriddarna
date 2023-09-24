@@ -32,6 +32,7 @@ import {
   eventEffects,
   resetEventEffects,
 } from "./events/EventsLogic";
+import { browser } from "$app/environment";
 
 export const save = (state: GameState) => {
   state.reRender = true;
@@ -75,6 +76,10 @@ export const init = (): GameState => {
     reRender: true,
   };
   resetLiveHeroes(state);
+  if (browser) {
+    console.log("autosave");
+    localStorage.setItem("autosave", JSON.stringify(state));
+  }
   return state;
 };
 
@@ -126,10 +131,10 @@ export const getEffectiveMaxMovement = (actor: Actor) => {
   return actor.maxMovement - (actor.armour?.movementReduction ?? 0);
 };
 
-export const next = (state: GameState) => {
+export const next = (state: GameState): GameState | undefined => {
   state.reRender = true;
   checkWinConditions(state);
-  if (state.currentActor === undefined) return;
+  if (state.currentActor === undefined) return state;
   else {
     addLog(state, `${state.currentActor.name} ended their turn`);
     let currentIndex = liveHeroes(state).indexOf(state.currentActor);
@@ -138,6 +143,9 @@ export const next = (state: GameState) => {
       monsterActions(state);
       nextIndex = 0;
       resetOnNext(state);
+    }
+    if (liveHeroes(state).length === 0) {
+      return resetLevel();
     }
     if (liveHeroes(state)[nextIndex].incapacitated) {
       addLog(
@@ -156,6 +164,35 @@ export const next = (state: GameState) => {
       eventEffects[event.effect](state, event);
     }
     addLog(state, `${state.currentActor.name} started their turn`);
+  }
+  return state;
+};
+
+export const resetLevel = (): GameState | undefined => {
+  const loadedRawState = localStorage.getItem("autosave");
+  if (loadedRawState) {
+    const state: GameState = JSON.parse(loadedRawState);
+    state.reRender = true;
+
+    replaceDeadHeroes(state);
+    resetLiveHeroes(state);
+    resetOnNextDungeon(state);
+    resetOnNext(state);
+    scrollTo(
+      {
+        x: state.dungeon.startingPositions[0].x,
+        y: state.dungeon.startingPositions[0].y,
+      },
+      state.settings["cellSize"] as number,
+    );
+    state.currentActor = state.heroes.find(
+      (hero) => hero.name === state.currentActor?.name,
+    );
+    addLog(
+      state,
+      `All the heroes fell in combat. But worry not, you can try again.`,
+    );
+    return state;
   }
 };
 
@@ -418,6 +455,7 @@ export const hasWon = (state: GameState) => {
       },
       state.settings["cellSize"] as number,
     );
+    localStorage.setItem("autosave", JSON.stringify(state));
   }
 };
 
@@ -462,6 +500,9 @@ export const stepAlongLine = (
   walking: boolean,
   seenCells: Position[],
 ): boolean => {
+  if (isNaN(startPixelPos.x) || isNaN(startPixelPos.y)) {
+    return false;
+  }
   const nextPixelPosition = normaliseVector(startPixelPos, targetPixelPos);
   const nextCellPosition = {
     x: Math.round(
@@ -471,6 +512,14 @@ export const stepAlongLine = (
       (nextPixelPosition.y + Math.floor(resolution / 2)) / resolution,
     ),
   };
+  if (
+    isNaN(nextCellPosition.x) ||
+    isNaN(nextCellPosition.y) ||
+    isNaN(nextPixelPosition.x) ||
+    isNaN(nextPixelPosition.y)
+  ) {
+    return false;
+  }
   const nextCell = findCell(
     state.dungeon.layout.grid,
     nextCellPosition.x,
