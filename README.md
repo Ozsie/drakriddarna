@@ -15,7 +15,6 @@
 - [ ] e1m6 - The Final Battle
 - [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] Event #16 - The Hexagram
-- [ ] Render pillars
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
@@ -26,6 +25,7 @@
 - [ ] Trade Items
 - [ ] Linting
 - [ ] Monster cards?
+- [X] Render pillars & pits
 - [X] Render on demand
 - [X] Click movement must take LoS into account for range
 - [X] e1m2 - Mines of Evil

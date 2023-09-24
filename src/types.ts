@@ -1,8 +1,8 @@
 export enum Colour {
-  Red = "#CD5C5C",
-  Blue = "#1E90FF",
-  Green = "#90EE90",
-  Yellow = "#FCFF4F",
+  Red = '#CD5C5C',
+  Blue = '#1E90FF',
+  Green = '#90EE90',
+  Yellow = '#FCFF4F'
 }
 
 export type GameState = {
@@ -109,6 +109,8 @@ export type Layout = {
   notes: Note[];
   items: ItemLocation[];
   corridors: string[];
+  pillars?: Position[];
+  pits?: Position[];
 };
 
 export type ItemLocation = {
