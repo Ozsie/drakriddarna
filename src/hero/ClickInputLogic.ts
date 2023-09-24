@@ -1,6 +1,7 @@
 import {
   addLog,
   doorAsActor,
+  hasLineOfSight,
   isSamePosition,
   isWalkable,
   takeDamage,
@@ -44,6 +45,7 @@ export const distanceInGrid = (a: Position, b: Position) => {
 };
 
 export const onTargetSelf = (state: GameState, target: Position) => {
+  state.reRender = true;
   const hero = state.currentActor as Hero;
 
   const itemLocation = state.dungeon.layout.items.find((item: ItemLocation) =>
@@ -114,18 +116,24 @@ export const onTargetSelf = (state: GameState, target: Position) => {
 };
 
 const onTargetCell = (state: GameState, target: Position) => {
+  state.reRender = true;
   const hero = state.currentActor as Hero;
   if (hero.actions === 0) {
     addLog(state, `${hero.name} has no actions left`);
     return;
   }
   const walkable = isWalkable(state.dungeon.layout, target.x, target.y);
-  const distance = distanceInGrid(hero.position, target);
-  console.log("distance: " + distance);
   if (walkable) {
     const blockedByHero = isBlockedByHero(state, target.x, target.y);
     const blockedByMonster = isBlockedByMonster(state, target.x, target.y);
-    if (!blockedByHero && !blockedByMonster && distance <= hero.movement) {
+    const distance = distanceInGrid(hero.position, target);
+    const los = hasLineOfSight(hero.position, target, 2, state);
+    if (
+      !blockedByHero &&
+      !blockedByMonster &&
+      distance <= hero.movement &&
+      los
+    ) {
       hero.position = target;
       hero.movement -= distance;
       checkForNote(state, hero);

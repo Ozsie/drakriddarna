@@ -36,15 +36,18 @@
     if (!state || !document) return;
     const c: HTMLCanvasElement = document.getElementById("gameBoard") as HTMLCanvasElement;
     const ctx: CanvasRenderingContext2D = c.getContext("2d");
-    ctx.clearRect(0, 0, c.width, c.height);
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, c.width, c.height);
-    renderGrid(ctx, ground, cellSize, state, debugMode);
-    renderSecrets(ctx, ground, cellSize, state);
-    renderItems(ctx, ground, cellSize, state)
-    renderDoors(ctx, ground, cellSize, state, debugMode)
-    renderMonsters(ctx, actors, cellSize, state, debugMode);
-    renderHeroes(ctx, actors, cellSize, state, debugMode);
+    if (state.reRender) {
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, c.width, c.height);
+      renderGrid(ctx, ground, cellSize, state, debugMode);
+      renderSecrets(ctx, ground, cellSize, state);
+      renderItems(ctx, ground, cellSize, state);
+      renderDoors(ctx, ground, cellSize, state, debugMode);
+      renderMonsters(ctx, actors, cellSize, state, debugMode);
+      renderHeroes(ctx, actors, cellSize, state, debugMode);
+      setTimeout(() => state.reRender = false, 500);
+    }
   }
 
   const onClick = (event) => {

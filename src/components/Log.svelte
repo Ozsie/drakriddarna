@@ -7,7 +7,9 @@
 
   onMount(() => {
     setInterval(() => {
-      actionLog = state.actionLog
+      if (state.reRender) {
+        actionLog = state.actionLog;
+      }
     }, 500);
   });
 </script>

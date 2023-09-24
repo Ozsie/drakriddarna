@@ -28,7 +28,6 @@
 
   if (browser) {
     screenSize = window.innerWidth;
-    console.log(screenSize)
   }
 
   const setDebugMode = () => {

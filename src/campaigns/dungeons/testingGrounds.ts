@@ -36,7 +36,7 @@ export const testingGrounds: Dungeon = {
     { x: 1, y: 9 },
     { x: 1, y: 10 },
   ],
-  discoveredRooms: ["A"],
+  discoveredRooms: ["A", "D"],
   layout: {
     grid: [
       "###########",
@@ -47,9 +47,9 @@ export const testingGrounds: Dungeon = {
       "  #####E#  ",
       "  #FFFFE## ",
       "###F###AA# ",
-      "#AAAAAAAA# ",
-      "#AAAAAAAA# ",
-      "#AAAAAAAA# ",
+      "#AAAAAAAA#D",
+      "#AAAAAAAA#D",
+      "#AAAAAAAA#D",
       "##G####### ",
       " #G#       ",
       " #G#       ",
