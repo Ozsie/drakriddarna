@@ -17,7 +17,7 @@ import {
   createTrappedHiddenDoor,
 } from "../../dungeon/DungeonLogic";
 import { weapons } from "../../items/weapons";
-import { e1m0 } from "../../campaigns/dungeons/e1m0";
+import { e1m0 } from "./e1m0";
 import { magicItems } from "../../items/magicItems";
 
 export const testingGrounds: Dungeon = {
