@@ -55,6 +55,14 @@ export const testingGrounds: Dungeon = {
       " #G#       ",
       " ###       ",
     ],
+    pillars: [
+      { x: 8, y: 3 },
+      { x: 7, y: 9 },
+    ],
+    pits: [
+      { x: 6, y: 3 },
+      { x: 6, y: 2 },
+    ],
     corridors: ["G", "E", "F"],
     doors: [
       createTrappedHiddenDoor(Side.UP, 3, 8, 1),

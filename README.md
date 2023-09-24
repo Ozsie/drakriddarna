@@ -16,7 +16,6 @@
 - [ ] e1m6 - The Final Battle
 - [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] Event #16 - The Hexagram
-- [ ] Render pillars
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
@@ -27,6 +26,7 @@
 - [ ] Trade Items
 - [ ] Linting
 - [ ] Monster cards?
+- [X] Render pillars & pits
 - [X] e1m2 - Mines of Evil
 - [X] Events
 - [X] e1m1 - The Three Gates of Power
