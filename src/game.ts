@@ -260,8 +260,11 @@ export const isWalkable = (layout: Layout, x: number, y: number): boolean => {
 export const isDiscovered = (dungeon: Dungeon, x: number, y: number) => {
   const cell = findCell(dungeon.layout.grid, x, y);
   if (!cell) return false;
-  else return dungeon.discoveredRooms.includes(cell);
+  else return isRoomDiscovered(dungeon, cell);
 };
+
+export const isRoomDiscovered = (dungeon: Dungeon, cell: string) =>
+  dungeon.discoveredRooms.includes(cell);
 
 export const findCell = (grid: string[], x: number, y: number): string => {
   let c = "";
