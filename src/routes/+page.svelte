@@ -17,6 +17,7 @@
     pickLock
   } from "../hero/HeroLogic.ts";
   import { browser } from "$app/environment";
+  import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
 
   let state = init();
   let debugMode = state.settings['debug'];
@@ -177,6 +178,9 @@
           <td><button on:click={() => state = load()}>Load</button></td>
           <td><button on:click={() => setDebugMode()}>Debug</button></td>
           <td><button on:click={() => endAction(state)}>End action</button></td>
+          {#if debugMode}
+            <td><button on:click={() => {state.dungeon = testingGrounds; state.reRender = true;}}>To Testing Grounds</button></td>
+          {/if}
         </tr>
       </table>
     {/if}

@@ -17,7 +17,7 @@ import {
   createTrappedHiddenDoor,
 } from "../../dungeon/DungeonLogic";
 import { weapons } from "../../items/weapons";
-import { e1m0 } from "../../campaigns/dungeons/e1m0";
+import { e1m0 } from "./e1m0";
 import { magicItems } from "../../items/magicItems";
 
 export const testingGrounds: Dungeon = {
@@ -73,6 +73,7 @@ export const testingGrounds: Dungeon = {
     ],
     monsters: [
       createMonster(MonsterType.ORCH, Colour.Green, 1, 1),
+      createMonster(MonsterType.ORCH, Colour.Red, 4, 9),
       createMonster(MonsterType.TROLL, Colour.Green, 5, 1),
     ],
     secrets: [

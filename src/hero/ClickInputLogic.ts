@@ -18,6 +18,7 @@ import {
   attack,
   canAct,
   canOpenDoor,
+  checkForNextToMonster,
   checkForNote,
   consumeActions,
   isBlockedByHero,
@@ -138,6 +139,10 @@ const onTargetCell = (state: GameState, target: Position) => {
       hero.position = target;
       hero.movement -= distance;
       checkForNote(state, hero);
+      const nextToMonster = checkForNextToMonster(state, hero);
+      if (nextToMonster) {
+        hero.movement = 0;
+      }
       if (checkForTrapDoor(state)) {
         return;
       }
