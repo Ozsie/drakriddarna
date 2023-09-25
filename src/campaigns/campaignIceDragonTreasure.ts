@@ -8,6 +8,7 @@ import { Colour } from "../types";
 import { newHero } from "../hero/HeroLogic";
 import { magicItems } from "../items/magicItems";
 import { e1m2 } from "./dungeons/e1m2";
+import { e1m3 } from "./dungeons/e1m3";
 
 const getMagicItemDeck = (): Item[] => {
   const itemDeck: Item[] = [];
@@ -41,7 +42,7 @@ const getItemDeck = (): Item[] => {
 
 export const campaignIceDragonTreasure: Campaign = {
   name: "Treasure of the Ice Dragon",
-  dungeons: [e1m0, e1m1, e1m2],
+  dungeons: [e1m0, e1m1, e1m2, e1m3],
   itemDeck: getItemDeck(),
   magicItemDeck: getMagicItemDeck(),
   heroes: [
