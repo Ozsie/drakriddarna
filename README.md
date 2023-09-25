@@ -16,6 +16,7 @@
 - [ ] e1m4 - The Dark Citadel
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
+- [ ] Select door on click when multiple doors in same cell
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout

@@ -45,7 +45,7 @@ export const load = (): GameState | undefined => {
   if (stateString) {
     const state: GameState = JSON.parse(stateString);
     state.currentActor = state.heroes.find(
-      (hero) => hero.name === state.currentActor?.name,
+      (hero) => hero.name === state.currentActor?.name
     );
     addLog(state, "Game loaded.");
     state.reRender = true;
@@ -132,6 +132,7 @@ export const getEffectiveMaxMovement = (actor: Actor) => {
 };
 
 export const next = (state: GameState): GameState | undefined => {
+  if (state.settings["debug"]) console.log(state);
   state.reRender = true;
   checkWinConditions(state);
   if (state.currentActor === undefined) return state;
@@ -150,7 +151,7 @@ export const next = (state: GameState): GameState | undefined => {
     if (liveHeroes(state)[nextIndex].incapacitated) {
       addLog(
         state,
-        `${liveHeroes(state)[nextIndex].name} is no longer incapacitated.`,
+        `${liveHeroes(state)[nextIndex].name} is no longer incapacitated.`
       );
       liveHeroes(state)[nextIndex].incapacitated = false;
       nextIndex++;
@@ -183,14 +184,14 @@ export const resetLevel = (): GameState | undefined => {
         x: state.dungeon.startingPositions[0].x,
         y: state.dungeon.startingPositions[0].y,
       },
-      state.settings["cellSize"] as number,
+      state.settings["cellSize"] as number
     );
     state.currentActor = state.heroes.find(
-      (hero) => hero.name === state.currentActor?.name,
+      (hero) => hero.name === state.currentActor?.name
     );
     addLog(
       state,
-      `All the heroes fell in combat. But worry not, you can try again.`,
+      `All the heroes fell in combat. But worry not, you can try again.`
     );
     return state;
   }
@@ -247,7 +248,7 @@ const checkWinConditions = (state: GameState) => {
     addLog(state, `You have cleared ${state.dungeon.name}`);
     addLog(
       state,
-      `Press 'Next' to move on to the next level: ${state.dungeon.nextDungeon?.name}`,
+      `Press 'Next' to move on to the next level: ${state.dungeon.nextDungeon?.name}`
     );
   }
 };
@@ -334,7 +335,7 @@ export const getDamageString = (
   damage: number,
   hits: number,
   shield: number,
-  target: Actor,
+  target: Actor
 ) => {
   const defense = target.armour?.defense ?? target.defense;
   return `${damage} damage (${hits}-(${defense}+${shield})=${damage})`;
@@ -353,7 +354,7 @@ export const takeDamage = (
   state: GameState,
   source: Actor & { rangedWeapon?: Weapon },
   target: Actor,
-  ranged: boolean,
+  ranged: boolean
 ) => {
   let weapon = source.weapon;
   if (ranged && source.rangedWeapon) {
@@ -366,7 +367,7 @@ export const takeDamage = (
   } else if (target.armour) {
     addLog(
       state,
-      `${target.name}'s armour was useless against ${weapon.name} `,
+      `${target.name}'s armour was useless against ${weapon.name} `
     );
   }
   if (!weapon.ignoresShield) {
@@ -374,7 +375,7 @@ export const takeDamage = (
   } else if (target.shield) {
     addLog(
       state,
-      `${target.name}'s shield was useless against ${weapon.name} `,
+      `${target.name}'s shield was useless against ${weapon.name} `
     );
   }
   const canReRoll = source.inventory
@@ -382,7 +383,7 @@ export const takeDamage = (
     .some((item) => {
       addLog(
         state,
-        `${source.name} used the effect of ${item.name} when attacking`,
+        `${source.name} used the effect of ${item.name} when attacking`
       );
       return item.properties?.[RE_ROLL_ATTACK];
     });
@@ -391,7 +392,7 @@ export const takeDamage = (
     .map((item) => {
       addLog(
         state,
-        `${source.name} used the effect of ${item.name} when attacking`,
+        `${source.name} used the effect of ${item.name} when attacking`
       );
       return item.properties?.[ATTACK_BONUS] as number;
     })
@@ -412,7 +413,7 @@ export const takeDamage = (
     state,
     `${source.name} attacked ${target.name} with ${
       weapon.name
-    } for ${getDamageString(damage, hits, shield, target)}`,
+    } for ${getDamageString(damage, hits, shield, target)}`
   );
   if (target.health <= 0) {
     addLog(state, `${source.name} killed ${target.name}`);
@@ -432,7 +433,7 @@ const scrollTo = (pos: Position, cellSize: number) => {
     container.scrollLeft = Math.round(x / xMax);
     container.scrollTop = Math.round(y / yMax);
     console.log(
-      `scrolling to ${container.scrollLeft} x ${container.scrollTop}`,
+      `scrolling to ${container.scrollLeft} x ${container.scrollTop}`
     );
   }
 };
@@ -453,7 +454,7 @@ export const hasWon = (state: GameState) => {
         x: state.dungeon.startingPositions[0].x,
         y: state.dungeon.startingPositions[0].y,
       },
-      state.settings["cellSize"] as number,
+      state.settings["cellSize"] as number
     );
     localStorage.setItem("autosave", JSON.stringify(state));
   }
@@ -468,7 +469,7 @@ export const hasLineOfSight = (
   targetPosition: Position,
   resolution: number,
   state: GameState,
-  walking: boolean,
+  walking: boolean
 ): boolean => {
   const startPixelPos = {
     x: startPosition.x * resolution - Math.floor(resolution / 2),
@@ -486,7 +487,7 @@ export const hasLineOfSight = (
     resolution,
     state,
     walking,
-    [],
+    []
   );
 };
 
@@ -498,7 +499,7 @@ export const stepAlongLine = (
   resolution: number,
   state: GameState,
   walking: boolean,
-  seenCells: Position[],
+  seenCells: Position[]
 ): boolean => {
   if (isNaN(startPixelPos.x) || isNaN(startPixelPos.y)) {
     return false;
@@ -506,10 +507,10 @@ export const stepAlongLine = (
   const nextPixelPosition = normaliseVector(startPixelPos, targetPixelPos);
   const nextCellPosition = {
     x: Math.round(
-      (nextPixelPosition.x + Math.floor(resolution / 2)) / resolution,
+      (nextPixelPosition.x + Math.floor(resolution / 2)) / resolution
     ),
     y: Math.round(
-      (nextPixelPosition.y + Math.floor(resolution / 2)) / resolution,
+      (nextPixelPosition.y + Math.floor(resolution / 2)) / resolution
     ),
   };
   if (
@@ -523,16 +524,16 @@ export const stepAlongLine = (
   const nextCell = findCell(
     state.dungeon.layout.grid,
     nextCellPosition.x,
-    nextCellPosition.y,
+    nextCellPosition.y
   );
   const pit = state.dungeon.layout.pits?.some((pit) =>
-    isSamePosition(pit, nextCellPosition),
+    isSamePosition(pit, nextCellPosition)
   );
   const pillar = state.dungeon.layout.pillars?.some((pit) =>
-    isSamePosition(pit, nextCellPosition),
+    isSamePosition(pit, nextCellPosition)
   );
   const monster = state.dungeon.layout.monsters.some((monster) =>
-    isSamePosition(monster.position, nextCellPosition),
+    isSamePosition(monster.position, nextCellPosition)
   );
   const hero = liveHeroes(state)
     .filter((hero) => !isSamePosition(hero.position, source))
@@ -553,7 +554,7 @@ export const stepAlongLine = (
     if (!(nextCellPosition.x === source.x && nextCellPosition.y === source.y)) {
       if (
         !seenCells.some(
-          (c) => c.x === nextCellPosition.x && c.y === nextCellPosition.y,
+          (c) => c.x === nextCellPosition.x && c.y === nextCellPosition.y
         )
       ) {
         seenCells.push(nextCellPosition);
@@ -567,14 +568,14 @@ export const stepAlongLine = (
       resolution,
       state,
       walking,
-      seenCells,
+      seenCells
     );
   }
 };
 
 export const normaliseVector = (
   start: Position,
-  target: Position,
+  target: Position
 ): Position => {
   const xOffset = start.x;
   const yOffset = start.y;
@@ -591,9 +592,9 @@ export const normaliseVector = (
 
 export const findNeighbouringHeroes = (
   state: GameState,
-  actor: Actor,
+  actor: Actor
 ): Hero[] => {
   return liveHeroes(state).filter((hero: Hero) =>
-    isNeighbouring(actor.position, hero.position.x, hero.position.y),
+    isNeighbouring(actor.position, hero.position.x, hero.position.y)
   );
 };
