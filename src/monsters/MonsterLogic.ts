@@ -1,4 +1,5 @@
-import type { GameState, Hero, Monster, Position } from "../types";
+import type { Actor, GameState, Hero, Monster, Position } from "../types";
+import { MonsterType } from "../types";
 import {
   addLog,
   findCell,
@@ -12,11 +13,14 @@ import {
   takeDamage,
 } from "../game";
 import { liveHeroes } from "../hero/HeroLogic";
+import { distanceInGrid } from "../hero/ClickInputLogic";
 
 enum MonsterAction {
   RANGED_ATTACK = "RANGED_ATTACK",
   MELEE_ATTACK = "MELEE_ATTACK",
   MOVE = "MOVE",
+  DIAGONAL_FIRE_ATTACK = "DIAGONAL_FIRE_ATTACK",
+  ORTHOGONAL_FIRE_ATTACK = "ORTHOGONAL_FIRE_ATTACK",
 }
 
 export const monsterActions = (state: GameState) => {
@@ -32,14 +36,18 @@ export const monsterActions = (state: GameState) => {
       state.reRender = true;
       const neighbouringHeroes: Hero[] = findNeighbouringHeroes(
         state,
-        monster,
+        monster
       ).filter((hero: Hero) => !hero.ignoredByMonsters);
       const visibleHeroes: Hero[] = findVisibleHeroes(state, monster);
+      const diagonalTargets = findDiagonalTargets(visibleHeroes, monster);
+      const orthogonalTargets = findOrthogonalTargets(visibleHeroes, monster);
       const action = selectAction(
         state,
         monster,
         neighbouringHeroes,
         visibleHeroes,
+        diagonalTargets,
+        orthogonalTargets
       );
       switch (action) {
         case MonsterAction.MELEE_ATTACK: {
@@ -56,6 +64,12 @@ export const monsterActions = (state: GameState) => {
           monsterMove(state, monster);
           break;
         }
+        case MonsterAction.DIAGONAL_FIRE_ATTACK:
+          performFireAttack(state, monster, diagonalTargets);
+          break;
+        case MonsterAction.ORTHOGONAL_FIRE_ATTACK:
+          performFireAttack(state, monster, orthogonalTargets);
+          break;
       }
       monster.movement = getEffectiveMaxMovement(monster);
     }
@@ -69,21 +83,41 @@ const selectAction = (
   monster: Monster,
   neighbouringHeroes: Hero[],
   visibleHeroes: Hero[],
+  diagonalTargets: Hero[],
+  orthogonalTargets: Hero[]
 ): MonsterAction => {
   if (neighbouringHeroes.length > 0) {
     return MonsterAction.MELEE_ATTACK;
-  } else if (!monster.rangedWeapon) {
+  } else if (!monster.rangedWeapon && diagonalTargets.length === 0) {
     return MonsterAction.MOVE;
   } else {
     if (visibleHeroes.length > 0 && monster.rangedWeapon) {
       if (Math.random() < 0.1) {
         addLog(
           state,
-          `${monster.name} decided to move despite seeing a target.`,
+          `${monster.name} decided to move despite seeing a target.`
         );
         return MonsterAction.MOVE;
       }
       return MonsterAction.RANGED_ATTACK;
+    } else if (visibleHeroes.length > 0 && diagonalTargets.length > 0) {
+      if (Math.random() < 0.1) {
+        addLog(
+          state,
+          `${monster.name} decided to move despite seeing a target.`
+        );
+        return MonsterAction.MOVE;
+      }
+      return MonsterAction.DIAGONAL_FIRE_ATTACK;
+    } else if (visibleHeroes.length > 0 && orthogonalTargets.length > 0) {
+      if (Math.random() < 0.1) {
+        addLog(
+          state,
+          `${monster.name} decided to move despite seeing a target.`
+        );
+        return MonsterAction.MOVE;
+      }
+      return MonsterAction.ORTHOGONAL_FIRE_ATTACK;
     } else {
       return MonsterAction.MOVE;
     }
@@ -92,7 +126,7 @@ const selectAction = (
 
 const selectRangedTarget = (
   possibleTargets: Hero[],
-  monster: Monster,
+  monster: Monster
 ): Hero => {
   return possibleTargets
     .filter((hero) => !hero.shield)
@@ -116,7 +150,7 @@ const findVisibleHeroes = (state: GameState, monster: Monster): Hero[] => {
   return liveHeroes(state)
     .filter((hero: Hero) => !hero.ignoredByMonsters)
     .filter((hero) =>
-      hasLineOfSight(monster.position, hero.position, 48, state, false),
+      hasLineOfSight(monster.position, hero.position, 48, state, false)
     );
 };
 
@@ -125,7 +159,7 @@ const findVisibleMonsters = (state: GameState) => {
     const cell = findCell(
       state.dungeon.layout.grid,
       monster.position.x,
-      monster.position.y,
+      monster.position.y
     );
     return cell && isRoomDiscovered(state.dungeon, cell) && monster.health > 0;
   });
@@ -135,7 +169,7 @@ const monsterAttack = (
   state: GameState,
   monster: Monster,
   hero: Hero,
-  ranged: boolean,
+  ranged: boolean
 ) => {
   takeDamage(state, monster, hero, ranged);
   if (monster?.actions > 1 && monster?.movement < 3) {
@@ -147,7 +181,7 @@ const monsterAttack = (
 
 const findClosestHeroAndDistance = (
   state: GameState,
-  monster: Monster,
+  monster: Monster
 ): { hero: Hero; dist: number } => {
   return liveHeroes(state)
     .map((hero) => {
@@ -181,7 +215,7 @@ const monsterMove = (state: GameState, monster: Monster) => {
         monster.position = newPosition;
         addLog(
           state,
-          `${monster.name} moved towards ${closestHeroAndDistance.hero.name} (${newPosition.x},${newPosition.y})`,
+          `${monster.name} moved towards ${closestHeroAndDistance.hero.name} (${newPosition.x},${newPosition.y})`
         );
       } else {
         addLog(state, `${monster.name} could not move`);
@@ -194,7 +228,7 @@ const monsterMove = (state: GameState, monster: Monster) => {
 
 const findPossibleMoves = (
   state: GameState,
-  position: Position,
+  position: Position
 ): Position[] => {
   const x = position.x;
   const y = position.y;
@@ -215,12 +249,55 @@ const findPossibleMoves = (
   return targets
     .filter((pos) => {
       return !liveHeroes(state).find(
-        (hero) => hero.position.x === pos.x && hero.position.y === pos.y,
+        (hero) => hero.position.x === pos.x && hero.position.y === pos.y
       );
     })
     .filter((pos) => {
       return !state.dungeon.layout.monsters.some(
-        (m) => m.position.x === pos.x && m.position.y === pos.y,
+        (m) => m.position.x === pos.x && m.position.y === pos.y
       );
     });
+};
+
+const findDiagonalTargets = (possibleTargets: Actor[], source: Monster) => {
+  return possibleTargets.filter((target) => {
+    return (
+      [MonsterType.YELLOW_DARK_LORD, MonsterType.BLUE_DARK_LORD].includes(
+        source.type
+      ) &&
+      Math.abs(source.position.x - target.position.x) ===
+        Math.abs(source.position.y - target.position.y) &&
+      distanceInGrid(source.position, target.position) > 1
+    );
+  });
+};
+
+const findOrthogonalTargets = (possibleTargets: Actor[], source: Monster) => {
+  return possibleTargets.filter((target) => {
+    return (
+      [MonsterType.RED_DARK_LORD, MonsterType.BLUE_DARK_LORD].includes(
+        source.type
+      ) &&
+      (source.position.x === target.position.x ||
+        source.position.y === target.position.y) &&
+      distanceInGrid(source.position, target.position) > 1
+    );
+  });
+};
+
+const performFireAttack = (
+  state: GameState,
+  source: Monster,
+  targets: Hero[]
+) => {
+  targets.forEach((target) => {
+    if (target.armour?.magicProtection) {
+      addLog(
+        state,
+        `${source.name} attempted a fire attack, but ${source.name}s ${source.armour} deflected it.`
+      );
+    } else {
+      takeDamage(state, source, target, true);
+    }
+  });
 };
