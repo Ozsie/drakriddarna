@@ -1,11 +1,22 @@
 import type { Dungeon } from "../../types";
-import { ConditionType, Side } from "../../types";
+import {
+  Colour,
+  ConditionType,
+  MonsterType,
+  SecretType,
+  Side,
+} from "../../types";
 import {
   createDoor,
   createHiddenDoor,
   createLockedDoor,
+  createMonster,
+  createMonsterWithInventory,
+  createSecret,
+  createSecretWithItem,
   createTrappedLockedDoor,
 } from "../../dungeon/DungeonLogic";
+import { magicItems } from "../../items/magicItems";
 
 export const e1m3: Dungeon = {
   name: "The Dread Labyrinth",
@@ -46,6 +57,14 @@ export const e1m3: Dungeon = {
       "         ######     ",
     ],
     corridors: ["B", "D", "F", "L"],
+    pits: [
+      { x: 16, y: 6 },
+      { x: 17, y: 6 },
+      { x: 18, y: 6 },
+      { x: 15, y: 8 },
+      { x: 16, y: 8 },
+      { x: 17, y: 8 },
+    ],
     doors: [
       createDoor(Side.RIGHT, 3, 5),
       createTrappedLockedDoor(Side.DOWN, 6, 5, 1),
@@ -64,9 +83,43 @@ export const e1m3: Dungeon = {
       createDoor(Side.UP, 13, 4),
       createDoor(Side.LEFT, 11, 1),
     ],
-    monsters: [],
-    secrets: [],
-    notes: [],
+    monsters: [
+      createMonster(MonsterType.ORCH, Colour.Yellow, 5, 5),
+      createMonsterWithInventory(MonsterType.TROLL, Colour.Yellow, 7, 3, [
+        magicItems[3],
+      ]),
+      createMonster(MonsterType.ORCH, Colour.Red, 7, 11),
+      createMonster(MonsterType.ORCH, Colour.Blue, 11, 2),
+      createMonster(MonsterType.ORCH, Colour.Blue, 14, 11),
+      createMonster(MonsterType.YELLOW_DARK_LORD, Colour.Yellow, 18, 5),
+    ],
+    secrets: [
+      createSecretWithItem(SecretType.MAGIC_ITEM, 8, 10, magicItems[2]),
+      createSecret(SecretType.TRAP_DOOR, "Trap door", 8, 6),
+      createSecret(SecretType.TRAP_DOOR, "Trap door", 11, 1),
+      createSecret(SecretType.TRAP_DOOR, "Trap door", 11, 7),
+      createSecret(SecretType.TRAP_DOOR, "Trap door", 13, 11),
+    ],
+    notes: [
+      {
+        position: { x: 6, y: 5 },
+        message: "An arrow on the far wall of the corridor points to the left.",
+      },
+      {
+        position: { x: 8, y: 3 },
+        message:
+          "An arrow on the far wall of the corridor points to the right.",
+      },
+      {
+        position: { x: 8, y: 8 },
+        message:
+          "There is a mosaic in the floor. It depicts a snake coiling around a dwarf, while battling an ice dragon. In the jaws of the snake is treasure chest.",
+      },
+      {
+        position: { x: 14, y: 10 },
+        message: "An arrow on the far wall of the corridor points to the left",
+      },
+    ],
     items: [],
   },
   killCount: 0,
