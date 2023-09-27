@@ -11,7 +11,7 @@ export const createSecret = (
   type: SecretType,
   name: string,
   x: number,
-  y: number,
+  y: number
 ): Secret => {
   return {
     type,
@@ -25,7 +25,7 @@ export const createSecretWithItem = (
   type: SecretType,
   x: number,
   y: number,
-  item: Item,
+  item: Item
 ): Secret => {
   return {
     type,
@@ -53,7 +53,7 @@ export const createTrappedDoor = (
   side: Side,
   x: number,
   y: number,
-  trapAttacks: number,
+  trapAttacks: number
 ): Door => {
   return {
     ...createDoor(side, x, y),
@@ -80,7 +80,7 @@ export const createTrappedLockedDoor = (
   side: Side,
   x: number,
   y: number,
-  trapAttacks: number,
+  trapAttacks: number
 ): Door => {
   return {
     ...createDoor(side, x, y),
@@ -94,7 +94,7 @@ export const createTrappedHiddenDoor = (
   side: Side,
   x: number,
   y: number,
-  trapAttacks: number,
+  trapAttacks: number
 ): Door => {
   return {
     ...createDoor(side, x, y),
@@ -104,11 +104,23 @@ export const createTrappedHiddenDoor = (
   };
 };
 
-export const createMonster = (
+export const createMonsterWithInventory = (
   type: MonsterType,
   colour: Colour,
   x: number,
   y: number,
+  inventory: Item[]
+): Monster => {
+  const monster = createMonster(type, colour, x, y);
+  monster.inventory = inventory;
+  return monster;
+};
+
+export const createMonster = (
+  type: MonsterType,
+  colour: Colour,
+  x: number,
+  y: number
 ): Monster => {
   const indexOfColour = Object.values(Colour).indexOf(colour);
   const colourName = Object.keys(Colour)[indexOfColour];
