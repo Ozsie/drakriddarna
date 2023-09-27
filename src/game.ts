@@ -127,9 +127,13 @@ export const roll = (level: Level, dice: number) => {
   return results.length;
 };
 
-export const getEffectiveMaxMovement = (actor: Actor) => {
-  return actor.maxMovement - (actor.armour?.movementReduction ?? 0);
-};
+export const getEffectiveMaxMovement = (actor: Actor) =>
+  actor.maxMovement - (actor.armour?.movementReduction ?? 0);
+
+const killAllMonstersNotAchieved = (state: GameState) =>
+  state.dungeon.winConditions
+    .filter((wc) => wc.type !== ConditionType.KILL_ALL)
+    .some((wc) => !wc.fulfilled);
 
 export const next = (state: GameState): GameState | undefined => {
   if (state.settings["debug"]) console.log(state);
@@ -159,7 +163,7 @@ export const next = (state: GameState): GameState | undefined => {
     state.currentActor.actions = 2;
     state.currentActor.movement = getEffectiveMaxMovement(state.currentActor);
     state.currentActor = liveHeroes(state)[nextIndex];
-    if (nextIndex === 0) {
+    if (nextIndex === 0 && killAllMonstersNotAchieved(state)) {
       resetEventEffects(state);
       const event = drawNextEvent(state);
       eventEffects[event.effect](state, event);
