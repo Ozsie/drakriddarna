@@ -46,9 +46,11 @@ export type Actor = {
   ignoredByMonsters?: boolean;
   blinded?: boolean;
   weakened?: boolean;
-};
+}
 
-export type Hero = Actor & {};
+export type Hero = Actor & {
+  isInventoryOpen: boolean;
+};
 
 export type Monster = Actor & {
   type: MonsterType;
