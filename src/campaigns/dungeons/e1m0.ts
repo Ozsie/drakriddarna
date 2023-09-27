@@ -11,7 +11,7 @@ import {
   createMonster,
   createSecret,
 } from "../../dungeon/DungeonLogic";
-import { e1m1 } from "../../campaigns/dungeons/e1m1";
+import { e1m1 } from "./e1m1";
 
 export const e1m0: Dungeon = {
   name: "Troll cave",

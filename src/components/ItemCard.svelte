@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { GameState, Item } from "../types";
-  import { DESCRIPTION, ACTIVE, USED } from "../items/magicItems";
-  import { useItem } from "../items/ItemLogic";
+  import { ACTIVE, DESCRIPTION, USED, useItem } from '../items/ItemLogic';
 
   export let item: Item
   export let state: GameState

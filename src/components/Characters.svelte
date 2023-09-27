@@ -13,7 +13,9 @@
   });
 
   const render = () => {
-    uglyUpdateToggle = !uglyUpdateToggle;
+    if (state.reRender) {
+      uglyUpdateToggle = !uglyUpdateToggle;
+    }
     if (!state || !document) return;
   };
 </script>

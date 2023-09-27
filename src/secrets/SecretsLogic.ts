@@ -1,14 +1,4 @@
-import type {
-  Actor,
-  Armour,
-  GameState,
-  Hero,
-  Item,
-  Position,
-  Secret,
-  Shield,
-  Weapon,
-} from "../types";
+import type { Actor, GameState, Hero, Item, Position, Secret } from "../types";
 import { Colour, ItemType, Level, SecretType } from "../types";
 import {
   addLog,
@@ -17,7 +7,8 @@ import {
   roll,
   takeDamage,
 } from "../game";
-import { onPickup, SEARCH_BONUS } from "../items/magicItems";
+import { pickupItem } from "../hero/HeroLogic";
+import { onPickup, SEARCH_BONUS } from "../items/ItemLogic";
 
 export const searchForSecret = (state: GameState) => {
   const hero = state.currentActor as Hero;
@@ -189,20 +180,7 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
         if (item.amountInDeck > 0) {
           removeFoundItemFromDeck(state, item);
           addLog(state, `${hero.name} equipped (${item.name})`);
-          switch (item.type) {
-            case ItemType.ARMOUR:
-              if (hero.armour) hero.inventory.push(hero.armour);
-              hero.armour = item as Armour;
-              break;
-            case ItemType.SHIELD:
-              if (hero.shield) hero.inventory.push(hero.shield);
-              hero.shield = item as Shield;
-              break;
-            case ItemType.WEAPON:
-              if (hero.weapon) hero.inventory.push(hero.weapon);
-              hero.weapon = item as Weapon;
-              break;
-          }
+          pickupItem(state, item, hero);
         }
         break;
       }

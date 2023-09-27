@@ -17,7 +17,7 @@ import {
   createTrappedHiddenDoor,
 } from "../../dungeon/DungeonLogic";
 import { weapons } from "../../items/weapons";
-import { e1m0 } from "../../campaigns/dungeons/e1m0";
+import { e1m0 } from "./e1m0";
 import { magicItems } from "../../items/magicItems";
 
 export const testingGrounds: Dungeon = {
@@ -36,7 +36,7 @@ export const testingGrounds: Dungeon = {
     { x: 1, y: 9 },
     { x: 1, y: 10 },
   ],
-  discoveredRooms: ["A"],
+  discoveredRooms: ["A", "D"],
   layout: {
     grid: [
       "###########",
@@ -47,13 +47,21 @@ export const testingGrounds: Dungeon = {
       "  #####E#  ",
       "  #FFFFE## ",
       "###F###AA# ",
-      "#AAAAAAAA# ",
-      "#AAAAAAAA# ",
-      "#AAAAAAAA# ",
+      "#AAAAAAAA#D",
+      "#AAAAAAAA#D",
+      "#AAAAAAAA#D",
       "##G####### ",
       " #G#       ",
       " #G#       ",
       " ###       ",
+    ],
+    pillars: [
+      { x: 8, y: 3 },
+      { x: 7, y: 9 },
+    ],
+    pits: [
+      { x: 6, y: 3 },
+      { x: 6, y: 2 },
     ],
     corridors: ["G", "E", "F"],
     doors: [
@@ -65,6 +73,7 @@ export const testingGrounds: Dungeon = {
     ],
     monsters: [
       createMonster(MonsterType.ORCH, Colour.Green, 1, 1),
+      createMonster(MonsterType.ORCH, Colour.Red, 4, 9),
       createMonster(MonsterType.TROLL, Colour.Green, 5, 1),
     ],
     secrets: [
