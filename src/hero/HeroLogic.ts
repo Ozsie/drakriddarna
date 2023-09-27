@@ -1,5 +1,16 @@
-import type { Actor, GameState, Hero, Monster, Door, Position } from "../types";
-import { Colour, Level, Side } from "../types";
+import type {
+  Shield,
+  Armour,
+  Actor,
+  GameState,
+  Hero,
+  Monster,
+  Door,
+  Position,
+  Item,
+  Weapon,
+} from "../types";
+import { Colour, ItemType, Level, Side } from "../types";
 import { weapons } from "../items/weapons";
 import {
   addLog,
@@ -16,7 +27,7 @@ import {
   takeDamage,
 } from "../game";
 import { checkForTrapDoor, searchForSecret } from "../secrets/SecretsLogic";
-import { BREAK_LOCK } from "../items/magicItems";
+import { BREAK_LOCK, onDrop, onPickup } from "../items/ItemLogic";
 
 export const newHero = (name: string, colour: Colour): Hero => {
   weapons[0].amountInDeck--;
@@ -39,6 +50,7 @@ export const newHero = (name: string, colour: Colour): Hero => {
 };
 
 export const act = (direction: string, state: GameState) => {
+  state.reRender = true;
   const hero: Actor | undefined = state.currentActor;
   if (!hero || hero.actions === 0) {
     return;
@@ -112,6 +124,7 @@ export const act = (direction: string, state: GameState) => {
 };
 
 export const pickLock = (state: GameState) => {
+  state.reRender = true;
   const hero = state.currentActor;
   if (!hero) return;
   if (hero.blinded) {
@@ -146,6 +159,7 @@ export const pickLock = (state: GameState) => {
 };
 
 export const resetLiveHeroes = (state: GameState) => {
+  state.reRender = true;
   state.heroes.forEach((hero, index) => {
     hero.position = state.dungeon.startingPositions[index];
     hero.movement = getEffectiveMaxMovement(hero);
@@ -159,6 +173,7 @@ export const liveHeroes = (state: GameState): Hero[] => {
 };
 
 export const endAction = (state: GameState) => {
+  state.reRender = true;
   const hero = state.currentActor;
   if (!hero) return;
   hero.actions--;
@@ -181,6 +196,7 @@ export const openDoor = (
   newX: number,
   newY: number,
 ) => {
+  state.reRender = true;
   const target = findCell(state.dungeon.layout.grid, newX, newY);
   if (target) state.dungeon.discoveredRooms.push(target);
   move(hero, state, hero.position.x, hero.position.y, 1);
@@ -188,6 +204,7 @@ export const openDoor = (
 };
 
 export const attack = (hero: Actor, state: GameState, target: Position) => {
+  state.reRender = true;
   if (hero.actions === 1 && hero.movement < hero.maxMovement) {
     addLog(state, `${hero.name} has no actions left to attack`);
     return;
@@ -215,6 +232,7 @@ export const attack = (hero: Actor, state: GameState, target: Position) => {
 };
 
 export const search = (state: GameState) => {
+  state.reRender = true;
   const hero: Actor | undefined = state.currentActor;
   if (!hero) return;
   if (hero.blinded) {
@@ -273,6 +291,7 @@ export const consumeActions = (hero: Actor) => {
 };
 
 export const levelUp = (state: GameState) => {
+  state.reRender = true;
   liveHeroes(state).forEach((hero) => {
     const currentLevel = hero.level;
     if (hero.experience >= 28) {
@@ -329,6 +348,57 @@ export const checkForNote = (state: GameState, hero: Hero) => {
   }
 };
 
+export const checkForNextToMonster = (
+  state: GameState,
+  hero: Hero,
+): boolean => {
+  const nextToMonster = state.dungeon.layout.monsters.some((monster) => {
+    return isNeighbouring(
+      hero.position,
+      monster.position.x,
+      monster.position.y,
+    );
+  });
+  if (nextToMonster) {
+    addLog(state, `${hero.name} walked by a monster and lost the momentum`);
+  }
+  return nextToMonster;
+};
+
+export const dropItem = (state: GameState, item: Item, actor: Actor) => {
+  state.dungeon.layout.items.push({
+    item,
+    position: actor.position,
+  });
+  if (item.drop) {
+    onDrop[item.drop](state, item, actor);
+  }
+};
+
+export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
+  switch (item.type) {
+    case ItemType.ARMOUR:
+      if (hero.armour) dropItem(state, hero.armour, hero);
+      hero.armour = item as Armour;
+      break;
+    case ItemType.SHIELD:
+      if (hero.shield) dropItem(state, hero.shield, hero);
+      hero.shield = item as Shield;
+      break;
+    case ItemType.WEAPON:
+      if (hero.weapon) dropItem(state, hero.weapon, hero);
+      hero.weapon = item as Weapon;
+      break;
+    default:
+      hero.inventory.push(item);
+      break;
+  }
+  if (item.pickup) {
+    const pickup = onPickup[item.pickup];
+    pickup(state, item, hero);
+  }
+};
+
 const move = (
   hero: Hero,
   state: GameState,
@@ -339,15 +409,8 @@ const move = (
   hero.position.x = newX;
   hero.position.y = newY;
   checkForNote(state, hero);
-  const nextToMonster = state.dungeon.layout.monsters.some((monster) => {
-    return isNeighbouring(
-      hero.position,
-      monster.position.x,
-      monster.position.y,
-    );
-  });
+  const nextToMonster = checkForNextToMonster(state, hero);
   if (nextToMonster) {
-    addLog(state, `${hero.name} walked by a monster and lost the momentum`);
     hero.movement = 0;
   } else {
     hero.movement -= cost;

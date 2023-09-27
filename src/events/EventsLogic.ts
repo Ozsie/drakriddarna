@@ -5,10 +5,17 @@ import {
   isBlockedByMonster,
   liveHeroes,
 } from "../hero/HeroLogic";
-import { addLog, findCell, roll, takeDamage, toArray } from "../game";
+import {
+  addLog,
+  findCell,
+  isRoomDiscovered,
+  roll,
+  takeDamage,
+  toArray,
+} from "../game";
 import { COLLAPSED, createMonster } from "../dungeon/DungeonLogic";
-import { events } from "../events/events";
-import { ACTIVE, onDrop, onPickup } from "../items/magicItems";
+import { events } from "./events";
+import { ACTIVE, onDrop, onPickup } from "../items/ItemLogic";
 
 export const getEventsForDungeon = (dungeon: Dungeon): TurnEvent[] => {
   if (dungeon.events) {
@@ -100,7 +107,7 @@ export const eventEffects: {
     eventDescriptionLog(state, event);
     const discoveredCorridors = state.dungeon.layout.corridors
       .filter((corridor) => !isRoomBlocked(state, corridor))
-      .filter((corridor) => state.dungeon.discoveredRooms.includes(corridor));
+      .filter((corridor) => isRoomDiscovered(state.dungeon, corridor));
     const maxCorridorIndex = discoveredCorridors.length - 1;
     const randomCorridorIndex = Math.floor(Math.random() * maxCorridorIndex);
     const randomCorridor = discoveredCorridors[randomCorridorIndex];
@@ -127,7 +134,7 @@ export const eventEffects: {
             secret.position.x,
             secret.position.y,
           ) ?? "";
-        return !state.dungeon.discoveredRooms.includes(secretRoom);
+        return !isRoomDiscovered(state.dungeon, secretRoom);
       });
     if (notDiscoveredSecret.length > 0) {
       const secret = state.dungeon.layout.secrets.pop();

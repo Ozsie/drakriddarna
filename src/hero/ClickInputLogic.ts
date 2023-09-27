@@ -1,6 +1,8 @@
 import {
   addLog,
   doorAsActor,
+  hasLineOfSight,
+  isRoomDiscovered,
   isSamePosition,
   isWalkable,
   takeDamage,
@@ -16,15 +18,18 @@ import {
   attack,
   canAct,
   canOpenDoor,
+  checkForNextToMonster,
   checkForNote,
   consumeActions,
   isBlockedByHero,
   isBlockedByMonster,
   openDoor,
   pickLock,
+  pickupItem,
   search,
-} from "../hero/HeroLogic";
-import { BREAK_LOCK, onPickup } from "../items/magicItems";
+} from "./HeroLogic";
+
+import { BREAK_LOCK } from "../items/ItemLogic";
 
 export const distanceInGrid = (a: Position, b: Position) => {
   const dx = Math.abs(b.x - a.x);
@@ -44,6 +49,7 @@ export const distanceInGrid = (a: Position, b: Position) => {
 };
 
 export const onTargetSelf = (state: GameState, target: Position) => {
+  state.reRender = true;
   const hero = state.currentActor as Hero;
 
   const itemLocation = state.dungeon.layout.items.find((item: ItemLocation) =>
@@ -59,11 +65,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     const index = state.dungeon.layout.items.indexOf(itemLocation);
     state.dungeon.layout.items.splice(index, 1);
     addLog(state, `${hero.name} picked up ${item.name}`);
-    hero.inventory.push(item);
-    if (item.pickup) {
-      const pickup = onPickup[item.pickup];
-      pickup(state, item, hero);
-    }
+    pickupItem(state, item, hero);
     return;
   }
 
@@ -114,21 +116,32 @@ export const onTargetSelf = (state: GameState, target: Position) => {
 };
 
 const onTargetCell = (state: GameState, target: Position) => {
+  state.reRender = true;
   const hero = state.currentActor as Hero;
   if (hero.actions === 0) {
+    hero.movement = 0;
     addLog(state, `${hero.name} has no actions left`);
     return;
   }
   const walkable = isWalkable(state.dungeon.layout, target.x, target.y);
-  const distance = distanceInGrid(hero.position, target);
-  console.log("distance: " + distance);
   if (walkable) {
     const blockedByHero = isBlockedByHero(state, target.x, target.y);
     const blockedByMonster = isBlockedByMonster(state, target.x, target.y);
-    if (!blockedByHero && !blockedByMonster && distance <= hero.movement) {
+    const distance = distanceInGrid(hero.position, target);
+    const los = hasLineOfSight(hero.position, target, 2, state, true);
+    if (
+      !blockedByHero &&
+      !blockedByMonster &&
+      distance <= hero.movement &&
+      los
+    ) {
       hero.position = target;
       hero.movement -= distance;
       checkForNote(state, hero);
+      const nextToMonster = checkForNextToMonster(state, hero);
+      if (nextToMonster) {
+        hero.movement = 0;
+      }
       if (checkForTrapDoor(state)) {
         return;
       }
@@ -166,7 +179,7 @@ export const doMouseLogic = (
   const hero = state.currentActor as Hero;
   if (x === hero.position.x && y === hero.position.y) {
     onTargetSelf(state, { x, y });
-  } else if (state.dungeon.discoveredRooms.includes(cell)) {
+  } else if (isRoomDiscovered(state.dungeon, cell)) {
     onTargetCell(state, { x, y });
   }
 };

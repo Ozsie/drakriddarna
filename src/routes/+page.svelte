@@ -17,6 +17,7 @@
     pickLock
   } from "../hero/HeroLogic.ts";
   import { browser } from "$app/environment";
+  import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
 
   let state = init();
   let debugMode = state.settings['debug'];
@@ -28,12 +29,12 @@
 
   if (browser) {
     screenSize = window.innerWidth;
-    console.log(screenSize)
   }
 
   const setDebugMode = () => {
     debugMode = !debugMode;
     state.settings['debug'] = debugMode;
+    state.reRender = true;
   }
 
   function onKeyDown(e)
@@ -73,7 +74,7 @@
         break;
       case "0":
       case " ":
-        next(state);
+        state = next(state);
         break;
       case "-":
       case "r":
@@ -158,7 +159,7 @@
           <td><button on:click={() => act('UL', state)}>UL</button></td>
           <td><button on:click={() => act('U', state)}>U</button></td>
           <td><button on:click={() => act('UR', state)}>UR</button></td>
-          <td><button on:click={() => next(state)}>Next</button></td>
+          <td><button on:click={() => state = next(state)}>Next</button></td>
         </tr>
         <tr>
           <td><button on:click={() => act('L', state)}>L</button></td>
@@ -177,6 +178,9 @@
           <td><button on:click={() => state = load()}>Load</button></td>
           <td><button on:click={() => setDebugMode()}>Debug</button></td>
           <td><button on:click={() => endAction(state)}>End action</button></td>
+          {#if debugMode}
+            <td><button on:click={() => {state.dungeon = testingGrounds; state.reRender = true;}}>To Testing Grounds</button></td>
+          {/if}
         </tr>
       </table>
     {/if}

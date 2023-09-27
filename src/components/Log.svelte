@@ -2,14 +2,19 @@
   import { onMount } from "svelte";
   import type { GameState } from "../types";
 
-  let actionLog: string[] = [];
   export let state: GameState;
+  let uglyUpdateToggle = false;
 
   onMount(() => {
-    setInterval(() => {
-      actionLog = state.actionLog
-    }, 500);
+    render();
+    setInterval(render, 500);
   });
+  const render = () => {
+    if (state.reRender) {
+      uglyUpdateToggle = !uglyUpdateToggle;
+    }
+    if (!state || !document) return;
+  };
 </script>
 <style>
     @media screen and (max-width: 600px) {
@@ -43,8 +48,8 @@
     }
 </style>
 <div class="log">
-  {#key actionLog}
-    {#each actionLog as log, index}
+  {#key uglyUpdateToggle}
+    {#each state.actionLog as log, index}
       {#if index < 25}
         <p>>{log}</p>
       {/if}
