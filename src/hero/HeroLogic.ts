@@ -368,6 +368,7 @@ export const checkForNextToMonster = (
 };
 
 export const dropItem = (state: GameState, item: Item, actor: Actor) => {
+  addLog(state, `${actor.name} dropped ${item.name}.`);
   state.dungeon.layout.items.push({
     item,
     position: actor.position,
@@ -470,7 +471,7 @@ const killMonster = (state: GameState, monster: Monster, hero: Hero) => {
   state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter(
     (m) => m != monster
   );
-  addLog(state, `${hero.name} killed ${monster.name}`);
+  monster.inventory.forEach((item) => dropItem(state, item, monster));
   state.dungeon.killCount++;
   hero.experience += monster.experience;
 };
