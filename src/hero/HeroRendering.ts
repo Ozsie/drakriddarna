@@ -1,6 +1,6 @@
-import type { GameState, Hero } from "../types";
-import { hasLineOfSight, isDiscovered, isWalkable } from "../game";
-import { isBlockedByHero, isBlockedByMonster, liveHeroes } from "./HeroLogic";
+import type { GameState, Hero } from '../types';
+import { hasLineOfSight, isDiscovered, isWalkable } from '../game';
+import { isBlockedByHero, isBlockedByMonster, liveHeroes } from './HeroLogic';
 
 export const renderHeroes = (
   ctx: CanvasRenderingContext2D,
@@ -42,8 +42,8 @@ const renderHero = (
   renderHealthBar(ctx, hero, x, y, cellSize);
   if (debugMode) {
     const debugText = `(${x},${y})`;
-    ctx.fillStyle = "black";
-    ctx.font = "8px Arial";
+    ctx.fillStyle = 'black';
+    ctx.font = '8px Arial';
     ctx.fillText(debugText, x * cellSize + 3, y * cellSize + 10);
   }
 };
@@ -58,8 +58,8 @@ const renderActionOnActor = (
   const prevFillStyle = ctx.fillStyle;
   const prevStrokeStyle = ctx.strokeStyle;
 
-  ctx.strokeStyle = "#080808";
-  ctx.fillStyle = "darkred";
+  ctx.strokeStyle = '#080808';
+  ctx.fillStyle = 'darkred';
   for (let index = 0; index < hero.actions; index++) {
     ctx.fillRect(
       x * cellSize + 4 + 6 * index,
@@ -71,7 +71,7 @@ const renderActionOnActor = (
     ctx.stroke();
   }
 
-  ctx.fillStyle = "blue";
+  ctx.fillStyle = 'blue';
   for (let index = 0; index < hero.movement; index++) {
     ctx.fillRect(
       x * cellSize + cellSize - 22 + 6 * index,
@@ -100,10 +100,10 @@ const renderHealthBar = (
   cellSize: number,
 ) => {
   ctx.beginPath();
-  ctx.strokeStyle = "black";
-  ctx.fillStyle = "red";
+  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'red';
   ctx.fillRect(x * cellSize + 4, y * cellSize, cellSize - 8, 4);
-  ctx.fillStyle = "green";
+  ctx.fillStyle = 'green';
   ctx.fillRect(
     x * cellSize + 4,
     y * cellSize,
@@ -166,7 +166,7 @@ const renderWalkableArea = (
             true,
           );
           if (!blockedByHeroes && !blockedByMonster && walkable && los) {
-            ctx.fillStyle = "rgba(50, 50, 255, 0.08)";
+            ctx.fillStyle = 'rgba(50, 50, 255, 0.08)';
             ctx.fillRect(pX * cellSize, pY * cellSize, cellSize, cellSize);
             ctx.stroke();
           }
@@ -184,7 +184,7 @@ const renderCurrentActor = (
   const hero = state.currentActor;
   if (hero) {
     ctx.beginPath();
-    ctx.strokeStyle = "lightblue";
+    ctx.strokeStyle = 'lightblue';
     ctx.lineWidth = 2;
 
     ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize);

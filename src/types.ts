@@ -2,7 +2,7 @@ export enum Colour {
   Red = '#CD5C5C',
   Blue = '#1E90FF',
   Green = '#90EE90',
-  Yellow = '#FCFF4F'
+  Yellow = '#FCFF4F',
 }
 
 export type GameState = {
@@ -13,7 +13,7 @@ export type GameState = {
   itemDeck: Item[];
   magicItemDeck: Item[];
   targetActor?: Actor;
-  settings: Record<string, any>;
+  settings: Record<string, string | number | boolean>;
   eventDeck: TurnEvent[];
   reRender: boolean;
 };
@@ -46,7 +46,7 @@ export type Actor = {
   ignoredByMonsters?: boolean;
   blinded?: boolean;
   weakened?: boolean;
-}
+};
 
 export type Hero = Actor & {
   isInventoryOpen: boolean;
@@ -58,20 +58,20 @@ export type Monster = Actor & {
 };
 
 export enum MonsterType {
-  ORCH = "Orch",
-  TROLL = "Troll",
-  GREEN_DARK_LORD = "Green Dark Lord",
-  BLUE_DARK_LORD = "Blue Dark Lord",
-  RED_DARK_LORD = "Red Dark Lord",
-  YELLOW_DARK_LORD = "Yellow Dark Lord",
+  ORCH = 'Orch',
+  TROLL = 'Troll',
+  GREEN_DARK_LORD = 'Green Dark Lord',
+  BLUE_DARK_LORD = 'Blue Dark Lord',
+  RED_DARK_LORD = 'Red Dark Lord',
+  YELLOW_DARK_LORD = 'Yellow Dark Lord',
 }
 
 export enum Level {
-  APPRENTICE = "Apprentice",
-  KNIGHT = "Knight",
-  HERO = "Hero",
-  LORD = "Lord",
-  MASTER = "Master",
+  APPRENTICE = 'Apprentice',
+  KNIGHT = 'Knight',
+  HERO = 'Hero',
+  LORD = 'Lord',
+  MASTER = 'Master',
 }
 
 export type Dungeon = {
@@ -134,10 +134,10 @@ export type Secret = {
 };
 
 export enum SecretType {
-  EQUIPMENT = "Equipment",
-  MAGIC_ITEM = "Magic Item",
-  TRAP_DOOR = "Trap Door",
-  NOTE = "Note",
+  EQUIPMENT = 'Equipment',
+  MAGIC_ITEM = 'Magic Item',
+  TRAP_DOOR = 'Trap Door',
+  NOTE = 'Note',
 }
 
 export type Door = {
@@ -152,10 +152,10 @@ export type Door = {
 };
 
 export enum Side {
-  LEFT = "Left",
-  RIGHT = "Right",
-  UP = "Up",
-  DOWN = "Down",
+  LEFT = 'Left',
+  RIGHT = 'Right',
+  UP = 'Up',
+  DOWN = 'Down',
 }
 
 export type Position = {
@@ -175,7 +175,7 @@ export type Item = {
   amountInDeck: number;
   type: ItemType;
   value: number;
-  properties?: Record<string, any>;
+  properties?: Record<string, string | number | boolean | string[]>;
   effect?: string;
   reset?: string;
   pickup?: string;
