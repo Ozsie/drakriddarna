@@ -1,6 +1,6 @@
-import type { Hero, GameState, Monster, Position } from "../types";
-import { MonsterType } from "../types";
-import { isRoomDiscovered, stepAlongLine } from "../game";
+import type { Hero, GameState, Monster, Position } from '../types';
+import { MonsterType } from '../types';
+import { isRoomDiscovered, stepAlongLine } from '../game';
 
 export const renderMonsters = (
   ctx: CanvasRenderingContext2D,
@@ -114,8 +114,8 @@ const renderActorBar = (
     4,
   );
   ctx.stroke();
-  ctx.strokeStyle = "black";
-  ctx.fillStyle = "black";
+  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'black';
 };
 
 const renderHealthBar = (
@@ -124,15 +124,15 @@ const renderHealthBar = (
   cellSize: number,
 ) => {
   ctx.beginPath();
-  ctx.strokeStyle = "black";
-  ctx.fillStyle = "red";
+  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'red';
   ctx.fillRect(
     monster.position.x * cellSize + 4,
     monster.position.y * cellSize,
     cellSize - 8,
     4,
   );
-  ctx.fillStyle = "green";
+  ctx.fillStyle = 'green';
   ctx.fillRect(
     monster.position.x * cellSize + 4,
     monster.position.y * cellSize,
@@ -146,8 +146,8 @@ const renderHealthBar = (
     4,
   );
   ctx.stroke();
-  ctx.strokeStyle = "black";
-  ctx.fillStyle = "black";
+  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'black';
 };
 
 const renderLineOfSight = (

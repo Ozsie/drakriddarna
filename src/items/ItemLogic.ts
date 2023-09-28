@@ -1,27 +1,27 @@
-import type { Actor, GameState, Item } from "../types";
-import { addLog, roll } from "../game";
-import { canAct } from "../hero/HeroLogic";
+import type { Actor, GameState, Item } from '../types';
+import { addLog, roll } from '../game';
+import { canAct } from '../hero/HeroLogic';
 
-export const USED = "USED";
-export const ATTACK_BONUS = "ATTACK_BONUS";
-export const SEARCH_BONUS = "SEARCH_BONUS";
-export const BREAK_LOCK = "BREAK_LOCK";
-export const RE_ROLL_ATTACK = "RE_ROLL_ATTACK";
-export const DESCRIPTION = "DESCRIPTION";
-export const ACTIVE = "ACTIVE";
-export const MOVEMENT_BONUS = "MOVEMENT_BONUS";
-export const ACTIONS_BONUS = "ACTIONS_BONUS";
-export const RESET_ON = "RESET_ON";
-export const NEXT_TURN = "NEXT_TURN";
-export const TRADE = "TRADE";
-export const NEXT_DUNGEON = "NEXT_SCENARIO";
+export const USED = 'USED';
+export const ATTACK_BONUS = 'ATTACK_BONUS';
+export const SEARCH_BONUS = 'SEARCH_BONUS';
+export const BREAK_LOCK = 'BREAK_LOCK';
+export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
+export const DESCRIPTION = 'DESCRIPTION';
+export const ACTIVE = 'ACTIVE';
+export const MOVEMENT_BONUS = 'MOVEMENT_BONUS';
+export const ACTIONS_BONUS = 'ACTIONS_BONUS';
+export const RESET_ON = 'RESET_ON';
+export const NEXT_TURN = 'NEXT_TURN';
+export const TRADE = 'TRADE';
+export const NEXT_DUNGEON = 'NEXT_SCENARIO';
 export const onPickup: {
   [index: string]: (state: GameState, self: Item, user: Actor) => void;
 } = {
   movementBonusOnPickup: (state: GameState, self: Item, user: Actor) => {
-    user.maxMovement += self.properties?.[MOVEMENT_BONUS];
+    user.maxMovement += self.properties?.[MOVEMENT_BONUS] as number;
     if (user.actions > 0) {
-      user.movement += self.properties?.[MOVEMENT_BONUS];
+      user.movement += self.properties?.[MOVEMENT_BONUS] as number;
     }
   },
 };
@@ -30,9 +30,9 @@ export const onDrop: {
 } = {
   movementBonusOnDrop: (state: GameState, self: Item, user: Actor) => {
     if (user.maxMovement - 1 > 0)
-      user.maxMovement -= self.properties?.[MOVEMENT_BONUS];
+      user.maxMovement -= self.properties?.[MOVEMENT_BONUS] as number;
     if (user.movement - 1 >= 0)
-      user.movement -= self.properties?.[MOVEMENT_BONUS];
+      user.movement -= self.properties?.[MOVEMENT_BONUS] as number;
   },
 };
 export const onUse: {
@@ -54,7 +54,7 @@ export const onUse: {
       return;
     }
     if (!target) {
-      addLog(state, `No target was selected.`);
+      addLog(state, 'No target was selected.');
       return;
     }
     if (!canAct(user)) {
@@ -67,7 +67,7 @@ export const onUse: {
         return;
       }
       self.properties[USED] = true;
-      let addedHealth = Math.min(
+      const addedHealth = Math.min(
         roll(user.level, 3),
         target.maxHealth - target.health,
       );
@@ -84,10 +84,14 @@ export const onUse: {
     state: GameState,
     self: Item,
     user: Actor,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     target?: Actor,
   ) => {
     if (self.disabled) {
-      addLog(state, `${self.name} cannot be used at this moment.`);
+      addLog(
+        state,
+        `${self.name} cannot be used at this moment. ${user.name} tried it.`,
+      );
       return;
     }
   },
@@ -97,11 +101,13 @@ export const onUse: {
       return;
     }
     if (!self.properties?.[USED]) {
-      user.actions += self.properties?.[ACTIONS_BONUS];
+      user.actions += self.properties?.[ACTIONS_BONUS] as number;
       if (self.properties) self.properties[USED] = true;
       addLog(
         state,
-        `${user.name} used ${self.name}, adding ${self.properties?.[ACTIONS_BONUS]} actions`,
+        `${user.name} used ${self.name}, adding ${
+          self.properties?.[ACTIONS_BONUS] as number
+        } actions`,
       );
     } else {
       addLog(state, `${self.name} has been consumed.`);
@@ -118,7 +124,7 @@ export const onUse: {
       return;
     }
     if (!target) {
-      addLog(state, `No target was selected.`);
+      addLog(state, 'No target was selected.');
       return;
     }
     if (!canAct(user)) {
@@ -179,7 +185,7 @@ export const resetOnNext = (state: GameState) => {
 
 const resetsOnNext = (item: Item) => {
   if (item.properties) {
-    const resetOn: string[] = item.properties[RESET_ON] ?? [];
+    const resetOn: string[] = (item.properties[RESET_ON] as string[]) ?? [];
     return resetOn.some((resetOn: string) => resetOn === NEXT_TURN);
   }
   return false;
@@ -187,7 +193,7 @@ const resetsOnNext = (item: Item) => {
 
 const resetsOnNextDungeon = (item: Item) => {
   if (item.properties) {
-    const resetOn: string[] = item.properties[RESET_ON] ?? [];
+    const resetOn: string[] = (item.properties[RESET_ON] as string) ?? [];
     return resetOn.some((resetOn: string) => resetOn === NEXT_DUNGEON);
   }
   return false;

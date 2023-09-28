@@ -1,11 +1,11 @@
-import type { Dungeon } from "../../types";
+import type { Dungeon } from '../../types';
 import {
   Colour,
   ConditionType,
   MonsterType,
   SecretType,
   Side,
-} from "../../types";
+} from '../../types';
 import {
   createDoor,
   createHiddenDoor,
@@ -13,12 +13,12 @@ import {
   createMonster,
   createSecret,
   createSecretWithItem,
-} from "../../dungeon/DungeonLogic";
-import { magicItems } from "../../items/magicItems";
+} from '../../dungeon/DungeonLogic';
+import { magicItems } from '../../items/magicItems';
 import { e1m3 } from "./e1m3";
 
 export const e1m2: Dungeon = {
-  name: "The Mines of Evil",
+  name: 'The Mines of Evil',
   nextDungeon: e1m3,
   beaten: false,
   winConditions: [
@@ -38,28 +38,28 @@ export const e1m2: Dungeon = {
     { x: 2, y: 15 },
     { x: 3, y: 15 },
   ],
-  discoveredRooms: ["M"],
+  discoveredRooms: ['M'],
   layout: {
     grid: [
-      "############## #####",
-      "#AAA###CCCCCC###EEE#",
-      "#AAABBBC@CC@CDDDEEE#",
-      "#AAA###CCCCCC###EEE#",
-      "##### ##H##### #EEE#",
-      "       #H#     #EEE#",
-      "##### ##H##### #EEE#",
-      "#KKK###IIIIII# #EEE#",
-      "#KKKJJJIIIIII# ##F##",
-      "#KKK###IIIIII# ##F##",
-      "##L## #IIIIII# ##F##",
-      " #L#  ######## #GGG#",
-      "##L##          #GGG#",
-      "#MMM#          #GGG#",
-      "#MMM#          #GGG#",
-      "#MMM#          #####",
-      "#####               ",
+      '############## #####',
+      '#AAA###CCCCCC###EEE#',
+      '#AAABBBC@CC@CDDDEEE#',
+      '#AAA###CCCCCC###EEE#',
+      '##### ##H##### #EEE#',
+      '       #H#     #EEE#',
+      '##### ##H##### #EEE#',
+      '#KKK###IIIIII# #EEE#',
+      '#KKKJJJIIIIII# ##F##',
+      '#KKK###IIIIII# ##F##',
+      '##L## #IIIIII# ##F##',
+      ' #L#  ######## #GGG#',
+      '##L##          #GGG#',
+      '#MMM#          #GGG#',
+      '#MMM#          #GGG#',
+      '#MMM#          #####',
+      '#####               ',
     ],
-    corridors: ["B", "D", "F", "H", "J", "L"],
+    corridors: ['B', 'D', 'F', 'H', 'J', 'L'],
     doors: [
       createDoor(Side.UP, 2, 13),
       createDoor(Side.UP, 2, 10),
@@ -84,28 +84,28 @@ export const e1m2: Dungeon = {
       createMonster(MonsterType.TROLL, Colour.Yellow, 17, 10),
     ],
     secrets: [
-      createSecret(SecretType.EQUIPMENT, "Equipment", 1, 3),
-      createSecret(SecretType.EQUIPMENT, "Equipment", 3, 3),
-      createSecret(SecretType.EQUIPMENT, "Equipment", 15, 2),
+      createSecret(SecretType.EQUIPMENT, 'Equipment', 1, 3),
+      createSecret(SecretType.EQUIPMENT, 'Equipment', 3, 3),
+      createSecret(SecretType.EQUIPMENT, 'Equipment', 15, 2),
       createSecretWithItem(SecretType.MAGIC_ITEM, 2, 3, magicItems[1]),
       createSecretWithItem(SecretType.MAGIC_ITEM, 16, 11, magicItems[6]),
     ],
     notes: [
       {
-        message: "Guard room",
+        message: 'Guard room',
         position: { x: 2, y: 10 },
       },
       {
-        message: "Look in the pillar room for the armory of the dwarf king",
+        message: 'Look in the pillar room for the armory of the dwarf king',
         position: { x: 8, y: 10 },
       },
       {
         message:
-          "To reach the treasure of the ice dragon, look behind the mirror in the alchemy laboratory.",
+          'To reach the treasure of the ice dragon, look behind the mirror in the alchemy laboratory.',
         position: { x: 2, y: 3 },
       },
       {
-        message: "A large mirror decorates the far wall of this room.",
+        message: 'A large mirror decorates the far wall of this room.',
         position: { x: 17, y: 11 },
       },
     ],

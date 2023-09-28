@@ -1,115 +1,99 @@
-import type { Door, Item, Monster, Secret } from "../types";
-import { Colour, Level, MonsterType, SecretType, Side } from "../types";
-import { monsterWeapons } from "../items/weapons";
-import { monsterArmour } from "../items/armours";
+import type { Door, Item, Monster, Secret } from '../types';
+import { Colour, Level, MonsterType, SecretType, Side } from '../types';
+import { monsterWeapons } from '../items/weapons';
+import { monsterArmour } from '../items/armours';
 
-export const EMPTY = " ";
-export const COLLAPSED = "?";
-export const WALL = "#";
+export const EMPTY = ' ';
+export const COLLAPSED = '?';
+export const WALL = '#';
 
 export const createSecret = (
   type: SecretType,
   name: string,
   x: number,
-  y: number
-): Secret => {
-  return {
-    type,
-    name,
-    position: { x, y },
-    found: false,
-  };
-};
+  y: number,
+): Secret => ({
+  type,
+  name,
+  position: { x, y },
+  found: false,
+});
 
 export const createSecretWithItem = (
   type: SecretType,
   x: number,
   y: number,
-  item: Item
-): Secret => {
-  return {
-    type,
-    name: item.name,
-    position: { x, y },
-    found: false,
-    item,
-  };
-};
+  item: Item,
+): Secret => ({
+  type,
+  name: item.name,
+  position: { x, y },
+  found: false,
+  item,
+});
 
-export const createDoor = (side: Side, x: number, y: number): Door => {
-  return {
-    side,
-    x,
-    y,
-    locked: false,
-    trapped: false,
-    open: false,
-    hidden: false,
-    trapAttacks: 0,
-  };
-};
+export const createDoor = (side: Side, x: number, y: number): Door => ({
+  side,
+  x,
+  y,
+  locked: false,
+  trapped: false,
+  open: false,
+  hidden: false,
+  trapAttacks: 0,
+});
 
 export const createTrappedDoor = (
   side: Side,
   x: number,
   y: number,
-  trapAttacks: number
-): Door => {
-  return {
-    ...createDoor(side, x, y),
-    trapped: true,
-    trapAttacks,
-  };
-};
+  trapAttacks: number,
+): Door => ({
+  ...createDoor(side, x, y),
+  trapped: true,
+  trapAttacks,
+});
 
-export const createHiddenDoor = (side: Side, x: number, y: number): Door => {
-  return {
-    ...createDoor(side, x, y),
-    hidden: true,
-  };
-};
+export const createHiddenDoor = (side: Side, x: number, y: number): Door => ({
+  ...createDoor(side, x, y),
+  hidden: true,
+});
 
-export const createLockedDoor = (side: Side, x: number, y: number): Door => {
-  return {
-    ...createDoor(side, x, y),
-    locked: true,
-  };
-};
+export const createLockedDoor = (side: Side, x: number, y: number): Door => ({
+  ...createDoor(side, x, y),
+  locked: true,
+});
 
 export const createTrappedLockedDoor = (
   side: Side,
   x: number,
   y: number,
-  trapAttacks: number
-): Door => {
-  return {
-    ...createDoor(side, x, y),
-    locked: true,
-    trapped: true,
-    trapAttacks,
-  };
-};
+  trapAttacks: number,
+): Door => ({
+  ...createDoor(side, x, y),
+  locked: true,
+  trapped: true,
+  trapAttacks,
+});
 
 export const createTrappedHiddenDoor = (
   side: Side,
   x: number,
   y: number,
-  trapAttacks: number
-): Door => {
-  return {
-    ...createDoor(side, x, y),
-    hidden: true,
-    trapped: true,
-    trapAttacks,
-  };
-};
+  trapAttacks: number,
+): Door => ({
+  ...createDoor(side, x, y),
+  hidden: true,
+  trapped: true,
+  trapAttacks,
+});
 
 export const createMonsterWithInventory = (
   type: MonsterType,
   colour: Colour,
   x: number,
   y: number,
-  inventory: Item[]
+  inventory: Item[],
 ): Monster => {
   const monster = createMonster(type, colour, x, y);
   monster.inventory = inventory;
@@ -165,7 +149,7 @@ export const createMonster = (
     health,
     maxHealth,
     experience,
-    name: type + " (" + colourName + ")",
+    name: type + ' (' + colourName + ')',
     movement: 3,
     maxMovement: 3,
     position: { x, y },

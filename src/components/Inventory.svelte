@@ -18,13 +18,21 @@
 </script>
 <style>
   .inventory {
+    display: grid;
+    width: 99%; 
+    overflow:hidden;
+    margin: 2px 4px; 
+
   }
-  .hero-card .inventory span {
+
+
+  h4 {
     display: inline-block;
+    margin-left: 50px;
   }
 </style>
+<h4> {state.currentActor?.name}s  Inventory</h4>
 <div class="inventory">
-  <span>Inventory</span>
   {#key uglyUpdateToggle}
     {#each inventory as item}
       <ItemCard bind:item={item} state={state} />

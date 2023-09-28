@@ -5,7 +5,9 @@
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
 ## Todo
-- [ ] Linting
+- [ ] Difficulty levels
+- [ ] Hints for secrets
+- [ ] Show level win conditions & button to move on
 - [ ] Monster special attack
   - [X] Diagonal fire attack (yellow dark lord)
   - [X] Orthogonal fire attack (red dark lord)
@@ -27,6 +29,7 @@
 - [ ] Monster cards?
 - [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] Event #16 - The Hexagram
+- [X] Linting
 - [X] Secrets
 - [X] Drop Items
 - [X] Monster blocking move on click move

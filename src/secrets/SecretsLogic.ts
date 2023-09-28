@@ -1,14 +1,14 @@
-import type { Actor, GameState, Hero, Item, Position, Secret } from "../types";
-import { Colour, ItemType, Level, SecretType } from "../types";
+import type { Actor, GameState, Hero, Item, Position, Secret } from '../types';
+import { Colour, ItemType, Level, SecretType } from '../types';
 import {
   addLog,
   isNeighbouring,
   isSamePosition,
   roll,
   takeDamage,
-} from "../game";
-import { pickupItem } from "../hero/HeroLogic";
-import { onPickup, SEARCH_BONUS } from "../items/ItemLogic";
+} from '../game';
+import { pickupItem } from '../hero/HeroLogic';
+import { onPickup, SEARCH_BONUS } from '../items/ItemLogic';
 
 export const searchForSecret = (state: GameState) => {
   const hero = state.currentActor as Hero;
@@ -83,68 +83,54 @@ export const removeFoundMagicItemFromDeck = (state: GameState, item: Item) => {
   state.magicItemDeck.splice(index, 1);
 };
 
-const secretAsActor = (secret: Secret): Actor => {
-  return {
-    health: 0,
-    position: secret.position,
-    defense: 0,
-    experience: 0,
-    actions: 0,
-    movement: 0,
-    maxMovement: 0,
-    colour: Colour.Red,
-    maxHealth: 0,
-    name: "Trap Door",
-    level: Level.APPRENTICE,
-    incapacitated: false,
-    weapon: {
-      name: "Falling",
-      amountInDeck: 0,
-      dice: 3,
-      useHearHeroes: true,
-      twoHanded: false,
-      range: 1,
-      type: ItemType.WEAPON,
-      value: 0,
-      ignoresShield: true,
-      ignoresArmour: true,
-    },
-    inventory: [],
-  };
-};
+const secretAsActor = (secret: Secret): Actor => ({
+  health: 0,
+  position: secret.position,
+  defense: 0,
+  experience: 0,
+  actions: 0,
+  movement: 0,
+  maxMovement: 0,
+  colour: Colour.Red,
+  maxHealth: 0,
+  name: 'Trap Door',
+  level: Level.APPRENTICE,
+  incapacitated: false,
+  weapon: {
+    name: 'Falling',
+    amountInDeck: 0,
+    dice: 3,
+    useHearHeroes: true,
+    twoHanded: false,
+    range: 1,
+    type: ItemType.WEAPON,
+    value: 0,
+    ignoresShield: true,
+    ignoresArmour: true,
+  },
+  inventory: [],
+});
 
-const findHiddenDoor = (state: GameState, pos: Position) => {
-  return state.dungeon.layout.doors
+const findHiddenDoor = (state: GameState, pos: Position) =>
+  state.dungeon.layout.doors
     .filter((secret) => secret.hidden)
-    .find((door) => {
-      return isNeighbouring({ x: door.x, y: door.y }, pos.x, pos.y);
-    });
-};
+    .find((door) => isNeighbouring({ x: door.x, y: door.y }, pos.x, pos.y));
 
-const findTrap = (state: GameState, pos: Position) => {
-  return state.dungeon.layout.doors
+const findTrap = (state: GameState, pos: Position) =>
+  state.dungeon.layout.doors
     .filter((door) => door.trapped)
-    .find((door) => {
-      return door.x === pos.x && door.y === pos.y;
-    });
-};
+    .find((door) => door.x === pos.x && door.y === pos.y);
 
-const findSecret = (state: GameState, pos: Position) => {
-  return state.dungeon.layout.secrets
+const findSecret = (state: GameState, pos: Position) =>
+  state.dungeon.layout.secrets
     .filter((secret) => !secret.found)
-    .find((secret) => {
-      return isNeighbouring(secret.position, pos.x, pos.y);
-    });
-};
+    .find((secret) => isNeighbouring(secret.position, pos.x, pos.y));
 
-const findTrapDoor = (state: GameState, pos: Position) => {
-  return state.dungeon.layout.secrets
+const findTrapDoor = (state: GameState, pos: Position) =>
+  state.dungeon.layout.secrets
     .filter((secret) => !secret.found)
     .filter((secret) => secret.type === SecretType.TRAP_DOOR)
-    .find((secret) => {
-      return isNeighbouring(secret.position, pos.x, pos.y);
-    });
-};
+    .find((secret) => isNeighbouring(secret.position, pos.x, pos.y));
 
 const lookForHiddenDoor = (state: GameState, hero: Hero, result: number) => {
   const hiddenDoor = findHiddenDoor(state, hero.position);
@@ -176,7 +162,7 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
     secret.found = true;
     switch (secret.type) {
       case SecretType.EQUIPMENT: {
-        let item = secret.item ?? randomItem(state);
+        const item = secret.item ?? randomItem(state);
         if (item.amountInDeck > 0) {
           removeFoundItemFromDeck(state, item);
           addLog(state, `${hero.name} equipped (${item.name})`);
@@ -185,7 +171,7 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
         break;
       }
       case SecretType.MAGIC_ITEM: {
-        let item = secret.item ?? randomMagicItem(state);
+        const item = secret.item ?? randomMagicItem(state);
         if (item.amountInDeck > 0) {
           removeFoundMagicItemFromDeck(state, item);
           addLog(state, `${hero.name} found (${item.name})`);

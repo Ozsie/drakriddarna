@@ -8,46 +8,46 @@ import type {
   Layout,
   Position,
   Weapon,
-} from "./types";
-import { Colour, ConditionType, ItemType, Level } from "./types";
-import { COLLAPSED, EMPTY, WALL } from "./dungeon/DungeonLogic";
-import { campaignIceDragonTreasure } from "./campaigns/campaignIceDragonTreasure";
-import { monsterActions } from "./monsters/MonsterLogic";
+} from './types';
+import { Colour, ConditionType, ItemType, Level } from './types';
+import { COLLAPSED, EMPTY, WALL } from './dungeon/DungeonLogic';
+import { campaignIceDragonTreasure } from './campaigns/campaignIceDragonTreasure';
+import { monsterActions } from './monsters/MonsterLogic';
 import {
   levelUp,
   liveHeroes,
   replaceDeadHeroes,
   resetLiveHeroes,
   rewardLiveHeroes,
-} from "./hero/HeroLogic";
+} from './hero/HeroLogic';
 import {
   ATTACK_BONUS,
   RE_ROLL_ATTACK,
   resetOnNext,
   resetOnNextDungeon,
-} from "./items/ItemLogic";
+} from './items/ItemLogic';
 import {
   drawNextEvent,
   getEventsForDungeon,
   eventEffects,
   resetEventEffects,
-} from "./events/EventsLogic";
-import { browser } from "$app/environment";
+} from './events/EventsLogic';
+import { browser } from '$app/environment';
 
 export const save = (state: GameState) => {
   state.reRender = true;
-  addLog(state, "Game saved.");
-  localStorage.setItem("state", JSON.stringify(state));
+  addLog(state, 'Game saved.');
+  localStorage.setItem('state', JSON.stringify(state));
 };
 
 export const load = (): GameState | undefined => {
-  const stateString = localStorage.getItem("state");
+  const stateString = localStorage.getItem('state');
   if (stateString) {
-    const state: GameState = JSON.parse(stateString);
+    const state: GameState = JSON.parse(stateString) as GameState;
     state.currentActor = state.heroes.find(
-      (hero) => hero.name === state.currentActor?.name
-    );
-    addLog(state, "Game loaded.");
+      (hero) => hero.name === state.currentActor?.name,
+    ) as Hero | undefined;
+    addLog(state, 'Game loaded.');
     state.reRender = true;
     return state;
   }
@@ -57,14 +57,14 @@ export const init = (): GameState => {
   const state: GameState = {
     heroes: campaignIceDragonTreasure.heroes,
     dungeon: campaignIceDragonTreasure.dungeons[0],
-    currentActor: campaignIceDragonTreasure.heroes[0],
+    currentActor: campaignIceDragonTreasure.heroes[0] as Hero | undefined,
     actionLog: [
       `Playing '${campaignIceDragonTreasure.name}'`,
-      "Game Initialised",
-      "Each character has 2 actions. Move, Attack, Search or Pick Lock.",
-      "Each character can move 3 steps per action.",
-      "If another action is performed before moving 3 steps, the move is finished and both actions are consumed.",
-      "The rules of this game are harsh and unfair.",
+      'Game Initialised',
+      'Each character has 2 actions. Move, Attack, Search or Pick Lock.',
+      'Each character can move 3 steps per action.',
+      'If another action is performed before moving 3 steps, the move is finished and both actions are consumed.',
+      'The rules of this game are harsh and unfair.',
     ],
     itemDeck: shuffle(campaignIceDragonTreasure.itemDeck),
     magicItemDeck: shuffle(campaignIceDragonTreasure.magicItemDeck),
@@ -77,8 +77,7 @@ export const init = (): GameState => {
   };
   resetLiveHeroes(state);
   if (browser) {
-    console.log("autosave");
-    localStorage.setItem("autosave", JSON.stringify(state));
+    localStorage.setItem('autosave', JSON.stringify(state));
   }
   return state;
 };
@@ -99,7 +98,7 @@ const shuffle = (array: Item[]): Item[] => {
 };
 
 export const toArray = (row: string): string[] => {
-  let array: string[] = [];
+  const array: string[] = [];
   for (let i = 0; i < row.length; i++) {
     array.push(row[i]);
   }
@@ -142,7 +141,7 @@ export const next = (state: GameState): GameState | undefined => {
   if (state.currentActor === undefined) return state;
   else {
     addLog(state, `${state.currentActor.name} ended their turn`);
-    let currentIndex = liveHeroes(state).indexOf(state.currentActor);
+    const currentIndex = liveHeroes(state).indexOf(state.currentActor);
     let nextIndex = currentIndex + 1;
     if (nextIndex === liveHeroes(state).length) {
       monsterActions(state);
@@ -174,9 +173,9 @@ export const next = (state: GameState): GameState | undefined => {
 };
 
 export const resetLevel = (): GameState | undefined => {
-  const loadedRawState = localStorage.getItem("autosave");
+  const loadedRawState = localStorage.getItem('autosave');
   if (loadedRawState) {
-    const state: GameState = JSON.parse(loadedRawState);
+    const state: GameState = JSON.parse(loadedRawState) as GameState;
     state.reRender = true;
 
     replaceDeadHeroes(state);
@@ -188,14 +187,14 @@ export const resetLevel = (): GameState | undefined => {
         x: state.dungeon.startingPositions[0].x,
         y: state.dungeon.startingPositions[0].y,
       },
-      state.settings["cellSize"] as number
+      state.settings['cellSize'] as number,
     );
     state.currentActor = state.heroes.find(
-      (hero) => hero.name === state.currentActor?.name
-    );
+      (hero) => hero.name === state.currentActor?.name,
+    ) as Hero | undefined;
     addLog(
       state,
-      `All the heroes fell in combat. But worry not, you can try again.`
+      'All the heroes fell in combat. But worry not, you can try again.',
     );
     return state;
   }
@@ -212,12 +211,11 @@ const checkWinConditions = (state: GameState) => {
         break;
       }
       case ConditionType.REACH_CELL: {
-        condition.fulfilled = liveHeroes(state).some((hero) => {
-          return (
+        condition.fulfilled = liveHeroes(state).some(
+          (hero) =>
             hero.position.x === condition.targetCell?.x &&
-            hero.position.y === condition.targetCell.y
-          );
-        });
+            hero.position.y === condition.targetCell.y,
+        );
         break;
       }
       case ConditionType.KILL_ALL_OF_TYPE: {
@@ -228,12 +226,11 @@ const checkWinConditions = (state: GameState) => {
       }
       case ConditionType.OPEN_DOOR: {
         condition.fulfilled =
-          state.dungeon.layout.doors.find((door) => {
-            return (
+          state.dungeon.layout.doors.find(
+            (door) =>
               door.x === condition.targetCell?.x &&
-              door.y === condition.targetCell?.y
-            );
-          })?.open ?? false;
+              door.y === condition.targetCell?.y,
+          )?.open ?? false;
         break;
       }
       case ConditionType.KILL_AT_LEAST: {
@@ -248,44 +245,44 @@ const checkWinConditions = (state: GameState) => {
     .map((condition) => condition.fulfilled)
     .reduce((partial, fulfilled) => partial && fulfilled, true);
   if (state.dungeon.beaten) {
-    addLog(state, "All win conditions have been fulfilled");
+    addLog(state, 'All win conditions have been fulfilled');
     addLog(state, `You have cleared ${state.dungeon.name}`);
-    addLog(
-      state,
-      `Press 'Next' to move on to the next level: ${state.dungeon.nextDungeon?.name}`
-    );
+    if (state.dungeon.nextDungeon?.name) {
+      addLog(
+        state,
+        `Press 'Next' to move on to the next level: ${state.dungeon.nextDungeon?.name}`,
+      );
+    }
   }
 };
 
-export const doorAsActor = (door: Door): Actor => {
-  return {
-    health: 0,
-    position: { x: door.x, y: door.y },
-    defense: 0,
-    experience: 0,
-    actions: 0,
-    movement: 0,
-    maxMovement: 0,
-    colour: Colour.Red,
-    maxHealth: 0,
-    name: "Door",
-    level: Level.APPRENTICE,
-    incapacitated: false,
-    weapon: {
-      name: "Trap",
-      amountInDeck: 0,
-      dice: door.trapAttacks,
-      useHearHeroes: true,
-      twoHanded: false,
-      range: 1,
-      type: ItemType.WEAPON,
-      value: 0,
-      ignoresShield: true,
-      ignoresArmour: false,
-    },
-    inventory: [],
-  };
-};
+export const doorAsActor = (door: Door): Actor => ({
+  health: 0,
+  position: { x: door.x, y: door.y },
+  defense: 0,
+  experience: 0,
+  actions: 0,
+  movement: 0,
+  maxMovement: 0,
+  colour: Colour.Red,
+  maxHealth: 0,
+  name: 'Door',
+  level: Level.APPRENTICE,
+  incapacitated: false,
+  weapon: {
+    name: 'Trap',
+    amountInDeck: 0,
+    dice: door.trapAttacks,
+    useHearHeroes: true,
+    twoHanded: false,
+    range: 1,
+    type: ItemType.WEAPON,
+    value: 0,
+    ignoresShield: true,
+    ignoresArmour: false,
+  },
+  inventory: [],
+});
 
 export const isWalkable = (layout: Layout, x: number, y: number): boolean => {
   let walkable = true;
@@ -312,7 +309,7 @@ export const isRoomDiscovered = (dungeon: Dungeon, cell: string) =>
   dungeon.discoveredRooms.includes(cell);
 
 export const findCell = (grid: string[], x: number, y: number): string => {
-  let c = "";
+  let c = '';
   grid.forEach((row, gY) => {
     toArray(row).forEach((cell, gX) => {
       if (gY === y && gX === x) c = cell;
@@ -321,19 +318,16 @@ export const findCell = (grid: string[], x: number, y: number): string => {
   return c;
 };
 
-export const isNeighbouring = (position: Position, x: number, y: number) => {
-  return (
-    (position.x === x && position.y === y) ||
-    (position.x === x - 1 && position.y === y) ||
-    (position.x === x - 1 && position.y === y - 1) ||
-    (position.x === x && position.y === y - 1) ||
-    (position.x === x + 1 && position.y === y - 1) ||
-    (position.x === x + 1 && position.y === y) ||
-    (position.x === x + 1 && position.y === y + 1) ||
-    (position.x === x && position.y === y + 1) ||
-    (position.x === x - 1 && position.y === y + 1)
-  );
-};
+export const isNeighbouring = (position: Position, x: number, y: number) =>
+  (position.x === x && position.y === y) ||
+  (position.x === x - 1 && position.y === y) ||
+  (position.x === x - 1 && position.y === y - 1) ||
+  (position.x === x && position.y === y - 1) ||
+  (position.x === x + 1 && position.y === y - 1) ||
+  (position.x === x + 1 && position.y === y) ||
+  (position.x === x + 1 && position.y === y + 1) ||
+  (position.x === x && position.y === y + 1) ||
+  (position.x === x - 1 && position.y === y + 1);
 
 export const getDamageString = (
   damage: number,
@@ -345,9 +339,8 @@ export const getDamageString = (
   return `${damage} damage (${hits}-(${defense}+${shield})=${damage})`;
 };
 
-export const isSamePosition = (a: Position, b: Position) => {
-  return a.x === b.x && a.y === b.y;
-};
+export const isSamePosition = (a: Position, b: Position) =>
+  a.x === b.x && a.y === b.y;
 
 export const addLog = (state: GameState, logMessage: string) => {
   state.actionLog = [logMessage, ...state.actionLog];
@@ -358,7 +351,7 @@ export const takeDamage = (
   state: GameState,
   source: Actor & { rangedWeapon?: Weapon },
   target: Actor,
-  ranged: boolean
+  ranged: boolean,
 ) => {
   let weapon = source.weapon;
   if (ranged && source.rangedWeapon) {
@@ -371,7 +364,7 @@ export const takeDamage = (
   } else if (target.armour) {
     addLog(
       state,
-      `${target.name}'s armour was useless against ${weapon.name} `
+      `${target.name}'s armour was useless against ${weapon.name} `,
     );
   }
   if (!weapon.ignoresShield) {
@@ -379,7 +372,7 @@ export const takeDamage = (
   } else if (target.shield) {
     addLog(
       state,
-      `${target.name}'s shield was useless against ${weapon.name} `
+      `${target.name}'s shield was useless against ${weapon.name} `,
     );
   }
   const canReRoll = source.inventory
@@ -387,7 +380,7 @@ export const takeDamage = (
     .some((item) => {
       addLog(
         state,
-        `${source.name} used the effect of ${item.name} when attacking`
+        `${source.name} used the effect of ${item.name} when attacking`,
       );
       return item.properties?.[RE_ROLL_ATTACK];
     });
@@ -396,14 +389,14 @@ export const takeDamage = (
     .map((item) => {
       addLog(
         state,
-        `${source.name} used the effect of ${item.name} when attacking`
+        `${source.name} used the effect of ${item.name} when attacking`,
       );
       return item.properties?.[ATTACK_BONUS] as number;
     })
     .reduce((partial, bonus) => partial + bonus, 0);
-  let blindedSubtraction = source.blinded ? 1 : 0;
-  let weakenedSubtraction = source.weakened ? 1 : 0;
-  let elementalAddition = source.weapon.elemental ? 1 : 0;
+  const blindedSubtraction = source.blinded ? 1 : 0;
+  const weakenedSubtraction = source.weakened ? 1 : 0;
+  const elementalAddition = source.weapon.elemental ? 1 : 0;
   const buff = attackBonus + elementalAddition;
   const deBuff = blindedSubtraction + weakenedSubtraction;
   const hits = roll(source.level, weapon.dice + buff - deBuff);
@@ -417,7 +410,7 @@ export const takeDamage = (
     state,
     `${source.name} attacked ${target.name} with ${
       weapon.name
-    } for ${getDamageString(damage, hits, shield, target)}`
+    } for ${getDamageString(damage, hits, shield, target)}`,
   );
   if (target.health <= 0) {
     addLog(state, `${source.name} killed ${target.name}`);
@@ -427,8 +420,8 @@ export const takeDamage = (
 };
 
 const scrollTo = (pos: Position, cellSize: number) => {
-  const container = document.getElementById("gameBoardContainer");
-  const canvas = document.getElementById("gameBoard");
+  const container = document.getElementById('gameBoardContainer');
+  const canvas = document.getElementById('gameBoard');
   if (container && canvas) {
     const x = pos.x * cellSize;
     const y = pos.y * cellSize;
@@ -436,16 +429,13 @@ const scrollTo = (pos: Position, cellSize: number) => {
     const yMax = canvas.offsetHeight;
     container.scrollLeft = Math.round(x / xMax);
     container.scrollTop = Math.round(y / yMax);
-    console.log(
-      `scrolling to ${container.scrollLeft} x ${container.scrollTop}`
-    );
   }
 };
 
 export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
     state.dungeon = state.dungeon.nextDungeon;
-    state.actionLog = ["You have reached " + state.dungeon.name];
+    state.actionLog = ['You have reached ' + state.dungeon.name];
     state.eventDeck = getEventsForDungeon(state.dungeon);
     state.reRender = true;
     rewardLiveHeroes(state);
@@ -458,22 +448,21 @@ export const hasWon = (state: GameState) => {
         x: state.dungeon.startingPositions[0].x,
         y: state.dungeon.startingPositions[0].y,
       },
-      state.settings["cellSize"] as number
+      state.settings['cellSize'] as number,
     );
-    localStorage.setItem("autosave", JSON.stringify(state));
+    localStorage.setItem('autosave', JSON.stringify(state));
   }
 };
 
-export const getDist = (a: Position, b: Position) => {
-  return Math.sqrt(Math.pow(a.x - b?.x, 2) + Math.pow(a.y - b?.y, 2));
-};
+export const getDist = (a: Position, b: Position) =>
+  Math.sqrt(Math.pow(a.x - b?.x, 2) + Math.pow(a.y - b?.y, 2));
 
 export const hasLineOfSight = (
   startPosition: Position,
   targetPosition: Position,
   resolution: number,
   state: GameState,
-  walking: boolean
+  walking: boolean,
 ): boolean => {
   const startPixelPos = {
     x: startPosition.x * resolution - Math.floor(resolution / 2),
@@ -491,7 +480,7 @@ export const hasLineOfSight = (
     resolution,
     state,
     walking,
-    []
+    [],
   );
 };
 
@@ -503,7 +492,7 @@ export const stepAlongLine = (
   resolution: number,
   state: GameState,
   walking: boolean,
-  seenCells: Position[]
+  seenCells: Position[],
 ): boolean => {
   if (isNaN(startPixelPos.x) || isNaN(startPixelPos.y)) {
     return false;
@@ -511,10 +500,10 @@ export const stepAlongLine = (
   const nextPixelPosition = normaliseVector(startPixelPos, targetPixelPos);
   const nextCellPosition = {
     x: Math.round(
-      (nextPixelPosition.x + Math.floor(resolution / 2)) / resolution
+      (nextPixelPosition.x + Math.floor(resolution / 2)) / resolution,
     ),
     y: Math.round(
-      (nextPixelPosition.y + Math.floor(resolution / 2)) / resolution
+      (nextPixelPosition.y + Math.floor(resolution / 2)) / resolution,
     ),
   };
   if (
@@ -528,16 +517,16 @@ export const stepAlongLine = (
   const nextCell = findCell(
     state.dungeon.layout.grid,
     nextCellPosition.x,
-    nextCellPosition.y
+    nextCellPosition.y,
   );
   const pit = state.dungeon.layout.pits?.some((pit) =>
-    isSamePosition(pit, nextCellPosition)
+    isSamePosition(pit, nextCellPosition),
   );
   const pillar = state.dungeon.layout.pillars?.some((pit) =>
-    isSamePosition(pit, nextCellPosition)
+    isSamePosition(pit, nextCellPosition),
   );
   const monster = state.dungeon.layout.monsters.some((monster) =>
-    isSamePosition(monster.position, nextCellPosition)
+    isSamePosition(monster.position, nextCellPosition),
   );
   const hero = liveHeroes(state)
     .filter((hero) => !isSamePosition(hero.position, source))
@@ -558,7 +547,7 @@ export const stepAlongLine = (
     if (!(nextCellPosition.x === source.x && nextCellPosition.y === source.y)) {
       if (
         !seenCells.some(
-          (c) => c.x === nextCellPosition.x && c.y === nextCellPosition.y
+          (c) => c.x === nextCellPosition.x && c.y === nextCellPosition.y,
         )
       ) {
         seenCells.push(nextCellPosition);
@@ -572,14 +561,14 @@ export const stepAlongLine = (
       resolution,
       state,
       walking,
-      seenCells
+      seenCells,
     );
   }
 };
 
 export const normaliseVector = (
   start: Position,
-  target: Position
+  target: Position,
 ): Position => {
   const xOffset = start.x;
   const yOffset = start.y;
@@ -588,17 +577,16 @@ export const normaliseVector = (
   const nX = x / Math.pow(Math.pow(x, 2) + Math.pow(y, 2), 1 / 2);
   const nY = y / Math.pow(Math.pow(x, 2) + Math.pow(y, 2), 1 / 2);
 
-  let newX = Math.round(nX + xOffset);
-  let newY = Math.round(nY + yOffset);
+  const newX = Math.round(nX + xOffset);
+  const newY = Math.round(nY + yOffset);
 
   return { x: newX, y: newY };
 };
 
 export const findNeighbouringHeroes = (
   state: GameState,
-  actor: Actor
-): Hero[] => {
-  return liveHeroes(state).filter((hero: Hero) =>
-    isNeighbouring(actor.position, hero.position.x, hero.position.y)
+  actor: Actor,
+): Hero[] =>
+  liveHeroes(state).filter((hero: Hero) =>
+    isNeighbouring(actor.position, hero.position.x, hero.position.y),
   );
-};
