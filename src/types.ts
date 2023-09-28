@@ -2,19 +2,20 @@ export enum Colour {
   Red = '#CD5C5C',
   Blue = '#1E90FF',
   Green = '#90EE90',
-  Yellow = '#FCFF4F',
+  Yellow = '#FCFF4F'
 }
 
 export type GameState = {
   heroes: Actor[];
   dungeon: Dungeon;
-  currentActor?: Actor;
+  currentActor?: Hero;
   actionLog: string[];
   itemDeck: Item[];
   magicItemDeck: Item[];
   targetActor?: Actor;
-  settings: Record<string, string | number | boolean>;
+  settings: Record<string, any>;
   eventDeck: TurnEvent[];
+  reRender: boolean;
 };
 
 export type Campaign = {
@@ -45,9 +46,11 @@ export type Actor = {
   ignoredByMonsters?: boolean;
   blinded?: boolean;
   weakened?: boolean;
-};
+}
 
-export type Hero = Actor & {};
+export type Hero = Actor & {
+  isInventoryOpen: boolean;
+};
 
 export type Monster = Actor & {
   type: MonsterType;
@@ -55,20 +58,20 @@ export type Monster = Actor & {
 };
 
 export enum MonsterType {
-  ORCH = 'Orch',
-  TROLL = 'Troll',
-  GREEN_DARK_LORD = 'Green Dark Lord',
-  BLUE_DARK_LORD = 'Blue Dark Lord',
-  RED_DARK_LORD = 'Red Dark Lord',
-  YELLOW_DARK_LORD = 'Yellow Dark Lord',
+  ORCH = "Orch",
+  TROLL = "Troll",
+  GREEN_DARK_LORD = "Green Dark Lord",
+  BLUE_DARK_LORD = "Blue Dark Lord",
+  RED_DARK_LORD = "Red Dark Lord",
+  YELLOW_DARK_LORD = "Yellow Dark Lord",
 }
 
 export enum Level {
-  APPRENTICE = 'Apprentice',
-  KNIGHT = 'Knight',
-  HERO = 'Hero',
-  LORD = 'Lord',
-  MASTER = 'Master',
+  APPRENTICE = "Apprentice",
+  KNIGHT = "Knight",
+  HERO = "Hero",
+  LORD = "Lord",
+  MASTER = "Master",
 }
 
 export type Dungeon = {
@@ -108,6 +111,8 @@ export type Layout = {
   notes: Note[];
   items: ItemLocation[];
   corridors: string[];
+  pillars?: Position[];
+  pits?: Position[];
 };
 
 export type ItemLocation = {
@@ -129,10 +134,10 @@ export type Secret = {
 };
 
 export enum SecretType {
-  EQUIPMENT = 'Equipment',
-  MAGIC_ITEM = 'Magic Item',
-  TRAP_DOOR = 'Trap Door',
-  NOTE = 'Note',
+  EQUIPMENT = "Equipment",
+  MAGIC_ITEM = "Magic Item",
+  TRAP_DOOR = "Trap Door",
+  NOTE = "Note",
 }
 
 export type Door = {
@@ -147,10 +152,10 @@ export type Door = {
 };
 
 export enum Side {
-  LEFT = 'Left',
-  RIGHT = 'Right',
-  UP = 'Up',
-  DOWN = 'Down',
+  LEFT = "Left",
+  RIGHT = "Right",
+  UP = "Up",
+  DOWN = "Down",
 }
 
 export type Position = {
@@ -170,7 +175,7 @@ export type Item = {
   amountInDeck: number;
   type: ItemType;
   value: number;
-  properties?: Record<string, string | number | boolean | string[]>;
+  properties?: Record<string, any>;
   effect?: string;
   reset?: string;
   pickup?: string;

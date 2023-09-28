@@ -4,6 +4,10 @@
   export let hero: Hero;
   export let state: GameState;
 
+  
+  let inventoryDisplayType = "none"
+  
+  
   const selectTarget = (target: Hero) => {
     if (state.targetActor && target === state.targetActor) {
       state.targetActor = undefined;
@@ -11,6 +15,32 @@
       state.targetActor = target;
     }
   }
+
+  const toggleInventory = (currentHero: Hero) =>
+  {
+    const inventoryDiv =  document.getElementById(currentHero.name+"s-inventory");
+    console.log(currentHero.isInventoryOpen);
+    if(inventoryDiv == null)
+      return; 
+
+    currentHero.isInventoryOpen = !currentHero.isInventoryOpen;
+    setInvetoryDisplayTyp();
+    inventoryDiv.style.display = inventoryDisplayType;
+  }
+
+  const setInvetoryDisplayTyp = () =>
+  {
+    if(hero.isInventoryOpen){
+      inventoryDisplayType = "inline-block";
+    }
+    else{
+      inventoryDisplayType = "none";
+    }
+  }
+
+  setInvetoryDisplayTyp();
+
+  
 </script>
 <style>
     .hero-card{
@@ -36,54 +66,117 @@
         display: block;
     }
 
-    .hero-card .equipment span {
+    .hero-card .equipment {
         float: left;
         margin: 0 4px;
         font-size: 0.75em;
     }
+
+    .hero-information{
+      position: relative
+    }
+    @media screen and (max-width: 600px) {
+      .hero-inventory
+      {
+        position: fixed;
+        opacity: 90%;
+        background-color: burlywood;
+        top: 205px;
+        left: 15px;
+        padding: 2px;
+        border-radius: 4px;
+        border: 2px solid #5C4033;
+        width: calc(92% - 6px);
+        min-height: 50px;
+        word-wrap: break-word;      
+
+      }
+    }
+    @media screen and (min-width: 601px) {
+      .hero-inventory
+      {
+        position: fixed;
+        opacity: 90%;
+        background-color: burlywood;
+        top: 15px;
+        left: 20%;
+        padding: 2px;
+        border-radius: 4px;
+        border: 2px solid #5C4033;
+        width: calc(60%);
+        min-height: 50px;
+        margin-top: 4px;
+        word-wrap: break-word;      
+
+      }
+    }
+
+    .hero-stats-and-equipmnet{
+
+    }
+    .hero-action-buttons{
+      
+    }
 </style>
 {#key state.targetActor}
-<div class="hero-card" style="background-color: {hero.colour};">
+<div class="hero-card" style="background-color: {hero.colour};" >
   <div class="hero-title">
     <b>{#if state.targetActor === hero}*{/if}{hero.name} - </b>
     <b> {hero.level} ({hero.experience})</b>
   </div>
-  <span>
-    <button on:click={() => selectTarget(hero)}>
+  <!-- {#if state.currentActor == hero} -->
+  <div class="hero-action-buttons">
+
+    <button on:click={() => selectTarget(hero)} title="select target hero">
       {#if state.targetActor !== hero}
-        Target
+      ⛶
       {:else}
-        Unselect
+      ☑
       {/if}
     </button>
-  </span>
-  <span>HP: {hero.health}</span>
-  <span>Actions: {hero.actions}</span>
-  <span>Moves: {hero.movement}</span>
-  <span>Equipment: </span>
-  <div class="equipment">
-    <span>🗡️ {hero.weapon.name} ({hero.weapon.dice}) </span>
-    <span>
-      🧱
-      {#if hero.armour}
-        {hero.armour.name} ({hero.armour.defense})
-      {:else}
-        None (0)
-      {/if}
-    </span>
-    <span>
-      🛡️
-      {#if hero.shield}
-        {hero.shield.name} ({hero.shield.dice})
-      {:else}
-        None (0)
-      {/if}
-    </span>
+    <button on:click={() => toggleInventory(hero)} title="Open inventory">🎒</button>
   </div>
-  {#if hero === state.currentActor}
-    <div class="equipment">
+  <!-- {/if} -->
+  
+  <div class="hero-information">
+    {#if state.currentActor == hero}
+    <div class="hero-inventory" id="{hero.name}s-inventory" style="display: {inventoryDisplayType};">
+      
       <Inventory bind:inventory={hero.inventory} state={state}/>
+      
     </div>
-  {/if}
+    {/if}
+  </div>
+
+  <div class="hero-stats-and-equipmnet">
+    <span>HP: {hero.health}</span>
+
+    {#if state.currentActor == hero}
+    <span>Actions: {hero.actions}</span>
+    <span>Moves: {hero.movement}</span>
+    <span>Equipment: </span>
+    <div class="equipment">
+      <span>🗡️ {hero.weapon.name} ({hero.weapon.dice}) </span>
+      <span>
+        🧱
+        {#if hero.armour}
+          {hero.armour.name} ({hero.armour.defense})
+        {:else}
+          None (0)
+        {/if}
+      </span>
+      <span>
+        🛡️
+        {#if hero.shield}
+          {hero.shield.name} ({hero.shield.dice})
+        {:else}
+          None (0)
+        {/if}
+      </span>
+    </div>
+    {/if}
+  </div>
+  
 </div>
+
 {/key}

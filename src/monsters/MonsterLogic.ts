@@ -1,33 +1,35 @@
-import type { GameState, Hero, Monster, Position } from '../types';
+import type { GameState, Hero, Monster, Position } from "../types";
 import {
   addLog,
   findCell,
   findNeighbouringHeroes,
   getDist,
   getEffectiveMaxMovement,
+  hasLineOfSight,
   isDiscovered,
+  isRoomDiscovered,
   isWalkable,
-  stepAlongLine,
   takeDamage,
-} from '../game';
-import { liveHeroes } from '../hero/HeroLogic';
+} from "../game";
+import { liveHeroes } from "../hero/HeroLogic";
 
 enum MonsterAction {
-  RANGED_ATTACK = 'RANGED_ATTACK',
-  MELEE_ATTACK = 'MELEE_ATTACK',
-  MOVE = 'MOVE',
+  RANGED_ATTACK = "RANGED_ATTACK",
+  MELEE_ATTACK = "MELEE_ATTACK",
+  MOVE = "MOVE",
 }
 
 export const monsterActions = (state: GameState) => {
   const visibleMonsters = findVisibleMonsters(state);
   if (visibleMonsters.length === 0) {
-    addLog(state, 'No monsters can act');
+    addLog(state, "No monsters can act");
   }
 
   visibleMonsters.forEach((monster) => {
     const maxActions = monster.actions;
     addLog(state, `${monster.name} acted `);
     while (monster.actions > 0) {
+      state.reRender = true;
       const neighbouringHeroes: Hero[] = findNeighbouringHeroes(
         state,
         monster,
@@ -88,53 +90,46 @@ const selectAction = (
   }
 };
 
-const selectRangedTarget = (possibleTargets: Hero[], monster: Monster): Hero =>
-  possibleTargets
+const selectRangedTarget = (
+  possibleTargets: Hero[],
+  monster: Monster,
+): Hero => {
+  return possibleTargets
     .filter((hero) => !hero.shield)
     .sort((hero) => getDist(monster.position, hero.position))
-    .sort(
-      (a, b) =>
+    .sort((a, b) => {
+      return (
         b.health - a.health ||
         getDist(monster.position, a.position) -
-          getDist(monster.position, b.position),
-    )[0];
-
-const selectMeleeTarget = (possibleTargets: Hero[]): Hero =>
-  possibleTargets.sort((a, b) => b.health - a.health)[0];
-
-const findVisibleHeroes = (state: GameState, monster: Monster): Hero[] =>
-  liveHeroes(state)
-    .filter((hero: Hero) => !hero.ignoredByMonsters)
-    .filter((hero) => {
-      const startPixelPos = {
-        x: monster.position.x * 48 - 24,
-        y: monster.position.y * 48 - 24,
-      };
-      const targetPixelPos = {
-        x: hero.position.x * 48 - 24,
-        y: hero.position.y * 48 - 24,
-      };
-      return stepAlongLine(
-        startPixelPos,
-        monster.position,
-        targetPixelPos,
-        hero.position,
-        state,
-        [],
+          getDist(monster.position, b.position)
       );
-    });
+    })[0];
+};
 
-const findVisibleMonsters = (state: GameState) =>
-  state.dungeon.layout.monsters.filter((monster) => {
+const selectMeleeTarget = (possibleTargets: Hero[]): Hero => {
+  return possibleTargets.sort((a, b) => {
+    return b.health - a.health;
+  })[0];
+};
+
+const findVisibleHeroes = (state: GameState, monster: Monster): Hero[] => {
+  return liveHeroes(state)
+    .filter((hero: Hero) => !hero.ignoredByMonsters)
+    .filter((hero) =>
+      hasLineOfSight(monster.position, hero.position, 48, state, false),
+    );
+};
+
+const findVisibleMonsters = (state: GameState) => {
+  return state.dungeon.layout.monsters.filter((monster) => {
     const cell = findCell(
       state.dungeon.layout.grid,
       monster.position.x,
       monster.position.y,
     );
-    return (
-      cell && state.dungeon.discoveredRooms.includes(cell) && monster.health > 0
-    );
+    return cell && isRoomDiscovered(state.dungeon, cell) && monster.health > 0;
   });
+};
 
 const monsterAttack = (
   state: GameState,
@@ -153,27 +148,36 @@ const monsterAttack = (
 const findClosestHeroAndDistance = (
   state: GameState,
   monster: Monster,
-): { hero: Hero; dist: number } =>
-  liveHeroes(state)
-    .map((hero) => ({
-      hero,
-      dist: getDist(hero.position, monster.position),
-    }))
-    .sort((a, b) => a.dist - b.dist)[0];
+): { hero: Hero; dist: number } => {
+  return liveHeroes(state)
+    .map((hero) => {
+      return {
+        hero,
+        dist: getDist(hero.position, monster.position),
+      };
+    })
+    .sort((a, b) => {
+      return a.dist - b.dist;
+    })[0];
+};
 
 const monsterMove = (state: GameState, monster: Monster) => {
   const closestHeroAndDistance = findClosestHeroAndDistance(state, monster);
 
   while (monster.movement > 0) {
-    if (closestHeroAndDistance.dist > 1) {
+    if (closestHeroAndDistance && closestHeroAndDistance.dist > 1) {
       const possibleMoves = findPossibleMoves(state, monster.position);
       if (possibleMoves.length > 0) {
         const newPosition = possibleMoves
-          .map((pos) => ({
-            pos,
-            dist: getDist(pos, closestHeroAndDistance.hero.position),
-          }))
-          .sort((a, b) => a.dist - b.dist)[0].pos;
+          .map((pos) => {
+            return {
+              pos,
+              dist: getDist(pos, closestHeroAndDistance.hero.position),
+            };
+          })
+          .sort((a, b) => {
+            return a.dist - b.dist;
+          })[0].pos;
         monster.position = newPosition;
         addLog(
           state,
@@ -209,16 +213,14 @@ const findPossibleMoves = (
   }
 
   return targets
-    .filter(
-      (pos) =>
-        !liveHeroes(state).find(
-          (hero) => hero.position.x === pos.x && hero.position.y === pos.y,
-        ),
-    )
-    .filter(
-      (pos) =>
-        !state.dungeon.layout.monsters.some(
-          (m) => m.position.x === pos.x && m.position.y === pos.y,
-        ),
-    );
+    .filter((pos) => {
+      return !liveHeroes(state).find(
+        (hero) => hero.position.x === pos.x && hero.position.y === pos.y,
+      );
+    })
+    .filter((pos) => {
+      return !state.dungeon.layout.monsters.some(
+        (m) => m.position.x === pos.x && m.position.y === pos.y,
+      );
+    });
 };

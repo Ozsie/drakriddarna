@@ -1,6 +1,6 @@
-import type { Hero, GameState, Monster, Position } from '../types';
-import { MonsterType } from '../types';
-import { stepAlongLine } from '../game';
+import type { Hero, GameState, Monster, Position } from "../types";
+import { MonsterType } from "../types";
+import { isRoomDiscovered, stepAlongLine } from "../game";
 
 export const renderMonsters = (
   ctx: CanvasRenderingContext2D,
@@ -24,7 +24,7 @@ const renderMonster = (
 ) => {
   const cell =
     state.dungeon.layout.grid[monster.position.y][monster.position.x];
-  if (monster && monster.health > 0 && isInDiscoveredRoom(cell, state)) {
+  if (monster && monster.health > 0 && isRoomDiscovered(state.dungeon, cell)) {
     switch (monster.type) {
       case MonsterType.ORCH:
         renderOrch(ctx, actors, cellSize, monster);
@@ -114,8 +114,8 @@ const renderActorBar = (
     4,
   );
   ctx.stroke();
-  ctx.strokeStyle = 'black';
-  ctx.fillStyle = 'black';
+  ctx.strokeStyle = "black";
+  ctx.fillStyle = "black";
 };
 
 const renderHealthBar = (
@@ -124,15 +124,15 @@ const renderHealthBar = (
   cellSize: number,
 ) => {
   ctx.beginPath();
-  ctx.strokeStyle = 'black';
-  ctx.fillStyle = 'red';
+  ctx.strokeStyle = "black";
+  ctx.fillStyle = "red";
   ctx.fillRect(
     monster.position.x * cellSize + 4,
     monster.position.y * cellSize,
     cellSize - 8,
     4,
   );
-  ctx.fillStyle = 'green';
+  ctx.fillStyle = "green";
   ctx.fillRect(
     monster.position.x * cellSize + 4,
     monster.position.y * cellSize,
@@ -146,8 +146,8 @@ const renderHealthBar = (
     4,
   );
   ctx.stroke();
-  ctx.strokeStyle = 'black';
-  ctx.fillStyle = 'black';
+  ctx.strokeStyle = "black";
+  ctx.fillStyle = "black";
 };
 
 const renderLineOfSight = (
@@ -174,7 +174,9 @@ const renderLineOfSight = (
         from.position,
         targetPixelPos,
         target.position,
+        48,
         state,
+        false,
         seenCells,
       );
       if (seen) {
@@ -194,6 +196,3 @@ const renderLineOfSight = (
     });
   }
 };
-
-const isInDiscoveredRoom = (cell: string, state: GameState) =>
-  state.dungeon.discoveredRooms.includes(cell);

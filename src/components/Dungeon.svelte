@@ -15,7 +15,10 @@
 
   let footerSize;
   let screenSize;
-  const cellSize: number = state?.settings['cellSize'] as number ?? 48;
+  const cellSize = state?.settings['cellSize'] ?? 48;
+  let totalReRenderCount = 0;
+  let reRenderCount = 0;
+  const stopReRenderTimeout = 10;
 
   if (browser) {
     screenSize = window.innerHeight;
@@ -36,15 +39,29 @@
     if (!state || !document) return;
     const c: HTMLCanvasElement = document.getElementById("gameBoard") as HTMLCanvasElement;
     const ctx: CanvasRenderingContext2D = c.getContext("2d");
-    ctx.clearRect(0, 0, c.width, c.height);
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, c.width, c.height);
-    renderGrid(ctx, ground, cellSize, state, debugMode);
-    renderSecrets(ctx, ground, cellSize, state);
-    renderItems(ctx, ground, cellSize, state)
-    renderDoors(ctx, ground, cellSize, state, debugMode)
-    renderMonsters(ctx, actors, cellSize, state, debugMode);
-    renderHeroes(ctx, actors, cellSize, state);
+    if (state.reRender) {
+      reRenderCount++;
+      totalReRenderCount++;
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, c.width, c.height);
+      renderGrid(ctx, ground, cellSize, state, debugMode);
+      renderSecrets(ctx, ground, cellSize, state, debugMode);
+      renderItems(ctx, ground, cellSize, state);
+      renderDoors(ctx, ground, cellSize, state, debugMode);
+      renderMonsters(ctx, actors, cellSize, state, debugMode);
+      renderHeroes(ctx, actors, cellSize, state, debugMode);
+      if (debugMode) {
+        ctx.fillStyle = 'white';
+        ctx.font = '8px Arial';
+        ctx.fillText(`Re-renders: ${totalReRenderCount}`, 2, 10);
+        ctx.fillText(`FPS: ${reRenderCount / (stopReRenderTimeout / 1000)}`, 2, 20);
+      }
+      setTimeout(() => {
+        state.reRender = false;
+        reRenderCount = 0;
+      }, stopReRenderTimeout);
+    }
   }
 
   const onClick = (event) => {

@@ -1,5 +1,5 @@
-import type { GameState, ItemLocation } from '../types';
-import { ItemType } from '../types';
+import type { GameState, ItemLocation } from "../types";
+import { ItemType } from "../types";
 
 export const renderItems = (
   ctx: CanvasRenderingContext2D,
@@ -12,6 +12,8 @@ export const renderItems = (
       case ItemType.MAGIC:
         renderMagicItem(ctx, ground, cellSize, itemLocation);
         break;
+      case ItemType.WEAPON:
+        renderMagicItem(ctx, ground, cellSize, itemLocation);
     }
   });
 };

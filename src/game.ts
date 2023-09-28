@@ -10,7 +10,7 @@ import type {
   Weapon,
 } from "./types";
 import { Colour, ConditionType, ItemType, Level } from "./types";
-import { EMPTY, PILLAR, PIT, WALL } from "./dungeon/DungeonLogic";
+import { COLLAPSED, EMPTY, WALL } from "./dungeon/DungeonLogic";
 import { campaignIceDragonTreasure } from "./campaigns/campaignIceDragonTreasure";
 import { monsterActions } from "./monsters/MonsterLogic";
 import {
@@ -20,16 +20,22 @@ import {
   resetLiveHeroes,
   rewardLiveHeroes,
 } from "./hero/HeroLogic";
-import { ATTACK_BONUS, RE_ROLL_ATTACK } from "./items/magicItems";
-import { resetOnNext, resetOnNextDungeon } from "./items/ItemLogic";
+import {
+  ATTACK_BONUS,
+  RE_ROLL_ATTACK,
+  resetOnNext,
+  resetOnNextDungeon,
+} from "./items/ItemLogic";
 import {
   drawNextEvent,
   getEventsForDungeon,
   eventEffects,
   resetEventEffects,
 } from "./events/EventsLogic";
+import { browser } from "$app/environment";
 
 export const save = (state: GameState) => {
+  state.reRender = true;
   addLog(state, "Game saved.");
   localStorage.setItem("state", JSON.stringify(state));
 };
@@ -42,6 +48,7 @@ export const load = (): GameState | undefined => {
       (hero) => hero.name === state.currentActor?.name,
     );
     addLog(state, "Game loaded.");
+    state.reRender = true;
     return state;
   }
 };
@@ -66,8 +73,13 @@ export const init = (): GameState => {
       debug: false,
     },
     eventDeck: getEventsForDungeon(campaignIceDragonTreasure.dungeons[0]),
+    reRender: true,
   };
   resetLiveHeroes(state);
+  if (browser) {
+    console.log("autosave");
+    localStorage.setItem("autosave", JSON.stringify(state));
+  }
   return state;
 };
 
@@ -119,17 +131,21 @@ export const getEffectiveMaxMovement = (actor: Actor) => {
   return actor.maxMovement - (actor.armour?.movementReduction ?? 0);
 };
 
-export const next = (state: GameState) => {
+export const next = (state: GameState): GameState | undefined => {
+  state.reRender = true;
   checkWinConditions(state);
-  if (state.currentActor === undefined) return;
+  if (state.currentActor === undefined) return state;
   else {
     addLog(state, `${state.currentActor.name} ended their turn`);
-    let currentIndex = liveHeroes(state).indexOf(state.currentActor!!);
+    let currentIndex = liveHeroes(state).indexOf(state.currentActor);
     let nextIndex = currentIndex + 1;
     if (nextIndex === liveHeroes(state).length) {
       monsterActions(state);
       nextIndex = 0;
       resetOnNext(state);
+    }
+    if (liveHeroes(state).length === 0) {
+      return resetLevel();
     }
     if (liveHeroes(state)[nextIndex].incapacitated) {
       addLog(
@@ -148,6 +164,35 @@ export const next = (state: GameState) => {
       eventEffects[event.effect](state, event);
     }
     addLog(state, `${state.currentActor.name} started their turn`);
+  }
+  return state;
+};
+
+export const resetLevel = (): GameState | undefined => {
+  const loadedRawState = localStorage.getItem("autosave");
+  if (loadedRawState) {
+    const state: GameState = JSON.parse(loadedRawState);
+    state.reRender = true;
+
+    replaceDeadHeroes(state);
+    resetLiveHeroes(state);
+    resetOnNextDungeon(state);
+    resetOnNext(state);
+    scrollTo(
+      {
+        x: state.dungeon.startingPositions[0].x,
+        y: state.dungeon.startingPositions[0].y,
+      },
+      state.settings["cellSize"] as number,
+    );
+    state.currentActor = state.heroes.find(
+      (hero) => hero.name === state.currentActor?.name,
+    );
+    addLog(
+      state,
+      `All the heroes fell in combat. But worry not, you can try again.`,
+    );
+    return state;
   }
 };
 
@@ -242,8 +287,10 @@ export const isWalkable = (layout: Layout, x: number, y: number): boolean => {
   if (x < 0 || x >= layout.grid[0].length || y < 0 || y >= layout.grid.length) {
     walkable = false;
   } else {
+    const pit = layout.pits?.some((pit) => isSamePosition(pit, { x, y }));
+    const pillar = layout.pillars?.some((pit) => isSamePosition(pit, { x, y }));
     const cell = findCell(layout.grid, x, y);
-    if (cell === PIT || cell === PILLAR || cell === EMPTY || cell === WALL) {
+    if (pit || pillar || cell === EMPTY || cell === WALL) {
       walkable = false;
     }
   }
@@ -253,15 +300,14 @@ export const isWalkable = (layout: Layout, x: number, y: number): boolean => {
 export const isDiscovered = (dungeon: Dungeon, x: number, y: number) => {
   const cell = findCell(dungeon.layout.grid, x, y);
   if (!cell) return false;
-  else return dungeon.discoveredRooms.includes(cell);
+  else return isRoomDiscovered(dungeon, cell);
 };
 
-export const findCell = (
-  grid: string[],
-  x: number,
-  y: number,
-): string | undefined => {
-  let c;
+export const isRoomDiscovered = (dungeon: Dungeon, cell: string) =>
+  dungeon.discoveredRooms.includes(cell);
+
+export const findCell = (grid: string[], x: number, y: number): string => {
+  let c = "";
   grid.forEach((row, gY) => {
     toArray(row).forEach((cell, gX) => {
       if (gY === y && gX === x) c = cell;
@@ -300,6 +346,7 @@ export const isSamePosition = (a: Position, b: Position) => {
 
 export const addLog = (state: GameState, logMessage: string) => {
   state.actionLog = [logMessage, ...state.actionLog];
+  state.reRender = true;
 };
 
 export const takeDamage = (
@@ -395,6 +442,7 @@ export const hasWon = (state: GameState) => {
     state.dungeon = state.dungeon.nextDungeon;
     state.actionLog = ["You have reached " + state.dungeon.name];
     state.eventDeck = getEventsForDungeon(state.dungeon);
+    state.reRender = true;
     rewardLiveHeroes(state);
     levelUp(state);
     replaceDeadHeroes(state);
@@ -407,6 +455,7 @@ export const hasWon = (state: GameState) => {
       },
       state.settings["cellSize"] as number,
     );
+    localStorage.setItem("autosave", JSON.stringify(state));
   }
 };
 
@@ -414,28 +463,91 @@ export const getDist = (a: Position, b: Position) => {
   return Math.sqrt(Math.pow(a.x - b?.x, 2) + Math.pow(a.y - b?.y, 2));
 };
 
+export const hasLineOfSight = (
+  startPosition: Position,
+  targetPosition: Position,
+  resolution: number,
+  state: GameState,
+  walking: boolean,
+): boolean => {
+  const startPixelPos = {
+    x: startPosition.x * resolution - Math.floor(resolution / 2),
+    y: startPosition.y * resolution - Math.floor(resolution / 2),
+  };
+  const targetPixelPos = {
+    x: targetPosition.x * resolution - Math.floor(resolution / 2),
+    y: targetPosition.y * resolution - Math.floor(resolution / 2),
+  };
+  return stepAlongLine(
+    startPixelPos,
+    startPosition,
+    targetPixelPos,
+    targetPosition,
+    resolution,
+    state,
+    walking,
+    [],
+  );
+};
+
 export const stepAlongLine = (
   startPixelPos: Position,
   source: Position,
   targetPixelPos: Position,
   target: Position,
+  resolution: number,
   state: GameState,
+  walking: boolean,
   seenCells: Position[],
 ): boolean => {
+  if (isNaN(startPixelPos.x) || isNaN(startPixelPos.y)) {
+    return false;
+  }
   const nextPixelPosition = normaliseVector(startPixelPos, targetPixelPos);
   const nextCellPosition = {
-    x: Math.round((nextPixelPosition.x + 24) / 48),
-    y: Math.round((nextPixelPosition.y + 24) / 48),
+    x: Math.round(
+      (nextPixelPosition.x + Math.floor(resolution / 2)) / resolution,
+    ),
+    y: Math.round(
+      (nextPixelPosition.y + Math.floor(resolution / 2)) / resolution,
+    ),
   };
+  if (
+    isNaN(nextCellPosition.x) ||
+    isNaN(nextCellPosition.y) ||
+    isNaN(nextPixelPosition.x) ||
+    isNaN(nextPixelPosition.y)
+  ) {
+    return false;
+  }
   const nextCell = findCell(
     state.dungeon.layout.grid,
     nextCellPosition.x,
     nextCellPosition.y,
   );
+  const pit = state.dungeon.layout.pits?.some((pit) =>
+    isSamePosition(pit, nextCellPosition),
+  );
+  const pillar = state.dungeon.layout.pillars?.some((pit) =>
+    isSamePosition(pit, nextCellPosition),
+  );
+  const monster = state.dungeon.layout.monsters.some((monster) =>
+    isSamePosition(monster.position, nextCellPosition),
+  );
+  const hero = liveHeroes(state)
+    .filter((hero) => !isSamePosition(hero.position, source))
+    .some((hero) => isSamePosition(hero.position, nextCellPosition));
   if (nextCellPosition.x === target.x && nextCellPosition.y === target.y) {
     seenCells.push(nextCellPosition);
     return true;
-  } else if (nextCell === WALL || nextCell === PILLAR) {
+  } else if (
+    pillar ||
+    monster ||
+    (!walking && hero) ||
+    nextCell === WALL ||
+    nextCell === COLLAPSED ||
+    (walking && (pit || nextCell === EMPTY))
+  ) {
     return false;
   } else {
     if (!(nextCellPosition.x === source.x && nextCellPosition.y === source.y)) {
@@ -452,7 +564,9 @@ export const stepAlongLine = (
       source,
       targetPixelPos,
       target,
+      resolution,
       state,
+      walking,
       seenCells,
     );
   }
