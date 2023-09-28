@@ -14,6 +14,7 @@ module.exports = {
     ecmaVersion: 'latest',
     sourceType: 'module',
     project: 'tsconfig.json',
+    extraFileExtensions: ['.svelte'],
   },
   plugins: ['@typescript-eslint', 'prettier'],
   rules: {
@@ -46,19 +47,8 @@ module.exports = {
   },
   overrides: [
     {
-      files: ['**/*.test.tsx', '**/*.stories.tsx', 'autotest/**/*'],
-      rules: {
-        '@typescript-eslint/no-explicit-any': 'off',
-        '@typescript-eslint/no-unsafe-call': 'off',
-        '@typescript-eslint/no-unsafe-member-access': 'off',
-      },
-    },
-    {
-      files: ['autotest/**/*'],
-      rules: {
-        '@typescript-eslint/no-unsafe-member-access': 'off',
-        'no-console': 'off',
-      },
+      "files": ["*.svelte"],
+      "parser": "svelte-eslint-parser"
     },
     {
       files: ['**/*.cjs'],
