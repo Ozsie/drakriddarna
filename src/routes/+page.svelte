@@ -9,7 +9,6 @@
   import Dungeon from '../components/Dungeon.svelte';
   import Characters from '../components/Characters.svelte';
   import Log from '../components/Log.svelte';
-  import { onMount } from 'svelte';
   import {
     search,
     endAction,
