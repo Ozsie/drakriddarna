@@ -1,7 +1,7 @@
-import { SecretType, Side } from "../types";
-import type { Secret, GameState, Door } from "../types";
-import { COLLAPSED, EMPTY, WALL } from "../dungeon/DungeonLogic";
-import { isDiscovered, isRoomDiscovered, toArray } from "../game";
+import { SecretType, Side } from '../types';
+import type { Secret, GameState, Door } from '../types';
+import { COLLAPSED, EMPTY, WALL } from './DungeonLogic';
+import { isDiscovered, isRoomDiscovered, toArray } from '../game';
 
 export const renderDoors = (
   ctx: CanvasRenderingContext2D,
@@ -56,15 +56,15 @@ export const renderSecrets = (
       .filter((secret) => !secret.found)
       .forEach((secret) => {
         const secretText = `${secret.type}`;
-        ctx.fillStyle = "rgba(255, 50, 50, 0.28)";
+        ctx.fillStyle = 'rgba(255, 50, 50, 0.28)';
         ctx.fillRect(
           secret.position.x * cellSize,
           secret.position.y * cellSize,
           cellSize,
           cellSize,
         );
-        ctx.fillStyle = "black";
-        ctx.font = "12px Arial";
+        ctx.fillStyle = 'black';
+        ctx.font = '12px Arial';
         ctx.fillText(
           secretText,
           secret.position.x * cellSize,
@@ -157,11 +157,8 @@ const renderFloor = (
   }
 };
 
-const notGround = (cell: string, state: GameState) => {
-  return (
-    isWall(cell) || (!isRoomDiscovered(state.dungeon, cell) && cell !== EMPTY)
-  );
-};
+const notGround = (cell: string, state: GameState) =>
+  isWall(cell) || (!isRoomDiscovered(state.dungeon, cell) && cell !== EMPTY);
 
 const renderHiddenCell = (
   ctx: CanvasRenderingContext2D,
@@ -170,8 +167,8 @@ const renderHiddenCell = (
   cellSize: number,
 ) => {
   ctx.beginPath();
-  ctx.strokeStyle = "black";
-  ctx.fillStyle = "black";
+  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'black';
   ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
   ctx.stroke();
 };
@@ -229,11 +226,11 @@ const renderGridLines = (
 ) => {
   if (!debugMode && (isEmpty(cell, state) || cell === WALL)) return;
   ctx.beginPath();
-  ctx.strokeStyle = "black";
+  ctx.strokeStyle = 'black';
   ctx.rect(x * cellSize, y * cellSize, cellSize, cellSize);
   if (debugMode) {
-    ctx.font = "7px Arial";
-    ctx.fillText(x + "," + y, x * cellSize + 3, y * cellSize + (cellSize - 3));
+    ctx.font = '7px Arial';
+    ctx.fillText(`${x},${y}`, x * cellSize + 3, y * cellSize + (cellSize - 3));
   }
   ctx.stroke();
 };
@@ -248,7 +245,7 @@ const renderDoor = (
 ) => {
   const cell = state.dungeon.layout.grid[door.y][door.x];
   if (door && !door.hidden && !door.open && !isEmpty(cell, state)) {
-    ctx.fillStyle = "brown";
+    ctx.fillStyle = 'brown';
     switch (door.side) {
       case Side.RIGHT: {
         ctx.fillRect(
@@ -258,7 +255,7 @@ const renderDoor = (
           cellSize,
         );
         if (door.locked && debugMode) {
-          ctx.fillStyle = "grey";
+          ctx.fillStyle = 'grey';
           ctx.fillRect(
             door.x * cellSize + (cellSize - 4),
             door.y * cellSize + (cellSize / 2 - 4),
@@ -271,7 +268,7 @@ const renderDoor = (
       case Side.LEFT: {
         ctx.fillRect(door.x * cellSize - 2, door.y * cellSize, 4, cellSize);
         if (door.locked && debugMode) {
-          ctx.fillStyle = "grey";
+          ctx.fillStyle = 'grey';
           ctx.fillRect(
             door.x * cellSize - 4,
             door.y * cellSize + (cellSize / 2 - 4),
@@ -284,7 +281,7 @@ const renderDoor = (
       case Side.UP: {
         ctx.fillRect(door.x * cellSize, door.y * cellSize - 2, cellSize, 4);
         if (door.locked && debugMode) {
-          ctx.fillStyle = "grey";
+          ctx.fillStyle = 'grey';
           ctx.fillRect(
             door.x * cellSize + (cellSize / 2 - 4),
             door.y * cellSize - 4,
@@ -302,7 +299,7 @@ const renderDoor = (
           4,
         );
         if (door.locked && debugMode) {
-          ctx.fillStyle = "grey";
+          ctx.fillStyle = 'grey';
           ctx.fillRect(
             door.x * cellSize + (cellSize / 2 - 4),
             door.y * cellSize + (cellSize - 4),
@@ -315,16 +312,16 @@ const renderDoor = (
     }
   }
   if (debugMode && !isEmpty(cell, state)) {
-    ctx.fillStyle = "black";
-    ctx.font = "12px Arial";
+    ctx.fillStyle = 'black';
+    ctx.font = '12px Arial';
     ctx.fillText(
-      `[${door.hidden ? "H" : "-"}/${
-        door.trapped ? "T" + door.trapAttacks : "-"
-      }/${door.locked ? "L" : "-"}]`,
+      `[${door.hidden ? 'H' : '-'}/${
+        door.trapped ? `T${door.trapAttacks}` : '-'
+      }/${door.locked ? 'L' : '-'}]`,
       door.x * cellSize,
       door.y * cellSize + 10,
     );
-    ctx.fillStyle = "rgba(50, 255, 255, 0.28)";
+    ctx.fillStyle = 'rgba(50, 255, 255, 0.28)';
     ctx.fillRect(door.x * cellSize, door.y * cellSize, cellSize, cellSize);
   }
 };

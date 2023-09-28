@@ -1,5 +1,5 @@
-import type { GameState, ItemLocation } from "../types";
-import { ItemType } from "../types";
+import type { GameState, ItemLocation } from '../types';
+import { ItemType } from '../types';
 
 export const renderItems = (
   ctx: CanvasRenderingContext2D,
