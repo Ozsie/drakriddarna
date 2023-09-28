@@ -1,4 +1,5 @@
 import type { GameState, Hero, Monster, Position } from '../types';
+import { MonsterType } from '../types';
 import {
   addLog,
   findCell,
@@ -12,11 +13,14 @@ import {
   takeDamage,
 } from '../game';
 import { liveHeroes } from '../hero/HeroLogic';
+import { distanceInGrid } from '../hero/ClickInputLogic';
 
 enum MonsterAction {
   RANGED_ATTACK = 'RANGED_ATTACK',
   MELEE_ATTACK = 'MELEE_ATTACK',
   MOVE = 'MOVE',
+  DIAGONAL_FIRE_ATTACK = 'DIAGONAL_FIRE_ATTACK',
+  ORTHOGONAL_FIRE_ATTACK = 'ORTHOGONAL_FIRE_ATTACK',
 }
 
 export const monsterActions = (state: GameState) => {
@@ -35,11 +39,15 @@ export const monsterActions = (state: GameState) => {
         monster,
       ).filter((hero: Hero) => !hero.ignoredByMonsters);
       const visibleHeroes: Hero[] = findVisibleHeroes(state, monster);
+      const diagonalTargets = findDiagonalTargets(visibleHeroes, monster);
+      const orthogonalTargets = findOrthogonalTargets(visibleHeroes, monster);
       const action = selectAction(
         state,
         monster,
         neighbouringHeroes,
         visibleHeroes,
+        diagonalTargets,
+        orthogonalTargets,
       );
       switch (action) {
         case MonsterAction.MELEE_ATTACK: {
@@ -56,6 +64,12 @@ export const monsterActions = (state: GameState) => {
           monsterMove(state, monster);
           break;
         }
+        case MonsterAction.DIAGONAL_FIRE_ATTACK:
+          performFireAttack(state, monster, diagonalTargets);
+          break;
+        case MonsterAction.ORTHOGONAL_FIRE_ATTACK:
+          performFireAttack(state, monster, orthogonalTargets);
+          break;
       }
       monster.movement = getEffectiveMaxMovement(monster);
     }
@@ -69,10 +83,12 @@ const selectAction = (
   monster: Monster,
   neighbouringHeroes: Hero[],
   visibleHeroes: Hero[],
+  diagonalTargets: Hero[],
+  orthogonalTargets: Hero[],
 ): MonsterAction => {
   if (neighbouringHeroes.length > 0) {
     return MonsterAction.MELEE_ATTACK;
-  } else if (!monster.rangedWeapon) {
+  } else if (!monster.rangedWeapon && diagonalTargets.length === 0) {
     return MonsterAction.MOVE;
   } else {
     if (visibleHeroes.length > 0 && monster.rangedWeapon) {
@@ -84,6 +100,24 @@ const selectAction = (
         return MonsterAction.MOVE;
       }
       return MonsterAction.RANGED_ATTACK;
+    } else if (visibleHeroes.length > 0 && diagonalTargets.length > 0) {
+      if (Math.random() < 0.1) {
+        addLog(
+          state,
+          `${monster.name} decided to move despite seeing a target.`,
+        );
+        return MonsterAction.MOVE;
+      }
+      return MonsterAction.DIAGONAL_FIRE_ATTACK;
+    } else if (visibleHeroes.length > 0 && orthogonalTargets.length > 0) {
+      if (Math.random() < 0.1) {
+        addLog(
+          state,
+          `${monster.name} decided to move despite seeing a target.`,
+        );
+        return MonsterAction.MOVE;
+      }
+      return MonsterAction.ORTHOGONAL_FIRE_ATTACK;
     } else {
       return MonsterAction.MOVE;
     }
@@ -206,4 +240,43 @@ const findPossibleMoves = (
           (m) => m.position.x === pos.x && m.position.y === pos.y,
         ),
     );
+};
+
+const findDiagonalTargets = (possibleTargets: Hero[], source: Monster) =>
+  possibleTargets.filter(
+    (target) =>
+      [MonsterType.YELLOW_DARK_LORD, MonsterType.BLUE_DARK_LORD].includes(
+        source.type,
+      ) &&
+      Math.abs(source.position.x - target.position.x) ===
+        Math.abs(source.position.y - target.position.y) &&
+      distanceInGrid(source.position, target.position) > 1,
+  );
+
+const findOrthogonalTargets = (possibleTargets: Hero[], source: Monster) =>
+  possibleTargets.filter(
+    (target) =>
+      [MonsterType.RED_DARK_LORD, MonsterType.BLUE_DARK_LORD].includes(
+        source.type,
+      ) &&
+      (source.position.x === target.position.x ||
+        source.position.y === target.position.y) &&
+      distanceInGrid(source.position, target.position) > 1,
+  );
+
+const performFireAttack = (
+  state: GameState,
+  source: Monster,
+  targets: Hero[],
+) => {
+  targets.forEach((target) => {
+    if (target.armour?.magicProtection) {
+      addLog(
+        state,
+        `${source.name} attempted a fire attack, but ${target.name}s ${target.armour?.name} deflected it.`,
+      );
+    } else {
+      takeDamage(state, source, target, true);
+    }
+  });
 };

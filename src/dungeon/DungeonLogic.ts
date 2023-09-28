@@ -88,6 +88,18 @@ export const createTrappedHiddenDoor = (
   trapAttacks,
 });
 
+export const createMonsterWithInventory = (
+  type: MonsterType,
+  colour: Colour,
+  x: number,
+  y: number,
+  inventory: Item[],
+): Monster => {
+  const monster = createMonster(type, colour, x, y);
+  monster.inventory = inventory;
+  return monster;
+};
+
 export const createMonster = (
   type: MonsterType,
   colour: Colour,

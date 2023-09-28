@@ -70,7 +70,8 @@ export const onTargetSelf = (state: GameState, target: Position) => {
   }
 
   const door = state.dungeon.layout.doors.find(
-    (door) => door.x === hero.position.x && door.y === hero.position.y,
+    (door) =>
+      door.x === hero.position.x && door.y === hero.position.y && !door.open,
   );
   if (door && !door.hidden) {
     const canBreakLock = hero.inventory.some(

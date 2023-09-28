@@ -9,11 +9,16 @@
 - [ ] Hints for secrets
 - [ ] Show level win conditions & button to move on
 - [ ] Monster special attack
+  - [X] Diagonal fire attack (yellow dark lord)
+  - [X] Orthogonal fire attack (red dark lord)
+  - [ ] In same room & next to fire attack (green dark lord)
+  - [ ] All of the above (blue dark lord)
 - [ ] Dungeon intro screen
-- [ ] e1m3 - Labyrinth of Horror
+- [X] e1m3 - Labyrinth of Horror
 - [ ] e1m4 - The Dark Citadel
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
+- [ ] Select door on click when multiple doors in same cell
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
