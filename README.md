@@ -5,7 +5,9 @@
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
 ## Todo
-- [ ] Linting
+- [ ] Difficulty levels
+- [ ] Hints for secrets
+- [ ] Show level win conditions & button to move on
 - [ ] Monster special attack
 - [ ] Dungeon intro screen
 - [ ] e1m3 - Labyrinth of Horror
@@ -22,6 +24,7 @@
 - [ ] Monster cards?
 - [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] Event #16 - The Hexagram
+- [X] Linting
 - [X] Secrets
 - [X] Drop Items
 - [X] Monster blocking move on click move
