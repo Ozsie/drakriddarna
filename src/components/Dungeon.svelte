@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { GameState } from '../types';
   import { onMount } from "svelte";
   import groundSprites from '$lib/Dungeon_Tileset.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
@@ -7,22 +8,22 @@
   import { renderHeroes } from "../hero/HeroRendering";
   import { renderMonsters } from "../monsters/MonsterRendering";
   import { renderDoors, renderGrid, renderSecrets } from "../dungeon/DungeonRendering";
-  import type { GameState } from "../types";
-  import { renderItems } from "../items/ItemRendering.ts";
+  import { renderItems } from '../items/ItemRendering';
+  import WinCondition from './WinCondition.svelte';
 
   export let state: GameState;
   export let debugMode: boolean;
 
-  let footerSize;
-  let screenSize;
-  const cellSize = state?.settings['cellSize'] ?? 48;
+  let footerSize: number;
+  let screenSize: number;
+  const cellSize: number = state?.settings['cellSize'] as number ?? 48;
   let totalReRenderCount = 0;
   let reRenderCount = 0;
   const stopReRenderTimeout = 10;
 
   if (browser) {
     screenSize = window.innerHeight;
-    footerSize = document.getElementById('footer').offsetHeight;
+    footerSize = document.getElementById('footer')?.offsetHeight ?? 0;
   }
 
   onMount(() => {
@@ -35,10 +36,10 @@
     setInterval(() => render(ground, actors), 10);
   });
 
-  const render = (ground, actors) => {
+  const render = (ground: HTMLImageElement, actors: HTMLImageElement) => {
     if (!state || !document) return;
     const c: HTMLCanvasElement = document.getElementById("gameBoard") as HTMLCanvasElement;
-    const ctx: CanvasRenderingContext2D = c.getContext("2d");
+    const ctx: CanvasRenderingContext2D = c.getContext("2d") as CanvasRenderingContext2D;
     if (state.reRender) {
       reRenderCount++;
       totalReRenderCount++;
@@ -64,7 +65,7 @@
     }
   }
 
-  const onClick = (event) => {
+  const onClick = (event: MouseEvent) => {
     doMouseLogic(event, cellSize, state);
   }
 
@@ -72,6 +73,7 @@
     const maxHeight = screenSize - footerSize - 20;
     return `max-height: ${maxHeight}px; max-width: ${cellSize * 40}`;
   }
+
 </script>
 <style>
   .dungeon {
@@ -79,7 +81,31 @@
       overflow: scroll;
       height: 80%;
   }
+  @media screen and (min-width: 601px) {
+      .winConditions {
+          position: absolute;
+          bottom: 113px;
+          width: 100%;
+          border: 1px solid red;
+          overflow: scroll;
+      }
+  }
+  @media screen and (max-width: 600px) {
+      .winConditions {
+          position: absolute;
+          bottom: 100px;
+          width: 100%;
+          border: 1px solid red;
+          overflow: scroll;
+      }
+  }
 </style>
 <div style="{getStyle()}" class="dungeon" id="gameBoardContainer">
   <canvas width="{cellSize * 40}" height="{cellSize * 30}" id="gameBoard" on:click="{onClick}"></canvas>
+
+  <div class='winConditions'>
+    {#each state.dungeon.winConditions.sort((a, b) => (a.fulfilled === b.fulfilled)? 0 : a.fulfilled? 1 : -1) as winCondition}
+      <WinCondition bind:condition={winCondition} bind:state={state}/>
+    {/each}
+  </div>
 </div>

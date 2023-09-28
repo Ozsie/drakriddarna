@@ -158,7 +158,7 @@ const onTargetCell = (state: GameState, target: Position) => {
 };
 
 export const doMouseLogic = (
-  event: PointerEvent,
+  event: MouseEvent,
   cellSize: number,
   state: GameState,
 ) => {
