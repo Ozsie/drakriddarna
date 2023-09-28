@@ -193,7 +193,7 @@ const resetsOnNext = (item: Item) => {
 
 const resetsOnNextDungeon = (item: Item) => {
   if (item.properties) {
-    const resetOn: string[] = (item.properties[RESET_ON] as string) ?? [];
+    const resetOn: string[] = (item.properties[RESET_ON] as string[]) ?? [];
     return resetOn.some((resetOn: string) => resetOn === NEXT_DUNGEON);
   }
   return false;
