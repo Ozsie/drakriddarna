@@ -15,7 +15,7 @@ import {
   createSecretWithItem,
 } from '../../dungeon/DungeonLogic';
 import { magicItems } from '../../items/magicItems';
-import { e1m3 } from "./e1m3";
+import { e1m3 } from './e1m3';
 
 export const e1m2: Dungeon = {
   name: 'The Mines of Evil',

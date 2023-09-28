@@ -1,11 +1,11 @@
-import type { Dungeon } from "../../types";
+import type { Dungeon } from '../../types';
 import {
   Colour,
   ConditionType,
   MonsterType,
   SecretType,
   Side,
-} from "../../types";
+} from '../../types';
 import {
   createDoor,
   createHiddenDoor,
@@ -15,11 +15,11 @@ import {
   createSecret,
   createSecretWithItem,
   createTrappedLockedDoor,
-} from "../../dungeon/DungeonLogic";
-import { magicItems } from "../../items/magicItems";
+} from '../../dungeon/DungeonLogic';
+import { magicItems } from '../../items/magicItems';
 
 export const e1m3: Dungeon = {
-  name: "The Dread Labyrinth",
+  name: 'The Dread Labyrinth',
   beaten: false,
   winConditions: [
     {
@@ -38,25 +38,25 @@ export const e1m3: Dungeon = {
     { x: 1, y: 5 },
     { x: 1, y: 6 },
   ],
-  discoveredRooms: ["A"],
+  discoveredRooms: ['A'],
   layout: {
     grid: [
-      "       ########     ",
-      "     ###DDDEEE#     ",
-      "     #CCC##EEE#     ",
-      "######CCC##EEE######",
-      "#AAA##CCC####F#IIII#",
-      "#AAABBB#J####F#IIII#",
-      "#AAA####J##G#F#IIII#",
-      "##### ##J##GGF#IIII#",
-      "   ####KKK###F#IIII#",
-      "   #LLLKKK# #FMIIII#",
-      "   ####KKK####M#####",
-      "      #KKKMMMMM#    ",
-      "      ####MMMM##    ",
-      "         ######     ",
+      '       ########     ',
+      '     ###DDDEEE#     ',
+      '     #CCC##EEE#     ',
+      '######CCC##EEE######',
+      '#AAA##CCC####F#IIII#',
+      '#AAABBB#J####F#IIII#',
+      '#AAA####J##G#F#IIII#',
+      '##### ##J##GGF#IIII#',
+      '   ####KKK###F#IIII#',
+      '   #LLLKKK# #FMIIII#',
+      '   ####KKK####M#####',
+      '      #KKKMMMMM#    ',
+      '      ####MMMM##    ',
+      '         ######     ',
     ],
-    corridors: ["B", "D", "F", "L"],
+    corridors: ['B', 'D', 'F', 'L'],
     pits: [
       { x: 16, y: 6 },
       { x: 17, y: 6 },
@@ -95,29 +95,29 @@ export const e1m3: Dungeon = {
     ],
     secrets: [
       createSecretWithItem(SecretType.MAGIC_ITEM, 8, 10, magicItems[2]),
-      createSecret(SecretType.TRAP_DOOR, "Trap door", 8, 6),
-      createSecret(SecretType.TRAP_DOOR, "Trap door", 11, 1),
-      createSecret(SecretType.TRAP_DOOR, "Trap door", 11, 7),
-      createSecret(SecretType.TRAP_DOOR, "Trap door", 13, 11),
+      createSecret(SecretType.TRAP_DOOR, 'Trap door', 8, 6),
+      createSecret(SecretType.TRAP_DOOR, 'Trap door', 11, 1),
+      createSecret(SecretType.TRAP_DOOR, 'Trap door', 11, 7),
+      createSecret(SecretType.TRAP_DOOR, 'Trap door', 13, 11),
     ],
     notes: [
       {
         position: { x: 6, y: 5 },
-        message: "An arrow on the far wall of the corridor points to the left.",
+        message: 'An arrow on the far wall of the corridor points to the left.',
       },
       {
         position: { x: 8, y: 3 },
         message:
-          "An arrow on the far wall of the corridor points to the right.",
+          'An arrow on the far wall of the corridor points to the right.',
       },
       {
         position: { x: 8, y: 8 },
         message:
-          "There is a mosaic in the floor. It depicts a snake coiling around a dwarf, while battling an ice dragon. In the jaws of the snake is treasure chest.",
+          'There is a mosaic in the floor. It depicts a snake coiling around a dwarf, while battling an ice dragon. In the jaws of the snake is treasure chest.',
       },
       {
         position: { x: 14, y: 10 },
-        message: "An arrow on the far wall of the corridor points to the left",
+        message: 'An arrow on the far wall of the corridor points to the left',
       },
     ],
     items: [],

@@ -135,7 +135,8 @@ const killAllMonstersNotAchieved = (state: GameState) =>
     .some((wc) => !wc.fulfilled);
 
 export const next = (state: GameState): GameState | undefined => {
-  if (state.settings["debug"]) console.log(state);
+  // eslint-disable-next-line no-console
+  if (state.settings['debug']) console.log(state);
   state.reRender = true;
   checkWinConditions(state);
   if (state.currentActor === undefined) return state;
@@ -154,7 +155,7 @@ export const next = (state: GameState): GameState | undefined => {
     if (liveHeroes(state)[nextIndex].incapacitated) {
       addLog(
         state,
-        `${liveHeroes(state)[nextIndex].name} is no longer incapacitated.`
+        `${liveHeroes(state)[nextIndex].name} is no longer incapacitated.`,
       );
       liveHeroes(state)[nextIndex].incapacitated = false;
       nextIndex++;
@@ -333,7 +334,7 @@ export const getDamageString = (
   damage: number,
   hits: number,
   shield: number,
-  target: Actor
+  target: Actor,
 ) => {
   const defense = target.armour?.defense ?? target.defense;
   return `${damage} damage (${hits}-(${defense}+${shield})=${damage})`;

@@ -104,7 +104,7 @@ export const createMonster = (
   type: MonsterType,
   colour: Colour,
   x: number,
-  y: number
+  y: number,
 ): Monster => {
   const indexOfColour = Object.values(Colour).indexOf(colour);
   const colourName = Object.keys(Colour)[indexOfColour];

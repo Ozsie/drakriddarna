@@ -28,7 +28,7 @@ import {
 } from '../game';
 import { checkForTrapDoor, searchForSecret } from '../secrets/SecretsLogic';
 import { BREAK_LOCK, onDrop, onPickup } from '../items/ItemLogic';
-import { COLLAPSED, EMPTY, WALL } from "../dungeon/DungeonLogic";
+import { COLLAPSED, EMPTY, WALL } from '../dungeon/DungeonLogic';
 
 export const newHero = (name: string, colour: Colour): Hero => {
   weapons[0].amountInDeck--;
@@ -47,12 +47,13 @@ export const newHero = (name: string, colour: Colour): Hero => {
     weapon: weapons[0],
     incapacitated: false,
     inventory: [],
+    isInventoryOpen: false,
   };
 };
 
 export const act = (direction: string, state: GameState) => {
   state.reRender = true;
-  const hero: Actor | undefined = state.currentActor;
+  const hero: Hero | undefined = state.currentActor;
   if (!hero || hero.actions === 0) {
     return;
   }
@@ -170,7 +171,7 @@ export const resetLiveHeroes = (state: GameState) => {
 };
 
 export const liveHeroes = (state: GameState): Hero[] =>
-  state.heroes.filter((hero) => hero.health > 0);
+  state.heroes.filter((hero) => hero.health > 0).map((hero) => hero as Hero);
 
 export const endAction = (state: GameState) => {
   state.reRender = true;
@@ -204,7 +205,7 @@ export const openDoor = (
   addLog(state, `${hero.name} opened a door`);
 };
 
-export const attack = (hero: Actor, state: GameState, target: Position) => {
+export const attack = (hero: Hero, state: GameState, target: Position) => {
   state.reRender = true;
   if (hero.actions === 1 && hero.movement < hero.maxMovement) {
     addLog(state, `${hero.name} has no actions left to attack`);
@@ -407,7 +408,7 @@ const move = (
 
 const moveOverDoor = (
   state: GameState,
-  hero: Actor,
+  hero: Hero,
   newX: number,
   newY: number,
 ) => {
@@ -471,4 +472,4 @@ const hasNeighbouringHeroes = (state: GameState, hero: Actor) =>
   0;
 
 const deadHeroes = (state: GameState): Hero[] =>
-  state.heroes.filter((hero) => hero.health <= 0);
+  state.heroes.filter((hero) => hero.health <= 0).map((hero) => hero as Hero);
