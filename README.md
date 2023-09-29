@@ -6,7 +6,6 @@
 
 ## Todo
 - [ ] Difficulty levels
-- [ ] Hints for secrets
 - [ ] Show level win conditions & button to move on
 - [ ] Monster special attack
   - [X] Diagonal fire attack (yellow dark lord)
@@ -14,7 +13,6 @@
   - [ ] In same room & next to fire attack (green dark lord)
   - [ ] All of the above (blue dark lord)
 - [ ] Dungeon intro screen
-- [X] e1m3 - Labyrinth of Horror
 - [ ] e1m4 - The Dark Citadel
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
@@ -23,12 +21,14 @@
 - [ ] Graphics
 - [ ] Responsive layout
 - [ ] Menu system
-- [ ] Doors blocking monsters?
-- [ ] Trade Items
 - [ ] Support for additional campaigns
-- [ ] Monster cards?
 - [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] Event #16 - The Hexagram
+- [ ] Doors blocking monsters?
+- [ ] Trade Items?
+- [ ] Monster cards?
+- [X] Hints for secrets
+- [X] e1m3 - Labyrinth of Horror
 - [X] Linting
 - [X] Secrets
 - [X] Drop Items
