@@ -51,10 +51,22 @@ export const renderSecrets = (
           break;
       }
     });
-  if (debugMode) {
-    state.dungeon.layout.secrets
-      .filter((secret) => !secret.found)
-      .forEach((secret) => {
+  state.dungeon.layout.secrets
+    .filter((secret) => !secret.found)
+    .forEach((secret) => {
+      ctx.globalAlpha = 0.6;
+      drawTile(
+        ctx,
+        ground,
+        8,
+        0,
+        cellSize,
+        secret.position.x,
+        secret.position.y,
+        state,
+      );
+      ctx.globalAlpha = 1;
+      if (debugMode) {
         const secretText = `${secret.type}`;
         ctx.fillStyle = 'rgba(255, 50, 50, 0.28)';
         ctx.fillRect(
@@ -70,8 +82,8 @@ export const renderSecrets = (
           secret.position.x * cellSize,
           secret.position.y * cellSize + 10,
         );
-      });
-  }
+      }
+    });
 };
 
 const drawTile = (

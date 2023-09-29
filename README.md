@@ -6,7 +6,6 @@
 
 ## Todo
 - [ ] Difficulty levels
-- [ ] Hints for secrets
 - [ ] Monster special attack
   - [X] Diagonal fire attack (yellow dark lord)
   - [X] Orthogonal fire attack (red dark lord)
@@ -21,12 +20,13 @@
 - [ ] Graphics
 - [ ] Responsive layout
 - [ ] Menu system
-- [ ] Doors blocking monsters?
-- [ ] Trade Items
 - [ ] Support for additional campaigns
-- [ ] Monster cards?
 - [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] Event #16 - The Hexagram
+- [ ] Doors blocking monsters?
+- [ ] Trade Items?
+- [ ] Monster cards?
+- [X] Hints for secrets
 - [X] e1m3 - Labyrinth of Horror
 - [X] Show level win conditions & button to move on
 - [X] Linting
