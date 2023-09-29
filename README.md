@@ -6,11 +6,7 @@
 
 ## Todo
 - [ ] Difficulty levels
-- [ ] Monster special attack
-  - [X] Diagonal fire attack (yellow dark lord)
-  - [X] Orthogonal fire attack (red dark lord)
-  - [ ] In same room & next to fire attack (green dark lord)
-  - [ ] All of the above (blue dark lord)
+- [ ] Translations
 - [ ] Dungeon intro screen
 - [ ] e1m4 - The Dark Citadel
 - [ ] e1m5 - The Ice Dragons Treasure
@@ -26,6 +22,11 @@
 - [ ] Doors blocking monsters?
 - [ ] Trade Items?
 - [ ] Monster cards?
+- [X] Monster special attack
+  - [X] Diagonal fire attack (yellow dark lord)
+  - [X] Orthogonal fire attack (red dark lord)
+  - [X] In same room & next to fire attack (green dark lord)
+  - [X] All of the above (blue dark lord)
 - [X] Hints for secrets
 - [X] e1m3 - Labyrinth of Horror
 - [X] Show level win conditions & button to move on
