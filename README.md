@@ -100,3 +100,6 @@ To create a production version of your app:
 ```bash
 npm run build
 ```
+
+## Translations
+https://phrase.com/blog/posts/how-to-localize-a-svelte-app-with-svelte-i18n/
