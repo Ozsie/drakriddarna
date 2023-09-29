@@ -9,7 +9,6 @@
   import Dungeon from '../components/Dungeon.svelte';
   import Characters from '../components/Characters.svelte';
   import Log from '../components/Log.svelte';
-  import { onMount } from 'svelte';
   import {
     search,
     endAction,
@@ -22,10 +21,6 @@
   let state = init();
   let debugMode = state.settings['debug'];
   let screenSize;
-
-  onMount(() => {
-    setInterval(() => hasWon(state), 1000);
-  });
 
   if (browser) {
     screenSize = window.innerWidth;
@@ -105,7 +100,7 @@
         .commands {
             width: 40%;
             height: 100px;
-            background: gray;
+            background: grey;
             float: left;
         }
     }
@@ -118,13 +113,13 @@
         .characterSide {
             width: 15%;
             max-width: 240px;
-            background: gray;
+            background: grey;
             float: left;
             padding-right: 10px;
         }
         .commands {
             height: 100px;
-            background: gray;
+            background: grey;
             float: left;
             padding-right: 10px;
         }
@@ -151,6 +146,9 @@
         </tr>
         <tr>
           <td><button on:click={() => setDebugMode()}>Debug</button></td>
+          {#if debugMode}
+            <td><button on:click={() => {state.dungeon = testingGrounds; state.reRender = true;}}>To Testing Grounds</button></td>
+          {/if}
         </tr>
       </table>
     {:else}
@@ -178,6 +176,9 @@
           <td><button on:click={() => state = load()}>Load</button></td>
           <td><button on:click={() => setDebugMode()}>Debug</button></td>
           <td><button on:click={() => endAction(state)}>End action</button></td>
+          {#if state.dungeon.beaten}
+            <button on:click={() => hasWon(state)}>Next level</button>
+          {/if}
           {#if debugMode}
             <td><button on:click={() => {state.dungeon = testingGrounds; state.reRender = true;}}>To Testing Grounds</button></td>
           {/if}

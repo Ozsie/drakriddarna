@@ -305,7 +305,7 @@ export const levelUp = (state: GameState) => {
 };
 
 export const rewardLiveHeroes = (state: GameState) => {
-  liveHeroes(state).forEach((hero) => (hero.experience += 4));
+  liveHeroes(state).forEach((hero) => (hero.experience += 1));
 };
 
 export const replaceDeadHeroes = (state: GameState) => {

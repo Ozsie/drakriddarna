@@ -1,8 +1,8 @@
 <script lang="ts">
-  import HeroCard from "./HeroCard.svelte";
-  import { onMount } from "svelte";
-  import { liveHeroes } from "../hero/HeroLogic";
-  import type { GameState } from "../types";
+  import HeroCard from './HeroCard.svelte';
+  import { onMount } from 'svelte';
+  import { liveHeroes } from '../hero/HeroLogic';
+  import type { GameState } from '../types';
 
   export let state: GameState;
   let uglyUpdateToggle = false;

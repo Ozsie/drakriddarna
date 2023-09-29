@@ -6,7 +6,6 @@
 
 ## Todo
 - [ ] Difficulty levels
-- [ ] Show level win conditions & button to move on
 - [ ] Monster special attack
   - [X] Diagonal fire attack (yellow dark lord)
   - [X] Orthogonal fire attack (red dark lord)
@@ -29,6 +28,7 @@
 - [ ] Monster cards?
 - [X] Hints for secrets
 - [X] e1m3 - Labyrinth of Horror
+- [X] Show level win conditions & button to move on
 - [X] Linting
 - [X] Secrets
 - [X] Drop Items

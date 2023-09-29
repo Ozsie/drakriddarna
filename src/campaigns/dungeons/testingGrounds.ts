@@ -22,10 +22,30 @@ import { magicItems } from '../../items/magicItems';
 
 export const testingGrounds: Dungeon = {
   name: 'Testing Grounds',
-  beaten: false,
+  beaten: true,
   winConditions: [
     {
       type: ConditionType.KILL_ALL,
+      fulfilled: true,
+    },
+    {
+      type: ConditionType.OPEN_DOOR,
+      targetCell: { x: 2, y: 10 },
+      fulfilled: false,
+    },
+    {
+      type: ConditionType.KILL_ALL_OF_TYPE,
+      targetMonsterType: MonsterType.ORCH,
+      fulfilled: false,
+    },
+    {
+      type: ConditionType.REACH_CELL,
+      targetCell: { x: 2, y: 10 },
+      fulfilled: false,
+    },
+    {
+      type: ConditionType.KILL_AT_LEAST,
+      killMinCount: 5,
       fulfilled: false,
     },
   ],
