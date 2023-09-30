@@ -14,12 +14,13 @@
   export let state: GameState;
   export let debugMode: boolean;
 
+  let showWinConditions = true;
   let footerSize: number;
   let screenSize: number;
   const cellSize: number = state?.settings['cellSize'] as number ?? 48;
-  let totalReRenderCount = 0;
-  let reRenderCount = 0;
-  const stopReRenderTimeout = 10;
+  let totalReRenderCount: number = 0;
+  let reRenderCount: number = 0;
+  const stopReRenderTimeout: number = 10;
 
   if (browser) {
     screenSize = window.innerHeight;
@@ -73,7 +74,6 @@
     const maxHeight = screenSize - footerSize - 20;
     return `max-height: ${maxHeight}px; max-width: ${cellSize * 40}`;
   }
-
 </script>
 <style>
   .dungeon {
@@ -81,31 +81,51 @@
       overflow: scroll;
       height: 80%;
   }
-  @media screen and (min-width: 601px) {
-      .winConditions {
-          position: absolute;
-          bottom: 113px;
-          width: 100%;
-          border: 1px solid red;
-          overflow: scroll;
-      }
+  .winConditions {
+      position: absolute;
+      max-width: 90%;
+      min-width: 175px;
+      bottom: 118px;
+      border: 1px solid grey;
+      border-radius: 3px;
+      overflow: scroll;
+      background-color: #5C4033;
+      opacity: 0.9;
+      margin-left: 4px;
   }
-  @media screen and (max-width: 600px) {
-      .winConditions {
-          position: absolute;
-          bottom: 100px;
-          width: 100%;
-          border: 1px solid red;
-          overflow: scroll;
-      }
+  .conditionsHidden {
+      min-width: 0;
+  }
+  .hideConditionsButton {
+      float: left;
+      margin-right: 4px;
+      width: 15px;
+      height: 15px;
+      font-size: 8pt;
+      padding-left: 2px;
+      padding-top: 0;
+  }
+  .buttonDiv {
+      float: left;
+  }
+  .conditionsDiv {
+      float: right;
+      padding-right: 60px;
   }
 </style>
 <div style="{getStyle()}" class="dungeon" id="gameBoardContainer">
   <canvas width="{cellSize * 40}" height="{cellSize * 30}" id="gameBoard" on:click="{onClick}"></canvas>
 
-  <div class='winConditions'>
-    {#each state.dungeon.winConditions.sort((a, b) => (a.fulfilled === b.fulfilled)? 0 : a.fulfilled? 1 : -1) as winCondition}
-      <WinCondition bind:condition={winCondition} bind:state={state}/>
-    {/each}
+  <div class='winConditions {showWinConditions ? "" : "conditionsHidden"}'>
+    <div class='buttonDiv'>
+      <button class='hideConditionsButton' on:click={() => showWinConditions = !showWinConditions}>{#if showWinConditions}X{:else}>{/if}</button>
+    </div>
+    {#if showWinConditions}
+      <div class='conditionsDiv'>
+      {#each state.dungeon.winConditions.sort((a, b) => (a.fulfilled === b.fulfilled)? 0 : a.fulfilled? 1 : -1) as winCondition}
+        <WinCondition bind:condition={winCondition} bind:state={state}/>
+      {/each}
+      </div>
+      {/if}
   </div>
 </div>
