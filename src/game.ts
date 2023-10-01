@@ -40,7 +40,7 @@ export const save = (state: GameState) => {
   localStorage.setItem('state', JSON.stringify(state));
 };
 
-export const load = (): GameState | undefined => {
+export const load = (currentState: GameState): GameState => {
   const stateString = localStorage.getItem('state');
   if (stateString) {
     const state: GameState = JSON.parse(stateString) as GameState;
@@ -51,6 +51,8 @@ export const load = (): GameState | undefined => {
     state.reRender = true;
     return state;
   }
+  addLog(currentState, 'Failed to load game.');
+  return currentState;
 };
 
 export const init = (): GameState => {
@@ -134,7 +136,7 @@ const killAllMonstersNotAchieved = (state: GameState) =>
     .filter((wc) => wc.type !== ConditionType.KILL_ALL)
     .some((wc) => !wc.fulfilled);
 
-export const next = (state: GameState): GameState | undefined => {
+export const next = (state: GameState): GameState => {
   // eslint-disable-next-line no-console
   if (state.settings['debug']) console.log(state);
   state.reRender = true;
@@ -150,7 +152,7 @@ export const next = (state: GameState): GameState | undefined => {
       resetOnNext(state);
     }
     if (liveHeroes(state).length === 0) {
-      return resetLevel();
+      return resetLevel(state);
     }
     if (liveHeroes(state)[nextIndex].incapacitated) {
       addLog(
@@ -173,7 +175,7 @@ export const next = (state: GameState): GameState | undefined => {
   return state;
 };
 
-export const resetLevel = (): GameState | undefined => {
+export const resetLevel = (currentState: GameState): GameState => {
   const loadedRawState = localStorage.getItem('autosave');
   if (loadedRawState) {
     const state: GameState = JSON.parse(loadedRawState) as GameState;
@@ -199,6 +201,8 @@ export const resetLevel = (): GameState | undefined => {
     );
     return state;
   }
+  addLog(currentState, 'Failed to reset level. Please reload.');
+  return currentState;
 };
 
 const checkWinConditions = (state: GameState) => {

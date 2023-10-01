@@ -18,6 +18,16 @@ jobs:
         with:
           node-version: 18.14
       - run: npm ci
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+      - name: Get git hash
+        id: hash
+        run: echo "::set-output name=hash::$(git rev-parse --short HEAD)"
+      - run: |
+          cat << EOF > src/lib/buildInfo.json
+          {"date": "${{ steps.date.outputs.date }}","hash": "${{ steps.hash.outputs.hash }}"}
+          EOF
       - run: |
           git remote set-url origin https://git:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
           npm run deploy -- -u "github-actions-bot <support+actions@github.com>"

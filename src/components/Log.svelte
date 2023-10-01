@@ -19,8 +19,6 @@
 <style>
     @media screen and (max-width: 600px) {
         .log {
-            width: 60%;
-            margin-left: 15%;
             height: 100px;
             background: green;
             overflow: scroll;

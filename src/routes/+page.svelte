@@ -5,6 +5,7 @@
   import Log from '../components/Log.svelte';
   import ButtonPad from '../components/ButtonPad.svelte';
   import type { GameState } from '../types';
+  import buildInfo from '$lib/buildInfo.json'
 
   let state: GameState = init();
   let debugMode: boolean = state.settings['debug'] as boolean;
@@ -45,6 +46,6 @@
   <Dungeon bind:state={state} bind:debugMode={debugMode} />
 </div>
 <div class='container' id='footer'>
-  <ButtonPad bind:state={state} bind:debugMode={debugMode} />
+  <ButtonPad bind:state={state} bind:debugMode={debugMode} buildInfo={buildInfo} />
   <Log bind:state={state} />
 </div>

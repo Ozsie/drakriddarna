@@ -7,7 +7,9 @@
 
   export let state: GameState;
   export let debugMode: boolean;
-  let screenSize;
+  export let buildInfo;
+  let screenSize: number;
+  let showMenu: boolean = false;
 
   if (browser) {
     screenSize = window.innerWidth;
@@ -19,7 +21,7 @@
     state.reRender = true;
   }
 
-  const onKeyDown = (e) => {
+  const onKeyDown = (e: KeyboardEvent) => {
     switch (e.key) {
       case "6":
       case "d":
@@ -72,74 +74,83 @@
 
 </script>
 <style>
+    .commands {
+        background: grey;
+        float: left;
+    }
     @media screen and (max-width: 600px) {
         .commands {
-            width: 40%;
-            height: 100px;
-            background: grey;
-            float: left;
+            width: 25%;
+            padding: 4px;
         }
     }
     @media screen and (min-width: 601px) {
         .commands {
-            height: 100px;
-            background: grey;
-            float: left;
-            padding-right: 10px;
+            width: 15%;
+            padding: 10px 10px 0 10px;
+            height: 90px;
         }
+    }
+    .menuClosed {
+        display: none;
+    }
+    .menuOpen {
+        background: cornsilk;
+        margin: auto;
+        position: absolute;
+        bottom: 110px;
+        max-width: 240px;
+        width: 15%;
+        padding: 10px;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+    }
+    @media screen and (max-width: 600px) {
+        .menuOpen {
+            width: 80%;
+            max-width: 80%;
+        }
+    }
+    @media screen and (min-width: 601px) {
+        .menuOpen {
+            max-width: 240px;
+        }
+    }
+    .menuButton {
+        margin: auto;
+        width: 100%;
+        margin-bottom: 10px;
+        border-top-right-radius: 8px;
+        border-bottom-left-radius: 8px;
+    }
+    .infoRow {
+        display: block;
+        margin: auto;
+        width: 100%;
+        text-align: center;
+        font-size: 7pt;
+    }
+    .twoColButton {
+        width: 48%;
     }
 </style>
 <div class="commands">
-  {#if screenSize < 600}
-    <table>
-      <tr>
-        <td><button on:click={() => next(state)}>Next</button></td>
-        <td><button on:click={() => endAction(state)}>End action</button></td>
-      </tr>
-      <tr>
-        <td><button on:click={() => save(state)}>Save</button></td>
-        <td><button on:click={() => state = load()}>Load</button></td>
-      </tr>
-      <tr>
-        <td><button on:click={() => setDebugMode()}>Debug</button></td>
-        {#if debugMode}
-          <td><button on:click={() => {state.dungeon = testingGrounds; state.reRender = true;}}>To Testing Grounds</button></td>
-        {/if}
-      </tr>
-    </table>
-  {:else}
-    <table>
-      <tr>
-        <td><button on:click={() => act('UL', state)}>UL</button></td>
-        <td><button on:click={() => act('U', state)}>U</button></td>
-        <td><button on:click={() => act('UR', state)}>UR</button></td>
-        <td><button on:click={() => state = next(state)}>Next</button></td>
-      </tr>
-      <tr>
-        <td><button on:click={() => act('L', state)}>L</button></td>
-        <td></td>
-        <td><button on:click={() => act('R', state)}>R</button></td>
-        <td><button on:click={() => search(state)}>Search</button></td>
-      </tr>
-      <tr>
-        <td><button on:click={() => act('DL', state)}>DL</button></td>
-        <td><button on:click={() => act('D', state)}>D</button></td>
-        <td><button on:click={() => act('DR', state)}>DR</button></td>
-        <td><button on:click={() => pickLock(state)}>Pick lock</button></td>
-      </tr>
-      <tr>
-        <td><button on:click={() => save(state)}>Save</button></td>
-        <td><button on:click={() => state = load()}>Load</button></td>
-        <td><button on:click={() => setDebugMode()}>Debug</button></td>
-        <td><button on:click={() => endAction(state)}>End action</button></td>
-        {#if state.dungeon.beaten}
-          <button on:click={() => hasWon(state)}>Next level</button>
-        {/if}
-        {#if debugMode}
-          <td><button on:click={() => {state.dungeon = testingGrounds; state.reRender = true;}}>To Testing Grounds</button></td>
-        {/if}
-      </tr>
-    </table>
+  <div class='  {showMenu ? "menuOpen" : "menuClosed"}'>
+    <button class='menuButton' on:click={() => save(state)}>Save</button>
+    <button class='menuButton' on:click={() => state = load(state)}>Load</button>
+    <button class='menuButton' on:click={() => setDebugMode()}>Debug</button>
+    {#if debugMode}
+      <button class='menuButton' on:click={() => {state.dungeon = testingGrounds; state.reRender = true;}}>To Testing Grounds</button>
+    {/if}
+    <span class='infoRow'>{buildInfo.date} - {buildInfo.hash}</span>
+  </div>
+  <button class='menuButton' on:click={() => showMenu = !showMenu}>Menu</button>
+  <div>
+    <button class='menuButton twoColButton' on:click={() => state = next(state)}>Next</button>
+    <button class='menuButton twoColButton' style='float:right;' on:click={() => endAction(state)}>Action</button>
+  </div>
+  {#if state.dungeon.beaten}
+    <button class='menuButton' on:click={() => hasWon(state)}>Next level</button>
   {/if}
 </div>
 <svelte:window on:keydown|preventDefault={onKeyDown} />
