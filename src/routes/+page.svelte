@@ -6,8 +6,18 @@
   import ButtonPad from '../components/ButtonPad.svelte';
   import type { GameState } from '../types';
   import buildInfo from '$lib/buildInfo.json'
+  import { browser } from '$app/environment';
 
-  let state: GameState = init();
+  let state: GameState;
+  let reloadGuard: string | null = null;
+  if (browser) {
+    reloadGuard = localStorage.getItem('reloadGuard');
+  }
+  if (reloadGuard) {
+    state = JSON.parse(reloadGuard) as GameState;
+  } else {
+    state = init();
+  }
   let debugMode: boolean = state.settings['debug'] as boolean;
 </script>
 

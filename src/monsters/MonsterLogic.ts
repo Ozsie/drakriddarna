@@ -2,6 +2,7 @@ import type { Actor, GameState, Hero, Monster, Position } from '../types';
 import { MonsterType } from '../types';
 import {
   addLog,
+  doReRender,
   findCell,
   findNeighbouringHeroes,
   getDist,
@@ -39,7 +40,7 @@ export const monsterActions = (state: GameState) => {
     const maxActions = monster.actions;
     addLog(state, `${monster.name} acted `);
     while (monster.actions > 0) {
-      state.reRender = true;
+      doReRender(state);
       const neighbouringHeroes: Hero[] = findNeighbouringHeroes(
         state,
         monster,

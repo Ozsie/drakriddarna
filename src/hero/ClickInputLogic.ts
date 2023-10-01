@@ -1,6 +1,7 @@
 import {
   addLog,
   doorAsActor,
+  doReRender,
   hasLineOfSight,
   isRoomDiscovered,
   isSamePosition,
@@ -49,7 +50,7 @@ export const distanceInGrid = (a: Position, b: Position) => {
 };
 
 export const onTargetSelf = (state: GameState, target: Position) => {
-  state.reRender = true;
+  doReRender(state);
   const hero = state.currentActor as Hero;
 
   const itemLocation = state.dungeon.layout.items.find((item: ItemLocation) =>
@@ -117,7 +118,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
 };
 
 const onTargetCell = (state: GameState, target: Position) => {
-  state.reRender = true;
+  doReRender(state);
   const hero = state.currentActor as Hero;
   if (hero.actions === 0) {
     hero.movement = 0;

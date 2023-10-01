@@ -35,9 +35,16 @@ import {
 import { browser } from '$app/environment';
 
 export const save = (state: GameState) => {
-  state.reRender = true;
+  doReRender(state);
   addLog(state, 'Game saved.');
   localStorage.setItem('state', JSON.stringify(state));
+};
+
+export const doReRender = (state: GameState) => {
+  state.reRender = true;
+  if (browser) {
+    localStorage.setItem('reloadGuard', JSON.stringify(state));
+  }
 };
 
 export const load = (currentState: GameState): GameState => {
@@ -48,7 +55,7 @@ export const load = (currentState: GameState): GameState => {
       (hero) => hero.name === state.currentActor?.name,
     ) as Hero | undefined;
     addLog(state, 'Game loaded.');
-    state.reRender = true;
+    doReRender(state);
     return state;
   }
   addLog(currentState, 'Failed to load game.');
@@ -139,7 +146,7 @@ const killAllMonstersNotAchieved = (state: GameState) =>
 export const next = (state: GameState): GameState => {
   // eslint-disable-next-line no-console
   if (state.settings['debug']) console.log(state);
-  state.reRender = true;
+  doReRender(state);
   checkWinConditions(state);
   if (state.currentActor === undefined) return state;
   else {
@@ -179,7 +186,7 @@ export const resetLevel = (currentState: GameState): GameState => {
   const loadedRawState = localStorage.getItem('autosave');
   if (loadedRawState) {
     const state: GameState = JSON.parse(loadedRawState) as GameState;
-    state.reRender = true;
+    doReRender(state);
 
     replaceDeadHeroes(state);
     resetLiveHeroes(state);
@@ -349,7 +356,7 @@ export const isSamePosition = (a: Position, b: Position) =>
 
 export const addLog = (state: GameState, logMessage: string) => {
   state.actionLog = [logMessage, ...state.actionLog];
-  state.reRender = true;
+  doReRender(state);
 };
 
 export const takeDamage = (
@@ -442,7 +449,7 @@ export const hasWon = (state: GameState) => {
     state.dungeon = state.dungeon.nextDungeon;
     state.actionLog = ['You have reached ' + state.dungeon.name];
     state.eventDeck = getEventsForDungeon(state.dungeon);
-    state.reRender = true;
+    doReRender(state);
     rewardLiveHeroes(state);
     levelUp(state);
     replaceDeadHeroes(state);

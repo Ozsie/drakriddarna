@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { hasWon, load, next, save } from '../game';
+  import { doReRender, hasWon, init, load, next, save } from '../game';
   import { act, endAction, pickLock, search } from '../hero/HeroLogic';
   import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
   import { browser } from '$app/environment';
@@ -7,7 +7,7 @@
 
   export let state: GameState;
   export let debugMode: boolean;
-  export let buildInfo;
+  export let buildInfo: {date: string, hash: string};
   let screenSize: number;
   let showMenu: boolean = false;
 
@@ -18,7 +18,7 @@
   const setDebugMode = () => {
     debugMode = !debugMode;
     state.settings['debug'] = debugMode;
-    state.reRender = true;
+    doReRender(state);
   }
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -70,6 +70,12 @@
       default:
         break;
     }
+  }
+
+  const newGame = () => {
+    state = init();
+    doReRender(state);
+    showMenu = false;
   }
 
 </script>
@@ -136,11 +142,12 @@
 </style>
 <div class="commands">
   <div class='  {showMenu ? "menuOpen" : "menuClosed"}'>
+    <button class='menuButton' on:click={newGame}>New Game</button>
     <button class='menuButton' on:click={() => save(state)}>Save</button>
     <button class='menuButton' on:click={() => state = load(state)}>Load</button>
     <button class='menuButton' on:click={() => setDebugMode()}>Debug</button>
     {#if debugMode}
-      <button class='menuButton' on:click={() => {state.dungeon = testingGrounds; state.reRender = true;}}>To Testing Grounds</button>
+      <button class='menuButton' on:click={() => {state.dungeon = testingGrounds; doReRender(state);}}>To Testing Grounds</button>
     {/if}
     <span class='infoRow'>{buildInfo.date} - {buildInfo.hash}</span>
   </div>
