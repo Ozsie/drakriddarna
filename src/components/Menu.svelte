@@ -40,20 +40,29 @@
         border-top-right-radius: 8px;
         border-bottom-left-radius: 8px;
     }
-    .infoRow {
+    .footer {
         display: block;
         margin: auto;
         width: 100%;
         text-align: center;
         font-size: 7pt;
+        font-family: sans-serif;
+    }
+    .header {
+        display: block;
+        margin: auto;
+        width: 100%;
+        text-align: center;
+        font-size: 15pt;
+        font-family: sans-serif;
     }
 </style>
 <div class='{showMenu ? "menuOpen" : "menuClosed"}'>
-  <span class='infoRow'>{header}</span>
+  <span class='header'>{header}</span>
   {#each buttons as button}
     {#if (button.debugModeOnly && debugMode) || !button.debugModeOnly}
       <button class='menuButton' on:click={button.onClick}>{button.label}</button>
     {/if}
   {/each}
-  <span class='infoRow'>{footer}</span>
+  <span class='footer'>{footer}</span>
 </div>
