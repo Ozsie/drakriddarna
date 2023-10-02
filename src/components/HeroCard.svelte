@@ -15,34 +15,27 @@
     }
   }
 
-  const toggleInventory = (currentHero: Hero) =>
-  {
-    const inventoryDiv =  document.getElementById(currentHero.name+"s-inventory");
-    console.log(currentHero.isInventoryOpen);
-    if(inventoryDiv == null)
-      return; 
+  const toggleInventory = (currentHero: Hero) => {
+    const inventoryDiv: HTMLDivElement = document.getElementById(currentHero.name+"s-inventory") as HTMLDivElement;
+    if(!inventoryDiv) return;
 
     currentHero.isInventoryOpen = !currentHero.isInventoryOpen;
-    setInvetoryDisplayTyp();
+    setInventoryDisplayType();
     inventoryDiv.style.display = inventoryDisplayType;
   }
 
-  const setInvetoryDisplayTyp = () =>
-  {
+  const setInventoryDisplayType = () => {
     if(hero.isInventoryOpen){
       inventoryDisplayType = "inline-block";
-    }
-    else{
+    } else {
       inventoryDisplayType = "none";
     }
   }
 
-  setInvetoryDisplayTyp();
-
-  
+  setInventoryDisplayType();
 </script>
 <style>
-    .hero-card{
+    .hero-card {
         font-size: 0.9em;
         font-family: Arial, Helvetica, sans-serif;
         margin: 4px;
@@ -74,47 +67,32 @@
     .hero-information{
       position: relative
     }
-    @media screen and (max-width: 600px) {
-      .hero-inventory
-      {
+
+    .hero-inventory {
         position: fixed;
         opacity: 90%;
         background-color: burlywood;
-        top: 205px;
-        left: 15px;
         padding: 2px;
         border-radius: 4px;
         border: 2px solid #5C4033;
-        width: calc(92% - 6px);
         min-height: 50px;
-        word-wrap: break-word;      
+        word-wrap: break-word;
+    }
+    @media screen and (max-width: 600px) {
+      .hero-inventory {
+        top: 205px;
+        left: 15px;
+        width: calc(92% - 6px);
 
       }
     }
     @media screen and (min-width: 601px) {
-      .hero-inventory
-      {
-        position: fixed;
-        opacity: 90%;
-        background-color: burlywood;
+      .hero-inventory {
         top: 15px;
         left: 20%;
-        padding: 2px;
-        border-radius: 4px;
-        border: 2px solid #5C4033;
         width: calc(60%);
-        min-height: 50px;
         margin-top: 4px;
-        word-wrap: break-word;      
-
       }
-    }
-
-    .hero-stats-and-equipmnet{
-
-    }
-    .hero-action-buttons{
-      
     }
 </style>
 {#key state.targetActor}
@@ -124,7 +102,7 @@
     {$t('content.level.' + hero.level)} ({hero.experience})</b>
   </div>
   <!-- {#if state.currentActor == hero} -->
-  <div class="hero-action-buttons">
+  <div>
 
     <button on:click={() => selectTarget(hero)} title="select target hero">
       {#if state.targetActor !== hero}
@@ -147,7 +125,7 @@
     {/if}
   </div>
 
-  <div class="hero-stats-and-equipmnet">
+  <div>
     <span>{$t('content.hero.hp')}: {hero.health}</span>
 
     {#if state.currentActor === hero}
