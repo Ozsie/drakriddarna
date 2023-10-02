@@ -3,7 +3,7 @@ import { ItemType } from '../types';
 
 export const armour: Armour[] = [
   {
-    name: 'Chain mail',
+    name: 'items.armour.chainMail',
     type: ItemType.ARMOUR,
     amountInDeck: 2,
     defense: 1,
@@ -12,7 +12,7 @@ export const armour: Armour[] = [
     value: 2,
   },
   {
-    name: 'Plate mail',
+    name: 'items.armour.plateMail',
     type: ItemType.ARMOUR,
     amountInDeck: 1,
     defense: 2,
@@ -21,7 +21,7 @@ export const armour: Armour[] = [
     value: 3,
   },
   {
-    name: 'Dragon Skin mail',
+    name: 'items.armour.dragonSkinMail',
     type: ItemType.ARMOUR,
     amountInDeck: 1,
     defense: 2,
@@ -33,7 +33,7 @@ export const armour: Armour[] = [
 
 export const monsterArmour: Armour[] = [
   {
-    name: 'Orch Mail',
+    name: 'items.armour.orchMail',
     defense: 0,
     magicProtection: false,
     amountInDeck: 4,
@@ -42,7 +42,7 @@ export const monsterArmour: Armour[] = [
     value: 0,
   },
   {
-    name: 'Troll Skin',
+    name: 'items.armour.trollSkin',
     defense: 1,
     magicProtection: false,
     amountInDeck: 4,

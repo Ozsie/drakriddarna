@@ -1,0 +1,57 @@
+{
+  "menu": {
+    "menuButton": "Menu",
+    "mainMenu": {
+      "header": "Main Menu",
+      "buttons": {
+        "newGame": "New Game",
+        "saveGame": "Save",
+        "loadGame": "Load",
+        "debug": "Debug",
+        "testingGrounds": "To Testing Grounds",
+        "language": "-> Svenska"
+      }
+    },
+    "loadGame": {
+      "header": "Load Game",
+      "buttons": {
+        "autoSave": "Auto Save",
+        "manualSave": "Manual Save",
+        "back": "Back"
+      }
+    }
+  },
+  "actions": {
+    "next": "Next",
+    "action": "Action",
+    "nextLevel": "Next Level"
+  },
+  "hero": {
+    "actions": "Actions",
+    "moves": "Moves",
+    "equipment": "Equipment",
+    "none": "None",
+    "hp": "HP"
+  },
+  "level": {
+    "apprentice": "Apprentice",
+    "knight": "Knight",
+    "hero": "Hero",
+    "lord": "Lord",
+    "master": "Master"
+  },
+  "inventory": {
+    "label": "{{hero}}s Inventory",
+    "use": "Use",
+    "used": "Used"
+  },
+  "winConditions": {
+    "buttonClose": "X",
+    "buttonOpen": ">",
+    "killAll": "Kill all monsters",
+    "killAllOfType": "Kill all {{type}}",
+    "killAtLeast": "Kill at least {{minKills}} monsters.",
+    "openDoor": "Open a certain door",
+    "reachCell": "Reach a certain cell"
+  }
+}

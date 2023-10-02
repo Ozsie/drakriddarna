@@ -8,6 +8,7 @@ import {
   getDist,
   getEffectiveMaxMovement,
   hasLineOfSight,
+  i18n,
   isDiscovered,
   isRoomDiscovered,
   isWalkable,
@@ -33,12 +34,12 @@ const getNonDarkLordMonsters = (state: GameState) =>
 export const monsterActions = (state: GameState) => {
   const visibleMonsters = findVisibleMonsters(state);
   if (visibleMonsters.length === 0) {
-    addLog(state, 'No monsters can act');
+    addLog(state, 'logs.monsterAction.noMonsterAct');
   }
 
   visibleMonsters.forEach((monster) => {
     const maxActions = monster.actions;
-    addLog(state, `${monster.name} acted `);
+    addLog(state, 'logs.monsterAction.acted', { monster: i18n(monster.name) });
     while (monster.actions > 0) {
       doReRender(state);
       const neighbouringHeroes: Hero[] = findNeighbouringHeroes(
@@ -115,37 +116,33 @@ const selectAction = (
   } else {
     if (visibleHeroes.length > 0 && monster.rangedWeapon) {
       if (Math.random() < 0.1) {
-        addLog(
-          state,
-          `${monster.name} decided to move despite seeing a target.`,
-        );
+        addLog(state, 'logs.monsterAction.moveDespiteTarget', {
+          monster: i18n(monster.name),
+        });
         return MonsterAction.MOVE;
       }
       return MonsterAction.RANGED_ATTACK;
     } else if (sameRoomTargets.length > 0) {
       if (Math.random() < 0.1) {
-        addLog(
-          state,
-          `${monster.name} decided to move despite seeing a target.`,
-        );
+        addLog(state, 'logs.monsterAction.moveDespiteTarget', {
+          monster: i18n(monster.name),
+        });
         return MonsterAction.MOVE;
       }
       return MonsterAction.SAME_ROOM_FIRE_ATTACK;
     } else if (visibleHeroes.length > 0 && orthogonalTargets.length > 0) {
       if (Math.random() < 0.1) {
-        addLog(
-          state,
-          `${monster.name} decided to move despite seeing a target.`,
-        );
+        addLog(state, 'logs.monsterAction.moveDespiteTarget', {
+          monster: i18n(monster.name),
+        });
         return MonsterAction.MOVE;
       }
       return MonsterAction.ORTHOGONAL_FIRE_ATTACK;
     } else if (visibleHeroes.length > 0 && diagonalTargets.length > 0) {
       if (Math.random() < 0.1) {
-        addLog(
-          state,
-          `${monster.name} decided to move despite seeing a target.`,
-        );
+        addLog(state, 'logs.monsterAction.moveDespiteTarget', {
+          monster: i18n(monster.name),
+        });
         return MonsterAction.MOVE;
       }
       return MonsterAction.DIAGONAL_FIRE_ATTACK;
@@ -225,12 +222,16 @@ const monsterMove = (state: GameState, monster: Monster) => {
           }))
           .sort((a, b) => a.dist - b.dist)[0].pos;
         monster.position = newPosition;
-        addLog(
-          state,
-          `${monster.name} moved towards ${closestHeroAndDistance.hero.name} (${newPosition.x},${newPosition.y})`,
-        );
+        addLog(state, 'logs.monsterAction.movedTowards', {
+          monster: i18n(monster.name),
+          hero: i18n(closestHeroAndDistance.hero.name),
+          x: `${newPosition.x}`,
+          y: `${newPosition.y}`,
+        });
       } else {
-        addLog(state, `${monster.name} could not move`);
+        addLog(state, 'logs.monsterAction.couldNotMove', {
+          monster: i18n(monster.name),
+        });
       }
     }
     monster.movement--;
@@ -324,10 +325,11 @@ const performFireAttack = (
 ) => {
   targets.forEach((target) => {
     if (target.armour?.magicProtection) {
-      addLog(
-        state,
-        `${source.name} attempted a fire attack, but ${target.name}s ${target.armour?.name} deflected it.`,
-      );
+      addLog(state, 'logs.monsterAction.fireAttackDeflected', {
+        monster: i18n(source.name),
+        target: i18n(target.name),
+        armour: i18n(target.armour?.name),
+      });
     } else {
       takeDamage(state, source, target, true);
     }

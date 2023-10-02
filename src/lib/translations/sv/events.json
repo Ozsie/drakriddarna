@@ -1,0 +1,62 @@
+{
+  "hungryTroll": {
+    "name": "Det Hungriga Trollet",
+    "description": "Du hör plötsligt ett fruktansvärt vrål eka i korridorerna bakom dig. Det är ljudet av ett hungrigt troll."
+  },
+  "sunStone": {
+    "name": "Solstenen",
+    "description": "En av er sparkar till en hög med bråte och avslöjar en liten, genomskinlig kristall. Den sänder ut ett varmt, gult ljus som förvandlar alla närvarande troll till sten."
+  },
+  "timePortal": {
+    "name": "Tidsportalen",
+    "description": "Du märker hur allt runt omkring dig verkar röra sig långsammare, som om tiden själv hade saktat ner."
+  },
+  "fountainOfYouth": {
+    "name": "Ungdomens Fontän",
+    "description": "Du hör det svaga ljudet av vatten som rinner från en vägg. När du smakar det känner du dig starkare än tidigare."
+  },
+  "sleepingGas": {
+    "name": "Sömngasmolnet",
+    "description": "Giftig gas sipprar genom ett hål i väggen, vilket får dig att känna dig tung och sömnig."
+  },
+  "lostOrch": {
+    "name": "Den Vilsna Orchen",
+    "description": "Du hör ett vrål fyllt av vrede någonstans bakom dig. Du inser snabbt att det fanns fler monster här än du trodde."
+  },
+  "dragonsBreath": {
+    "name": "Drakens Andedräkt",
+    "description": "Facklornas lågor börjar fladdra och snart är allt helt mörkt omkring dig."
+  },
+  "landslide": {
+    "name": "Jordskred",
+    "description": "Marken börjar skaka, och du hör en hög smäll, som om taket hade rasat ner."
+  },
+  "magicNode": {
+    "name": "Den Magiska Noden",
+    "description": "Du känner en konstig, kraftfull magi genomströmma dig. Du känner dig uppfriskad av den när du fortsätter framåt."
+  },
+  "foresight": {
+    "name": "Föraning",
+    "description": "Du ser framför dig ett kraftfullt föremål, dolt bakom tjocka väggar."
+  },
+  "earthquake": {
+    "name": "Jordbävning",
+    "description": "Hela rummet börjar skaka, och du kastas till marken. Stenar faller från taket och väggarna, och med skräck inser du att du är fångad i en jordbävning."
+  },
+  "magicStorm": {
+    "name": "Den Magiska Stormen",
+    "description": "En ryslig vind blåser genom korridorerna. Du stelnar till när en grön glöd strålar från ett av dina magiska föremål."
+  },
+  "elementalWeapon": {
+    "name": "Det Elementära Vapnet",
+    "description": "En låga skjuter plötsligt ut från en silverklädd sten i taket och rör sig mot ett av dina vapen. Vapnet omsluts av lågor och känns mäktigare än tidigare."
+  },
+  "orchDrums": {
+    "name": "Orchtrummorna",
+    "description": "Du hör trummornas ljud långt under dig. När ljudet närmar sig inser du att orcherna är på marsch."
+  },
+  "weakness": {
+    "name": "Svaghetens Symbol",
+    "description": "Du går förbi en konstig symbol på väggen. En ond, gul glöd strålar från den. Plötsligt känner ni er alla svagare."
+  }
+}

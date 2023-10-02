@@ -8,6 +8,7 @@ import {
 import {
   addLog,
   findCell,
+  i18n,
   isRoomDiscovered,
   roll,
   takeDamage,
@@ -61,7 +62,7 @@ export const eventEffects: {
           ) === heroCell,
       )
       .forEach((monster) => {
-        addLog(state, `${monster.name} was killed by the Sun Stone`);
+        addLog(state, 'logs.events.sunStone', { monster: i18n(monster.name) });
         monster.health = 0;
       });
     event.used = true;
@@ -139,12 +140,10 @@ export const eventEffects: {
     if (notDiscoveredSecret.length > 0) {
       const secret = state.dungeon.layout.secrets.pop();
       if (secret && secret.item) {
-        addLog(
-          state,
-          `You sense the object is close to (${secret.position.x + 2},${
-            secret.position.y - 1
-          })`,
-        );
+        addLog(state, 'logs.events.foreSight', {
+          x: `${secret.position.x + 2}`,
+          y: `${secret.position.y - 1}`,
+        });
         state.dungeon.layout.items.push({
           item: secret.item,
           position: secret.position,
@@ -260,7 +259,7 @@ export const eventEffects: {
 
 const restoreDisabledItems = (state: GameState) => {
   if (liveHeroes(state).some((hero) => hero.weapon.elemental)) {
-    addLog(state, 'The magic storm calmed down');
+    addLog(state, 'logs.events.magicStormRestored');
     liveHeroes(state).forEach((hero) => {
       hero.inventory.forEach((item) => {
         if (!item.properties?.[ACTIVE] && item.pickup) {
@@ -286,7 +285,7 @@ export const resetEventEffects = (state: GameState) => {
 const restoreCorridor = (state: GameState) => {
   const collapsed = state.dungeon.collapsedCorridor;
   if (collapsed) {
-    addLog(state, 'The collapsed corridor cleared up.');
+    addLog(state, 'logs.events.landslideRestored');
     state.dungeon.layout.grid = state.dungeon.layout.grid.map((row) =>
       row.replaceAll(COLLAPSED, collapsed),
     );
@@ -296,21 +295,21 @@ const restoreCorridor = (state: GameState) => {
 
 const restoreBlinded = (state: GameState) => {
   if (liveHeroes(state).some((hero) => hero.blinded)) {
-    addLog(state, 'You light your torches again.');
+    addLog(state, 'logs.events.blindedRestored');
     liveHeroes(state).forEach((hero) => (hero.blinded = false));
   }
 };
 
 const restoreElementalWeapon = (state: GameState) => {
   if (liveHeroes(state).some((hero) => hero.weapon.elemental)) {
-    addLog(state, 'The elemental magic died off.');
+    addLog(state, 'logs.events.elementalWeaponRestored');
     liveHeroes(state).forEach((hero) => (hero.weapon.elemental = false));
   }
 };
 
 const restoreWeakened = (state: GameState) => {
   if (liveHeroes(state).some((hero) => hero.weakened)) {
-    addLog(state, 'Your strength returns to you.');
+    addLog(state, 'logs.events.weakenedRestored');
     liveHeroes(state).forEach((hero) => (hero.weakened = false));
   }
 };
@@ -353,8 +352,8 @@ const spawnRandomMonster = (state: GameState, monsterType: MonsterType) => {
 };
 
 const eventDescriptionLog = (state: GameState, event: TurnEvent) => {
-  addLog(state, `${event.description}`);
-  addLog(state, `${event.number}. ${event.name}`);
+  addLog(state, event.description);
+  addLog(state, event.name);
 };
 
 const shuffleEvents = (array: TurnEvent[]): TurnEvent[] => {

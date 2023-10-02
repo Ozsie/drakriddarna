@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { GameState, Item } from "../types";
   import { ACTIVE, DESCRIPTION, USED, useItem } from '../items/ItemLogic';
+  import { t } from '$lib/translations';
 
   export let item: Item
   export let state: GameState
@@ -60,14 +61,13 @@
   
   </div>
   <div class="item item-description bottom-border">
-    <b>{item.name}</b>
-    <span>{item.properties?.[DESCRIPTION]} {item.properties?.[DESCRIPTION]}</span>
+    <b>{$t(item.name)}</b>
+    <span>{$t(item.properties?.[DESCRIPTION])}</span>
   </div>
   <div class="item item-action">
   {#if item.properties?.[ACTIVE] && !item.properties?.[USED]}
-    <button on:click={() => useItem(state, item)}>Use</button>
+    <button on:click={() => useItem(state, item)}>{$t('content.inventory.use')}</button>
   {:else if item.properties?.[ACTIVE]}
-    <button disabled>Used</button>
+    <button disabled>{$t('content.inventory.uses')}</button>
   {/if}
   </div>
-

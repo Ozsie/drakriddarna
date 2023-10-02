@@ -6,7 +6,6 @@
 
 ## Todo
 - [ ] Difficulty levels
-- [ ] Translations
 - [ ] Dungeon intro screen
 - [ ] e1m4 - The Dark Citadel
 - [ ] e1m5 - The Ice Dragons Treasure
@@ -21,6 +20,7 @@
 - [ ] Doors blocking monsters?
 - [ ] Trade Items?
 - [ ] Monster cards?
+- [X] Translations
 - [X] Menu system
 - [X] Monster special attack
   - [X] Diagonal fire attack (yellow dark lord)

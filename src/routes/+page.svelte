@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { init } from "../game";
+  import { init, loadState } from '../game';
   import Dungeon from '../components/Dungeon.svelte';
   import Characters from '../components/Characters.svelte';
   import Log from '../components/Log.svelte';
@@ -7,6 +7,7 @@
   import type { GameState } from '../types';
   import buildInfo from '$lib/buildInfo.json'
   import { browser } from '$app/environment';
+  import { setLocale } from '$lib/translations';
 
   let state: GameState;
   let reloadGuard: string | null = null;
@@ -14,10 +15,11 @@
     reloadGuard = localStorage.getItem('reloadGuard');
   }
   if (reloadGuard) {
-    state = JSON.parse(reloadGuard) as GameState;
+    state = loadState(JSON.parse(reloadGuard) as GameState)
   } else {
     state = init();
   }
+  setLocale(state.settings['locale'] as string);
   let debugMode: boolean = state.settings['debug'] as boolean;
 </script>
 

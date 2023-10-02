@@ -2,122 +2,107 @@ import type { TurnEvent } from '../types';
 
 export const events: TurnEvent[] = [
   {
-    name: 'The Hungry Troll',
+    name: 'events.hungryTroll.name',
     number: 1,
-    description:
-      "You suddenly hear a terrible roar echo in the halls behind you. It's the sound of a hungry troll",
+    description: 'events.hungryTroll.description',
     effect: 'theHungryTroll',
     used: false,
   },
   {
-    name: 'The Sun Stone',
+    name: 'events.sunStone.name',
     number: 2,
-    description:
-      'One of you kicks a pile of rubble, revealing a small, transparent crystal. It radiates a warm, yellow light turning all nearby trolls to stone.',
+    description: 'events.sunStone.description',
     effect: 'sunStone',
     used: false,
   },
   {
-    name: 'The Time Portal',
+    name: 'events.timePortal.name',
     number: 3,
-    description:
-      'You notice how everything around you seem to move slower, as if time it self had slowed down.',
+    description: 'events.timePortal.description',
     effect: 'timePortal',
     used: false,
   },
   {
-    name: 'The Fountain of Youth',
+    name: 'events.fountainOfYouth.name',
     number: 4,
-    description:
-      'You hear the weak sound of water running from a wall. When you taste it, you feel stronger than before',
+    description: 'events.fountainOfYouth.description',
     effect: 'fountainOfYouth',
     used: false,
   },
   {
-    name: 'Sleeping Gas Cloud',
+    name: 'events.sleepingGas.name',
     number: 5,
-    description:
-      'Noxious gas seeps through a hole in the wall, making you feel heavy and sleepy.',
+    description: 'events.sleepingGas.description',
     effect: 'sleepingGasCloud',
     used: false,
   },
   {
-    name: 'The Lost Orch',
+    name: 'events.lostOrch.name',
     number: 6,
-    description:
-      'You hear a snarling filled with rage somewhere behind you. You quickly realise there were more monsters here than you thought.',
+    description: 'events.lostOrch.description',
     effect: 'theLostOrch',
     used: false,
   },
   {
-    name: 'The Dragons Breath',
+    name: 'events.dragonsBreath.name',
     number: 7,
-    description:
-      'The flames of your torches start to flicker and soon the dungeon is completely dark.',
+    description: 'events.dragonsBreath.description',
     effect: 'theDragonsBreath',
     used: false,
   },
   {
-    name: 'Landslide',
+    name: 'events.landslide.name',
     number: 8,
-    description:
-      'The ground starts shaking, and you hear a loud crash, as if the ceiling had fallen down.',
+    description: 'events.landslide.description',
     effect: 'landslide',
     used: false,
   },
   {
-    name: 'The Magic Node',
+    name: 'events.magicNode.name',
     number: 9,
-    description:
-      'You feel a strange, powerful magic course through you. You feel invigorated by it as you press on.',
+    description: 'events.magicNode.description',
     effect: 'fountainOfYouth',
     used: false,
   },
   {
-    name: 'Foresight',
+    name: 'events.foresight.name',
     number: 10,
-    description:
-      'You see before you a powerful object, hidden behind thick walls.',
+    description: 'events.foresight.description',
     effect: 'foresight',
     used: false,
   },
   {
-    name: 'Earthquake',
+    name: 'events.earthquake.name',
     number: 11,
-    description:
-      'The whole room starts shaking and you are thrown to the ground. Stones fall from the ceiling and walls and with terror you realise that you ar caught in an earhtquake.',
+    description: 'events.earthquake.description',
     effect: 'earthquake',
     used: false,
   },
   {
-    name: 'The Magic Storm',
+    name: 'events.magicStorm.name',
     number: 12,
-    description:
-      'An unsettling wind blows through the dungeon. You freeze as a green glow emanates from one of your magical items',
+    description: 'events.magicStorm.description',
     effect: 'theMagicStorm',
     used: false,
   },
   {
-    name: 'The Elemental Weapon',
+    name: 'events.elementalWeapon.name',
     number: 13,
-    description:
-      'A flame suddenly shoots from a silver clad stone in the ceiling, moving towards one of your weapons. The weapon becomes engulfed in flames, feeling more powerful than before.',
+    description: 'events.elementalWeapon.description',
     effect: 'theElementalWeapon',
     used: false,
   },
   {
-    name: 'The Orch Drums',
+    name: 'events.orchDrums.name',
     number: 14,
-    description:
-      'You hear the sound of drums from deep below you. As the sound draws nearer, you realise the orchs are on the march.',
+    description: 'events.orchDrums.description',
     effect: 'theOrchDrums',
     used: false,
   },
   {
-    name: 'The Symbol of Weakness',
+    name: 'events.weakness.name',
     number: 15,
-    description:
-      'You walk past a strange symbol on the wall. An evil, yellow glow emanates from it. All of you suddenly feel weaker.',
+    description: 'events.weakness.description',
     effect: 'theSymbolOfWeakness',
     used: false,
   },

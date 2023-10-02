@@ -3,7 +3,7 @@ import { ItemType } from '../types';
 
 export const weapons: Weapon[] = [
   {
-    name: 'Sword',
+    name: 'items.weapons.sword',
     range: 1,
     dice: 3,
     twoHanded: false,
@@ -15,7 +15,7 @@ export const weapons: Weapon[] = [
     ignoresArmour: false,
   },
   {
-    name: 'Two-handed Sword',
+    name: 'items.weapons.twoHandedSword',
     range: 1,
     dice: 4,
     twoHanded: true,
@@ -27,7 +27,7 @@ export const weapons: Weapon[] = [
     ignoresArmour: false,
   },
   {
-    name: 'Halberd',
+    name: 'items.weapons.halberd',
     range: 2,
     dice: 3,
     twoHanded: true,
@@ -39,7 +39,7 @@ export const weapons: Weapon[] = [
     ignoresArmour: false,
   },
   {
-    name: 'Flail',
+    name: 'items.weapons.flail',
     range: 1,
     dice: 4,
     twoHanded: false,
@@ -51,7 +51,7 @@ export const weapons: Weapon[] = [
     ignoresArmour: false,
   },
   {
-    name: 'Double Headed Axe',
+    name: 'items.weapons.doubleHeadedAxe',
     range: 1,
     dice: 4,
     twoHanded: true,
@@ -66,7 +66,7 @@ export const weapons: Weapon[] = [
 
 export const monsterWeapons: Weapon[] = [
   {
-    name: 'Orch Sword',
+    name: 'items.weapons.orchSword',
     range: 1,
     dice: 3,
     twoHanded: false,
@@ -78,7 +78,7 @@ export const monsterWeapons: Weapon[] = [
     ignoresArmour: false,
   },
   {
-    name: 'Orch Bow',
+    name: 'items.weapons.orchBow',
     range: 999,
     dice: 3,
     twoHanded: false,
@@ -90,7 +90,7 @@ export const monsterWeapons: Weapon[] = [
     ignoresArmour: false,
   },
   {
-    name: 'Troll Club',
+    name: 'items.weapons.trollClub',
     range: 1,
     dice: 3,
     twoHanded: false,

@@ -1,0 +1,57 @@
+{
+  "menu": {
+    "menuButton": "Meny",
+    "mainMenu": {
+      "header": "Huvudmeny",
+      "buttons": {
+        "newGame": "Nytt spel",
+        "saveGame": "Spara",
+        "loadGame": "Ladda",
+        "debug": "Debug",
+        "testingGrounds": "Till testområde",
+        "language": "-> English"
+      }
+    },
+    "loadGame": {
+      "header": "Ladda spel",
+      "buttons": {
+        "autoSave": "Autosparat spel",
+        "manualSave": "Manuellt sparat spel",
+        "back": "Tillbaka"
+      }
+    }
+  },
+  "actions": {
+    "next": "Nästa",
+    "action": "Handling",
+    "nextLevel": "Nästa nivå"
+  },
+  "hero": {
+    "actions": "Handlingar",
+    "moves": "Steg",
+    "equipment": "Utrustning",
+    "none": "Ingen",
+    "hp": "HP"
+  },
+  "level": {
+    "apprentice": "Lärling",
+    "knight": "Riddare",
+    "hero": "Hjälte",
+    "lord": "Herre",
+    "master": "Mästare"
+  },
+  "inventory": {
+    "label": "{{hero}}s packning",
+    "use": "Använd",
+    "used": "Förbrukad"
+  },
+  "winConditions": {
+    "buttonClose": "X",
+    "buttonOpen": ">",
+    "killAll": "Döda alla monster",
+    "killAllOfType": "Döda alla {{type}}",
+    "killAtLeast": "Döda åtminstone {{minKills}} monster",
+    "openDoor": "Öppna en viss dörr",
+    "reachCell": "Nå en viss cell"
+  }
+}

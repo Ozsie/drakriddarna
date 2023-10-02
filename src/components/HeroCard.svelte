@@ -1,13 +1,12 @@
 <script lang="ts">
   import type { GameState, Hero } from "../types";
   import Inventory from "./Inventory.svelte";
+  import { t } from '$lib/translations';
   export let hero: Hero;
   export let state: GameState;
 
-  
   let inventoryDisplayType = "none"
-  
-  
+
   const selectTarget = (target: Hero) => {
     if (state.targetActor && target === state.targetActor) {
       state.targetActor = undefined;
@@ -16,34 +15,27 @@
     }
   }
 
-  const toggleInventory = (currentHero: Hero) =>
-  {
-    const inventoryDiv =  document.getElementById(currentHero.name+"s-inventory");
-    console.log(currentHero.isInventoryOpen);
-    if(inventoryDiv == null)
-      return; 
+  const toggleInventory = (currentHero: Hero) => {
+    const inventoryDiv: HTMLDivElement = document.getElementById(currentHero.name+"s-inventory") as HTMLDivElement;
+    if(!inventoryDiv) return;
 
     currentHero.isInventoryOpen = !currentHero.isInventoryOpen;
-    setInvetoryDisplayTyp();
+    setInventoryDisplayType();
     inventoryDiv.style.display = inventoryDisplayType;
   }
 
-  const setInvetoryDisplayTyp = () =>
-  {
+  const setInventoryDisplayType = () => {
     if(hero.isInventoryOpen){
       inventoryDisplayType = "inline-block";
-    }
-    else{
+    } else {
       inventoryDisplayType = "none";
     }
   }
 
-  setInvetoryDisplayTyp();
-
-  
+  setInventoryDisplayType();
 </script>
 <style>
-    .hero-card{
+    .hero-card {
         font-size: 0.9em;
         font-family: Arial, Helvetica, sans-serif;
         margin: 4px;
@@ -75,57 +67,42 @@
     .hero-information{
       position: relative
     }
-    @media screen and (max-width: 600px) {
-      .hero-inventory
-      {
+
+    .hero-inventory {
         position: fixed;
         opacity: 90%;
         background-color: burlywood;
-        top: 205px;
-        left: 15px;
         padding: 2px;
         border-radius: 4px;
         border: 2px solid #5C4033;
-        width: calc(92% - 6px);
         min-height: 50px;
-        word-wrap: break-word;      
+        word-wrap: break-word;
+    }
+    @media screen and (max-width: 600px) {
+      .hero-inventory {
+        top: 205px;
+        left: 15px;
+        width: calc(92% - 6px);
 
       }
     }
     @media screen and (min-width: 601px) {
-      .hero-inventory
-      {
-        position: fixed;
-        opacity: 90%;
-        background-color: burlywood;
+      .hero-inventory {
         top: 15px;
         left: 20%;
-        padding: 2px;
-        border-radius: 4px;
-        border: 2px solid #5C4033;
         width: calc(60%);
-        min-height: 50px;
         margin-top: 4px;
-        word-wrap: break-word;      
-
       }
-    }
-
-    .hero-stats-and-equipmnet{
-
-    }
-    .hero-action-buttons{
-      
     }
 </style>
 {#key state.targetActor}
 <div class="hero-card" style="background-color: {hero.colour};" >
   <div class="hero-title">
-    <b>{#if state.targetActor === hero}*{/if}{hero.name} - </b>
-    <b> {hero.level} ({hero.experience})</b>
+    <b>{#if state.targetActor === hero}*{/if}{$t(hero.name)} -
+    {$t('content.level.' + hero.level)} ({hero.experience})</b>
   </div>
   <!-- {#if state.currentActor == hero} -->
-  <div class="hero-action-buttons">
+  <div>
 
     <button on:click={() => selectTarget(hero)} title="select target hero">
       {#if state.targetActor !== hero}
@@ -139,7 +116,7 @@
   <!-- {/if} -->
   
   <div class="hero-information">
-    {#if state.currentActor == hero}
+    {#if state.currentActor === hero}
     <div class="hero-inventory" id="{hero.name}s-inventory" style="display: {inventoryDisplayType};">
       
       <Inventory bind:inventory={hero.inventory} state={state}/>
@@ -148,29 +125,29 @@
     {/if}
   </div>
 
-  <div class="hero-stats-and-equipmnet">
-    <span>HP: {hero.health}</span>
+  <div>
+    <span>{$t('content.hero.hp')}: {hero.health}</span>
 
-    {#if state.currentActor == hero}
-    <span>Actions: {hero.actions}</span>
-    <span>Moves: {hero.movement}</span>
-    <span>Equipment: </span>
+    {#if state.currentActor === hero}
+    <span>{$t('content.hero.actions')}: {hero.actions}</span>
+    <span>{$t('content.hero.moves')}: {hero.movement}</span>
+    <span>{$t('content.hero.equipment')}: </span>
     <div class="equipment">
-      <span>🗡️ {hero.weapon.name} ({hero.weapon.dice}) </span>
+      <span>🗡️ {$t(hero.weapon.name)} ({hero.weapon.dice}) </span>
       <span>
         🧱
         {#if hero.armour}
-          {hero.armour.name} ({hero.armour.defense})
+          {$t(hero.armour.name)} ({hero.armour.defense})
         {:else}
-          None (0)
+          {$t('content.hero.none')} (0)
         {/if}
       </span>
       <span>
         🛡️
         {#if hero.shield}
-          {hero.shield.name} ({hero.shield.dice})
+          {$t(hero.shield.name)} ({hero.shield.dice})
         {:else}
-          None (0)
+          {$t('content.hero.none')} (0)
         {/if}
       </span>
     </div>
