@@ -9,13 +9,18 @@ export type GameState = {
   heroes: Actor[];
   dungeon: Dungeon;
   currentActor?: Hero;
-  actionLog: string[];
+  actionLog: LogEvent[];
   itemDeck: Item[];
   magicItemDeck: Item[];
   targetActor?: Actor;
   settings: Record<string, string | number | boolean>;
   eventDeck: TurnEvent[];
   reRender: boolean;
+};
+
+export type LogEvent = {
+  key: string;
+  properties?: Record<string, string>;
 };
 
 export type Campaign = {

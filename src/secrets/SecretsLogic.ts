@@ -13,16 +13,16 @@ import { onPickup, SEARCH_BONUS } from '../items/ItemLogic';
 export const searchForSecret = (state: GameState) => {
   const hero = state.currentActor as Hero;
   if (hero.blinded) {
-    addLog(state, `${hero.name} is blinded and may not search.`);
+    addLog(state, 'logs.heroAction.blinded', { hero: hero.name });
     return;
   }
   const searchBonus = hero.inventory
     .filter((item) => item.properties?.[SEARCH_BONUS])
     .map((item) => {
-      addLog(
-        state,
-        `${hero.name} used the effect of ${item.name} when searching`,
-      );
+      addLog(state, 'logs.heroAction.searchBonus', {
+        hero: hero.name,
+        item: item.name,
+      });
       return item.properties?.[SEARCH_BONUS] as number;
     })
     .reduce((partial, bonus) => partial + bonus, 0);
@@ -40,29 +40,26 @@ export const searchForSecret = (state: GameState) => {
       secret = lookForSecret(state, hero, result);
     }
     if (!trapDoor && !hiddenDoor && !trap && !secret) {
-      addLog(state, `${hero.name} searched but found nothing`);
+      addLog(state, 'logs.heroAction.searchFoundNothing', { hero: hero.name });
     }
   } else {
-    addLog(state, `${hero.name} searched but found nothing`);
+    addLog(state, 'logs.heroAction.searchFoundNothing', { hero: hero.name });
   }
 };
 
 export const checkForTrapDoor = (state: GameState) => {
-  const actor = state.currentActor;
-  if (!actor) return false;
+  const hero = state.currentActor;
+  if (!hero) return false;
   const trap = state.dungeon.layout.secrets
     .filter((secret) => secret.type === SecretType.TRAP_DOOR)
     .filter((secret) => !secret.found)
-    .find((secret) => isSamePosition(secret.position, actor.position));
+    .find((secret) => isSamePosition(secret.position, hero.position));
   if (trap) {
-    takeDamage(state, secretAsActor(trap), actor, false);
-    addLog(
-      state,
-      `${actor.name} fell into a pit and is incapacitated for one turn.`,
-    );
-    actor.movement = 0;
-    actor.actions = 0;
-    actor.incapacitated = true;
+    takeDamage(state, secretAsActor(trap), hero, false);
+    addLog(state, 'logs.heroAction.pitfall', { hero: hero.name });
+    hero.movement = 0;
+    hero.actions = 0;
+    hero.incapacitated = true;
     trap.found = true;
     return true;
   }
@@ -136,7 +133,10 @@ const lookForHiddenDoor = (state: GameState, hero: Hero, result: number) => {
   const hiddenDoor = findHiddenDoor(state, hero.position);
   if (hiddenDoor) {
     hiddenDoor.hidden = false;
-    addLog(state, `${hero.name} searched (${result}) and found a hidden door`);
+    addLog(state, 'logs.heroAction.foundDoor', {
+      hero: hero.name,
+      result: `${result}`,
+    });
     return true;
   }
   return false;
@@ -145,10 +145,10 @@ const lookForHiddenDoor = (state: GameState, hero: Hero, result: number) => {
 const lookForTrap = (state: GameState, hero: Hero, result: number) => {
   const trap = findTrap(state, hero.position);
   if (trap) {
-    addLog(
-      state,
-      `${hero.name} searched (${result}) and found a trap in a door`,
-    );
+    addLog(state, 'logs.heroAction.foundTrapInDoor', {
+      hero: hero.name,
+      result: `${result}`,
+    });
     trap.trapped = false;
     return true;
   }
@@ -158,14 +158,21 @@ const lookForTrap = (state: GameState, hero: Hero, result: number) => {
 const lookForSecret = (state: GameState, hero: Hero, result: number) => {
   const secret = findSecret(state, hero.position);
   if (secret) {
-    addLog(state, `${hero.name} searched (${result}) and found ${secret.name}`);
+    addLog(state, 'logs.heroAction.foundSecret', {
+      hero: hero.name,
+      result: `${result}`,
+      secret: secret.name,
+    });
     secret.found = true;
     switch (secret.type) {
       case SecretType.EQUIPMENT: {
         const item = secret.item ?? randomItem(state);
         if (item.amountInDeck > 0) {
           removeFoundItemFromDeck(state, item);
-          addLog(state, `${hero.name} equipped (${item.name})`);
+          addLog(state, 'logs.heroAction.equipped', {
+            hero: hero.name,
+            item: item.name,
+          });
           pickupItem(state, item, hero);
         }
         break;
@@ -174,7 +181,10 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
         const item = secret.item ?? randomMagicItem(state);
         if (item.amountInDeck > 0) {
           removeFoundMagicItemFromDeck(state, item);
-          addLog(state, `${hero.name} found (${item.name})`);
+          addLog(state, 'logs.heroAction.found', {
+            hero: hero.name,
+            item: item.name,
+          });
           hero.inventory.push(item);
           if (item.pickup) onPickup[item.pickup](state, item, hero);
         }
@@ -201,10 +211,11 @@ const randomMagicItem = (state: GameState): Item => {
 const lookForTrapDoor = (state: GameState, hero: Hero, result: number) => {
   const trapDoor = findTrapDoor(state, hero.position);
   if (trapDoor) {
-    addLog(
-      state,
-      `${hero.name} searched (${result}) and found ${trapDoor.name}`,
-    );
+    addLog(state, 'logs.heroAction.foundSecret', {
+      hero: hero.name,
+      result: `${result}`,
+      secret: trapDoor.name,
+    });
     trapDoor.found = true;
     return true;
   }

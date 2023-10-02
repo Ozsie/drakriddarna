@@ -1,0 +1,62 @@
+{
+  "hungryTroll": {
+    "name": "The Hungry Troll",
+    "description": "You suddenly hear a terrible roar echo in the halls behind you. It's the sound of a hungry troll"
+  },
+  "sunStone": {
+    "name": "The Sun Stone",
+    "description": "One of you kicks a pile of rubble, revealing a small, transparent crystal. It radiates a warm, yellow light turning all nearby trolls to stone."
+  },
+  "timePortal": {
+    "name": "The Time Portal",
+    "description": "You notice how everything around you seem to move slower, as if time it self had slowed down."
+  },
+  "fountainOfYouth": {
+    "name": "The Fountain of Youth",
+    "description": "You hear the weak sound of water running from a wall. When you taste it, you feel stronger than before."
+  },
+  "sleepingGas": {
+    "name": "Sleeping Gas Cloud",
+    "description": "Noxious gas seeps through a hole in the wall, making you feel heavy and sleepy."
+  },
+  "lostOrch": {
+    "name": "The Lost Orch",
+    "description": "You hear a snarling filled with rage somewhere behind you. You quickly realise there were more monsters here than you thought."
+  },
+  "dragonsBreath": {
+    "name": "The Dragons Breath",
+    "description": "The flames of your torches start to flicker and soon the dungeon is completely dark."
+  },
+  "landslide": {
+    "name": "Landslide",
+    "description": "The ground starts shaking, and you hear a loud crash, as if the ceiling had fallen down."
+  },
+  "magicNode": {
+    "name": "The Magic Node",
+    "description": "You feel a strange, powerful magic course through you. You feel invigorated by it as you press on."
+  },
+  "foresight": {
+    "name": "Foresight",
+    "description": "You see before you a powerful object, hidden behind thick walls."
+  },
+  "earthquake": {
+    "name": "Earthquake",
+    "description": "The whole room starts shaking and you are thrown to the ground. Stones fall from the ceiling and walls and with terror you realise that you ar caught in an earthquake."
+  },
+  "magicStorm": {
+    "name": "The Magic Storm",
+    "description": "An unsettling wind blows through the dungeon. You freeze as a green glow emanates from one of your magical items."
+  },
+  "elementalWeapon": {
+    "name": "The Elemental Weapon",
+    "description": "A flame suddenly shoots from a silver clad stone in the ceiling, moving towards one of your weapons. The weapon becomes engulfed in flames, feeling more powerful than before."
+  },
+  "orchDrums": {
+    "name": "The Orch Drums",
+    "description": "You hear the sound of drums from deep below you. As the sound draws nearer, you realise the orchs are on the march."
+  },
+  "weakness": {
+    "name": "The Symbol of Weakness",
+    "description": "You walk past a strange symbol on the wall. An evil, yellow glow emanates from it. All of you suddenly feel weaker."
+  }
+}

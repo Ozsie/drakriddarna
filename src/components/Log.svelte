@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import type { GameState } from "../types";
+  import type { GameState, LogEvent } from '../types';
+  import { t } from '$lib/translations';
 
   export let state: GameState;
   let uglyUpdateToggle = false;
@@ -15,6 +16,10 @@
     }
     if (!state || !document) return;
   };
+
+  const renderLog = (log: LogEvent) => {
+    return $t(log.key, log.properties)
+  }
 </script>
 <style>
     @media screen and (max-width: 600px) {
@@ -49,7 +54,7 @@
   {#key uglyUpdateToggle}
     {#each state.actionLog as log, index}
       {#if index < 25}
-        <p>>{log}</p>
+        <p>>{renderLog(log)}</p>
       {/if}
     {/each}
   {/key}

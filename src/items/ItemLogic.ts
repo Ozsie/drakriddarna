@@ -50,20 +50,20 @@ export const onUse: {
     target?: Actor,
   ) => {
     if (self.disabled) {
-      addLog(state, `${self.name} cannot be used at this moment.`);
+      addLog(state, 'logs.item.cannotUse', { item: self.name });
       return;
     }
     if (!target) {
-      addLog(state, 'No target was selected.');
+      addLog(state, 'logs.item.noTarget');
       return;
     }
     if (!canAct(user)) {
-      addLog(state, `${user.name} has no actions left.`);
+      addLog(state, 'logs.heroAction.noActions', { hero: user.name });
       return;
     }
     if (self.properties) {
       if (self.properties[USED]) {
-        addLog(state, `${self.name} has no uses left.`);
+        addLog(state, 'logs.item.noUsesLeft', { item: self.name });
         return;
       }
       self.properties[USED] = true;
@@ -72,10 +72,12 @@ export const onUse: {
         target.maxHealth - target.health,
       );
       target.health += addedHealth;
-      addLog(
-        state,
-        `${user.name} used ${self.name} on ${target.name}, restoring ${addedHealth} HP`,
-      );
+      addLog(state, 'logs.item.magicHerbs', {
+        user: user.name,
+        item: self.name,
+        target: target.name,
+        addedHealth: `${addedHealth}`,
+      });
       user.actions--;
       user.movement = user.maxMovement;
     }
@@ -83,34 +85,31 @@ export const onUse: {
   chaosSwordOnUse: (
     state: GameState,
     self: Item,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     user: Actor,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     target?: Actor,
   ) => {
     if (self.disabled) {
-      addLog(
-        state,
-        `${self.name} cannot be used at this moment. ${user.name} tried it.`,
-      );
+      addLog(state, 'logs.item.cannotUse', { item: self.name });
       return;
     }
   },
   potionOfSpeedOnUse: (state: GameState, self: Item, user: Actor) => {
     if (self.disabled) {
-      addLog(state, `${self.name} cannot be used at this moment.`);
+      addLog(state, 'logs.item.cannotUse', { item: self.name });
       return;
     }
     if (!self.properties?.[USED]) {
       user.actions += self.properties?.[ACTIONS_BONUS] as number;
       if (self.properties) self.properties[USED] = true;
-      addLog(
-        state,
-        `${user.name} used ${self.name}, adding ${
-          self.properties?.[ACTIONS_BONUS] as number
-        } actions`,
-      );
+      addLog(state, 'logs.item.potionOfSpeed', {
+        user: user.name,
+        item: self.name,
+        actions: self.properties?.[ACTIONS_BONUS] as string,
+      });
     } else {
-      addLog(state, `${self.name} has been consumed.`);
+      addLog(state, 'logs.item.consumed', { item: self.name });
     }
   },
   necklaceOfLightOnUse: (
@@ -120,15 +119,15 @@ export const onUse: {
     target?: Actor,
   ) => {
     if (self.disabled) {
-      addLog(state, `${self.name} cannot be used at this moment.`);
+      addLog(state, 'logs.item.cannotUse', { item: self.name });
       return;
     }
     if (!target) {
-      addLog(state, 'No target was selected.');
+      addLog(state, 'logs.item.noTarget');
       return;
     }
     if (!canAct(user)) {
-      addLog(state, `${user.name} has no actions left.`);
+      addLog(state, 'logs.heroAction.noActions', { hero: user.name });
       return;
     }
     if (self.properties && !self.properties?.[USED]) {

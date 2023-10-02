@@ -156,8 +156,10 @@
   const onChangeLanguage = () => {
     if (locale.get() === 'en') {
       setLocale('sv');
+      state.settings['locale'] = 'sv';
     } else {
       setLocale('en');
+      state.settings['locale'] = 'en';
     }
     mainMenuButtons = getMainMenu();
     doReRender(state);

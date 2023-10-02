@@ -7,6 +7,7 @@
   import type { GameState } from '../types';
   import buildInfo from '$lib/buildInfo.json'
   import { browser } from '$app/environment';
+  import { setLocale } from '$lib/translations';
 
   let state: GameState;
   let reloadGuard: string | null = null;
@@ -18,6 +19,7 @@
   } else {
     state = init();
   }
+  setLocale(state.settings['locale'] as string);
   let debugMode: boolean = state.settings['debug'] as boolean;
 </script>
 

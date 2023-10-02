@@ -36,7 +36,7 @@ import { browser } from '$app/environment';
 
 export const save = (state: GameState) => {
   doReRender(state);
-  addLog(state, 'Game saved.');
+  addLog(state, 'logs.gameSaved');
   localStorage.setItem('state', JSON.stringify(state));
 };
 
@@ -51,7 +51,7 @@ export const loadState = (newState: GameState) => {
   newState.currentActor = newState.heroes.find(
     (hero) => hero.name === newState.currentActor?.name,
   ) as Hero | undefined;
-  addLog(newState, 'Game loaded.');
+  addLog(newState, 'logs.gameLoaded');
   doReRender(newState);
   return newState;
 };
@@ -62,7 +62,7 @@ export const load = (currentState: GameState): GameState => {
     const state: GameState = JSON.parse(stateString) as GameState;
     return loadState(state);
   }
-  addLog(currentState, 'Failed to load game.');
+  addLog(currentState, 'logs.loadFailed');
   return currentState;
 };
 
@@ -72,12 +72,25 @@ export const init = (): GameState => {
     dungeon: campaignIceDragonTreasure.dungeons[0],
     currentActor: campaignIceDragonTreasure.heroes[0] as Hero | undefined,
     actionLog: [
-      `Playing '${campaignIceDragonTreasure.name}'`,
-      'Game Initialised',
-      'Each character has 2 actions. Move, Attack, Search or Pick Lock.',
-      'Each character can move 3 steps per action.',
-      'If another action is performed before moving 3 steps, the move is finished and both actions are consumed.',
-      'The rules of this game are harsh and unfair.',
+      {
+        key: 'logs.playingCampaign',
+        properties: { name: campaignIceDragonTreasure.name },
+      },
+      {
+        key: 'logs.gameInitialized',
+      },
+      {
+        key: 'logs.initLogActions',
+      },
+      {
+        key: 'logs.initLogMoves',
+      },
+      {
+        key: 'logs.initLogMoveFinished',
+      },
+      {
+        key: 'logs.initLogUnfair',
+      },
     ],
     itemDeck: shuffle(campaignIceDragonTreasure.itemDeck),
     magicItemDeck: shuffle(campaignIceDragonTreasure.magicItemDeck),
@@ -154,7 +167,9 @@ export const next = (state: GameState): GameState => {
   checkWinConditions(state);
   if (state.currentActor === undefined) return state;
   else {
-    addLog(state, `${state.currentActor.name} ended their turn`);
+    addLog(state, 'logs.endedTurn', {
+      name: state.currentActor.name,
+    });
     const currentIndex = liveHeroes(state).indexOf(state.currentActor);
     let nextIndex = currentIndex + 1;
     if (nextIndex === liveHeroes(state).length) {
@@ -166,10 +181,9 @@ export const next = (state: GameState): GameState => {
       return resetLevel(state);
     }
     if (liveHeroes(state)[nextIndex].incapacitated) {
-      addLog(
-        state,
-        `${liveHeroes(state)[nextIndex].name} is no longer incapacitated.`,
-      );
+      addLog(state, 'logs.noLongerIncapacitated', {
+        name: liveHeroes(state)[nextIndex].name,
+      });
       liveHeroes(state)[nextIndex].incapacitated = false;
       nextIndex++;
     }
@@ -181,7 +195,7 @@ export const next = (state: GameState): GameState => {
       const event = drawNextEvent(state);
       eventEffects[event.effect](state, event);
     }
-    addLog(state, `${state.currentActor.name} started their turn`);
+    addLog(state, 'logs.startedTurn', { name: state.currentActor.name });
   }
   return state;
 };
@@ -206,13 +220,10 @@ export const resetLevel = (currentState: GameState): GameState => {
     state.currentActor = state.heroes.find(
       (hero) => hero.name === state.currentActor?.name,
     ) as Hero | undefined;
-    addLog(
-      state,
-      'All the heroes fell in combat. But worry not, you can try again.',
-    );
+    addLog(state, 'logs.allHeroesDead');
     return state;
   }
-  addLog(currentState, 'Failed to reset level. Please reload.');
+  addLog(currentState, 'logs.failedToReset');
   return currentState;
 };
 
@@ -261,13 +272,12 @@ const checkWinConditions = (state: GameState) => {
     .map((condition) => condition.fulfilled)
     .reduce((partial, fulfilled) => partial && fulfilled, true);
   if (state.dungeon.beaten) {
-    addLog(state, 'All win conditions have been fulfilled');
-    addLog(state, `You have cleared ${state.dungeon.name}`);
+    addLog(state, 'logs.allConditionsFulfilled');
+    addLog(state, 'logs.clearedDungeon', { name: state.dungeon.name });
     if (state.dungeon.nextDungeon?.name) {
-      addLog(
-        state,
-        `Press 'Next' to move on to the next level: ${state.dungeon.nextDungeon?.name}`,
-      );
+      addLog(state, 'logs.moveToNext', {
+        name: state.dungeon.nextDungeon?.name,
+      });
     }
   }
 };
@@ -358,8 +368,18 @@ export const getDamageString = (
 export const isSamePosition = (a: Position, b: Position) =>
   a.x === b.x && a.y === b.y;
 
-export const addLog = (state: GameState, logMessage: string) => {
-  state.actionLog = [logMessage, ...state.actionLog];
+export const addLog = (
+  state: GameState,
+  messageKey: string,
+  properties?: Record<string, string>,
+) => {
+  state.actionLog = [
+    {
+      key: messageKey,
+      properties: properties,
+    },
+    ...state.actionLog,
+  ];
   doReRender(state);
 };
 
@@ -378,35 +398,35 @@ export const takeDamage = (
   if (!weapon.ignoresArmour) {
     defense = target.armour?.defense ?? target.defense;
   } else if (target.armour) {
-    addLog(
-      state,
-      `${target.name}'s armour was useless against ${weapon.name} `,
-    );
+    addLog(state, 'logs.takeDamage.armourUseless', {
+      actor: target.name,
+      weapon: weapon.name,
+    });
   }
   if (!weapon.ignoresShield) {
     shield = roll(target.level, target.shield?.dice ?? 0);
   } else if (target.shield) {
-    addLog(
-      state,
-      `${target.name}'s shield was useless against ${weapon.name} `,
-    );
+    addLog(state, 'logs.takeDamage.shieldUseless', {
+      actor: target.name,
+      weapon: weapon.name,
+    });
   }
   const canReRoll = source.inventory
     .filter((item) => item?.properties?.[RE_ROLL_ATTACK])
     .some((item) => {
-      addLog(
-        state,
-        `${source.name} used the effect of ${item.name} when attacking`,
-      );
+      addLog(state, 'logs.takeDamage.usedEffect', {
+        actor: source.name,
+        item: item.name,
+      });
       return item.properties?.[RE_ROLL_ATTACK];
     });
   const attackBonus = source.inventory
     .filter((item) => item?.properties?.[ATTACK_BONUS])
     .map((item) => {
-      addLog(
-        state,
-        `${source.name} used the effect of ${item.name} when attacking`,
-      );
+      addLog(state, 'logs.takeDamage.usedEffect', {
+        actor: source.name,
+        item: item.name,
+      });
       return item.properties?.[ATTACK_BONUS] as number;
     })
     .reduce((partial, bonus) => partial + bonus, 0);
@@ -418,18 +438,21 @@ export const takeDamage = (
   const hits = roll(source.level, weapon.dice + buff - deBuff);
   let damage = Math.max(hits - (defense + shield), 0);
   if (damage === 0 && canReRoll) {
-    addLog(state, `${source.name} missed but got another chance`);
+    addLog(state, 'logs.takeDamage.reRoll', { actor: source.name });
     damage = Math.max(hits - (defense + shield), 0);
   }
   target.health -= damage;
-  addLog(
-    state,
-    `${source.name} attacked ${target.name} with ${
-      weapon.name
-    } for ${getDamageString(damage, hits, shield, target)}`,
-  );
+  addLog(state, 'logs.takeDamage.attackedWith', {
+    actor: source.name,
+    target: target.name,
+    weapon: weapon.name,
+    damage: getDamageString(damage, hits, shield, target),
+  });
   if (target.health <= 0) {
-    addLog(state, `${source.name} killed ${target.name}`);
+    addLog(state, 'logs.takeDamage.killed', {
+      actor: source.name,
+      target: target.name,
+    });
     target.health = 0;
     target.level = Level.APPRENTICE;
   }
@@ -451,7 +474,12 @@ const scrollTo = (pos: Position, cellSize: number) => {
 export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
     state.dungeon = state.dungeon.nextDungeon;
-    state.actionLog = ['You have reached ' + state.dungeon.name];
+    state.actionLog = [
+      {
+        key: 'logs.youHaveReached',
+        properties: { name: state.dungeon.name },
+      },
+    ];
     state.eventDeck = getEventsForDungeon(state.dungeon);
     doReRender(state);
     rewardLiveHeroes(state);
