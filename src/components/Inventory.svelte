@@ -32,7 +32,7 @@
     margin-left: 50px;
   }
 </style>
-<h4>{$t('content.inventory.label', { hero: state.currentActor?.name })}</h4>
+<h4>{$t('content.inventory.label', { hero: $t(state.currentActor?.name) })}</h4>
 <div class="inventory">
   {#key uglyUpdateToggle}
     {#each inventory as item}

@@ -61,8 +61,8 @@
   
   </div>
   <div class="item item-description bottom-border">
-    <b>{item.name}</b>
-    <span>{item.properties?.[DESCRIPTION]} {item.properties?.[DESCRIPTION]}</span>
+    <b>{$t(item.name)}</b>
+    <span>{$t(item.properties?.[DESCRIPTION])}</span>
   </div>
   <div class="item item-action">
   {#if item.properties?.[ACTIVE] && !item.properties?.[USED]}

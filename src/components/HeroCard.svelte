@@ -120,7 +120,7 @@
 {#key state.targetActor}
 <div class="hero-card" style="background-color: {hero.colour};" >
   <div class="hero-title">
-    <b>{#if state.targetActor === hero}*{/if}{hero.name} -
+    <b>{#if state.targetActor === hero}*{/if}{$t(hero.name)} -
     {$t('content.level.' + hero.level)} ({hero.experience})</b>
   </div>
   <!-- {#if state.currentActor == hero} -->
@@ -150,16 +150,16 @@
   <div class="hero-stats-and-equipmnet">
     <span>{$t('content.hero.hp')}: {hero.health}</span>
 
-    {#if state.currentActor == hero}
+    {#if state.currentActor === hero}
     <span>{$t('content.hero.actions')}: {hero.actions}</span>
     <span>{$t('content.hero.moves')}: {hero.movement}</span>
     <span>{$t('content.hero.equipment')}: </span>
     <div class="equipment">
-      <span>🗡️ {hero.weapon.name} ({hero.weapon.dice}) </span>
+      <span>🗡️ {$t(hero.weapon.name)} ({hero.weapon.dice}) </span>
       <span>
         🧱
         {#if hero.armour}
-          {hero.armour.name} ({hero.armour.defense})
+          {$t(hero.armour.name)} ({hero.armour.defense})
         {:else}
           {$t('content.hero.none')} (0)
         {/if}
@@ -167,7 +167,7 @@
       <span>
         🛡️
         {#if hero.shield}
-          {hero.shield.name} ({hero.shield.dice})
+          {$t(hero.shield.name)} ({hero.shield.dice})
         {:else}
           {$t('content.hero.none')} (0)
         {/if}

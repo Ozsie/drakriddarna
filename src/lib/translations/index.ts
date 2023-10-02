@@ -29,6 +29,11 @@ export const config: Config = {
       loader: async () => (await import('./en/campaign.json')).default,
     },
     {
+      locale: 'en',
+      key: 'items',
+      loader: async () => (await import('./en/items.json')).default,
+    },
+    {
       locale: 'sv',
       key: 'content',
       loader: async () => (await import('./sv/content.json')).default,
@@ -42,6 +47,16 @@ export const config: Config = {
       locale: 'sv',
       key: 'events',
       loader: async () => (await import('./sv/events.json')).default,
+    },
+    {
+      locale: 'sv',
+      key: 'campaign',
+      loader: async () => (await import('./sv/campaign.json')).default,
+    },
+    {
+      locale: 'sv',
+      key: 'items',
+      loader: async () => (await import('./sv/items.json')).default,
     },
   ],
 };
