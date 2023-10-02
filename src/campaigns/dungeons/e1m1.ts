@@ -17,7 +17,7 @@ import { magicItems } from '../../items/magicItems';
 import { e1m2 } from './e1m2';
 
 export const e1m1: Dungeon = {
-  name: 'The Three Gates of Power',
+  name: 'campaign.iceDragon.e1m1.name',
   nextDungeon: e1m2,
   beaten: false,
   winConditions: [
@@ -73,30 +73,41 @@ export const e1m1: Dungeon = {
       createMonster(MonsterType.TROLL, Colour.Yellow, 14, 7),
     ],
     secrets: [
-      createSecret(SecretType.EQUIPMENT, 'Random Equipment', 10, 5),
-      createSecret(SecretType.EQUIPMENT, 'Random Equipment', 13, 1),
-      createSecret(SecretType.EQUIPMENT, 'Random Equipment', 16, 10),
+      createSecret(
+        SecretType.EQUIPMENT,
+        'campaign.iceDragon.randomEquipment',
+        10,
+        5,
+      ),
+      createSecret(
+        SecretType.EQUIPMENT,
+        'campaign.iceDragon.randomEquipment',
+        13,
+        1,
+      ),
+      createSecret(
+        SecretType.EQUIPMENT,
+        'campaign.iceDragon.randomEquipment',
+        16,
+        10,
+      ),
       createSecretWithItem(SecretType.MAGIC_ITEM, 16, 6, magicItems[0]),
     ],
     notes: [
       {
-        message:
-          'Beyond stone and fire you shall find the Dread tunnel, the road to the Ice Dragons treasure.',
+        message: 'campaign.iceDragon.e1m1.notes.hint1',
         position: { x: 2, y: 4 },
       },
       {
-        message:
-          'The Gate of Water. <There is an image of a sea dragon under the text>',
+        message: 'campaign.iceDragon.e1m1.notes.hint2',
         position: { x: 9, y: 8 },
       },
       {
-        message:
-          'The Gate of Air. <There is an image of a pegasus under the text>',
+        message: 'campaign.iceDragon.e1m1.notes.hint3',
         position: { x: 9, y: 5 },
       },
       {
-        message:
-          'The Gate of Fire. <There is an image of a hippogriph under the text>',
+        message: 'campaign.iceDragon.e1m1.notes.hint4',
         position: { x: 9, y: 3 },
       },
     ],

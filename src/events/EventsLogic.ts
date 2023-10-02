@@ -8,6 +8,7 @@ import {
 import {
   addLog,
   findCell,
+  i18n,
   isRoomDiscovered,
   roll,
   takeDamage,
@@ -61,7 +62,7 @@ export const eventEffects: {
           ) === heroCell,
       )
       .forEach((monster) => {
-        addLog(state, 'logs.events.sunStone', { monster: monster.name });
+        addLog(state, 'logs.events.sunStone', { monster: i18n(monster.name) });
         monster.health = 0;
       });
     event.used = true;

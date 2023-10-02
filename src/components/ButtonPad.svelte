@@ -145,6 +145,7 @@
   }
 
   const onMenuButton = () => {
+    mainMenuButtons = getMainMenu();
     if (showLoadMenu) {
       showMenu = false;
     } else {
@@ -198,9 +199,7 @@
     }
 </style>
 <div class="commands">
-  {#key mainMenuButtons}
-    <Menu header={$t('content.menu.mainMenu.header')} bind:debugMode={debugMode} footer={`${buildInfo.date} - ${buildInfo.hash}`} bind:showMenu={showMenu} buttons={mainMenuButtons} />
-  {/key}
+  <Menu header={$t('content.menu.mainMenu.header')} bind:debugMode={debugMode} footer={`${buildInfo.date} - ${buildInfo.hash}`} bind:showMenu={showMenu} bind:buttons={mainMenuButtons} />
   <Menu header={$t('content.menu.loadGame.header')} bind:debugMode={debugMode} footer='' bind:showMenu={showLoadMenu} bind:buttons={savedGames}/>
   <button class='menuButton' on:click={onMenuButton}>{$t('content.menu.menuButton')}</button>
   <div>

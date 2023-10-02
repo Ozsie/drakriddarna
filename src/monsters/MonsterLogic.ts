@@ -8,6 +8,7 @@ import {
   getDist,
   getEffectiveMaxMovement,
   hasLineOfSight,
+  i18n,
   isDiscovered,
   isRoomDiscovered,
   isWalkable,
@@ -38,7 +39,7 @@ export const monsterActions = (state: GameState) => {
 
   visibleMonsters.forEach((monster) => {
     const maxActions = monster.actions;
-    addLog(state, 'logs.monsterAction.acted', { monster: monster.name });
+    addLog(state, 'logs.monsterAction.acted', { monster: i18n(monster.name) });
     while (monster.actions > 0) {
       doReRender(state);
       const neighbouringHeroes: Hero[] = findNeighbouringHeroes(
@@ -116,7 +117,7 @@ const selectAction = (
     if (visibleHeroes.length > 0 && monster.rangedWeapon) {
       if (Math.random() < 0.1) {
         addLog(state, 'logs.monsterAction.moveDespiteTarget', {
-          monster: monster.name,
+          monster: i18n(monster.name),
         });
         return MonsterAction.MOVE;
       }
@@ -124,7 +125,7 @@ const selectAction = (
     } else if (sameRoomTargets.length > 0) {
       if (Math.random() < 0.1) {
         addLog(state, 'logs.monsterAction.moveDespiteTarget', {
-          monster: monster.name,
+          monster: i18n(monster.name),
         });
         return MonsterAction.MOVE;
       }
@@ -132,7 +133,7 @@ const selectAction = (
     } else if (visibleHeroes.length > 0 && orthogonalTargets.length > 0) {
       if (Math.random() < 0.1) {
         addLog(state, 'logs.monsterAction.moveDespiteTarget', {
-          monster: monster.name,
+          monster: i18n(monster.name),
         });
         return MonsterAction.MOVE;
       }
@@ -140,7 +141,7 @@ const selectAction = (
     } else if (visibleHeroes.length > 0 && diagonalTargets.length > 0) {
       if (Math.random() < 0.1) {
         addLog(state, 'logs.monsterAction.moveDespiteTarget', {
-          monster: monster.name,
+          monster: i18n(monster.name),
         });
         return MonsterAction.MOVE;
       }
@@ -222,14 +223,14 @@ const monsterMove = (state: GameState, monster: Monster) => {
           .sort((a, b) => a.dist - b.dist)[0].pos;
         monster.position = newPosition;
         addLog(state, 'logs.monsterAction.movedTowards', {
-          monster: monster.name,
-          hero: closestHeroAndDistance.hero.name,
+          monster: i18n(monster.name),
+          hero: i18n(closestHeroAndDistance.hero.name),
           x: `${newPosition.x}`,
           y: `${newPosition.y}`,
         });
       } else {
         addLog(state, 'logs.monsterAction.couldNotMove', {
-          monster: monster.name,
+          monster: i18n(monster.name),
         });
       }
     }
@@ -325,9 +326,9 @@ const performFireAttack = (
   targets.forEach((target) => {
     if (target.armour?.magicProtection) {
       addLog(state, 'logs.monsterAction.fireAttackDeflected', {
-        monster: source.name,
-        target: target.name,
-        armour: target.armour?.name,
+        monster: i18n(source.name),
+        target: i18n(target.name),
+        armour: i18n(target.armour?.name),
       });
     } else {
       takeDamage(state, source, target, true);

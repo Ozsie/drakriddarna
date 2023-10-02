@@ -19,7 +19,7 @@ import {
 import { magicItems } from '../../items/magicItems';
 
 export const e1m3: Dungeon = {
-  name: 'The Dread Labyrinth',
+  name: 'campaign.iceDragon.e1m3.name',
   beaten: false,
   winConditions: [
     {
@@ -95,29 +95,27 @@ export const e1m3: Dungeon = {
     ],
     secrets: [
       createSecretWithItem(SecretType.MAGIC_ITEM, 8, 10, magicItems[2]),
-      createSecret(SecretType.TRAP_DOOR, 'Trap door', 8, 6),
-      createSecret(SecretType.TRAP_DOOR, 'Trap door', 11, 1),
-      createSecret(SecretType.TRAP_DOOR, 'Trap door', 11, 7),
-      createSecret(SecretType.TRAP_DOOR, 'Trap door', 13, 11),
+      createSecret(SecretType.TRAP_DOOR, 'campaign.iceDragon.trapDoor', 8, 6),
+      createSecret(SecretType.TRAP_DOOR, 'campaign.iceDragon.trapDoor', 11, 1),
+      createSecret(SecretType.TRAP_DOOR, 'campaign.iceDragon.trapDoor', 11, 7),
+      createSecret(SecretType.TRAP_DOOR, 'campaign.iceDragon.trapDoor', 13, 11),
     ],
     notes: [
       {
         position: { x: 6, y: 5 },
-        message: 'An arrow on the far wall of the corridor points to the left.',
+        message: 'campaign.iceDragon.e1m3.notes.hint1',
       },
       {
         position: { x: 8, y: 3 },
-        message:
-          'An arrow on the far wall of the corridor points to the right.',
+        message: 'campaign.iceDragon.e1m3.notes.hint2',
       },
       {
         position: { x: 8, y: 8 },
-        message:
-          'There is a mosaic in the floor. It depicts a snake coiling around a dwarf, while battling an ice dragon. In the jaws of the snake is treasure chest.',
+        message: 'campaign.iceDragon.e1m3.notes.hint3',
       },
       {
         position: { x: 14, y: 10 },
-        message: 'An arrow on the far wall of the corridor points to the left',
+        message: 'campaign.iceDragon.e1m3.notes.hint4',
       },
     ],
     items: [],

@@ -24,6 +24,11 @@ export const config: Config = {
       loader: async () => (await import('./en/events.json')).default,
     },
     {
+      locale: 'en',
+      key: 'campaign',
+      loader: async () => (await import('./en/campaign.json')).default,
+    },
+    {
       locale: 'sv',
       key: 'content',
       loader: async () => (await import('./sv/content.json')).default,

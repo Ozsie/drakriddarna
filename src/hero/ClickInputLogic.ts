@@ -3,6 +3,7 @@ import {
   doorAsActor,
   doReRender,
   hasLineOfSight,
+  i18n,
   isRoomDiscovered,
   isSamePosition,
   isWalkable,
@@ -66,8 +67,8 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     const index = state.dungeon.layout.items.indexOf(itemLocation);
     state.dungeon.layout.items.splice(index, 1);
     addLog(state, 'logs.heroAction.pickUp', {
-      hero: hero.name,
-      item: item.name,
+      hero: i18n(hero.name),
+      item: i18n(item.name),
     });
     pickupItem(state, item, hero);
     return;
@@ -83,7 +84,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     );
     if (canOpenDoor(hero, canBreakLock, door)) {
       if (door.locked && canBreakLock)
-        addLog(state, 'logs.heroAction.brokeLock', { hero: hero.name });
+        addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
       door.open = true;
       if (door.trapped) {
         takeDamage(state, doorAsActor(door), hero, false);
@@ -105,7 +106,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
       consumeActions(hero);
     } else if (door.locked && !door.hidden) {
       if (!canAct(hero)) {
-        addLog(state, 'logs.heroAction.noActions', { hero: hero.name });
+        addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
         return;
       }
       addLog(state, 'logs.heroAction.locked');
@@ -113,7 +114,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     }
   } else {
     if (!canAct(hero)) {
-      addLog(state, 'logs.heroAction.noActions', { hero: hero.name });
+      addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
       return;
     }
     search(state);
@@ -125,7 +126,7 @@ const onTargetCell = (state: GameState, target: Position) => {
   const hero = state.currentActor as Hero;
   if (hero.actions === 0) {
     hero.movement = 0;
-    addLog(state, 'logs.heroAction.noActions', { hero: hero.name });
+    addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
   }
   const walkable = isWalkable(state.dungeon.layout, target.x, target.y);

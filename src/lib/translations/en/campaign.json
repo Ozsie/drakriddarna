@@ -1,0 +1,43 @@
+{
+  "iceDragon": {
+    "name": "Treasure of the Ice Dragon",
+    "randomEquipment": "Random Equipment",
+    "trapDoor": "Trap Door",
+    "e1m0": {
+      "name": "Troll Cave"
+    },
+    "e1m1": {
+      "name": "The Three Gates of Power",
+      "notes": {
+        "hint1": "Beyond stone and fire you shall find the Dread tunnel, the road to the Ice Dragons treasure.",
+        "hint2": "The Gate of Water. <There is an image of a sea dragon under the text>",
+        "hint3": "The Gate of Air. <There is an image of a pegasus under the text>",
+        "hint4": "The Gate of Fire. <There is an image of a hippogriph under the text>"
+      }
+    },
+    "e1m2": {
+      "name": "The Mines of Evil",
+      "notes": {
+        "hint1": "Guard room",
+        "hint2": "Look in the pillar room for the armory of the dwarf king",
+        "hint3": "To reach the treasure of the ice dragon, look behind the mirror in the alchemy laboratory.",
+        "hint4": "A large mirror decorates the far wall of this room."
+      }
+    },
+    "e1m3": {
+      "name": "The Dread Labyrinth",
+      "notes": {
+        "hint1": "An arrow on the far wall of the corridor points to the left.",
+        "hint2": "An arrow on the far wall of the corridor points to the right.",
+        "hint3": "There is a mosaic in the floor. It depicts a snake coiling around a dwarf, while battling an ice dragon. In the jaws of the snake is treasure chest.",
+        "hint4": "An arrow on the far wall of the corridor points to the left"
+      }
+    },
+    "testingGrounds": {
+      "name": "Testing Grounds",
+      "secrets": {
+        "trapDoor": "Welcome to Drakriddarna"
+      }
+    }
+  }
+}

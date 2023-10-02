@@ -1,20 +1,10 @@
-import {
-  Colour,
-  ConditionType,
-  MonsterType,
-  SecretType,
-  Side,
-} from '../../types';
+import { Colour, ConditionType, MonsterType, Side } from '../../types';
 import type { Dungeon } from '../../types';
-import {
-  createDoor,
-  createMonster,
-  createSecret,
-} from '../../dungeon/DungeonLogic';
+import { createDoor, createMonster } from '../../dungeon/DungeonLogic';
 import { e1m1 } from './e1m1';
 
 export const e1m0: Dungeon = {
-  name: 'Troll cave',
+  name: 'campaign.iceDragon.e1mo.name',
   beaten: false,
   winConditions: [
     {
@@ -58,7 +48,7 @@ export const e1m0: Dungeon = {
       createMonster(MonsterType.ORCH, Colour.Red, 9, 3),
       createMonster(MonsterType.TROLL, Colour.Green, 6, 1),
     ],
-    secrets: [createSecret(SecretType.NOTE, 'Welcome to Drakriddarna', 3, 9)],
+    secrets: [],
     notes: [],
     items: [],
     corridors: ['D', 'E'],

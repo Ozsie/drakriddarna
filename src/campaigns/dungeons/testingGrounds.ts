@@ -21,7 +21,7 @@ import { e1m0 } from './e1m0';
 import { magicItems } from '../../items/magicItems';
 
 export const testingGrounds: Dungeon = {
-  name: 'Testing Grounds',
+  name: 'campaign.iceDragon.testingGrounds.name',
   beaten: true,
   winConditions: [
     {
@@ -97,8 +97,18 @@ export const testingGrounds: Dungeon = {
       createMonster(MonsterType.TROLL, Colour.Green, 5, 1),
     ],
     secrets: [
-      createSecret(SecretType.TRAP_DOOR, 'Welcome to Drakriddarna', 3, 9),
-      createSecret(SecretType.EQUIPMENT, 'Random Equipment', 1, 10),
+      createSecret(
+        SecretType.TRAP_DOOR,
+        'campaign.iceDragon.testingGrounds.secrets.trapDoor',
+        3,
+        9,
+      ),
+      createSecret(
+        SecretType.EQUIPMENT,
+        'campaign.iceDragon.randomEquipment',
+        1,
+        10,
+      ),
       createSecretWithItem(SecretType.EQUIPMENT, 5, 10, weapons[2]),
     ],
     notes: [],

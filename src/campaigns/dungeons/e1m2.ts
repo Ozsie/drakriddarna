@@ -18,7 +18,7 @@ import { magicItems } from '../../items/magicItems';
 import { e1m3 } from './e1m3';
 
 export const e1m2: Dungeon = {
-  name: 'The Mines of Evil',
+  name: 'campaign.iceDragon.e1m2.name',
   nextDungeon: e1m3,
   beaten: false,
   winConditions: [
@@ -84,28 +84,42 @@ export const e1m2: Dungeon = {
       createMonster(MonsterType.TROLL, Colour.Yellow, 17, 10),
     ],
     secrets: [
-      createSecret(SecretType.EQUIPMENT, 'Equipment', 1, 3),
-      createSecret(SecretType.EQUIPMENT, 'Equipment', 3, 3),
-      createSecret(SecretType.EQUIPMENT, 'Equipment', 15, 2),
+      createSecret(
+        SecretType.EQUIPMENT,
+        'campaign.iceDragon.randomEquipment',
+        1,
+        3,
+      ),
+      createSecret(
+        SecretType.EQUIPMENT,
+        'campaign.iceDragon.randomEquipment',
+        3,
+        3,
+      ),
+      createSecret(
+        SecretType.EQUIPMENT,
+        'campaign.iceDragon.randomEquipment',
+        15,
+        2,
+      ),
       createSecretWithItem(SecretType.MAGIC_ITEM, 2, 3, magicItems[1]),
       createSecretWithItem(SecretType.MAGIC_ITEM, 16, 11, magicItems[6]),
     ],
     notes: [
       {
-        message: 'Guard room',
+        message: 'campaign.iceDragon.e1m2.notes.hint1',
         position: { x: 2, y: 10 },
       },
       {
-        message: 'Look in the pillar room for the armory of the dwarf king',
+        message: 'campaign.iceDragon.e1m2.notes.hint2',
         position: { x: 8, y: 10 },
       },
       {
-        message:
-          'To reach the treasure of the ice dragon, look behind the mirror in the alchemy laboratory.',
+        message: 'campaign.iceDragon.e1m2.notes.hint3',
         position: { x: 2, y: 3 },
       },
       {
-        message: 'A large mirror decorates the far wall of this room.',
+        message: 'campaign.iceDragon.e1m2.notes.hint4',
         position: { x: 17, y: 11 },
       },
     ],

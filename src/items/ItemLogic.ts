@@ -1,5 +1,5 @@
 import type { Actor, GameState, Item } from '../types';
-import { addLog, roll } from '../game';
+import { addLog, i18n, roll } from '../game';
 import { canAct } from '../hero/HeroLogic';
 
 export const USED = 'USED';
@@ -50,7 +50,7 @@ export const onUse: {
     target?: Actor,
   ) => {
     if (self.disabled) {
-      addLog(state, 'logs.item.cannotUse', { item: self.name });
+      addLog(state, 'logs.item.cannotUse', { item: i18n(self.name) });
       return;
     }
     if (!target) {
@@ -58,12 +58,12 @@ export const onUse: {
       return;
     }
     if (!canAct(user)) {
-      addLog(state, 'logs.heroAction.noActions', { hero: user.name });
+      addLog(state, 'logs.heroAction.noActions', { hero: i18n(user.name) });
       return;
     }
     if (self.properties) {
       if (self.properties[USED]) {
-        addLog(state, 'logs.item.noUsesLeft', { item: self.name });
+        addLog(state, 'logs.item.noUsesLeft', { item: i18n(self.name) });
         return;
       }
       self.properties[USED] = true;
@@ -73,9 +73,9 @@ export const onUse: {
       );
       target.health += addedHealth;
       addLog(state, 'logs.item.magicHerbs', {
-        user: user.name,
-        item: self.name,
-        target: target.name,
+        user: i18n(user.name),
+        item: i18n(self.name),
+        target: i18n(target.name),
         addedHealth: `${addedHealth}`,
       });
       user.actions--;
@@ -91,25 +91,25 @@ export const onUse: {
     target?: Actor,
   ) => {
     if (self.disabled) {
-      addLog(state, 'logs.item.cannotUse', { item: self.name });
+      addLog(state, 'logs.item.cannotUse', { item: i18n(self.name) });
       return;
     }
   },
   potionOfSpeedOnUse: (state: GameState, self: Item, user: Actor) => {
     if (self.disabled) {
-      addLog(state, 'logs.item.cannotUse', { item: self.name });
+      addLog(state, 'logs.item.cannotUse', { item: i18n(self.name) });
       return;
     }
     if (!self.properties?.[USED]) {
       user.actions += self.properties?.[ACTIONS_BONUS] as number;
       if (self.properties) self.properties[USED] = true;
       addLog(state, 'logs.item.potionOfSpeed', {
-        user: user.name,
-        item: self.name,
+        user: i18n(user.name),
+        item: i18n(self.name),
         actions: self.properties?.[ACTIONS_BONUS] as string,
       });
     } else {
-      addLog(state, 'logs.item.consumed', { item: self.name });
+      addLog(state, 'logs.item.consumed', { item: i18n(self.name) });
     }
   },
   necklaceOfLightOnUse: (
@@ -119,7 +119,7 @@ export const onUse: {
     target?: Actor,
   ) => {
     if (self.disabled) {
-      addLog(state, 'logs.item.cannotUse', { item: self.name });
+      addLog(state, 'logs.item.cannotUse', { item: i18n(self.name) });
       return;
     }
     if (!target) {
@@ -127,7 +127,7 @@ export const onUse: {
       return;
     }
     if (!canAct(user)) {
-      addLog(state, 'logs.heroAction.noActions', { hero: user.name });
+      addLog(state, 'logs.heroAction.noActions', { hero: i18n(user.name) });
       return;
     }
     if (self.properties && !self.properties?.[USED]) {

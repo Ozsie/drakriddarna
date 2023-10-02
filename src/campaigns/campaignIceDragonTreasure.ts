@@ -41,7 +41,7 @@ const getItemDeck = (): Item[] => {
 };
 
 export const campaignIceDragonTreasure: Campaign = {
-  name: 'Treasure of the Ice Dragon',
+  name: 'campaign.iceDragon.name',
   dungeons: [e1m0, e1m1, e1m2, e1m3],
   itemDeck: getItemDeck(),
   magicItemDeck: getMagicItemDeck(),
