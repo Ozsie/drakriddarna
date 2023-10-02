@@ -15,13 +15,13 @@
 - [ ] Multiple saves
 - [ ] Graphics
 - [ ] Responsive layout
-- [ ] Menu system
 - [ ] Support for additional campaigns
 - [ ] Magic Item/Weapon: Sword of Chaos
 - [ ] Event #16 - The Hexagram
 - [ ] Doors blocking monsters?
 - [ ] Trade Items?
 - [ ] Monster cards?
+- [X] Menu system
 - [X] Monster special attack
   - [X] Diagonal fire attack (yellow dark lord)
   - [X] Orthogonal fire attack (red dark lord)
