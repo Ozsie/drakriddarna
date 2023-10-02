@@ -47,16 +47,20 @@ export const doReRender = (state: GameState) => {
   }
 };
 
+export const loadState = (newState: GameState) => {
+  newState.currentActor = newState.heroes.find(
+    (hero) => hero.name === newState.currentActor?.name,
+  ) as Hero | undefined;
+  addLog(newState, 'Game loaded.');
+  doReRender(newState);
+  return newState;
+};
+
 export const load = (currentState: GameState): GameState => {
   const stateString = localStorage.getItem('state');
   if (stateString) {
     const state: GameState = JSON.parse(stateString) as GameState;
-    state.currentActor = state.heroes.find(
-      (hero) => hero.name === state.currentActor?.name,
-    ) as Hero | undefined;
-    addLog(state, 'Game loaded.');
-    doReRender(state);
-    return state;
+    return loadState(state);
   }
   addLog(currentState, 'Failed to load game.');
   return currentState;
