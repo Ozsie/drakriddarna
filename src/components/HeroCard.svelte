@@ -1,13 +1,12 @@
 <script lang="ts">
   import type { GameState, Hero } from "../types";
   import Inventory from "./Inventory.svelte";
+  import { t } from '$lib/translations';
   export let hero: Hero;
   export let state: GameState;
 
-  
   let inventoryDisplayType = "none"
-  
-  
+
   const selectTarget = (target: Hero) => {
     if (state.targetActor && target === state.targetActor) {
       state.targetActor = undefined;
@@ -121,8 +120,8 @@
 {#key state.targetActor}
 <div class="hero-card" style="background-color: {hero.colour};" >
   <div class="hero-title">
-    <b>{#if state.targetActor === hero}*{/if}{hero.name} - </b>
-    <b> {hero.level} ({hero.experience})</b>
+    <b>{#if state.targetActor === hero}*{/if}{hero.name} -
+    {$t('content.level.' + hero.level)} ({hero.experience})</b>
   </div>
   <!-- {#if state.currentActor == hero} -->
   <div class="hero-action-buttons">
@@ -139,7 +138,7 @@
   <!-- {/if} -->
   
   <div class="hero-information">
-    {#if state.currentActor == hero}
+    {#if state.currentActor === hero}
     <div class="hero-inventory" id="{hero.name}s-inventory" style="display: {inventoryDisplayType};">
       
       <Inventory bind:inventory={hero.inventory} state={state}/>
@@ -149,12 +148,12 @@
   </div>
 
   <div class="hero-stats-and-equipmnet">
-    <span>HP: {hero.health}</span>
+    <span>{$t('content.hero.hp')}: {hero.health}</span>
 
     {#if state.currentActor == hero}
-    <span>Actions: {hero.actions}</span>
-    <span>Moves: {hero.movement}</span>
-    <span>Equipment: </span>
+    <span>{$t('content.hero.actions')}: {hero.actions}</span>
+    <span>{$t('content.hero.moves')}: {hero.movement}</span>
+    <span>{$t('content.hero.equipment')}: </span>
     <div class="equipment">
       <span>🗡️ {hero.weapon.name} ({hero.weapon.dice}) </span>
       <span>
@@ -162,7 +161,7 @@
         {#if hero.armour}
           {hero.armour.name} ({hero.armour.defense})
         {:else}
-          None (0)
+          {$t('content.hero.none')} (0)
         {/if}
       </span>
       <span>
@@ -170,7 +169,7 @@
         {#if hero.shield}
           {hero.shield.name} ({hero.shield.dice})
         {:else}
-          None (0)
+          {$t('content.hero.none')} (0)
         {/if}
       </span>
     </div>

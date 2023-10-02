@@ -67,11 +67,11 @@ export enum MonsterType {
 }
 
 export enum Level {
-  APPRENTICE = 'Apprentice',
-  KNIGHT = 'Knight',
-  HERO = 'Hero',
-  LORD = 'Lord',
-  MASTER = 'Master',
+  APPRENTICE = 'apprentice',
+  KNIGHT = 'knight',
+  HERO = 'hero',
+  LORD = 'lord',
+  MASTER = 'master',
 }
 
 export type Dungeon = {

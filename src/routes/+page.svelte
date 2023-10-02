@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { init } from "../game";
+  import { init, loadState } from '../game';
   import Dungeon from '../components/Dungeon.svelte';
   import Characters from '../components/Characters.svelte';
   import Log from '../components/Log.svelte';
@@ -14,7 +14,7 @@
     reloadGuard = localStorage.getItem('reloadGuard');
   }
   if (reloadGuard) {
-    state = JSON.parse(reloadGuard) as GameState;
+    state = loadState(JSON.parse(reloadGuard) as GameState)
   } else {
     state = init();
   }

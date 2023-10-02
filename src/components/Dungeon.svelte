@@ -10,6 +10,7 @@
   import { renderDoors, renderGrid, renderSecrets } from "../dungeon/DungeonRendering";
   import { renderItems } from '../items/ItemRendering';
   import WinCondition from './WinCondition.svelte';
+  import { t } from '$lib/translations';
 
   export let state: GameState;
   export let debugMode: boolean;
@@ -118,14 +119,20 @@
 
   <div class='winConditions {showWinConditions ? "" : "conditionsHidden"}'>
     <div class='buttonDiv'>
-      <button class='hideConditionsButton' on:click={() => showWinConditions = !showWinConditions}>{#if showWinConditions}X{:else}>{/if}</button>
+      <button class='hideConditionsButton' on:click={() => showWinConditions = !showWinConditions}>
+        {#if showWinConditions}
+          {$t('content.winConditions.buttonClose')}
+        {:else}
+          {$t('content.winConditions.buttonOpen')}
+        {/if}
+      </button>
     </div>
     {#if showWinConditions}
       <div class='conditionsDiv'>
-      {#each state.dungeon.winConditions.sort((a, b) => (a.fulfilled === b.fulfilled)? 0 : a.fulfilled? 1 : -1) as winCondition}
-        <WinCondition bind:condition={winCondition} bind:state={state}/>
-      {/each}
+        {#each state.dungeon.winConditions.sort((a, b) => (a.fulfilled === b.fulfilled)? 0 : a.fulfilled? 1 : -1) as winCondition}
+          <WinCondition bind:condition={winCondition} bind:state={state}/>
+        {/each}
       </div>
-      {/if}
+    {/if}
   </div>
 </div>

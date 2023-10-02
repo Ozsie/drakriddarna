@@ -2,6 +2,7 @@
   import ItemCard from "./ItemCard.svelte";
   import type { GameState, Item } from "../types";
   import { onMount } from "svelte";
+  import { t } from '$lib/translations'
   export let inventory: Item[];
   export let state: GameState;
   let uglyUpdateToggle = false;
@@ -31,7 +32,7 @@
     margin-left: 50px;
   }
 </style>
-<h4> {state.currentActor?.name}s  Inventory</h4>
+<h4>{$t('content.inventory.label', { hero: state.currentActor?.name })}</h4>
 <div class="inventory">
   {#key uglyUpdateToggle}
     {#each inventory as item}

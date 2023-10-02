@@ -6,6 +6,7 @@
   import type { GameState } from '../types';
   import Menu from './Menu.svelte';
   import type { MenuButtonProps } from './ComponentTypes';
+  import { locale, setLocale, t } from '$lib/translations';
 
   export let state: GameState;
   export let debugMode: boolean;
@@ -13,6 +14,7 @@
   let showMenu: boolean = false;
   let showLoadMenu: boolean = false;
   let savedGames: MenuButtonProps[] = [];
+  let mainMenuButtons: MenuButtonProps[] = [];
 
   const setDebugMode = () => {
     debugMode = !debugMode;
@@ -101,7 +103,7 @@
     if (autoSave) {
       buttons.push({
         debugModeOnly: false,
-        label: 'Autosave',
+        label: $t('content.menu.loadGame.buttons.autoSave'),
         onClick: () => onClickLoad(autoSave),
       });
     }
@@ -110,14 +112,14 @@
     if (manualSave) {
       buttons.push({
         debugModeOnly: false,
-        label: 'Manual Save',
+        label: $t('content.menu.loadGame.buttons.manualSave'),
         onClick: () => onClickLoad(manualSave),
       });
     }
 
     buttons.push({
       debugModeOnly: false,
-      label: 'Back',
+      label: $t('content.menu.loadGame.buttons.back'),
       onClick: () => {
         showMenu = true;
         showLoadMenu = false;
@@ -126,6 +128,15 @@
 
     return buttons
   }
+
+  const getMainMenu = () => [
+    {debugModeOnly: false, label: $t('content.menu.mainMenu.buttons.newGame'), onClick: onNewGame},
+    {debugModeOnly: false, label: $t('content.menu.mainMenu.buttons.saveGame'), onClick: onSaveGame},
+    {debugModeOnly: false, label: $t('content.menu.mainMenu.buttons.loadGame'), onClick: onLoadButton},
+    {debugModeOnly: false, label: $t('content.menu.mainMenu.buttons.debug'), onClick: setDebugMode},
+    {debugModeOnly: true, label: $t('content.menu.mainMenu.buttons.testingGrounds'), onClick: toTestingGrounds},
+    {debugModeOnly: false, label: $t('content.menu.mainMenu.buttons.language'), onClick: onChangeLanguage}
+  ]
 
   const onClickLoad = (stateString: string) => {
     state = loadState(JSON.parse(stateString) as GameState);
@@ -142,13 +153,17 @@
     showLoadMenu = false;
   }
 
-  const mainMenuButtons: MenuButtonProps[] = [
-    {debugModeOnly: false, label: 'New Game', onClick: onNewGame},
-    {debugModeOnly: false, label: 'Save', onClick: onSaveGame},
-    {debugModeOnly: false, label: 'Load', onClick: onLoadButton},
-    {debugModeOnly: false, label: 'Debug', onClick: setDebugMode},
-    {debugModeOnly: true, label: 'To Testing Grounds', onClick: toTestingGrounds}
-  ]
+  const onChangeLanguage = () => {
+    if (locale.get() === 'en') {
+      setLocale('sv');
+    } else {
+      setLocale('en');
+    }
+    mainMenuButtons = getMainMenu();
+    doReRender(state);
+  }
+
+  mainMenuButtons = getMainMenu();
 
 </script>
 <style>
@@ -181,15 +196,17 @@
     }
 </style>
 <div class="commands">
-  <Menu header='Main Menu' bind:debugMode={debugMode} footer={`${buildInfo.date} - ${buildInfo.hash}`} bind:showMenu={showMenu} buttons={mainMenuButtons} />
-  <Menu header='Load Game' bind:debugMode={debugMode} footer='' bind:showMenu={showLoadMenu} bind:buttons={savedGames}/>
-  <button class='menuButton' on:click={onMenuButton}>Menu</button>
+  {#key mainMenuButtons}
+    <Menu header={$t('content.menu.mainMenu.header')} bind:debugMode={debugMode} footer={`${buildInfo.date} - ${buildInfo.hash}`} bind:showMenu={showMenu} buttons={mainMenuButtons} />
+  {/key}
+  <Menu header={$t('content.menu.loadGame.header')} bind:debugMode={debugMode} footer='' bind:showMenu={showLoadMenu} bind:buttons={savedGames}/>
+  <button class='menuButton' on:click={onMenuButton}>{$t('content.menu.menuButton')}</button>
   <div>
-    <button class='menuButton twoColButton' on:click={() => state = next(state)}>Next</button>
-    <button class='menuButton twoColButton' style='float:right;' on:click={() => endAction(state)}>Action</button>
+    <button class='menuButton twoColButton' on:click={() => state = next(state)}>{$t('content.actions.next')}</button>
+    <button class='menuButton twoColButton' style='float:right;' on:click={() => endAction(state)}>{$t('content.actions.action')}</button>
   </div>
   {#if state.dungeon.beaten}
-    <button class='menuButton' on:click={() => hasWon(state)}>Next level</button>
+    <button class='menuButton' on:click={() => hasWon(state)}>{$t('content.actions.nextLevel')}</button>
   {/if}
 </div>
 <svelte:window on:keydown|preventDefault={onKeyDown} />
