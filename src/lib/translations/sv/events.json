@@ -1,11 +1,11 @@
 {
   "hungryTroll": {
-    "name": "Den Hungriga Trollen",
-    "description": "Du hör plötsligt ett fruktansvärt vrål eka i korridorerna bakom dig. Det är ljudet av en hungrig trollen."
+    "name": "Det Hungriga Trollet",
+    "description": "Du hör plötsligt ett fruktansvärt vrål eka i korridorerna bakom dig. Det är ljudet av ett hungrigt troll."
   },
   "sunStone": {
     "name": "Solstenen",
-    "description": "En av er sparkar på en hög av spillror och avslöjar en liten, genomskinlig kristall. Den sänder ut ett varmt, gult ljus som förvandlar alla närliggande troll till sten."
+    "description": "En av er sparkar till en hög med bråte och avslöjar en liten, genomskinlig kristall. Den sänder ut ett varmt, gult ljus som förvandlar alla närvarande troll till sten."
   },
   "timePortal": {
     "name": "Tidsportalen",
@@ -16,16 +16,16 @@
     "description": "Du hör det svaga ljudet av vatten som rinner från en vägg. När du smakar det känner du dig starkare än tidigare."
   },
   "sleepingGas": {
-    "name": "Sömnigas Moln",
+    "name": "Sömngasmolnet",
     "description": "Giftig gas sipprar genom ett hål i väggen, vilket får dig att känna dig tung och sömnig."
   },
   "lostOrch": {
-    "name": "Den Förlorade Orchen",
+    "name": "Den Vilsna Orchen",
     "description": "Du hör ett vrål fyllt av vrede någonstans bakom dig. Du inser snabbt att det fanns fler monster här än du trodde."
   },
   "dragonsBreath": {
     "name": "Drakens Andedräkt",
-    "description": "Facklornas lågor börjar fladdra och snart är fängelset helt mörkt."
+    "description": "Facklornas lågor börjar fladdra och snart är allt helt mörkt omkring dig."
   },
   "landslide": {
     "name": "Jordskred",
@@ -37,7 +37,7 @@
   },
   "foresight": {
     "name": "Föraning",
-    "description": "Du ser framför dig en kraftfull föremål, dolt bakom tjocka väggar."
+    "description": "Du ser framför dig ett kraftfullt föremål, dolt bakom tjocka väggar."
   },
   "earthquake": {
     "name": "Jordbävning",
@@ -45,7 +45,7 @@
   },
   "magicStorm": {
     "name": "Den Magiska Stormen",
-    "description": "En oroande vind blåser genom fängelset. Du fryser när en grön glöd strålar från en av dina magiska föremål."
+    "description": "En ryslig vind blåser genom korridorerna. Du stelnar till när en grön glöd strålar från ett av dina magiska föremål."
   },
   "elementalWeapon": {
     "name": "Det Elementära Vapnet",

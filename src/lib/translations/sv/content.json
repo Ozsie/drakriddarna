@@ -8,27 +8,27 @@
         "saveGame": "Spara",
         "loadGame": "Ladda",
         "debug": "Debug",
-        "testingGrounds": "Till testområden",
+        "testingGrounds": "Till testområde",
         "language": "-> English"
       }
     },
     "loadGame": {
       "header": "Ladda spel",
       "buttons": {
-        "autoSave": "Autospara",
-        "manualSave": "Manuell spara",
+        "autoSave": "Autosparat spel",
+        "manualSave": "Manuellt sparat spel",
         "back": "Tillbaka"
       }
     }
   },
   "actions": {
     "next": "Nästa",
-    "action": "Åtgärd",
+    "action": "Handling",
     "nextLevel": "Nästa nivå"
   },
   "hero": {
-    "actions": "Åtgärder",
-    "moves": "Rörelser",
+    "actions": "Handlingar",
+    "moves": "Steg",
     "equipment": "Utrustning",
     "none": "Ingen",
     "hp": "HP"
@@ -43,7 +43,7 @@
   "inventory": {
     "label": "{{hero}}s packning",
     "use": "Använd",
-    "used": "Används"
+    "used": "Förbrukad"
   },
   "winConditions": {
     "buttonClose": "X",

@@ -1,9 +1,9 @@
 {
   "armour": {
-    "chainMail": "Kedjebrynja",
-    "plateMail": "Plåtbrynja",
-    "dragonSkinMail": "Drakskinnbrynja",
-    "orchMail": "Orch-brynja",
+    "chainMail": "Ringbrynja",
+    "plateMail": "Helrustning",
+    "dragonSkinMail": "Drakskinnsrustning",
+    "orchMail": "Orchisk brynja",
     "trollSkin": "Trollskinn"
   },
   "shields": {
@@ -12,42 +12,42 @@
   },
   "weapons": {
     "sword": "Svärd",
-    "twoHandedSword": "Tvåhandsvärd",
+    "twoHandedSword": "Tvåhandssvärd",
     "halberd": "Hillebard",
-    "flail": "Flinka",
-    "doubleHeadedAxe": "Dubbelsiffrig yxa",
-    "orchSword": "Orch-svärd",
-    "orchBow": "Orch-båge",
+    "flail": "Stridsgissel",
+    "doubleHeadedAxe": "Tvehövdad yxa",
+    "orchSword": "Orchiskt svärd",
+    "orchBow": "Orchisk pilbåge",
     "trollClub": "Trollklubba"
   },
   "magicItems": {
     "healingHerbs": {
       "name": "Läkeörter",
-      "description": "Chans att läka upp till 3 sår på en hjälte."
+      "description": "Chans att läka upp till 3 HP på en hjälte."
     },
     "boots": {
-      "name": "Tusenmilsstövlar",
-      "description": "Ger ett extra steg för varje rörelseåtgärd."
+      "name": "Tusenmilastövlar",
+      "description": "Ger ett extra steg för varje rörelsehandling."
     },
     "giantsGlove": {
       "name": "Jättens Handske",
-      "description": "En extra attacktärning. Bryter låsta dörrar."
+      "description": "En extra attacktärning. Slår sönder lås på dörrar."
     },
     "ringOfPrecision": {
-      "name": "Ring av Precision",
+      "name": "Precisionsringen",
       "description": "Kan göra om en helt misslyckad attack."
     },
     "crownOfWisdom": {
       "name": "Vishetens Krona",
-      "description": "En extra tärningskastning vid sökning."
+      "description": "Ett extra tärningskastning vid sökning."
     },
     "swordOfChaos": {
-      "name": "Svärdet av Kaos",
+      "name": "Kaossvärdet",
       "description": "Ett svärd med en egen vilja. Använd på egen risk."
     },
     "potionOfSpeed": {
       "name": "Snabbhetsdryck",
-      "description": "Ger 2 extra åtgärder. Kan bara användas en gång."
+      "description": "Ger 2 extra handlingar. Kan bara användas en gång."
     },
     "necklaceOfLight": {
       "name": "Ljusets Halsband",
