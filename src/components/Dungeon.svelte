@@ -11,6 +11,7 @@
   import { renderItems } from '../items/ItemRendering';
   import WinCondition from './WinCondition.svelte';
   import { t } from '$lib/translations';
+  import EventCard from './EventCard.svelte';
 
   export let state: GameState;
   export let debugMode: boolean;
@@ -134,5 +135,8 @@
         {/each}
       </div>
     {/if}
+  </div>
+  <div>
+    <EventCard event={state.currentEvent} />
   </div>
 </div>

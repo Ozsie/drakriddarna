@@ -15,9 +15,11 @@
     reloadGuard = localStorage.getItem('reloadGuard');
   }
   if (reloadGuard) {
-    state = loadState(JSON.parse(reloadGuard) as GameState)
+    state = loadState(JSON.parse(reloadGuard) as GameState);
+    doReRender(state);
   } else {
     state = init();
+    doReRender(state);
   }
   setLocale(state.settings['locale'] as string);
   let debugMode: boolean = state.settings['debug'] as boolean;

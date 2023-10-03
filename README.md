@@ -6,6 +6,7 @@
 
 ## Todo
 - [ ] Difficulty levels
+- [ ] Show current event
 - [ ] Dungeon intro screen
 - [ ] e1m4 - The Dark Citadel
 - [ ] e1m5 - The Ice Dragons Treasure

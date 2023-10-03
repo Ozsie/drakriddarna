@@ -16,6 +16,7 @@ export type GameState = {
   settings: Record<string, string | number | boolean>;
   eventDeck: TurnEvent[];
   reRender: boolean;
+  currentEvent?: TurnEvent;
 };
 
 export type LogEvent = {
