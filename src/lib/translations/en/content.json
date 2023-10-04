@@ -53,5 +53,8 @@
     "killAtLeast": "Kill at least {{minKills}} monsters.",
     "openDoor": "Open a certain door",
     "reachCell": "Reach a certain cell"
+  },
+  "event": {
+    "current": "Current event"
   }
 }

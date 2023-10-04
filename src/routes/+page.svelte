@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { init, loadState } from '../game';
+  import { doReRender, init, loadState } from '../game';
   import Dungeon from '../components/Dungeon.svelte';
   import Characters from '../components/Characters.svelte';
   import Log from '../components/Log.svelte';
