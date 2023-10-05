@@ -73,14 +73,15 @@ export const load = (currentState: GameState): GameState => {
 };
 
 export const init = (): GameState => {
+  const campaign = structuredClone(campaignIceDragonTreasure);
   const state: GameState = {
-    heroes: campaignIceDragonTreasure.heroes,
-    dungeon: campaignIceDragonTreasure.dungeons[0],
-    currentActor: campaignIceDragonTreasure.heroes[0] as Hero | undefined,
+    heroes: campaign.heroes,
+    dungeon: campaign.dungeons[0],
+    currentActor: campaign.heroes[0] as Hero | undefined,
     actionLog: [
       {
         key: 'logs.playingCampaign',
-        properties: { name: i18n(campaignIceDragonTreasure.name) },
+        properties: { name: i18n(campaign.name) },
       },
       {
         key: 'logs.gameInitialized',
@@ -98,13 +99,13 @@ export const init = (): GameState => {
         key: 'logs.initLogUnfair',
       },
     ],
-    itemDeck: shuffle(campaignIceDragonTreasure.itemDeck),
-    magicItemDeck: shuffle(campaignIceDragonTreasure.magicItemDeck),
+    itemDeck: shuffle(campaign.itemDeck),
+    magicItemDeck: shuffle(campaign.magicItemDeck),
     settings: {
       cellSize: 48,
       debug: false,
     },
-    eventDeck: getEventsForDungeon(campaignIceDragonTreasure.dungeons[0]),
+    eventDeck: getEventsForDungeon(campaign.dungeons[0]),
     reRender: true,
   };
   resetLiveHeroes(state);
@@ -161,7 +162,7 @@ export const roll = (level: Level, dice: number) => {
 export const getEffectiveMaxMovement = (actor: Actor) =>
   actor.maxMovement - (actor.armour?.movementReduction ?? 0);
 
-const killAllMonstersNotAchieved = (state: GameState) =>
+const killAllMonstersAchieved = (state: GameState) =>
   state.dungeon.winConditions
     .filter((wc) => wc.type !== ConditionType.KILL_ALL)
     .some((wc) => !wc.fulfilled);
@@ -196,9 +197,11 @@ export const next = (state: GameState): GameState => {
     state.currentActor.actions = 2;
     state.currentActor.movement = getEffectiveMaxMovement(state.currentActor);
     state.currentActor = liveHeroes(state)[nextIndex];
-    if (nextIndex === 0 && killAllMonstersNotAchieved(state)) {
+    const hasKilledAll = killAllMonstersAchieved(state);
+    if (nextIndex === 0 && !hasKilledAll) {
       resetEventEffects(state);
       const event = drawNextEvent(state);
+      state.currentEvent = event;
       eventEffects[event.effect](state, event);
     }
     addLog(state, 'logs.startedTurn', { name: i18n(state.currentActor.name) });

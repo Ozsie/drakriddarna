@@ -53,5 +53,8 @@
     "killAtLeast": "Döda åtminstone {{minKills}} monster",
     "openDoor": "Öppna en viss dörr",
     "reachCell": "Nå en viss cell"
+  },
+  "event": {
+    "current": "Nuvarande händelse"
   }
 }

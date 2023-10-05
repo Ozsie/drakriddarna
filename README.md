@@ -20,6 +20,7 @@
 - [ ] Doors blocking monsters?
 - [ ] Trade Items?
 - [ ] Monster cards?
+- [X] Show current event
 - [X] Translations
 - [X] Menu system
 - [X] Monster special attack
@@ -62,8 +63,8 @@
 ## Controls
 ### Mouse/touch
 * Click in the tile you want to move to
-* CLick the active hero to open a door, if next to one
-* CLick the active hero to pick a lock, if next to locked door
+* Click the active hero to open a door, if next to one
+* Click the active hero to pick a lock, if next to locked door
 * Click the active hero to search
 * If within range of a monster, click it to attack
 
@@ -84,7 +85,7 @@
 
 ## Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Once you've installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
 ```bash
 npm run dev
@@ -100,6 +101,3 @@ To create a production version of your app:
 ```bash
 npm run build
 ```
-
-## Translations
-https://phrase.com/blog/posts/how-to-localize-a-svelte-app-with-svelte-i18n/

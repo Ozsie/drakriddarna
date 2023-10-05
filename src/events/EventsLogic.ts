@@ -17,6 +17,7 @@ import {
 import { COLLAPSED, createMonster } from '../dungeon/DungeonLogic';
 import { events } from './events';
 import { ACTIVE, onDrop, onPickup } from '../items/ItemLogic';
+import { findVisibleMonsters } from '../monsters/MonsterLogic';
 
 export const getEventsForDungeon = (dungeon: Dungeon): TurnEvent[] => {
   if (dungeon.events) {
@@ -321,7 +322,7 @@ const getRandomRoom = (state: GameState) => {
 };
 
 const spawnRandomMonster = (state: GameState, monsterType: MonsterType) => {
-  const activeMonsters = state.dungeon.layout.monsters.filter(
+  const activeMonsters = findVisibleMonsters(state).filter(
     (monster) => monster.type === monsterType,
   );
   const monsterCount = activeMonsters.length;

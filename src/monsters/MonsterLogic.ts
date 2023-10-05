@@ -173,7 +173,7 @@ const findVisibleHeroes = (state: GameState, monster: Monster): Hero[] =>
       hasLineOfSight(monster.position, hero.position, 48, state, false),
     );
 
-const findVisibleMonsters = (state: GameState) =>
+export const findVisibleMonsters = (state: GameState) =>
   state.dungeon.layout.monsters.filter((monster) => {
     const cell = findCell(
       state.dungeon.layout.grid,
