@@ -73,14 +73,15 @@ export const load = (currentState: GameState): GameState => {
 };
 
 export const init = (): GameState => {
+  const campaign = structuredClone(campaignIceDragonTreasure);
   const state: GameState = {
-    heroes: campaignIceDragonTreasure.heroes,
-    dungeon: campaignIceDragonTreasure.dungeons[0],
-    currentActor: campaignIceDragonTreasure.heroes[0] as Hero | undefined,
+    heroes: campaign.heroes,
+    dungeon: campaign.dungeons[0],
+    currentActor: campaign.heroes[0] as Hero | undefined,
     actionLog: [
       {
         key: 'logs.playingCampaign',
-        properties: { name: i18n(campaignIceDragonTreasure.name) },
+        properties: { name: i18n(campaign.name) },
       },
       {
         key: 'logs.gameInitialized',
@@ -98,13 +99,13 @@ export const init = (): GameState => {
         key: 'logs.initLogUnfair',
       },
     ],
-    itemDeck: shuffle(campaignIceDragonTreasure.itemDeck),
-    magicItemDeck: shuffle(campaignIceDragonTreasure.magicItemDeck),
+    itemDeck: shuffle(campaign.itemDeck),
+    magicItemDeck: shuffle(campaign.magicItemDeck),
     settings: {
       cellSize: 48,
       debug: false,
     },
-    eventDeck: getEventsForDungeon(campaignIceDragonTreasure.dungeons[0]),
+    eventDeck: getEventsForDungeon(campaign.dungeons[0]),
     reRender: true,
   };
   resetLiveHeroes(state);
