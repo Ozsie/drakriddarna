@@ -136,7 +136,9 @@
       </div>
     {/if}
   </div>
-  <div>
-    <EventCard event={state.currentEvent} />
-  </div>
+  {#if state.currentEvent}
+    <div>
+      <EventCard event={state.currentEvent} />
+    </div>
+  {/if}
 </div>
