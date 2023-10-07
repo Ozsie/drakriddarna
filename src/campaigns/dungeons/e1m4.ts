@@ -1,9 +1,10 @@
 import type { Dungeon } from '../../types';
-import { ConditionType, Side } from '../../types';
+import { ConditionType, SecretType, Side } from '../../types';
 import {
   createDoor,
   createHiddenDoor,
   createLockedDoor,
+  createSecret,
   createTrappedDoor,
   createTrappedHiddenDoor,
   createTrappedLockedDoor,
@@ -78,8 +79,34 @@ export const e1m4: Dungeon = {
       createHiddenDoor(Side.UP, 15, 13),
     ],
     monsters: [],
-    secrets: [],
-    notes: [],
+    secrets: [
+      createSecret(
+        SecretType.NOTE,
+        'campaign.iceDragon.e1m4.secrets.note1',
+        13,
+        2,
+      ),
+      createSecret(
+        SecretType.EQUIPMENT,
+        'campaign.iceDragon.randomEquipment',
+        4,
+        10,
+      ),
+      createSecret(SecretType.TRAP_DOOR, 'campaign.iceDragon.trapDoor', 5, 15),
+      createSecret(SecretType.TRAP_DOOR, 'campaign.iceDragon.trapDoor', 14, 10),
+      createSecret(SecretType.TRAP_DOOR, 'campaign.iceDragon.trapDoor', 15, 11),
+      createSecret(SecretType.TRAP_DOOR, 'campaign.iceDragon.trapDoor', 14, 12),
+    ],
+    notes: [
+      {
+        position: { x: 11, y: 8 },
+        message: 'campaign.iceDragon.e1m4.notes.liberVortex',
+      },
+      {
+        position: { x: 13, y: 10 },
+        message: 'campaign.iceDragon.e1m4.notes.ironDoor',
+      },
+    ],
     items: [],
   },
   killCount: 0,
