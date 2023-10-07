@@ -4,11 +4,13 @@
     "plateMail": "Plate mail",
     "dragonSkinMail": "Dragon Skin mail",
     "orchMail": "Orch mail",
-    "trollSkin": "Troll skin"
+    "trollSkin": "Troll skin",
+    "darkLordCape": "Dark Lord Cape"
   },
   "shields": {
     "largeShield": "Large shield",
-    "smallShield": "Small shield"
+    "smallShield": "Small shield",
+    "blueDarkLordShield": "Dark Magic Shield"
   },
   "weapons": {
     "sword": "Sword",
@@ -18,7 +20,9 @@
     "doubleHeadedAxe": "Double Headed Axe",
     "orchSword": "Orch Sword",
     "orchBow": "Orch Bow",
-    "trollClub": "Troll Club"
+    "trollClub": "Troll Club",
+    "darkLordSword": "Dark Sword",
+    "greenDarkLordSword": "Paralysing Dark Sword"
   },
   "magicItems": {
     "healingHerbs": {

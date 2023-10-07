@@ -17,3 +17,13 @@ export const shields: Shield[] = [
     value: 1,
   },
 ];
+
+export const monsterShields: Shield[] = [
+  {
+    name: 'items.shields.blueDarkLordShield',
+    type: ItemType.SHIELD,
+    amountInDeck: 1,
+    dice: 1,
+    value: 0,
+  },
+];
