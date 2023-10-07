@@ -9,6 +9,7 @@ import { newHero } from '../hero/HeroLogic';
 import { magicItems } from '../items/magicItems';
 import { e1m2 } from './dungeons/e1m2';
 import { e1m3 } from './dungeons/e1m3';
+import { e1m4 } from './dungeons/e1m4';
 
 const getMagicItemDeck = (): Item[] => {
   const itemDeck: Item[] = [];
@@ -42,7 +43,7 @@ const getItemDeck = (): Item[] => {
 
 export const campaignIceDragonTreasure: Campaign = {
   name: 'campaign.iceDragon.name',
-  dungeons: [e1m0, e1m1, e1m2, e1m3],
+  dungeons: [e1m0, e1m1, e1m2, e1m3, e1m4],
   itemDeck: getItemDeck(),
   magicItemDeck: getMagicItemDeck(),
   heroes: [
