@@ -33,6 +33,9 @@
         "hint4": "An arrow on the far wall of the corridor points to the left"
       }
     },
+    "e1m4": {
+      "name": "The Dark Citadel"
+    },
     "testingGrounds": {
       "name": "Testing Grounds",
       "secrets": {

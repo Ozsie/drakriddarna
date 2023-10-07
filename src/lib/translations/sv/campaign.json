@@ -33,6 +33,9 @@
         "hint4": "En pil på den bortre väggen i korridoren pekar åt vänster."
       }
     },
+    "e1m4": {
+      "name": "Det Mörka Citadellet"
+    },
     "testingGrounds": {
       "name": "Testområde",
       "secrets": {
