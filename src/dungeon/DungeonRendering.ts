@@ -242,7 +242,11 @@ const renderGridLines = (
   ctx.rect(x * cellSize, y * cellSize, cellSize, cellSize);
   if (debugMode) {
     ctx.font = '7px Arial';
-    ctx.fillText(`${x},${y}`, x * cellSize + 3, y * cellSize + (cellSize - 3));
+    ctx.fillText(
+      `${cell}: ${x},${y}`,
+      x * cellSize + 3,
+      y * cellSize + (cellSize - 3),
+    );
   }
   ctx.stroke();
 };
