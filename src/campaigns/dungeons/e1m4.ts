@@ -2,6 +2,7 @@ import type { Dungeon } from '../../types';
 import { ConditionType, SecretType, Side } from '../../types';
 import {
   createDoor,
+  createEquipment,
   createHiddenDoor,
   createLockedDoor,
   createSecret,
@@ -9,6 +10,7 @@ import {
   createTrappedHiddenDoor,
   createTrappedLockedDoor,
 } from '../../dungeon/DungeonLogic';
+import { weapons } from '../../items/weapons';
 
 export const e1m4: Dungeon = {
   name: 'campaign.iceDragon.e1m4.name',
@@ -107,7 +109,7 @@ export const e1m4: Dungeon = {
         message: 'campaign.iceDragon.e1m4.notes.ironDoor',
       },
     ],
-    items: [],
+    items: [createEquipment(3, 8, weapons[1])],
   },
   killCount: 0,
   events: [],

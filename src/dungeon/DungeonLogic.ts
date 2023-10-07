@@ -1,4 +1,4 @@
-import type { Door, Item, Monster, Secret } from '../types';
+import type { Door, Item, ItemLocation, Monster, Secret } from '../types';
 import { Colour, Level, MonsterType, SecretType, Side } from '../types';
 import { monsterWeapons } from '../items/weapons';
 import { monsterArmour } from '../items/armours';
@@ -7,6 +7,15 @@ import { monsterShields } from '../items/shields';
 export const EMPTY = ' ';
 export const COLLAPSED = '?';
 export const WALL = '#';
+
+export const createEquipment = (
+  x: number,
+  y: number,
+  item: Item,
+): ItemLocation => ({
+  item,
+  position: { x, y },
+});
 
 export const createSecret = (
   type: SecretType,
