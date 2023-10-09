@@ -1,13 +1,24 @@
 import type { GameState, ItemLocation } from '../types';
 import { ItemType } from '../types';
+import { findCell, isDiscovered } from '../game';
 
 export const renderItems = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
   state: GameState,
+  debugMode: boolean,
 ) => {
   state.dungeon.layout.items.forEach((itemLocation) => {
+    if (
+      !isDiscovered(
+        state.dungeon,
+        itemLocation.position.x,
+        itemLocation.position.y,
+      ) &&
+      !debugMode
+    )
+      return;
     switch (itemLocation.item.type) {
       case ItemType.MAGIC:
         renderMagicItem(ctx, ground, cellSize, itemLocation);
