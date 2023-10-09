@@ -1,12 +1,40 @@
-import type { Door, Item, ItemLocation, Monster, Secret } from '../types';
+import type {
+  Door,
+  GameState,
+  Item,
+  ItemLocation,
+  Monster,
+  Secret,
+  WinCondition,
+} from '../types';
 import { Colour, Level, MonsterType, SecretType, Side } from '../types';
 import { monsterWeapons } from '../items/weapons';
 import { monsterArmour } from '../items/armours';
 import { monsterShields } from '../items/shields';
+import { liveHeroes } from '../hero/HeroLogic';
+import { addLog } from '../game';
 
 export const EMPTY = ' ';
 export const COLLAPSED = '?';
 export const WALL = '#';
+
+export const onCheckFulfilled: {
+  [index: string]: (state: GameState, self: WinCondition) => boolean;
+} = {
+  hasNecklaceOfLight: (state: GameState, self: WinCondition): boolean => {
+    const hasNecklaceOfLight = liveHeroes(state).some((hero) =>
+      hero.inventory.some(
+        (item) => item.name === 'items.magicItems.necklaceOfLight.name',
+      ),
+    );
+    if (state.settings['debug']) {
+      addLog(state, 'logs.debug.hasNecklaceOfLight', {
+        hasNecklaceOfLight: hasNecklaceOfLight ? 'Y' : 'N',
+      });
+    }
+    return self.fulfilled && hasNecklaceOfLight;
+  },
+};
 
 export const createEquipment = (
   x: number,

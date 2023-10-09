@@ -29,6 +29,9 @@ export const e1m4: Dungeon = {
       type: ConditionType.REACH_CELL,
       fulfilled: false,
       targetCell: { x: 16, y: 11 },
+      checkFulfilled: 'hasNecklaceOfLight',
+      additionalDescription:
+        'content.winConditions.additional.requiresNecklace',
     },
   ],
   startingPositions: [

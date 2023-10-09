@@ -10,7 +10,12 @@ import type {
   Weapon,
 } from './types';
 import { Colour, ConditionType, ItemType, Level } from './types';
-import { COLLAPSED, EMPTY, WALL } from './dungeon/DungeonLogic';
+import {
+  COLLAPSED,
+  EMPTY,
+  onCheckFulfilled,
+  WALL,
+} from './dungeon/DungeonLogic';
 import { campaignIceDragonTreasure } from './campaigns/campaignIceDragonTreasure';
 import { monsterActions } from './monsters/MonsterLogic';
 import {
@@ -76,7 +81,7 @@ export const init = (): GameState => {
   const campaign = structuredClone(campaignIceDragonTreasure);
   const state: GameState = {
     heroes: campaign.heroes,
-    dungeon: campaign.dungeons[0],
+    dungeon: campaign.dungeons[4],
     currentActor: campaign.heroes[0] as Hero | undefined,
     actionLog: [
       {
@@ -105,7 +110,7 @@ export const init = (): GameState => {
       cellSize: 48,
       debug: false,
     },
-    eventDeck: getEventsForDungeon(campaign.dungeons[0]),
+    eventDeck: getEventsForDungeon(campaign.dungeons[4]),
     reRender: true,
   };
   resetLiveHeroes(state);
@@ -275,6 +280,12 @@ const checkWinConditions = (state: GameState) => {
           state.dungeon.killCount;
         break;
       }
+    }
+    if (condition.checkFulfilled) {
+      condition.fulfilled = onCheckFulfilled[condition.checkFulfilled](
+        state,
+        condition,
+      );
     }
   });
   state.dungeon.beaten = state.dungeon.winConditions
