@@ -7,9 +7,11 @@
 ## Todo
 - [ ] Difficulty levels
 - [ ] Dungeon intro screen
-- [ ] e1m4 - The Dark Citadel
+- [ ] Create function for random item on floor
+- [ ] Stop search through walls & doors
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
+- [ ] Green dark lord paralyzing sword
 - [ ] Select door on click when multiple doors in same cell
 - [ ] Multiple saves
 - [ ] Graphics
@@ -20,6 +22,7 @@
 - [ ] Doors blocking monsters?
 - [ ] Trade Items?
 - [ ] Monster cards?
+- [X] e1m4 - The Dark Citadel
 - [X] Show current event
 - [X] Translations
 - [X] Menu system

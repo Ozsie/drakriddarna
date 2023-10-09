@@ -48,11 +48,14 @@
   "winConditions": {
     "buttonClose": "X",
     "buttonOpen": ">",
-    "killAll": "Kill all monsters",
-    "killAllOfType": "Kill all {{type}}",
+    "killAll": "Kill all monsters.",
+    "killAllOfType": "Kill all {{type}}.",
     "killAtLeast": "Kill at least {{minKills}} monsters.",
-    "openDoor": "Open a certain door",
-    "reachCell": "Reach a certain cell"
+    "openDoor": "Open a certain door.",
+    "reachCell": "Reach a certain cell.",
+    "additional": {
+      "requiresNecklace": "The Necklace of Light is required."
+    }
   },
   "event": {
     "current": "Current event"

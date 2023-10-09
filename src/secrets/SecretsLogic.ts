@@ -166,7 +166,7 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
     addLog(state, 'logs.heroAction.foundSecret', {
       hero: i18n(hero.name),
       result: `${result}`,
-      secret: secret.name,
+      secret: i18n(secret.name),
     });
     secret.found = true;
     switch (secret.type) {
@@ -201,7 +201,7 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
   return false;
 };
 
-const randomItem = (state: GameState): Item => {
+export const randomItem = (state: GameState): Item => {
   const itemCount = state.itemDeck.length;
   const index = Math.floor(Math.random() * itemCount);
   return state.itemDeck[index];

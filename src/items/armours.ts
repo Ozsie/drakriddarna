@@ -50,4 +50,13 @@ export const monsterArmour: Armour[] = [
     movementReduction: 0,
     value: 0,
   },
+  {
+    name: 'items.armour.darkLordCape',
+    defense: 2,
+    magicProtection: false,
+    amountInDeck: 4,
+    type: ItemType.ARMOUR,
+    movementReduction: 0,
+    value: 0,
+  },
 ];

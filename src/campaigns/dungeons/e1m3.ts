@@ -17,9 +17,11 @@ import {
   createTrappedLockedDoor,
 } from '../../dungeon/DungeonLogic';
 import { magicItems } from '../../items/magicItems';
+import { e1m4 } from './e1m4';
 
 export const e1m3: Dungeon = {
   name: 'campaign.iceDragon.e1m3.name',
+  nextDungeon: e1m4,
   beaten: false,
   winConditions: [
     {

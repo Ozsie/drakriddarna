@@ -48,11 +48,14 @@
   "winConditions": {
     "buttonClose": "X",
     "buttonOpen": ">",
-    "killAll": "Döda alla monster",
-    "killAllOfType": "Döda alla {{type}}",
-    "killAtLeast": "Döda åtminstone {{minKills}} monster",
-    "openDoor": "Öppna en viss dörr",
-    "reachCell": "Nå en viss cell"
+    "killAll": "Döda alla monster.",
+    "killAllOfType": "Döda alla {{type}}.",
+    "killAtLeast": "Döda åtminstone {{minKills}} monster.",
+    "openDoor": "Öppna en viss dör.r",
+    "reachCell": "Nå en viss cell.",
+    "additional": {
+      "requiresNecklace": "Ni behöver ljusets halsband."
+    }
   },
   "event": {
     "current": "Nuvarande händelse"

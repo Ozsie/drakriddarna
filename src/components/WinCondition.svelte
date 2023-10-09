@@ -9,12 +9,16 @@
   let uglyUpdateToggle: boolean = false;
 
   const renderWinCondition =  (condition: WinCondition) => {
+    let additionalDescription = '';
+    if (condition.additionalDescription) {
+      additionalDescription = ` ${$t(condition.additionalDescription)}`;
+    }
     switch (condition.type) {
-      case ConditionType.KILL_ALL: return $t('content.winConditions.killAll');
-      case ConditionType.KILL_ALL_OF_TYPE: return $t('content.winConditions.killAll', { type: condition.targetMonsterType });
-      case ConditionType.KILL_AT_LEAST: return $t('content.winConditions.killAtLeast', { minKills: condition.killMinCount }) + ` (${state.dungeon.killCount}/${condition.killMinCount})`;
-      case ConditionType.OPEN_DOOR: return $t('content.winConditions.openDoor');
-      case ConditionType.REACH_CELL: return $t('content.winConditions.reachCell');
+      case ConditionType.KILL_ALL: return $t('content.winConditions.killAll') + additionalDescription;
+      case ConditionType.KILL_ALL_OF_TYPE: return $t('content.winConditions.killAll', { type: condition.targetMonsterType }) + additionalDescription;
+      case ConditionType.KILL_AT_LEAST: return $t('content.winConditions.killAtLeast', { minKills: condition.killMinCount }) + ` (${state.dungeon.killCount}/${condition.killMinCount})` + additionalDescription;
+      case ConditionType.OPEN_DOOR: return $t('content.winConditions.openDoor') + additionalDescription;
+      case ConditionType.REACH_CELL: return $t('content.winConditions.reachCell') + additionalDescription;
     }
   }
 

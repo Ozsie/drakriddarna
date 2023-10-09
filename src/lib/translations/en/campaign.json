@@ -33,6 +33,16 @@
         "hint4": "An arrow on the far wall of the corridor points to the left"
       }
     },
+    "e1m4": {
+      "name": "The Dark Citadel",
+      "secrets": {
+        "note1": "The lizard moves to the right and forward. The snake moves to the left and forward."
+      },
+      "notes": {
+        "liberVortex": "On the floor lies a book, Liber Vortex. Its first page reads 'When the Iron Door opens, walk as the Lizard two steps, then as the Snake, one step.'",
+        "ironDoor": "The door is very clearly made of iron."
+      }
+    },
     "testingGrounds": {
       "name": "Testing Grounds",
       "secrets": {

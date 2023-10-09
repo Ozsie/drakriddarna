@@ -75,5 +75,8 @@
     "movedTowards": "{{monster}} moved towards {{hero}} ({{x}},{{y}}).",
     "couldNotMove": "{{monster}} could not move.",
     "fireAttackDeflected": "{{monster}} attempted a fire attack, but {{target}}s {{armour}} deflected it."
+  },
+  "debug": {
+    "hasNecklaceOfLight": "Heroes had necklace of light? {{hasNecklaceOfLight}}"
   }
 }

@@ -4,11 +4,13 @@
     "plateMail": "Helrustning",
     "dragonSkinMail": "Drakskinnsrustning",
     "orchMail": "Orchisk brynja",
-    "trollSkin": "Trollskinn"
+    "trollSkin": "Trollskinn",
+    "darkLordCape": "Mörkerherrens mantel"
   },
   "shields": {
     "largeShield": "Stor sköld",
-    "smallShield": "Liten sköld"
+    "smallShield": "Liten sköld",
+    "blueDarkLordShield": "Magisk mörkersköld"
   },
   "weapons": {
     "sword": "Svärd",
@@ -18,7 +20,9 @@
     "doubleHeadedAxe": "Tvehövdad yxa",
     "orchSword": "Orchiskt svärd",
     "orchBow": "Orchisk pilbåge",
-    "trollClub": "Trollklubba"
+    "trollClub": "Trollklubba",
+    "darkLordSword": "Mörkersvärd",
+    "greenDarkLordSword": "Paralyserande mörkersvärd"
   },
   "magicItems": {
     "healingHerbs": {

@@ -74,5 +74,8 @@
     "movedTowards": "{{monster}} rörde sig mot {{hero}} ({{x}},{{y}}).",
     "couldNotMove": "{{monster}} kunde inte röra sig.",
     "fireAttackDeflected": "{{monster}} försökte genomföra en eldattack, men {{target}}s {{armour}} avvisade den."
+  },
+  "debug": {
+    "hasNecklaceOfLight": "Har hjältarna ljusets halsband? {{hasNecklaceOfLight}}"
   }
 }

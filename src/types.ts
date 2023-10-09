@@ -99,6 +99,8 @@ export type WinCondition = {
   targetMonsterType?: MonsterType;
   killMinCount?: number;
   fulfilled: boolean;
+  checkFulfilled?: string;
+  additionalDescription?: string;
 };
 
 export enum ConditionType {
