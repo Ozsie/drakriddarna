@@ -12,6 +12,7 @@
   import WinCondition from './WinCondition.svelte';
   import { t } from '$lib/translations';
   import EventCard from './EventCard.svelte';
+  import { renderNotes } from '../notes/NotesRendering';
 
   export let state: GameState;
   export let debugMode: boolean;
@@ -55,6 +56,7 @@
       renderDoors(ctx, ground, cellSize, state, debugMode);
       renderMonsters(ctx, actors, cellSize, state, debugMode);
       renderHeroes(ctx, actors, cellSize, state, debugMode);
+      renderNotes(ctx, actors, cellSize, state, debugMode);
       if (debugMode) {
         ctx.fillStyle = 'white';
         ctx.font = '8px Arial';

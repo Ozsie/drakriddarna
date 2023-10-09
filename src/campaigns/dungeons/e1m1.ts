@@ -63,7 +63,7 @@ export const e1m1: Dungeon = {
       createDoor(Side.RIGHT, 10, 9),
       createDoor(Side.RIGHT, 13, 9),
       createDoor(Side.RIGHT, 12, 3),
-      createHiddenDoor(Side.UP, 9, 4),
+      createHiddenDoor(Side.UP, 10, 4),
       createHiddenDoor(Side.RIGHT, 15, 2),
     ],
     monsters: [
@@ -96,19 +96,19 @@ export const e1m1: Dungeon = {
     notes: [
       {
         message: 'campaign.iceDragon.e1m1.notes.hint1',
-        position: { x: 2, y: 4 },
+        position: { x: 3, y: 5 },
       },
       {
         message: 'campaign.iceDragon.e1m1.notes.hint2',
-        position: { x: 9, y: 8 },
+        position: { x: 10, y: 9 },
       },
       {
         message: 'campaign.iceDragon.e1m1.notes.hint3',
-        position: { x: 9, y: 5 },
+        position: { x: 10, y: 6 },
       },
       {
         message: 'campaign.iceDragon.e1m1.notes.hint4',
-        position: { x: 9, y: 3 },
+        position: { x: 10, y: 4 },
       },
     ],
     items: [],

@@ -111,7 +111,13 @@ export const testingGrounds: Dungeon = {
       ),
       createSecretWithItem(SecretType.EQUIPMENT, 5, 10, weapons[2]),
     ],
-    notes: [],
+    notes: [
+      {
+        position: { x: 2, y: 10 },
+        message:
+          'Some note\nto test rendering\n on game board. \nThe note is pretty long, so we g\net several lines of text. I wonder how it handles a linebreak?\nLike this apparently.',
+      },
+    ],
     items: [
       {
         item: magicItems[0],

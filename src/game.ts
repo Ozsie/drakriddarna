@@ -81,7 +81,7 @@ export const init = (): GameState => {
   const campaign = structuredClone(campaignIceDragonTreasure);
   const state: GameState = {
     heroes: campaign.heroes,
-    dungeon: campaign.dungeons[0],
+    dungeon: campaign.dungeons[1],
     currentActor: campaign.heroes[0] as Hero | undefined,
     actionLog: [
       {
