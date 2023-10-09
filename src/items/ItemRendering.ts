@@ -1,6 +1,6 @@
 import type { GameState, ItemLocation } from '../types';
 import { ItemType } from '../types';
-import { findCell, isDiscovered } from '../game';
+import { isDiscovered } from '../game';
 
 export const renderItems = (
   ctx: CanvasRenderingContext2D,
