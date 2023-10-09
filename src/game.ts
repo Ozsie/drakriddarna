@@ -81,7 +81,7 @@ export const init = (): GameState => {
   const campaign = structuredClone(campaignIceDragonTreasure);
   const state: GameState = {
     heroes: campaign.heroes,
-    dungeon: campaign.dungeons[4],
+    dungeon: campaign.dungeons[0],
     currentActor: campaign.heroes[0] as Hero | undefined,
     actionLog: [
       {
@@ -110,7 +110,7 @@ export const init = (): GameState => {
       cellSize: 48,
       debug: false,
     },
-    eventDeck: getEventsForDungeon(campaign.dungeons[4]),
+    eventDeck: getEventsForDungeon(campaign.dungeons[0]),
     reRender: true,
   };
   resetLiveHeroes(state);
