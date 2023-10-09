@@ -1,16 +1,25 @@
 import type { Dungeon } from '../../types';
-import { ConditionType, SecretType, Side } from '../../types';
+import {
+  Colour,
+  ConditionType,
+  MonsterType,
+  SecretType,
+  Side,
+} from '../../types';
 import {
   createDoor,
   createEquipment,
   createHiddenDoor,
   createLockedDoor,
+  createMonster,
+  createMonsterWithInventory,
   createSecret,
   createTrappedDoor,
   createTrappedHiddenDoor,
   createTrappedLockedDoor,
 } from '../../dungeon/DungeonLogic';
 import { weapons } from '../../items/weapons';
+import { magicItems } from '../../items/magicItems';
 
 export const e1m4: Dungeon = {
   name: 'campaign.iceDragon.e1m4.name',
@@ -83,7 +92,17 @@ export const e1m4: Dungeon = {
       createTrappedHiddenDoor(Side.RIGHT, 13, 14, 2),
       createHiddenDoor(Side.UP, 15, 13),
     ],
-    monsters: [],
+    monsters: [
+      createMonster(MonsterType.ORCH, Colour.Blue, 12, 1),
+      createMonster(MonsterType.ORCH, Colour.Red, 12, 6),
+      createMonster(MonsterType.ORCH, Colour.Green, 2, 8),
+      createMonster(MonsterType.ORCH, Colour.Yellow, 2, 14),
+      createMonster(MonsterType.TROLL, Colour.Blue, 10, 9),
+      createMonsterWithInventory(MonsterType.TROLL, Colour.Yellow, 9, 15, [
+        magicItems[7],
+      ]),
+      createMonster(MonsterType.RED_DARK_LORD, Colour.Red, 16, 10),
+    ],
     secrets: [
       createSecret(
         SecretType.NOTE,
@@ -115,5 +134,4 @@ export const e1m4: Dungeon = {
     items: [createEquipment(3, 8, weapons[1])],
   },
   killCount: 0,
-  events: [],
 };
