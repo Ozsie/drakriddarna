@@ -87,21 +87,27 @@ export const init = (): GameState => {
       {
         key: 'logs.playingCampaign',
         properties: { name: i18n(campaign.name) },
+        turn: 0,
       },
       {
         key: 'logs.gameInitialized',
+        turn: 0,
       },
       {
         key: 'logs.initLogActions',
+        turn: 0,
       },
       {
         key: 'logs.initLogMoves',
+        turn: 0,
       },
       {
         key: 'logs.initLogMoveFinished',
+        turn: 0,
       },
       {
         key: 'logs.initLogUnfair',
+        turn: 0,
       },
     ],
     itemDeck: shuffle(campaign.itemDeck),
@@ -208,6 +214,9 @@ export const next = (state: GameState): GameState => {
       const event = drawNextEvent(state);
       state.currentEvent = event;
       eventEffects[event.effect](state, event);
+    }
+    if (nextIndex === 0) {
+      state.turnCount = (state.turnCount ?? 0) + 1;
     }
     addLog(state, 'logs.startedTurn', { name: i18n(state.currentActor.name) });
   }
@@ -397,6 +406,7 @@ export const addLog = (
     {
       key: messageKey,
       properties: properties,
+      turn: state.turnCount ?? 0,
     },
     ...state.actionLog,
   ];
@@ -498,6 +508,7 @@ export const hasWon = (state: GameState) => {
       {
         key: 'logs.youHaveReached',
         properties: { name: i18n(state.dungeon.name) },
+        turn: 0,
       },
     ];
     state.eventDeck = getEventsForDungeon(state.dungeon);

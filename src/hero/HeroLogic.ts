@@ -343,11 +343,14 @@ export const checkForNote = (state: GameState, hero: Hero) => {
           y: door.y,
         }),
     );
-    if (!onHiddenDoor)
+    if (!onHiddenDoor) {
       addLog(state, 'logs.heroAction.reads', {
         hero: i18n(hero.name),
         note: i18n(note.message),
       });
+      note.found = true;
+      note.foundOn = state.turnCount;
+    }
   }
 };
 
