@@ -81,7 +81,7 @@ export const init = (): GameState => {
   const campaign = structuredClone(campaignIceDragonTreasure);
   const state: GameState = {
     heroes: campaign.heroes,
-    dungeon: campaign.dungeons[1],
+    dungeon: campaign.dungeons[0],
     currentActor: campaign.heroes[0] as Hero | undefined,
     actionLog: [
       {
@@ -169,8 +169,8 @@ export const getEffectiveMaxMovement = (actor: Actor) =>
 
 const killAllMonstersAchieved = (state: GameState) =>
   state.dungeon.winConditions
-    .filter((wc) => wc.type !== ConditionType.KILL_ALL)
-    .some((wc) => !wc.fulfilled);
+    .filter((wc) => wc.type === ConditionType.KILL_ALL)
+    .some((wc) => wc.fulfilled);
 
 export const next = (state: GameState): GameState => {
   // eslint-disable-next-line no-console
