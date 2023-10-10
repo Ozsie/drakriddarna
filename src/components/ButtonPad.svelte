@@ -1,6 +1,6 @@
 <script lang="ts">
   import { doReRender, hasWon, init, loadState, next, save } from '../game';
-  import { act, endAction, pickLock, search } from '../hero/HeroLogic';
+  import { act, endAction, pickLock, resetLiveHeroes, search } from '../hero/HeroLogic';
   import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
   import { browser } from '$app/environment';
   import type { GameState } from '../types';
@@ -86,6 +86,7 @@
 
   const toTestingGrounds = () => {
     state.dungeon = testingGrounds;
+    resetLiveHeroes(state);
     doReRender(state);
     showMenu = false;
   }
