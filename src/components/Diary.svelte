@@ -37,6 +37,12 @@
       background-color: darkgreen;
       color: darkgreen;
   }
+
+  @media screen and (max-width: 600px) {
+      div {
+          display: none;
+      }
+  }
 </style>
 <div>
   <span>{$t('content.diary.label', { turn: state.turnCount })} </span>

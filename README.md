@@ -15,6 +15,7 @@
 - [ ] Select door on click when multiple doors in same cell
 - [ ] Multiple saves
 - [ ] Graphics
+- [ ] Diary on mobile
 - [ ] Responsive layout
 - [ ] Support for additional campaigns
 - [ ] Magic Item/Weapon: Sword of Chaos
