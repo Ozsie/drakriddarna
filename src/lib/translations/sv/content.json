@@ -59,5 +59,9 @@
   },
   "event": {
     "current": "Nuvarande händelse"
+  },
+  "diary": {
+    "label": "Dagbok (runda {{turn}})",
+    "foundOn": "På {{round}})"
   }
 }

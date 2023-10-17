@@ -8,6 +8,7 @@
   import buildInfo from '$lib/buildInfo.json'
   import { browser } from '$app/environment';
   import { setLocale } from '$lib/translations';
+  import Diary from '../components/Diary.svelte';
 
   let state: GameState;
   let reloadGuard: string | null = null;
@@ -56,6 +57,7 @@
 <div class='container'>
   <div class="characterSide">
     <Characters {state}/>
+    <Diary {state}/>
   </div>
   <Dungeon bind:state={state} bind:debugMode={debugMode} />
 </div>

@@ -18,7 +18,7 @@
   };
 
   const renderLog = (log: LogEvent) => {
-    return $t(log.key, log.properties)
+    return `(${log.turn}) ${$t(log.key, log.properties)}`;
   }
 </script>
 <style>

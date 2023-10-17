@@ -37,6 +37,15 @@
     const actors = new Image();
     actors.src = actorSprites;
 
+    const ratio = window.devicePixelRatio;
+    const canvas: HTMLCanvasElement = document.getElementById("gameBoard") as HTMLCanvasElement;
+
+    canvas.width = (cellSize * 40) * ratio;
+    canvas.height = (cellSize * 30) * ratio;
+    canvas.style.width = `${cellSize * 40}px`;
+    canvas.style.height = `${cellSize * 30}px`;
+    canvas.getContext("2d")?.scale(ratio, ratio);
+
     setInterval(() => render(ground, actors), 10);
   });
 

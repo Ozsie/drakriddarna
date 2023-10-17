@@ -17,11 +17,13 @@ export type GameState = {
   eventDeck: TurnEvent[];
   reRender: boolean;
   currentEvent?: TurnEvent;
+  turnCount?: number;
 };
 
 export type LogEvent = {
   key: string;
   properties?: Record<string, string>;
+  turn: number;
 };
 
 export type Campaign = {
@@ -131,6 +133,8 @@ export type ItemLocation = {
 export type Note = {
   message: string;
   position: Position;
+  found?: boolean;
+  foundOn?: number;
 };
 
 export type Secret = {

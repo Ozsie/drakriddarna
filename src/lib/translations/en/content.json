@@ -59,5 +59,9 @@
   },
   "event": {
     "current": "Current event"
+  },
+  "diary": {
+    "label": "Diary (turn {{turn}})",
+    "foundOn": "On {{round}})"
   }
 }
