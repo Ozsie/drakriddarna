@@ -123,7 +123,34 @@ export type Layout = {
   corridors: string[];
   pillars?: Position[];
   pits?: Position[];
+  corners: Corner[];
 };
+
+export type Corner = {
+  position: Position;
+  type: CornerType;
+};
+
+export enum CornerType {
+  INNER_BOTTOM_RIGHT = 'IBR',
+  INNER_TOP_RIGHT = 'ITR',
+  INNER_BOTTOM_LEFT = 'IBL',
+  INNER_TOP_LEFT = 'ITL',
+  OUTER_BOTTOM_RIGHT = 'OBR',
+  OUTER_TOP_RIGHT = 'OTR',
+  OUTER_BOTTOM_LEFT = 'OBL',
+  OUTER_TOP_LEFT = 'OTL',
+  BOTTOM_END = 'BE',
+  TOP_END = 'TE',
+  LEFT_END = 'LE',
+  RIGHT_END = 'RE',
+  FOUR_WAY_INTERSECTION = 'I',
+  THREE_WAY_INTERSECTION_UP = 'TU',
+  THREE_WAY_INTERSECTION_DOWN = 'TD',
+  THREE_WAY_INTERSECTION_LEFT = 'TL',
+  THREE_WAY_INTERSECTION_RIGHT = 'TR',
+  NOT_CORNER = 'NC',
+}
 
 export type ItemLocation = {
   item: Item;

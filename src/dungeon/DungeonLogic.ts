@@ -24,7 +24,7 @@ export const onCheckFulfilled: {
   hasNecklaceOfLight: (state: GameState, self: WinCondition): boolean => {
     const hasNecklaceOfLight = liveHeroes(state).some((hero) =>
       hero.inventory.some(
-        (item) => item.name === 'items.magicItems.necklaceOfLight.name',
+        (item) => item && item.name === 'items.magicItems.necklaceOfLight.name',
       ),
     );
     if (state.settings['debug']) {

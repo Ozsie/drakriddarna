@@ -210,7 +210,7 @@ export const eventEffects: {
     eventDescriptionLog(state, event);
     const heroesWithMagicalItems = liveHeroes(state).filter((hero) =>
       hero.inventory
-        .filter((item) => !item.disabled)
+        .filter((item) => item && !item.disabled)
         .some((item) => item.type === ItemType.MAGIC),
     );
 
@@ -219,7 +219,7 @@ export const eventEffects: {
       const randomHeroIndex = Math.floor(Math.random() * maxHeroIndex);
       const hero = heroesWithMagicalItems[randomHeroIndex];
       const magicItems = hero.inventory.filter(
-        (item) => item.type === ItemType.MAGIC,
+        (item) => item && item.type === ItemType.MAGIC,
       );
       if (magicItems.length > 0) {
         const magicItemMaxIndex = magicItems.length - 1;
@@ -228,7 +228,7 @@ export const eventEffects: {
         );
         const item = magicItems[randomMagicItemIndex];
         item.disabled = true;
-        if (!item.properties?.[ACTIVE] && item.pickup && item.drop) {
+        if (item && !item.properties?.[ACTIVE] && item.pickup && item.drop) {
           onDrop[item.drop](state, item, hero);
         }
       }
@@ -263,10 +263,10 @@ const restoreDisabledItems = (state: GameState) => {
     addLog(state, 'logs.events.magicStormRestored');
     liveHeroes(state).forEach((hero) => {
       hero.inventory.forEach((item) => {
-        if (!item.properties?.[ACTIVE] && item.pickup) {
+        if (item && !item.properties?.[ACTIVE] && item.pickup) {
           onPickup[item.pickup](state, item, hero);
         }
-        item.disabled = false;
+        if (item) item.disabled = false;
       });
     });
   }

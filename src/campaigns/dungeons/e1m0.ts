@@ -21,6 +21,7 @@ export const e1m0: Dungeon = {
   ],
   discoveredRooms: ['A'],
   layout: {
+    corners: [],
     grid: [
       '     ######',
       '     #CCCC#',

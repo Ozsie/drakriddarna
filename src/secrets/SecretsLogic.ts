@@ -18,7 +18,7 @@ export const searchForSecret = (state: GameState) => {
     return;
   }
   const searchBonus = hero.inventory
-    .filter((item) => item.properties?.[SEARCH_BONUS])
+    .filter((item) => item && item.properties?.[SEARCH_BONUS])
     .map((item) => {
       addLog(state, 'logs.heroAction.searchBonus', {
         hero: i18n(hero.name),
@@ -191,7 +191,7 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
             item: i18n(item.name),
           });
           hero.inventory.push(item);
-          if (item.pickup) onPickup[item.pickup](state, item, hero);
+          if (item && item.pickup) onPickup[item.pickup](state, item, hero);
         }
         break;
       }

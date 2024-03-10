@@ -41,8 +41,8 @@ const renderMagicItem = (
   const y = itemLocation.position.y;
   ctx.drawImage(
     ground,
-    0,
-    48,
+    48 * 6,
+    48 * 3,
     48,
     48,
     x * cellSize,

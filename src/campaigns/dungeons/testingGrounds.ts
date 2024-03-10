@@ -1,4 +1,4 @@
-import type { Dungeon } from '../../types';
+import { CornerType, type Dungeon } from '../../types';
 import {
   Colour,
   ConditionType,
@@ -58,6 +58,26 @@ export const testingGrounds: Dungeon = {
   ],
   discoveredRooms: ['A', 'D'],
   layout: {
+    corners: [
+      { position: { x: 0, y: 0 }, type: CornerType.INNER_TOP_LEFT },
+      { position: { x: 10, y: 0 }, type: CornerType.INNER_TOP_RIGHT },
+      { position: { x: 0, y: 4 }, type: CornerType.INNER_BOTTOM_LEFT },
+      { position: { x: 6, y: 4 }, type: CornerType.OUTER_TOP_RIGHT },
+      { position: { x: 8, y: 4 }, type: CornerType.OUTER_TOP_LEFT },
+      { position: { x: 10, y: 4 }, type: CornerType.INNER_BOTTOM_RIGHT },
+      { position: { x: 2, y: 5 }, type: CornerType.INNER_TOP_LEFT },
+      { position: { x: 6, y: 5 }, type: CornerType.OUTER_BOTTOM_RIGHT },
+      { position: { x: 8, y: 6 }, type: CornerType.OUTER_BOTTOM_LEFT },
+      { position: { x: 9, y: 6 }, type: CornerType.INNER_TOP_RIGHT },
+      { position: { x: 0, y: 7 }, type: CornerType.INNER_TOP_LEFT },
+      { position: { x: 2, y: 7 }, type: CornerType.OUTER_BOTTOM_RIGHT },
+      { position: { x: 4, y: 7 }, type: CornerType.LEFT_END },
+      { position: { x: 6, y: 7 }, type: CornerType.RIGHT_END },
+      { position: { x: 0, y: 11 }, type: CornerType.INNER_BOTTOM_LEFT },
+      { position: { x: 9, y: 11 }, type: CornerType.INNER_BOTTOM_RIGHT },
+      { position: { x: 1, y: 14 }, type: CornerType.INNER_BOTTOM_LEFT },
+      { position: { x: 3, y: 14 }, type: CornerType.INNER_BOTTOM_RIGHT },
+    ],
     grid: [
       '###########',
       '#CCCCCCCCC#',
