@@ -173,8 +173,20 @@ const drawCornerTile = (
       drawTile(ctx, ground, 0, 2, cellSize, x, y, state);
       break;
     }
+    case CornerType.BOTTOM_END: {
+      drawTile(ctx, ground, 2, 4, cellSize, x, y, state);
+      break;
+    }
+    case CornerType.TOP_END: {
+      drawTile(ctx, ground, 4, 7, cellSize, x, y, state);
+      break;
+    }
+    case CornerType.THREE_WAY_INTERSECTION_UP: {
+      drawTile(ctx, ground, 4, 8, cellSize, x, y, state);
+      break;
+    }
     default:
-      drawTile(ctx, ground, 0, 0, cellSize, x, y, state);
+      drawTile(ctx, ground, 15, 0, cellSize, x, y, state);
       break;
   }
 };
@@ -364,8 +376,8 @@ const renderTrapDoor = (
   const y = secret.position.y;
   ctx.drawImage(
     ground,
-    3 * 48,
-    0,
+    48 * 6,
+    48 * 7,
     48,
     48,
     x * cellSize,
@@ -427,6 +439,68 @@ const renderGridLines = (
   ctx.stroke();
 };
 
+const renderClosedHiddenDoor = (
+  door: Door,
+  ctx: CanvasRenderingContext2D,
+  ground: CanvasImageSource,
+  cellSize: number,
+  state: GameState,
+) => {
+  switch (door.side) {
+    case Side.RIGHT: {
+      drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y, state);
+      drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y - 1, state);
+      drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y + 1, state);
+      break;
+    }
+    case Side.LEFT: {
+      drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y, state);
+      drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y - 1, state);
+      drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y + 1, state);
+      break;
+    }
+    case Side.UP: {
+      drawTile(ctx, ground, 2, 4, cellSize, door.x, door.y - 1, state);
+      drawTile(ctx, ground, 2, 4, cellSize, door.x + 1, door.y - 1, state);
+      drawTile(ctx, ground, 2, 4, cellSize, door.x - 1, door.y - 1, state);
+      break;
+    }
+    case Side.DOWN: {
+      drawTile(ctx, ground, 2, 6, cellSize, door.x, door.y + 1, state);
+      drawTile(ctx, ground, 2, 6, cellSize, door.x + 1, door.y + 1, state);
+      drawTile(ctx, ground, 2, 6, cellSize, door.x - 1, door.y + 1, state);
+      break;
+    }
+  }
+};
+
+const renderClosedDoor = (
+  door: Door,
+  ctx: CanvasRenderingContext2D,
+  ground: CanvasImageSource,
+  cellSize: number,
+  state: GameState,
+) => {
+  switch (door.side) {
+    case Side.RIGHT: {
+      drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y, state);
+      break;
+    }
+    case Side.LEFT: {
+      drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y, state);
+      break;
+    }
+    case Side.UP: {
+      drawTile(ctx, ground, 2, 4, cellSize, door.x, door.y - 1, state);
+      break;
+    }
+    case Side.DOWN: {
+      drawTile(ctx, ground, 2, 6, cellSize, door.x, door.y + 1, state);
+      break;
+    }
+  }
+};
+
 const renderDoor = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
@@ -437,23 +511,10 @@ const renderDoor = (
 ) => {
   const cell = state.dungeon.layout.grid[door.y][door.x];
   if (door && !door.open) {
-    switch (door.side) {
-      case Side.RIGHT: {
-        drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y, state);
-        break;
-      }
-      case Side.LEFT: {
-        drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y, state);
-        break;
-      }
-      case Side.UP: {
-        drawTile(ctx, ground, 2, 4, cellSize, door.x, door.y - 1, state);
-        break;
-      }
-      case Side.DOWN: {
-        drawTile(ctx, ground, 2, 6, cellSize, door.x, door.y + 1, state);
-        break;
-      }
+    if (door.hidden) {
+      renderClosedHiddenDoor(door, ctx, ground, cellSize, state);
+    } else {
+      renderClosedDoor(door, ctx, ground, cellSize, state);
     }
   }
   if (door && !door.hidden && !door.open && !isEmpty(cell, state)) {
