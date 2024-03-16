@@ -1,4 +1,4 @@
-import type { GameState, Monster, Position, Actor } from '../types';
+import type { Hero, GameState, Monster, Position } from '../types';
 import { MonsterType } from '../types';
 import { isRoomDiscovered, stepAlongLine } from '../game';
 
@@ -50,14 +50,14 @@ const renderOrch = (
 ) => {
   ctx.drawImage(
     actors,
-    48 * 4,
-    0,
-    48,
-    75,
+    cellSize,
+    16,
+    16,
+    16,
     monster.position.x * cellSize,
-    monster.position.y * cellSize - 32,
-    48,
-    75,
+    monster.position.y * cellSize,
+    cellSize,
+    cellSize,
   );
 };
 
@@ -69,14 +69,14 @@ const renderTroll = (
 ) => {
   ctx.drawImage(
     actors,
-    48 * 5,
-    0,
-    48,
-    75,
+    cellSize,
+    16,
+    16,
+    16,
     monster.position.x * cellSize,
-    monster.position.y * cellSize - 27,
-    48,
-    75,
+    monster.position.y * cellSize,
+    cellSize,
+    cellSize,
   );
 };
 
@@ -88,14 +88,14 @@ const renderDefaultMonster = (
 ) => {
   ctx.drawImage(
     actors,
-    48 * 4,
-    0,
-    48,
-    75,
+    16,
+    16,
+    16,
+    16,
     monster.position.x * cellSize,
-    monster.position.y * cellSize - 27,
-    48,
-    75,
+    monster.position.y * cellSize,
+    cellSize,
+    cellSize,
   );
 };
 
@@ -126,16 +126,25 @@ const renderHealthBar = (
   ctx.beginPath();
   ctx.strokeStyle = 'black';
   ctx.fillStyle = 'red';
-  const yPosition = monster.position.y * cellSize - 12;
-  ctx.fillRect(monster.position.x * cellSize + 4, yPosition, cellSize - 8, 4);
+  ctx.fillRect(
+    monster.position.x * cellSize + 4,
+    monster.position.y * cellSize,
+    cellSize - 8,
+    4,
+  );
   ctx.fillStyle = 'green';
   ctx.fillRect(
     monster.position.x * cellSize + 4,
-    yPosition,
+    monster.position.y * cellSize,
     (cellSize - 8) * (monster.health / monster.maxHealth),
     4,
   );
-  ctx.rect(monster.position.x * cellSize + 4, yPosition, cellSize - 8, 4);
+  ctx.rect(
+    monster.position.x * cellSize + 4,
+    monster.position.y * cellSize,
+    cellSize - 8,
+    4,
+  );
   ctx.stroke();
   ctx.strokeStyle = 'black';
   ctx.fillStyle = 'black';
@@ -144,7 +153,7 @@ const renderHealthBar = (
 const renderLineOfSight = (
   ctx: CanvasRenderingContext2D,
   from: Monster,
-  to: Actor[],
+  to: Hero[],
   state: GameState,
   cellSize: number,
   debugMode: boolean,
