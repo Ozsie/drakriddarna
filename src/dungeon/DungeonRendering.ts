@@ -397,8 +397,8 @@ const renderFoundSecret = (
   const y = secret.position.y;
   ctx.drawImage(
     ground,
-    4 * 48,
-    0,
+    48 * 5,
+    48 * 5,
     48,
     48,
     x * cellSize,

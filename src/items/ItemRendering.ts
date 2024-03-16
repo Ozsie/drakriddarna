@@ -18,8 +18,9 @@ export const renderItems = (
         itemLocation.position.y,
       ) &&
       !debugMode
-    )
+    ) {
       return;
+    }
     switch (itemLocation.item.type) {
       case ItemType.MAGIC:
         renderMagicItem(ctx, ground, cellSize, state, itemLocation);

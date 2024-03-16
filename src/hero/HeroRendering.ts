@@ -26,19 +26,19 @@ const renderHero = (
 ) => {
   const x = hero.position.x;
   const y = hero.position.y;
+  renderActorBar(ctx, hero, x, y, cellSize);
   ctx.drawImage(
     actors,
-    4 * 16,
     0,
-    16,
-    16,
-    x * cellSize,
-    y * cellSize,
-    cellSize,
-    cellSize,
+    0,
+    48,
+    75,
+    hero.position.x * cellSize,
+    hero.position.y * cellSize - 35,
+    48,
+    75,
   );
   renderActionOnActor(ctx, hero, x, y, cellSize);
-  renderActorBar(ctx, hero, x, y, cellSize);
   renderHealthBar(ctx, hero, x, y, cellSize);
   if (debugMode) {
     const debugText = `(${x},${y})`;
@@ -60,31 +60,18 @@ const renderActionOnActor = (
 
   ctx.strokeStyle = '#080808';
   ctx.fillStyle = 'darkred';
+  const yPosition = y * cellSize - 28;
   for (let index = 0; index < hero.actions; index++) {
-    ctx.fillRect(
-      x * cellSize + 4 + 6 * index,
-      y * cellSize + cellSize - 12,
-      5,
-      5,
-    );
-    ctx.rect(x * cellSize + 4 + 6 * index, y * cellSize + cellSize - 12, 5, 5);
+    const xPosition = x * cellSize + 4 + 6 * index;
+    ctx.fillRect(xPosition, yPosition, 5, 5);
+    ctx.rect(xPosition, yPosition, 5, 5);
     ctx.stroke();
   }
 
   ctx.fillStyle = 'blue';
   for (let index = 0; index < hero.movement; index++) {
-    ctx.fillRect(
-      x * cellSize + cellSize - 22 + 6 * index,
-      y * cellSize + cellSize - 12,
-      5,
-      5,
-    );
-    ctx.rect(
-      x * cellSize + cellSize - 22 + 6 * index,
-      y * cellSize + cellSize - 12,
-      5,
-      5,
-    );
+    ctx.fillRect(x * cellSize + cellSize - 22 + 6 * index, yPosition, 5, 5);
+    ctx.rect(x * cellSize + cellSize - 22 + 6 * index, yPosition, 5, 5);
     ctx.stroke();
   }
 
@@ -102,15 +89,16 @@ const renderHealthBar = (
   ctx.beginPath();
   ctx.strokeStyle = 'black';
   ctx.fillStyle = 'red';
-  ctx.fillRect(x * cellSize + 4, y * cellSize, cellSize - 8, 4);
+  const yPosition = y * cellSize - 32;
+  ctx.fillRect(x * cellSize + 4, yPosition, cellSize - 8, 4);
   ctx.fillStyle = 'green';
   ctx.fillRect(
     x * cellSize + 4,
-    y * cellSize,
+    yPosition,
     (cellSize - 8) * (hero.health / hero.maxHealth),
     4,
   );
-  ctx.rect(x * cellSize + 4, y * cellSize, cellSize - 8, 4);
+  ctx.rect(x * cellSize + 4, yPosition, cellSize - 8, 4);
   ctx.stroke();
 };
 
@@ -187,32 +175,34 @@ const renderCurrentActor = (
     ctx.strokeStyle = 'lightblue';
     ctx.lineWidth = 2;
 
-    ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize);
+    // Top left
+    ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize - 32);
     ctx.lineTo(
       hero.position.x * cellSize + cellSize / 3,
-      hero.position.y * cellSize,
+      hero.position.y * cellSize - 32,
     );
-    ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize);
+    ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize - 32);
     ctx.lineTo(
       hero.position.x * cellSize,
-      hero.position.y * cellSize + cellSize / 3,
+      hero.position.y * cellSize - 32 + cellSize / 3,
     );
 
+    // Top right
     ctx.moveTo(
       hero.position.x * cellSize + cellSize,
-      hero.position.y * cellSize,
+      hero.position.y * cellSize - 32,
     );
     ctx.lineTo(
       hero.position.x * cellSize + (cellSize / 3) * 2,
-      hero.position.y * cellSize,
+      hero.position.y * cellSize - 32,
     );
     ctx.moveTo(
       hero.position.x * cellSize + cellSize,
-      hero.position.y * cellSize,
+      hero.position.y * cellSize - 32,
     );
     ctx.lineTo(
       hero.position.x * cellSize + cellSize,
-      hero.position.y * cellSize + cellSize / 3,
+      hero.position.y * cellSize - 32 + cellSize / 3,
     );
 
     ctx.moveTo(
