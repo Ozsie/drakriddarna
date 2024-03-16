@@ -71,7 +71,7 @@ export const renderSecrets = (
       drawTile(
         ctx,
         ground,
-        8,
+        9,
         0,
         cellSize,
         secret.position.x,
@@ -224,6 +224,28 @@ export const renderPillars = (
     });
 };
 
+const randomFloorTileCoordinates = (seed: number) => {
+  let rndX: number;
+  let rndY: number;
+  if (seed / 100 > 2) {
+    rndX = 1;
+    rndY = 5;
+  } else if (seed / 100 > 1.8) {
+    rndX = 11;
+    rndY = 0;
+  } else if (seed / 100 > 1) {
+    rndX = 10;
+    rndY = 0;
+  } else if (seed / 100 === 1) {
+    rndX = 12;
+    rndY = 0;
+  } else {
+    rndX = 8;
+    rndY = 0;
+  }
+  return { rndX, rndY };
+};
+
 const renderFloor = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
@@ -265,7 +287,9 @@ const renderFloor = (
     }
   } else if (!isEmpty(cell, state)) {
     // Ordinary floor
-    drawTile(ctx, ground, 10, 0, cellSize, x, y, state);
+    const seed = (x + y) * 10;
+    const { rndX, rndY } = randomFloorTileCoordinates(seed);
+    drawTile(ctx, ground, rndX, rndY, cellSize, x, y, state);
   } else {
     renderHiddenCell(ctx, x, y, cellSize);
   }
