@@ -23,6 +23,7 @@
 - [ ] Doors blocking monsters?
 - [ ] Trade Items?
 - [ ] Monster cards?
+- [ ] Level editor
 - [X] e1m4 - The Dark Citadel
 - [X] Show current event
 - [X] Translations
