@@ -1,7 +1,21 @@
-import { SecretType, Side } from '../types';
-import type { Secret, GameState, Door } from '../types';
+import {
+  CornerType,
+  type Door,
+  type GameState,
+  type Secret,
+  SecretType,
+  Side,
+} from '../types';
 import { COLLAPSED, EMPTY, WALL } from './DungeonLogic';
-import { isDiscovered, isRoomDiscovered, toArray } from '../game';
+import {
+  findCell,
+  isDiscovered,
+  isRoomDiscovered,
+  isSamePosition,
+  toArray,
+} from '../game';
+
+export const background = '#1E1C19';
 
 export const renderDoors = (
   ctx: CanvasRenderingContext2D,
@@ -29,7 +43,6 @@ export const renderGrid = (
     });
   });
   renderPits(ctx, ground, cellSize, state, debugMode);
-  renderPillars(ctx, ground, cellSize, state, debugMode);
 };
 
 export const renderSecrets = (
@@ -58,7 +71,7 @@ export const renderSecrets = (
       drawTile(
         ctx,
         ground,
-        8,
+        9,
         0,
         cellSize,
         secret.position.x,
@@ -103,7 +116,7 @@ const drawTile = (
     ctx.drawImage(
       ground,
       xPos * 48,
-      yPos,
+      yPos * 48,
       48,
       48,
       x * cellSize,
@@ -113,6 +126,68 @@ const drawTile = (
     );
   } else {
     renderHiddenCell(ctx, x, y, cellSize);
+  }
+};
+
+const drawCornerTile = (
+  ctx: CanvasRenderingContext2D,
+  ground: CanvasImageSource,
+  corner: CornerType,
+  cellSize: number,
+  x: number,
+  y: number,
+  state: GameState,
+) => {
+  switch (corner) {
+    case CornerType.INNER_BOTTOM_LEFT: {
+      drawTile(ctx, ground, 0, 6, cellSize, x, y, state);
+      break;
+    }
+    case CornerType.INNER_BOTTOM_RIGHT: {
+      drawTile(ctx, ground, 4, 6, cellSize, x, y, state);
+      break;
+    }
+    case CornerType.INNER_TOP_LEFT: {
+      drawTile(ctx, ground, 0, 4, cellSize, x, y, state);
+      break;
+    }
+    case CornerType.INNER_TOP_RIGHT: {
+      drawTile(ctx, ground, 4, 4, cellSize, x, y, state);
+      break;
+    }
+    case CornerType.OUTER_TOP_RIGHT: {
+      drawTile(ctx, ground, 4, 0, cellSize, x, y, state);
+      break;
+    }
+    case CornerType.OUTER_TOP_LEFT: {
+      drawTile(ctx, ground, 0, 0, cellSize, x, y, state);
+      break;
+    }
+    case CornerType.OUTER_BOTTOM_RIGHT:
+    case CornerType.RIGHT_END: {
+      drawTile(ctx, ground, 4, 2, cellSize, x, y, state);
+      break;
+    }
+    case CornerType.OUTER_BOTTOM_LEFT:
+    case CornerType.LEFT_END: {
+      drawTile(ctx, ground, 0, 2, cellSize, x, y, state);
+      break;
+    }
+    case CornerType.BOTTOM_END: {
+      drawTile(ctx, ground, 2, 4, cellSize, x, y, state);
+      break;
+    }
+    case CornerType.TOP_END: {
+      drawTile(ctx, ground, 4, 7, cellSize, x, y, state);
+      break;
+    }
+    case CornerType.THREE_WAY_INTERSECTION_UP: {
+      drawTile(ctx, ground, 4, 8, cellSize, x, y, state);
+      break;
+    }
+    default:
+      drawTile(ctx, ground, 15, 0, cellSize, x, y, state);
+      break;
   }
 };
 
@@ -126,11 +201,11 @@ const renderPits = (
   state.dungeon.layout.pits
     ?.filter((pit) => isDiscovered(state.dungeon, pit.x, pit.y) || debugMode)
     ?.forEach((pit) => {
-      drawTile(ctx, ground, 7, 0, cellSize, pit.x, pit.y, state);
+      drawTile(ctx, ground, 13, 0, cellSize, pit.x, pit.y, state);
     });
 };
 
-const renderPillars = (
+export const renderPillars = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
@@ -142,8 +217,33 @@ const renderPillars = (
       (pillar) => isDiscovered(state.dungeon, pillar.x, pillar.y) || debugMode,
     )
     ?.forEach((pillar) => {
-      drawTile(ctx, ground, 6, 0, cellSize, pillar.x, pillar.y, state);
+      drawTile(ctx, ground, 7, 2, cellSize, pillar.x, pillar.y, state);
+      ctx.globalAlpha = 0.4;
+      drawTile(ctx, ground, 7, 1, cellSize, pillar.x, pillar.y - 1, state);
+      ctx.globalAlpha = 1;
     });
+};
+
+const randomFloorTileCoordinates = (seed: number) => {
+  let rndX: number;
+  let rndY: number;
+  if (seed / 100 > 2) {
+    rndX = 1;
+    rndY = 5;
+  } else if (seed / 100 > 1.8) {
+    rndX = 11;
+    rndY = 0;
+  } else if (seed / 100 > 1) {
+    rndX = 10;
+    rndY = 0;
+  } else if (seed / 100 === 1) {
+    rndX = 12;
+    rndY = 0;
+  } else {
+    rndX = 8;
+    rndY = 0;
+  }
+  return { rndX, rndY };
 };
 
 const renderFloor = (
@@ -158,19 +258,124 @@ const renderFloor = (
   if (notGround(cell, state)) {
     if (cell === COLLAPSED) {
       drawTile(ctx, ground, 0, 0, cellSize, x, y, state);
-      drawTile(ctx, ground, 5, 0, cellSize, x, y, state);
+      drawTile(ctx, ground, 2, 0, cellSize, x, y, state);
     } else {
-      drawTile(ctx, ground, 1, 0, cellSize, x, y, state);
+      const corner = isCornerWall(x, y, state);
+      if (corner !== CornerType.NOT_CORNER) {
+        drawCornerTile(ctx, ground, corner, cellSize, x, y, state);
+      } else {
+        const vertical = isVerticalWall(x, y, state);
+        const horizontal = isHorizontalWall(x, y, state);
+        if (horizontal !== 'none' && vertical === 'none') {
+          if (horizontal === 'up') {
+            drawTile(ctx, ground, 1, 0, cellSize, x, y, state);
+          } else if (horizontal === 'down') {
+            drawTile(ctx, ground, 2, 4, cellSize, x, y, state);
+          } else {
+            drawTile(ctx, ground, 0, 2, cellSize, x, y, state);
+          }
+        } else if (vertical !== 'none') {
+          if (vertical === 'left') {
+            drawTile(ctx, ground, 4, 5, cellSize, x, y, state);
+          } else if (vertical === 'right') {
+            drawTile(ctx, ground, 0, 5, cellSize, x, y, state);
+          } else {
+            drawTile(ctx, ground, 5, 7, cellSize, x, y, state);
+          }
+        }
+      }
     }
   } else if (!isEmpty(cell, state)) {
-    drawTile(ctx, ground, 0, 0, cellSize, x, y, state);
+    // Ordinary floor
+    const seed = (x + y) * 10;
+    const { rndX, rndY } = randomFloorTileCoordinates(seed);
+    drawTile(ctx, ground, rndX, rndY, cellSize, x, y, state);
   } else {
     renderHiddenCell(ctx, x, y, cellSize);
   }
 };
 
+const isHorizontalWall = (x: number, y: number, state: GameState): string => {
+  const grid = state.dungeon.layout.grid;
+  if (findCell(grid, x, y) !== WALL) {
+    return 'none';
+  }
+  if (x === 0 || x === grid[0].length - 1) {
+    return 'none';
+  }
+  const cellLeft = findCell(grid, x - 1, y);
+  const cellRight = findCell(grid, x + 1, y);
+  const isHorizontal =
+    cellLeft === WALL ||
+    isEmpty(cellLeft, state) ||
+    cellRight === WALL ||
+    isEmpty(cellRight, state);
+  if (isHorizontal) {
+    const cellAbove = findCell(grid, x, y - 1);
+    const cellBelow = findCell(grid, x, y + 1);
+    if (isRoom(cellAbove, state) && isRoom(cellBelow, state)) {
+      return 'both';
+    } else if (isRoom(cellAbove, state)) {
+      return 'up';
+    } else if (isRoom(cellBelow, state)) {
+      return 'down';
+    } else {
+      return 'none';
+    }
+  } else {
+    return 'none';
+  }
+};
+
+const isVerticalWall = (x: number, y: number, state: GameState): string => {
+  const grid = state.dungeon.layout.grid;
+  if (findCell(grid, x, y) !== WALL) {
+    return 'none';
+  }
+  if (y === 0 || y === grid.length - 1) {
+    return 'none';
+  }
+
+  const cellAbove = findCell(grid, x, y - 1);
+  const cellBelow = findCell(grid, x, y + 1);
+  const isVertical =
+    cellAbove === WALL ||
+    isEmpty(cellAbove, state) ||
+    cellBelow === WALL ||
+    isEmpty(cellBelow, state);
+  if (isVertical) {
+    const cellLeft = findCell(grid, x - 1, y);
+    const cellRight = findCell(grid, x + 1, y);
+    if (isRoom(cellLeft, state) && isRoom(cellRight, state)) {
+      return 'both';
+    } else if (isRoom(cellLeft, state)) {
+      return 'left';
+    } else if (isRoom(cellRight, state)) {
+      return 'right';
+    } else {
+      return 'none';
+    }
+  } else {
+    return 'none';
+  }
+};
+
+const isCornerWall = (x: number, y: number, state: GameState): CornerType => {
+  const corner = state.dungeon.layout.corners.filter((corner) =>
+    isSamePosition(corner.position, { x, y }),
+  );
+  if (corner.length === 1) {
+    return corner[0].type;
+  } else {
+    return CornerType.NOT_CORNER;
+  }
+};
+
 const notGround = (cell: string, state: GameState) =>
   isWall(cell) || (!isRoomDiscovered(state.dungeon, cell) && cell !== EMPTY);
+
+const isRoom = (cell: string, state: GameState) =>
+  state.dungeon.discoveredRooms.includes(cell);
 
 const renderHiddenCell = (
   ctx: CanvasRenderingContext2D,
@@ -179,8 +384,8 @@ const renderHiddenCell = (
   cellSize: number,
 ) => {
   ctx.beginPath();
-  ctx.strokeStyle = 'black';
-  ctx.fillStyle = 'black';
+  ctx.strokeStyle = background;
+  ctx.fillStyle = background;
   ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
   ctx.stroke();
 };
@@ -195,8 +400,8 @@ const renderTrapDoor = (
   const y = secret.position.y;
   ctx.drawImage(
     ground,
-    3 * 48,
-    0,
+    48 * 6,
+    48 * 7,
     48,
     48,
     x * cellSize,
@@ -241,14 +446,83 @@ const renderGridLines = (
   ctx.strokeStyle = 'black';
   ctx.rect(x * cellSize, y * cellSize, cellSize, cellSize);
   if (debugMode) {
+    const horizontalWall = isHorizontalWall(x, y, state);
+    const verticalWall = isVerticalWall(x, y, state);
+    const isCorner = isCornerWall(x, y, state);
+    let text = `${cell}: ${x},${y}`;
+    if (isCorner !== CornerType.NOT_CORNER) {
+      text += ` C ${isCorner.valueOf()}`;
+    } else if (horizontalWall != 'none') {
+      text += ' H ' + horizontalWall[0];
+    } else if (verticalWall !== 'none') {
+      text += ' V ' + verticalWall[0];
+    }
     ctx.font = '7px Arial';
-    ctx.fillText(
-      `${cell}: ${x},${y}`,
-      x * cellSize + 3,
-      y * cellSize + (cellSize - 3),
-    );
+    ctx.fillText(text, x * cellSize + 3, y * cellSize + (cellSize - 3));
   }
   ctx.stroke();
+};
+
+const renderClosedHiddenDoor = (
+  door: Door,
+  ctx: CanvasRenderingContext2D,
+  ground: CanvasImageSource,
+  cellSize: number,
+  state: GameState,
+) => {
+  switch (door.side) {
+    case Side.RIGHT: {
+      drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y, state);
+      drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y - 1, state);
+      drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y + 1, state);
+      break;
+    }
+    case Side.LEFT: {
+      drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y, state);
+      drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y - 1, state);
+      drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y + 1, state);
+      break;
+    }
+    case Side.UP: {
+      drawTile(ctx, ground, 2, 4, cellSize, door.x, door.y - 1, state);
+      drawTile(ctx, ground, 2, 4, cellSize, door.x + 1, door.y - 1, state);
+      drawTile(ctx, ground, 2, 4, cellSize, door.x - 1, door.y - 1, state);
+      break;
+    }
+    case Side.DOWN: {
+      drawTile(ctx, ground, 2, 6, cellSize, door.x, door.y + 1, state);
+      drawTile(ctx, ground, 2, 6, cellSize, door.x + 1, door.y + 1, state);
+      drawTile(ctx, ground, 2, 6, cellSize, door.x - 1, door.y + 1, state);
+      break;
+    }
+  }
+};
+
+const renderClosedDoor = (
+  door: Door,
+  ctx: CanvasRenderingContext2D,
+  ground: CanvasImageSource,
+  cellSize: number,
+  state: GameState,
+) => {
+  switch (door.side) {
+    case Side.RIGHT: {
+      drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y, state);
+      break;
+    }
+    case Side.LEFT: {
+      drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y, state);
+      break;
+    }
+    case Side.UP: {
+      drawTile(ctx, ground, 2, 4, cellSize, door.x, door.y - 1, state);
+      break;
+    }
+    case Side.DOWN: {
+      drawTile(ctx, ground, 2, 6, cellSize, door.x, door.y + 1, state);
+      break;
+    }
+  }
 };
 
 const renderDoor = (
@@ -260,6 +534,13 @@ const renderDoor = (
   debugMode: boolean,
 ) => {
   const cell = state.dungeon.layout.grid[door.y][door.x];
+  if (door && !door.open) {
+    if (door.hidden) {
+      renderClosedHiddenDoor(door, ctx, ground, cellSize, state);
+    } else {
+      renderClosedDoor(door, ctx, ground, cellSize, state);
+    }
+  }
   if (door && !door.hidden && !door.open && !isEmpty(cell, state)) {
     ctx.fillStyle = 'brown';
     switch (door.side) {
@@ -295,6 +576,7 @@ const renderDoor = (
         break;
       }
       case Side.UP: {
+        drawTile(ctx, ground, 13, 1, cellSize, door.x, door.y - 1, state);
         ctx.fillRect(door.x * cellSize, door.y * cellSize - 2, cellSize, 4);
         if (door.locked && debugMode) {
           ctx.fillStyle = 'grey';

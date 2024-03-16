@@ -442,7 +442,7 @@ export const takeDamage = (
     });
   }
   const canReRoll = source.inventory
-    .filter((item) => item?.properties?.[RE_ROLL_ATTACK])
+    .filter((item) => item && item?.properties?.[RE_ROLL_ATTACK])
     .some((item) => {
       addLog(state, 'logs.takeDamage.usedEffect', {
         actor: i18n(source.name),
@@ -451,7 +451,7 @@ export const takeDamage = (
       return item.properties?.[RE_ROLL_ATTACK];
     });
   const attackBonus = source.inventory
-    .filter((item) => item?.properties?.[ATTACK_BONUS])
+    .filter((item) => item && item?.properties?.[ATTACK_BONUS])
     .map((item) => {
       addLog(state, 'logs.takeDamage.usedEffect', {
         actor: i18n(source.name),

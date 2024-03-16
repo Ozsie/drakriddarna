@@ -149,7 +149,7 @@ export const onReset: {
   },
 };
 export const useItem = (state: GameState, item: Item) => {
-  if (item.effect && state.currentActor) {
+  if (item && item.effect && state.currentActor) {
     const use = onUse[item.effect];
     use(state, item, state.currentActor, state.targetActor);
     state.targetActor = undefined;
@@ -161,7 +161,7 @@ export const resetOnNextDungeon = (state: GameState) => {
     hero.inventory
       .filter((item) => resetsOnNextDungeon(item))
       .forEach((item) => {
-        if (item.reset) {
+        if (item && item.reset) {
           const reset = onReset[item.reset];
           reset(state, item);
         }
@@ -174,7 +174,7 @@ export const resetOnNext = (state: GameState) => {
     hero.inventory
       .filter((item) => resetsOnNext(item))
       .forEach((item) => {
-        if (item.reset) {
+        if (item && item.reset) {
           const reset = onReset[item.reset];
           reset(state, item);
         }
@@ -183,7 +183,7 @@ export const resetOnNext = (state: GameState) => {
 };
 
 const resetsOnNext = (item: Item) => {
-  if (item.properties) {
+  if (item && item.properties) {
     const resetOn: string[] = (item.properties[RESET_ON] as string[]) ?? [];
     return resetOn.some((resetOn: string) => resetOn === NEXT_TURN);
   }
@@ -191,7 +191,7 @@ const resetsOnNext = (item: Item) => {
 };
 
 const resetsOnNextDungeon = (item: Item) => {
-  if (item.properties) {
+  if (item && item.properties) {
     const resetOn: string[] = (item.properties[RESET_ON] as string[]) ?? [];
     return resetOn.some((resetOn: string) => resetOn === NEXT_DUNGEON);
   }

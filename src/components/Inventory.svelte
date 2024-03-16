@@ -36,7 +36,9 @@
 <div class="inventory">
   {#key uglyUpdateToggle}
     {#each inventory as item}
-      <ItemCard bind:item={item} state={state} />
+      {#if item}
+        <ItemCard bind:item={item} state={state} />
+      {/if}
     {/each}
   {/key}
 </div>

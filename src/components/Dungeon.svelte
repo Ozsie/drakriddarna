@@ -1,13 +1,13 @@
 <script lang="ts">
   import type { GameState } from '../types';
   import { onMount } from "svelte";
-  import groundSprites from '$lib/Dungeon_Tileset.png';
+  import groundSprites from '$lib/DungeonTiles.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
   import { doMouseLogic } from "../hero/ClickInputLogic";
   import { browser } from '$app/environment';
   import { renderHeroes } from "../hero/HeroRendering";
   import { renderMonsters } from "../monsters/MonsterRendering";
-  import { renderDoors, renderGrid, renderSecrets } from "../dungeon/DungeonRendering";
+  import { background, renderDoors, renderGrid, renderPillars, renderSecrets } from '../dungeon/DungeonRendering';
   import { renderItems } from '../items/ItemRendering';
   import WinCondition from './WinCondition.svelte';
   import { t } from '$lib/translations';
@@ -57,7 +57,7 @@
       reRenderCount++;
       totalReRenderCount++;
       ctx.clearRect(0, 0, c.width, c.height);
-      ctx.fillStyle = 'black';
+      ctx.fillStyle = background;
       ctx.fillRect(0, 0, c.width, c.height);
       renderGrid(ctx, ground, cellSize, state, debugMode);
       renderSecrets(ctx, ground, cellSize, state, debugMode);
@@ -66,6 +66,7 @@
       renderMonsters(ctx, actors, cellSize, state, debugMode);
       renderHeroes(ctx, actors, cellSize, state, debugMode);
       renderNotes(ctx, actors, cellSize, state, debugMode);
+      renderPillars(ctx, ground, cellSize, state, debugMode);
       if (debugMode) {
         ctx.fillStyle = 'white';
         ctx.font = '8px Arial';

@@ -9,6 +9,12 @@
 - [ ] Dungeon intro screen
 - [ ] Create function for random item on floor
 - [ ] Stop search through walls & doors
+- [ ] Corners
+  - [X] e1m0
+  - [ ] e1m1
+  - [ ] e1m2
+  - [ ] e1m3
+  - [ ] e1m4
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
 - [ ] Green dark lord paralyzing sword
@@ -23,6 +29,7 @@
 - [ ] Doors blocking monsters?
 - [ ] Trade Items?
 - [ ] Monster cards?
+- [ ] Level editor
 - [X] e1m4 - The Dark Citadel
 - [X] Show current event
 - [X] Translations

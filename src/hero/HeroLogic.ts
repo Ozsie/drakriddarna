@@ -376,7 +376,7 @@ export const dropItem = (state: GameState, item: Item, actor: Actor) => {
     item,
     position: actor.position,
   });
-  if (item.drop) {
+  if (item && item.drop) {
     onDrop[item.drop](state, item, actor);
   }
 };
@@ -399,7 +399,7 @@ export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
       hero.inventory.push(item);
       break;
   }
-  if (item.pickup) {
+  if (item && item.pickup) {
     const pickup = onPickup[item.pickup];
     pickup(state, item, hero);
   }
@@ -433,7 +433,7 @@ const moveOverDoor = (
     (door) => door.x === hero.position.x && door.y === hero.position.y,
   );
   const canBreakLock = hero.inventory.some(
-    (item) => item.properties?.[BREAK_LOCK],
+    (item) => item && item.properties?.[BREAK_LOCK],
   );
 
   if (door && canOpenDoor(hero, canBreakLock, door)) {

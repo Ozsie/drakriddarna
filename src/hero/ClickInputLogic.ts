@@ -80,7 +80,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
   );
   if (door && !door.hidden) {
     const canBreakLock = hero.inventory.some(
-      (item) => item.properties?.[BREAK_LOCK],
+      (item) => item && item.properties?.[BREAK_LOCK],
     );
     if (canOpenDoor(hero, canBreakLock, door)) {
       if (door.locked && canBreakLock)

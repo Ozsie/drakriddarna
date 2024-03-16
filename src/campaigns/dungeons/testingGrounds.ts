@@ -1,4 +1,4 @@
-import type { Dungeon } from '../../types';
+import { CornerType, type Dungeon } from '../../types';
 import {
   Colour,
   ConditionType,
@@ -56,8 +56,44 @@ export const testingGrounds: Dungeon = {
     { x: 1, y: 9 },
     { x: 1, y: 10 },
   ],
-  discoveredRooms: ['A', 'D'],
+  discoveredRooms: ['A', 'D', 'I'],
   layout: {
+    corners: [
+      { position: { x: 0, y: 0 }, type: CornerType.INNER_TOP_LEFT },
+      { position: { x: 10, y: 0 }, type: CornerType.INNER_TOP_RIGHT },
+      { position: { x: 0, y: 4 }, type: CornerType.INNER_BOTTOM_LEFT },
+      { position: { x: 6, y: 4 }, type: CornerType.OUTER_TOP_RIGHT },
+      { position: { x: 8, y: 4 }, type: CornerType.OUTER_TOP_LEFT },
+      { position: { x: 10, y: 4 }, type: CornerType.INNER_BOTTOM_RIGHT },
+      { position: { x: 2, y: 5 }, type: CornerType.INNER_TOP_LEFT },
+      { position: { x: 6, y: 5 }, type: CornerType.OUTER_BOTTOM_RIGHT },
+      { position: { x: 8, y: 6 }, type: CornerType.OUTER_BOTTOM_LEFT },
+      { position: { x: 9, y: 6 }, type: CornerType.INNER_TOP_RIGHT },
+      { position: { x: 0, y: 7 }, type: CornerType.INNER_TOP_LEFT },
+      { position: { x: 2, y: 7 }, type: CornerType.OUTER_BOTTOM_RIGHT },
+      { position: { x: 4, y: 7 }, type: CornerType.LEFT_END },
+      { position: { x: 6, y: 7 }, type: CornerType.RIGHT_END },
+      { position: { x: 0, y: 11 }, type: CornerType.INNER_BOTTOM_LEFT },
+      { position: { x: 1, y: 11 }, type: CornerType.OUTER_TOP_RIGHT },
+      { position: { x: 3, y: 11 }, type: CornerType.TOP_END },
+      {
+        position: { x: 9, y: 11 },
+        type: CornerType.BOTTOM_END,
+      },
+      { position: { x: 10, y: 11 }, type: CornerType.INNER_TOP_RIGHT },
+      { position: { x: 3, y: 12 }, type: CornerType.BOTTOM_END },
+      { position: { x: 3, y: 13 }, type: CornerType.INNER_BOTTOM_RIGHT },
+      { position: { x: 8, y: 13 }, type: CornerType.TOP_END },
+      { position: { x: 1, y: 14 }, type: CornerType.INNER_BOTTOM_LEFT },
+      {
+        position: { x: 8, y: 14 },
+        type: CornerType.THREE_WAY_INTERSECTION_UP,
+      },
+      {
+        position: { x: 10, y: 14 },
+        type: CornerType.INNER_BOTTOM_RIGHT,
+      },
+    ],
     grid: [
       '###########',
       '#CCCCCCCCC#',
@@ -70,10 +106,10 @@ export const testingGrounds: Dungeon = {
       '#AAAAAAAA#D',
       '#AAAAAAAA#D',
       '#AAAAAAAA#D',
-      '##G####### ',
-      ' #G#       ',
-      ' #G#       ',
-      ' ###       ',
+      '##G########',
+      ' #G#IIIIII#',
+      ' #GIIIII#I#',
+      ' ##########',
     ],
     pillars: [
       { x: 8, y: 3 },

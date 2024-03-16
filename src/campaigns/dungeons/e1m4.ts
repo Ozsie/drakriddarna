@@ -51,6 +51,7 @@ export const e1m4: Dungeon = {
   ],
   discoveredRooms: ['A'],
   layout: {
+    corners: [],
     grid: [
       ' ##### ########   ',
       ' #AAA###CCCCCC#   ',
