@@ -576,6 +576,7 @@ const renderDoor = (
         break;
       }
       case Side.UP: {
+        drawTile(ctx, ground, 13, 1, cellSize, door.x, door.y - 1, state);
         ctx.fillRect(door.x * cellSize, door.y * cellSize - 2, cellSize, 4);
         if (door.locked && debugMode) {
           ctx.fillStyle = 'grey';
