@@ -1,7 +1,13 @@
 import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { setLocale } from '$lib/translations';
-import type { GameAction, GameState, Hero, Item, MoveDirection } from '../types';
+import type {
+  GameAction,
+  GameState,
+  Hero,
+  Item,
+  MoveDirection,
+} from '../types';
 import { assertNever } from '../types';
 import {
   init,
@@ -33,7 +39,7 @@ const getInitialState = (): GameState => {
         const parsed = JSON.parse(reloadGuard) as GameState;
         const loaded = loadState(parsed);
         if (loaded.settings?.['locale']) {
-          void setLocale(loaded.settings['locale'] as string);
+          void setLocale(loaded.settings['locale']);
         }
         return loaded;
       } catch (e) {
@@ -44,7 +50,7 @@ const getInitialState = (): GameState => {
   }
   const initialState = init();
   if (initialState.settings?.['locale']) {
-    void setLocale(initialState.settings['locale'] as string);
+    void setLocale(initialState.settings['locale']);
   }
   return initialState;
 };

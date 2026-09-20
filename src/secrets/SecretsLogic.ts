@@ -69,7 +69,9 @@ export const checkForTrapDoor = (state: GameState) => {
 
 export const removeFoundItemFromDeck = (state: GameState, item: Item) => {
   const index = state.itemDeck.findIndex((i) =>
-    item.id && i.id ? i.id === item.id : i.type === item.type && i.name === item.name,
+    item.id && i.id
+      ? i.id === item.id
+      : i.type === item.type && i.name === item.name,
   );
   if (index !== -1) {
     state.itemDeck.splice(index, 1);
@@ -78,7 +80,9 @@ export const removeFoundItemFromDeck = (state: GameState, item: Item) => {
 
 export const removeFoundMagicItemFromDeck = (state: GameState, item: Item) => {
   const index = state.magicItemDeck.findIndex((i) =>
-    item.id && i.id ? i.id === item.id : i.type === item.type && i.name === item.name,
+    item.id && i.id
+      ? i.id === item.id
+      : i.type === item.type && i.name === item.name,
   );
   if (index !== -1) {
     state.magicItemDeck.splice(index, 1);

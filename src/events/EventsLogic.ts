@@ -1,5 +1,19 @@
-import type { Actor, Dungeon, GameEvent, GameState, TurnEvent, Weapon } from '../types';
-import { assertNever, Colour, ItemType, Level, MonsterType, SecretType } from '../types';
+import type {
+  Actor,
+  Dungeon,
+  GameEvent,
+  GameState,
+  TurnEvent,
+  Weapon,
+} from '../types';
+import {
+  assertNever,
+  Colour,
+  ItemType,
+  Level,
+  MonsterType,
+  SecretType,
+} from '../types';
 import {
   isBlockedByHero,
   isBlockedByMonster,

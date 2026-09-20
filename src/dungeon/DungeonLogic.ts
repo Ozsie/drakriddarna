@@ -16,6 +16,8 @@ import { addLog } from '../core';
 import { COLLAPSED, EMPTY, WALL } from '../core';
 
 export { COLLAPSED, EMPTY, WALL };
+export * from './dungeonParser';
+export * from './dungeonValidator';
 
 export const onCheckFulfilled: {
   [index: string]: (state: GameState, self: WinCondition) => boolean;
@@ -202,7 +204,9 @@ export const createMonster = (
   return {
     id:
       id ??
-      `${type.toLowerCase().replace(/ /g, '_')}_${colourName.toLowerCase()}_${x}_${y}`,
+      `${type
+        .toLowerCase()
+        .replace(/ /g, '_')}_${colourName.toLowerCase()}_${x}_${y}`,
     type,
     level,
     colour,

@@ -333,21 +333,126 @@ export type GameEventType =
   | 'SYMBOL_OF_WEAKNESS';
 
 export type GameEvent =
-  | { type: 'SUN_STONE'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'HUNGRY_TROLL'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'TIME_PORTAL'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'FOUNTAIN_OF_YOUTH'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'SLEEPING_GAS_CLOUD'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'LOST_ORC'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'DRAGONS_BREATH'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'LANDSLIDE'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'MAGIC_NODE'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'FORESIGHT'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'EARTHQUAKE'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'MAGIC_STORM'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'ELEMENTAL_WEAPON'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'ORC_DRUMS'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean }
-  | { type: 'SYMBOL_OF_WEAKNESS'; number: number; name: string; description: string; effect: TurnEventEffect; used: boolean };
+  | {
+      type: 'SUN_STONE';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'HUNGRY_TROLL';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'TIME_PORTAL';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'FOUNTAIN_OF_YOUTH';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'SLEEPING_GAS_CLOUD';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'LOST_ORC';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'DRAGONS_BREATH';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'LANDSLIDE';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'MAGIC_NODE';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'FORESIGHT';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'EARTHQUAKE';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'MAGIC_STORM';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'ELEMENTAL_WEAPON';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'ORC_DRUMS';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'SYMBOL_OF_WEAKNESS';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    };
 
 export type TurnEvent = {
   id?: string;

@@ -6,20 +6,13 @@ import {
   SecretType,
   Side,
 } from '../../types';
-import {
-  createDoor,
-  createHiddenDoor,
-  createMonster,
-  createSecret,
-  createSecretWithItem,
-} from '../../dungeon/DungeonLogic';
+import { defineDungeon } from '../../dungeon/DungeonLogic';
 import { magicItems } from '../../items/magicItems';
 import { e1m2 } from './e1m2';
 
-export const e1m1: Dungeon = {
+export const e1m1: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m1.name',
   nextDungeon: e1m2,
-  beaten: false,
   winConditions: [
     {
       type: ConditionType.KILL_ALL,
@@ -32,14 +25,13 @@ export const e1m1: Dungeon = {
     },
   ],
   startingPositions: [
-    { x: 2, y: 5 },
-    { x: 1, y: 4 },
-    { x: 1, y: 5 },
-    { x: 1, y: 6 },
+    [2, 5],
+    [1, 4],
+    [1, 5],
+    [1, 6],
   ],
   discoveredRooms: ['A'],
   layout: {
-    corners: [],
     grid: [
       '            ######',
       '            #EEEE#',
@@ -57,62 +49,33 @@ export const e1m1: Dungeon = {
     ],
     corridors: ['B', 'D', 'F', 'H'],
     doors: [
-      createDoor(Side.RIGHT, 3, 5),
-      createDoor(Side.RIGHT, 6, 5),
-      createDoor(Side.RIGHT, 10, 6),
-      createDoor(Side.RIGHT, 13, 6),
-      createDoor(Side.RIGHT, 10, 9),
-      createDoor(Side.RIGHT, 13, 9),
-      createDoor(Side.RIGHT, 12, 3),
-      createHiddenDoor(Side.UP, 10, 4),
-      createHiddenDoor(Side.RIGHT, 15, 2),
+      [Side.RIGHT, 3, 5],
+      [Side.RIGHT, 6, 5],
+      [Side.RIGHT, 10, 6],
+      [Side.RIGHT, 13, 6],
+      [Side.RIGHT, 10, 9],
+      [Side.RIGHT, 13, 9],
+      [Side.RIGHT, 12, 3],
+      [Side.UP, 10, 4, { hidden: true }],
+      [Side.RIGHT, 15, 2, { hidden: true }],
     ],
     monsters: [
-      createMonster(MonsterType.ORC, Colour.Blue, 10, 8),
-      createMonster(MonsterType.ORC, Colour.Red, 13, 9),
-      createMonster(MonsterType.TROLL, Colour.Red, 16, 2),
-      createMonster(MonsterType.TROLL, Colour.Yellow, 14, 7),
+      [MonsterType.ORC, Colour.Blue, 10, 8],
+      [MonsterType.ORC, Colour.Red, 13, 9],
+      [MonsterType.TROLL, Colour.Red, 16, 2],
+      [MonsterType.TROLL, Colour.Yellow, 14, 7],
     ],
     secrets: [
-      createSecret(
-        SecretType.EQUIPMENT,
-        'campaign.iceDragon.randomEquipment',
-        10,
-        5,
-      ),
-      createSecret(
-        SecretType.EQUIPMENT,
-        'campaign.iceDragon.randomEquipment',
-        13,
-        1,
-      ),
-      createSecret(
-        SecretType.EQUIPMENT,
-        'campaign.iceDragon.randomEquipment',
-        16,
-        10,
-      ),
-      createSecretWithItem(SecretType.MAGIC_ITEM, 16, 6, magicItems[0]),
+      [SecretType.EQUIPMENT, 10, 5],
+      [SecretType.EQUIPMENT, 13, 1],
+      [SecretType.EQUIPMENT, 16, 10],
+      [SecretType.MAGIC_ITEM, 16, 6, magicItems[0]],
     ],
     notes: [
-      {
-        message: 'campaign.iceDragon.e1m1.notes.hint1',
-        position: { x: 3, y: 5 },
-      },
-      {
-        message: 'campaign.iceDragon.e1m1.notes.hint2',
-        position: { x: 10, y: 9 },
-      },
-      {
-        message: 'campaign.iceDragon.e1m1.notes.hint3',
-        position: { x: 10, y: 6 },
-      },
-      {
-        message: 'campaign.iceDragon.e1m1.notes.hint4',
-        position: { x: 10, y: 4 },
-      },
+      [3, 5, 'campaign.iceDragon.e1m1.notes.hint1'],
+      [10, 9, 'campaign.iceDragon.e1m1.notes.hint2'],
+      [10, 6, 'campaign.iceDragon.e1m1.notes.hint3'],
+      [10, 4, 'campaign.iceDragon.e1m1.notes.hint4'],
     ],
-    items: [],
   },
-  killCount: 0,
-};
+});

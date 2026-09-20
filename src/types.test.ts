@@ -103,7 +103,7 @@ describe('Type Safety & Domain Modeling', () => {
         4,
         magicItems[0],
       );
-      expect(itemSecret.id).toBe(`secret_${magicItems[0].id}_3_4`);
+      expect(itemSecret.id).toBe(`secret_${magicItems[0].id ?? ''}_3_4`);
       expect(itemSecret.item?.id).toBe(magicItems[0].id);
     });
 
@@ -134,19 +134,27 @@ describe('Type Safety & Domain Modeling', () => {
       const state = init();
       const testItem = state.itemDeck[0];
       const initialCount = state.itemDeck.length;
-      const occurrencesBefore = state.itemDeck.filter((i) => i.id === testItem.id).length;
+      const occurrencesBefore = state.itemDeck.filter(
+        (i) => i.id === testItem.id,
+      ).length;
 
       removeFoundItemFromDeck(state, testItem);
       expect(state.itemDeck.length).toBe(initialCount - 1);
-      const occurrencesAfter = state.itemDeck.filter((i) => i.id === testItem.id).length;
+      const occurrencesAfter = state.itemDeck.filter(
+        (i) => i.id === testItem.id,
+      ).length;
       expect(occurrencesAfter).toBe(occurrencesBefore - 1);
 
       const testMagicItem = state.magicItemDeck[0];
       const initialMagicCount = state.magicItemDeck.length;
-      const magicOccurrencesBefore = state.magicItemDeck.filter((i) => i.id === testMagicItem.id).length;
+      const magicOccurrencesBefore = state.magicItemDeck.filter(
+        (i) => i.id === testMagicItem.id,
+      ).length;
       removeFoundMagicItemFromDeck(state, testMagicItem);
       expect(state.magicItemDeck.length).toBe(initialMagicCount - 1);
-      const magicOccurrencesAfter = state.magicItemDeck.filter((i) => i.id === testMagicItem.id).length;
+      const magicOccurrencesAfter = state.magicItemDeck.filter(
+        (i) => i.id === testMagicItem.id,
+      ).length;
       expect(magicOccurrencesAfter).toBe(magicOccurrencesBefore - 1);
     });
   });

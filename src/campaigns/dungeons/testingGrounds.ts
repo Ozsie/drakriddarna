@@ -6,21 +6,12 @@ import {
   SecretType,
   Side,
 } from '../../types';
-import {
-  createDoor,
-  createHiddenDoor,
-  createLockedDoor,
-  createMonster,
-  createSecret,
-  createSecretWithItem,
-  createTrappedDoor,
-  createTrappedHiddenDoor,
-} from '../../dungeon/DungeonLogic';
+import { defineDungeon } from '../../dungeon/DungeonLogic';
 import { weapons } from '../../items/weapons';
 import { e1m0 } from './e1m0';
 import { magicItems } from '../../items/magicItems';
 
-export const testingGrounds: Dungeon = {
+export const testingGrounds: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.testingGrounds.name',
   beaten: true,
   winConditions: [
@@ -51,10 +42,10 @@ export const testingGrounds: Dungeon = {
   ],
   nextDungeon: e1m0,
   startingPositions: [
-    { x: 2, y: 9 },
-    { x: 1, y: 8 },
-    { x: 1, y: 9 },
-    { x: 1, y: 10 },
+    [2, 9],
+    [1, 8],
+    [1, 9],
+    [1, 10],
   ],
   discoveredRooms: ['A', 'D', 'I'],
   layout: {
@@ -112,74 +103,50 @@ export const testingGrounds: Dungeon = {
       ' ##########',
     ],
     pillars: [
-      { x: 8, y: 3 },
-      { x: 7, y: 9 },
+      [8, 3],
+      [7, 9],
     ],
     pits: [
-      { x: 6, y: 3 },
-      { x: 6, y: 2 },
+      [6, 3],
+      [6, 2],
     ],
     corridors: ['G', 'E', 'F'],
     doors: [
-      createTrappedHiddenDoor(Side.UP, 3, 8, 1),
-      createLockedDoor(Side.LEFT, 7, 6),
-      createTrappedDoor(Side.UP, 7, 7, 1),
-      createDoor(Side.UP, 7, 4),
-      createHiddenDoor(Side.DOWN, 2, 10),
+      [Side.UP, 3, 8, { trapped: 1, hidden: true }],
+      [Side.LEFT, 7, 6, { locked: true }],
+      [Side.UP, 7, 7, { trapped: 1 }],
+      [Side.UP, 7, 4],
+      [Side.DOWN, 2, 10, { hidden: true }],
     ],
     monsters: [
-      createMonster(MonsterType.ORC, Colour.Green, 1, 1),
-      createMonster(MonsterType.ORC, Colour.Red, 4, 9),
-      createMonster(MonsterType.TROLL, Colour.Green, 5, 1),
+      [MonsterType.ORC, Colour.Green, 1, 1],
+      [MonsterType.ORC, Colour.Red, 4, 9],
+      [MonsterType.TROLL, Colour.Green, 5, 1],
     ],
     secrets: [
-      createSecret(
+      [
         SecretType.TRAP_DOOR,
-        'campaign.iceDragon.testingGrounds.secrets.trapDoor',
         3,
         9,
-      ),
-      createSecret(
-        SecretType.EQUIPMENT,
-        'campaign.iceDragon.randomEquipment',
-        1,
-        10,
-      ),
-      createSecretWithItem(SecretType.EQUIPMENT, 5, 10, weapons[2]),
+        'campaign.iceDragon.testingGrounds.secrets.trapDoor',
+      ],
+      [SecretType.EQUIPMENT, 1, 10],
+      [SecretType.EQUIPMENT, 5, 10, weapons[2]],
     ],
     notes: [
-      {
-        position: { x: 2, y: 10 },
-        message:
-          'Some note\nto test rendering\n on game board. \nThe note is pretty long, so we g\net several lines of text. I wonder how it handles a linebreak?\nLike this apparently.',
-      },
+      [
+        2,
+        10,
+        'Some note\nto test rendering\n on game board. \nThe note is pretty long, so we g\net several lines of text. I wonder how it handles a linebreak?\nLike this apparently.',
+      ],
     ],
     items: [
-      {
-        item: magicItems[0],
-        position: { x: 3, y: 10 },
-      },
-      {
-        item: magicItems[1],
-        position: { x: 4, y: 10 },
-      },
-      {
-        item: magicItems[6],
-        position: { x: 5, y: 10 },
-      },
-      {
-        item: magicItems[2],
-        position: { x: 6, y: 10 },
-      },
-      {
-        item: magicItems[3],
-        position: { x: 7, y: 10 },
-      },
-      {
-        item: magicItems[4],
-        position: { x: 8, y: 10 },
-      },
+      [3, 10, magicItems[0]],
+      [4, 10, magicItems[1]],
+      [5, 10, magicItems[6]],
+      [6, 10, magicItems[2]],
+      [7, 10, magicItems[3]],
+      [8, 10, magicItems[4]],
     ],
   },
-  killCount: 0,
-};
+});
