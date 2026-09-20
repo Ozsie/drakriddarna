@@ -11,7 +11,7 @@ import type {
   WinCondition,
 } from '../types';
 import { ConditionType, Side } from '../types';
-import { EMPTY, findCell, WALL } from '../core/grid';
+import { EMPTY, findCell, WALL } from '../core';
 
 export interface ValidationError {
   type:
