@@ -87,13 +87,13 @@ export const e1m3: Dungeon = {
       createDoor(Side.LEFT, 11, 1),
     ],
     monsters: [
-      createMonster(MonsterType.ORCH, Colour.Yellow, 5, 5),
+      createMonster(MonsterType.ORC, Colour.Yellow, 5, 5),
       createMonsterWithInventory(MonsterType.TROLL, Colour.Yellow, 7, 3, [
         magicItems[3],
       ]),
-      createMonster(MonsterType.ORCH, Colour.Red, 7, 11),
-      createMonster(MonsterType.ORCH, Colour.Blue, 11, 2),
-      createMonster(MonsterType.ORCH, Colour.Blue, 14, 11),
+      createMonster(MonsterType.ORC, Colour.Red, 7, 11),
+      createMonster(MonsterType.ORC, Colour.Blue, 11, 2),
+      createMonster(MonsterType.ORC, Colour.Blue, 14, 11),
       createMonster(MonsterType.YELLOW_DARK_LORD, Colour.Yellow, 18, 5),
     ],
     secrets: [

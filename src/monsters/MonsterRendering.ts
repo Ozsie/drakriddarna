@@ -26,6 +26,7 @@ const renderMonster = (
     state.dungeon.layout.grid[monster.position.y][monster.position.x];
   if (monster && monster.health > 0 && isRoomDiscovered(state.dungeon, cell)) {
     switch (monster.type) {
+      case MonsterType.ORC:
       case MonsterType.ORCH:
         renderOrch(ctx, actors, cellSize, monster);
         break;

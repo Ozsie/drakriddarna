@@ -107,7 +107,7 @@ export const onUse: {
       addLog(state, 'logs.item.potionOfSpeed', {
         user: i18n(user.name),
         item: i18n(self.name),
-        actions: self.properties?.[ACTIONS_BONUS] as string,
+        actions: String(self.properties?.[ACTIONS_BONUS] ?? ''),
       });
     } else {
       addLog(state, 'logs.item.consumed', { item: i18n(self.name) });
@@ -144,6 +144,11 @@ export const onReset: {
   magicHerbsOnReset: (state: GameState, self: Item) => {
     if (self.properties) self.properties[USED] = false;
   },
+  necklaceOfLightOnReset: (state: GameState, self: Item) => {
+    if (self.properties) self.properties[USED] = false;
+    state.heroes.forEach((hero) => (hero.ignoredByMonsters = false));
+  },
+  // Backward compatibility alias
   necklaceOfLightOnUse: (state: GameState, self: Item) => {
     if (self.properties) self.properties[USED] = false;
     state.heroes.forEach((hero) => (hero.ignoredByMonsters = false));

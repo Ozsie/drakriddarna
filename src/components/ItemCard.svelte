@@ -70,7 +70,7 @@
 
 </div>
 <div class="item item-description bottom-border">
-  <b>{$t(item.name)}</b>
+  <b>{$t(item.nameTranslationKey ?? item.name)}</b>
   <span>{item.properties?.[DESCRIPTION] ? $t(String(item.properties[DESCRIPTION])) : ''}</span>
 </div>
 <div class="item item-action">

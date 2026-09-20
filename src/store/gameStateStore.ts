@@ -1,7 +1,8 @@
 import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { setLocale } from '$lib/translations';
-import type { GameState, Hero, Item } from '../types';
+import type { GameAction, GameState, Hero, Item, MoveDirection } from '../types';
+import { assertNever } from '../types';
 import {
   init,
   loadState,
@@ -138,7 +139,7 @@ export const endHeroAction = (): void => {
   syncStore(state);
 };
 
-export const moveHero = (direction: string): void => {
+export const moveHero = (direction: MoveDirection | string): void => {
   const state = get(gameStateStore);
   act(direction, state);
   syncStore(state);
@@ -223,6 +224,67 @@ export const handleCanvasClick = (
   const state = get(gameStateStore);
   doMouseLogic(event, cellSize, state);
   syncStore(state);
+};
+
+export const dispatchAction = (action: GameAction): void => {
+  switch (action.type) {
+    case 'MOVE':
+      moveHero(action.direction);
+      break;
+    case 'PICK_LOCK':
+      pickLockAction();
+      break;
+    case 'SEARCH':
+      searchAction();
+      break;
+    case 'USE_ITEM':
+      useHeroItem(action.item);
+      break;
+    case 'SELECT_TARGET':
+      if (action.target) {
+        selectTargetHero(action.target);
+      } else {
+        const state = get(gameStateStore);
+        state.targetActor = undefined;
+        syncStore(state);
+      }
+      break;
+    case 'TOGGLE_INVENTORY':
+      toggleHeroInventory(action.hero);
+      break;
+    case 'END_ACTION':
+      endHeroAction();
+      break;
+    case 'NEXT_TURN':
+      nextTurn();
+      break;
+    case 'INIT_GAME':
+      initGame();
+      break;
+    case 'LOAD_GAME':
+      loadGameState(action.state);
+      break;
+    case 'SAVE_GAME':
+      saveGame();
+      break;
+    case 'SET_DEBUG':
+      setDebug(action.debug);
+      break;
+    case 'SET_LOCALE':
+      setGameLocale(action.locale);
+      break;
+    case 'WIN_LEVEL':
+      winLevel();
+      break;
+    case 'RESET_LEVEL':
+      resetCurrentLevel();
+      break;
+    case 'GO_TO_TESTING_GROUNDS':
+      goToTestingGrounds();
+      break;
+    default:
+      assertNever(action);
+  }
 };
 
 export const dispatch = (actionFn: (state: GameState) => void): void => {

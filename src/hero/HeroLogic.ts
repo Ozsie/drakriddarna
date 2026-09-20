@@ -9,6 +9,7 @@ import type {
   Position,
   Item,
   Weapon,
+  MoveDirection,
 } from '../types';
 import { Colour, ItemType, Level, Side } from '../types';
 import { weapons } from '../items/weapons';
@@ -35,7 +36,9 @@ import { COLLAPSED, EMPTY, WALL } from '../core';
 export const newHero = (name: string, colour: Colour): Hero => {
   weapons[0].amountInDeck--;
   return {
+    id: name.toLowerCase().replace(/ /g, '_'),
     name: name,
+    nameTranslationKey: name,
     actions: 2,
     movement: 3,
     maxMovement: 3,
@@ -53,7 +56,7 @@ export const newHero = (name: string, colour: Colour): Hero => {
   };
 };
 
-export const act = (direction: string, state: GameState) => {
+export const act = (direction: MoveDirection | string, state: GameState) => {
   doReRender(state);
   const hero: Hero | undefined = state.currentActor;
   if (!hero || hero.actions === 0) {

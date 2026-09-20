@@ -1,11 +1,11 @@
-import { addLog, doReRender, i18n } from '../core/logger';
+import { addLog, doReRender, i18n } from '../core';
 import {
   hasLineOfSight,
   isRoomDiscovered,
   isSamePosition,
   isWalkable,
-} from '../core/grid';
-import { doorAsActor, takeDamage } from '../core/combat';
+} from '../core';
+import { doorAsActor, takeDamage } from '../core';
 import type { ItemLocation, GameState, Hero, Position } from '../types';
 import { ItemType, Side } from '../types';
 import {

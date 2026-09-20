@@ -68,8 +68,8 @@ export const e1m1: Dungeon = {
       createHiddenDoor(Side.RIGHT, 15, 2),
     ],
     monsters: [
-      createMonster(MonsterType.ORCH, Colour.Blue, 10, 8),
-      createMonster(MonsterType.ORCH, Colour.Red, 13, 9),
+      createMonster(MonsterType.ORC, Colour.Blue, 10, 8),
+      createMonster(MonsterType.ORC, Colour.Red, 13, 9),
       createMonster(MonsterType.TROLL, Colour.Red, 16, 2),
       createMonster(MonsterType.TROLL, Colour.Yellow, 14, 7),
     ],

@@ -35,7 +35,7 @@ export const testingGrounds: Dungeon = {
     },
     {
       type: ConditionType.KILL_ALL_OF_TYPE,
-      targetMonsterType: MonsterType.ORCH,
+      targetMonsterType: MonsterType.ORC,
       fulfilled: false,
     },
     {
@@ -128,8 +128,8 @@ export const testingGrounds: Dungeon = {
       createHiddenDoor(Side.DOWN, 2, 10),
     ],
     monsters: [
-      createMonster(MonsterType.ORCH, Colour.Green, 1, 1),
-      createMonster(MonsterType.ORCH, Colour.Red, 4, 9),
+      createMonster(MonsterType.ORC, Colour.Green, 1, 1),
+      createMonster(MonsterType.ORC, Colour.Red, 4, 9),
       createMonster(MonsterType.TROLL, Colour.Green, 5, 1),
     ],
     secrets: [

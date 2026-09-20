@@ -23,7 +23,10 @@ export const onCheckFulfilled: {
   hasNecklaceOfLight: (state: GameState, self: WinCondition): boolean => {
     const hasNecklaceOfLight = liveHeroes(state).some((hero) =>
       hero.inventory.some(
-        (item) => item && item.name === 'items.magicItems.necklaceOfLight.name',
+        (item) =>
+          item &&
+          (item.id === 'necklace_of_light' ||
+            item.name === 'items.magicItems.necklaceOfLight.name'),
       ),
     );
     if (state.settings['debug']) {
@@ -49,9 +52,12 @@ export const createSecret = (
   name: string,
   x: number,
   y: number,
+  id?: string,
 ): Secret => ({
+  id: id ?? `secret_${type.toLowerCase().replace(/ /g, '_')}_${x}_${y}`,
   type,
   name,
+  nameTranslationKey: name,
   position: { x, y },
   found: false,
 });
@@ -61,15 +67,23 @@ export const createSecretWithItem = (
   x: number,
   y: number,
   item: Item,
+  id?: string,
 ): Secret => ({
+  id:
+    id ??
+    (item.id
+      ? `secret_${item.id}_${x}_${y}`
+      : `secret_${type.toLowerCase().replace(/ /g, '_')}_${x}_${y}`),
   type,
-  name: item.name,
+  name: item.nameTranslationKey ?? item.name,
+  nameTranslationKey: item.nameTranslationKey ?? item.name,
   position: { x, y },
   found: false,
   item,
 });
 
 export const createDoor = (side: Side, x: number, y: number): Door => ({
+  id: `door_${side.toLowerCase()}_${x}_${y}`,
   side,
   x,
   y,
@@ -131,8 +145,9 @@ export const createMonsterWithInventory = (
   x: number,
   y: number,
   inventory: Item[],
+  id?: string,
 ): Monster => {
-  const monster = createMonster(type, colour, x, y);
+  const monster = createMonster(type, colour, x, y, id);
   monster.inventory = inventory;
   return monster;
 };
@@ -142,6 +157,7 @@ export const createMonster = (
   colour: Colour,
   x: number,
   y: number,
+  id?: string,
 ): Monster => {
   const indexOfColour = Object.values(Colour).indexOf(colour);
   const colourName = Object.keys(Colour)[indexOfColour];
@@ -156,7 +172,7 @@ export const createMonster = (
   let armour = monsterArmour[2];
   let rangedWeapon = undefined;
   let shield = undefined;
-  if (type === MonsterType.ORCH) {
+  if (type === MonsterType.ORC) {
     level = Level.APPRENTICE;
     defense = 0;
     health = 2;
@@ -181,7 +197,12 @@ export const createMonster = (
     shield = monsterShields[0];
   }
 
+  const monsterName = type + ' (' + colourName + ')';
+
   return {
+    id:
+      id ??
+      `${type.toLowerCase().replace(/ /g, '_')}_${colourName.toLowerCase()}_${x}_${y}`,
     type,
     level,
     colour,
@@ -194,7 +215,8 @@ export const createMonster = (
     armour,
     shield,
     rangedWeapon,
-    name: type + ' (' + colourName + ')',
+    name: monsterName,
+    nameTranslationKey: monsterName,
     movement: 3,
     maxMovement: 3,
     position: { x, y },

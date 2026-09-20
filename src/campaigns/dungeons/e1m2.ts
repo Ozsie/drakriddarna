@@ -78,10 +78,10 @@ export const e1m2: Dungeon = {
     ],
     monsters: [
       createMonster(MonsterType.TROLL, Colour.Red, 3, 7),
-      createMonster(MonsterType.ORCH, Colour.Red, 12, 8),
-      createMonster(MonsterType.ORCH, Colour.Green, 11, 1),
+      createMonster(MonsterType.ORC, Colour.Red, 12, 8),
+      createMonster(MonsterType.ORC, Colour.Green, 11, 1),
       createMonster(MonsterType.TROLL, Colour.Green, 2, 2),
-      createMonster(MonsterType.ORCH, Colour.Yellow, 18, 7),
+      createMonster(MonsterType.ORC, Colour.Yellow, 18, 7),
       createMonster(MonsterType.TROLL, Colour.Yellow, 17, 10),
     ],
     secrets: [

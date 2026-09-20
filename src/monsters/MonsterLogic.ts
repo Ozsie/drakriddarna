@@ -25,7 +25,7 @@ enum MonsterAction {
 
 const getNonDarkLordMonsters = (state: GameState) =>
   state.dungeon.layout.monsters.filter((monster) =>
-    [MonsterType.ORCH, MonsterType.TROLL].includes(monster.type),
+    [MonsterType.ORC, MonsterType.TROLL].includes(monster.type),
   );
 
 export const monsterActions = (state: GameState) => {
