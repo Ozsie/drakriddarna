@@ -13,7 +13,7 @@ import {
   isRoomDiscovered,
   isSamePosition,
   toArray,
-} from '../game';
+} from '../core/grid';
 
 export const background = '#1E1C19';
 

@@ -12,22 +12,22 @@ import type {
 } from '../types';
 import { Colour, ItemType, Level, Side } from '../types';
 import { weapons } from '../items/weapons';
+import { addLog, doReRender, i18n } from '../core/logger';
 import {
-  addLog,
-  doorAsActor,
-  doReRender,
   findCell,
   findNeighbouringHeroes,
-  getEffectiveMaxMovement,
-  i18n,
   isDiscovered,
   isNeighbouring,
   isSamePosition,
   isWalkable,
-  next,
-  roll,
+} from '../core/grid';
+import { roll } from '../core/dice';
+import {
+  canAct,
+  doorAsActor,
+  getEffectiveMaxMovement,
   takeDamage,
-} from '../game';
+} from '../core/combat';
 import { checkForTrapDoor, searchForSecret } from '../secrets/SecretsLogic';
 import { BREAK_LOCK, onDrop, onPickup } from '../items/ItemLogic';
 import { COLLAPSED, EMPTY, WALL } from '../dungeon/DungeonLogic';
@@ -177,23 +177,7 @@ export const resetLiveHeroes = (state: GameState) => {
 export const liveHeroes = (state: GameState): Hero[] =>
   state.heroes.filter((hero) => hero.health > 0).map((hero) => hero as Hero);
 
-export const endAction = (state: GameState) => {
-  doReRender(state);
-  const hero = state.currentActor;
-  if (!hero) return;
-  hero.actions--;
-  hero.movement = getEffectiveMaxMovement(hero);
-  if (hero.actions === 0) {
-    next(state);
-  }
-};
-
-export const canAct = (hero: Actor) => {
-  if (hero.movement < getEffectiveMaxMovement(hero)) {
-    return hero.actions > 1;
-  }
-  return hero.actions > 0;
-};
+export { canAct, getEffectiveMaxMovement };
 
 export const openDoor = (
   hero: Hero,

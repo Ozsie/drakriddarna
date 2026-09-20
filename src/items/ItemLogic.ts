@@ -1,12 +1,13 @@
 import type { Actor, GameState, Item } from '../types';
-import { addLog, i18n, roll } from '../game';
-import { canAct } from '../hero/HeroLogic';
+import { addLog, i18n } from '../core/logger';
+import { roll } from '../core/dice';
+import { canAct, ATTACK_BONUS, RE_ROLL_ATTACK } from '../core/combat';
 
 export const USED = 'USED';
-export const ATTACK_BONUS = 'ATTACK_BONUS';
+export { ATTACK_BONUS };
 export const SEARCH_BONUS = 'SEARCH_BONUS';
 export const BREAK_LOCK = 'BREAK_LOCK';
-export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
+export { RE_ROLL_ATTACK };
 export const DESCRIPTION = 'DESCRIPTION';
 export const ACTIVE = 'ACTIVE';
 export const MOVEMENT_BONUS = 'MOVEMENT_BONUS';

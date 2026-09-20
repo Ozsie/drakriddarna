@@ -1,6 +1,6 @@
-import type { Hero, GameState, Monster, Position } from '../types';
+import type { Actor, GameState, Monster, Position } from '../types';
 import { MonsterType } from '../types';
-import { isRoomDiscovered, stepAlongLine } from '../game';
+import { isRoomDiscovered, stepAlongLine } from '../core/grid';
 
 export const renderMonsters = (
   ctx: CanvasRenderingContext2D,
@@ -153,7 +153,7 @@ const renderHealthBar = (
 const renderLineOfSight = (
   ctx: CanvasRenderingContext2D,
   from: Monster,
-  to: Hero[],
+  to: Actor[],
   state: GameState,
   cellSize: number,
   debugMode: boolean,

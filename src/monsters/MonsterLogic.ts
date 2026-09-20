@@ -1,19 +1,16 @@
 import type { Actor, GameState, Hero, Monster, Position } from '../types';
 import { MonsterType } from '../types';
+import { addLog, doReRender, i18n } from '../core/logger';
 import {
-  addLog,
-  doReRender,
   findCell,
   findNeighbouringHeroes,
   getDist,
-  getEffectiveMaxMovement,
   hasLineOfSight,
-  i18n,
   isDiscovered,
   isRoomDiscovered,
   isWalkable,
-  takeDamage,
-} from '../game';
+} from '../core/grid';
+import { getEffectiveMaxMovement, takeDamage } from '../core/combat';
 import { liveHeroes } from '../hero/HeroLogic';
 import { distanceInGrid } from '../hero/ClickInputLogic';
 

@@ -1,5 +1,5 @@
 import type { GameState, Hero } from '../types';
-import { hasLineOfSight, isDiscovered, isWalkable } from '../game';
+import { hasLineOfSight, isDiscovered, isWalkable } from '../core/grid';
 import { isBlockedByHero, isBlockedByMonster, liveHeroes } from './HeroLogic';
 
 export const renderHeroes = (

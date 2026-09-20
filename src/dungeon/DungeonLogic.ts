@@ -12,11 +12,10 @@ import { monsterWeapons } from '../items/weapons';
 import { monsterArmour } from '../items/armours';
 import { monsterShields } from '../items/shields';
 import { liveHeroes } from '../hero/HeroLogic';
-import { addLog } from '../game';
+import { addLog } from '../core/logger';
+import { COLLAPSED, EMPTY, WALL } from '../core/grid';
 
-export const EMPTY = ' ';
-export const COLLAPSED = '?';
-export const WALL = '#';
+export { COLLAPSED, EMPTY, WALL };
 
 export const onCheckFulfilled: {
   [index: string]: (state: GameState, self: WinCondition) => boolean;
