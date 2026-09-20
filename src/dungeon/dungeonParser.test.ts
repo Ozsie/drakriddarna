@@ -20,6 +20,7 @@ import {
 } from '../types';
 import { weapons } from '../items/weapons';
 import { magicItems } from '../items/magicItems';
+import { autoDetectCorners } from './cornerDetection';
 
 describe('dungeonParser', () => {
   describe('parsePosition', () => {
@@ -189,7 +190,9 @@ describe('dungeonParser', () => {
       expect(dungeon.layout.corridors).toEqual([]);
       expect(dungeon.layout.pits).toEqual([]);
       expect(dungeon.layout.pillars).toEqual([]);
-      expect(dungeon.layout.corners).toEqual([]);
+      expect(dungeon.layout.corners).toEqual(
+        autoDetectCorners(dungeon.layout.grid),
+      );
     });
   });
 

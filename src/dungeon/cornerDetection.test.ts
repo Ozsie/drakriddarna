@@ -6,12 +6,7 @@ import { e1m0 } from '../campaigns/dungeons/e1m0';
 
 describe('Corner Detection Algorithm', () => {
   it('detects inner corners of a simple rectangular room', () => {
-    const grid = [
-      '#####',
-      '#AAA#',
-      '#AAA#',
-      '#####',
-    ];
+    const grid = ['#####', '#AAA#', '#AAA#', '#####'];
 
     expect(detectCornerType(grid, 0, 0)).toBe(CornerType.INNER_TOP_LEFT);
     expect(detectCornerType(grid, 4, 0)).toBe(CornerType.INNER_TOP_RIGHT);
@@ -81,13 +76,17 @@ describe('Corner Detection Algorithm', () => {
     expect(detectCornerType(grid, 0, 11)).toBe(CornerType.INNER_BOTTOM_LEFT);
     expect(detectCornerType(grid, 1, 11)).toBe(CornerType.OUTER_TOP_RIGHT);
     expect(detectCornerType(grid, 3, 11)).toBe(CornerType.OUTER_TOP_LEFT);
-    expect(detectCornerType(grid, 9, 11)).toBe(CornerType.THREE_WAY_INTERSECTION_UP);
+    expect(detectCornerType(grid, 9, 11)).toBe(
+      CornerType.THREE_WAY_INTERSECTION_UP,
+    );
     expect(detectCornerType(grid, 10, 11)).toBe(CornerType.INNER_TOP_RIGHT);
     expect(detectCornerType(grid, 3, 12)).toBe(CornerType.BOTTOM_END);
     expect(detectCornerType(grid, 3, 13)).toBe(CornerType.INNER_BOTTOM_RIGHT);
     expect(detectCornerType(grid, 8, 13)).toBe(CornerType.TOP_END);
     expect(detectCornerType(grid, 1, 14)).toBe(CornerType.INNER_BOTTOM_LEFT);
-    expect(detectCornerType(grid, 8, 14)).toBe(CornerType.THREE_WAY_INTERSECTION_UP);
+    expect(detectCornerType(grid, 8, 14)).toBe(
+      CornerType.THREE_WAY_INTERSECTION_UP,
+    );
     expect(detectCornerType(grid, 10, 14)).toBe(CornerType.INNER_BOTTOM_RIGHT);
 
     expect(detected.length).toBeGreaterThanOrEqual(20);

@@ -68,16 +68,32 @@ export const detectCornerType = (
   }
 
   // 3. Outer (Convex) Corners
-  if ((fN && fE && !fW && !fS) || (fN && fNE && (fE || !wE) && !fNW && (wW || eW)) || (fE && fNE && (fN || !wN) && !fSE && (wS || eS))) {
+  if (
+    (fN && fE && !fW && !fS) ||
+    (fN && fNE && (fE || !wE) && !fNW && (wW || eW)) ||
+    (fE && fNE && (fN || !wN) && !fSE && (wS || eS))
+  ) {
     return CornerType.OUTER_TOP_RIGHT;
   }
-  if ((fN && fW && !fE && !fS) || (fN && fNW && (fW || !wW) && !fNE && (wE || eE)) || (fW && fNW && (fN || !wN) && !fSW && (wS || eS))) {
+  if (
+    (fN && fW && !fE && !fS) ||
+    (fN && fNW && (fW || !wW) && !fNE && (wE || eE)) ||
+    (fW && fNW && (fN || !wN) && !fSW && (wS || eS))
+  ) {
     return CornerType.OUTER_TOP_LEFT;
   }
-  if ((fS && fE && !fW && !fN) || (fS && fSE && (fE || !wE) && !fSW && (wW || eW)) || (fE && fSE && (fS || !wS) && !fNE && (wN || eN))) {
+  if (
+    (fS && fE && !fW && !fN) ||
+    (fS && fSE && (fE || !wE) && !fSW && (wW || eW)) ||
+    (fE && fSE && (fS || !wS) && !fNE && (wN || eN))
+  ) {
     return CornerType.OUTER_BOTTOM_RIGHT;
   }
-  if ((fS && fW && !fE && !fN) || (fS && fSW && (fW || !wW) && !fSE && (wE || eE)) || (fW && fSW && (fS || !wS) && !fNW && (wN || eN))) {
+  if (
+    (fS && fW && !fE && !fN) ||
+    (fS && fSW && (fW || !wW) && !fSE && (wE || eE)) ||
+    (fW && fSW && (fS || !wS) && !fNW && (wN || eN))
+  ) {
     return CornerType.OUTER_BOTTOM_LEFT;
   }
 
@@ -119,16 +135,52 @@ export const detectCornerType = (
   }
 
   // Edge boundary inner corners (borders of map / void)
-  if (fSE && (eN || wN) && (eW || wW) && !fN && !fW && !fNW && (!fS || (eN && eW)) && (!fE || (eN && eW))) {
+  if (
+    fSE &&
+    (eN || wN) &&
+    (eW || wW) &&
+    !fN &&
+    !fW &&
+    !fNW &&
+    (!fS || (eN && eW)) &&
+    (!fE || (eN && eW))
+  ) {
     return CornerType.INNER_TOP_LEFT;
   }
-  if (fSW && (eN || wN) && (eE || wE) && !fN && !fE && !fNE && (!fS || (eN && eE)) && (!fW || (eN && eE))) {
+  if (
+    fSW &&
+    (eN || wN) &&
+    (eE || wE) &&
+    !fN &&
+    !fE &&
+    !fNE &&
+    (!fS || (eN && eE)) &&
+    (!fW || (eN && eE))
+  ) {
     return CornerType.INNER_TOP_RIGHT;
   }
-  if (fNE && (eS || wS) && (eW || wW) && !fS && !fW && !fSW && (!fN || (eS && eW)) && (!fE || (eS && eW))) {
+  if (
+    fNE &&
+    (eS || wS) &&
+    (eW || wW) &&
+    !fS &&
+    !fW &&
+    !fSW &&
+    (!fN || (eS && eW)) &&
+    (!fE || (eS && eW))
+  ) {
     return CornerType.INNER_BOTTOM_LEFT;
   }
-  if (fNW && (eS || wS) && (eE || wE) && !fS && !fE && !fSE && (!fN || (eS && eE)) && (!fW || (eS && eE))) {
+  if (
+    fNW &&
+    (eS || wS) &&
+    (eE || wE) &&
+    !fS &&
+    !fE &&
+    !fSE &&
+    (!fN || (eS && eE)) &&
+    (!fW || (eS && eE))
+  ) {
     return CornerType.INNER_BOTTOM_RIGHT;
   }
 

@@ -1,9 +1,4 @@
-import {
-  Colour,
-  ConditionType,
-  MonsterType,
-  Side,
-} from '../../types';
+import { Colour, ConditionType, MonsterType, Side } from '../../types';
 import type { Dungeon } from '../../types';
 import { defineDungeon } from '../../dungeon/DungeonLogic';
 import { e1m1 } from './e1m1';
