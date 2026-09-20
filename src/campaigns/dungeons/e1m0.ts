@@ -1,7 +1,6 @@
 import {
   Colour,
   ConditionType,
-  CornerType,
   MonsterType,
   Side,
 } from '../../types';
@@ -26,26 +25,6 @@ export const e1m0: Dungeon = defineDungeon({
   ],
   discoveredRooms: ['A'],
   layout: {
-    corners: [
-      { position: { x: 5, y: 0 }, type: CornerType.INNER_TOP_LEFT },
-      { position: { x: 10, y: 0 }, type: CornerType.INNER_BOTTOM_RIGHT },
-      { position: { x: 5, y: 4 }, type: CornerType.INNER_BOTTOM_LEFT },
-      { position: { x: 6, y: 4 }, type: CornerType.OUTER_TOP_RIGHT },
-      { position: { x: 8, y: 4 }, type: CornerType.OUTER_TOP_LEFT },
-      { position: { x: 10, y: 4 }, type: CornerType.INNER_BOTTOM_RIGHT },
-      { position: { x: 8, y: 6 }, type: CornerType.OUTER_BOTTOM_LEFT },
-      { position: { x: 9, y: 6 }, type: CornerType.INNER_TOP_RIGHT },
-      { position: { x: 0, y: 7 }, type: CornerType.INNER_TOP_LEFT },
-      { position: { x: 4, y: 7 }, type: CornerType.INNER_TOP_RIGHT },
-      { position: { x: 4, y: 8 }, type: CornerType.OUTER_BOTTOM_LEFT },
-      { position: { x: 6, y: 8 }, type: CornerType.OUTER_BOTTOM_RIGHT },
-      { position: { x: 4, y: 10 }, type: CornerType.OUTER_TOP_LEFT },
-      { position: { x: 6, y: 10 }, type: CornerType.OUTER_TOP_RIGHT },
-      { position: { x: 0, y: 11 }, type: CornerType.INNER_BOTTOM_LEFT },
-      { position: { x: 4, y: 11 }, type: CornerType.INNER_BOTTOM_RIGHT },
-      { position: { x: 6, y: 11 }, type: CornerType.INNER_BOTTOM_LEFT },
-      { position: { x: 9, y: 11 }, type: CornerType.INNER_BOTTOM_RIGHT },
-    ],
     grid: [
       '     ######',
       '     #CCCC#',

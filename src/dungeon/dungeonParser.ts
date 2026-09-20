@@ -26,6 +26,7 @@ import {
   createTrappedLockedDoor,
 } from './DungeonLogic';
 import { assertValidDungeon } from './dungeonValidator';
+import { autoDetectCorners } from './cornerDetection';
 
 export type PositionTuple = [x: number, y: number];
 
@@ -392,7 +393,7 @@ export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
   corridors: layoutDef.corridors ?? [],
   pillars: (layoutDef.pillars ?? []).map(parsePosition),
   pits: (layoutDef.pits ?? []).map(parsePosition),
-  corners: layoutDef.corners ?? [],
+  corners: autoDetectCorners(layoutDef.grid),
 });
 
 export const defineDungeon = (
