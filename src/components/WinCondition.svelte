@@ -3,7 +3,7 @@
   import { ConditionType } from '../types';
   import { t } from '$lib/translations';
   import { gameStateStore } from '../store/gameStateStore';
-  import { i18n } from '../core/logger';
+  import { i18n } from '../core';
 
   export let condition: WinCondition;
   export let state: GameState | undefined = undefined;

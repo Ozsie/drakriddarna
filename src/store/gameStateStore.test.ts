@@ -26,7 +26,7 @@ import {
   goToTestingGrounds,
   dispatch,
 } from './gameStateStore';
-import { debouncedSaveReloadGuard, saveReloadGuard } from '../core/logger';
+import { debouncedSaveReloadGuard, saveReloadGuard } from '../core';
 import type { Hero } from '../types';
 import { init } from '../game';
 

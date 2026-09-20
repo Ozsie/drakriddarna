@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { GameState, LogEvent } from '../types';
   import { t } from '$lib/translations';
-  import { gameStateStore, actionLogs } from '../store/gameStateStore';
+  import { actionLogs } from '../store/gameStateStore';
 
   export let state: GameState | undefined = undefined;
 

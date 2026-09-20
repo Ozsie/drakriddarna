@@ -12,7 +12,7 @@ import type {
 } from '../types';
 import { Colour, ItemType, Level, Side } from '../types';
 import { weapons } from '../items/weapons';
-import { addLog, doReRender, i18n } from '../core/logger';
+import { addLog, doReRender, i18n } from '../core';
 import {
   findCell,
   findNeighbouringHeroes,
@@ -20,17 +20,17 @@ import {
   isNeighbouring,
   isSamePosition,
   isWalkable,
-} from '../core/grid';
-import { roll } from '../core/dice';
+} from '../core';
+import { roll } from '../core';
 import {
   canAct,
   doorAsActor,
   getEffectiveMaxMovement,
   takeDamage,
-} from '../core/combat';
+} from '../core';
 import { checkForTrapDoor, searchForSecret } from '../secrets/SecretsLogic';
 import { BREAK_LOCK, onDrop, onPickup } from '../items/ItemLogic';
-import { COLLAPSED, EMPTY, WALL } from '../dungeon/DungeonLogic';
+import { COLLAPSED, EMPTY, WALL } from '../core';
 
 export const newHero = (name: string, colour: Colour): Hero => {
   weapons[0].amountInDeck--;

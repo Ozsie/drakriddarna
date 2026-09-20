@@ -1,6 +1,6 @@
 import type { Actor, GameState, Monster, Position } from '../types';
 import { MonsterType } from '../types';
-import { isRoomDiscovered, stepAlongLine } from '../core/grid';
+import { isRoomDiscovered, stepAlongLine } from '../core';
 
 export const renderMonsters = (
   ctx: CanvasRenderingContext2D,

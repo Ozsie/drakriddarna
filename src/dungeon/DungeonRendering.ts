@@ -6,14 +6,14 @@ import {
   SecretType,
   Side,
 } from '../types';
-import { COLLAPSED, EMPTY, WALL } from './DungeonLogic';
+import { COLLAPSED, EMPTY, WALL } from '../core';
 import {
   findCell,
   isDiscovered,
   isRoomDiscovered,
   isSamePosition,
   toArray,
-} from '../core/grid';
+} from '../core';
 
 export const background = '#1E1C19';
 

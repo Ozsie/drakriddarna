@@ -18,9 +18,9 @@ import {
   resetEventEffects,
 } from './events/EventsLogic';
 import { browser } from '$app/environment';
-import { addLog, doReRender, i18n } from './core/logger';
-import { shuffle } from './core/dice';
-import { getEffectiveMaxMovement } from './core/combat';
+import { addLog, doReRender, i18n } from './core';
+import { shuffle } from './core';
+import { getEffectiveMaxMovement } from './core';
 
 // Re-export core modules for backwards compatibility and ease of access
 export {

@@ -22,7 +22,7 @@ import { useItem } from '../items/ItemLogic';
 import { findVisibleMonsters } from '../monsters/MonsterLogic';
 import { doMouseLogic } from '../hero/ClickInputLogic';
 import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
-import { saveReloadGuard, debouncedSaveReloadGuard } from '../core/logger';
+import { saveReloadGuard, debouncedSaveReloadGuard } from '../core';
 
 const getInitialState = (): GameState => {
   if (browser) {

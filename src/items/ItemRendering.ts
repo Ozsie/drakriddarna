@@ -1,7 +1,7 @@
 import type { GameState, ItemLocation } from '../types';
 import { ItemType } from '../types';
-import { i18n } from '../core/logger';
-import { isDiscovered, isSamePosition } from '../core/grid';
+import { i18n } from '../core';
+import { isDiscovered, isSamePosition } from '../core';
 import { renderTextBox } from '../notes/NotesRendering';
 
 export const renderItems = (

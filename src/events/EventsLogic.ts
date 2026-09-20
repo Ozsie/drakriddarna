@@ -5,10 +5,10 @@ import {
   isBlockedByMonster,
   liveHeroes,
 } from '../hero/HeroLogic';
-import { addLog, i18n } from '../core/logger';
-import { roll } from '../core/dice';
-import { findCell, isRoomDiscovered, toArray } from '../core/grid';
-import { takeDamage } from '../core/combat';
+import { addLog, i18n } from '../core';
+import { roll } from '../core';
+import { findCell, isRoomDiscovered, toArray } from '../core';
+import { takeDamage } from '../core';
 import { COLLAPSED, createMonster } from '../dungeon/DungeonLogic';
 import { events } from './events';
 import { ACTIVE, onDrop, onPickup } from '../items/ItemLogic';

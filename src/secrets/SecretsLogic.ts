@@ -1,9 +1,9 @@
 import type { Actor, GameState, Hero, Item, Position, Secret } from '../types';
 import { Colour, ItemType, Level, SecretType } from '../types';
-import { addLog, i18n } from '../core/logger';
-import { isNeighbouring, isSamePosition } from '../core/grid';
-import { roll } from '../core/dice';
-import { takeDamage } from '../core/combat';
+import { addLog, i18n } from '../core';
+import { isNeighbouring, isSamePosition } from '../core';
+import { roll } from '../core';
+import { takeDamage } from '../core';
 import { pickupItem } from '../hero/HeroLogic';
 import { onPickup, SEARCH_BONUS } from '../items/ItemLogic';
 

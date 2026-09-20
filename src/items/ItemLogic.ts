@@ -1,7 +1,7 @@
 import type { Actor, GameState, Item } from '../types';
-import { addLog, i18n } from '../core/logger';
-import { roll } from '../core/dice';
-import { canAct, ATTACK_BONUS, RE_ROLL_ATTACK } from '../core/combat';
+import { addLog, i18n } from '../core';
+import { roll } from '../core';
+import { canAct, ATTACK_BONUS, RE_ROLL_ATTACK } from '../core';
 
 export const USED = 'USED';
 export { ATTACK_BONUS };

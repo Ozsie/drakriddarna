@@ -1,9 +1,8 @@
 <script lang="ts">
   import ItemCard from './ItemCard.svelte';
   import type { GameState, Item } from '../types';
-  import { t } from '$lib/translations';
   import { gameStateStore, currentHero } from '../store/gameStateStore';
-  import { i18n } from '../core/logger';
+  import { i18n } from '../core';
 
   export let inventory: Item[] | undefined = undefined;
   export let state: GameState | undefined = undefined;

@@ -2,7 +2,7 @@
   import { t } from '$lib/translations/index.js';
   import type { GameState } from '../types';
   import { gameStateStore } from '../store/gameStateStore';
-  import { i18n } from '../core/logger';
+  import { i18n } from '../core';
 
   export let state: GameState | undefined = undefined;
 
