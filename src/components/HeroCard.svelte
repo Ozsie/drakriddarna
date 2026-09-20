@@ -2,38 +2,41 @@
   import type { GameState, Hero } from "../types";
   import Inventory from "./Inventory.svelte";
   import { t } from '$lib/translations';
-  export let hero: Hero;
-  export let state: GameState;
+  import { gameStateStore, selectTargetHero, toggleHeroInventory } from '../store/gameStateStore';
 
-  let inventoryDisplayType = "none"
+  export let hero: Hero;
+  export let state: GameState | undefined = undefined;
+
+  $: activeState = state ?? $gameStateStore;
+  $: isTarget = activeState.targetActor?.name === hero.name;
+  $: isCurrent = activeState.currentActor?.name === hero.name;
+
+  let inventoryDisplayType = hero.isInventoryOpen ? "inline-block" : "none";
+  $: inventoryDisplayType = hero.isInventoryOpen ? "inline-block" : "none";
 
   const selectTarget = (target: Hero) => {
-    if (state.targetActor && target === state.targetActor) {
-      state.targetActor = undefined;
+    if (state) {
+      if (state.targetActor && state.targetActor.name === target.name) {
+        state.targetActor = undefined;
+      } else {
+        state.targetActor = target;
+      }
+      gameStateStore.set(state);
     } else {
-      state.targetActor = target;
+      selectTargetHero(target);
     }
-  }
+  };
 
   const toggleInventory = (currentHero: Hero) => {
-    const inventoryDiv: HTMLDivElement = document.getElementById(currentHero.name+"s-inventory") as HTMLDivElement;
-    if(!inventoryDiv) return;
-
-    currentHero.isInventoryOpen = !currentHero.isInventoryOpen;
-    setInventoryDisplayType();
-    inventoryDiv.style.display = inventoryDisplayType;
-  }
-
-  const setInventoryDisplayType = () => {
-    if(hero.isInventoryOpen){
-      inventoryDisplayType = "inline-block";
+    if (state) {
+      currentHero.isInventoryOpen = !currentHero.isInventoryOpen;
+      gameStateStore.set(state);
     } else {
-      inventoryDisplayType = "none";
+      toggleHeroInventory(currentHero);
     }
-  }
-
-  setInventoryDisplayType();
+  };
 </script>
+
 <style>
     .hero-card {
         font-size: 0.9em;
@@ -95,17 +98,15 @@
       }
     }
 </style>
-{#key state.targetActor}
+
 <div class="hero-card" style="background-color: {hero.colour};" >
   <div class="hero-title">
-    <b>{#if state.targetActor === hero}*{/if}{$t(hero.name)} -
+    <b>{#if isTarget}*{/if}{$t(hero.name)} -
     {$t('content.level.' + hero.level)} ({hero.experience})</b>
   </div>
-  <!-- {#if state.currentActor == hero} -->
   <div>
-
     <button on:click={() => selectTarget(hero)} title="select target hero">
-      {#if state.targetActor !== hero}
+      {#if !isTarget}
       ⛶
       {:else}
       ☑
@@ -113,14 +114,11 @@
     </button>
     <button on:click={() => toggleInventory(hero)} title="Open inventory">🎒</button>
   </div>
-  <!-- {/if} -->
   
   <div class="hero-information">
-    {#if state.currentActor === hero}
+    {#if isCurrent}
     <div class="hero-inventory" id="{hero.name}s-inventory" style="display: {inventoryDisplayType};">
-      
-      <Inventory bind:inventory={hero.inventory} state={state}/>
-      
+      <Inventory inventory={hero.inventory} state={activeState}/>
     </div>
     {/if}
   </div>
@@ -128,7 +126,7 @@
   <div>
     <span>{$t('content.hero.hp')}: {hero.health}</span>
 
-    {#if state.currentActor === hero}
+    {#if isCurrent}
     <span>{$t('content.hero.actions')}: {hero.actions}</span>
     <span>{$t('content.hero.moves')}: {hero.movement}</span>
     <span>{$t('content.hero.equipment')}: </span>
@@ -155,5 +153,3 @@
   </div>
   
 </div>
-
-{/key}

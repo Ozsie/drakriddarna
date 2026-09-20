@@ -1,26 +1,17 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import type { GameState, LogEvent } from '../types';
   import { t } from '$lib/translations';
+  import { gameStateStore, actionLogs } from '../store/gameStateStore';
 
-  export let state: GameState;
-  let uglyUpdateToggle = false;
+  export let state: GameState | undefined = undefined;
 
-  onMount(() => {
-    render();
-    setInterval(render, 500);
-  });
-  const render = () => {
-    if (state.reRender) {
-      uglyUpdateToggle = !uglyUpdateToggle;
-    }
-    if (!state || !document) return;
-  };
+  $: logs = state ? state.actionLog : $actionLogs;
 
   const renderLog = (log: LogEvent) => {
     return `(${log.turn}) ${$t(log.key, log.properties)}`;
-  }
+  };
 </script>
+
 <style>
     @media screen and (max-width: 600px) {
         .log {
@@ -50,12 +41,11 @@
         }
     }
 </style>
+
 <div class="log">
-  {#key uglyUpdateToggle}
-    {#each state.actionLog as log, index}
-      {#if index < 25}
-        <p>>{renderLog(log)}</p>
-      {/if}
-    {/each}
-  {/key}
+  {#each logs as log, index}
+    {#if index < 25}
+      <p>>{renderLog(log)}</p>
+    {/if}
+  {/each}
 </div>

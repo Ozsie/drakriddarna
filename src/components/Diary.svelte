@@ -1,8 +1,14 @@
 <script lang="ts">
   import { t } from '$lib/translations/index.js';
   import type { GameState } from '../types';
-  export let state: GameState;
+  import { gameStateStore } from '../store/gameStateStore';
+  import { i18n } from '../core/logger';
+
+  export let state: GameState | undefined = undefined;
+
+  $: activeState = state ?? $gameStateStore;
 </script>
+
 <style>
   .header {
       font-size: 10pt;
@@ -44,12 +50,13 @@
       }
   }
 </style>
+
 <div>
-  <span>{$t('content.diary.label', { turn: state.turnCount })} </span>
-  {#each state.dungeon.layout.notes as note}
+  <span>{i18n('content.diary.label', { turn: `${activeState.turnCount ?? 0}` })} </span>
+  {#each activeState.dungeon.layout.notes as note}
     {#if note.found}
       <hr/>
-      <p class='header'>{$t('content.diary.foundOn', { round: note.foundOn })}</p>
+      <p class='header'>{i18n('content.diary.foundOn', { round: `${note.foundOn ?? ''}` })}</p>
       <p class='note'>{$t(note.message)}</p>
     {/if}
   {/each}

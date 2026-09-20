@@ -58,7 +58,6 @@
     "foundDoor": "{{hero}} searched ({{result}}) and found a hidden door.",
     "foundTrapInDoor": "{{hero}} searched ({{result}}) and found a trap in a door.",
     "foundSecret": "{{hero}} searched ({{result}}) and found {{secret}}."
-
   },
   "item": {
     "cannotUse": "{{item}} cannot be used at this moment.",

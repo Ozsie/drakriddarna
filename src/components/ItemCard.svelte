@@ -2,12 +2,22 @@
   import type { GameState, Item } from "../types";
   import { ACTIVE, DESCRIPTION, USED, useItem } from '../items/ItemLogic';
   import { t } from '$lib/translations';
+  import { gameStateStore, useHeroItem } from '../store/gameStateStore';
 
-  export let item: Item
-  export let state: GameState
+  export let item: Item;
+  export let state: GameState | undefined = undefined;
+
+  const onUseItem = () => {
+    if (state) {
+      useItem(state, item);
+      gameStateStore.set(state);
+    } else {
+      useHeroItem(item);
+    }
+  };
 </script>
-<style>
 
+<style>
   .bottom-border{
     border-bottom: 1px solid rgb(201, 138, 80);
   }
@@ -40,7 +50,7 @@
   {
     display: block; 
     font-size: 11px;
-    text-wrap: wrap;
+    word-wrap: break-word;
   }
   .item-description b
   {
@@ -54,20 +64,19 @@
     font-size: 10px;
     padding: 1px;
   }
-  
 </style>
 
-  <div class="item item-icon">
-  
-  </div>
-  <div class="item item-description bottom-border">
-    <b>{$t(item.name)}</b>
-    <span>{$t(item.properties?.[DESCRIPTION])}</span>
-  </div>
-  <div class="item item-action">
-  {#if item.properties?.[ACTIVE] && !item.properties?.[USED]}
-    <button on:click={() => useItem(state, item)}>{$t('content.inventory.use')}</button>
-  {:else if item.properties?.[ACTIVE]}
-    <button disabled>{$t('content.inventory.uses')}</button>
-  {/if}
-  </div>
+<div class="item item-icon">
+
+</div>
+<div class="item item-description bottom-border">
+  <b>{$t(item.name)}</b>
+  <span>{item.properties?.[DESCRIPTION] ? $t(String(item.properties[DESCRIPTION])) : ''}</span>
+</div>
+<div class="item item-action">
+{#if item.properties?.[ACTIVE] && !item.properties?.[USED]}
+  <button on:click={onUseItem}>{$t('content.inventory.use')}</button>
+{:else if item.properties?.[ACTIVE]}
+  <button disabled>{$t('content.inventory.uses')}</button>
+{/if}
+</div>

@@ -1,29 +1,10 @@
 <script lang="ts">
-  import { doReRender, init, loadState } from '../game';
   import Dungeon from '../components/Dungeon.svelte';
   import Characters from '../components/Characters.svelte';
   import Log from '../components/Log.svelte';
   import ButtonPad from '../components/ButtonPad.svelte';
-  import type { GameState } from '../types';
-  import buildInfo from '$lib/buildInfo.json'
-  import { browser } from '$app/environment';
-  import { setLocale } from '$lib/translations';
+  import buildInfo from '$lib/buildInfo.json';
   import Diary from '../components/Diary.svelte';
-
-  let state: GameState;
-  let reloadGuard: string | null = null;
-  if (browser) {
-    reloadGuard = localStorage.getItem('reloadGuard');
-  }
-  if (reloadGuard) {
-    state = loadState(JSON.parse(reloadGuard) as GameState);
-    doReRender(state);
-  } else {
-    state = init();
-    doReRender(state);
-  }
-  setLocale(state.settings['locale'] as string);
-  let debugMode: boolean = state.settings['debug'] as boolean;
 </script>
 
 <style>
@@ -56,12 +37,12 @@
 
 <div class='container'>
   <div class="characterSide">
-    <Characters {state}/>
-    <Diary {state}/>
+    <Characters />
+    <Diary />
   </div>
-  <Dungeon bind:state={state} bind:debugMode={debugMode} />
+  <Dungeon />
 </div>
 <div class='container' id='footer'>
-  <ButtonPad bind:state={state} bind:debugMode={debugMode} buildInfo={buildInfo} />
-  <Log bind:state={state} />
+  <ButtonPad buildInfo={buildInfo} />
+  <Log />
 </div>

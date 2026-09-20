@@ -1,44 +1,40 @@
 <script lang="ts">
-  import ItemCard from "./ItemCard.svelte";
-  import type { GameState, Item } from "../types";
-  import { onMount } from "svelte";
-  import { t } from '$lib/translations'
-  export let inventory: Item[];
-  export let state: GameState;
-  let uglyUpdateToggle = false;
+  import ItemCard from './ItemCard.svelte';
+  import type { GameState, Item } from '../types';
+  import { t } from '$lib/translations';
+  import { gameStateStore, currentHero } from '../store/gameStateStore';
+  import { i18n } from '../core/logger';
 
-  onMount(() => {
-    render();
-    setInterval(render, 100)
+  export let inventory: Item[] | undefined = undefined;
+  export let state: GameState | undefined = undefined;
+
+  $: activeState = state ?? $gameStateStore;
+  $: activeHero = state ? state.currentActor : $currentHero;
+  $: items = inventory ?? activeHero?.inventory ?? [];
+  $: inventoryLabel = i18n('content.inventory.label', {
+    hero: activeHero?.name ? i18n(activeHero.name) : '',
   });
-
-  const render = () => {
-    uglyUpdateToggle = !uglyUpdateToggle;
-    if (!inventory || !document) return;
-  };
 </script>
+
 <style>
   .inventory {
     display: grid;
     width: 99%; 
     overflow:hidden;
     margin: 2px 4px; 
-
   }
-
 
   h4 {
     display: inline-block;
     margin-left: 50px;
   }
 </style>
-<h4>{$t('content.inventory.label', { hero: $t(state.currentActor?.name) })}</h4>
+
+<h4>{inventoryLabel}</h4>
 <div class="inventory">
-  {#key uglyUpdateToggle}
-    {#each inventory as item}
-      {#if item}
-        <ItemCard bind:item={item} state={state} />
-      {/if}
-    {/each}
-  {/key}
+  {#each items as item}
+    {#if item}
+      <ItemCard {item} state={activeState} />
+    {/if}
+  {/each}
 </div>

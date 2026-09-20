@@ -23,7 +23,13 @@ import { shuffle } from './core/dice';
 import { getEffectiveMaxMovement } from './core/combat';
 
 // Re-export core modules for backwards compatibility and ease of access
-export { i18n, doReRender, addLog } from './core/logger';
+export {
+  i18n,
+  doReRender,
+  addLog,
+  saveReloadGuard,
+  debouncedSaveReloadGuard,
+} from './core/logger';
 export { roll, shuffle, setRng, resetRng, createSeededRng } from './core/dice';
 export {
   COLLAPSED,
@@ -54,7 +60,9 @@ export {
 
 export const save = (state: GameState) => {
   doReRender(state);
-  localStorage.setItem('state', JSON.stringify(state));
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('state', JSON.stringify(state));
+  }
   addLog(state, 'logs.gameSaved');
 };
 
@@ -68,10 +76,12 @@ export const loadState = (newState: GameState) => {
 };
 
 export const load = (currentState: GameState): GameState => {
-  const stateString = localStorage.getItem('state');
-  if (stateString) {
-    const state: GameState = JSON.parse(stateString) as GameState;
-    return loadState(state);
+  if (typeof localStorage !== 'undefined') {
+    const stateString = localStorage.getItem('state');
+    if (stateString) {
+      const state: GameState = JSON.parse(stateString) as GameState;
+      return loadState(state);
+    }
   }
   addLog(currentState, 'logs.loadFailed');
   return currentState;
@@ -188,27 +198,29 @@ export const endAction = (state: GameState) => {
 };
 
 export const resetLevel = (currentState: GameState): GameState => {
-  const loadedRawState = localStorage.getItem('autosave');
-  if (loadedRawState) {
-    const state: GameState = JSON.parse(loadedRawState) as GameState;
-    doReRender(state);
+  if (typeof localStorage !== 'undefined') {
+    const loadedRawState = localStorage.getItem('autosave');
+    if (loadedRawState) {
+      const state: GameState = JSON.parse(loadedRawState) as GameState;
+      doReRender(state);
 
-    replaceDeadHeroes(state);
-    resetLiveHeroes(state);
-    resetOnNextDungeon(state);
-    resetOnNext(state);
-    scrollTo(
-      {
-        x: state.dungeon.startingPositions[0].x,
-        y: state.dungeon.startingPositions[0].y,
-      },
-      state.settings['cellSize'] as number,
-    );
-    state.currentActor = state.heroes.find(
-      (hero) => hero.name === state.currentActor?.name,
-    ) as Hero | undefined;
-    addLog(state, 'logs.allHeroesDead');
-    return state;
+      replaceDeadHeroes(state);
+      resetLiveHeroes(state);
+      resetOnNextDungeon(state);
+      resetOnNext(state);
+      scrollTo(
+        {
+          x: state.dungeon.startingPositions[0].x,
+          y: state.dungeon.startingPositions[0].y,
+        },
+        state.settings['cellSize'] as number,
+      );
+      state.currentActor = state.heroes.find(
+        (hero) => hero.name === state.currentActor?.name,
+      ) as Hero | undefined;
+      addLog(state, 'logs.allHeroesDead');
+      return state;
+    }
   }
   addLog(currentState, 'logs.failedToReset');
   return currentState;
@@ -312,6 +324,8 @@ export const hasWon = (state: GameState) => {
       },
       state.settings['cellSize'] as number,
     );
-    localStorage.setItem('autosave', JSON.stringify(state));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('autosave', JSON.stringify(state));
+    }
   }
 };

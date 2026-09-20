@@ -1,24 +1,16 @@
 <script lang="ts">
   import HeroCard from './HeroCard.svelte';
-  import { onMount } from 'svelte';
+  import { liveHeroesStore, currentHero, gameStateStore } from '../store/gameStateStore';
   import { liveHeroes } from '../hero/HeroLogic';
   import type { GameState } from '../types';
 
-  export let state: GameState;
-  let uglyUpdateToggle = false;
-  
-  onMount(() => {
-    render();
-    setInterval(render, 100)
-  });
+  export let state: GameState | undefined = undefined;
 
-  const render = () => {
-    if (state.reRender) {
-      uglyUpdateToggle = !uglyUpdateToggle;
-    }
-    if (!state || !document) return;
-  };
+  $: activeState = state ?? $gameStateStore;
+  $: heroes = state ? liveHeroes(state) : $liveHeroesStore;
+  $: currHero = state ? state.currentActor : $currentHero;
 </script>
+
 <style>
     @media screen and (max-width: 600px) {
         .is-current-actor{
@@ -60,16 +52,15 @@
         }
     }
 </style>
-{#each liveHeroes(state) as hero, i}
-  {#key uglyUpdateToggle}
-    {#if hero === state.currentActor}
+
+{#each heroes as hero (hero.name)}
+  {#if hero.name === currHero?.name}
     <div class="is-current-actor">
-      <HeroCard hero={hero} state={state}/>
+      <HeroCard {hero} state={activeState}/>
     </div>
-    {:else}
+  {:else}
     <div class="not-current-actor">
-      <HeroCard hero={hero} state={state}/>
+      <HeroCard {hero} state={activeState}/>
     </div>
-    {/if}
-  {/key}
+  {/if}
 {/each}
