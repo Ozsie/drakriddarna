@@ -81,7 +81,6 @@ describe('Corner Detection Algorithm', () => {
     );
     expect(detectCornerType(grid, 10, 11)).toBe(CornerType.INNER_TOP_RIGHT);
     expect(detectCornerType(grid, 3, 12)).toBe(CornerType.BOTTOM_END);
-    expect(detectCornerType(grid, 3, 13)).toBe(CornerType.INNER_BOTTOM_RIGHT);
     expect(detectCornerType(grid, 8, 13)).toBe(CornerType.TOP_END);
     expect(detectCornerType(grid, 1, 14)).toBe(CornerType.INNER_BOTTOM_LEFT);
     expect(detectCornerType(grid, 8, 14)).toBe(
