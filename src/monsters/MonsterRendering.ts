@@ -1,6 +1,7 @@
 import type { Actor, GameState, Monster, Position } from '../types';
 import { MonsterType } from '../types';
 import { isRoomDiscovered, stepAlongLine } from '../core';
+import { drawCachedTile } from '../dungeon/TileTextureCache';
 
 export const renderMonsters = (
   ctx: CanvasRenderingContext2D,
@@ -49,7 +50,8 @@ const renderOrch = (
   cellSize: number,
   monster: Monster,
 ) => {
-  ctx.drawImage(
+  drawCachedTile(
+    ctx,
     actors,
     cellSize,
     16,
@@ -68,7 +70,8 @@ const renderTroll = (
   cellSize: number,
   monster: Monster,
 ) => {
-  ctx.drawImage(
+  drawCachedTile(
+    ctx,
     actors,
     cellSize,
     16,
@@ -87,7 +90,8 @@ const renderDefaultMonster = (
   cellSize: number,
   monster: Monster,
 ) => {
-  ctx.drawImage(
+  drawCachedTile(
+    ctx,
     actors,
     16,
     16,

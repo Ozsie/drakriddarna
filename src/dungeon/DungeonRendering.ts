@@ -14,6 +14,7 @@ import {
   isSamePosition,
   toArray,
 } from '../core';
+import { drawCachedTile } from './TileTextureCache';
 
 export const background = '#1E1C19';
 
@@ -113,7 +114,8 @@ const drawTile = (
     state.dungeon.discoveredRooms.some((r) => neighbourOf(x, y, r, state)) ||
     neighbourOf(x, y, COLLAPSED, state)
   ) {
-    ctx.drawImage(
+    drawCachedTile(
+      ctx,
       ground,
       xPos * 48,
       yPos * 48,
@@ -398,7 +400,8 @@ const renderTrapDoor = (
 ) => {
   const x = secret.position.x;
   const y = secret.position.y;
-  ctx.drawImage(
+  drawCachedTile(
+    ctx,
     ground,
     48 * 6,
     48 * 7,
@@ -419,7 +422,8 @@ const renderFoundSecret = (
 ) => {
   const x = secret.position.x;
   const y = secret.position.y;
-  ctx.drawImage(
+  drawCachedTile(
+    ctx,
     ground,
     4 * 48,
     0,

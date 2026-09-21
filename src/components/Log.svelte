@@ -21,7 +21,7 @@
     border-radius: var(--radius-sm, 4px);
     padding: 6px 8px;
     overflow-y: auto;
-    font-family: var(--font-family-mono, monospace);
+    font-family: var(--font-family-mono, monospace),monospace;
     width: 100%;
     box-sizing: border-box;
   }

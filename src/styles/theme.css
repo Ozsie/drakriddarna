@@ -60,7 +60,7 @@ body {
   padding: 0;
   background-color: var(--color-bg-app);
   color: var(--color-text-primary);
-  font-family: var(--font-family-base);
+  font-family: var(--font-family-base), sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 

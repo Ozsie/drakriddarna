@@ -1,6 +1,7 @@
 import type { GameState, Hero } from '../types';
 import { hasLineOfSight, isDiscovered, isWalkable } from '../core';
 import { isBlockedByHero, isBlockedByMonster, liveHeroes } from './HeroLogic';
+import { drawCachedTile } from '../dungeon/TileTextureCache';
 
 export const renderHeroes = (
   ctx: CanvasRenderingContext2D,
@@ -26,7 +27,8 @@ const renderHero = (
 ) => {
   const x = hero.position.x;
   const y = hero.position.y;
-  ctx.drawImage(
+  drawCachedTile(
+    ctx,
     actors,
     4 * 16,
     0,
