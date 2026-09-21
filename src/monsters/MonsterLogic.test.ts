@@ -336,7 +336,7 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
     expect(monster.position.y).toBeGreaterThan(1);
   });
 
-  it('monsterActions executes full turn with pathfinding movement then attack', () => {
+  it('monsterActions executes full turn with pathfinding movement then attack', async () => {
     const state = createTestState();
     const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
     monster.actions = 2;
@@ -349,11 +349,82 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
     // Monster is at (1, 1), Hero at (1, 3).
     // Action 1: Move to (1, 2) which is adjacent to Hero.
     // Action 2: Melee attack Hero!
-    monsterActions(state);
+    await monsterActions(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
 
     expect(monster.position).toEqual({ x: 1, y: 2 });
     expect(
       state.actionLog.some((l) => l.key === 'logs.takeDamage.attackedWith'),
+    ).toBe(true);
+  });
+
+  it('monsterActions executes multiple monsters sequentially with callbacks and delays', async () => {
+    const state = createTestState();
+    const monster1 = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
+    monster1.actions = 2;
+    monster1.movement = 3;
+
+    const monster2 = createMonster(MonsterType.ORC, Colour.Red, 2, 1);
+    monster2.actions = 2;
+    monster2.movement = 3;
+
+    state.dungeon.layout.monsters = [monster1, monster2];
+
+    const hero = createTestHero('Fearik', 1, 3, 20);
+    state.heroes = [hero];
+
+    const callbackHistory: number[] = [];
+    const callbackTimes: number[] = [];
+
+    await monsterActions(state, {
+      delayBetweenMonsters: 20,
+      delayBetweenActions: 10,
+      delayAfterAttack: 10,
+      waitForMovement: false,
+      onActionCallback: (st) => {
+        callbackHistory.push(st.actionLog.length);
+        callbackTimes.push(Date.now());
+      },
+    });
+
+    // Both monsters should have acted sequentially
+    expect(monster1.position.y).toBeGreaterThan(1);
+    expect(monster2.position.y).toBeGreaterThan(1);
+    expect(callbackHistory.length).toBeGreaterThan(2);
+    expect(
+      state.actionLog.some(
+        (l) =>
+          l.key === 'logs.monsterAction.acted' &&
+          l.properties?.monster === monster1.name,
+      ),
+    ).toBe(true);
+    expect(
+      state.actionLog.some(
+        (l) =>
+          l.key === 'logs.monsterAction.acted' &&
+          l.properties?.monster === monster2.name,
+      ),
+    ).toBe(true);
+  });
+
+  it('monsterActions logs when no visible monsters are found', async () => {
+    const state = createTestState();
+    state.dungeon.layout.monsters = [];
+    state.heroes = [createTestHero('Fearik', 1, 1)];
+
+    await monsterActions(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    expect(
+      state.actionLog.some((l) => l.key === 'logs.monsterAction.noMonsterAct'),
     ).toBe(true);
   });
 });

@@ -202,3 +202,20 @@ export const snapActorPosition = (
 export const clearActorAnimations = (): void => {
   activeActors.clear();
 };
+
+export const getActorRemainingAnimationDuration = (
+  actor: Actor,
+  currentTime: number = Date.now(),
+): number => {
+  if (!actor) return 0;
+  const state = actorAnimations.get(actor);
+  if (!state || state.waypoints.length === 0) {
+    return 0;
+  }
+  return Math.max(0, state.lastStepEndTime - currentTime);
+};
+
+export const sleep = (ms: number): Promise<void> => {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};

@@ -7,6 +7,7 @@
   import {
     gameStateStore,
     debugModeStore,
+    isTurnInProgress,
     initGame,
     loadGameState,
     saveGame,
@@ -46,21 +47,23 @@
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if ($isTurnInProgress) return;
     if (state) {
-      state = next(state);
+      state = await next(state);
       gameStateStore.set(state);
     } else {
-      nextTurn();
+      await nextTurn();
     }
   };
 
-  const handleEndAction = () => {
+  const handleEndAction = async () => {
+    if ($isTurnInProgress) return;
     if (state) {
-      endAction(state);
+      await endAction(state);
       gameStateStore.set(state);
     } else {
-      endHeroAction();
+      await endHeroAction();
     }
   };
 

@@ -1,6 +1,13 @@
 import type { Actor, GameState, Hero, Monster } from '../types';
 import { MonsterType } from '../types';
-import { addLog, doReRender, i18n, recordActorStep } from '../core';
+import {
+  addLog,
+  doReRender,
+  getActorRemainingAnimationDuration,
+  i18n,
+  recordActorStep,
+  sleep,
+} from '../core';
 import {
   findCell,
   findNeighbouringHeroes,
@@ -27,24 +34,50 @@ enum MonsterAction {
   SAME_ROOM_FIRE_ATTACK = 'SAME_ROOM_FIRE_ATTACK',
 }
 
+export interface MonsterTurnOptions {
+  delayBetweenMonsters?: number;
+  delayBetweenActions?: number;
+  delayAfterAttack?: number;
+  waitForMovement?: boolean;
+  onActionCallback?: (state: GameState) => void;
+}
+
+export const DEFAULT_MONSTER_TURN_OPTIONS: MonsterTurnOptions = {
+  delayBetweenMonsters: 300,
+  delayBetweenActions: 250,
+  delayAfterAttack: 350,
+  waitForMovement: true,
+};
+
 const getNonDarkLordMonsters = (state: GameState) =>
   state.dungeon.layout.monsters.filter((monster) =>
     [MonsterType.ORC, MonsterType.TROLL].includes(monster.type),
   );
 
-export const monsterActions = (state: GameState) => {
+export const monsterActions = async (
+  state: GameState,
+  options?: MonsterTurnOptions,
+): Promise<void> => {
+  const opts = { ...DEFAULT_MONSTER_TURN_OPTIONS, ...options };
   const visibleMonsters = findVisibleMonsters(state);
   if (visibleMonsters.length === 0) {
     addLog(state, 'logs.monsterAction.noMonsterAct');
+    doReRender(state);
+    opts.onActionCallback?.(state);
+    return;
   }
 
-  const passableGrid = createPassableGrid(state);
+  for (let mIdx = 0; mIdx < visibleMonsters.length; mIdx++) {
+    const monster = visibleMonsters[mIdx];
+    if (monster.health <= 0) continue;
 
-  visibleMonsters.forEach((monster) => {
     const maxActions = monster.actions;
     addLog(state, 'logs.monsterAction.acted', { monster: i18n(monster.name) });
-    while (monster.actions > 0) {
-      doReRender(state);
+    doReRender(state);
+    opts.onActionCallback?.(state);
+
+    while (monster.actions > 0 && monster.health > 0) {
+      const passableGrid = createPassableGrid(state);
       const neighbouringHeroes: Hero[] = findNeighbouringHeroes(
         state,
         monster,
@@ -76,31 +109,88 @@ export const monsterActions = (state: GameState) => {
         case MonsterAction.MELEE_ATTACK: {
           const target: Hero = selectMeleeTarget(neighbouringHeroes);
           monsterAttack(state, monster, target, false);
+          doReRender(state);
+          opts.onActionCallback?.(state);
+          if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+            await sleep(opts.delayAfterAttack);
+          }
           break;
         }
         case MonsterAction.RANGED_ATTACK: {
           const target: Hero = selectRangedTarget(visibleHeroes, monster);
           monsterAttack(state, monster, target, true);
+          doReRender(state);
+          opts.onActionCallback?.(state);
+          if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+            await sleep(opts.delayAfterAttack);
+          }
           break;
         }
         case MonsterAction.MOVE: {
           monsterMove(state, monster, passableGrid);
+          doReRender(state);
+          opts.onActionCallback?.(state);
+          if (opts.waitForMovement !== false) {
+            const animRemaining = getActorRemainingAnimationDuration(monster);
+            const moveWait =
+              animRemaining > 0
+                ? animRemaining
+                : (opts.delayBetweenActions ?? 0);
+            if (moveWait > 0) {
+              await sleep(moveWait);
+            }
+          }
           break;
         }
-        case MonsterAction.DIAGONAL_FIRE_ATTACK:
+        case MonsterAction.DIAGONAL_FIRE_ATTACK: {
           performFireAttack(state, monster, diagonalTargets);
+          doReRender(state);
+          opts.onActionCallback?.(state);
+          if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+            await sleep(opts.delayAfterAttack);
+          }
           break;
-        case MonsterAction.ORTHOGONAL_FIRE_ATTACK:
+        }
+        case MonsterAction.ORTHOGONAL_FIRE_ATTACK: {
           performFireAttack(state, monster, orthogonalTargets);
+          doReRender(state);
+          opts.onActionCallback?.(state);
+          if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+            await sleep(opts.delayAfterAttack);
+          }
           break;
-        case MonsterAction.SAME_ROOM_FIRE_ATTACK:
+        }
+        case MonsterAction.SAME_ROOM_FIRE_ATTACK: {
           performFireAttack(state, monster, sameRoomTargets);
+          doReRender(state);
+          opts.onActionCallback?.(state);
+          if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+            await sleep(opts.delayAfterAttack);
+          }
+          break;
+        }
       }
       monster.movement = getEffectiveMaxMovement(monster);
+
+      if (
+        monster.actions > 0 &&
+        opts.delayBetweenActions &&
+        opts.delayBetweenActions > 0
+      ) {
+        await sleep(opts.delayBetweenActions);
+      }
     }
     monster.actions = maxActions;
     monster.movement = getEffectiveMaxMovement(monster);
-  });
+
+    if (
+      mIdx < visibleMonsters.length - 1 &&
+      opts.delayBetweenMonsters &&
+      opts.delayBetweenMonsters > 0
+    ) {
+      await sleep(opts.delayBetweenMonsters);
+    }
+  }
 };
 
 const selectAction = (

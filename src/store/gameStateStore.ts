@@ -27,7 +27,10 @@ import {
   liveHeroes,
 } from '../hero/HeroLogic';
 import { useItem } from '../items/ItemLogic';
-import { findVisibleMonsters } from '../monsters/MonsterLogic';
+import {
+  findVisibleMonsters,
+  type MonsterTurnOptions,
+} from '../monsters/MonsterLogic';
 import { doMouseLogic } from '../hero/ClickInputLogic';
 import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
 import { saveReloadGuard, debouncedSaveReloadGuard } from '../core';
@@ -119,6 +122,9 @@ export const debugModeStore = derived(gameStateStore, ($state) =>
   Boolean($state.settings?.['debug']),
 );
 
+export const isTurnInProgress = writable<boolean>(false);
+let isExecutingTurn = false;
+
 // Encapsulated Action Dispatchers
 export const initGame = (): GameState => {
   const state = init();
@@ -138,44 +144,87 @@ export const saveGame = (): void => {
   syncStore(state, true);
 };
 
-export const nextTurn = (): GameState => {
-  const state = get(gameStateStore);
-  const updated = next(state);
-  syncStore(updated, true);
-  return updated;
+export const nextTurn = async (
+  options?: MonsterTurnOptions,
+): Promise<GameState> => {
+  if (isExecutingTurn) {
+    return get(gameStateStore);
+  }
+  isExecutingTurn = true;
+  isTurnInProgress.set(true);
+  try {
+    const state = get(gameStateStore);
+    const updated = await next(state, {
+      onActionCallback: (st) => syncStore(st),
+      ...options,
+    });
+    syncStore(updated, true);
+    return updated;
+  } finally {
+    isExecutingTurn = false;
+    isTurnInProgress.set(false);
+  }
 };
 
-export const endHeroAction = (): void => {
+export const endHeroAction = async (
+  options?: MonsterTurnOptions,
+): Promise<void> => {
+  if (isExecutingTurn) {
+    return;
+  }
   const state = get(gameStateStore);
-  endAction(state);
-  syncStore(state);
+  const hero = state.currentActor;
+  if (!hero) return;
+
+  if (hero.actions === 1) {
+    isExecutingTurn = true;
+    isTurnInProgress.set(true);
+    try {
+      await endAction(state, {
+        onActionCallback: (st) => syncStore(st),
+        ...options,
+      });
+      syncStore(state, true);
+    } finally {
+      isExecutingTurn = false;
+      isTurnInProgress.set(false);
+    }
+  } else {
+    await endAction(state, options);
+    syncStore(state);
+  }
 };
 
 export const moveHero = (direction: MoveDirection | string): void => {
+  if (isExecutingTurn) return;
   const state = get(gameStateStore);
   act(direction, state);
   syncStore(state);
 };
 
 export const pickLockAction = (): void => {
+  if (isExecutingTurn) return;
   const state = get(gameStateStore);
   pickLock(state);
   syncStore(state);
 };
 
 export const searchAction = (): void => {
+  if (isExecutingTurn) return;
   const state = get(gameStateStore);
   search(state);
   syncStore(state);
 };
 
 export const useHeroItem = (item: Item): void => {
+  if (isExecutingTurn) return;
   const state = get(gameStateStore);
   useItem(state, item);
   syncStore(state);
 };
 
 export const selectTargetHero = (target: Hero): void => {
+  if (isExecutingTurn) return;
   const state = get(gameStateStore);
   if (state.targetActor && state.targetActor === target) {
     state.targetActor = undefined;
@@ -186,6 +235,7 @@ export const selectTargetHero = (target: Hero): void => {
 };
 
 export const toggleHeroInventory = (hero: Hero): void => {
+  if (isExecutingTurn) return;
   const state = get(gameStateStore);
   const foundHero = state.heroes.find((h) => h.name === hero.name) as
     | Hero
@@ -229,6 +279,7 @@ export const resetCurrentLevel = (): void => {
 };
 
 export const goToTestingGrounds = (): void => {
+  if (isExecutingTurn) return;
   const state = get(gameStateStore);
   state.dungeon = testingGrounds;
   resetLiveHeroes(state);
@@ -239,6 +290,7 @@ export const handleCanvasClick = (
   event: MouseEvent,
   cellSize: number,
 ): void => {
+  if (isExecutingTurn) return;
   const state = get(gameStateStore);
   doMouseLogic(event, cellSize, state);
   syncStore(state);

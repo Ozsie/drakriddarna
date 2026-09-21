@@ -2,7 +2,7 @@
   import type { GameState } from '../types';
   import { onMount, onDestroy } from 'svelte';
   import groundSprites from '$lib/DungeonTiles.png';
-  import actorSprites from '$lib/Dungeon_Character_2.png';
+  import actorSprites from '$lib/Dungeon_Character_3.png';
   import { doMouseLogic } from '../hero/ClickInputLogic';
   import { browser } from '$app/environment';
   import { renderHeroes } from '../hero/HeroRendering';

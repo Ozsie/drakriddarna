@@ -42,14 +42,14 @@ const renderHero = (
   drawCachedTile(
     ctx,
     actors,
-    4 * 16,
     0,
-    16,
-    16,
+    2 * 32,
+    32,
+    32,
     x * cellSize,
     y * cellSize,
-    cellSize,
-    cellSize,
+    32,
+    32,
   );
   renderActionOnActor(ctx, hero, x, y, cellSize);
   renderActorBar(ctx, hero, x, y, cellSize);

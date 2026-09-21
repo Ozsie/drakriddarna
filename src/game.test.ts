@@ -11,16 +11,26 @@ describe('game orchestrator', () => {
     expect(state.reRender).toBe(true);
   });
 
-  it('endAction decrements actor actions and triggers next when actions reach 0', () => {
+  it('endAction decrements actor actions and triggers next when actions reach 0', async () => {
     const state = init();
     expect(state.currentActor).toBeDefined();
     if (!state.currentActor) return;
 
     state.currentActor.actions = 2;
-    endAction(state);
+    await endAction(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
     expect(state.currentActor.actions).toBe(1);
 
-    endAction(state); // actions reached 0, triggers next(state)
+    await endAction(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    }); // actions reached 0, triggers next(state)
     expect(state.reRender).toBe(true);
   });
 

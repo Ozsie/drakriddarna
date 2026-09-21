@@ -2,7 +2,7 @@ import type { GameState, Hero, Position } from './types';
 import { ConditionType } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
 import { campaignIceDragonTreasure } from './campaigns/campaignIceDragonTreasure';
-import { monsterActions } from './monsters/MonsterLogic';
+import { monsterActions, type MonsterTurnOptions, DEFAULT_MONSTER_TURN_OPTIONS } from './monsters/MonsterLogic';
 import {
   levelUp,
   liveHeroes,
@@ -65,6 +65,8 @@ export {
   getActorVisualPosition,
   isActorAnimating,
   hasActiveActorAnimations,
+  getActorRemainingAnimationDuration,
+  sleep,
   snapActorPosition,
   clearActorAnimations,
   setActorMovementDuration,
@@ -72,6 +74,11 @@ export {
   resetActorMovementDuration,
   DEFAULT_ACTOR_MOVEMENT_DURATION_MS,
 } from './core/ActorAnimation';
+export {
+  monsterActions,
+  DEFAULT_MONSTER_TURN_OPTIONS,
+  type MonsterTurnOptions,
+} from './monsters/MonsterLogic';
 
 export const save = (state: GameState) => {
   doReRender(state);
@@ -157,7 +164,10 @@ const killAllMonstersAchieved = (state: GameState) =>
     .filter((wc) => wc.type === ConditionType.KILL_ALL)
     .some((wc) => wc.fulfilled);
 
-export const next = (state: GameState): GameState => {
+export const next = async (
+  state: GameState,
+  monsterOptions?: MonsterTurnOptions,
+): Promise<GameState> => {
   // eslint-disable-next-line no-console
   if (state.settings['debug']) console.log(state);
   doReRender(state);
@@ -170,7 +180,8 @@ export const next = (state: GameState): GameState => {
     const currentIndex = liveHeroes(state).indexOf(state.currentActor);
     let nextIndex = currentIndex + 1;
     if (nextIndex === liveHeroes(state).length) {
-      monsterActions(state);
+      state.currentActor = undefined;
+      await monsterActions(state, monsterOptions);
       nextIndex = 0;
       resetOnNext(state);
     }
@@ -184,9 +195,9 @@ export const next = (state: GameState): GameState => {
       liveHeroes(state)[nextIndex].incapacitated = false;
       nextIndex++;
     }
+    state.currentActor = liveHeroes(state)[nextIndex];
     state.currentActor.actions = 2;
     state.currentActor.movement = getEffectiveMaxMovement(state.currentActor);
-    state.currentActor = liveHeroes(state)[nextIndex];
     const hasKilledAll = killAllMonstersAchieved(state);
     if (nextIndex === 0 && !hasKilledAll) {
       resetEventEffects(state);
@@ -198,18 +209,22 @@ export const next = (state: GameState): GameState => {
       state.turnCount = (state.turnCount ?? 0) + 1;
     }
     addLog(state, 'logs.startedTurn', { name: i18n(state.currentActor.name) });
+    doReRender(state);
   }
   return state;
 };
 
-export const endAction = (state: GameState) => {
+export const endAction = async (
+  state: GameState,
+  monsterOptions?: MonsterTurnOptions,
+): Promise<void> => {
   doReRender(state);
   const hero = state.currentActor;
   if (!hero) return;
   hero.actions--;
   hero.movement = getEffectiveMaxMovement(hero);
   if (hero.actions === 0) {
-    next(state);
+    await next(state, monsterOptions);
   }
 };
 

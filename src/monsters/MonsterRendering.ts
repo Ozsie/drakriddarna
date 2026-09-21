@@ -77,14 +77,14 @@ const renderOrch = (
   drawCachedTile(
     ctx,
     actors,
-    cellSize,
-    16,
-    16,
-    16,
+    (11 * 32) - 16,
+    8 * 32,
+    32,
+    32,
     x * cellSize,
     y * cellSize,
-    cellSize,
-    cellSize,
+    32,
+    32,
   );
 };
 
@@ -98,14 +98,14 @@ const renderTroll = (
   drawCachedTile(
     ctx,
     actors,
-    cellSize,
-    16,
-    16,
-    16,
+    (11 * 32) - 16,
+    4 * 32,
+    32,
+    32,
     x * cellSize,
     y * cellSize,
-    cellSize,
-    cellSize,
+    32,
+    32,
   );
 };
 
@@ -119,14 +119,14 @@ const renderDefaultMonster = (
   drawCachedTile(
     ctx,
     actors,
-    16,
-    16,
-    16,
-    16,
+    (11 * 32) - 16,
+    2 * 32,
+    32,
+    32,
     x * cellSize,
     y * cellSize,
-    cellSize,
-    cellSize,
+    32,
+    32,
   );
 };
 

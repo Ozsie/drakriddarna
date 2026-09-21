@@ -125,13 +125,13 @@ describe('gameStateStore and state management', () => {
     );
   });
 
-  it('actions like endHeroAction, moveHero, pickLockAction, searchAction modify state and notify store', () => {
+  it('actions like endHeroAction, moveHero, pickLockAction, searchAction modify state and notify store', async () => {
     const hero = get(currentHero);
     expect(hero).toBeDefined();
     if (!hero) return;
 
     hero.actions = 2;
-    endHeroAction();
+    await endHeroAction();
     expect(get(currentHero)?.actions).toBe(1);
 
     moveHero('R');
@@ -140,12 +140,17 @@ describe('gameStateStore and state management', () => {
     expect(get(gameStateStore)).toBeDefined();
   });
 
-  it('supports saveGame, loadGameState, nextTurn, and goToTestingGrounds', () => {
+  it('supports saveGame, loadGameState, nextTurn, and goToTestingGrounds', async () => {
     const state = get(gameStateStore);
     saveGame();
     saveReloadGuard(state);
 
-    const nextState = nextTurn();
+    const nextState = await nextTurn({
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
     expect(nextState).toBeDefined();
 
     loadGameState(state);
