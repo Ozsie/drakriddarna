@@ -13,7 +13,13 @@ import type {
 } from '../types';
 import { Colour, ItemType, Level, Side } from '../types';
 import { weapons } from '../items/weapons';
-import { addLog, doReRender, i18n, recordActorStep, clearActorAnimations } from '../core';
+import {
+  addLog,
+  doReRender,
+  i18n,
+  recordActorStep,
+  clearActorAnimations,
+} from '../core';
 import {
   findCell,
   findNeighbouringHeroes,

@@ -19,9 +19,8 @@ export const toArray = (row: string): string[] => {
   return array;
 };
 
-export const findCell = (grid: string[], x: number, y: number): string => {
-  return grid[y]?.[x] ?? '';
-};
+export const findCell = (grid: string[], x: number, y: number): string =>
+  grid[y]?.[x] ?? '';
 
 export const isSamePosition = (a: Position, b: Position): boolean =>
   a.x === b.x && a.y === b.y;

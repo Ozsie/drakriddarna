@@ -61,7 +61,16 @@ const renderMonster = (
     }
     renderActorBar(ctx, monster, cellSize, x, y);
     renderHealthBar(ctx, monster, cellSize, x, y);
-    renderLineOfSight(ctx, monster, state.heroes, state, cellSize, debugMode, x, y);
+    renderLineOfSight(
+      ctx,
+      monster,
+      state.heroes,
+      state,
+      cellSize,
+      debugMode,
+      x,
+      y,
+    );
     return isActorAnimating(monster, currentTime);
   }
   return false;
@@ -77,7 +86,7 @@ const renderOrch = (
   drawCachedTile(
     ctx,
     actors,
-    (11 * 32) - 16,
+    11 * 32 - 16,
     8 * 32,
     32,
     32,
@@ -98,7 +107,7 @@ const renderTroll = (
   drawCachedTile(
     ctx,
     actors,
-    (11 * 32) - 16,
+    11 * 32 - 16,
     4 * 32,
     32,
     32,
@@ -119,7 +128,7 @@ const renderDefaultMonster = (
   drawCachedTile(
     ctx,
     actors,
-    (11 * 32) - 16,
+    11 * 32 - 16,
     2 * 32,
     32,
     32,
@@ -161,12 +170,7 @@ const renderHealthBar = (
   ctx.beginPath();
   ctx.strokeStyle = 'black';
   ctx.fillStyle = 'red';
-  ctx.fillRect(
-    x * cellSize + 4,
-    y * cellSize,
-    cellSize - 8,
-    4,
-  );
+  ctx.fillRect(x * cellSize + 4, y * cellSize, cellSize - 8, 4);
   ctx.fillStyle = 'green';
   ctx.fillRect(
     x * cellSize + 4,
@@ -174,12 +178,7 @@ const renderHealthBar = (
     (cellSize - 8) * (monster.health / monster.maxHealth),
     4,
   );
-  ctx.rect(
-    x * cellSize + 4,
-    y * cellSize,
-    cellSize - 8,
-    4,
-  );
+  ctx.rect(x * cellSize + 4, y * cellSize, cellSize - 8, 4);
   ctx.stroke();
   ctx.strokeStyle = 'black';
   ctx.fillStyle = 'black';

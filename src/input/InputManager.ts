@@ -117,8 +117,8 @@ export class InputManager {
     this.onAction(InputAction.MOVE_UP_RIGHT, () => moveHero('UR'));
     this.onAction(InputAction.MOVE_DOWN_LEFT, () => moveHero('DL'));
     this.onAction(InputAction.MOVE_DOWN_RIGHT, () => moveHero('DR'));
-    this.onAction(InputAction.NEXT_TURN, () => nextTurn());
-    this.onAction(InputAction.END_ACTION, () => endHeroAction());
+    this.onAction(InputAction.NEXT_TURN, () => void nextTurn());
+    this.onAction(InputAction.END_ACTION, () => void endHeroAction());
     this.onAction(InputAction.PICK_LOCK, () => pickLockAction());
     this.onAction(InputAction.SEARCH, () => searchAction());
     this.onAction(InputAction.WIN_LEVEL, () => winLevel());

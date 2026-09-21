@@ -11,7 +11,7 @@ import { renderMonsters } from '../monsters/MonsterRendering';
 import { renderNotes } from '../notes/NotesRendering';
 import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
 import { renderItems } from '../items/ItemRendering';
-import { recordActorStep, clearActorAnimations } from '../core/ActorAnimation';
+import { recordActorStep, clearActorAnimations } from '../core';
 import { weapons, monsterWeapons } from '../items/weapons';
 import type { GameState, Hero, Monster } from '../types';
 import {
@@ -188,8 +188,22 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     const now = 10000;
 
     // Stationary actors should return false
-    const heroAnimStationary = renderHeroes(actorCtx, mockActors, 48, state, false, now);
-    const monsterAnimStationary = renderMonsters(actorCtx, mockActors, 48, state, false, now);
+    const heroAnimStationary = renderHeroes(
+      actorCtx,
+      mockActors,
+      48,
+      state,
+      false,
+      now,
+    );
+    const monsterAnimStationary = renderMonsters(
+      actorCtx,
+      mockActors,
+      48,
+      state,
+      false,
+      now,
+    );
     expect(heroAnimStationary).toBe(false);
     expect(monsterAnimStationary).toBe(false);
 
@@ -198,14 +212,42 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     recordActorStep(state.dungeon.layout.monsters[0], { x: 3, y: 2 }, 200, now);
 
     // While in progress: both should return true
-    const heroAnimMoving = renderHeroes(actorCtx, mockActors, 48, state, false, now + 50);
-    const monsterAnimMoving = renderMonsters(actorCtx, mockActors, 48, state, false, now + 50);
+    const heroAnimMoving = renderHeroes(
+      actorCtx,
+      mockActors,
+      48,
+      state,
+      false,
+      now + 50,
+    );
+    const monsterAnimMoving = renderMonsters(
+      actorCtx,
+      mockActors,
+      48,
+      state,
+      false,
+      now + 50,
+    );
     expect(heroAnimMoving).toBe(true);
     expect(monsterAnimMoving).toBe(true);
 
     // After animation duration finishes: both should return false
-    const heroAnimFinished = renderHeroes(actorCtx, mockActors, 48, state, false, now + 250);
-    const monsterAnimFinished = renderMonsters(actorCtx, mockActors, 48, state, false, now + 250);
+    const heroAnimFinished = renderHeroes(
+      actorCtx,
+      mockActors,
+      48,
+      state,
+      false,
+      now + 250,
+    );
+    const monsterAnimFinished = renderMonsters(
+      actorCtx,
+      mockActors,
+      48,
+      state,
+      false,
+      now + 250,
+    );
     expect(heroAnimFinished).toBe(false);
     expect(monsterAnimFinished).toBe(false);
   });

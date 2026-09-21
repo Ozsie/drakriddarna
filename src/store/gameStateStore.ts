@@ -323,10 +323,10 @@ export const dispatchAction = (action: GameAction): void => {
       toggleHeroInventory(action.hero);
       break;
     case 'END_ACTION':
-      endHeroAction();
+      void endHeroAction();
       break;
     case 'NEXT_TURN':
-      nextTurn();
+      void nextTurn();
       break;
     case 'INIT_GAME':
       initGame();

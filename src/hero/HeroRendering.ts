@@ -20,7 +20,14 @@ export const renderHeroes = (
   const heroes = liveHeroes(state);
   let hasActiveAnimation = false;
   heroes.forEach((hero) => {
-    const isAnim = renderHero(ctx, hero, actors, cellSize, debugMode, currentTime);
+    const isAnim = renderHero(
+      ctx,
+      hero,
+      actors,
+      cellSize,
+      debugMode,
+      currentTime,
+    );
     if (isAnim) hasActiveAnimation = true;
   });
   renderWalkableArea(ctx, state, cellSize);
@@ -207,66 +214,24 @@ const renderCurrentActor = (
     ctx.lineWidth = 2;
 
     ctx.moveTo(x * cellSize, y * cellSize);
-    ctx.lineTo(
-      x * cellSize + cellSize / 3,
-      y * cellSize,
-    );
+    ctx.lineTo(x * cellSize + cellSize / 3, y * cellSize);
     ctx.moveTo(x * cellSize, y * cellSize);
-    ctx.lineTo(
-      x * cellSize,
-      y * cellSize + cellSize / 3,
-    );
+    ctx.lineTo(x * cellSize, y * cellSize + cellSize / 3);
 
-    ctx.moveTo(
-      x * cellSize + cellSize,
-      y * cellSize,
-    );
-    ctx.lineTo(
-      x * cellSize + (cellSize / 3) * 2,
-      y * cellSize,
-    );
-    ctx.moveTo(
-      x * cellSize + cellSize,
-      y * cellSize,
-    );
-    ctx.lineTo(
-      x * cellSize + cellSize,
-      y * cellSize + cellSize / 3,
-    );
+    ctx.moveTo(x * cellSize + cellSize, y * cellSize);
+    ctx.lineTo(x * cellSize + (cellSize / 3) * 2, y * cellSize);
+    ctx.moveTo(x * cellSize + cellSize, y * cellSize);
+    ctx.lineTo(x * cellSize + cellSize, y * cellSize + cellSize / 3);
 
-    ctx.moveTo(
-      x * cellSize,
-      y * cellSize + cellSize,
-    );
-    ctx.lineTo(
-      x * cellSize,
-      y * cellSize + (cellSize / 3) * 2,
-    );
-    ctx.moveTo(
-      x * cellSize,
-      y * cellSize + cellSize,
-    );
-    ctx.lineTo(
-      x * cellSize + cellSize / 3,
-      y * cellSize + cellSize,
-    );
+    ctx.moveTo(x * cellSize, y * cellSize + cellSize);
+    ctx.lineTo(x * cellSize, y * cellSize + (cellSize / 3) * 2);
+    ctx.moveTo(x * cellSize, y * cellSize + cellSize);
+    ctx.lineTo(x * cellSize + cellSize / 3, y * cellSize + cellSize);
 
-    ctx.moveTo(
-      x * cellSize + cellSize,
-      y * cellSize + cellSize,
-    );
-    ctx.lineTo(
-      x * cellSize + cellSize,
-      y * cellSize + (cellSize / 3) * 2,
-    );
-    ctx.moveTo(
-      x * cellSize + cellSize,
-      y * cellSize + cellSize,
-    );
-    ctx.lineTo(
-      x * cellSize + (cellSize / 3) * 2,
-      y * cellSize + cellSize,
-    );
+    ctx.moveTo(x * cellSize + cellSize, y * cellSize + cellSize);
+    ctx.lineTo(x * cellSize + cellSize, y * cellSize + (cellSize / 3) * 2);
+    ctx.moveTo(x * cellSize + cellSize, y * cellSize + cellSize);
+    ctx.lineTo(x * cellSize + (cellSize / 3) * 2, y * cellSize + cellSize);
     ctx.stroke();
     ctx.lineWidth = 1;
   }

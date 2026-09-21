@@ -24,17 +24,14 @@ export const setActorMovementDuration = (durationMs: number): void => {
   currentMovementDurationMs = Math.max(10, durationMs);
 };
 
-export const getActorMovementDuration = (): number => {
-  return currentMovementDurationMs;
-};
+export const getActorMovementDuration = (): number => currentMovementDurationMs;
 
 export const resetActorMovementDuration = (): void => {
   currentMovementDurationMs = DEFAULT_ACTOR_MOVEMENT_DURATION_MS;
 };
 
-const easeInOutQuad = (t: number): number => {
-  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-};
+const easeInOutQuad = (t: number): number =>
+  t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
 export const recordActorStep = (
   actor: Actor,
@@ -143,7 +140,10 @@ export const getActorVisualPosition = (
   }
 
   const elapsed = currentTime - activeWaypoint.startTime;
-  const rawProgress = Math.min(Math.max(elapsed / activeWaypoint.duration, 0), 1);
+  const rawProgress = Math.min(
+    Math.max(elapsed / activeWaypoint.duration, 0),
+    1,
+  );
   const progress = easeInOutQuad(rawProgress);
 
   const visualX =

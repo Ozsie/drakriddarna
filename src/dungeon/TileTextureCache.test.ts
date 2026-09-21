@@ -13,15 +13,13 @@ describe('TileTextureCache', () => {
   beforeEach(() => {
     clearTileTextureCache();
     // Provide mock canvas factory for unit test environment
-    setCanvasFactory((width, height) => {
-      return {
-        width,
-        height,
-        getContext: () => ({
-          drawImage: vi.fn(),
-        }),
-      };
-    });
+    setCanvasFactory((width, height) => ({
+      width,
+      height,
+      getContext: () => ({
+        drawImage: vi.fn(),
+      }),
+    }));
   });
 
   it('starts with an empty cache', () => {

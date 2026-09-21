@@ -2,7 +2,10 @@ import type { GameState, Hero, Position } from './types';
 import { ConditionType } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
 import { campaignIceDragonTreasure } from './campaigns/campaignIceDragonTreasure';
-import { monsterActions, type MonsterTurnOptions, DEFAULT_MONSTER_TURN_OPTIONS } from './monsters/MonsterLogic';
+import {
+  monsterActions,
+  type MonsterTurnOptions,
+} from './monsters/MonsterLogic';
 import {
   levelUp,
   liveHeroes,
@@ -21,7 +24,7 @@ import { browser } from '$app/environment';
 import { addLog, doReRender, i18n } from './core';
 import { shuffle } from './core';
 import { getEffectiveMaxMovement } from './core';
-import { clearActorAnimations } from './core/ActorAnimation';
+import { clearActorAnimations } from './core';
 
 // Re-export core modules for backwards compatibility and ease of access
 export {

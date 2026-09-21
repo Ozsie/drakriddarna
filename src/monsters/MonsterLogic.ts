@@ -133,9 +133,7 @@ export const monsterActions = async (
           if (opts.waitForMovement !== false) {
             const animRemaining = getActorRemainingAnimationDuration(monster);
             const moveWait =
-              animRemaining > 0
-                ? animRemaining
-                : (opts.delayBetweenActions ?? 0);
+              animRemaining > 0 ? animRemaining : opts.delayBetweenActions ?? 0;
             if (moveWait > 0) {
               await sleep(moveWait);
             }
