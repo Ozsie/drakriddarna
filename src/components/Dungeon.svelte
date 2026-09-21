@@ -120,9 +120,10 @@
 
 <style>
   .dungeon {
-      background: yellow;
-      overflow: scroll;
+      background: var(--color-bg-dungeon, #121418);
+      overflow: auto;
       height: 80%;
+      position: relative;
   }
   .winConditions {
       position: absolute;

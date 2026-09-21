@@ -22,13 +22,14 @@
       margin-bottom: 2px;
   }
   div {
-      margin: 5px;
+      margin: 5px 0;
       border-style: groove;
-      border-width: 5px;
-      border-color: darkgreen;
+      border-width: 4px;
+      border-color: var(--color-diary-border, #15803d);
       border-radius: 4px 4px 10px 10px;
-      padding: 2px;
-      background: lightgoldenrodyellow;
+      padding: 4px;
+      background: var(--color-diary-bg, #fefce8);
+      color: var(--color-diary-text, #1e293b);
   }
   div span {
       font-family: sans-serif;
@@ -40,8 +41,9 @@
   }
   div hr {
       height: 2px;
-      background-color: darkgreen;
-      color: darkgreen;
+      background-color: var(--color-diary-border, #15803d);
+      color: var(--color-diary-border, #15803d);
+      border: none;
   }
 
   @media screen and (max-width: 600px) {
