@@ -23,6 +23,10 @@ describe('grid module', () => {
     expect(findCell(grid, 0, 0)).toBe('A');
     expect(findCell(grid, 2, 1)).toBe('F');
     expect(findCell(grid, 1, 2)).toBe('H');
+    expect(findCell(grid, -1, 0)).toBe('');
+    expect(findCell(grid, 0, -1)).toBe('');
+    expect(findCell(grid, 3, 0)).toBe('');
+    expect(findCell(grid, 0, 3)).toBe('');
   });
 
   it('isSamePosition correctly compares positions', () => {

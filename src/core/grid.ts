@@ -20,13 +20,7 @@ export const toArray = (row: string): string[] => {
 };
 
 export const findCell = (grid: string[], x: number, y: number): string => {
-  let c = '';
-  grid.forEach((row, gY) => {
-    toArray(row).forEach((cell, gX) => {
-      if (gY === y && gX === x) c = cell;
-    });
-  });
-  return c;
+  return grid[y]?.[x] ?? '';
 };
 
 export const isSamePosition = (a: Position, b: Position): boolean =>
