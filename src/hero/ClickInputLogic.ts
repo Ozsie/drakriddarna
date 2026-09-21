@@ -1,4 +1,4 @@
-import { addLog, doReRender, i18n } from '../core';
+import { addLog, doReRender, i18n, recordActorStep } from '../core';
 import {
   hasLineOfSight,
   isRoomDiscovered,
@@ -138,6 +138,7 @@ const onTargetCell = (state: GameState, target: Position) => {
       distance <= hero.movement &&
       los
     ) {
+      recordActorStep(hero, target);
       hero.position = target;
       hero.movement -= distance;
       checkForNote(state, hero);

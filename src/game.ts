@@ -21,6 +21,7 @@ import { browser } from '$app/environment';
 import { addLog, doReRender, i18n } from './core';
 import { shuffle } from './core';
 import { getEffectiveMaxMovement } from './core';
+import { clearActorAnimations } from './core/ActorAnimation';
 
 // Re-export core modules for backwards compatibility and ease of access
 export {
@@ -59,6 +60,18 @@ export {
   removeDamageIndicator,
   takeDamage,
 } from './core/combat';
+export {
+  recordActorStep,
+  getActorVisualPosition,
+  isActorAnimating,
+  hasActiveActorAnimations,
+  snapActorPosition,
+  clearActorAnimations,
+  setActorMovementDuration,
+  getActorMovementDuration,
+  resetActorMovementDuration,
+  DEFAULT_ACTOR_MOVEMENT_DURATION_MS,
+} from './core/ActorAnimation';
 
 export const save = (state: GameState) => {
   doReRender(state);
@@ -69,6 +82,7 @@ export const save = (state: GameState) => {
 };
 
 export const loadState = (newState: GameState) => {
+  clearActorAnimations();
   newState.currentActor = newState.heroes.find(
     (hero) => hero.name === newState.currentActor?.name,
   ) as Hero | undefined;
@@ -200,6 +214,7 @@ export const endAction = (state: GameState) => {
 };
 
 export const resetLevel = (currentState: GameState): GameState => {
+  clearActorAnimations();
   if (typeof localStorage !== 'undefined') {
     const loadedRawState = localStorage.getItem('autosave');
     if (loadedRawState) {
@@ -304,6 +319,7 @@ const scrollTo = (pos: Position, cellSize: number) => {
 
 export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
+    clearActorAnimations();
     state.dungeon = state.dungeon.nextDungeon;
     state.actionLog = [
       {

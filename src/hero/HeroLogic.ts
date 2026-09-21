@@ -13,7 +13,7 @@ import type {
 } from '../types';
 import { Colour, ItemType, Level, Side } from '../types';
 import { weapons } from '../items/weapons';
-import { addLog, doReRender, i18n } from '../core';
+import { addLog, doReRender, i18n, recordActorStep, clearActorAnimations } from '../core';
 import {
   findCell,
   findNeighbouringHeroes,
@@ -169,6 +169,7 @@ export const pickLock = (state: GameState) => {
 
 export const resetLiveHeroes = (state: GameState) => {
   doReRender(state);
+  clearActorAnimations();
   state.heroes.forEach((hero, index) => {
     hero.position = state.dungeon.startingPositions[index];
     hero.movement = getEffectiveMaxMovement(hero);
@@ -399,6 +400,7 @@ const move = (
   newY: number,
   cost: number,
 ) => {
+  recordActorStep(hero, { x: newX, y: newY });
   hero.position.x = newX;
   hero.position.y = newY;
   checkForNote(state, hero);

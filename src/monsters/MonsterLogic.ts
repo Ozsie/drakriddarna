@@ -1,6 +1,6 @@
 import type { Actor, GameState, Hero, Monster } from '../types';
 import { MonsterType } from '../types';
-import { addLog, doReRender, i18n } from '../core';
+import { addLog, doReRender, i18n, recordActorStep } from '../core';
 import {
   findCell,
   findNeighbouringHeroes,
@@ -241,6 +241,7 @@ export const monsterMove = (
       continue;
     }
 
+    recordActorStep(monster, nextPos);
     monster.position = nextPos;
     addLog(state, 'logs.monsterAction.movedTowards', {
       monster: i18n(monster.name),

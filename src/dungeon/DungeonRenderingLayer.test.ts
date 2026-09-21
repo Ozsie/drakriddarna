@@ -11,6 +11,7 @@ import { renderMonsters } from '../monsters/MonsterRendering';
 import { renderNotes } from '../notes/NotesRendering';
 import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
 import { renderItems } from '../items/ItemRendering';
+import { recordActorStep, clearActorAnimations } from '../core/ActorAnimation';
 import { weapons, monsterWeapons } from '../items/weapons';
 import type { GameState, Hero, Monster } from '../types';
 import {
@@ -177,5 +178,35 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
 
     expect(overlayCtx.fillText).toHaveBeenCalled();
     expect(overlayCtx.fill).toHaveBeenCalled();
+  });
+
+  it('tracks active actor animations during dynamic render loop', () => {
+    clearActorAnimations();
+    const state = createMockState();
+    const actorCtx = createMockCtx();
+    const mockActors = { src: 'actors.png' } as unknown as CanvasImageSource;
+    const now = 10000;
+
+    // Stationary actors should return false
+    const heroAnimStationary = renderHeroes(actorCtx, mockActors, 48, state, false, now);
+    const monsterAnimStationary = renderMonsters(actorCtx, mockActors, 48, state, false, now);
+    expect(heroAnimStationary).toBe(false);
+    expect(monsterAnimStationary).toBe(false);
+
+    // Record movement step
+    recordActorStep(state.heroes[0], { x: 2, y: 1 }, 200, now);
+    recordActorStep(state.dungeon.layout.monsters[0], { x: 3, y: 2 }, 200, now);
+
+    // While in progress: both should return true
+    const heroAnimMoving = renderHeroes(actorCtx, mockActors, 48, state, false, now + 50);
+    const monsterAnimMoving = renderMonsters(actorCtx, mockActors, 48, state, false, now + 50);
+    expect(heroAnimMoving).toBe(true);
+    expect(monsterAnimMoving).toBe(true);
+
+    // After animation duration finishes: both should return false
+    const heroAnimFinished = renderHeroes(actorCtx, mockActors, 48, state, false, now + 250);
+    const monsterAnimFinished = renderMonsters(actorCtx, mockActors, 48, state, false, now + 250);
+    expect(heroAnimFinished).toBe(false);
+    expect(monsterAnimFinished).toBe(false);
   });
 });

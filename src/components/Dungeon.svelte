@@ -21,6 +21,7 @@
   import { renderNotes } from '../notes/NotesRendering';
   import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
   import { clearTileTextureCache } from '../dungeon/TileTextureCache';
+  import { hasActiveActorAnimations } from '../core';
   import {
     gameStateStore,
     debugModeStore,
@@ -53,6 +54,7 @@
   let lastOverlaySignature = '';
   let lastCellSize = cellSize;
   let overlayAnimationId: number | null = null;
+  let dynamicAnimationId: number | null = null;
 
   if (browser) {
     screenSize = window.innerHeight;
@@ -123,28 +125,53 @@
   const renderDynamicLayer = (force = false) => {
     if (!activeState || !browser || !actors || !actorCanvas) return;
     if (!isReady(actors)) return;
+    const hasActiveAnimations = hasActiveActorAnimations();
     const sig = getDynamicSignature(
       activeState,
       activeDebugMode ?? false,
       cellSize,
     );
-    if (!force && sig === lastDynamicSignature) return;
+    if (!force && !hasActiveAnimations && sig === lastDynamicSignature) return;
     lastDynamicSignature = sig;
 
     const ctx = actorCanvas.getContext('2d');
     if (!ctx) return;
 
+    const currentTime = Date.now();
     dynamicRenderCount++;
     totalReRenderCount++;
     ctx.clearRect(0, 0, cellSize * 40, cellSize * 30);
-    renderMonsters(
+    const hasActiveMonsters = renderMonsters(
       ctx,
       actors,
       cellSize,
       activeState,
       activeDebugMode ?? false,
+      currentTime,
     );
-    renderHeroes(ctx, actors, cellSize, activeState, activeDebugMode ?? false);
+    const hasActiveHeroes = renderHeroes(
+      ctx,
+      actors,
+      cellSize,
+      activeState,
+      activeDebugMode ?? false,
+      currentTime,
+    );
+
+    if (dynamicAnimationId) {
+      cancelAnimationFrame(dynamicAnimationId);
+      dynamicAnimationId = null;
+    }
+
+    if (
+      hasActiveMonsters ||
+      hasActiveHeroes ||
+      hasActiveActorAnimations(currentTime)
+    ) {
+      dynamicAnimationId = requestAnimationFrame(() => {
+        renderDynamicLayer(true);
+      });
+    }
   };
 
   const renderOverlayLayer = (force = false) => {
@@ -250,6 +277,10 @@
     if (overlayAnimationId) {
       cancelAnimationFrame(overlayAnimationId);
       overlayAnimationId = null;
+    }
+    if (dynamicAnimationId) {
+      cancelAnimationFrame(dynamicAnimationId);
+      dynamicAnimationId = null;
     }
   });
 
