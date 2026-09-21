@@ -17,6 +17,7 @@ import {
   endAction,
   hasWon,
   resetLevel,
+  removeDamageIndicator,
 } from '../game';
 import {
   act,
@@ -109,6 +110,11 @@ export const turnCountStore = derived(
   ($state) => $state.turnCount ?? 0,
 );
 
+export const damageIndicatorsStore = derived(
+  gameStateStore,
+  ($state) => $state.damageIndicators ?? [],
+);
+
 export const debugModeStore = derived(gameStateStore, ($state) =>
   Boolean($state.settings?.['debug']),
 );
@@ -195,6 +201,12 @@ export const toggleHeroInventory = (hero: Hero): void => {
 export const setDebug = (debug: boolean): void => {
   const state = get(gameStateStore);
   state.settings['debug'] = debug;
+  syncStore(state);
+};
+
+export const removeDamageIndicatorAction = (id: string): void => {
+  const state = get(gameStateStore);
+  removeDamageIndicator(state, id);
   syncStore(state);
 };
 

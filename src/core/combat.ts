@@ -1,10 +1,27 @@
-import type { Actor, Door, GameState, Weapon } from '../types';
+import type { Actor, DamageIndicator, Door, GameState, Weapon } from '../types';
 import { Colour, ItemType, Level } from '../types';
 import { roll } from './dice';
 import { addLog, i18n } from './logger';
 
 export const ATTACK_BONUS = 'ATTACK_BONUS';
 export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
+
+export const createDamageIndicator = (
+  damage: number,
+  position: { x: number; y: number },
+): DamageIndicator => ({
+  id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+  damage,
+  position: { x: position.x, y: position.y },
+  timestamp: Date.now(),
+});
+
+export const removeDamageIndicator = (state: GameState, id: string): void => {
+  if (!state.damageIndicators) return;
+  state.damageIndicators = state.damageIndicators.filter(
+    (ind) => ind.id !== id,
+  );
+};
 
 export const getEffectiveMaxMovement = (actor: Actor): number =>
   actor.maxMovement - (actor.armour?.movementReduction ?? 0);
@@ -113,6 +130,12 @@ export const takeDamage = (
     damage = Math.max(hits - (defense + shield), 0);
   }
   target.health -= damage;
+  if (target.position) {
+    if (!state.damageIndicators) {
+      state.damageIndicators = [];
+    }
+    state.damageIndicators.push(createDamageIndicator(damage, target.position));
+  }
   addLog(state, 'logs.takeDamage.attackedWith', {
     actor: i18n(source.name),
     target: i18n(target.name),

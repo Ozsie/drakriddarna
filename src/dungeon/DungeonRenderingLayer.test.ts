@@ -9,6 +9,7 @@ import {
 import { renderHeroes } from '../hero/HeroRendering';
 import { renderMonsters } from '../monsters/MonsterRendering';
 import { renderNotes } from '../notes/NotesRendering';
+import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
 import { renderItems } from '../items/ItemRendering';
 import { weapons, monsterWeapons } from '../items/weapons';
 import type { GameState, Hero, Monster } from '../types';
@@ -131,6 +132,9 @@ const createMockCtx = () =>
     rect: vi.fn(),
     roundRect: vi.fn(),
     fillText: vi.fn(),
+    strokeText: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
     setTransform: vi.fn(),
     scale: vi.fn(),
   }) as unknown as CanvasRenderingContext2D;
@@ -162,12 +166,14 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     expect(actorCtx.fillRect).toHaveBeenCalled();
   });
 
-  it('renders overlay notes and tooltips onto overlay context', () => {
+  it('renders overlay notes and damage indicators onto overlay context', () => {
     const state = createMockState();
+    state.damageIndicators = [{ id: '1', damage: 4, position: { x: 1, y: 1 } }];
     const overlayCtx = createMockCtx();
     const mockActors = { src: 'actors.png' } as unknown as CanvasImageSource;
 
     renderNotes(overlayCtx, mockActors, 48, state, false);
+    renderDamageIndicators(overlayCtx, 48, state, Date.now());
 
     expect(overlayCtx.fillText).toHaveBeenCalled();
     expect(overlayCtx.fill).toHaveBeenCalled();

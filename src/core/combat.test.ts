@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
+  createDamageIndicator,
   doorAsActor,
   getDamageString,
   getEffectiveMaxMovement,
+  removeDamageIndicator,
   takeDamage,
 } from './combat';
 import { setRng, resetRng } from './dice';
@@ -197,5 +199,31 @@ describe('combat module', () => {
     // 3 hits - 1 defense = 2 damage; health: 5 - 2 = 3
     expect(target.health).toBe(3);
     expect(state.actionLog.length).toBeGreaterThan(0);
+    expect(state.damageIndicators).toBeDefined();
+    expect(state.damageIndicators?.length).toBe(1);
+    expect(state.damageIndicators?.[0].damage).toBe(2);
+    expect(state.damageIndicators?.[0].position).toEqual({ x: 1, y: 0 });
+  });
+
+  it('createDamageIndicator and removeDamageIndicator manage indicator state', () => {
+    const indicator = createDamageIndicator(4, { x: 3, y: 5 });
+    expect(indicator.damage).toBe(4);
+    expect(indicator.position).toEqual({ x: 3, y: 5 });
+    expect(indicator.id).toBeDefined();
+
+    const state: GameState = {
+      heroes: [],
+      dungeon: dummyDungeon,
+      actionLog: [],
+      itemDeck: [],
+      magicItemDeck: [],
+      settings: {},
+      eventDeck: [],
+      reRender: false,
+      damageIndicators: [indicator],
+    };
+
+    removeDamageIndicator(state, indicator.id);
+    expect(state.damageIndicators).toEqual([]);
   });
 });

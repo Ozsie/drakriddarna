@@ -25,6 +25,14 @@ export type GameState = {
   reRender: boolean;
   currentEvent?: TurnEvent;
   turnCount?: number;
+  damageIndicators?: DamageIndicator[];
+};
+
+export type DamageIndicator = {
+  id: string;
+  damage: number;
+  position: Position;
+  timestamp?: number;
 };
 
 export type LogEvent = {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { GameState } from '../types';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import groundSprites from '$lib/DungeonTiles.png';
   import actorSprites from '$lib/Dungeon_Character_2.png';
   import { doMouseLogic } from '../hero/ClickInputLogic';
@@ -19,6 +19,7 @@
   import { t } from '$lib/translations';
   import EventCard from './EventCard.svelte';
   import { renderNotes } from '../notes/NotesRendering';
+  import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
   import { clearTileTextureCache } from '../dungeon/TileTextureCache';
   import {
     gameStateStore,
@@ -51,6 +52,7 @@
   let lastDynamicSignature = '';
   let lastOverlaySignature = '';
   let lastCellSize = cellSize;
+  let overlayAnimationId: number | null = null;
 
   if (browser) {
     screenSize = window.innerHeight;
@@ -84,7 +86,8 @@
 
   const getOverlaySignature = (st: GameState, dbg: boolean, size: number) => {
     const curActor = `${st.currentActor?.name},${st.currentActor?.position?.x},${st.currentActor?.position?.y}`;
-    return `${curActor}|${size}|${dbg}`;
+    const dmgCount = st.damageIndicators?.length ?? 0;
+    return `${curActor}|${dmgCount}|${size}|${dbg}`;
   };
 
   const isReady = (img: HTMLImageElement | null): boolean => {
@@ -147,12 +150,13 @@
   const renderOverlayLayer = (force = false) => {
     if (!activeState || !browser || !actors || !overlayCanvas) return;
     if (!isReady(actors)) return;
+    const hasDamageIndicators = (activeState.damageIndicators?.length ?? 0) > 0;
     const sig = getOverlaySignature(
       activeState,
       activeDebugMode ?? false,
       cellSize,
     );
-    if (!force && sig === lastOverlaySignature && !activeDebugMode) return;
+    if (!force && !hasDamageIndicators && sig === lastOverlaySignature && !activeDebugMode) return;
     lastOverlaySignature = sig;
 
     const ctx = overlayCanvas.getContext('2d');
@@ -160,6 +164,12 @@
 
     ctx.clearRect(0, 0, cellSize * 40, cellSize * 30);
     renderNotes(ctx, actors, cellSize, activeState, activeDebugMode ?? false);
+    const hasActiveDamage = renderDamageIndicators(
+      ctx,
+      cellSize,
+      activeState,
+      Date.now(),
+    );
     if (activeDebugMode) {
       ctx.fillStyle = 'white';
       ctx.font = '8px Arial';
@@ -168,6 +178,23 @@
         2,
         10,
       );
+    }
+
+    if (overlayAnimationId) {
+      cancelAnimationFrame(overlayAnimationId);
+      overlayAnimationId = null;
+    }
+
+    if (hasActiveDamage) {
+      overlayAnimationId = requestAnimationFrame(() => {
+        renderOverlayLayer(true);
+      });
+    } else if (hasDamageIndicators) {
+      // Clean up finished indicators
+      activeState.damageIndicators = [];
+      if (!state) {
+        gameStateStore.set(activeState);
+      }
     }
   };
 
@@ -216,6 +243,13 @@
     if (isReady(actors)) {
       renderDynamicLayer(true);
       renderOverlayLayer(true);
+    }
+  });
+
+  onDestroy(() => {
+    if (overlayAnimationId) {
+      cancelAnimationFrame(overlayAnimationId);
+      overlayAnimationId = null;
     }
   });
 

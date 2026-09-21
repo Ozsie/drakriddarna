@@ -52,9 +52,11 @@ export {
   ATTACK_BONUS,
   RE_ROLL_ATTACK,
   canAct,
+  createDamageIndicator,
   doorAsActor,
   getDamageString,
   getEffectiveMaxMovement,
+  removeDamageIndicator,
   takeDamage,
 } from './core/combat';
 

@@ -11,6 +11,7 @@ import {
   isDungeonBeaten,
   isGameOver,
   debugModeStore,
+  damageIndicatorsStore,
   initGame,
   loadGameState,
   saveGame,
@@ -25,6 +26,7 @@ import {
   setGameLocale,
   goToTestingGrounds,
   dispatch,
+  removeDamageIndicatorAction,
 } from './gameStateStore';
 import { debouncedSaveReloadGuard, saveReloadGuard } from '../core';
 import type { Hero } from '../types';
@@ -67,6 +69,22 @@ describe('gameStateStore and state management', () => {
 
     const debug = get(debugModeStore);
     expect(debug).toBe(false);
+
+    const indicators = get(damageIndicatorsStore);
+    expect(indicators).toEqual([]);
+  });
+
+  it('damageIndicatorsStore reflects damage indicators and removeDamageIndicatorAction removes them', () => {
+    dispatch((s) => {
+      s.damageIndicators = [
+        { id: 'dmg-1', damage: 3, position: { x: 2, y: 2 } },
+      ];
+    });
+    expect(get(damageIndicatorsStore).length).toBe(1);
+    expect(get(damageIndicatorsStore)[0].damage).toBe(3);
+
+    removeDamageIndicatorAction('dmg-1');
+    expect(get(damageIndicatorsStore).length).toBe(0);
   });
 
   it('updates debugMode and locale through action dispatchers', () => {
