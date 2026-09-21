@@ -1,12 +1,13 @@
 import type { Actor, GameState, Item } from '../types';
-import { addLog, i18n, roll } from '../game';
-import { canAct } from '../hero/HeroLogic';
+import { addLog, i18n } from '../core';
+import { roll } from '../core';
+import { canAct, ATTACK_BONUS, RE_ROLL_ATTACK } from '../core';
 
 export const USED = 'USED';
-export const ATTACK_BONUS = 'ATTACK_BONUS';
+export { ATTACK_BONUS };
 export const SEARCH_BONUS = 'SEARCH_BONUS';
 export const BREAK_LOCK = 'BREAK_LOCK';
-export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
+export { RE_ROLL_ATTACK };
 export const DESCRIPTION = 'DESCRIPTION';
 export const ACTIVE = 'ACTIVE';
 export const MOVEMENT_BONUS = 'MOVEMENT_BONUS';
@@ -106,7 +107,7 @@ export const onUse: {
       addLog(state, 'logs.item.potionOfSpeed', {
         user: i18n(user.name),
         item: i18n(self.name),
-        actions: self.properties?.[ACTIONS_BONUS] as string,
+        actions: String(self.properties?.[ACTIONS_BONUS] ?? ''),
       });
     } else {
       addLog(state, 'logs.item.consumed', { item: i18n(self.name) });
@@ -143,6 +144,11 @@ export const onReset: {
   magicHerbsOnReset: (state: GameState, self: Item) => {
     if (self.properties) self.properties[USED] = false;
   },
+  necklaceOfLightOnReset: (state: GameState, self: Item) => {
+    if (self.properties) self.properties[USED] = false;
+    state.heroes.forEach((hero) => (hero.ignoredByMonsters = false));
+  },
+  // Backward compatibility alias
   necklaceOfLightOnUse: (state: GameState, self: Item) => {
     if (self.properties) self.properties[USED] = false;
     state.heroes.forEach((hero) => (hero.ignoredByMonsters = false));

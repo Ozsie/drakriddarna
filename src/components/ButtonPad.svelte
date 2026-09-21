@@ -1,101 +1,116 @@
 <script lang="ts">
-  import { doReRender, hasWon, init, loadState, next, save } from '../game';
-  import { act, endAction, pickLock, resetLiveHeroes, search } from '../hero/HeroLogic';
-  import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
   import { browser } from '$app/environment';
   import type { GameState } from '../types';
   import Menu from './Menu.svelte';
   import type { MenuButtonProps } from './ComponentTypes';
   import { locale, setLocale, t } from '$lib/translations';
+  import {
+    gameStateStore,
+    debugModeStore,
+    isTurnInProgress,
+    initGame,
+    loadGameState,
+    saveGame,
+    nextTurn,
+    endHeroAction,
+    setDebug,
+    setGameLocale,
+    winLevel,
+    goToTestingGrounds,
+  } from '../store/gameStateStore';
+  import { resetLiveHeroes } from '../hero/HeroLogic';
+  import { endAction, hasWon, init, loadState, next, save } from '../game';
+  import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
 
-  export let state: GameState;
-  export let debugMode: boolean;
-  export let buildInfo: {date: string, hash: string};
+  export let state: GameState | undefined = undefined;
+  export let debugMode: boolean | undefined = undefined;
+  export let buildInfo: { date: string; hash: string };
+
+  $: activeState = state ?? $gameStateStore;
+  $: activeDebugMode = debugMode ?? $debugModeStore;
+
   let showMenu: boolean = false;
   let showLoadMenu: boolean = false;
   let savedGames: MenuButtonProps[] = [];
   let mainMenuButtons: MenuButtonProps[] = [];
 
   const setDebugMode = () => {
-    debugMode = !debugMode;
-    state.settings['debug'] = debugMode;
-    doReRender(state);
-  }
-
-  const onKeyDown = (e: KeyboardEvent) => {
-    switch (e.key) {
-      case "6":
-      case "d":
-        act('R', state);
-        break;
-      case "9":
-      case "e":
-        act('UR', state);
-        break;
-      case "8":
-      case "w":
-        act('U', state);
-        break;
-      case "7":
-      case "q":
-        act('UL', state);
-        break;
-      case "4":
-      case "a":
-        act('L', state);
-        break;
-      case "1":
-      case "z":
-        act('DL', state);
-        break;
-      case "2":
-      case "x":
-        act('D', state);
-        break;
-      case "3":
-      case "c":
-        act('DR', state);
-        break;
-      case "0":
-      case " ":
-        state = next(state);
-        break;
-      case "-":
-      case "r":
-        pickLock(state);
-        break;
-      case "+":
-      case "f":
-        search(state);
-        break;
-      default:
-        break;
+    const newDebug = !activeDebugMode;
+    if (debugMode !== undefined) {
+      debugMode = newDebug;
     }
-  }
+    if (state) {
+      state.settings['debug'] = newDebug;
+      gameStateStore.set(state);
+    } else {
+      setDebug(newDebug);
+    }
+  };
+
+  const handleNext = async () => {
+    if ($isTurnInProgress) return;
+    if (state) {
+      state = await next(state);
+      gameStateStore.set(state);
+    } else {
+      await nextTurn();
+    }
+  };
+
+  const handleEndAction = async () => {
+    if ($isTurnInProgress) return;
+    if (state) {
+      await endAction(state);
+      gameStateStore.set(state);
+    } else {
+      await endHeroAction();
+    }
+  };
+
+  const handleWinLevel = () => {
+    if (state) {
+      hasWon(state);
+      gameStateStore.set(state);
+    } else {
+      winLevel();
+    }
+  };
 
   const onNewGame = () => {
-    state = init();
-    doReRender(state);
+    if (state) {
+      state = init();
+      gameStateStore.set(state);
+    } else {
+      initGame();
+    }
     showMenu = false;
-  }
+  };
 
   const onSaveGame = () => {
-    save(state);
+    if (state) {
+      save(state);
+    } else {
+      saveGame();
+    }
     showMenu = false;
-  }
+  };
 
   const toTestingGrounds = () => {
-    state.dungeon = testingGrounds;
-    resetLiveHeroes(state);
-    doReRender(state);
+    if (state) {
+      state.dungeon = testingGrounds;
+      resetLiveHeroes(state);
+      gameStateStore.set(state);
+    } else {
+      goToTestingGrounds();
+    }
     showMenu = false;
-  }
+  };
 
   const onLoadButton = () => {
     showMenu = false;
     showLoadMenu = true;
     savedGames = getSavedGames();
-  }
+  };
 
   const getSavedGames = () => {
     if (!browser) return [];
@@ -124,26 +139,56 @@
       onClick: () => {
         showMenu = true;
         showLoadMenu = false;
-      }
+      },
     });
 
-    return buttons
-  }
+    return buttons;
+  };
 
   const getMainMenu = () => [
-    {debugModeOnly: false, label: $t('content.menu.mainMenu.buttons.newGame'), onClick: onNewGame},
-    {debugModeOnly: false, label: $t('content.menu.mainMenu.buttons.saveGame'), onClick: onSaveGame},
-    {debugModeOnly: false, label: $t('content.menu.mainMenu.buttons.loadGame'), onClick: onLoadButton},
-    {debugModeOnly: false, label: $t('content.menu.mainMenu.buttons.debug'), onClick: setDebugMode},
-    {debugModeOnly: true, label: $t('content.menu.mainMenu.buttons.testingGrounds'), onClick: toTestingGrounds},
-    {debugModeOnly: false, label: $t('content.menu.mainMenu.buttons.language'), onClick: onChangeLanguage}
-  ]
+    {
+      debugModeOnly: false,
+      label: $t('content.menu.mainMenu.buttons.newGame'),
+      onClick: onNewGame,
+    },
+    {
+      debugModeOnly: false,
+      label: $t('content.menu.mainMenu.buttons.saveGame'),
+      onClick: onSaveGame,
+    },
+    {
+      debugModeOnly: false,
+      label: $t('content.menu.mainMenu.buttons.loadGame'),
+      onClick: onLoadButton,
+    },
+    {
+      debugModeOnly: false,
+      label: $t('content.menu.mainMenu.buttons.debug'),
+      onClick: setDebugMode,
+    },
+    {
+      debugModeOnly: true,
+      label: $t('content.menu.mainMenu.buttons.testingGrounds'),
+      onClick: toTestingGrounds,
+    },
+    {
+      debugModeOnly: false,
+      label: $t('content.menu.mainMenu.buttons.language'),
+      onClick: onChangeLanguage,
+    },
+  ];
 
   const onClickLoad = (stateString: string) => {
-    state = loadState(JSON.parse(stateString) as GameState);
+    const loaded = JSON.parse(stateString) as GameState;
+    if (state) {
+      state = loadState(loaded);
+      gameStateStore.set(state);
+    } else {
+      loadGameState(loaded);
+    }
     showMenu = false;
     showLoadMenu = false;
-  }
+  };
 
   const onMenuButton = () => {
     mainMenuButtons = getMainMenu();
@@ -153,62 +198,84 @@
       showMenu = !showMenu;
     }
     showLoadMenu = false;
-  }
+  };
 
   const onChangeLanguage = () => {
     if (locale.get() === 'en') {
       setLocale('sv');
-      state.settings['locale'] = 'sv';
+      if (state) {
+        state.settings['locale'] = 'sv';
+        gameStateStore.set(state);
+      } else {
+        setGameLocale('sv');
+      }
     } else {
       setLocale('en');
-      state.settings['locale'] = 'en';
+      if (state) {
+        state.settings['locale'] = 'en';
+        gameStateStore.set(state);
+      } else {
+        setGameLocale('en');
+      }
     }
     mainMenuButtons = getMainMenu();
-    doReRender(state);
-  }
+  };
 
   mainMenuButtons = getMainMenu();
-
 </script>
+
 <style>
-    .commands {
-        background: grey;
-        float: left;
-    }
-    @media screen and (max-width: 600px) {
-        .commands {
-            width: 25%;
-            padding: 4px;
-        }
-    }
-    @media screen and (min-width: 601px) {
-        .commands {
-            width: 15%;
-            padding: 10px 10px 0 10px;
-            height: 90px;
-        }
-    }
-    .menuButton {
-        margin: auto;
-        width: 100%;
-        margin-bottom: 10px;
-        border-top-right-radius: 8px;
-        border-bottom-left-radius: 8px;
-    }
-    .twoColButton {
-        width: 48%;
-    }
+  .commands {
+    background: var(--color-panel-bg, #252932);
+    color: var(--color-text-primary, #e2e8f0);
+    padding: 8px;
+    border-radius: var(--radius-sm, 4px);
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-sizing: border-box;
+  }
+  .menuButton {
+    margin: 0;
+    width: 100%;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+  .buttonGroup {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+  }
+  .twoColButton {
+    flex: 1;
+    width: 100%;
+  }
 </style>
+
 <div class="commands">
-  <Menu header={$t('content.menu.mainMenu.header')} bind:debugMode={debugMode} footer={`${buildInfo.date} - ${buildInfo.hash}`} bind:showMenu={showMenu} bind:buttons={mainMenuButtons} />
-  <Menu header={$t('content.menu.loadGame.header')} bind:debugMode={debugMode} footer='' bind:showMenu={showLoadMenu} bind:buttons={savedGames}/>
-  <button class='menuButton' on:click={onMenuButton}>{$t('content.menu.menuButton')}</button>
-  <div>
-    <button class='menuButton twoColButton' on:click={() => state = next(state)}>{$t('content.actions.next')}</button>
-    <button class='menuButton twoColButton' style='float:right;' on:click={() => endAction(state)}>{$t('content.actions.action')}</button>
+  <Menu
+    header={$t('content.menu.mainMenu.header')}
+    debugMode={activeDebugMode}
+    footer={`${buildInfo.date} - ${buildInfo.hash}`}
+    bind:showMenu={showMenu}
+    bind:buttons={mainMenuButtons}
+  />
+  <Menu
+    header={$t('content.menu.loadGame.header')}
+    debugMode={activeDebugMode}
+    footer=""
+    bind:showMenu={showLoadMenu}
+    bind:buttons={savedGames}
+  />
+  <button class="menuButton" on:click={onMenuButton}>{$t('content.menu.menuButton')}</button>
+  <div class="buttonGroup">
+    <button class="menuButton twoColButton" on:click={handleNext}>{$t('content.actions.next')}</button>
+    <button class="menuButton twoColButton" on:click={handleEndAction}>{$t('content.actions.action')}</button>
   </div>
-  {#if state.dungeon.beaten}
-    <button class='menuButton' on:click={() => hasWon(state)}>{$t('content.actions.nextLevel')}</button>
+  {#if activeState.dungeon.beaten}
+    <button class="menuButton" on:click={handleWinLevel}>{$t('content.actions.nextLevel')}</button>
   {/if}
 </div>
-<svelte:window on:keydown|preventDefault={onKeyDown} />

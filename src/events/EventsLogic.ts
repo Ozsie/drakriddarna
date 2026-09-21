@@ -1,19 +1,28 @@
-import type { Actor, Dungeon, GameState, TurnEvent, Weapon } from '../types';
-import { Colour, ItemType, Level, MonsterType, SecretType } from '../types';
+import type {
+  Actor,
+  Dungeon,
+  GameEvent,
+  GameState,
+  TurnEvent,
+  Weapon,
+} from '../types';
+import {
+  assertNever,
+  Colour,
+  ItemType,
+  Level,
+  MonsterType,
+  SecretType,
+} from '../types';
 import {
   isBlockedByHero,
   isBlockedByMonster,
   liveHeroes,
 } from '../hero/HeroLogic';
-import {
-  addLog,
-  findCell,
-  i18n,
-  isRoomDiscovered,
-  roll,
-  takeDamage,
-  toArray,
-} from '../game';
+import { addLog, i18n } from '../core';
+import { roll } from '../core';
+import { findCell, isRoomDiscovered, toArray } from '../core';
+import { takeDamage } from '../core';
 import { COLLAPSED, createMonster } from '../dungeon/DungeonLogic';
 import { events } from './events';
 import { ACTIVE, onDrop, onPickup } from '../items/ItemLogic';
@@ -39,9 +48,10 @@ export const drawNextEvent = (state: GameState): TurnEvent => {
   }
 };
 
-export const eventEffects: {
-  [index: string]: (state: GameState, event: TurnEvent) => void;
-} = {
+export const eventEffects: Record<
+  string,
+  (state: GameState, event: TurnEvent) => void
+> = {
   sunStone: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     const maxIndex = liveHeroes(state).length - 1;
@@ -95,9 +105,14 @@ export const eventEffects: {
     });
     event.used = true;
   },
+  theLostOrc: (state: GameState, event: TurnEvent) => {
+    eventDescriptionLog(state, event);
+    spawnRandomMonster(state, MonsterType.ORC);
+    event.used = true;
+  },
   theLostOrch: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
-    spawnRandomMonster(state, MonsterType.ORCH);
+    spawnRandomMonster(state, MonsterType.ORC);
     event.used = true;
   },
   theDragonsBreath: (state: GameState, event: TurnEvent) => {
@@ -119,7 +134,7 @@ export const eventEffects: {
     );
     event.used = true;
   },
-  foreSight: (state: GameState, event: TurnEvent) => {
+  foresight: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     const notDiscoveredSecret = state.dungeon.layout.secrets
       .filter(
@@ -153,11 +168,16 @@ export const eventEffects: {
     }
     event.used = true;
   },
+  foreSight: (state: GameState, event: TurnEvent) => {
+    eventEffects.foresight(state, event);
+  },
   earthquake: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     const room = getRandomRoom(state);
     const earthquakeWeapon: Weapon = {
+      id: 'boulder',
       name: 'boulder',
+      nameTranslationKey: 'boulder',
       type: ItemType.WEAPON,
       value: 0,
       dice: 3,
@@ -169,7 +189,9 @@ export const eventEffects: {
       ignoresArmour: false,
     };
     const earthQuakeActor: Actor = {
+      id: 'earthquake',
       name: 'Earthquake',
+      nameTranslationKey: 'Earthquake',
       actions: 0,
       health: 0,
       maxMovement: 0,
@@ -244,18 +266,73 @@ export const eventEffects: {
     hero.weapon.elemental = true;
     event.used = true;
   },
-  theOrchDrums: (state: GameState, event: TurnEvent) => {
+  theOrcDrums: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     state.dungeon.layout.monsters
-      .filter((monster) => monster.type === MonsterType.ORCH)
+      .filter((monster) => monster.type === MonsterType.ORC)
       .forEach((monster) => (monster.actions = 3));
     event.used = true;
+  },
+  theOrchDrums: (state: GameState, event: TurnEvent) => {
+    eventEffects.theOrcDrums(state, event);
   },
   theSymbolOfWeakness: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     liveHeroes(state).forEach((hero) => (hero.weakened = true));
     event.used = true;
   },
+};
+
+export const executeGameEvent = (state: GameState, event: GameEvent): void => {
+  switch (event.type) {
+    case 'SUN_STONE':
+      eventEffects.sunStone(state, event);
+      break;
+    case 'HUNGRY_TROLL':
+      eventEffects.theHungryTroll(state, event);
+      break;
+    case 'TIME_PORTAL':
+      eventEffects.timePortal(state, event);
+      break;
+    case 'FOUNTAIN_OF_YOUTH':
+      eventEffects.fountainOfYouth(state, event);
+      break;
+    case 'SLEEPING_GAS_CLOUD':
+      eventEffects.sleepingGasCloud(state, event);
+      break;
+    case 'LOST_ORC':
+      eventEffects.theLostOrc(state, event);
+      break;
+    case 'DRAGONS_BREATH':
+      eventEffects.theDragonsBreath(state, event);
+      break;
+    case 'LANDSLIDE':
+      eventEffects.landslide(state, event);
+      break;
+    case 'MAGIC_NODE':
+      eventEffects.fountainOfYouth(state, event);
+      break;
+    case 'FORESIGHT':
+      eventEffects.foresight(state, event);
+      break;
+    case 'EARTHQUAKE':
+      eventEffects.earthquake(state, event);
+      break;
+    case 'MAGIC_STORM':
+      eventEffects.theMagicStorm(state, event);
+      break;
+    case 'ELEMENTAL_WEAPON':
+      eventEffects.theElementalWeapon(state, event);
+      break;
+    case 'ORC_DRUMS':
+      eventEffects.theOrcDrums(state, event);
+      break;
+    case 'SYMBOL_OF_WEAKNESS':
+      eventEffects.theSymbolOfWeakness(state, event);
+      break;
+    default:
+      assertNever(event);
+  }
 };
 
 const restoreDisabledItems = (state: GameState) => {

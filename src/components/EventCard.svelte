@@ -59,10 +59,10 @@
       {/if}
     </div>
     <div>
-      <span>{event.number}. {$t(event.name)}</span>
+      <span>{event.number}. {$t(event.nameTranslationKey ?? event.name)}</span>
       {#if showEvent}
         <p>
-          {$t(event.description)}
+          {$t(event.descriptionTranslationKey ?? event.description)}
         </p>
       {/if}
     </div>

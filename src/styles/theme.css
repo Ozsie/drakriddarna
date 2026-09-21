@@ -1,0 +1,92 @@
+:root {
+  /* Theme Colors */
+  --color-bg-app: #1a1d24;
+  --color-bg-dungeon: #121418;
+  --color-panel-bg: #252932;
+  --color-panel-border: #3a414d;
+  --color-panel-header: #323843;
+
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-accent: #f59e0b;
+  --color-accent-hover: #d97706;
+
+  /* Hero Color Palette */
+  --color-hero-red: #ef4444;
+  --color-hero-blue: #3b82f6;
+  --color-hero-green: #10b981;
+  --color-hero-yellow: #f59e0b;
+  --color-border-active: #60a5fa;
+
+  /* Specialized Component Themes */
+  --color-log-bg: #14281d;
+  --color-log-text: #86efac;
+  --color-log-border: #1e4732;
+
+  --color-diary-bg: #fefce8;
+  --color-diary-border: #15803d;
+  --color-diary-text: #1e293b;
+
+  --color-card-bg: #5c4033;
+  --color-card-border: #785544;
+  --color-card-text: #fef3c7;
+
+  --color-button-bg: #334155;
+  --color-button-text: #f8fafc;
+  --color-button-hover: #475569;
+  --color-button-active: #1e293b;
+  --color-button-border: #475569;
+
+  /* Sizing and Radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-family-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo,
+    monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg-app);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base), sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid var(--color-button-border);
+  background-color: var(--color-button-bg);
+  color: var(--color-button-text);
+  border-radius: var(--radius-sm);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+button:hover {
+  background-color: var(--color-button-hover);
+}
+
+button:active {
+  background-color: var(--color-button-active);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

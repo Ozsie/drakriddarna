@@ -9,33 +9,42 @@ import type {
   Position,
   Item,
   Weapon,
+  MoveDirection,
 } from '../types';
 import { Colour, ItemType, Level, Side } from '../types';
 import { weapons } from '../items/weapons';
 import {
   addLog,
-  doorAsActor,
   doReRender,
+  i18n,
+  recordActorStep,
+  clearActorAnimations,
+} from '../core';
+import {
   findCell,
   findNeighbouringHeroes,
-  getEffectiveMaxMovement,
-  i18n,
   isDiscovered,
   isNeighbouring,
   isSamePosition,
   isWalkable,
-  next,
-  roll,
+} from '../core';
+import { roll } from '../core';
+import {
+  canAct,
+  doorAsActor,
+  getEffectiveMaxMovement,
   takeDamage,
-} from '../game';
+} from '../core';
 import { checkForTrapDoor, searchForSecret } from '../secrets/SecretsLogic';
 import { BREAK_LOCK, onDrop, onPickup } from '../items/ItemLogic';
-import { COLLAPSED, EMPTY, WALL } from '../dungeon/DungeonLogic';
+import { COLLAPSED, EMPTY, WALL } from '../core';
 
 export const newHero = (name: string, colour: Colour): Hero => {
   weapons[0].amountInDeck--;
   return {
+    id: name.toLowerCase().replace(/ /g, '_'),
     name: name,
+    nameTranslationKey: name,
     actions: 2,
     movement: 3,
     maxMovement: 3,
@@ -53,7 +62,7 @@ export const newHero = (name: string, colour: Colour): Hero => {
   };
 };
 
-export const act = (direction: string, state: GameState) => {
+export const act = (direction: MoveDirection | string, state: GameState) => {
   doReRender(state);
   const hero: Hero | undefined = state.currentActor;
   if (!hero || hero.actions === 0) {
@@ -166,6 +175,7 @@ export const pickLock = (state: GameState) => {
 
 export const resetLiveHeroes = (state: GameState) => {
   doReRender(state);
+  clearActorAnimations();
   state.heroes.forEach((hero, index) => {
     hero.position = state.dungeon.startingPositions[index];
     hero.movement = getEffectiveMaxMovement(hero);
@@ -177,23 +187,7 @@ export const resetLiveHeroes = (state: GameState) => {
 export const liveHeroes = (state: GameState): Hero[] =>
   state.heroes.filter((hero) => hero.health > 0).map((hero) => hero as Hero);
 
-export const endAction = (state: GameState) => {
-  doReRender(state);
-  const hero = state.currentActor;
-  if (!hero) return;
-  hero.actions--;
-  hero.movement = getEffectiveMaxMovement(hero);
-  if (hero.actions === 0) {
-    next(state);
-  }
-};
-
-export const canAct = (hero: Actor) => {
-  if (hero.movement < getEffectiveMaxMovement(hero)) {
-    return hero.actions > 1;
-  }
-  return hero.actions > 0;
-};
+export { canAct, getEffectiveMaxMovement };
 
 export const openDoor = (
   hero: Hero,
@@ -412,6 +406,7 @@ const move = (
   newY: number,
   cost: number,
 ) => {
+  recordActorStep(hero, { x: newX, y: newY });
   hero.position.x = newX;
   hero.position.y = newY;
   checkForNote(state, hero);

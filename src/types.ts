@@ -5,6 +5,13 @@ export enum Colour {
   Yellow = '#FCFF4F',
 }
 
+export interface GameSettings {
+  cellSize?: number;
+  debug?: boolean;
+  locale?: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
 export type GameState = {
   heroes: Actor[];
   dungeon: Dungeon;
@@ -13,11 +20,19 @@ export type GameState = {
   itemDeck: Item[];
   magicItemDeck: Item[];
   targetActor?: Actor;
-  settings: Record<string, string | number | boolean>;
+  settings: GameSettings;
   eventDeck: TurnEvent[];
   reRender: boolean;
   currentEvent?: TurnEvent;
   turnCount?: number;
+  damageIndicators?: DamageIndicator[];
+};
+
+export type DamageIndicator = {
+  id: string;
+  damage: number;
+  position: Position;
+  timestamp?: number;
 };
 
 export type LogEvent = {
@@ -28,6 +43,7 @@ export type LogEvent = {
 
 export type Campaign = {
   name: string;
+  nameTranslationKey?: string;
   dungeons: Dungeon[];
   heroes: Actor[];
   itemDeck: Item[];
@@ -35,7 +51,9 @@ export type Campaign = {
 };
 
 export type Actor = {
+  id?: string;
   name: string;
+  nameTranslationKey?: string;
   actions: number;
   movement: number;
   maxMovement: number;
@@ -66,7 +84,8 @@ export type Monster = Actor & {
 };
 
 export enum MonsterType {
-  ORCH = 'Orch',
+  ORC = 'Orc',
+  ORCH = 'Orc',
   TROLL = 'Troll',
   GREEN_DARK_LORD = 'Green Dark Lord',
   BLUE_DARK_LORD = 'Blue Dark Lord',
@@ -84,6 +103,7 @@ export enum Level {
 
 export type Dungeon = {
   name: string;
+  nameTranslationKey?: string;
   layout: Layout;
   startingPositions: Position[];
   discoveredRooms: string[];
@@ -159,6 +179,7 @@ export type ItemLocation = {
 };
 
 export type Note = {
+  id?: string;
   message: string;
   position: Position;
   found?: boolean;
@@ -166,7 +187,9 @@ export type Note = {
 };
 
 export type Secret = {
+  id?: string;
   name: string;
+  nameTranslationKey?: string;
   type: SecretType;
   position: Position;
   found: boolean;
@@ -181,6 +204,7 @@ export enum SecretType {
 }
 
 export type Door = {
+  id?: string;
   locked: boolean;
   trapped: boolean;
   open: boolean;
@@ -210,16 +234,52 @@ export enum ItemType {
   MAGIC,
 }
 
+export type ResetTrigger = 'TRADE' | 'NEXT_SCENARIO' | 'NEXT_TURN' | string;
+
+export interface ItemProperties {
+  USED?: boolean;
+  ACTIVE?: boolean;
+  DESCRIPTION?: string;
+  RESET_ON?: ResetTrigger[];
+  MOVEMENT_BONUS?: number;
+  ATTACK_BONUS?: number;
+  SEARCH_BONUS?: number;
+  ACTIONS_BONUS?: number;
+  BREAK_DOOR?: boolean;
+  BREAK_LOCK?: boolean;
+  RE_ROLL_ATTACK?: boolean;
+  [key: string]: string | number | boolean | string[] | undefined;
+}
+
+export type ItemEffectKey =
+  | 'magicHerbsOnUse'
+  | 'chaosSwordOnUse'
+  | 'potionOfSpeedOnUse'
+  | 'necklaceOfLightOnUse'
+  | string;
+
+export type ItemResetKey =
+  | 'magicHerbsOnReset'
+  | 'necklaceOfLightOnReset'
+  | 'necklaceOfLightOnUse'
+  | string;
+
+export type ItemPickupKey = 'movementBonusOnPickup' | string;
+
+export type ItemDropKey = 'movementBonusOnDrop' | string;
+
 export type Item = {
+  id?: string;
   name: string;
+  nameTranslationKey?: string;
   amountInDeck: number;
   type: ItemType;
   value: number;
-  properties?: Record<string, string | number | boolean | string[]>;
-  effect?: string;
-  reset?: string;
-  pickup?: string;
-  drop?: string;
+  properties?: ItemProperties;
+  effect?: ItemEffectKey;
+  reset?: ItemResetKey;
+  pickup?: ItemPickupKey;
+  drop?: ItemDropKey;
   disabled?: boolean;
 };
 
@@ -243,10 +303,197 @@ export type Armour = Item & {
   movementReduction: number;
 };
 
+export type TurnEventEffect =
+  | 'sunStone'
+  | 'theHungryTroll'
+  | 'timePortal'
+  | 'fountainOfYouth'
+  | 'sleepingGasCloud'
+  | 'theLostOrch'
+  | 'theLostOrc'
+  | 'theDragonsBreath'
+  | 'landslide'
+  | 'foresight'
+  | 'foreSight'
+  | 'earthquake'
+  | 'theMagicStorm'
+  | 'theElementalWeapon'
+  | 'theOrchDrums'
+  | 'theOrcDrums'
+  | 'theSymbolOfWeakness'
+  | string;
+
+export type GameEventType =
+  | 'SUN_STONE'
+  | 'HUNGRY_TROLL'
+  | 'TIME_PORTAL'
+  | 'FOUNTAIN_OF_YOUTH'
+  | 'SLEEPING_GAS_CLOUD'
+  | 'LOST_ORC'
+  | 'DRAGONS_BREATH'
+  | 'LANDSLIDE'
+  | 'MAGIC_NODE'
+  | 'FORESIGHT'
+  | 'EARTHQUAKE'
+  | 'MAGIC_STORM'
+  | 'ELEMENTAL_WEAPON'
+  | 'ORC_DRUMS'
+  | 'SYMBOL_OF_WEAKNESS';
+
+export type GameEvent =
+  | {
+      type: 'SUN_STONE';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'HUNGRY_TROLL';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'TIME_PORTAL';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'FOUNTAIN_OF_YOUTH';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'SLEEPING_GAS_CLOUD';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'LOST_ORC';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'DRAGONS_BREATH';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'LANDSLIDE';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'MAGIC_NODE';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'FORESIGHT';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'EARTHQUAKE';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'MAGIC_STORM';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'ELEMENTAL_WEAPON';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'ORC_DRUMS';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'SYMBOL_OF_WEAKNESS';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    };
+
 export type TurnEvent = {
+  id?: string;
+  type?: GameEventType;
   number: number;
   name: string;
+  nameTranslationKey?: string;
   description: string;
-  effect: string;
+  descriptionTranslationKey?: string;
+  effect: TurnEventEffect;
   used: boolean;
 };
+
+export type MoveDirection = 'UL' | 'U' | 'UR' | 'L' | 'R' | 'DL' | 'D' | 'DR';
+
+export type GameAction =
+  | { type: 'MOVE'; direction: MoveDirection }
+  | { type: 'PICK_LOCK' }
+  | { type: 'SEARCH' }
+  | { type: 'USE_ITEM'; item: Item }
+  | { type: 'SELECT_TARGET'; target?: Hero }
+  | { type: 'TOGGLE_INVENTORY'; hero: Hero }
+  | { type: 'END_ACTION' }
+  | { type: 'NEXT_TURN' }
+  | { type: 'INIT_GAME' }
+  | { type: 'LOAD_GAME'; state: GameState }
+  | { type: 'SAVE_GAME' }
+  | { type: 'SET_DEBUG'; debug: boolean }
+  | { type: 'SET_LOCALE'; locale: string }
+  | { type: 'WIN_LEVEL' }
+  | { type: 'RESET_LEVEL' }
+  | { type: 'GO_TO_TESTING_GROUNDS' };
+
+export function assertNever(x: never, message = 'Unexpected object'): never {
+  throw new Error(`${message}: ${JSON.stringify(x)}`);
+}

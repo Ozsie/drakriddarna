@@ -1,5 +1,6 @@
 import type { GameState, Position } from '../types';
-import { i18n, isSamePosition } from '../game';
+import { i18n } from '../core';
+import { isSamePosition } from '../core';
 
 export const renderTextBox = (
   ctx: CanvasRenderingContext2D,

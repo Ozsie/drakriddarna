@@ -1,13 +1,9 @@
 import type { Actor, GameState, Hero, Item, Position, Secret } from '../types';
 import { Colour, ItemType, Level, SecretType } from '../types';
-import {
-  addLog,
-  i18n,
-  isNeighbouring,
-  isSamePosition,
-  roll,
-  takeDamage,
-} from '../game';
+import { addLog, i18n } from '../core';
+import { isNeighbouring, isSamePosition } from '../core';
+import { roll } from '../core';
+import { takeDamage } from '../core';
 import { pickupItem } from '../hero/HeroLogic';
 import { onPickup, SEARCH_BONUS } from '../items/ItemLogic';
 
@@ -72,20 +68,29 @@ export const checkForTrapDoor = (state: GameState) => {
 };
 
 export const removeFoundItemFromDeck = (state: GameState, item: Item) => {
-  const index = state.itemDeck.findIndex(
-    (i) => i.type === item.type && i.name === item.name,
+  const index = state.itemDeck.findIndex((i) =>
+    item.id && i.id
+      ? i.id === item.id
+      : i.type === item.type && i.name === item.name,
   );
-  state.itemDeck.splice(index, 1);
+  if (index !== -1) {
+    state.itemDeck.splice(index, 1);
+  }
 };
 
 export const removeFoundMagicItemFromDeck = (state: GameState, item: Item) => {
-  const index = state.magicItemDeck.findIndex(
-    (i) => i.type === item.type && i.name === item.name,
+  const index = state.magicItemDeck.findIndex((i) =>
+    item.id && i.id
+      ? i.id === item.id
+      : i.type === item.type && i.name === item.name,
   );
-  state.magicItemDeck.splice(index, 1);
+  if (index !== -1) {
+    state.magicItemDeck.splice(index, 1);
+  }
 };
 
 const secretAsActor = (secret: Secret): Actor => ({
+  id: secret.id ?? 'trap_door_actor',
   health: 0,
   position: secret.position,
   defense: 0,
@@ -96,10 +101,13 @@ const secretAsActor = (secret: Secret): Actor => ({
   colour: Colour.Red,
   maxHealth: 0,
   name: 'Trap Door',
+  nameTranslationKey: 'Trap Door',
   level: Level.APPRENTICE,
   incapacitated: false,
   weapon: {
+    id: 'falling_trap',
     name: 'Falling',
+    nameTranslationKey: 'Falling',
     amountInDeck: 0,
     dice: 3,
     useHearHeroes: true,

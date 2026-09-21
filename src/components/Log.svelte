@@ -1,61 +1,43 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import type { GameState, LogEvent } from '../types';
   import { t } from '$lib/translations';
+  import { actionLogs } from '../store/gameStateStore';
 
-  export let state: GameState;
-  let uglyUpdateToggle = false;
+  export let state: GameState | undefined = undefined;
 
-  onMount(() => {
-    render();
-    setInterval(render, 500);
-  });
-  const render = () => {
-    if (state.reRender) {
-      uglyUpdateToggle = !uglyUpdateToggle;
-    }
-    if (!state || !document) return;
-  };
+  $: logs = state ? state.actionLog : $actionLogs;
 
   const renderLog = (log: LogEvent) => {
     return `(${log.turn}) ${$t(log.key, log.properties)}`;
-  }
+  };
 </script>
+
 <style>
-    @media screen and (max-width: 600px) {
-        .log {
-            height: 100px;
-            background: green;
-            overflow: scroll;
-        }
+  .log {
+    height: 100px;
+    background: var(--color-log-bg, #14281d);
+    color: var(--color-log-text, #86efac);
+    border: 1px solid var(--color-log-border, #1e4732);
+    border-radius: var(--radius-sm, 4px);
+    padding: 6px 8px;
+    overflow-y: auto;
+    font-family: var(--font-family-mono, monospace),monospace;
+    width: 100%;
+    box-sizing: border-box;
+  }
 
-        p {
-            font-size: 10pt;
-            margin-top: 0;
-            margin-bottom: 1px;
-        }
-    }
-    @media screen and (min-width: 601px) {
-        .log {
-            margin-left: 15%;
-            height: 100px;
-            background: green;
-            overflow: scroll;
-        }
-
-        p {
-            font-size: 10pt;
-            margin-top: 0;
-            margin-bottom: 1px;
-        }
-    }
+  p {
+    font-size: 11px;
+    margin-top: 0;
+    margin-bottom: 2px;
+    line-height: 1.3;
+  }
 </style>
+
 <div class="log">
-  {#key uglyUpdateToggle}
-    {#each state.actionLog as log, index}
-      {#if index < 25}
-        <p>>{renderLog(log)}</p>
-      {/if}
-    {/each}
-  {/key}
+  {#each logs as log, index}
+    {#if index < 25}
+      <p>>{renderLog(log)}</p>
+    {/if}
+  {/each}
 </div>

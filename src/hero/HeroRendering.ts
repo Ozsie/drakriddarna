@@ -1,6 +1,13 @@
 import type { GameState, Hero } from '../types';
-import { hasLineOfSight, isDiscovered, isWalkable } from '../game';
+import {
+  getActorVisualPosition,
+  hasLineOfSight,
+  isActorAnimating,
+  isDiscovered,
+  isWalkable,
+} from '../core';
 import { isBlockedByHero, isBlockedByMonster, liveHeroes } from './HeroLogic';
+import { drawCachedTile } from '../dungeon/TileTextureCache';
 
 export const renderHeroes = (
   ctx: CanvasRenderingContext2D,
@@ -8,13 +15,24 @@ export const renderHeroes = (
   cellSize: number,
   state: GameState,
   debugMode: boolean,
-) => {
+  currentTime: number = Date.now(),
+): boolean => {
   const heroes = liveHeroes(state);
+  let hasActiveAnimation = false;
   heroes.forEach((hero) => {
-    renderHero(ctx, hero, actors, cellSize, debugMode);
+    const isAnim = renderHero(
+      ctx,
+      hero,
+      actors,
+      cellSize,
+      debugMode,
+      currentTime,
+    );
+    if (isAnim) hasActiveAnimation = true;
   });
   renderWalkableArea(ctx, state, cellSize);
-  renderCurrentActor(ctx, state, cellSize);
+  renderCurrentActor(ctx, state, cellSize, currentTime);
+  return hasActiveAnimation;
 };
 
 const renderHero = (
@@ -23,29 +41,33 @@ const renderHero = (
   actors: CanvasImageSource,
   cellSize: number,
   debugMode: boolean,
-) => {
-  const x = hero.position.x;
-  const y = hero.position.y;
-  ctx.drawImage(
+  currentTime: number = Date.now(),
+): boolean => {
+  const visualPos = getActorVisualPosition(hero, currentTime);
+  const x = visualPos.x;
+  const y = visualPos.y;
+  drawCachedTile(
+    ctx,
     actors,
-    4 * 16,
     0,
-    16,
-    16,
+    2 * 32,
+    32,
+    32,
     x * cellSize,
     y * cellSize,
-    cellSize,
-    cellSize,
+    32,
+    32,
   );
   renderActionOnActor(ctx, hero, x, y, cellSize);
   renderActorBar(ctx, hero, x, y, cellSize);
   renderHealthBar(ctx, hero, x, y, cellSize);
   if (debugMode) {
-    const debugText = `(${x},${y})`;
+    const debugText = `(${hero.position.x},${hero.position.y})`;
     ctx.fillStyle = 'black';
     ctx.font = '8px Arial';
     ctx.fillText(debugText, x * cellSize + 3, y * cellSize + 10);
   }
+  return isActorAnimating(hero, currentTime);
 };
 
 const renderActionOnActor = (
@@ -180,74 +202,36 @@ const renderCurrentActor = (
   ctx: CanvasRenderingContext2D,
   state: GameState,
   cellSize: number,
+  currentTime: number = Date.now(),
 ) => {
   const hero = state.currentActor;
   if (hero) {
+    const visualPos = getActorVisualPosition(hero, currentTime);
+    const x = visualPos.x;
+    const y = visualPos.y;
     ctx.beginPath();
     ctx.strokeStyle = 'lightblue';
     ctx.lineWidth = 2;
 
-    ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize);
-    ctx.lineTo(
-      hero.position.x * cellSize + cellSize / 3,
-      hero.position.y * cellSize,
-    );
-    ctx.moveTo(hero.position.x * cellSize, hero.position.y * cellSize);
-    ctx.lineTo(
-      hero.position.x * cellSize,
-      hero.position.y * cellSize + cellSize / 3,
-    );
+    ctx.moveTo(x * cellSize, y * cellSize);
+    ctx.lineTo(x * cellSize + cellSize / 3, y * cellSize);
+    ctx.moveTo(x * cellSize, y * cellSize);
+    ctx.lineTo(x * cellSize, y * cellSize + cellSize / 3);
 
-    ctx.moveTo(
-      hero.position.x * cellSize + cellSize,
-      hero.position.y * cellSize,
-    );
-    ctx.lineTo(
-      hero.position.x * cellSize + (cellSize / 3) * 2,
-      hero.position.y * cellSize,
-    );
-    ctx.moveTo(
-      hero.position.x * cellSize + cellSize,
-      hero.position.y * cellSize,
-    );
-    ctx.lineTo(
-      hero.position.x * cellSize + cellSize,
-      hero.position.y * cellSize + cellSize / 3,
-    );
+    ctx.moveTo(x * cellSize + cellSize, y * cellSize);
+    ctx.lineTo(x * cellSize + (cellSize / 3) * 2, y * cellSize);
+    ctx.moveTo(x * cellSize + cellSize, y * cellSize);
+    ctx.lineTo(x * cellSize + cellSize, y * cellSize + cellSize / 3);
 
-    ctx.moveTo(
-      hero.position.x * cellSize,
-      hero.position.y * cellSize + cellSize,
-    );
-    ctx.lineTo(
-      hero.position.x * cellSize,
-      hero.position.y * cellSize + (cellSize / 3) * 2,
-    );
-    ctx.moveTo(
-      hero.position.x * cellSize,
-      hero.position.y * cellSize + cellSize,
-    );
-    ctx.lineTo(
-      hero.position.x * cellSize + cellSize / 3,
-      hero.position.y * cellSize + cellSize,
-    );
+    ctx.moveTo(x * cellSize, y * cellSize + cellSize);
+    ctx.lineTo(x * cellSize, y * cellSize + (cellSize / 3) * 2);
+    ctx.moveTo(x * cellSize, y * cellSize + cellSize);
+    ctx.lineTo(x * cellSize + cellSize / 3, y * cellSize + cellSize);
 
-    ctx.moveTo(
-      hero.position.x * cellSize + cellSize,
-      hero.position.y * cellSize + cellSize,
-    );
-    ctx.lineTo(
-      hero.position.x * cellSize + cellSize,
-      hero.position.y * cellSize + (cellSize / 3) * 2,
-    );
-    ctx.moveTo(
-      hero.position.x * cellSize + cellSize,
-      hero.position.y * cellSize + cellSize,
-    );
-    ctx.lineTo(
-      hero.position.x * cellSize + (cellSize / 3) * 2,
-      hero.position.y * cellSize + cellSize,
-    );
+    ctx.moveTo(x * cellSize + cellSize, y * cellSize + cellSize);
+    ctx.lineTo(x * cellSize + cellSize, y * cellSize + (cellSize / 3) * 2);
+    ctx.moveTo(x * cellSize + cellSize, y * cellSize + cellSize);
+    ctx.lineTo(x * cellSize + (cellSize / 3) * 2, y * cellSize + cellSize);
     ctx.stroke();
     ctx.lineWidth = 1;
   }

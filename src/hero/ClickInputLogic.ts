@@ -1,14 +1,11 @@
+import { addLog, doReRender, i18n, recordActorStep } from '../core';
 import {
-  addLog,
-  doorAsActor,
-  doReRender,
   hasLineOfSight,
-  i18n,
   isRoomDiscovered,
   isSamePosition,
   isWalkable,
-  takeDamage,
-} from '../game';
+} from '../core';
+import { doorAsActor, takeDamage } from '../core';
 import type { ItemLocation, GameState, Hero, Position } from '../types';
 import { ItemType, Side } from '../types';
 import {
@@ -141,6 +138,7 @@ const onTargetCell = (state: GameState, target: Position) => {
       distance <= hero.movement &&
       los
     ) {
+      recordActorStep(hero, target);
       hero.position = target;
       hero.movement -= distance;
       checkForNote(state, hero);

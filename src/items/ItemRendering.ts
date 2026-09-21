@@ -1,7 +1,9 @@
 import type { GameState, ItemLocation } from '../types';
 import { ItemType } from '../types';
-import { i18n, isDiscovered, isSamePosition } from '../game';
+import { i18n } from '../core';
+import { isDiscovered, isSamePosition } from '../core';
 import { renderTextBox } from '../notes/NotesRendering';
+import { drawCachedTile } from '../dungeon/TileTextureCache';
 
 export const renderItems = (
   ctx: CanvasRenderingContext2D,
@@ -39,7 +41,8 @@ const renderMagicItem = (
 ) => {
   const x = itemLocation.position.x;
   const y = itemLocation.position.y;
-  ctx.drawImage(
+  drawCachedTile(
+    ctx,
     ground,
     48 * 6,
     48 * 3,

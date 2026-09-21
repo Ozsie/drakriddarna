@@ -4,7 +4,9 @@ import { NEXT_DUNGEON, NEXT_TURN, TRADE } from './ItemLogic';
 
 export const magicItems: Item[] = [
   {
+    id: 'healing_herbs',
     name: 'items.magicItems.healingHerbs.name',
+    nameTranslationKey: 'items.magicItems.healingHerbs.name',
     type: ItemType.MAGIC,
     value: 0,
     amountInDeck: 1,
@@ -18,7 +20,9 @@ export const magicItems: Item[] = [
     reset: 'magicHerbsOnReset',
   },
   {
+    id: 'boots_of_speed',
     name: 'items.magicItems.boots.name',
+    nameTranslationKey: 'items.magicItems.boots.name',
     type: ItemType.MAGIC,
     value: 0,
     amountInDeck: 1,
@@ -30,7 +34,9 @@ export const magicItems: Item[] = [
     drop: 'movementBonusOnDrop',
   },
   {
+    id: 'giants_glove',
     name: 'items.magicItems.giantsGlove.name',
+    nameTranslationKey: 'items.magicItems.giantsGlove.name',
     type: ItemType.MAGIC,
     value: 0,
     amountInDeck: 1,
@@ -41,7 +47,9 @@ export const magicItems: Item[] = [
     },
   },
   {
+    id: 'ring_of_precision',
     name: 'items.magicItems.ringOfPrecision.name',
+    nameTranslationKey: 'items.magicItems.ringOfPrecision.name',
     type: ItemType.MAGIC,
     value: 0,
     amountInDeck: 1,
@@ -51,7 +59,9 @@ export const magicItems: Item[] = [
     },
   },
   {
+    id: 'crown_of_wisdom',
     name: 'items.magicItems.crownOfWisdom.name',
+    nameTranslationKey: 'items.magicItems.crownOfWisdom.name',
     type: ItemType.MAGIC,
     value: 0,
     amountInDeck: 1,
@@ -61,7 +71,9 @@ export const magicItems: Item[] = [
     },
   },
   {
+    id: 'sword_of_chaos',
     name: 'items.magicItems.swordOfChaos.name',
+    nameTranslationKey: 'items.magicItems.swordOfChaos.name',
     type: ItemType.MAGIC,
     value: 0,
     amountInDeck: 1,
@@ -71,7 +83,9 @@ export const magicItems: Item[] = [
     effect: 'chaosSwordOnUse',
   },
   {
+    id: 'potion_of_speed',
     name: 'items.magicItems.potionOfSpeed.name',
+    nameTranslationKey: 'items.magicItems.potionOfSpeed.name',
     type: ItemType.MAGIC,
     value: 0,
     amountInDeck: 1,
@@ -84,7 +98,9 @@ export const magicItems: Item[] = [
     effect: 'potionOfSpeedOnUse',
   },
   {
+    id: 'necklace_of_light',
     name: 'items.magicItems.necklaceOfLight.name',
+    nameTranslationKey: 'items.magicItems.necklaceOfLight.name',
     type: ItemType.MAGIC,
     value: 0,
     amountInDeck: 1,
