@@ -9,7 +9,9 @@
         "loadGame": "Load",
         "debug": "Debug",
         "testingGrounds": "To Testing Grounds",
-        "language": "-> Svenska"
+        "language": "-> Svenska",
+        "shuffleDeck": "Shuffle Deck",
+        "selectNextEvent": "Select Next Event"
       }
     },
     "loadGame": {
@@ -19,6 +21,9 @@
         "manualSave": "Manual Save",
         "back": "Back"
       }
+    },
+    "selectNextEvent": {
+      "header": "Select Next Event"
     }
   },
   "actions": {

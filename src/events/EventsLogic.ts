@@ -48,6 +48,23 @@ export const drawNextEvent = (state: GameState): TurnEvent => {
   }
 };
 
+export const shuffleEventDeck = (state: GameState): void => {
+  shuffleEvents(state.eventDeck);
+};
+
+export const selectNextEvent = (
+  state: GameState,
+  eventId: string | undefined,
+): void => {
+  const selectedIndex = state.eventDeck.findIndex(
+    (event) => event.id === eventId,
+  );
+  if (selectedIndex === -1) return;
+  const [selectedEvent] = state.eventDeck.splice(selectedIndex, 1);
+  selectedEvent.used = false;
+  state.eventDeck.unshift(selectedEvent);
+};
+
 export const eventEffects: Record<
   string,
   (state: GameState, event: TurnEvent) => void

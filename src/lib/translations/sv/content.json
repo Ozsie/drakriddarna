@@ -9,7 +9,9 @@
         "loadGame": "Ladda",
         "debug": "Debug",
         "testingGrounds": "Till testområde",
-        "language": "-> English"
+        "language": "-> English",
+        "shuffleDeck": "Blanda Kortleken",
+        "selectNextEvent": "Välj Nästa Händelse"
       }
     },
     "loadGame": {
@@ -19,6 +21,9 @@
         "manualSave": "Manuellt sparat spel",
         "back": "Tillbaka"
       }
+    },
+    "selectNextEvent": {
+      "header": "Välj Nästa Händelse"
     }
   },
   "actions": {
@@ -51,7 +56,7 @@
     "killAll": "Döda alla monster.",
     "killAllOfType": "Döda alla {{type}}.",
     "killAtLeast": "Döda åtminstone {{minKills}} monster.",
-    "openDoor": "Öppna en viss dör.r",
+    "openDoor": "Öppna en viss dörr.",
     "reachCell": "Nå en viss cell.",
     "additional": {
       "requiresNecklace": "Ni behöver ljusets halsband."

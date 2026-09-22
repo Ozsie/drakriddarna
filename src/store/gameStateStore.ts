@@ -33,6 +33,7 @@ import {
 } from '../monsters/MonsterLogic';
 import { doMouseLogic } from '../hero/ClickInputLogic';
 import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
+import { getEventsForDungeon } from '../events/EventsLogic';
 import { saveReloadGuard, debouncedSaveReloadGuard } from '../core';
 
 const getInitialState = (): GameState => {
@@ -282,6 +283,7 @@ export const goToTestingGrounds = (): void => {
   if (isExecutingTurn) return;
   const state = get(gameStateStore);
   state.dungeon = testingGrounds;
+  state.eventDeck = getEventsForDungeon(state.dungeon);
   resetLiveHeroes(state);
   syncStore(state);
 };

@@ -17,10 +17,17 @@
     setGameLocale,
     winLevel,
     goToTestingGrounds,
+    dispatch,
   } from '../store/gameStateStore';
   import { resetLiveHeroes } from '../hero/HeroLogic';
   import { endAction, hasWon, init, loadState, next, save } from '../game';
   import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
+  import {
+    shuffleEventDeck,
+    selectNextEvent,
+    getEventsForDungeon,
+  } from '../events/EventsLogic';
+  import type { TurnEvent } from '../types';
 
   export let state: GameState | undefined = undefined;
   export let debugMode: boolean | undefined = undefined;
@@ -31,8 +38,10 @@
 
   let showMenu: boolean = false;
   let showLoadMenu: boolean = false;
+  let showEventMenu: boolean = false;
   let savedGames: MenuButtonProps[] = [];
   let mainMenuButtons: MenuButtonProps[] = [];
+  let eventMenuButtons: MenuButtonProps[] = [];
 
   const setDebugMode = () => {
     const newDebug = !activeDebugMode;
@@ -98,12 +107,58 @@
   const toTestingGrounds = () => {
     if (state) {
       state.dungeon = testingGrounds;
+      state.eventDeck = getEventsForDungeon(state.dungeon);
       resetLiveHeroes(state);
       gameStateStore.set(state);
     } else {
       goToTestingGrounds();
     }
     showMenu = false;
+  };
+
+  const onShuffleDeck = () => {
+    if (state) {
+      shuffleEventDeck(state);
+      gameStateStore.set(state);
+    } else {
+      dispatch(shuffleEventDeck);
+    }
+    showMenu = false;
+  };
+
+  const onSelectNextEvent = (event: TurnEvent) => {
+    if (state) {
+      selectNextEvent(state, event.id);
+      gameStateStore.set(state);
+    } else {
+      dispatch((currentState) => selectNextEvent(currentState, event.id));
+    }
+    showEventMenu = false;
+  };
+
+  const getEventMenu = (): MenuButtonProps[] => {
+    const buttons = activeState.eventDeck
+      .sort((a, b) => a.number - b.number)
+      .map((event) => ({
+        debugModeOnly: false,
+        label: $t(event.nameTranslationKey ?? event.name),
+        onClick: () => onSelectNextEvent(event),
+      }));
+    buttons.push({
+      debugModeOnly: false,
+      label: $t('content.menu.loadGame.buttons.back'),
+      onClick: () => {
+        showMenu = true;
+        showEventMenu = false;
+      },
+    });
+    return buttons;
+  };
+
+  const onSelectNextEventButton = () => {
+    showMenu = false;
+    showEventMenu = true;
+    eventMenuButtons = getEventMenu();
   };
 
   const onLoadButton = () => {
@@ -172,6 +227,16 @@
       onClick: toTestingGrounds,
     },
     {
+      debugModeOnly: true,
+      label: $t('content.menu.mainMenu.buttons.shuffleDeck'),
+      onClick: onShuffleDeck,
+    },
+    {
+      debugModeOnly: true,
+      label: $t('content.menu.mainMenu.buttons.selectNextEvent'),
+      onClick: onSelectNextEventButton,
+    },
+    {
       debugModeOnly: false,
       label: $t('content.menu.mainMenu.buttons.language'),
       onClick: onChangeLanguage,
@@ -192,12 +257,13 @@
 
   const onMenuButton = () => {
     mainMenuButtons = getMainMenu();
-    if (showLoadMenu) {
+    if (showLoadMenu || showEventMenu) {
       showMenu = false;
     } else {
       showMenu = !showMenu;
     }
     showLoadMenu = false;
+    showEventMenu = false;
   };
 
   const onChangeLanguage = () => {
@@ -269,6 +335,13 @@
     footer=""
     bind:showMenu={showLoadMenu}
     bind:buttons={savedGames}
+  />
+  <Menu
+    header={$t('content.menu.selectNextEvent.header')}
+    debugMode={activeDebugMode}
+    footer=""
+    bind:showMenu={showEventMenu}
+    bind:buttons={eventMenuButtons}
   />
   <button class="menuButton" on:click={onMenuButton}>{$t('content.menu.menuButton')}</button>
   <div class="buttonGroup">
