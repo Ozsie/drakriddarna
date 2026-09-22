@@ -32,7 +32,9 @@
     "landslideRestored": "Den kollapsade korridoren rensades upp.",
     "blindedRestored": "Du tänder dina facklor igen.",
     "elementalWeaponRestored": "Den elementära magin dog ut.",
-    "weakenedRestored": "Din styrka återvänder till dig."
+    "weakenedRestored": "Din styrka återvänder till dig.",
+    "hexagram": "Ett hexagram dök upp vid ({{x}},{{y}}).",
+    "hexagramTeleport": "{{hero}} flyttade genom hexagrammet."
   },
   "heroAction": {
     "pickUp": "{{hero}} plockade upp {{item}}.",

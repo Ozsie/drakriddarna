@@ -58,5 +58,9 @@
   "weakness": {
     "name": "Svaghetens Symbol",
     "description": "Du går förbi en konstig symbol på väggen. En ond, gul glöd strålar från den. Plötsligt känner ni er alla svagare."
+  },
+  "hexagram": {
+    "name": "Hexagrammet",
+    "description": "På golvet i rummet ser ni en märklig, sexuddig stjärna med ett glittrande kraftfält i mitten. Genom glittret kan ni skymta en massa bekanta platser, samtidigt..."
   }
 }

@@ -281,6 +281,28 @@ export const eventEffects: Record<
     liveHeroes(state).forEach((hero) => (hero.weakened = true));
     event.used = true;
   },
+  theHexagram: (state: GameState, event: TurnEvent) => {
+    eventDescriptionLog(state, event);
+    const heroesInDiscoveredRooms = liveHeroes(state).filter((hero) => {
+      const room = findCell(
+        state.dungeon.layout.grid,
+        hero.position.x,
+        hero.position.y,
+      );
+      return room && isRoomDiscovered(state.dungeon, room);
+    });
+    if (heroesInDiscoveredRooms.length > 0) {
+      const maxHeroIndex = heroesInDiscoveredRooms.length;
+      const randomHeroIndex = Math.floor(Math.random() * maxHeroIndex);
+      const hero = heroesInDiscoveredRooms[randomHeroIndex];
+      state.dungeon.portal = { x: hero.position.x, y: hero.position.y };
+      addLog(state, 'logs.events.hexagram', {
+        x: `${hero.position.x}`,
+        y: `${hero.position.y}`,
+      });
+    }
+    event.used = true;
+  },
 };
 
 export const executeGameEvent = (state: GameState, event: GameEvent): void => {
@@ -329,6 +351,9 @@ export const executeGameEvent = (state: GameState, event: GameEvent): void => {
       break;
     case 'SYMBOL_OF_WEAKNESS':
       eventEffects.theSymbolOfWeakness(state, event);
+      break;
+    case 'HEXAGRAM':
+      eventEffects.theHexagram(state, event);
       break;
     default:
       assertNever(event);

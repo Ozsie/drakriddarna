@@ -113,6 +113,7 @@ export type Dungeon = {
   killCount: number;
   events?: number[];
   collapsedCorridor?: string;
+  portal?: Position;
 };
 
 export type WinCondition = {
@@ -321,6 +322,7 @@ export type TurnEventEffect =
   | 'theOrchDrums'
   | 'theOrcDrums'
   | 'theSymbolOfWeakness'
+  | 'theHexagram'
   | string;
 
 export type GameEventType =
@@ -338,7 +340,8 @@ export type GameEventType =
   | 'MAGIC_STORM'
   | 'ELEMENTAL_WEAPON'
   | 'ORC_DRUMS'
-  | 'SYMBOL_OF_WEAKNESS';
+  | 'SYMBOL_OF_WEAKNESS'
+  | 'HEXAGRAM';
 
 export type GameEvent =
   | {
@@ -455,6 +458,14 @@ export type GameEvent =
     }
   | {
       type: 'SYMBOL_OF_WEAKNESS';
+      number: number;
+      name: string;
+      description: string;
+      effect: TurnEventEffect;
+      used: boolean;
+    }
+  | {
+      type: 'HEXAGRAM';
       number: number;
       name: string;
       description: string;

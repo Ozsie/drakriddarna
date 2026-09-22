@@ -226,6 +226,45 @@ export const renderPillars = (
     });
 };
 
+export const renderPortal = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+) => {
+  const portal = state.dungeon.portal;
+  if (!portal) return;
+  if (!isDiscovered(state.dungeon, portal.x, portal.y) && !debugMode) return;
+
+  const centerX = portal.x * cellSize + cellSize / 2;
+  const centerY = portal.y * cellSize + cellSize / 2;
+  const radius = cellSize * 0.4;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(155, 89, 182, 0.35)';
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(210, 170, 255, 0.9)';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 6; i++) {
+    const angle1 = (Math.PI / 3) * i - Math.PI / 2;
+    const angle2 = (Math.PI / 3) * ((i + 2) % 6) - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(
+      centerX + radius * Math.cos(angle1),
+      centerY + radius * Math.sin(angle1),
+    );
+    ctx.lineTo(
+      centerX + radius * Math.cos(angle2),
+      centerY + radius * Math.sin(angle2),
+    );
+    ctx.stroke();
+  }
+  ctx.restore();
+};
+
 const randomFloorTileCoordinates = (seed: number) => {
   let rndX: number;
   let rndY: number;

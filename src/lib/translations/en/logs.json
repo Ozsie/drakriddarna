@@ -32,7 +32,9 @@
     "landslideRestored": "The collapsed corridor cleared up.",
     "blindedRestored": "You light your torches again.",
     "elementalWeaponRestored": "The elemental magic died off.",
-    "weakenedRestored": "Your strength returns to you."
+    "weakenedRestored": "Your strength returns to you.",
+    "hexagram": "A hexagram appeared at ({{x}},{{y}}).",
+    "hexagramTeleport": "{{hero}} moved through the hexagram."
   },
   "heroAction": {
     "pickUp": "{{hero}} picked up {{item}}.",

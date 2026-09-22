@@ -58,5 +58,9 @@
   "weakness": {
     "name": "The Symbol of Weakness",
     "description": "You walk past a strange symbol on the wall. An evil, yellow glow emanates from it. All of you suddenly feel weaker."
+  },
+  "hexagram": {
+    "name": "The Hexagram",
+    "description": "On the floor of the room you see a strange, six-pointed star with a glittering force field in the middle. Through the glitter you can glimpse a lot of familiar places, all at once..."
   }
 }

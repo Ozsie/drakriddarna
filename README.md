@@ -25,12 +25,12 @@
 - [ ] Responsive layout
 - [ ] Support for additional campaigns
 - [ ] Magic Item/Weapon: Sword of Chaos
-- [ ] Event #16 - The Hexagram
 - [ ] Doors blocking monsters?
 - [ ] Trade Items?
 - [ ] Monster cards?
 - [ ] Level editor
 - [X] e1m4 - The Dark Citadel
+- [X] Event #16 - The Hexagram
 - [X] Show current event
 - [X] Translations
 - [X] Menu system

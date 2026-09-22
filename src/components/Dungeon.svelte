@@ -12,6 +12,7 @@
     renderDoors,
     renderGrid,
     renderPillars,
+    renderPortal,
     renderSecrets,
   } from '../dungeon/DungeonRendering';
   import { renderItems } from '../items/ItemRendering';
@@ -69,7 +70,7 @@
       .map((s) => `${s.position.x},${s.position.y},${s.found}`)
       .join(';')}|${d.layout.items.length}|${
       d.layout.pits?.length ?? 0
-    }|${size}|${dbg}`;
+    }|${d.portal?.x},${d.portal?.y}|${size}|${dbg}`;
   };
 
   const getDynamicSignature = (st: GameState, dbg: boolean, size: number) => {
@@ -120,6 +121,7 @@
     renderItems(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderDoors(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderPillars(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
+    renderPortal(ctx, cellSize, activeState, activeDebugMode ?? false);
   };
 
   const renderDynamicLayer = (force = false) => {

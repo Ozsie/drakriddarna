@@ -1,5 +1,6 @@
 import { addLog, doReRender, i18n, recordActorStep } from '../core';
 import {
+  findCell,
   hasLineOfSight,
   isRoomDiscovered,
   isSamePosition,
@@ -125,6 +126,29 @@ const onTargetCell = (state: GameState, target: Position) => {
     hero.movement = 0;
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
+  }
+  const portal = state.dungeon.portal;
+  if (portal && isSamePosition(hero.position, portal)) {
+    const targetRoom = findCell(state.dungeon.layout.grid, target.x, target.y);
+    if (
+      targetRoom &&
+      isRoomDiscovered(state.dungeon, targetRoom) &&
+      !isBlockedByHero(state, target.x, target.y) &&
+      !isBlockedByMonster(state, target.x, target.y) &&
+      !isSamePosition(hero.position, target)
+    ) {
+      recordActorStep(hero, target);
+      hero.position = target;
+      hero.movement = 0;
+      checkForNote(state, hero);
+      checkForNextToMonster(state, hero);
+      addLog(state, 'logs.events.hexagramTeleport', { hero: i18n(hero.name) });
+      if (checkForTrapDoor(state)) {
+        return;
+      }
+      consumeActions(hero);
+      return;
+    }
   }
   const walkable = isWalkable(state.dungeon.layout, target.x, target.y);
   if (walkable) {

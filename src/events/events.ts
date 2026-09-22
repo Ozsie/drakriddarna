@@ -166,4 +166,15 @@ export const events: TurnEvent[] = [
     effect: 'theSymbolOfWeakness',
     used: false,
   },
+  {
+    id: 'hexagram',
+    type: 'HEXAGRAM',
+    name: 'events.hexagram.name',
+    nameTranslationKey: 'events.hexagram.name',
+    number: 16,
+    description: 'events.hexagram.description',
+    descriptionTranslationKey: 'events.hexagram.description',
+    effect: 'theHexagram',
+    used: false,
+  },
 ];
