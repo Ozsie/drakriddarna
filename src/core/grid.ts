@@ -171,6 +171,56 @@ export const stepAlongLine = (
   }
 };
 
+const cellsAlongLine = (source: Position, target: Position): Position[] => {
+  const cells: Position[] = [];
+  let x = source.x;
+  let y = source.y;
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const stepX = Math.sign(dx);
+  const stepY = Math.sign(dy);
+  let progressX = Math.abs(dx) === 0 ? Infinity : 0.5 / Math.abs(dx);
+  let progressY = Math.abs(dy) === 0 ? Infinity : 0.5 / Math.abs(dy);
+  const incrementX = Math.abs(dx) === 0 ? Infinity : 1 / Math.abs(dx);
+  const incrementY = Math.abs(dy) === 0 ? Infinity : 1 / Math.abs(dy);
+
+  while (x !== target.x || y !== target.y) {
+    if (progressX < progressY) {
+      x += stepX;
+      progressX += incrementX;
+    } else if (progressY < progressX) {
+      y += stepY;
+      progressY += incrementY;
+    } else {
+      x += stepX;
+      y += stepY;
+      progressX += incrementX;
+      progressY += incrementY;
+    }
+    cells.push({ x, y });
+  }
+  return cells;
+};
+
+const isBlockingCell = (state: GameState, position: Position): boolean => {
+  const cell = findCell(state.dungeon.layout.grid, position.x, position.y);
+  const pit = state.dungeon.layout.pits?.some((pit) =>
+    isSamePosition(pit, position),
+  );
+  const pillar = state.dungeon.layout.pillars?.some((pillar) =>
+    isSamePosition(pillar, position),
+  );
+  const monster = state.dungeon.layout.monsters.some((monster) =>
+    isSamePosition(monster.position, position),
+  );
+  const hero = state.heroes.some(
+    (hero) => hero.health > 0 && isSamePosition(hero.position, position),
+  );
+  return Boolean(
+    pit || pillar || monster || hero || cell === WALL || cell === COLLAPSED,
+  );
+};
+
 export const hasLineOfSight = (
   startPosition: Position,
   targetPosition: Position,
@@ -178,6 +228,10 @@ export const hasLineOfSight = (
   state: GameState,
   walking: boolean,
 ): boolean => {
+  if (walking) {
+    const cells = cellsAlongLine(startPosition, targetPosition);
+    return cells.slice(0, -1).every((cell) => !isBlockingCell(state, cell));
+  }
   const startPixelPos = {
     x: startPosition.x * resolution - Math.floor(resolution / 2),
     y: startPosition.y * resolution - Math.floor(resolution / 2),
