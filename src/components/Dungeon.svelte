@@ -18,7 +18,6 @@
   import { renderItems } from '../items/ItemRendering';
   import WinCondition from './WinCondition.svelte';
   import { t } from '$lib/translations';
-  import EventCard from './EventCard.svelte';
   import { renderNotes } from '../notes/NotesRendering';
   import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
   import { clearTileTextureCache } from '../dungeon/TileTextureCache';
@@ -368,11 +367,6 @@
       </div>
     {/if}
   </div>
-  {#if activeState.currentEvent}
-    <div>
-      <EventCard event={activeState.currentEvent} />
-    </div>
-  {/if}
 </div>
 
 <style>

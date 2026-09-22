@@ -6,7 +6,10 @@
 
   export let state: GameState | undefined = undefined;
 
+  let showEvent = true;
+
   $: activeState = state ?? $gameStateStore;
+  $: currentEvent = activeState.currentEvent
 </script>
 
 <style>
@@ -55,6 +58,22 @@
 
 <div>
   <span>{i18n('content.diary.label', { turn: `${activeState.turnCount ?? 0}` })} </span>
+  {#if currentEvent}
+    <button class='hideEventButton' on:click={() => showEvent = !showEvent}>
+      {#if showEvent}
+        {$t('content.winConditions.buttonClose')}
+      {:else}
+        {$t('content.winConditions.buttonOpen')}
+      {/if}
+    </button>
+    <p class='header'>{$t('content.event.current')}</p>
+    <p class='note'>{currentEvent.number}. {$t(currentEvent.nameTranslationKey ?? currentEvent.name)}</p>
+    {#if showEvent}
+      <p>
+        {$t(currentEvent.descriptionTranslationKey ?? currentEvent.description)}
+      </p>
+    {/if}
+  {/if}
   {#each activeState.dungeon.layout.notes as note}
     {#if note.found}
       <hr/>
