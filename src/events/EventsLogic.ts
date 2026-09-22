@@ -54,7 +54,7 @@ export const eventEffects: Record<
 > = {
   sunStone: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
-    const maxIndex = liveHeroes(state).length - 1;
+    const maxIndex = liveHeroes(state).length;
     const randomIndex = Math.floor(Math.random() * maxIndex);
     const hero = liveHeroes(state)[randomIndex];
     const heroCell = findCell(
@@ -125,7 +125,7 @@ export const eventEffects: Record<
     const discoveredCorridors = state.dungeon.layout.corridors
       .filter((corridor) => !isRoomBlocked(state, corridor))
       .filter((corridor) => isRoomDiscovered(state.dungeon, corridor));
-    const maxCorridorIndex = discoveredCorridors.length - 1;
+    const maxCorridorIndex = discoveredCorridors.length;
     const randomCorridorIndex = Math.floor(Math.random() * maxCorridorIndex);
     const randomCorridor = discoveredCorridors[randomCorridorIndex];
     state.dungeon.collapsedCorridor = randomCorridor;
@@ -237,14 +237,14 @@ export const eventEffects: Record<
     );
 
     if (heroesWithMagicalItems.length > 0) {
-      const maxHeroIndex = heroesWithMagicalItems.length - 1;
+      const maxHeroIndex = heroesWithMagicalItems.length;
       const randomHeroIndex = Math.floor(Math.random() * maxHeroIndex);
       const hero = heroesWithMagicalItems[randomHeroIndex];
       const magicItems = hero.inventory.filter(
         (item) => item && item.type === ItemType.MAGIC,
       );
       if (magicItems.length > 0) {
-        const magicItemMaxIndex = magicItems.length - 1;
+        const magicItemMaxIndex = magicItems.length;
         const randomMagicItemIndex = Math.floor(
           Math.random() * magicItemMaxIndex,
         );
@@ -260,7 +260,7 @@ export const eventEffects: Record<
   theElementalWeapon: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     const heroes = liveHeroes(state);
-    const maxHeroIndex = heroes.length - 1;
+    const maxHeroIndex = heroes.length;
     const randomHeroIndex = Math.floor(Math.random() * maxHeroIndex);
     const hero = heroes[randomHeroIndex];
     hero.weapon.elemental = true;
@@ -393,7 +393,7 @@ const restoreWeakened = (state: GameState) => {
 };
 
 const getRandomRoom = (state: GameState) => {
-  const maxRoomIndex = state.dungeon.discoveredRooms.length - 1;
+  const maxRoomIndex = state.dungeon.discoveredRooms.length;
   const randomIndex = Math.floor(Math.random() * maxRoomIndex);
   return state.dungeon.discoveredRooms[randomIndex];
 };
