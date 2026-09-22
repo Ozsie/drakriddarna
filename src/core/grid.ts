@@ -213,12 +213,7 @@ const isBlockingCell = (state: GameState, position: Position): boolean => {
   const monster = state.dungeon.layout.monsters.some((monster) =>
     isSamePosition(monster.position, position),
   );
-  const hero = state.heroes.some(
-    (hero) => hero.health > 0 && isSamePosition(hero.position, position),
-  );
-  return Boolean(
-    pit || pillar || monster || hero || cell === WALL || cell === COLLAPSED,
-  );
+  return Boolean(pit || pillar || monster || cell === WALL || cell === COLLAPSED);
 };
 
 export const hasLineOfSight = (
