@@ -116,11 +116,9 @@
   </div>
   
   <div class="hero-information">
-    {#if isCurrent}
     <div class="hero-inventory" id="{hero.name}s-inventory" style="display: {inventoryDisplayType};">
       <Inventory inventory={hero.inventory} state={activeState}/>
     </div>
-    {/if}
   </div>
 
   <div>
