@@ -67,7 +67,11 @@
     "noUsesLeft": "{{item}} has no uses left.",
     "magicHerbs": "{{user}} used {{item}} on {{target}}, restoring {{addedHealth}} HP.",
     "consumed": "{{item}} has been consumed.",
-    "potionOfSpeed": "{{user}} used {{item}}, adding {{actions}} actions."
+    "potionOfSpeed": "{{user}} used {{item}}, adding {{actions}} actions.",
+    "chaosSwordInstantKill": "{{user}} swings the Sword of Chaos wildly and slays {{target}} instantly!",
+    "chaosSwordStumble": "{{user}} stumbles and loses the rest of the turn.",
+    "chaosSwordHit": "{{user}} hits {{target}} for {{damage}} damage with the Sword of Chaos.",
+    "chaosSwordMiss": "{{user}} completely misses with the Sword of Chaos."
   },
   "monsterAction": {
     "noMonsterAct": "No monsters can act.",

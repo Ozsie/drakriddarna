@@ -1,4 +1,4 @@
-import type { Item } from '../types';
+import type { Item, Weapon } from '../types';
 import { ItemType } from '../types';
 import { NEXT_DUNGEON, NEXT_TURN, TRADE } from './ItemLogic';
 
@@ -81,7 +81,14 @@ export const magicItems: Item[] = [
       DESCRIPTION: 'items.magicItems.swordOfChaos.description',
     },
     effect: 'chaosSwordOnUse',
-  },
+    // Weapon properties so the sword can be equipped in hero.weapon and used via attack()
+    dice: 4,
+    range: 1,
+    twoHanded: false,
+    useHearHeroes: true,
+    ignoresShield: true,
+    ignoresArmour: true,
+  } as Item & Weapon,
   {
     id: 'potion_of_speed',
     name: 'items.magicItems.potionOfSpeed.name',

@@ -67,7 +67,11 @@
     "noUsesLeft": "{{item}} har inga användningar kvar.",
     "magicHerbs": "{{user}} använde {{item}} på {{target}} och återställde {{addedHealth}} HP.",
     "consumed": "{{item}} har förbrukats.",
-    "potionOfSpeed": "{{user}} använde {{item}} och la till {{actions}} handlingar."
+    "potionOfSpeed": "{{user}} använde {{item}} och la till {{actions}} handlingar.",
+    "chaosSwordInstantKill": "{{user}} svingar Kaossvärdet vilt och dödar {{target}} direkt!",
+    "chaosSwordStumble": "{{user}} snubblar och står över resten av rundan.",
+    "chaosSwordHit": "{{user}} träffar {{target}} för {{damage}} skada med Kaossvärdet.",
+    "chaosSwordMiss": "{{user}} missar helt med Kaossvärdet."
   },
   "monsterAction": {
     "noMonsterAct": "Inga monster kan agera.",

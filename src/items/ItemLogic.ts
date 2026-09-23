@@ -1,7 +1,13 @@
 import type { Actor, GameState, Item } from '../types';
+import { Level } from '../types';
 import { addLog, i18n } from '../core';
 import { roll } from '../core';
-import { canAct, ATTACK_BONUS, RE_ROLL_ATTACK } from '../core';
+import {
+  canAct,
+  ATTACK_BONUS,
+  RE_ROLL_ATTACK,
+  getEffectiveMaxMovement,
+} from '../core';
 
 export const USED = 'USED';
 export { ATTACK_BONUS };
@@ -36,6 +42,64 @@ export const onDrop: {
       user.movement -= self.properties?.[MOVEMENT_BONUS] as number;
   },
 };
+export const resolveChaosSwordAttack = (
+  state: GameState,
+  user: Actor,
+  target: Actor,
+): void => {
+  const hits = roll(user.level, 4);
+
+  const killTarget = () => {
+    target.health = 0;
+    target.level = Level.APPRENTICE;
+    const monster = state.dungeon.layout.monsters.find((m) => m === target);
+    if (monster) {
+      state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter(
+        (m) => m !== monster,
+      );
+      state.dungeon.killCount++;
+      user.experience += monster.experience;
+    }
+  };
+
+  switch (hits) {
+    case 0:
+      addLog(state, 'logs.item.chaosSwordInstantKill', {
+        user: i18n(user.name),
+        target: i18n(target.name),
+      });
+      killTarget();
+      break;
+    case 1:
+      addLog(state, 'logs.item.chaosSwordStumble', { user: i18n(user.name) });
+      user.movement = 0;
+      user.actions = 0;
+      user.incapacitated = true;
+      break;
+    case 2:
+    case 3: {
+      const damage = hits === 2 ? 2 : 1;
+      target.health -= damage;
+      addLog(state, 'logs.item.chaosSwordHit', {
+        user: i18n(user.name),
+        target: i18n(target.name),
+        damage: String(damage),
+      });
+      if (target.health <= 0) {
+        addLog(state, 'logs.takeDamage.killed', {
+          actor: i18n(user.name),
+          target: i18n(target.name),
+        });
+        killTarget();
+      }
+      break;
+    }
+    default:
+      addLog(state, 'logs.item.chaosSwordMiss', { user: i18n(user.name) });
+      break;
+  }
+};
+
 export const onUse: {
   [index: string]: (
     state: GameState,
@@ -86,14 +150,32 @@ export const onUse: {
   chaosSwordOnUse: (
     state: GameState,
     self: Item,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     user: Actor,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     target?: Actor,
   ) => {
     if (self.disabled) {
       addLog(state, 'logs.item.cannotUse', { item: i18n(self.name) });
       return;
+    }
+    if (!target) {
+      addLog(state, 'logs.item.noTarget');
+      return;
+    }
+    if (!canAct(user)) {
+      addLog(state, 'logs.heroAction.noActions', { hero: i18n(user.name) });
+      return;
+    }
+    resolveChaosSwordAttack(state, user, target);
+    if (user.actions === 0) {
+      return;
+    }
+    if (user.actions > 1 && user.movement < getEffectiveMaxMovement(user)) {
+      user.actions -= 2;
+    } else {
+      user.actions--;
+    }
+    if (user.actions === 0) {
+      user.movement = 0;
     }
   },
   potionOfSpeedOnUse: (state: GameState, self: Item, user: Actor) => {

@@ -36,7 +36,12 @@ import {
   takeDamage,
 } from '../core';
 import { checkForTrapDoor, searchForSecret } from '../secrets/SecretsLogic';
-import { BREAK_LOCK, onDrop, onPickup } from '../items/ItemLogic';
+import {
+  BREAK_LOCK,
+  onDrop,
+  onPickup,
+  resolveChaosSwordAttack,
+} from '../items/ItemLogic';
 import { COLLAPSED, EMPTY, WALL } from '../core';
 
 export const newHero = (name: string, colour: Colour): Hero => {
@@ -219,9 +224,16 @@ export const attack = (hero: Hero, state: GameState, target: Position) => {
 
   const monster = findMonsterAt(state, target);
   if (monster) {
-    takeDamage(state, hero, monster, false);
+    if (hero.weapon.id === 'sword_of_chaos') {
+      resolveChaosSwordAttack(state, hero, monster);
+    } else {
+      takeDamage(state, hero, monster, false);
+    }
     if (monster.health <= 0) {
       killMonster(state, monster, hero);
+    }
+    if (hero.actions === 0) {
+      return;
     }
     if (hero.actions > 1 && hero.movement < 3) {
       hero.actions -= 2;
@@ -376,6 +388,15 @@ export const dropItem = (state: GameState, item: Item, actor: Actor) => {
 };
 
 export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
+  if (item.id === 'sword_of_chaos') {
+    if (hero.weapon) dropItem(state, hero.weapon, hero);
+    hero.weapon = item as Weapon;
+    if (item && item.pickup) {
+      const pickup = onPickup[item.pickup];
+      pickup(state, item, hero);
+    }
+    return;
+  }
   switch (item.type) {
     case ItemType.ARMOUR:
       if (hero.armour) dropItem(state, hero.armour, hero);

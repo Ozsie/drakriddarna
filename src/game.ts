@@ -182,7 +182,7 @@ export const next = async (
     });
     const currentIndex = liveHeroes(state).indexOf(state.currentActor);
     let nextIndex = currentIndex + 1;
-    if (nextIndex === liveHeroes(state).length) {
+    if (nextIndex >= liveHeroes(state).length) {
       state.currentActor = undefined;
       await monsterActions(state, monsterOptions);
       nextIndex = 0;
@@ -191,12 +191,24 @@ export const next = async (
     if (liveHeroes(state).length === 0) {
       return resetLevel(state);
     }
-    if (liveHeroes(state)[nextIndex].incapacitated) {
+    let guard = 0;
+    while (
+      liveHeroes(state)[nextIndex] &&
+      liveHeroes(state)[nextIndex].incapacitated &&
+      guard < liveHeroes(state).length * 2
+    ) {
       addLog(state, 'logs.noLongerIncapacitated', {
         name: i18n(liveHeroes(state)[nextIndex].name),
       });
       liveHeroes(state)[nextIndex].incapacitated = false;
       nextIndex++;
+      if (nextIndex >= liveHeroes(state).length) {
+        state.currentActor = undefined;
+        await monsterActions(state, monsterOptions);
+        nextIndex = 0;
+        resetOnNext(state);
+      }
+      guard++;
     }
     state.currentActor = liveHeroes(state)[nextIndex];
     state.currentActor.actions = 2;
