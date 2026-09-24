@@ -68,5 +68,12 @@
   "diary": {
     "label": "Dagbok (runda {{turn}})",
     "foundOn": "På {{round}})"
+  },
+  "radialMenu": {
+    "search": "Sök",
+    "pickLock": "Dyrka lås",
+    "openDoor": "Öppna dörr",
+    "pickUpItem": "Plocka upp föremål",
+    "next": "Nästa"
   }
 }

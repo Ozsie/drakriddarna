@@ -17,6 +17,7 @@
   } from '../dungeon/DungeonRendering';
   import { renderItems } from '../items/ItemRendering';
   import WinCondition from './WinCondition.svelte';
+  import RadialMenu from './RadialMenu.svelte';
   import { t } from '$lib/translations';
   import { renderNotes } from '../notes/NotesRendering';
   import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
@@ -342,6 +343,7 @@
       bind:this={overlayCanvas}
       on:click={onClick}
     ></canvas>
+    <RadialMenu {cellSize} {state} />
   </div>
 
   <div class="winConditions {showWinConditions ? '' : 'conditionsHidden'}">

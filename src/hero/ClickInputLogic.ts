@@ -32,6 +32,16 @@ import {
 } from './HeroLogic';
 
 import { BREAK_LOCK } from '../items/ItemLogic';
+import {
+  RadialAction,
+  findDoorAtHero,
+  findItemAtHero,
+  getAvailableRadialActions,
+} from './RadialMenuLogic';
+import { radialMenuStore } from '../store/radialMenuStore';
+import { next } from '../game';
+import { gameStateStore, isTurnInProgress, nextTurn } from '../store/gameStateStore';
+import { get } from 'svelte/store';
 
 export const distanceInGrid = (a: Position, b: Position) => {
   const dx = Math.abs(b.x - a.x);
@@ -50,60 +60,73 @@ export const distanceInGrid = (a: Position, b: Position) => {
   return Math.floor(factor * diagonalSteps + straightSteps);
 };
 
+const pickUpItemAtHero = (
+  state: GameState,
+  hero: Hero,
+  itemLocation: ItemLocation,
+) => {
+  const item = itemLocation.item ?? randomItem(state);
+  if (item.type === ItemType.MAGIC) {
+    removeFoundMagicItemFromDeck(state, item);
+  } else {
+    removeFoundItemFromDeck(state, item);
+  }
+  const index = state.dungeon.layout.items.indexOf(itemLocation);
+  state.dungeon.layout.items.splice(index, 1);
+  addLog(state, 'logs.heroAction.pickUp', {
+    hero: i18n(hero.name),
+    item: i18n(item.name),
+  });
+  pickupItem(state, item, hero);
+};
+
+const openDoorAtHero = (state: GameState, hero: Hero, target: Position) => {
+  const door = findDoorAtHero(state, hero);
+  if (!door || door.open) return;
+  const canBreakLock = hero.inventory.some(
+    (item) => item && item.properties?.[BREAK_LOCK],
+  );
+  if (!canOpenDoor(hero, canBreakLock, door)) return;
+  if (door.locked && canBreakLock)
+    addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
+  door.open = true;
+  if (door.trapped) {
+    takeDamage(state, doorAsActor(door), hero, false);
+  }
+  switch (door.side) {
+    case Side.RIGHT:
+      openDoor(hero, state, target.x + 1, target.y);
+      break;
+    case Side.LEFT:
+      openDoor(hero, state, target.x - 1, target.y);
+      break;
+    case Side.DOWN:
+      openDoor(hero, state, target.x, target.y + 1);
+      break;
+    case Side.UP:
+      openDoor(hero, state, target.x, target.y - 1);
+      break;
+  }
+  consumeActions(hero);
+};
+
 export const onTargetSelf = (state: GameState, target: Position) => {
   doReRender(state);
   const hero = state.currentActor as Hero;
 
-  const itemLocation = state.dungeon.layout.items.find((item: ItemLocation) =>
-    isSamePosition(item.position, hero.position),
-  );
+  const itemLocation = findItemAtHero(state, hero);
   if (itemLocation) {
-    const item = itemLocation.item ?? randomItem(state);
-    if (item.type === ItemType.MAGIC) {
-      removeFoundMagicItemFromDeck(state, item);
-    } else {
-      removeFoundItemFromDeck(state, item);
-    }
-    const index = state.dungeon.layout.items.indexOf(itemLocation);
-    state.dungeon.layout.items.splice(index, 1);
-    addLog(state, 'logs.heroAction.pickUp', {
-      hero: i18n(hero.name),
-      item: i18n(item.name),
-    });
-    pickupItem(state, item, hero);
+    pickUpItemAtHero(state, hero, itemLocation);
     return;
   }
 
-  const door = state.dungeon.layout.doors.find(
-    (door) =>
-      door.x === hero.position.x && door.y === hero.position.y && !door.open,
-  );
-  if (door && !door.hidden) {
+  const door = findDoorAtHero(state, hero);
+  if (door && !door.open && !door.hidden) {
     const canBreakLock = hero.inventory.some(
       (item) => item && item.properties?.[BREAK_LOCK],
     );
     if (canOpenDoor(hero, canBreakLock, door)) {
-      if (door.locked && canBreakLock)
-        addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
-      door.open = true;
-      if (door.trapped) {
-        takeDamage(state, doorAsActor(door), hero, false);
-      }
-      switch (door.side) {
-        case Side.RIGHT:
-          openDoor(hero, state, target.x + 1, target.y);
-          break;
-        case Side.LEFT:
-          openDoor(hero, state, target.x - 1, target.y);
-          break;
-        case Side.DOWN:
-          openDoor(hero, state, target.x, target.y + 1);
-          break;
-        case Side.UP:
-          openDoor(hero, state, target.x, target.y - 1);
-          break;
-      }
-      consumeActions(hero);
+      openDoorAtHero(state, hero, target);
     } else if (door.locked && !door.hidden) {
       if (!canAct(hero)) {
         addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
@@ -119,6 +142,47 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     }
     search(state);
   }
+};
+
+export const onHeroClicked = (state: GameState, hero: Hero) => {
+  doReRender(state);
+  const actions = getAvailableRadialActions(state, hero);
+  if (actions.length === 0) {
+    radialMenuStore.set(null);
+    return;
+  }
+  radialMenuStore.set({ x: hero.position.x, y: hero.position.y, actions });
+};
+
+export const executeRadialAction = (state: GameState, action: RadialAction) => {
+  const hero = state.currentActor as Hero;
+  switch (action) {
+    case RadialAction.SEARCH:
+      search(state);
+      break;
+    case RadialAction.PICK_LOCK:
+      addLog(state, 'logs.heroAction.locked');
+      pickLock(state);
+      break;
+    case RadialAction.OPEN_DOOR:
+      openDoorAtHero(state, hero, hero.position);
+      break;
+    case RadialAction.PICK_UP_ITEM: {
+      const itemLocation = findItemAtHero(state, hero);
+      if (itemLocation) {
+        pickUpItemAtHero(state, hero, itemLocation);
+      }
+      break;
+    }
+    case RadialAction.NEXT: {
+      if (get(isTurnInProgress)) return;
+      nextTurn().then(newState => {
+        gameStateStore.set(newState);
+      });
+      break;
+    }
+  }
+  radialMenuStore.set(null);
 };
 
 export const onTargetCell = (state: GameState, target: Position) => {
@@ -211,8 +275,9 @@ export const doMouseLogic = (
 
   const hero = state.currentActor as Hero;
   if (x === hero.position.x && y === hero.position.y) {
-    onTargetSelf(state, { x, y });
+    onHeroClicked(state, hero);
   } else if (isRoomDiscovered(state.dungeon, cell)) {
+    radialMenuStore.set(null);
     onTargetCell(state, { x, y });
   }
 };
