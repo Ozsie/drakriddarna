@@ -60,7 +60,8 @@
     "pitfall": "{{hero}} föll i en grop och är handlingsförlamad i en tur.",
     "foundDoor": "{{hero}} letade ({{result}}) och hittade en dold dörr.",
     "foundTrapInDoor": "{{hero}} letade ({{result}}) och hittade en fälla i en dörr.",
-    "foundSecret": "{{hero}} letade ({{result}}) och hittade {{secret}}."
+    "foundSecret": "{{hero}} letade ({{result}}) och hittade {{secret}}.",
+    "turnFailed": "Misslyckades med att gå vidare till nästa tur."
   },
   "item": {
     "cannotUse": "{{item}} kan inte användas för tillfället.",

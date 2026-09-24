@@ -212,7 +212,7 @@ export const openDoor = (
 
 export const attack = (hero: Hero, state: GameState, target: Position) => {
   doReRender(state);
-  if (hero.actions === 1 && hero.movement < hero.maxMovement) {
+  if (!canAct(hero)) {
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
   }

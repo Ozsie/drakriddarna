@@ -35,12 +35,11 @@ import { BREAK_LOCK } from '../items/ItemLogic';
 import {
   RadialAction,
   findDoorAtHero,
-  findDoorsAtHero,
   findItemAtHero,
   getAvailableRadialActions,
+  findDoorsAtHero,
 } from './RadialMenuLogic';
 import { radialMenuStore } from '../store/radialMenuStore';
-import { next } from '../game';
 import {
   gameStateStore,
   isTurnInProgress,
@@ -195,9 +194,13 @@ export const executeRadialAction = (
     }
     case RadialAction.NEXT: {
       if (get(isTurnInProgress)) return;
-      nextTurn().then((newState) => {
-        gameStateStore.set(newState);
-      });
+      nextTurn()
+        .then((newState) => {
+          gameStateStore.set(newState);
+        })
+        .catch(() => {
+          addLog(state, 'logs.heroAction.turnFailed');
+        });
       break;
     }
   }
