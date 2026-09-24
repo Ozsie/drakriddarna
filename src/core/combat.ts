@@ -149,5 +149,13 @@ export const takeDamage = (
     });
     target.health = 0;
     target.level = Level.APPRENTICE;
+  } else if (weapon.id === 'green_dark_lord_sword') {
+    addLog(state, 'logs.takeDamage.paralyzed', {
+      target: i18n(target.name),
+      weapon: i18n(weapon.name),
+    });
+    target.movement = 0;
+    target.actions = 0;
+    target.incapacitated = true;
   }
 };

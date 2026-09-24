@@ -23,7 +23,8 @@
     "usedEffect": "{{actor}} used the effect of {{item}} when attacking.",
     "reRoll": "{{actor}} missed but got another chance.",
     "attackedWith": "{{actor}} attacked {{target}} with {{weapon}} for {{damage}}.",
-    "killed": "{{actor}} killed {{target}}."
+    "killed": "{{actor}} killed {{target}}.",
+    "paralyzed": "{{target}} is paralyzed by {{weapon}} and loses the rest of the turn."
   },
   "events": {
     "sunStone": "{{monster}} was killed by the Sun Stone.",

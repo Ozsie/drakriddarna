@@ -23,7 +23,8 @@
     "usedEffect": "{{actor}} använde effekten av {{item}} när hen attackerade.",
     "reRoll": "{{actor}} missade men fick en till chans.",
     "attackedWith": "{{actor}} attackerade {{target}} med {{weapon}} för {{damage}}.",
-    "killed": "{{actor}} dödade {{target}}."
+    "killed": "{{actor}} dödade {{target}}.",
+    "paralyzed": "{{target}} blir förlamad av {{weapon}} och står över resten av rundan."
   },
   "events": {
     "sunStone": "{{monster}} dödades av Solstenen.",

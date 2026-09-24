@@ -17,7 +17,6 @@
   - [ ] e1m4
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
-- [ ] Green dark lord paralyzing sword
 - [ ] Select door on click when multiple doors in same cell
 - [ ] Multiple saves
 - [ ] Graphics
@@ -28,6 +27,7 @@
 - [ ] Trade Items?
 - [ ] Monster cards?
 - [ ] Level editor
+- [X] Green dark lord paralyzing sword
 - [X] Magic Item/Weapon: Sword of Chaos
 - [X] e1m4 - The Dark Citadel
 - [X] Event #16 - The Hexagram

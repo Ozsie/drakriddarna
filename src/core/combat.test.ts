@@ -205,6 +205,84 @@ describe('combat module', () => {
     expect(state.damageIndicators?.[0].position).toEqual({ x: 1, y: 0 });
   });
 
+  it('takeDamage paralyzes surviving target hit by green_dark_lord_sword', () => {
+    // 5/6 gives dice roll 6 (success for KNIGHT)
+    setRng(() => 5 / 6);
+
+    const source: Actor = {
+      name: 'Attacker',
+      actions: 2,
+      movement: 3,
+      maxMovement: 3,
+      defense: 0,
+      health: 7,
+      maxHealth: 7,
+      colour: Colour.Blue,
+      experience: 0,
+      position: { x: 0, y: 0 },
+      level: Level.KNIGHT,
+      weapon: {
+        id: 'green_dark_lord_sword',
+        name: 'Green Dark Lord Sword',
+        dice: 1,
+        amountInDeck: 1,
+        range: 1,
+        twoHanded: false,
+        useHearHeroes: true,
+        type: ItemType.WEAPON,
+        value: 0,
+        ignoresArmour: false,
+        ignoresShield: false,
+      },
+      inventory: [],
+    };
+
+    const target: Actor = {
+      name: 'Defender',
+      actions: 2,
+      movement: 3,
+      maxMovement: 3,
+      defense: 0,
+      health: 20,
+      maxHealth: 20,
+      colour: Colour.Red,
+      experience: 0,
+      position: { x: 1, y: 0 },
+      level: Level.APPRENTICE,
+      weapon: {
+        name: 'Club',
+        dice: 1,
+        amountInDeck: 1,
+        range: 1,
+        twoHanded: false,
+        useHearHeroes: true,
+        type: ItemType.WEAPON,
+        value: 5,
+        ignoresArmour: false,
+        ignoresShield: false,
+      },
+      inventory: [],
+    };
+
+    const state: GameState = {
+      heroes: [source],
+      dungeon: dummyDungeon,
+      actionLog: [],
+      itemDeck: [],
+      magicItemDeck: [],
+      settings: {},
+      eventDeck: [],
+      reRender: false,
+    };
+
+    takeDamage(state, source, target, false);
+
+    expect(target.health).toBeGreaterThan(0);
+    expect(target.movement).toBe(0);
+    expect(target.actions).toBe(0);
+    expect(target.incapacitated).toBe(true);
+  });
+
   it('createDamageIndicator and removeDamageIndicator manage indicator state', () => {
     const indicator = createDamageIndicator(4, { x: 3, y: 5 });
     expect(indicator.damage).toBe(4);
