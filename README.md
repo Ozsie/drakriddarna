@@ -5,7 +5,6 @@
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
 ## Todo
-- [ ] Stop search through walls & doors
 - [ ] Trigger traps when heroes move through a cell with a trap
 - [ ] Create function for random item on floor
 - [ ] Select door on click when multiple doors in same cell
@@ -22,6 +21,7 @@
 - [ ] Monster cards?
 - [ ] Support for additional campaigns
 - [ ] Level editor
+- [x] Stop search through walls & doors
 - [X] Corners
 - [X] Green dark lord paralyzing sword
 - [X] Magic Item/Weapon: Sword of Chaos

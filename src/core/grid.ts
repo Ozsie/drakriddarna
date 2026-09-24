@@ -6,6 +6,7 @@ import type {
   Layout,
   Position,
 } from '../types';
+import { Side } from '../types';
 
 export const EMPTY = ' ';
 export const COLLAPSED = '?';
@@ -39,6 +40,60 @@ export const isNeighbouring = (
   (position.x === x + 1 && position.y === y + 1) ||
   (position.x === x && position.y === y + 1) ||
   (position.x === x - 1 && position.y === y + 1);
+
+export const isDoorEdge = (
+  layout: Layout,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+) =>
+  layout.doors?.find((door) => {
+    const [dx, dy] =
+      door.side === Side.RIGHT
+        ? [1, 0]
+        : door.side === Side.LEFT
+        ? [-1, 0]
+        : door.side === Side.DOWN
+        ? [0, 1]
+        : [0, -1];
+    return (
+      (door.x === fromX &&
+        door.y === fromY &&
+        door.x + dx === toX &&
+        door.y + dy === toY) ||
+      (door.x === toX &&
+        door.y === toY &&
+        door.x + dx === fromX &&
+        door.y + dy === fromY)
+    );
+  });
+
+export const canSearchThrough = (
+  layout: Layout,
+  from: Position,
+  to: Position,
+): boolean => {
+  if (isSamePosition(from, to)) return true;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+
+  // Diagonal: block if either flanking cell is a wall (no cutting corners)
+  if (dx !== 0 && dy !== 0) {
+    if (
+      !isWalkable(layout, from.x + dx, from.y) ||
+      !isWalkable(layout, from.x, from.y + dy)
+    ) {
+      return false;
+    }
+  }
+
+  // Any closed door standing on this edge blocks searching beyond it
+  const door = isDoorEdge(layout, from.x, from.y, to.x, to.y);
+  if (door && !door.open) return false;
+
+  return true;
+};
 
 export const getDist = (a: Position, b: Position): number =>
   Math.sqrt(Math.pow(a.x - b?.x, 2) + Math.pow(a.y - b?.y, 2));

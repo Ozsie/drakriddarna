@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  canSearchThrough,
   findCell,
   getDist,
+  isDoorEdge,
   isNeighbouring,
   isSamePosition,
   isWalkable,
@@ -11,7 +13,8 @@ import {
   EMPTY,
   WALL,
 } from './grid';
-import type { Layout } from '../types';
+import type { Door, Layout } from '../types';
+import { Side } from '../types';
 
 describe('grid module', () => {
   it('toArray splits string into array of chars', () => {
@@ -85,5 +88,97 @@ describe('grid module', () => {
     // Free cell
     layout.pillars = [];
     expect(isWalkable(layout, 1, 1)).toBe(true);
+  });
+
+  const makeDoor = (overrides: Partial<Door> = {}): Door => ({
+    locked: false,
+    trapped: false,
+    open: false,
+    hidden: false,
+    x: 1,
+    y: 1,
+    side: Side.RIGHT,
+    trapAttacks: 0,
+    ...overrides,
+  });
+
+  it('isDoorEdge finds the door standing on an edge between two cells', () => {
+    const door = makeDoor({ x: 1, y: 1, side: Side.RIGHT });
+    const layout: Layout = {
+      grid: ['###', '#AA#', '###'],
+      corridors: [],
+      doors: [door],
+      items: [],
+      monsters: [],
+      notes: [],
+      pillars: [],
+      pits: [],
+      secrets: [],
+      corners: [],
+    };
+
+    expect(isDoorEdge(layout, 1, 1, 2, 1)).toBe(door);
+    expect(isDoorEdge(layout, 2, 1, 1, 1)).toBe(door);
+    expect(isDoorEdge(layout, 1, 1, 1, 2)).toBeUndefined();
+  });
+
+  it('canSearchThrough allows same cell and open passages', () => {
+    const layout: Layout = {
+      grid: ['#####', '#AAA#', '#####'],
+      corridors: [],
+      doors: [],
+      items: [],
+      monsters: [],
+      notes: [],
+      pillars: [],
+      pits: [],
+      secrets: [],
+      corners: [],
+    };
+
+    expect(canSearchThrough(layout, { x: 1, y: 1 }, { x: 1, y: 1 })).toBe(true);
+    expect(canSearchThrough(layout, { x: 1, y: 1 }, { x: 2, y: 1 })).toBe(true);
+  });
+
+  it('canSearchThrough blocks through a closed door but allows through an open one', () => {
+    const closedDoor = makeDoor({ x: 1, y: 1, side: Side.RIGHT, open: false });
+    const layout: Layout = {
+      grid: ['#####', '#AAA#', '#####'],
+      corridors: [],
+      doors: [closedDoor],
+      items: [],
+      monsters: [],
+      notes: [],
+      pillars: [],
+      pits: [],
+      secrets: [],
+      corners: [],
+    };
+
+    expect(canSearchThrough(layout, { x: 1, y: 1 }, { x: 2, y: 1 })).toBe(
+      false,
+    );
+
+    closedDoor.open = true;
+    expect(canSearchThrough(layout, { x: 1, y: 1 }, { x: 2, y: 1 })).toBe(true);
+  });
+
+  it('canSearchThrough disallows cutting a diagonal corner through a wall', () => {
+    const layout: Layout = {
+      grid: ['A#', '#A'],
+      corridors: [],
+      doors: [],
+      items: [],
+      monsters: [],
+      notes: [],
+      pillars: [],
+      pits: [],
+      secrets: [],
+      corners: [],
+    };
+
+    expect(canSearchThrough(layout, { x: 0, y: 0 }, { x: 1, y: 1 })).toBe(
+      false,
+    );
   });
 });

@@ -1,7 +1,12 @@
 import type { Actor, GameState, Hero, Item, Position, Secret } from '../types';
 import { Colour, ItemType, Level, SecretType } from '../types';
 import { addLog, i18n } from '../core';
-import { isNeighbouring, isSamePosition } from '../core';
+import {
+  canSearchThrough,
+  isDoorEdge,
+  isNeighbouring,
+  isSamePosition,
+} from '../core';
 import { roll } from '../core';
 import { takeDamage } from '../core';
 import { pickupItem } from '../hero/HeroLogic';
@@ -124,7 +129,13 @@ const secretAsActor = (secret: Secret): Actor => ({
 const findHiddenDoor = (state: GameState, pos: Position) =>
   state.dungeon.layout.doors
     .filter((secret) => secret.hidden)
-    .find((door) => isNeighbouring({ x: door.x, y: door.y }, pos.x, pos.y));
+    .find((door) => {
+      if (!isNeighbouring({ x: door.x, y: door.y }, pos.x, pos.y)) return false;
+      return (
+        (door.x === pos.x && door.y === pos.y) ||
+        !!isDoorEdge(state.dungeon.layout, pos.x, pos.y, door.x, door.y)
+      );
+    });
 
 const findTrap = (state: GameState, pos: Position) =>
   state.dungeon.layout.doors
@@ -134,13 +145,21 @@ const findTrap = (state: GameState, pos: Position) =>
 const findSecret = (state: GameState, pos: Position) =>
   state.dungeon.layout.secrets
     .filter((secret) => !secret.found)
-    .find((secret) => isNeighbouring(secret.position, pos.x, pos.y));
+    .find(
+      (secret) =>
+        isNeighbouring(secret.position, pos.x, pos.y) &&
+        canSearchThrough(state.dungeon.layout, pos, secret.position),
+    );
 
 const findTrapDoor = (state: GameState, pos: Position) =>
   state.dungeon.layout.secrets
     .filter((secret) => !secret.found)
     .filter((secret) => secret.type === SecretType.TRAP_DOOR)
-    .find((secret) => isNeighbouring(secret.position, pos.x, pos.y));
+    .find(
+      (secret) =>
+        isNeighbouring(secret.position, pos.x, pos.y) &&
+        canSearchThrough(state.dungeon.layout, pos, secret.position),
+    );
 
 const lookForHiddenDoor = (state: GameState, hero: Hero, result: number) => {
   const hiddenDoor = findHiddenDoor(state, hero.position);
