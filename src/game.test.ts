@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { init, endAction, loadState, next } from './game';
+import { liveHeroes } from './hero/HeroLogic';
+import { eventEffects } from './events/EventsLogic';
 
 describe('game orchestrator', () => {
   it('init initializes campaign and hero state properly', () => {
@@ -64,5 +66,44 @@ describe('game orchestrator', () => {
     // The game must not lock up: a current actor must always be assigned
     // after advancing turns, instead of becoming undefined.
     expect(state.currentActor).toBeDefined();
+  });
+
+  it('timePortal event grants +1 action to every hero for the whole round, not just the first', async () => {
+    const state = init();
+    expect(state.currentActor).toBeDefined();
+    if (!state.currentActor) return;
+
+    // Simulate the first hero's turn triggering the round event.
+    eventEffects.timePortal(state, {
+      effect: 'timePortal',
+      used: false,
+    } as never);
+
+    const heroes = liveHeroes(state);
+    // First hero got the bonus applied directly.
+    expect(heroes[0].actions).toBe(3);
+
+    // End the first hero's turn 3 times to move to the next hero.
+    for (let i = 0; i < 3; i++) {
+      await endAction(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+    }
+
+    // Every subsequent hero should also start their turn with the +1 bonus applied.
+    for (let i = 1; i < heroes.length; i++) {
+      expect(state.currentActor?.actions).toBe(3);
+      for (let j = 0; j < 3; j++) {
+        await endAction(state, {
+          delayBetweenMonsters: 0,
+          delayBetweenActions: 0,
+          delayAfterAttack: 0,
+          waitForMovement: false,
+        });
+      }
+    }
   });
 });

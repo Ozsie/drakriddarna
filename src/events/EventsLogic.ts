@@ -102,7 +102,8 @@ export const eventEffects: Record<
   },
   timePortal: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
-    state.heroes.forEach((hero) => hero.actions++);
+    if (state.currentActor) state.currentActor.actions++;
+    state.roundActionsDelta = (state.roundActionsDelta ?? 0) + 1;
     event.used = true;
   },
   fountainOfYouth: (state: GameState, event: TurnEvent) => {
@@ -117,9 +118,10 @@ export const eventEffects: Record<
   },
   sleepingGasCloud: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
-    liveHeroes(state).forEach((hero) => {
-      hero.actions = Math.max(1, hero.actions - 1);
-    });
+    if (state.currentActor) {
+      state.currentActor.actions = Math.max(1, state.currentActor.actions - 1);
+    }
+    state.roundActionsDelta = (state.roundActionsDelta ?? 0) - 1;
     event.used = true;
   },
   theLostOrc: (state: GameState, event: TurnEvent) => {
@@ -400,6 +402,7 @@ export const resetEventEffects = (state: GameState) => {
   }
   restoreWeakened(state);
   restoreBlinded(state);
+  state.roundActionsDelta = 0;
 };
 
 const restoreCorridor = (state: GameState) => {

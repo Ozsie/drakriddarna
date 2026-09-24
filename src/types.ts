@@ -26,6 +26,7 @@ export type GameState = {
   currentEvent?: TurnEvent;
   turnCount?: number;
   damageIndicators?: DamageIndicator[];
+  roundActionsDelta?: number;
 };
 
 export type DamageIndicator = {

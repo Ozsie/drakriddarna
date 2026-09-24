@@ -219,6 +219,11 @@ export const next = async (
       const event = drawNextEvent(state);
       state.currentEvent = event;
       eventEffects[event.effect](state, event);
+    } else if (state.roundActionsDelta) {
+      state.currentActor.actions = Math.max(
+        1,
+        state.currentActor.actions + state.roundActionsDelta,
+      );
     }
     if (nextIndex === 0) {
       state.turnCount = (state.turnCount ?? 0) + 1;
