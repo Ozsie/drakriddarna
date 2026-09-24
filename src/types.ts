@@ -176,7 +176,7 @@ export enum CornerType {
 }
 
 export type ItemLocation = {
-  item: Item;
+  item?: Item;
   position: Position;
 };
 

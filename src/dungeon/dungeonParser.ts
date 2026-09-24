@@ -19,6 +19,7 @@ import {
   createLockedDoor,
   createMonster,
   createMonsterWithInventory,
+  createRandomItem,
   createSecret,
   createSecretWithItem,
   createTrappedDoor,
@@ -128,10 +129,12 @@ export type DeclarativeNote =
 export type DeclarativeItemObject = {
   x: number;
   y: number;
-  item: Item;
+  item?: Item;
 };
 
-export type DeclarativeItemTuple = [x: number, y: number, item: Item];
+export type DeclarativeItemTuple =
+  | [x: number, y: number, item: Item]
+  | [x: number, y: number];
 
 export type DeclarativeItem =
   | ItemLocation
@@ -372,14 +375,20 @@ export const parseNote = (noteDef: DeclarativeNote): Note => {
 };
 
 export const parseItem = (itemDef: DeclarativeItem): ItemLocation => {
-  if ('position' in itemDef && 'item' in itemDef) {
+  if ('position' in itemDef) {
     return itemDef;
   }
 
   if (Array.isArray(itemDef)) {
+    if (itemDef.length === 2) {
+      return createRandomItem(itemDef[0], itemDef[1]);
+    }
     return createEquipment(itemDef[0], itemDef[1], itemDef[2]);
   }
 
+  if (!itemDef.item) {
+    return createRandomItem(itemDef.x, itemDef.y);
+  }
   return createEquipment(itemDef.x, itemDef.y, itemDef.item);
 };
 

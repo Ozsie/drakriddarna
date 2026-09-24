@@ -12,6 +12,7 @@ import type { ItemLocation, GameState, Hero, Position } from '../types';
 import { ItemType, Side } from '../types';
 import {
   checkForTrapDoor,
+  randomItem,
   removeFoundItemFromDeck,
   removeFoundMagicItemFromDeck,
 } from '../secrets/SecretsLogic';
@@ -57,7 +58,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     isSamePosition(item.position, hero.position),
   );
   if (itemLocation) {
-    const item = itemLocation.item;
+    const item = itemLocation.item ?? randomItem(state);
     if (item.type === ItemType.MAGIC) {
       removeFoundMagicItemFromDeck(state, item);
     } else {

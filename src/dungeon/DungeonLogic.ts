@@ -49,6 +49,10 @@ export const createEquipment = (
   position: { x, y },
 });
 
+export const createRandomItem = (x: number, y: number): ItemLocation => ({
+  position: { x, y },
+});
+
 export const createSecret = (
   type: SecretType,
   name: string,

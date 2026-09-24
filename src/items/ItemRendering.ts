@@ -22,7 +22,7 @@ export const renderItems = (
       !debugMode
     )
       return;
-    switch (itemLocation.item.type) {
+    switch (itemLocation.item?.type ?? ItemType.WEAPON) {
       case ItemType.MAGIC:
         renderMagicItem(ctx, ground, cellSize, state, itemLocation);
         break;
@@ -56,7 +56,9 @@ const renderMagicItem = (
   if (!state.currentActor) return;
   const actor = state.currentActor;
   if (isSamePosition(actor?.position, itemLocation.position)) {
-    const text = i18n(itemLocation.item.name);
+    const text = itemLocation.item
+      ? i18n(itemLocation.item.name)
+      : i18n('campaign.iceDragon.randomItem');
     renderTextBox(ctx, text, itemLocation.position, cellSize);
   }
 };

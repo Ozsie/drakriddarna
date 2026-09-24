@@ -2,6 +2,7 @@
   "iceDragon": {
     "name": "Treasure of the Ice Dragon",
     "randomEquipment": "Random Equipment",
+    "randomItem": "Random Item",
     "trapDoor": "Trap Door",
     "e1m0": {
       "name": "Troll Cave"

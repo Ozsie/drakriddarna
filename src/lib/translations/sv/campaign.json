@@ -2,6 +2,7 @@
   "iceDragon": {
     "name": "Isdrakens Skatt",
     "randomEquipment": "Slumpmässig Utrustning",
+    "randomItem": "Slumpmässigt Föremål",
     "trapDoor": "Fälla",
     "e1m0": {
       "name": "Trollgrottan"
