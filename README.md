@@ -5,7 +5,6 @@
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
 ## Todo
-- [ ] Select door on click when multiple doors in same cell
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
 - [ ] Difficulty levels
@@ -19,6 +18,7 @@
 - [ ] Monster cards?
 - [ ] Support for additional campaigns
 - [ ] Level editor
+- [X] Select door on click when multiple doors in same cell
 - [X] Create function for random item on floor
 - [X] Trigger traps when heroes move through a cell with a trap
 - [X] Stop search through walls & doors

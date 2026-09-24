@@ -1,10 +1,10 @@
 import { writable } from 'svelte/store';
-import type { RadialAction } from '../hero/RadialMenuLogic';
+import type { RadialMenuEntry } from '../hero/RadialMenuLogic';
 
 export type RadialMenuState = {
   x: number;
   y: number;
-  actions: RadialAction[];
+  entries: RadialMenuEntry[];
 } | null;
 
 export const radialMenuStore = writable<RadialMenuState>(null);

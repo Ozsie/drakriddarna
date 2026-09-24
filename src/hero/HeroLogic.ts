@@ -141,7 +141,7 @@ export const act = (direction: MoveDirection | string, state: GameState) => {
   }
 };
 
-export const pickLock = (state: GameState) => {
+export const pickLock = (state: GameState, door?: Door) => {
   doReRender(state);
   const hero = state.currentActor;
   if (!hero) return;
@@ -153,9 +153,11 @@ export const pickLock = (state: GameState) => {
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
   }
-  const door = state.dungeon.layout.doors.find(
-    (door) => door.x === hero.position.x && door.y === hero.position.y,
-  );
+  door =
+    door ??
+    state.dungeon.layout.doors.find(
+      (d) => d.x === hero.position.x && d.y === hero.position.y,
+    );
   if (door && door.locked) {
     const result = roll(hero.level, 1);
     if (result >= 1) {

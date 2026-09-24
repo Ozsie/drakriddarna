@@ -8,7 +8,7 @@ import {
   isWalkable,
 } from '../core';
 import { doorAsActor, takeDamage } from '../core';
-import type { ItemLocation, GameState, Hero, Position } from '../types';
+import type { ItemLocation, GameState, Hero, Position, Door } from '../types';
 import { ItemType, Side } from '../types';
 import {
   checkForTrapDoor,
@@ -35,12 +35,17 @@ import { BREAK_LOCK } from '../items/ItemLogic';
 import {
   RadialAction,
   findDoorAtHero,
+  findDoorsAtHero,
   findItemAtHero,
   getAvailableRadialActions,
 } from './RadialMenuLogic';
 import { radialMenuStore } from '../store/radialMenuStore';
 import { next } from '../game';
-import { gameStateStore, isTurnInProgress, nextTurn } from '../store/gameStateStore';
+import {
+  gameStateStore,
+  isTurnInProgress,
+  nextTurn,
+} from '../store/gameStateStore';
 import { get } from 'svelte/store';
 
 export const distanceInGrid = (a: Position, b: Position) => {
@@ -80,8 +85,13 @@ const pickUpItemAtHero = (
   pickupItem(state, item, hero);
 };
 
-const openDoorAtHero = (state: GameState, hero: Hero, target: Position) => {
-  const door = findDoorAtHero(state, hero);
+const openDoorAtHero = (
+  state: GameState,
+  hero: Hero,
+  target: Position,
+  door?: Door,
+) => {
+  door = door ?? findDoorAtHero(state, hero);
   if (!door || door.open) return;
   const canBreakLock = hero.inventory.some(
     (item) => item && item.properties?.[BREAK_LOCK],
@@ -120,20 +130,25 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     return;
   }
 
-  const door = findDoorAtHero(state, hero);
+  const doors = findDoorsAtHero(state, hero);
+  const door = doors.length === 1 ? doors[0] : undefined;
+  if (doors.length > 1) {
+    onHeroClicked(state, hero);
+    return;
+  }
   if (door && !door.open && !door.hidden) {
     const canBreakLock = hero.inventory.some(
       (item) => item && item.properties?.[BREAK_LOCK],
     );
     if (canOpenDoor(hero, canBreakLock, door)) {
-      openDoorAtHero(state, hero, target);
+      openDoorAtHero(state, hero, target, door);
     } else if (door.locked && !door.hidden) {
       if (!canAct(hero)) {
         addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
         return;
       }
       addLog(state, 'logs.heroAction.locked');
-      pickLock(state);
+      pickLock(state, door);
     }
   } else {
     if (!canAct(hero)) {
@@ -146,15 +161,19 @@ export const onTargetSelf = (state: GameState, target: Position) => {
 
 export const onHeroClicked = (state: GameState, hero: Hero) => {
   doReRender(state);
-  const actions = getAvailableRadialActions(state, hero);
-  if (actions.length === 0) {
+  const entries = getAvailableRadialActions(state, hero);
+  if (entries.length === 0) {
     radialMenuStore.set(null);
     return;
   }
-  radialMenuStore.set({ x: hero.position.x, y: hero.position.y, actions });
+  radialMenuStore.set({ x: hero.position.x, y: hero.position.y, entries });
 };
 
-export const executeRadialAction = (state: GameState, action: RadialAction) => {
+export const executeRadialAction = (
+  state: GameState,
+  action: RadialAction,
+  door?: Door,
+) => {
   const hero = state.currentActor as Hero;
   switch (action) {
     case RadialAction.SEARCH:
@@ -162,10 +181,10 @@ export const executeRadialAction = (state: GameState, action: RadialAction) => {
       break;
     case RadialAction.PICK_LOCK:
       addLog(state, 'logs.heroAction.locked');
-      pickLock(state);
+      pickLock(state, door);
       break;
     case RadialAction.OPEN_DOOR:
-      openDoorAtHero(state, hero, hero.position);
+      openDoorAtHero(state, hero, hero.position, door);
       break;
     case RadialAction.PICK_UP_ITEM: {
       const itemLocation = findItemAtHero(state, hero);
@@ -176,7 +195,7 @@ export const executeRadialAction = (state: GameState, action: RadialAction) => {
     }
     case RadialAction.NEXT: {
       if (get(isTurnInProgress)) return;
-      nextTurn().then(newState => {
+      nextTurn().then((newState) => {
         gameStateStore.set(newState);
       });
       break;

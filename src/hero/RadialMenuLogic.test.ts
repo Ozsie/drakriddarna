@@ -97,9 +97,9 @@ describe('getAvailableRadialActions', () => {
     const hero = createTestHero(1, 1);
     const state = createTestState(hero);
 
-    const actions = getAvailableRadialActions(state, hero);
+    const entries = getAvailableRadialActions(state, hero);
 
-    expect(actions).toEqual([RadialAction.SEARCH]);
+    expect(entries.map((e) => e.action)).toEqual([RadialAction.SEARCH]);
   });
 
   it('returns PICK_LOCK and SEARCH when standing on a locked door with full action', () => {
@@ -118,10 +118,53 @@ describe('getAvailableRadialActions', () => {
       },
     ];
 
-    const actions = getAvailableRadialActions(state, hero);
+    const entries = getAvailableRadialActions(state, hero);
+    const actions = entries.map((e) => e.action);
 
     expect(actions).toContain(RadialAction.PICK_LOCK);
     expect(actions).toContain(RadialAction.SEARCH);
+  });
+
+  it('returns one OPEN_DOOR/PICK_LOCK entry per door when multiple doors are on the same cell', () => {
+    const hero = createTestHero(1, 1);
+    const state = createTestState(hero);
+    const rightDoor = {
+      x: 1,
+      y: 1,
+      side: Side.RIGHT,
+      open: false,
+      locked: true,
+      hidden: false,
+      trapped: false,
+      trapAttacks: 0,
+    };
+    const downDoor = {
+      x: 1,
+      y: 1,
+      side: Side.DOWN,
+      open: false,
+      locked: false,
+      hidden: false,
+      trapped: false,
+      trapAttacks: 0,
+    };
+    state.dungeon.layout.doors = [rightDoor, downDoor];
+
+    const entries = getAvailableRadialActions(state, hero);
+
+    const openDoorEntries = entries.filter(
+      (e) => e.action === RadialAction.OPEN_DOOR,
+    );
+    const pickLockEntries = entries.filter(
+      (e) => e.action === RadialAction.PICK_LOCK,
+    );
+
+    expect(openDoorEntries).toHaveLength(2);
+    expect(openDoorEntries.map((e) => e.door)).toEqual(
+      expect.arrayContaining([rightDoor, downDoor]),
+    );
+    expect(pickLockEntries).toHaveLength(1);
+    expect(pickLockEntries[0].door).toEqual(rightDoor);
   });
 
   it('returns OPEN_DOOR only when hero has half action left (movement>0 but no full action)', () => {
@@ -142,7 +185,8 @@ describe('getAvailableRadialActions', () => {
       },
     ];
 
-    const actions = getAvailableRadialActions(state, hero);
+    const entries = getAvailableRadialActions(state, hero);
+    const actions = entries.map((e) => e.action);
 
     expect(actions).toContain(RadialAction.OPEN_DOOR);
   });
@@ -156,7 +200,8 @@ describe('getAvailableRadialActions', () => {
       },
     ];
 
-    const actions = getAvailableRadialActions(state, hero);
+    const entries = getAvailableRadialActions(state, hero);
+    const actions = entries.map((e) => e.action);
 
     expect(actions).toContain(RadialAction.PICK_UP_ITEM);
   });
@@ -167,8 +212,8 @@ describe('getAvailableRadialActions', () => {
     hero.movement = 0;
     const state = createTestState(hero);
 
-    const actions = getAvailableRadialActions(state, hero);
+    const entries = getAvailableRadialActions(state, hero);
 
-    expect(actions).toEqual([]);
+    expect(entries).toEqual([]);
   });
 });

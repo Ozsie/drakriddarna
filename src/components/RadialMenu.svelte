@@ -5,7 +5,7 @@
   import { gameStateStore } from '../store/gameStateStore';
   import { t } from '$lib/translations';
 
-  import type { GameState } from '../types';
+  import type { GameState, Door } from '../types';
 
   export let cellSize: number;
   export let state: GameState | undefined = undefined;
@@ -33,9 +33,9 @@
 
   const close = () => radialMenuStore.set(null);
 
-  const onSelect = (action: RadialAction) => {
+  const onSelect = (action: RadialAction, door?: Door) => {
     const activeState = state ?? $gameStateStore;
-    executeRadialAction(activeState, action);
+    executeRadialAction(activeState, action, door);
     if (!state) {
       gameStateStore.set(activeState);
     }
@@ -44,17 +44,17 @@
 
 {#if menu}
   <div class="radialOverlay" on:click|self={close}>
-    {#each menu.actions as action, i}
-      {@const angle = (i / menu.actions.length) * 2 * Math.PI - Math.PI / 2}
+    {#each menu.entries as entry, i}
+      {@const angle = (i / menu.entries.length) * 2 * Math.PI - Math.PI / 2}
       {@const x = centerX + radius * Math.cos(angle)}
       {@const y = centerY + radius * Math.sin(angle)}
       <button
         class="radialButton"
         style="left: {x}px; top: {y}px;"
-        title={$t(labels[action])}
-        on:click={() => onSelect(action)}
+        title={$t(labels[entry.action]) + (entry.door ? ` (${entry.door.side})` : '')}
+        on:click={() => onSelect(entry.action, entry.door)}
       >
-        {icons[action]}
+        {icons[entry.action]}
       </button>
     {/each}
   </div>

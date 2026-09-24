@@ -12,11 +12,21 @@ export enum RadialAction {
   NEXT = 'NEXT',
 }
 
+export type RadialMenuEntry = {
+  action: RadialAction;
+  door?: Door;
+};
+
 export const findDoorAtHero = (
   state: GameState,
   hero: Hero,
 ): Door | undefined =>
   state.dungeon.layout.doors.find(
+    (door) => door.x === hero.position.x && door.y === hero.position.y,
+  );
+
+export const findDoorsAtHero = (state: GameState, hero: Hero): Door[] =>
+  state.dungeon.layout.doors.filter(
     (door) => door.x === hero.position.x && door.y === hero.position.y,
   );
 
@@ -31,37 +41,38 @@ export const findItemAtHero = (
 export const getAvailableRadialActions = (
   state: GameState,
   hero: Hero,
-): RadialAction[] => {
-  const actions: RadialAction[] = [];
-  const door = findDoorAtHero(state, hero);
+): RadialMenuEntry[] => {
+  const entries: RadialMenuEntry[] = [];
+  const doors = findDoorsAtHero(state, hero);
   const canBreakLock = hero.inventory.some(
     (item) => item && item.properties?.[BREAK_LOCK],
   );
 
   if (findItemAtHero(state, hero)) {
-    actions.push(RadialAction.PICK_UP_ITEM);
+    entries.push({ action: RadialAction.PICK_UP_ITEM });
   }
 
-  if (door && !door.open && canOpenDoor(hero, canBreakLock, door)) {
-    actions.push(RadialAction.OPEN_DOOR);
-  }
+  for (const door of doors) {
+    if (!door.open && canOpenDoor(hero, canBreakLock, door)) {
+      entries.push({ action: RadialAction.OPEN_DOOR, door });
+    }
 
-  if (
-    door &&
-    door.locked &&
-    !door.hidden &&
-    !door.open &&
-    !hero.blinded &&
-    canAct(hero)
-  ) {
-    actions.push(RadialAction.PICK_LOCK);
+    if (
+      door.locked &&
+      !door.hidden &&
+      !door.open &&
+      !hero.blinded &&
+      canAct(hero)
+    ) {
+      entries.push({ action: RadialAction.PICK_LOCK, door });
+    }
   }
 
   if (!hero.blinded && canAct(hero)) {
-    actions.push(RadialAction.SEARCH);
+    entries.push({ action: RadialAction.SEARCH });
   }
 
-  actions.push(RadialAction.NEXT);
+  entries.push({ action: RadialAction.NEXT });
 
-  return actions;
+  return entries;
 };
