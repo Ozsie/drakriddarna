@@ -226,7 +226,10 @@ export const stepAlongLine = (
   }
 };
 
-const cellsAlongLine = (source: Position, target: Position): Position[] => {
+export const cellsAlongLine = (
+  source: Position,
+  target: Position,
+): Position[] => {
   const cells: Position[] = [];
   let x = source.x;
   let y = source.y;

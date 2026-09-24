@@ -5,7 +5,6 @@
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
 ## Todo
-- [ ] Trigger traps when heroes move through a cell with a trap
 - [ ] Create function for random item on floor
 - [ ] Select door on click when multiple doors in same cell
 - [ ] e1m5 - The Ice Dragons Treasure
@@ -21,7 +20,8 @@
 - [ ] Monster cards?
 - [ ] Support for additional campaigns
 - [ ] Level editor
-- [x] Stop search through walls & doors
+- [X] Trigger traps when heroes move through a cell with a trap
+- [X] Stop search through walls & doors
 - [X] Corners
 - [X] Green dark lord paralyzing sword
 - [X] Magic Item/Weapon: Sword of Chaos

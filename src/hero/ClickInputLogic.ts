@@ -1,5 +1,6 @@
 import { addLog, doReRender, i18n, recordActorStep } from '../core';
 import {
+  cellsAlongLine,
   findCell,
   hasLineOfSight,
   isRoomDiscovered,
@@ -119,7 +120,7 @@ export const onTargetSelf = (state: GameState, target: Position) => {
   }
 };
 
-const onTargetCell = (state: GameState, target: Position) => {
+export const onTargetCell = (state: GameState, target: Position) => {
   doReRender(state);
   const hero = state.currentActor as Hero;
   if (hero.actions === 0) {
@@ -162,16 +163,19 @@ const onTargetCell = (state: GameState, target: Position) => {
       distance <= hero.movement &&
       los
     ) {
-      recordActorStep(hero, target);
-      hero.position = target;
+      const path = cellsAlongLine(hero.position, target);
       hero.movement -= distance;
-      checkForNote(state, hero);
-      const nextToMonster = checkForNextToMonster(state, hero);
-      if (nextToMonster) {
-        hero.movement = 0;
-      }
-      if (checkForTrapDoor(state)) {
-        return;
+      for (const cell of path) {
+        recordActorStep(hero, cell);
+        hero.position = cell;
+        checkForNote(state, hero);
+        const nextToMonster = checkForNextToMonster(state, hero);
+        if (nextToMonster) {
+          hero.movement = 0;
+        }
+        if (checkForTrapDoor(state)) {
+          return;
+        }
       }
     } else if (blockedByMonster) {
       if (distance <= hero.weapon.range) {
