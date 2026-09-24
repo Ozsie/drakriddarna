@@ -5,28 +5,24 @@
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
 ## Todo
-- [ ] Difficulty levels
-- [ ] Dungeon intro screen
-- [ ] Create function for random item on floor
 - [ ] Stop search through walls & doors
-- [ ] Corners
-  - [X] e1m0
-  - [ ] e1m1
-  - [ ] e1m2
-  - [ ] e1m3
-  - [ ] e1m4
+- [ ] Trigger traps when heroes move through a cell with a trap
+- [ ] Create function for random item on floor
+- [ ] Select door on click when multiple doors in same cell
 - [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
-- [ ] Select door on click when multiple doors in same cell
+- [ ] Difficulty levels
+- [ ] Dungeon intro screen
 - [ ] Multiple saves
-- [ ] Graphics
 - [ ] Diary on mobile
 - [ ] Responsive layout
-- [ ] Support for additional campaigns
+- [ ] Graphics
 - [ ] Doors blocking monsters?
 - [ ] Trade Items?
 - [ ] Monster cards?
+- [ ] Support for additional campaigns
 - [ ] Level editor
+- [X] Corners
 - [X] Green dark lord paralyzing sword
 - [X] Magic Item/Weapon: Sword of Chaos
 - [X] e1m4 - The Dark Citadel
