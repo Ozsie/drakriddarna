@@ -61,6 +61,7 @@
     "foundDoor": "{{hero}} letade ({{result}}) och hittade en dold dörr.",
     "foundTrapInDoor": "{{hero}} letade ({{result}}) och hittade en fälla i en dörr.",
     "foundSecret": "{{hero}} letade ({{result}}) och hittade {{secret}}.",
+    "revealedSecretWithItem": "{{hero}} klev in i rummet med {{item}} och avslöjade {{secret}}.",
     "turnFailed": "Misslyckades med att gå vidare till nästa tur."
   },
   "item": {

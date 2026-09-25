@@ -123,6 +123,7 @@ export type WinCondition = {
   type: ConditionType;
   targetCell?: Position;
   targetMonsterType?: MonsterType;
+  targetSecretId?: string;
   killMinCount?: number;
   fulfilled: boolean;
   checkFulfilled?: string;
@@ -135,6 +136,7 @@ export enum ConditionType {
   REACH_CELL,
   OPEN_DOOR,
   KILL_AT_LEAST,
+  SECRET_FOUND,
 }
 
 export type Layout = {
@@ -198,6 +200,7 @@ export type Secret = {
   position: Position;
   found: boolean;
   item?: Item;
+  revealedBy?: string;
 };
 
 export enum SecretType {

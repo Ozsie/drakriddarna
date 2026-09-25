@@ -58,6 +58,7 @@
     "killAtLeast": "Döda åtminstone {{minKills}} monster.",
     "openDoor": "Öppna en viss dörr.",
     "reachCell": "Nå en viss cell.",
+    "secretFound": "Hitta en viss hemlighet.",
     "additional": {
       "requiresNecklace": "Ni behöver ljusets halsband."
     }

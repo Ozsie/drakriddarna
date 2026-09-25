@@ -32,9 +32,9 @@ export const roomEffects: Record<
       }
     });
   },
-  stopEvents: (state: GameState, room: string) => {
+  stopEvents: (state: GameState) => {
     state.drawEvents = false;
-  }
+  },
 };
 
 export const executeRoomDiscoveredEffect = (

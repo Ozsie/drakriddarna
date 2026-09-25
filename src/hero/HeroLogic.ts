@@ -35,7 +35,11 @@ import {
   getEffectiveMaxMovement,
   takeDamage,
 } from '../core';
-import { checkForTrapDoor, searchForSecret } from '../secrets/SecretsLogic';
+import {
+  checkForItemRevealedSecret,
+  checkForTrapDoor,
+  searchForSecret,
+} from '../secrets/SecretsLogic';
 import { executeRoomDiscoveredEffect } from '../dungeon/RoomEffectsLogic';
 import {
   BREAK_LOCK,
@@ -438,6 +442,7 @@ const move = (
   hero.position.x = newX;
   hero.position.y = newY;
   checkForNote(state, hero);
+  checkForItemRevealedSecret(state, hero);
   const nextToMonster = checkForNextToMonster(state, hero);
   if (nextToMonster) {
     hero.movement = 0;

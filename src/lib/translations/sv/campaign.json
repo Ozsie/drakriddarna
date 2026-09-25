@@ -37,7 +37,8 @@
     "e1m4": {
       "name": "Det Mörka Citadellet",
       "secrets": {
-        "note1": "Ödlan går åt höger och framåt. Ormen går åt vänster och framåt."
+        "note1": "Ödlan går åt höger och framåt. Ormen går åt vänster och framåt.",
+        "stair": "En dold trappa, avslöjad av halsbandets ljus."
       },
       "notes": {
         "liberVortex": "På golvet ligger en bok, Liber Vortex. På dess första sidan står det 'När Järndörren öppnas, gå som Ödlan två steg, sen som Ormen ett steg..'",

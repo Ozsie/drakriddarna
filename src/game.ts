@@ -323,6 +323,13 @@ const checkWinConditions = (state: GameState) => {
           state.dungeon.killCount;
         break;
       }
+      case ConditionType.SECRET_FOUND: {
+        condition.fulfilled =
+          state.dungeon.layout.secrets.find(
+            (secret) => secret.id === condition.targetSecretId,
+          )?.found ?? false;
+        break;
+      }
     }
     if (condition.checkFulfilled) {
       condition.fulfilled = onCheckFulfilled[condition.checkFulfilled](

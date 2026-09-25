@@ -25,10 +25,9 @@ export const e1m4: Dungeon = defineDungeon({
       fulfilled: false,
     },
     {
-      type: ConditionType.REACH_CELL,
+      type: ConditionType.SECRET_FOUND,
       fulfilled: false,
-      targetCell: { x: 16, y: 11 },
-      checkFulfilled: 'hasNecklaceOfLight',
+      targetSecretId: 'secret_stair_16_11',
       additionalDescription:
         'content.winConditions.additional.requiresNecklace',
     },
@@ -97,6 +96,15 @@ export const e1m4: Dungeon = defineDungeon({
       [SecretType.TRAP_DOOR, 14, 10],
       [SecretType.TRAP_DOOR, 15, 11],
       [SecretType.TRAP_DOOR, 14, 12],
+      {
+        id: 'secret_stair_16_11',
+        name: 'campaign.iceDragon.e1m4.secrets.stair',
+        nameTranslationKey: 'campaign.iceDragon.e1m4.secrets.stair',
+        type: SecretType.NOTE,
+        position: { x: 16, y: 11 },
+        found: false,
+        revealedBy: 'necklace_of_light',
+      },
     ],
     notes: [
       [11, 8, 'campaign.iceDragon.e1m4.notes.liberVortex'],

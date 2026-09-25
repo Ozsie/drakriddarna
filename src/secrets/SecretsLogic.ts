@@ -3,6 +3,7 @@ import { Colour, ItemType, Level, SecretType } from '../types';
 import { addLog, i18n } from '../core';
 import {
   canSearchThrough,
+  findCell,
   isDoorEdge,
   isNeighbouring,
   isSamePosition,
@@ -11,6 +12,35 @@ import { roll } from '../core';
 import { takeDamage } from '../core';
 import { pickupItem } from '../hero/HeroLogic';
 import { onPickup, SEARCH_BONUS } from '../items/ItemLogic';
+
+export const checkForItemRevealedSecret = (state: GameState, hero: Hero) => {
+  const heroRoom = findCell(
+    state.dungeon.layout.grid,
+    hero.position.x,
+    hero.position.y,
+  );
+  state.dungeon.layout.secrets
+    .filter((secret) => !secret.found && secret.revealedBy)
+    .forEach((secret) => {
+      const secretRoom = findCell(
+        state.dungeon.layout.grid,
+        secret.position.x,
+        secret.position.y,
+      );
+      if (secretRoom !== heroRoom) return;
+      const item = hero.inventory.find(
+        (item) => item && item.id === secret.revealedBy,
+      );
+      if (item) {
+        secret.found = true;
+        addLog(state, 'logs.heroAction.revealedSecretWithItem', {
+          hero: i18n(hero.name),
+          item: i18n(item.name),
+          secret: i18n(secret.name),
+        });
+      }
+    });
+};
 
 export const searchForSecret = (state: GameState) => {
   const hero = state.currentActor as Hero;

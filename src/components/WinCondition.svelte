@@ -37,6 +37,8 @@
         return $t('content.winConditions.openDoor') + additionalDescription;
       case ConditionType.REACH_CELL:
         return $t('content.winConditions.reachCell') + additionalDescription;
+      case ConditionType.SECRET_FOUND:
+        return $t('content.winConditions.secretFound') + additionalDescription;
     }
   };
 </script>

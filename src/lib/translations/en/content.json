@@ -58,6 +58,7 @@
     "killAtLeast": "Kill at least {{minKills}} monsters.",
     "openDoor": "Open a certain door.",
     "reachCell": "Reach a certain cell.",
+    "secretFound": "Find a certain secret.",
     "additional": {
       "requiresNecklace": "The Necklace of Light is required."
     }
