@@ -110,6 +110,6 @@ export const e1m4: Dungeon = defineDungeon({
       [11, 8, 'campaign.iceDragon.e1m4.notes.liberVortex'],
       [13, 10, 'campaign.iceDragon.e1m4.notes.ironDoor'],
     ],
-    items: [[3, 8, weapons[1]]],
+    items: [[3, 8]],
   },
 });
