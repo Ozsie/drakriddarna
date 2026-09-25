@@ -101,6 +101,16 @@ export const getDist = (a: Position, b: Position): number =>
 export const isRoomDiscovered = (dungeon: Dungeon, cell: string): boolean =>
   dungeon.discoveredRooms.includes(cell);
 
+export const findRoomCells = (grid: string[], room: string): Position[] => {
+  const cells: Position[] = [];
+  grid.forEach((row, y) => {
+    toArray(row).forEach((cell, x) => {
+      if (cell === room) cells.push({ x, y });
+    });
+  });
+  return cells;
+};
+
 export const isDiscovered = (
   dungeon: Dungeon,
   x: number,

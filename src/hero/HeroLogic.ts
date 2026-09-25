@@ -36,6 +36,7 @@ import {
   takeDamage,
 } from '../core';
 import { checkForTrapDoor, searchForSecret } from '../secrets/SecretsLogic';
+import { executeRoomDiscoveredEffect } from '../dungeon/RoomEffectsLogic';
 import {
   BREAK_LOCK,
   onDrop,
@@ -207,7 +208,7 @@ export const openDoor = (
   if (target && ![WALL, EMPTY, COLLAPSED].includes(target)) {
     if (!state.dungeon.discoveredRooms.includes(target)) {
       state.dungeon.discoveredRooms.push(target);
-      state.dungeon.onRoomDiscovered?.[target]?.(state);
+      executeRoomDiscoveredEffect(state, target);
     }
   }
   move(hero, state, hero.position.x, hero.position.y, 1);

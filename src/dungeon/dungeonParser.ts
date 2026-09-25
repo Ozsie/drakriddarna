@@ -2,7 +2,6 @@ import type {
   Corner,
   Door,
   Dungeon,
-  GameState,
   Item,
   ItemLocation,
   Layout,
@@ -167,7 +166,7 @@ export type DeclarativeDungeon = {
   killCount?: number;
   events?: number[];
   collapsedCorridor?: string;
-  onRoomDiscovered?: Record<string, (state: GameState) => void>;
+  onRoomDiscovered?: Record<string, string>;
 };
 
 export interface DefineDungeonOptions {

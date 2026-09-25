@@ -1,4 +1,4 @@
-import type { Dungeon, GameState, Hero, Position } from './types';
+import type { GameState, Hero, Position } from './types';
 import { ConditionType } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
 import { campaignIceDragonTreasure } from './campaigns/campaignIceDragonTreasure';
@@ -96,26 +96,9 @@ export const loadState = (newState: GameState) => {
   newState.currentActor = newState.heroes.find(
     (hero) => hero.name === newState.currentActor?.name,
   ) as Hero | undefined;
-  const originalDungeon = collectDungeons(
-    campaignIceDragonTreasure.dungeons,
-  ).find((dungeon) => dungeon.name === newState.dungeon.name);
-  newState.dungeon.onRoomDiscovered = originalDungeon?.onRoomDiscovered;
   addLog(newState, 'logs.gameLoaded');
   doReRender(newState);
   return newState;
-};
-
-const collectDungeons = (dungeons: Dungeon[]): Dungeon[] => {
-  const all: Dungeon[] = [];
-  const seen = new Set<Dungeon>();
-  const visit = (dungeon?: Dungeon) => {
-    if (!dungeon || seen.has(dungeon)) return;
-    seen.add(dungeon);
-    all.push(dungeon);
-    visit(dungeon.nextDungeon);
-  };
-  dungeons.forEach(visit);
-  return all;
 };
 
 export const load = (currentState: GameState): GameState => {
@@ -131,23 +114,7 @@ export const load = (currentState: GameState): GameState => {
 };
 
 export const init = (): GameState => {
-  // `onRoomDiscovered` callbacks can't be structurally cloned, so they are
-  // temporarily removed before cloning and re-attached (by dungeon name) to
-  // the cloned dungeons afterwards.
-  const allDungeons = collectDungeons(campaignIceDragonTreasure.dungeons);
-  const onRoomDiscoveredByName = new Map(
-    allDungeons.map((dungeon) => [dungeon.name, dungeon.onRoomDiscovered]),
-  );
-  allDungeons.forEach((dungeon) => {
-    delete dungeon.onRoomDiscovered;
-  });
   const campaign = structuredClone(campaignIceDragonTreasure);
-  allDungeons.forEach((dungeon) => {
-    dungeon.onRoomDiscovered = onRoomDiscoveredByName.get(dungeon.name);
-  });
-  collectDungeons(campaign.dungeons).forEach((dungeon) => {
-    dungeon.onRoomDiscovered = onRoomDiscoveredByName.get(dungeon.name);
-  });
   const state: GameState = {
     heroes: campaign.heroes,
     dungeon: campaign.dungeons[0],

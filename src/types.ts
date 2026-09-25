@@ -115,7 +115,7 @@ export type Dungeon = {
   events?: number[];
   collapsedCorridor?: string;
   portal?: Position;
-  onRoomDiscovered?: Record<string, (state: GameState) => void>;
+  onRoomDiscovered?: Record<string, string>;
 };
 
 export type WinCondition = {
