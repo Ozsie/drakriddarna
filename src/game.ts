@@ -154,6 +154,7 @@ export const init = (): GameState => {
     },
     eventDeck: getEventsForDungeon(campaign.dungeons[0]),
     reRender: true,
+    drawEvents: true,
   };
   resetLiveHeroes(state);
   if (browser) {
@@ -216,9 +217,13 @@ export const next = async (
     const hasKilledAll = killAllMonstersAchieved(state);
     if (nextIndex === 0 && !hasKilledAll) {
       resetEventEffects(state);
-      const event = drawNextEvent(state);
-      state.currentEvent = event;
-      eventEffects[event.effect](state, event);
+      if (state.drawEvents) {
+        const event = drawNextEvent(state);
+        state.currentEvent = event;
+        eventEffects[event.effect](state, event);
+      } else {
+        state.currentEvent = undefined;
+      }
     } else if (state.roundActionsDelta) {
       state.currentActor.actions = Math.max(
         1,
@@ -270,6 +275,7 @@ export const resetLevel = (currentState: GameState): GameState => {
       state.currentActor = state.heroes.find(
         (hero) => hero.name === state.currentActor?.name,
       ) as Hero | undefined;
+      state.drawEvents = true;
       addLog(state, 'logs.allHeroesDead');
       return state;
     }

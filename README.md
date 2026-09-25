@@ -5,7 +5,6 @@
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
 ## Todo
-- [ ] e1m5 - The Ice Dragons Treasure
 - [ ] e1m6 - The Final Battle
 - [ ] Difficulty levels
 - [ ] Dungeon intro screen
@@ -18,6 +17,7 @@
 - [ ] Monster cards?
 - [ ] Support for additional campaigns
 - [ ] Level editor
+- [X] e1m5 - The Ice Dragons Treasure
 - [X] Select door on click when multiple doors in same cell
 - [X] Create function for random item on floor
 - [X] Trigger traps when heroes move through a cell with a trap
