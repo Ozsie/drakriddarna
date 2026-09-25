@@ -53,6 +53,7 @@
     "leveledUp": "{{hero}} gick upp i nivå till {{level}}.",
     "notNearFriend": "{{hero}} kunde inte använda {{weapon}} nära en vän.",
     "locked": "Dörren är låst.",
+    "reinforced": "Dörren är förstärkt och kan bara öppnas med Jättehandsken.",
     "monsterOutOfRange": "Monstret är utom räckhåll.",
     "walkedByMonster": "{{hero}} gick förbi ett monster och blev stoppad.",
     "searchBonus": "{{hero}} använde effekten av {{item}} när hen sökte.",

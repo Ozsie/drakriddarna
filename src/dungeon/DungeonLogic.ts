@@ -97,6 +97,7 @@ export const createDoor = (side: Side, x: number, y: number): Door => ({
   trapped: false,
   open: false,
   hidden: false,
+  reinforced: false,
   trapAttacks: 0,
 });
 

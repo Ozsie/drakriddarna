@@ -53,6 +53,9 @@
         "crystalBall": "You peer into the crystal ball and see a vast cavern. Inside the cave, a spiral stone bridge leads to a flat rock formation in the center of the immense hall. Standing atop the rock, the four Dark Lords are preparing a sinister ritual. You can hear their rumbling voices: 'Only three hours remain until the end of the world; prepare to summon the destructive bolt of our evil master!' You realize you must hurry on at once and find the way to the cave if you are to defeat the Dark Lords."
       }
     },
+    "e1m6": {
+      "name": "The Final Battle"
+    },
     "testingGrounds": {
       "name": "Testing Grounds",
       "secrets": {

@@ -11,7 +11,9 @@ import {
   type Weapon,
   MonsterType,
 } from '../types';
-import { attack } from './HeroLogic';
+import { attack, canOpenDoor } from './HeroLogic';
+import type { Door } from '../types';
+import { Side } from '../types';
 
 const chaosSwordWeapon: Weapon = {
   id: 'sword_of_chaos',
@@ -148,5 +150,51 @@ describe('attack', () => {
     // stumble, or miss), so at least the resolution should have run without
     // being blocked by the incapacitated guard.
     expect(hero.actions).toBeLessThanOrEqual(2);
+  });
+});
+
+describe('canOpenDoor', () => {
+  const createTestDoor = (overrides?: Partial<Door>): Door => ({
+    locked: false,
+    trapped: false,
+    open: false,
+    hidden: false,
+    x: 2,
+    y: 1,
+    side: Side.RIGHT,
+    trapAttacks: 0,
+    reinforced: false,
+    ...overrides,
+  });
+
+  it('prevents opening a reinforced door without the giants glove', () => {
+    const hero = createTestHero({ inventory: [] });
+    const door = createTestDoor({ reinforced: true });
+
+    expect(canOpenDoor(hero, false, door)).toBe(false);
+  });
+
+  it('allows opening a reinforced door when carrying the giants glove', () => {
+    const hero = createTestHero({
+      inventory: [
+        {
+          id: 'giants_glove',
+          name: 'Giants Glove',
+          amountInDeck: 1,
+          type: ItemType.MAGIC,
+          value: 0,
+        },
+      ],
+    });
+    const door = createTestDoor({ reinforced: true });
+
+    expect(canOpenDoor(hero, false, door)).toBe(true);
+  });
+
+  it('allows opening a non-reinforced door without the giants glove', () => {
+    const hero = createTestHero({ inventory: [] });
+    const door = createTestDoor({ reinforced: false });
+
+    expect(canOpenDoor(hero, false, door)).toBe(true);
   });
 });

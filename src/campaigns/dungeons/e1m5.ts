@@ -8,9 +8,11 @@ import {
 } from '../../types';
 import { defineDungeon } from '../../dungeon/dungeonParser';
 import { magicItems } from '../../items/magicItems';
+import { e1m6 } from './e1m6';
 
 export const e1m5: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m5.name',
+  nextDungeon: e1m6,
   winConditions: [
     {
       type: ConditionType.OPEN_DOOR,

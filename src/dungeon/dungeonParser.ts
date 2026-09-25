@@ -53,6 +53,7 @@ export type DeclarativeDoorTuple = [
     trapped?: boolean | number;
     hidden?: boolean;
     open?: boolean;
+    reinforced?: boolean;
     id?: string;
   },
 ];
@@ -198,6 +199,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
   let trapAttacks = 0;
   let hidden = false;
   let open = false;
+  let reinforced = false;
   let id: string | undefined;
 
   if (Array.isArray(doorDef)) {
@@ -209,6 +211,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       locked = !!opts.locked;
       hidden = !!opts.hidden;
       open = !!opts.open;
+      reinforced = !!opts.reinforced;
       id = opts.id;
       if (typeof opts.trapped === 'number') {
         trapped = opts.trapped > 0;
@@ -240,6 +243,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       ...createTrappedLockedDoor(side, x, y, trapAttacks),
       open,
       hidden,
+      reinforced,
       ...(id ? { id } : {}),
     };
   }
@@ -248,6 +252,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       ...createTrappedHiddenDoor(side, x, y, trapAttacks),
       open,
       locked,
+      reinforced,
       ...(id ? { id } : {}),
     };
   }
@@ -257,6 +262,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       open,
       locked,
       hidden,
+      reinforced,
       ...(id ? { id } : {}),
     };
   }
@@ -265,6 +271,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       ...createLockedDoor(side, x, y),
       open,
       hidden,
+      reinforced,
       ...(id ? { id } : {}),
     };
   }
@@ -273,6 +280,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       ...createHiddenDoor(side, x, y),
       open,
       locked,
+      reinforced,
       ...(id ? { id } : {}),
     };
   }
@@ -280,6 +288,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
   return {
     ...createDoor(side, x, y),
     open,
+    reinforced,
     ...(id ? { id } : {}),
   };
 };

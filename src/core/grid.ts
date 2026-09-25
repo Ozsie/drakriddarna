@@ -90,9 +90,7 @@ export const canSearchThrough = (
 
   // Any closed door standing on this edge blocks searching beyond it
   const door = isDoorEdge(layout, from.x, from.y, to.x, to.y);
-  if (door && !door.open) return false;
-
-  return true;
+  return !(door && !door.open);
 };
 
 export const getDist = (a: Position, b: Position): number =>

@@ -53,6 +53,7 @@
     "leveledUp": "{{hero}} leveled up to {{level}}.",
     "notNearFriend": "{{hero}} could not use {{weapon}} near a friend.",
     "locked": "Door is locked.",
+    "reinforced": "The door is reinforced and can only be opened with the Giant's Glove.",
     "monsterOutOfRange": "Monster is out of range.",
     "walkedByMonster": "{{hero}} walked by a monster and lost the momentum.",
     "searchBonus": "{{hero}} used the effect of {{item}} when searching.",

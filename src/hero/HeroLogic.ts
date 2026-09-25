@@ -345,7 +345,11 @@ export const canOpenDoor = (hero: Hero, canBreakDoor: boolean, door: Door) =>
   !door.open &&
   !door.hidden &&
   (!door.locked || (door.locked && canBreakDoor)) &&
+  (!door.reinforced || hasGiantsGlove(hero)) &&
   hero.movement > 0;
+
+export const hasGiantsGlove = (hero: Hero) =>
+  hero.inventory.some((item) => item && item.id === 'giants_glove');
 
 export const checkForNote = (state: GameState, hero: Hero) => {
   const note = state.dungeon.layout.notes.find((note) =>

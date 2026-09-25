@@ -7,7 +7,6 @@ import {
   Side,
 } from '../../types';
 import { defineDungeon } from '../../dungeon/DungeonLogic';
-import { weapons } from '../../items/weapons';
 import { magicItems } from '../../items/magicItems';
 import { e1m5 } from './e1m5';
 

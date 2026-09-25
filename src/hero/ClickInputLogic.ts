@@ -23,6 +23,7 @@ import {
   checkForNextToMonster,
   checkForNote,
   consumeActions,
+  hasGiantsGlove,
   isBlockedByHero,
   isBlockedByMonster,
   openDoor,
@@ -141,6 +142,8 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     );
     if (canOpenDoor(hero, canBreakLock, door)) {
       openDoorAtHero(state, hero, target, door);
+    } else if (door.reinforced && !hasGiantsGlove(hero)) {
+      addLog(state, 'logs.heroAction.reinforced');
     } else if (door.locked && !door.hidden) {
       if (!canAct(hero)) {
         addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });

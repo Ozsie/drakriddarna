@@ -53,6 +53,9 @@
         "crystalBall": "Ni kikar i kristallkulan och ser en väldig grottsal. I grottan fins en spiralformad stenbro som leder till en flat klippa mitt i den väldiga salen. Mitt på klippan står de fyra mörkerherrarna och förbereder en ondskefull ritual. Ni kan höra deras mullrande röster: 'Bara tre timmar kvar till världens undergång, förbered nedkallandet av vår onde herres förgörelseblixt!' Ni inser att ni genast måste skynda vidare och finna vägen till grottan om ni ska kunna besegra mörkerherrarna."
       }
     },
+    "e1m6": {
+      "name": "Slutstriden"
+    },
     "testingGrounds": {
       "name": "Testområde",
       "secrets": {

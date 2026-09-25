@@ -220,6 +220,7 @@ export type Door = {
   y: number;
   side: Side;
   trapAttacks: number;
+  reinforced: boolean;
 };
 
 export enum Side {
