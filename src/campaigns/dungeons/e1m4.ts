@@ -9,9 +9,11 @@ import {
 import { defineDungeon } from '../../dungeon/DungeonLogic';
 import { weapons } from '../../items/weapons';
 import { magicItems } from '../../items/magicItems';
+import { e1m5 } from './e1m5';
 
 export const e1m4: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m4.name',
+  nextDungeon: e1m5,
   winConditions: [
     {
       type: ConditionType.KILL_AT_LEAST,

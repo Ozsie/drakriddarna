@@ -44,6 +44,14 @@
         "ironDoor": "The door is very clearly made of iron."
       }
     },
+    "e1m5": {
+      "name": "The Ice Dragon's Treasure",
+      "notes": {
+        "magicNumber": "Three is the magic number, but four are the Dark Lords",
+        "stoneFace": "A stone face in the wall speaks to you: 'The path to the Hall of Fire shall be found in the chamber of the Blue Dark Lord...'",
+        "crystalBall": "You peer into the crystal ball and see a vast cavern. Inside the cave, a spiral stone bridge leads to a flat rock formation in the center of the immense hall. Standing atop the rock, the four Dark Lords are preparing a sinister ritual. You can hear their rumbling voices: 'Only three hours remain until the end of the world; prepare to summon the destructive bolt of our evil master!' You realize you must hurry on at once and find the way to the cave if you are to defeat the Dark Lords."
+      }
+    },
     "testingGrounds": {
       "name": "Testing Grounds",
       "secrets": {

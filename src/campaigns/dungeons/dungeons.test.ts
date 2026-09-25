@@ -4,6 +4,7 @@ import { e1m1 } from './e1m1';
 import { e1m2 } from './e1m2';
 import { e1m3 } from './e1m3';
 import { e1m4 } from './e1m4';
+import { e1m5 } from './e1m5';
 import { testingGrounds } from './testingGrounds';
 import { validateDungeon } from '../../dungeon/DungeonLogic';
 
@@ -14,6 +15,7 @@ describe('Campaign Dungeons Validation', () => {
     { name: 'e1m2', dungeon: e1m2 },
     { name: 'e1m3', dungeon: e1m3 },
     { name: 'e1m4', dungeon: e1m4 },
+    { name: 'e1m5', dungeon: e1m5 },
     { name: 'testingGrounds', dungeon: testingGrounds },
   ];
 
@@ -85,6 +87,7 @@ describe('Campaign Dungeons Validation', () => {
     expect(e1m1.nextDungeon).toBe(e1m2);
     expect(e1m2.nextDungeon).toBe(e1m3);
     expect(e1m3.nextDungeon).toBe(e1m4);
-    expect(e1m4.nextDungeon).toBeUndefined();
+    expect(e1m4.nextDungeon).toBe(e1m5);
+    expect(e1m5.nextDungeon).toBeUndefined();
   });
 });

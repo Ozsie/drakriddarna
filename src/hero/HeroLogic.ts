@@ -204,8 +204,12 @@ export const openDoor = (
 ) => {
   doReRender(state);
   const target = findCell(state.dungeon.layout.grid, newX, newY);
-  if (target && ![WALL, EMPTY, COLLAPSED].includes(target))
-    state.dungeon.discoveredRooms.push(target);
+  if (target && ![WALL, EMPTY, COLLAPSED].includes(target)) {
+    if (!state.dungeon.discoveredRooms.includes(target)) {
+      state.dungeon.discoveredRooms.push(target);
+      state.dungeon.onRoomDiscovered?.[target]?.(state);
+    }
+  }
   move(hero, state, hero.position.x, hero.position.y, 1);
   addLog(state, 'logs.heroAction.openedDoor', { hero: i18n(hero.name) });
 };
