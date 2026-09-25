@@ -278,6 +278,39 @@ export const onTargetCell = (state: GameState, target: Position) => {
   consumeActions(hero);
 };
 
+export type CursorType = 'sword' | 'boot' | 'menu' | 'default';
+
+export const getCursorType = (
+  state: GameState,
+  target: Position,
+): CursorType => {
+  const hero = state.currentActor;
+  if (!hero) return 'default';
+  if (isSamePosition(hero.position, target)) return 'menu';
+
+  const monster = state.dungeon.layout.monsters.find((m) =>
+    isSamePosition(m.position, target),
+  );
+  const cell = findCell(state.dungeon.layout.grid, target.x, target.y);
+  if (!cell || !isRoomDiscovered(state.dungeon, cell)) return 'default';
+
+  if (monster) {
+    const distance = distanceInGrid(hero.position, target);
+    if (distance <= hero.weapon.range) return 'sword';
+    return 'default';
+  }
+
+  if (!isWalkable(state.dungeon.layout, target.x, target.y)) return 'default';
+  if (isBlockedByHero(state, target.x, target.y)) return 'default';
+  if (isBlockedByMonster(state, target.x, target.y)) return 'default';
+
+  const distance = distanceInGrid(hero.position, target);
+  if (distance > hero.movement) return 'default';
+  if (!hasLineOfSight(hero.position, target, 2, state, true)) return 'default';
+
+  return 'boot';
+};
+
 export const doMouseLogic = (
   event: MouseEvent,
   cellSize: number,

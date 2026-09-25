@@ -1,9 +1,10 @@
 <script lang="ts">
-  import type { GameState } from '../types';
+  import type { Door, GameState, Hero, Monster, Secret } from '../types';
   import { onMount, onDestroy } from 'svelte';
   import groundSprites from '$lib/DungeonTiles.png';
   import actorSprites from '$lib/Dungeon_Character_3.png';
-  import { doMouseLogic } from '../hero/ClickInputLogic';
+  import { doMouseLogic, getCursorType } from '../hero/ClickInputLogic';
+  import type { CursorType } from '../hero/ClickInputLogic';
   import { browser } from '$app/environment';
   import { renderHeroes } from '../hero/HeroRendering';
   import { renderMonsters } from '../monsters/MonsterRendering';
@@ -65,9 +66,9 @@
   const getStaticSignature = (st: GameState, dbg: boolean, size: number) => {
     const d = st.dungeon;
     return `${d.name}|${d.discoveredRooms.join(',')}|${d.layout.doors
-      .map((dr) => `${dr.x},${dr.y},${dr.open},${dr.locked},${dr.hidden}`)
+      .map((dr: Door) => `${dr.x},${dr.y},${dr.open},${dr.locked},${dr.hidden}`)
       .join(';')}|${d.layout.secrets
-      .map((s) => `${s.position.x},${s.position.y},${s.found}`)
+      .map((s: Secret) => `${s.position.x},${s.position.y},${s.found}`)
       .join(';')}|${d.layout.items.length}|${
       d.layout.pits?.length ?? 0
     }|${d.portal?.x},${d.portal?.y}|${size}|${dbg}`;
@@ -76,12 +77,12 @@
   const getDynamicSignature = (st: GameState, dbg: boolean, size: number) => {
     const heroes = st.heroes
       .map(
-        (h) =>
+        (h: Hero) =>
           `${h.name},${h.position.x},${h.position.y},${h.health},${h.actions},${h.movement},${h.incapacitated}`,
       )
       .join(';');
     const monsters = st.dungeon.layout.monsters
-      .map((m) => `${m.name},${m.position.x},${m.position.y},${m.health}`)
+      .map((m: Monster) => `${m.name},${m.position.x},${m.position.y},${m.health}`)
       .join(';');
     const curActor = `${st.currentActor?.name},${st.currentActor?.position?.x},${st.currentActor?.position?.y}`;
     return `${heroes}|${monsters}|${curActor}|${size}|${dbg}`;
@@ -309,6 +310,58 @@
     }
   };
 
+  const cursorEmojis: Record<CursorType, string> = {
+    sword: '⚔️',
+    boot: '🥾',
+    menu: '📜',
+    default: '',
+  };
+
+  const emojiCursorCache = new Map<CursorType, string>();
+
+  const emojiCursor = (cursorType: CursorType): string => {
+    if (cursorType === 'default') return 'default';
+    const cached = emojiCursorCache.get(cursorType);
+    if (cached) return cached;
+    const emoji = cursorEmojis[cursorType];
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><text x='0' y='16' font-size='20'>${emoji}</text></svg>`;
+    const cursor = `url("data:image/svg+xml,${encodeURIComponent(
+      svg,
+    )}") 4 28, pointer`;
+    emojiCursorCache.set(cursorType, cursor);
+    return cursor;
+  };
+
+  let boardCursor = 'pointer';
+
+  const onMouseMove = (event: MouseEvent) => {
+    if (!activeState) {
+      boardCursor = 'pointer';
+      return;
+    }
+    const c = overlayCanvas;
+    if (!c) return;
+    const rect = c.getBoundingClientRect();
+    const x = Math.min(
+      Math.floor((event.clientX - rect.left) / cellSize),
+      activeState.dungeon.layout.grid[0].length - 1,
+    );
+    const y = Math.min(
+      Math.floor((event.clientY - rect.top) / cellSize),
+      activeState.dungeon.layout.grid.length - 1,
+    );
+    if (x < 0 || y < 0) {
+      boardCursor = 'pointer';
+      return;
+    }
+    const cursorType = getCursorType(activeState, { x, y });
+    boardCursor = emojiCursor(cursorType);
+  };
+
+  const onMouseLeave = () => {
+    boardCursor = 'pointer';
+  };
+
   const getStyle = () => {
     const maxHeight = screenSize - footerSize - 20;
     return `max-height: ${maxHeight}px; max-width: ${cellSize * 40}px`;
@@ -340,8 +393,11 @@
       height={cellSize * 30}
       id="gameBoard"
       class="canvasLayer interactiveLayer"
+      style="cursor: {boardCursor};"
       bind:this={overlayCanvas}
       on:click={onClick}
+      on:mousemove={onMouseMove}
+      on:mouseleave={onMouseLeave}
     ></canvas>
     <RadialMenu {cellSize} {state} />
   </div>
@@ -361,9 +417,7 @@
     </div>
     {#if showWinConditions}
       <div class="conditionsDiv">
-        {#each activeState.dungeon.winConditions
-          .slice()
-          .sort( (a, b) => (a.fulfilled === b.fulfilled ? 0 : a.fulfilled ? 1 : -1), ) as winCondition}
+        {#each activeState.dungeon.winConditions.slice().sort((a, b) => (a.fulfilled === b.fulfilled ? 0 : a.fulfilled ? 1 : -1)) as winCondition}
           <WinCondition condition={winCondition} state={activeState} />
         {/each}
       </div>
