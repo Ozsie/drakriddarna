@@ -35,7 +35,7 @@ export const e1m2: Dungeon = defineDungeon({
     grid: [
       '############## #####',
       '#AAA###CCCCCC###EEE#',
-      '#AAABBBC@CC@CDDDEEE#',
+      '#AAABBBCCCCCCDDDEEE#',
       '#AAA###CCCCCC###EEE#',
       '##### ##H##### #EEE#',
       '       #H#     #EEE#',
@@ -52,6 +52,10 @@ export const e1m2: Dungeon = defineDungeon({
       '#####               ',
     ],
     corridors: ['B', 'D', 'F', 'H', 'J', 'L'],
+    pillars: [
+      [8, 2],
+      [11, 2],
+    ],
     doors: [
       [Side.UP, 2, 13],
       [Side.UP, 2, 10],
