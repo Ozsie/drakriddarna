@@ -192,9 +192,9 @@ export const stepAlongLine = (
   const pillar = state.dungeon.layout.pillars?.some((pit) =>
     isSamePosition(pit, nextCellPosition),
   );
-  const monster = state.dungeon.layout.monsters.some((monster) =>
-    isSamePosition(monster.position, nextCellPosition),
-  );
+  const monster = state.dungeon.layout.monsters
+    .filter((monster) => !isSamePosition(monster.position, source))
+    .some((monster) => isSamePosition(monster.position, nextCellPosition));
   const hero = state.heroes
     .filter((hero) => hero.health > 0)
     .filter((hero) => !isSamePosition(hero.position, source))

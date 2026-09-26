@@ -200,6 +200,43 @@ const selectAction = (
   orthogonalTargets: Actor[],
   sameRoomTargets: Actor[],
 ): MonsterAction => {
+  // Monsters prefer to perform a ranged attack (weapon or special fire attack)
+  // against the hero with the most health left, as long as they have line of
+  // sight (or another valid ranged option) to that hero.
+  const allHeroes = [...new Set([...neighbouringHeroes, ...visibleHeroes])];
+  if (allHeroes.length > 0) {
+    const bestHero = allHeroes.slice().sort((a, b) => b.health - a.health)[0];
+    const canRangedAttack =
+      !!monster.rangedWeapon &&
+      !bestHero.shield &&
+      visibleHeroes.includes(bestHero);
+    const canSameRoomAttack = sameRoomTargets.includes(bestHero);
+    const canOrthogonalAttack = orthogonalTargets.includes(bestHero);
+    const canDiagonalAttack = diagonalTargets.includes(bestHero);
+
+    if (
+      canRangedAttack ||
+      canSameRoomAttack ||
+      canOrthogonalAttack ||
+      canDiagonalAttack
+    ) {
+      if (Math.random() < 0.1) {
+        addLog(state, 'logs.monsterAction.moveDespiteTarget', {
+          monster: i18n(monster.name),
+        });
+        return MonsterAction.MOVE;
+      }
+      if (canSameRoomAttack) {
+        return MonsterAction.SAME_ROOM_FIRE_ATTACK;
+      } else if (canOrthogonalAttack) {
+        return MonsterAction.ORTHOGONAL_FIRE_ATTACK;
+      } else if (canDiagonalAttack) {
+        return MonsterAction.DIAGONAL_FIRE_ATTACK;
+      }
+      return MonsterAction.RANGED_ATTACK;
+    }
+  }
+
   if (neighbouringHeroes.length > 0) {
     return MonsterAction.MELEE_ATTACK;
   } else if (!monster.rangedWeapon && diagonalTargets.length === 0) {

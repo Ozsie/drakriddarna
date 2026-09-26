@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   Colour,
   ConditionType,
@@ -95,6 +95,7 @@ const createTestState = (overrides?: Partial<GameState>): GameState => {
     eventDeck: [],
     settings: {},
     reRender: false,
+    drawEvents: true,
     ...overrides,
   };
 };
@@ -337,6 +338,7 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
   });
 
   it('monsterActions executes full turn with pathfinding movement then attack', async () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
     const state = createTestState();
     const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
     monster.actions = 2;
@@ -346,9 +348,9 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
     const hero = createTestHero('Fearik', 1, 3, 10);
     state.heroes = [hero];
 
-    // Monster is at (1, 1), Hero at (1, 3).
-    // Action 1: Move to (1, 2) which is adjacent to Hero.
-    // Action 2: Melee attack Hero!
+    // Monster is at (1, 1), Hero at (1, 3), with a clear line of sight.
+    // The monster prefers a ranged attack over moving into melee range,
+    // so it should shoot the hero from range without moving.
     await monsterActions(state, {
       delayBetweenMonsters: 0,
       delayBetweenActions: 0,
@@ -356,13 +358,16 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
       waitForMovement: false,
     });
 
-    expect(monster.position).toEqual({ x: 1, y: 2 });
+    expect(monster.position).toEqual({ x: 1, y: 1 });
     expect(
       state.actionLog.some((l) => l.key === 'logs.takeDamage.attackedWith'),
     ).toBe(true);
+
+    randomSpy.mockRestore();
   });
 
   it('monsterActions executes multiple monsters sequentially with callbacks and delays', async () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
     const state = createTestState();
     const monster1 = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
     monster1.actions = 2;
@@ -378,7 +383,6 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
     state.heroes = [hero];
 
     const callbackHistory: number[] = [];
-    const callbackTimes: number[] = [];
 
     await monsterActions(state, {
       delayBetweenMonsters: 20,
@@ -387,13 +391,13 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
       waitForMovement: false,
       onActionCallback: (st) => {
         callbackHistory.push(st.actionLog.length);
-        callbackTimes.push(Date.now());
       },
     });
 
-    // Both monsters should have acted sequentially
-    expect(monster1.position.y).toBeGreaterThan(1);
-    expect(monster2.position.y).toBeGreaterThan(1);
+    // Both monsters have a clear line of sight to the hero, so they prefer
+    // ranged attacks over moving into melee range.
+    expect(monster1.position).toEqual({ x: 1, y: 1 });
+    expect(monster2.position).toEqual({ x: 2, y: 1 });
     expect(callbackHistory.length).toBeGreaterThan(2);
     expect(
       state.actionLog.some(
@@ -409,6 +413,44 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
           l.properties?.monster === monster2.name,
       ),
     ).toBe(true);
+
+    randomSpy.mockRestore();
+  });
+
+  it('prefers a ranged attack against the hero with the most health left when in line of sight, even if adjacent to a weaker hero', async () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    const state = createTestState();
+    const monster = createMonster(MonsterType.ORC, Colour.Green, 2, 2);
+    monster.actions = 1;
+    monster.movement = 0;
+    state.dungeon.layout.monsters = [monster];
+
+    // Weak hero adjacent to the monster (would be the melee target).
+    const weakNeighbour = createTestHero('Fearik', 2, 3, 1);
+    // Stronger hero further away but with a clear line of sight (ranged target).
+    const strongHero = createTestHero('Helbran', 4, 2, 10);
+    state.heroes = [weakNeighbour, strongHero];
+
+    await monsterActions(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    // The monster should have used its ranged weapon on the stronger hero
+    // instead of meleeing the weaker, neighbouring hero.
+    expect(
+      state.actionLog.some(
+        (l) =>
+          l.key === 'logs.takeDamage.attackedWith' &&
+          l.properties?.target === strongHero.name &&
+          l.properties?.weapon === 'items.weapons.orchBow',
+      ),
+    ).toBe(true);
+    expect(weakNeighbour.health).toBe(1);
+
+    randomSpy.mockRestore();
   });
 
   it('monsterActions logs when no visible monsters are found', async () => {
