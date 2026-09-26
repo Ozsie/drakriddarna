@@ -2,6 +2,7 @@ import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { setLocale } from '$lib/translations';
 import type {
+  Difficulty,
   GameAction,
   GameState,
   Hero,
@@ -264,6 +265,12 @@ export const removeDamageIndicatorAction = (id: string): void => {
 export const setGameLocale = (loc: string): void => {
   const state = get(gameStateStore);
   state.settings['locale'] = loc;
+  syncStore(state);
+};
+
+export const setDifficulty = (difficulty: Difficulty): void => {
+  const state = get(gameStateStore);
+  state.difficulty = difficulty;
   syncStore(state);
 };
 

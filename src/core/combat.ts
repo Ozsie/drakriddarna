@@ -2,6 +2,7 @@ import type { Actor, DamageIndicator, Door, GameState, Weapon } from '../types';
 import { Colour, ItemType, Level } from '../types';
 import { roll } from './dice';
 import { addLog, i18n } from './logger';
+import { getDifficulty } from './DifficultLevels';
 
 export const ATTACK_BONUS = 'ATTACK_BONUS';
 export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
@@ -23,11 +24,14 @@ export const removeDamageIndicator = (state: GameState, id: string): void => {
   );
 };
 
-export const getEffectiveMaxMovement = (actor: Actor): number =>
-  actor.maxMovement - (actor.armour?.movementReduction ?? 0);
+export const getEffectiveMaxMovement = (
+  actor: Actor,
+  movementModifier = 0,
+): number =>
+  actor.maxMovement - (actor.armour?.movementReduction ?? 0) + movementModifier;
 
-export const canAct = (hero: Actor): boolean => {
-  if (hero.movement < getEffectiveMaxMovement(hero)) {
+export const canAct = (hero: Actor, movementModifier = 0): boolean => {
+  if (hero.movement < getEffectiveMaxMovement(hero, movementModifier)) {
     return hero.actions > 1;
   }
   return hero.actions > 0;
@@ -81,6 +85,9 @@ export const takeDamage = (
   if (ranged && source.rangedWeapon) {
     weapon = source.rangedWeapon;
   }
+  const isHeroSource = state.heroes.includes(source);
+  const isHeroTarget = state.heroes.includes(target);
+  const difficultyModifiers = getDifficulty(state).modifiers;
   let defense = 0;
   let shield = 0;
   if (!weapon.ignoresArmour) {
@@ -121,13 +128,22 @@ export const takeDamage = (
   const blindedSubtraction = source.blinded ? 1 : 0;
   const weakenedSubtraction = source.weakened ? 1 : 0;
   const elementalAddition = source.weapon.elemental ? 1 : 0;
-  const buff = attackBonus + elementalAddition;
+  const attackDifficultyModifier = isHeroSource
+    ? difficultyModifiers.attack
+    : 0;
+  const defenseDifficultyModifier = isHeroTarget
+    ? difficultyModifiers.defense
+    : 0;
+  const buff = attackBonus + elementalAddition + attackDifficultyModifier;
   const deBuff = blindedSubtraction + weakenedSubtraction;
   const hits = roll(source.level, weapon.dice + buff - deBuff);
-  let damage = Math.max(hits - (defense + shield), 0);
+  let damage = Math.max(
+    hits - (defense + defenseDifficultyModifier + shield),
+    0,
+  );
   if (damage === 0 && canReRoll) {
     addLog(state, 'logs.takeDamage.reRoll', { actor: i18n(source.name) });
-    damage = Math.max(hits - (defense + shield), 0);
+    damage = Math.max(hits - (defense + defenseDifficultyModifier + shield), 0);
   }
   target.health -= damage;
   if (target.position) {

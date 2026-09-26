@@ -11,7 +11,8 @@
         "testingGrounds": "To Testing Grounds",
         "language": "-> Svenska",
         "shuffleDeck": "Shuffle Deck",
-        "selectNextEvent": "Select Next Event"
+        "selectNextEvent": "Select Next Event",
+        "difficulty": "Difficulty:"
       }
     },
     "loadGame": {
@@ -76,5 +77,19 @@
     "openDoor": "Open Door",
     "pickUpItem": "Pick Up Item",
     "next": "Next"
+  },
+  "difficulty": {
+    "easy": {
+      "name": "Easy",
+      "description": "Easy: +1 attack, +1 defense, +1 moves, +1 search"
+    },
+    "normal": {
+      "name": "Normal",
+      "description": "Normal: +0 attack, +0 defense, +0 moves, +0 search"
+    },
+    "hard": {
+      "name": "Hard",
+      "description": "Hard: -1 attack, -1 defense, -1 moves, -1 search"
+    }
   }
 }

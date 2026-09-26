@@ -1,33 +1,29 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import type { GameState } from '../types';
+  import type { GameState, TurnEvent } from '../types';
   import Menu from './Menu.svelte';
   import type { MenuButtonProps } from './ComponentTypes';
   import { locale, setLocale, t } from '$lib/translations';
   import {
-    gameStateStore,
     debugModeStore,
-    isTurnInProgress,
-    initGame,
-    loadGameState,
-    saveGame,
-    nextTurn,
+    dispatch,
     endHeroAction,
+    gameStateStore,
+    goToTestingGrounds,
+    initGame,
+    isTurnInProgress,
+    loadGameState,
+    nextTurn,
+    saveGame,
     setDebug,
+    setDifficulty,
     setGameLocale,
     winLevel,
-    goToTestingGrounds,
-    dispatch,
   } from '../store/gameStateStore';
   import { resetLiveHeroes } from '../hero/HeroLogic';
-  import { endAction, hasWon, init, loadState, next, save } from '../game';
+  import { addLog, DifficultLevels, endAction, getDifficulty, hasWon, init, loadState, next, save } from '../game';
   import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
-  import {
-    shuffleEventDeck,
-    selectNextEvent,
-    getEventsForDungeon,
-  } from '../events/EventsLogic';
-  import type { TurnEvent } from '../types';
+  import { getEventsForDungeon, selectNextEvent, shuffleEventDeck } from '../events/EventsLogic';
 
   export let state: GameState | undefined = undefined;
   export let debugMode: boolean | undefined = undefined;
@@ -241,6 +237,11 @@
       label: $t('content.menu.mainMenu.buttons.language'),
       onClick: onChangeLanguage,
     },
+    {
+      debugModeOnly: false,
+      label: getDifficultyMenuLabel(),
+      onClick: onClickDifficulty,
+    },
   ];
 
   const onClickLoad = (stateString: string) => {
@@ -286,6 +287,28 @@
     }
     mainMenuButtons = getMainMenu();
   };
+
+  const onClickDifficulty = () => {
+    const difficulty = getDifficulty(activeState);
+    const index = DifficultLevels.findIndex((level) => level.id === difficulty.id);
+    const nextIndex = (index + 1) % DifficultLevels.length;
+    const nextDifficulty = DifficultLevels[nextIndex];
+    if (state) {
+      state.difficulty = nextDifficulty;
+      addLog(state, nextDifficulty.descriptionTranslationKey ?? '');
+      gameStateStore.set(state);
+    } else {
+      setDifficulty(nextDifficulty);
+      addLog(activeState, nextDifficulty.descriptionTranslationKey ?? '');
+      gameStateStore.set(activeState);
+    }
+    mainMenuButtons = getMainMenu();
+  };
+
+  const getDifficultyMenuLabel = () => {
+    const difficulty = getDifficulty(activeState);
+    return $t('content.menu.mainMenu.buttons.difficulty') + ' ' + $t(difficulty?.nameTranslationKey);
+  }
 
   mainMenuButtons = getMainMenu();
 </script>

@@ -32,6 +32,7 @@ import { roll } from '../core';
 import {
   canAct,
   doorAsActor,
+  getDifficulty,
   getEffectiveMaxMovement,
   takeDamage,
 } from '../core';
@@ -142,7 +143,7 @@ export const act = (direction: MoveDirection | string, state: GameState) => {
     addLog(state, 'logs.heroAction.illegalMove', { hero: i18n(hero.name) });
   }
   if (!checkForTrapDoor(state)) {
-    consumeActions(hero);
+    consumeActions(hero, getDifficulty(state).modifiers.movement);
   }
 };
 
@@ -154,7 +155,7 @@ export const pickLock = (state: GameState, door?: Door) => {
     addLog(state, 'logs.heroAction.blinded', { hero: i18n(hero.name) });
     return;
   }
-  if (!canAct(hero)) {
+  if (!canAct(hero, getDifficulty(state).modifiers.movement)) {
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
   }
@@ -178,7 +179,10 @@ export const pickLock = (state: GameState, door?: Door) => {
     } else {
       hero.actions--;
     }
-    hero.movement = getEffectiveMaxMovement(hero);
+    hero.movement = getEffectiveMaxMovement(
+      hero,
+      getDifficulty(state).modifiers.movement,
+    );
     if (hero.actions == 0) {
       hero.movement = 0;
     }
@@ -188,9 +192,10 @@ export const pickLock = (state: GameState, door?: Door) => {
 export const resetLiveHeroes = (state: GameState) => {
   doReRender(state);
   clearActorAnimations();
+  const movementModifier = getDifficulty(state).modifiers.movement;
   state.heroes.forEach((hero, index) => {
     hero.position = state.dungeon.startingPositions[index];
-    hero.movement = getEffectiveMaxMovement(hero);
+    hero.movement = getEffectiveMaxMovement(hero, movementModifier);
     hero.actions = 2;
     hero.health = hero.maxHealth;
   });
@@ -221,7 +226,7 @@ export const openDoor = (
 
 export const attack = (hero: Hero, state: GameState, target: Position) => {
   doReRender(state);
-  if (!canAct(hero)) {
+  if (!canAct(hero, getDifficulty(state).modifiers.movement)) {
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
   }
@@ -262,12 +267,16 @@ export const search = (state: GameState) => {
     addLog(state, 'logs.heroAction.blinded', { hero: i18n(hero.name) });
     return;
   }
-  if (!canAct(hero)) {
+  const movementModifier = getDifficulty(state).modifiers.movement;
+  if (!canAct(hero, movementModifier)) {
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
   }
   searchForSecret(state);
-  if (hero.actions > 1 && hero.movement < getEffectiveMaxMovement(hero)) {
+  if (
+    hero.actions > 1 &&
+    hero.movement < getEffectiveMaxMovement(hero, movementModifier)
+  ) {
     hero.actions -= 2;
   } else {
     hero.actions--;
@@ -294,11 +303,11 @@ export const isBlockedByHero = (state: GameState, newX: number, newY: number) =>
     (hero) => hero.position.x === newX && hero.position.y === newY,
   );
 
-export const consumeActions = (hero: Actor) => {
+export const consumeActions = (hero: Actor, movementModifier = 0) => {
   if (hero.movement === 0) {
     hero.actions--;
     if (hero.actions !== 0) {
-      hero.movement = getEffectiveMaxMovement(hero);
+      hero.movement = getEffectiveMaxMovement(hero, movementModifier);
     }
   }
   if (hero.actions == 0) {
@@ -333,10 +342,11 @@ export const rewardLiveHeroes = (state: GameState) => {
 };
 
 export const replaceDeadHeroes = (state: GameState) => {
+  const movementModifier = getDifficulty(state).modifiers.movement;
   deadHeroes(state).forEach((hero) => {
     hero.experience = 0;
     hero.health = hero.maxHealth;
-    hero.movement = hero.maxMovement;
+    hero.movement = getEffectiveMaxMovement(hero, movementModifier);
     hero.actions = 2;
   });
 };

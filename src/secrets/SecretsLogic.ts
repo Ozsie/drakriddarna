@@ -1,6 +1,7 @@
 import type { Actor, GameState, Hero, Item, Position, Secret } from '../types';
 import { Colour, ItemType, Level, SecretType } from '../types';
 import { addLog, i18n } from '../core';
+import { getDifficulty } from '../core';
 import {
   canSearchThrough,
   findCell,
@@ -58,7 +59,8 @@ export const searchForSecret = (state: GameState) => {
       return item.properties?.[SEARCH_BONUS] as number;
     })
     .reduce((partial, bonus) => partial + bonus, 0);
-  const result = roll(hero.level, 1 + searchBonus);
+  const searchDifficultyModifier = getDifficulty(state).modifiers.search;
+  const result = roll(hero.level, 1 + searchBonus + searchDifficultyModifier);
   let trapDoor, hiddenDoor, trap, secret;
   if (result >= 1) {
     trapDoor = lookForTrapDoor(state, hero, result);

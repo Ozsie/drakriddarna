@@ -6,6 +6,7 @@ import {
   canAct,
   ATTACK_BONUS,
   RE_ROLL_ATTACK,
+  getDifficulty,
   getEffectiveMaxMovement,
 } from '../core';
 
@@ -47,7 +48,8 @@ export const resolveChaosSwordAttack = (
   user: Actor,
   target: Actor,
 ): void => {
-  const hits = roll(user.level, 4);
+  const attackDifficultyModifier = getDifficulty(state).modifiers.attack;
+  const hits = roll(user.level, 4 + attackDifficultyModifier);
 
   const killTarget = () => {
     target.health = 0;
@@ -122,7 +124,7 @@ export const onUse: {
       addLog(state, 'logs.item.noTarget');
       return;
     }
-    if (!canAct(user)) {
+    if (!canAct(user, getDifficulty(state).modifiers.movement)) {
       addLog(state, 'logs.heroAction.noActions', { hero: i18n(user.name) });
       return;
     }
@@ -161,7 +163,8 @@ export const onUse: {
       addLog(state, 'logs.item.noTarget');
       return;
     }
-    if (!canAct(user)) {
+    const movementModifier = getDifficulty(state).modifiers.movement;
+    if (!canAct(user, movementModifier)) {
       addLog(state, 'logs.heroAction.noActions', { hero: i18n(user.name) });
       return;
     }
@@ -169,7 +172,10 @@ export const onUse: {
     if (user.actions === 0) {
       return;
     }
-    if (user.actions > 1 && user.movement < getEffectiveMaxMovement(user)) {
+    if (
+      user.actions > 1 &&
+      user.movement < getEffectiveMaxMovement(user, movementModifier)
+    ) {
       user.actions -= 2;
     } else {
       user.actions--;
@@ -209,7 +215,7 @@ export const onUse: {
       addLog(state, 'logs.item.noTarget');
       return;
     }
-    if (!canAct(user)) {
+    if (!canAct(user, getDifficulty(state).modifiers.movement)) {
       addLog(state, 'logs.heroAction.noActions', { hero: i18n(user.name) });
       return;
     }

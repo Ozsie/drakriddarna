@@ -15,6 +15,7 @@ export interface GameSettings {
 export type GameState = {
   heroes: Actor[];
   dungeon: Dungeon;
+  difficulty?: Difficulty;
   currentActor?: Hero;
   actionLog: LogEvent[];
   itemDeck: Item[];
@@ -515,3 +516,15 @@ export type GameAction =
 export function assertNever(x: never, message = 'Unexpected object'): never {
   throw new Error(`${message}: ${JSON.stringify(x)}`);
 }
+
+export type Difficulty = {
+  id: string;
+  nameTranslationKey: string;
+  descriptionTranslationKey?: string;
+  modifiers: {
+    attack: number;
+    defense: number;
+    movement: number;
+    search: number;
+  };
+};

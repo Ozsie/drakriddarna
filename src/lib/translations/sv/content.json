@@ -11,7 +11,8 @@
         "testingGrounds": "Till testområde",
         "language": "-> English",
         "shuffleDeck": "Blanda Kortleken",
-        "selectNextEvent": "Välj Nästa Händelse"
+        "selectNextEvent": "Välj Nästa Händelse",
+        "difficulty": "Svårighetsgrad:"
       }
     },
     "loadGame": {
@@ -76,5 +77,19 @@
     "openDoor": "Öppna dörr",
     "pickUpItem": "Plocka upp föremål",
     "next": "Nästa"
+  },
+  "difficulty": {
+    "easy": {
+      "name": "Lätt",
+      "description": "Lätt: +1 skada, +1 försvar, +1 förflyttning, +1 leta"
+    },
+    "normal": {
+      "name": "Normal",
+      "description": "Normal: +0 skada, +0 försvar, +0 förflyttning, +0 leta"
+    },
+    "hard": {
+      "name": "Svår",
+      "description": "Svår: -1 skada, -1 försvar, -1 förflyttning, -1 leta"
+    }
   }
 }

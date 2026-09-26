@@ -3,3 +3,4 @@ export * from './dice';
 export * from './grid';
 export * from './combat';
 export * from './ActorAnimation';
+export * from './DifficultLevels';

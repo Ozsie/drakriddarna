@@ -23,7 +23,12 @@ import {
 import { browser } from '$app/environment';
 import { addLog, doReRender, i18n } from './core';
 import { shuffle } from './core';
-import { getEffectiveMaxMovement } from './core';
+import {
+  getEffectiveMaxMovement,
+  getDifficulty,
+  DifficultLevels,
+  DEFAULT_DIFFICULTY_ID,
+} from './core';
 import { clearActorAnimations } from './core';
 
 // Re-export core modules for backwards compatibility and ease of access
@@ -64,6 +69,11 @@ export {
   takeDamage,
 } from './core/combat';
 export {
+  DifficultLevels,
+  DEFAULT_DIFFICULTY_ID,
+  getDifficulty,
+} from './core/DifficultLevels';
+export {
   recordActorStep,
   getActorVisualPosition,
   isActorAnimating,
@@ -96,6 +106,11 @@ export const loadState = (newState: GameState) => {
   newState.currentActor = newState.heroes.find(
     (hero) => hero.name === newState.currentActor?.name,
   ) as Hero | undefined;
+  if (!newState.difficulty) {
+    newState.difficulty = DifficultLevels.find(
+      (level) => level.id === DEFAULT_DIFFICULTY_ID,
+    );
+  }
   addLog(newState, 'logs.gameLoaded');
   doReRender(newState);
   return newState;
@@ -118,6 +133,9 @@ export const init = (): GameState => {
   const state: GameState = {
     heroes: campaign.heroes,
     dungeon: campaign.dungeons[0],
+    difficulty: DifficultLevels.find(
+      (level) => level.id === DEFAULT_DIFFICULTY_ID,
+    ),
     currentActor: campaign.heroes[0] as Hero | undefined,
     actionLog: [
       {
@@ -213,7 +231,10 @@ export const next = async (
     }
     state.currentActor = liveHeroes(state)[nextIndex];
     state.currentActor.actions = 2;
-    state.currentActor.movement = getEffectiveMaxMovement(state.currentActor);
+    state.currentActor.movement = getEffectiveMaxMovement(
+      state.currentActor,
+      getDifficulty(state).modifiers.movement,
+    );
     const hasKilledAll = killAllMonstersAchieved(state);
     if (nextIndex === 0 && !hasKilledAll) {
       resetEventEffects(state);
@@ -247,7 +268,10 @@ export const endAction = async (
   const hero = state.currentActor;
   if (!hero) return;
   hero.actions--;
-  hero.movement = getEffectiveMaxMovement(hero);
+  hero.movement = getEffectiveMaxMovement(
+    hero,
+    getDifficulty(state).modifiers.movement,
+  );
   if (hero.actions === 0) {
     await next(state, monsterOptions);
   }
