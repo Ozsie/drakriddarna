@@ -15,6 +15,7 @@
 - [ ] Trade Items?
 - [ ] Monster cards?
 - [ ] Support for additional campaigns
+- [ ] Earth Hour Campaign - [Dungeons](https://hearthelamentationoftheplayers.home.blog/tag/drakriddarna/)
 - [ ] Level editor
 - [X] e1m6 - The Final Battle
 - [X] e1m5 - The Ice Dragons Treasure
