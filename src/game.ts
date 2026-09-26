@@ -303,7 +303,7 @@ const checkWinConditions = (state: GameState) => {
         break;
       }
       case ConditionType.KILL_ALL_OF_TYPE: {
-        condition.fulfilled = state.dungeon.layout.monsters
+        condition.fulfilled = !state.dungeon.layout.monsters
           .filter((monster) => monster.type === condition.targetMonsterType)
           .some((monster) => monster.health > 0);
         break;
