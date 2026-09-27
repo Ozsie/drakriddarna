@@ -34,13 +34,13 @@ const loadCampaignTranslations = async (
 };
 
 const loadLogsWithCampaigns = async (
-  baseLoader: () => Promise<{ default: Record<string, unknown> }>,
+  baseLoader: () => Promise<Record<string, unknown>>,
   campaignModules: Record<
     string,
     () => Promise<{ default: Record<string, unknown> }>
   >,
 ): Promise<Record<string, unknown>> => {
-  const base = (await baseLoader()).default;
+  const base = await baseLoader();
   const campaignLogs = await loadCampaignTranslations(campaignModules);
   const merged: Record<string, unknown> = { ...base };
   for (const [key, value] of Object.entries(campaignLogs)) {
