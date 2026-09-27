@@ -1,8 +1,9 @@
 <script lang="ts">
   import { t } from '$lib/translations/index.js';
-  import type { GameState } from '../types';
+  import type { GameState, WinCondition as Condition } from '../types';
   import { gameStateStore } from '../store/gameStateStore';
   import { i18n } from '../core';
+  import WinCondition from './WinCondition.svelte';
 
   export let state: GameState | undefined = undefined;
 
@@ -10,6 +11,10 @@
 
   $: activeState = state ?? $gameStateStore;
   $: currentEvent = activeState.currentEvent
+
+  $: winConditions = activeState.dungeon.winConditions
+    .slice()
+    .sort((a: Condition, b: Condition) => (a.fulfilled === b.fulfilled ? 0 : a.fulfilled ? 1 : -1))
 </script>
 
 <style>
@@ -54,10 +59,18 @@
           display: none;
       }
   }
+  .conditionsDiv {
+      float: right;
+      padding-right: 60px;
+  }
 </style>
 
 <div>
-  <span>{i18n('content.diary.label', { turn: `${activeState.turnCount ?? 0}` })} </span>
+  <div class="conditionsDiv">
+    {#each winConditions as winCondition}
+      <WinCondition condition={winCondition} state={activeState} />
+    {/each}
+  </div>
   {#if currentEvent}
     <button class='hideEventButton' on:click={() => showEvent = !showEvent}>
       {#if showEvent}
@@ -74,6 +87,7 @@
       </p>
     {/if}
   {/if}
+  <span>{i18n('content.diary.label', { turn: `${activeState.turnCount ?? 0}` })} </span>
   {#each activeState.dungeon.layout.notes as note}
     {#if note.found}
       <hr/>

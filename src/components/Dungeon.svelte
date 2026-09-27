@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Door, GameState, Hero, Monster, Secret } from '../types';
+  import type { Actor, Door, GameState, Monster, Secret } from '../types';
   import { onMount, onDestroy } from 'svelte';
   import groundSprites from '$lib/DungeonTiles.png';
   import actorSprites from '$lib/Dungeon_Character_3.png';
@@ -17,9 +17,7 @@
     renderSecrets,
   } from '../dungeon/DungeonRendering';
   import { renderItems } from '../items/ItemRendering';
-  import WinCondition from './WinCondition.svelte';
   import RadialMenu from './RadialMenu.svelte';
-  import { t } from '$lib/translations';
   import { renderNotes } from '../notes/NotesRendering';
   import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
   import { clearTileTextureCache } from '../dungeon/TileTextureCache';
@@ -36,7 +34,6 @@
   $: activeState = state ?? $gameStateStore;
   $: activeDebugMode = debugMode ?? $debugModeStore;
 
-  let showWinConditions = true;
   let footerSize = 0;
   let screenSize = 0;
   $: cellSize = (activeState?.settings?.['cellSize'] as number) ?? 48;
@@ -77,7 +74,7 @@
   const getDynamicSignature = (st: GameState, dbg: boolean, size: number) => {
     const heroes = st.heroes
       .map(
-        (h: Hero) =>
+        (h: Actor) =>
           `${h.name},${h.position.x},${h.position.y},${h.health},${h.actions},${h.movement},${h.incapacitated}`,
       )
       .join(';');
@@ -401,28 +398,6 @@
     ></canvas>
     <RadialMenu {cellSize} {state} />
   </div>
-
-  <div class="winConditions {showWinConditions ? '' : 'conditionsHidden'}">
-    <div class="buttonDiv">
-      <button
-        class="hideConditionsButton"
-        on:click={() => (showWinConditions = !showWinConditions)}
-      >
-        {#if showWinConditions}
-          {$t('content.winConditions.buttonClose')}
-        {:else}
-          {$t('content.winConditions.buttonOpen')}
-        {/if}
-      </button>
-    </div>
-    {#if showWinConditions}
-      <div class="conditionsDiv">
-        {#each activeState.dungeon.winConditions.slice().sort((a, b) => (a.fulfilled === b.fulfilled ? 0 : a.fulfilled ? 1 : -1)) as winCondition}
-          <WinCondition condition={winCondition} state={activeState} />
-        {/each}
-      </div>
-    {/if}
-  </div>
 </div>
 
 <style>
@@ -442,37 +417,5 @@
   }
   .interactiveLayer {
     cursor: pointer;
-  }
-  .winConditions {
-    position: absolute;
-    max-width: 90%;
-    min-width: 175px;
-    bottom: 118px;
-    border: 1px solid grey;
-    border-radius: 3px;
-    overflow: scroll;
-    background-color: #5c4033;
-    opacity: 0.9;
-    margin-left: 4px;
-    z-index: 10;
-  }
-  .conditionsHidden {
-    min-width: 0;
-  }
-  .hideConditionsButton {
-    float: left;
-    margin-right: 4px;
-    width: 15px;
-    height: 15px;
-    font-size: 8pt;
-    padding-left: 2px;
-    padding-top: 0;
-  }
-  .buttonDiv {
-    float: left;
-  }
-  .conditionsDiv {
-    float: right;
-    padding-right: 60px;
   }
 </style>

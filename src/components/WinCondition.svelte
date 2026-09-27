@@ -50,13 +50,13 @@
   }
   .fulfilled {
       text-decoration: line-through;
-      color: wheat;
+      color: #14281d;
       margin: 0;
   }
 
   .notFulfilled {
       text-decoration: none;
-      color: wheat;
+      color: #14281d;
       margin: 0;
   }
 </style>
