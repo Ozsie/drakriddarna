@@ -14,6 +14,40 @@ import { monsterShields } from '../items/shields';
 import { liveHeroes } from '../hero/HeroLogic';
 import { addLog } from '../core';
 import { COLLAPSED, EMPTY, WALL } from '../core';
+import {
+  getMonsterTemplate,
+  registerMonsterTemplate,
+} from '../monsters/MonsterRegistry';
+
+// Built-in monster templates, registered here so campaign-defined monster
+// types can register their own stat templates the same way via
+// `registerMonsterTemplate` (see src/monsters/MonsterRegistry.ts).
+registerMonsterTemplate(MonsterType.ORC, {
+  level: Level.APPRENTICE,
+  defense: 0,
+  health: 2,
+  maxHealth: 2,
+  experience: 1,
+  weapon: monsterWeapons[0],
+  rangedWeapon: monsterWeapons[1],
+  armour: monsterArmour[0],
+});
+registerMonsterTemplate(MonsterType.TROLL, {
+  level: Level.KNIGHT,
+  defense: 1,
+  health: 3,
+  maxHealth: 3,
+  experience: 2,
+  weapon: monsterWeapons[2],
+  armour: monsterArmour[1],
+});
+registerMonsterTemplate(MonsterType.YELLOW_DARK_LORD, { actions: 3 });
+registerMonsterTemplate(MonsterType.GREEN_DARK_LORD, {
+  weapon: monsterWeapons[4],
+});
+registerMonsterTemplate(MonsterType.BLUE_DARK_LORD, {
+  shield: monsterShields[0],
+});
 
 export { COLLAPSED, EMPTY, WALL };
 export * from './dungeonParser';
@@ -179,29 +213,19 @@ export const createMonster = (
   let armour = monsterArmour[2];
   let rangedWeapon = undefined;
   let shield = undefined;
-  if (type === MonsterType.ORC) {
-    level = Level.APPRENTICE;
-    defense = 0;
-    health = 2;
-    maxHealth = 2;
-    experience = 1;
-    weapon = monsterWeapons[0];
-    rangedWeapon = monsterWeapons[1];
-    armour = monsterArmour[0];
-  } else if (type === MonsterType.TROLL) {
-    level = Level.KNIGHT;
-    defense = 1;
-    health = 3;
-    maxHealth = 3;
-    experience = 2;
-    weapon = monsterWeapons[2];
-    armour = monsterArmour[1];
-  } else if (type === MonsterType.YELLOW_DARK_LORD) {
-    actions = 3;
-  } else if (type === MonsterType.GREEN_DARK_LORD) {
-    weapon = monsterWeapons[4];
-  } else if (type === MonsterType.BLUE_DARK_LORD) {
-    shield = monsterShields[0];
+
+  const template = getMonsterTemplate(type);
+  if (template) {
+    level = template.level ?? level;
+    actions = template.actions ?? actions;
+    defense = template.defense ?? defense;
+    health = template.health ?? health;
+    maxHealth = template.maxHealth ?? maxHealth;
+    experience = template.experience ?? experience;
+    weapon = template.weapon ?? weapon;
+    armour = template.armour ?? armour;
+    rangedWeapon = template.rangedWeapon ?? rangedWeapon;
+    shield = template.shield ?? shield;
   }
 
   const monsterName = type + ' (' + colourName + ')';

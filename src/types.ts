@@ -89,15 +89,25 @@ export type Monster = Actor & {
   rangedWeapon?: Weapon;
 };
 
-export enum MonsterType {
-  ORC = 'Orc',
-  ORCH = 'Orc',
-  TROLL = 'Troll',
-  GREEN_DARK_LORD = 'Green Dark Lord',
-  BLUE_DARK_LORD = 'Blue Dark Lord',
-  RED_DARK_LORD = 'Red Dark Lord',
-  YELLOW_DARK_LORD = 'Yellow Dark Lord',
-}
+// `MonsterType` is intentionally not a closed `enum`: campaigns need to be
+// able to introduce brand-new monster type identifiers (e.g. via their own
+// monsters/*.ts file registering a template/abilities, see
+// src/monsters/MonsterRegistry.ts and src/campaigns/README.md) without
+// modifying this shared file. The known built-in types are still exposed as
+// named constants for convenience and backwards compatibility.
+export const MonsterType = {
+  ORC: 'Orc',
+  ORCH: 'Orc',
+  TROLL: 'Troll',
+  GREEN_DARK_LORD: 'Green Dark Lord',
+  BLUE_DARK_LORD: 'Blue Dark Lord',
+  RED_DARK_LORD: 'Red Dark Lord',
+  YELLOW_DARK_LORD: 'Yellow Dark Lord',
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type MonsterType =
+  | (typeof MonsterType)[keyof typeof MonsterType]
+  | string;
 
 export enum Level {
   APPRENTICE = 'apprentice',

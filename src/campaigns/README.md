@@ -9,9 +9,12 @@ campaign.
 Items, magic items, monsters and world events are **global** and shared by
 every campaign (`src/items/*`, `src/monsters/*`, `src/events/*`). A campaign
 normally just imports these shared modules to build its `itemDeck` /
-`magicItemDeck`, but it can also define brand-new items with brand-new
+`magicItemDeck` and places the built-in monster types in its dungeons, but it
+can also define brand-new items, monsters and events with brand-new
 behaviour that live entirely inside its own folder (see
-[Adding new items](#adding-new-items-optional) below).
+[Adding new items](#adding-new-items-optional),
+[Adding new monsters](#adding-new-monsters-optional) and
+[Adding new events](#adding-new-events-optional) below).
 
 ## Directory layout
 
@@ -32,6 +35,7 @@ src/campaigns/
     campaign.ts
     dungeons/*.ts
     items/*.ts
+    monsters/*.ts
     events/*.ts
     translations/
       en.json
@@ -246,6 +250,134 @@ const campaignMyNewCampaign: Campaign = {
 };
 ```
 
+## Adding new monsters (optional)
+
+Monster stats and special abilities are also driven by a string-keyed
+registry (`src/monsters/MonsterRegistry.ts`), the same pattern used for
+items and events, so a campaign can introduce brand-new monster types
+(new stats and/or new special abilities) without editing any shared file.
+`MonsterType` is not a closed enum — it accepts any string, so a campaign
+can invent its own type identifiers freely.
+
+1. Create `monsters/customMonsters.ts` inside your campaign folder and pick
+   a unique type identifier string for each new monster type.
+2. Call `registerMonsterTemplate(type, overrides)` (exported from
+   `src/monsters/MonsterRegistry.ts`) once at module load, for each new
+   type, to define its stats (`level`, `actions`, `defense`, `health`,
+   `maxHealth`, `experience`, `weapon`, `armour`, `rangedWeapon`, `shield`).
+   Any field left out falls back to the default "master" stat block used by
+   `createMonster` (`src/dungeon/DungeonLogic.ts`).
+3. Optionally call `registerMonsterAbility(type, ability)` for each of
+   `'diagonalFireAttack'`, `'orthogonalFireAttack'`, `'sameRoomFireAttack'`
+   to give the new type one of the existing "dark lord" special attacks
+   (`src/monsters/MonsterLogic.ts`). A type with any of these abilities is
+   treated as a dark lord (excluded from the "regular monster" diagonal /
+   orthogonal / same-room target lists, matching the built-in dark lords).
+4. Or, define a **brand-new ability** with entirely new behaviour (see
+   [Adding new monster abilities](#adding-new-monster-abilities-optional)
+   below) instead of reusing one of the 3 built-in fire attacks.
+5. Use `createMonster(type, colour, x, y)` (or
+   `createMonsterWithInventory`) with your new type identifier when placing
+   monsters in your campaign's own `dungeons/*.ts` files — exactly like the
+   built-in `MonsterType.ORC`/`MonsterType.TROLL`/etc.
+
+### Example: `monsters/customMonsters.ts`
+
+```ts
+import { Level } from '../../../types';
+import {
+  registerMonsterAbility,
+  registerMonsterTemplate,
+} from '../../../monsters/MonsterRegistry';
+import { monsterWeapons } from '../../../items/weapons';
+
+export const FROST_LORD = 'Frost Lord';
+
+registerMonsterTemplate(FROST_LORD, {
+  level: Level.LORD,
+  actions: 2,
+  defense: 2,
+  health: 5,
+  maxHealth: 5,
+  experience: 5,
+  weapon: monsterWeapons[4],
+});
+
+// Gains the same "attack any hero in the same room" special ability as the
+// built-in Green/Blue Dark Lords.
+registerMonsterAbility(FROST_LORD, 'sameRoomFireAttack');
+```
+
+Then reference `FROST_LORD` from your campaign's own dungeon layouts, the
+same way `MonsterType.GREEN_DARK_LORD` etc. are used in
+`iceDragonTreasure/dungeons/e1m6.ts`:
+
+```ts
+import { createMonster } from '../../../dungeon/DungeonLogic';
+import { Colour } from '../../../types';
+import { FROST_LORD } from '../monsters/customMonsters';
+
+createMonster(FROST_LORD, Colour.Blue, 5, 8);
+```
+
+## Adding new monster abilities (optional)
+
+The 3 built-in special attacks (`diagonalFireAttack`, `orthogonalFireAttack`,
+`sameRoomFireAttack`) are not the only abilities a monster can have. A
+campaign can define a genuinely new ability — with completely custom
+behaviour (self-heal, poison, summon, etc.) — by registering a handler
+function, without editing `MonsterLogic.ts` or any other shared file.
+
+1. Pick a unique ability key string (anything other than the 3 built-in
+   keys above).
+2. Call `registerMonsterAbilityHandler(ability, handler)` (exported from
+   `src/monsters/MonsterRegistry.ts`) once at module load. The handler has
+   the signature `(state, monster) => boolean | Promise<boolean>` and is
+   invoked once per monster action, before the default melee/ranged/move
+   selection. Return `true` if the handler performed an action (and
+   **decrement `monster.actions` yourself**, exactly like the built-in
+   attack functions in `MonsterLogic.ts` do); return `false`/`undefined`
+   to fall back to the monster's normal behaviour for that turn.
+3. Call `registerMonsterAbility(type, ability)` to attach the new ability
+   key to one or more monster types (built-in or campaign-defined).
+
+### Example: `monsters/customAbilities.ts`
+
+```ts
+import type { GameState, Monster } from '../../../types';
+import {
+  registerMonsterAbility,
+  registerMonsterAbilityHandler,
+} from '../../../monsters/MonsterRegistry';
+import { addLog, i18n } from '../../../core';
+import { liveHeroes } from '../../../hero/HeroLogic';
+
+export const POISON_CLOUD = 'poisonCloud';
+
+registerMonsterAbilityHandler(
+  POISON_CLOUD,
+  (state: GameState, monster: Monster): boolean => {
+    // Only trigger once every couple of turns, otherwise let the monster
+    // act normally.
+    if (Math.random() > 0.3) return false;
+
+    liveHeroes(state).forEach((hero) => {
+      hero.health = Math.max(0, hero.health - 1);
+    });
+    addLog(state, 'logs.monster.poisonCloud', { monster: i18n(monster.name) });
+    monster.actions--;
+    return true;
+  },
+);
+
+// Attach the new ability to a campaign-defined (or built-in) monster type.
+registerMonsterAbility('Bog Troll', POISON_CLOUD);
+```
+
+Remember to add the `logs.monster.poisonCloud` message key to your campaign's
+own `translations/logs.en.json`/`logs.sv.json` (see
+[Adding new log messages](#adding-new-log-messages-optional) below).
+
 ## Adding new log messages (optional)
 
 The action log (`addLog(state, key, params)`) reads its message templates from
@@ -300,7 +432,7 @@ unique keys that won't collide with the shared ones or another campaign's.
   dungeons or translation keys.
 - Prefer reusing the global `items/`, `monsters/` and `events/` modules so
   balance stays consistent across campaigns; only add campaign-specific
-  items/events when you need genuinely new behaviour.
+  items/monsters/events when you need genuinely new behaviour.
 - `nextDungeon` chains, and any other cross-references, must stay entirely
   within the campaign's own `dungeons/` folder.
 - Do not edit `src/campaigns/index.ts` to add a campaign — it auto-discovers

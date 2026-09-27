@@ -1,6 +1,13 @@
 import type { Actor, GameState, Hero, Monster } from '../types';
 import { MonsterType } from '../types';
 import {
+  getMonsterAbilities,
+  getMonsterAbilityHandler,
+  hasMonsterAbility,
+  isDarkLord,
+  registerMonsterAbility,
+} from './MonsterRegistry';
+import {
   addLog,
   doReRender,
   getActorRemainingAnimationDuration,
@@ -49,10 +56,45 @@ export const DEFAULT_MONSTER_TURN_OPTIONS: MonsterTurnOptions = {
   waitForMovement: true,
 };
 
+// Built-in dark lord abilities, registered here so campaign-defined monster
+// types can register their own abilities the same way via
+// `registerMonsterAbility` (see src/monsters/MonsterRegistry.ts).
+registerMonsterAbility(MonsterType.YELLOW_DARK_LORD, 'diagonalFireAttack');
+registerMonsterAbility(MonsterType.BLUE_DARK_LORD, 'diagonalFireAttack');
+registerMonsterAbility(MonsterType.RED_DARK_LORD, 'orthogonalFireAttack');
+registerMonsterAbility(MonsterType.BLUE_DARK_LORD, 'orthogonalFireAttack');
+registerMonsterAbility(MonsterType.GREEN_DARK_LORD, 'sameRoomFireAttack');
+registerMonsterAbility(MonsterType.BLUE_DARK_LORD, 'sameRoomFireAttack');
+
 const getNonDarkLordMonsters = (state: GameState) =>
-  state.dungeon.layout.monsters.filter((monster) =>
-    [MonsterType.ORC, MonsterType.TROLL].includes(monster.type),
+  state.dungeon.layout.monsters.filter((monster) => !isDarkLord(monster.type));
+
+// Built-in ability keys handled directly by the default action-selection
+// logic below; any other ability registered on a monster type is treated
+// as a fully custom ability and dispatched through a campaign-registered
+// handler instead (see `registerMonsterAbilityHandler` in MonsterRegistry.ts).
+const BUILTIN_ABILITIES = new Set([
+  'diagonalFireAttack',
+  'orthogonalFireAttack',
+  'sameRoomFireAttack',
+]);
+
+const tryCustomMonsterAbility = async (
+  state: GameState,
+  monster: Monster,
+): Promise<boolean> => {
+  const customAbilities = getMonsterAbilities(monster.type).filter(
+    (ability) => !BUILTIN_ABILITIES.has(ability),
   );
+  for (const ability of customAbilities) {
+    const handler = getMonsterAbilityHandler(ability);
+    if (handler) {
+      const handled = await handler(state, monster);
+      if (handled) return true;
+    }
+  }
+  return false;
+};
 
 export const monsterActions = async (
   state: GameState,
@@ -77,6 +119,24 @@ export const monsterActions = async (
     opts.onActionCallback?.(state);
 
     while (monster.actions > 0 && monster.health > 0) {
+      const customAbilityHandled = await tryCustomMonsterAbility(
+        state,
+        monster,
+      );
+      if (customAbilityHandled) {
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        monster.movement = getEffectiveMaxMovement(monster);
+        if (
+          monster.actions > 0 &&
+          opts.delayBetweenActions &&
+          opts.delayBetweenActions > 0
+        ) {
+          await sleep(opts.delayBetweenActions);
+        }
+        continue;
+      }
+
       const passableGrid = createPassableGrid(state);
       const neighbouringHeroes: Hero[] = findNeighbouringHeroes(
         state,
@@ -393,9 +453,7 @@ export const monsterMove = (
 const findDiagonalTargets = (possibleTargets: Actor[], source: Monster) =>
   possibleTargets.filter(
     (target) =>
-      [MonsterType.YELLOW_DARK_LORD, MonsterType.BLUE_DARK_LORD].includes(
-        source.type,
-      ) &&
+      hasMonsterAbility(source.type, 'diagonalFireAttack') &&
       Math.abs(source.position.x - target.position.x) ===
         Math.abs(source.position.y - target.position.y) &&
       distanceInGrid(source.position, target.position) > 1,
@@ -404,9 +462,7 @@ const findDiagonalTargets = (possibleTargets: Actor[], source: Monster) =>
 const findOrthogonalTargets = (possibleTargets: Actor[], source: Monster) =>
   possibleTargets.filter(
     (target) =>
-      [MonsterType.RED_DARK_LORD, MonsterType.BLUE_DARK_LORD].includes(
-        source.type,
-      ) &&
+      hasMonsterAbility(source.type, 'orthogonalFireAttack') &&
       (source.position.x === target.position.x ||
         source.position.y === target.position.y) &&
       distanceInGrid(source.position, target.position) > 1,
@@ -419,9 +475,7 @@ const findSameRoomTargets = (
 ) =>
   possibleTargets.filter(
     (target) =>
-      [MonsterType.GREEN_DARK_LORD, MonsterType.BLUE_DARK_LORD].includes(
-        source.type,
-      ) &&
+      hasMonsterAbility(source.type, 'sameRoomFireAttack') &&
       findCell(
         state.dungeon.layout.grid,
         source.position.x,
