@@ -12,6 +12,16 @@ const campaignSvModules = import.meta.glob<{
   default: Record<string, unknown>;
 }>('../../campaigns/*/translations/sv.json');
 
+// Campaigns may additionally define their own log message translations, so that
+// campaign-specific items/events can add their own entries to the "logs" namespace
+// without touching the shared logs.json files.
+const campaignLogsEnModules = import.meta.glob<{
+  default: Record<string, unknown>;
+}>('../../campaigns/*/translations/logs.en.json');
+const campaignLogsSvModules = import.meta.glob<{
+  default: Record<string, unknown>;
+}>('../../campaigns/*/translations/logs.sv.json');
+
 const loadCampaignTranslations = async (
   modules: Record<string, () => Promise<{ default: Record<string, unknown> }>>,
 ): Promise<Record<string, unknown>> => {
@@ -19,6 +29,34 @@ const loadCampaignTranslations = async (
   for (const loader of Object.values(modules)) {
     const mod = await loader();
     Object.assign(merged, mod.default);
+  }
+  return merged;
+};
+
+const loadLogsWithCampaigns = async (
+  baseLoader: () => Promise<{ default: Record<string, unknown> }>,
+  campaignModules: Record<
+    string,
+    () => Promise<{ default: Record<string, unknown> }>
+  >,
+): Promise<Record<string, unknown>> => {
+  const base = (await baseLoader()).default;
+  const campaignLogs = await loadCampaignTranslations(campaignModules);
+  const merged: Record<string, unknown> = { ...base };
+  for (const [key, value] of Object.entries(campaignLogs)) {
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      typeof merged[key] === 'object' &&
+      merged[key] !== null
+    ) {
+      merged[key] = {
+        ...(merged[key] as Record<string, unknown>),
+        ...(value as Record<string, unknown>),
+      };
+    } else {
+      merged[key] = value;
+    }
   }
   return merged;
 };
@@ -37,7 +75,11 @@ export const config: Config = {
     {
       locale: 'en',
       key: 'logs',
-      loader: async () => (await import('./en/logs.json')).default,
+      loader: async () =>
+        loadLogsWithCampaigns(
+          async () => (await import('./en/logs.json')).default,
+          campaignLogsEnModules,
+        ),
     },
     {
       locale: 'en',
@@ -62,7 +104,11 @@ export const config: Config = {
     {
       locale: 'sv',
       key: 'logs',
-      loader: async () => (await import('./sv/logs.json')).default,
+      loader: async () =>
+        loadLogsWithCampaigns(
+          async () => (await import('./sv/logs.json')).default,
+          campaignLogsSvModules,
+        ),
     },
     {
       locale: 'sv',

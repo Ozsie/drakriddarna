@@ -33,7 +33,11 @@ src/campaigns/
     dungeons/*.ts
     items/*.ts
     events/*.ts
-    translations/en.json, sv.json
+    translations/
+      en.json
+      sv.json
+      logs.en.json
+      logs.sv.json
 ```
 
 ## Creating a new campaign
@@ -146,7 +150,7 @@ export const customMagicItems: Item[] = [
 
 registerItemEffect(AMULET_OF_WARDING, (state, self, user) => {
   user.defense += 1;
-  addLog(state, 'logs.items.amuletOfWarding', {
+  addLog(state, 'logs.item.amuletOfWarding', {
     user: i18n(user.name),
     item: i18n(self.name),
   });
@@ -156,6 +160,10 @@ registerItemReset(AMULET_OF_WARDING, (_state, self) => {
   self.disabled = false;
 });
 ```
+
+The `logs.item.amuletOfWarding` key used above is a **campaign-defined log
+translation** — see [Adding new log messages](#adding-new-log-messages-optional)
+below for how to define it.
 
 Then merge `customMagicItems` into `magicItemDeck` inside `campaign.ts`:
 
@@ -236,6 +244,53 @@ const campaignMyNewCampaign: Campaign = {
   // ...
   eventDeck: customEvents,
 };
+```
+
+## Adding new log messages (optional)
+
+The action log (`addLog(state, key, params)`) reads its message templates from
+the global `logs` translation namespace (`src/lib/translations/{en,sv}/logs.json`).
+Since campaign-defined items and events (see above) can trigger arbitrary
+`addLog` keys, a campaign needs a way to add its own log message templates
+without editing those shared files.
+
+This works exactly like the campaign `translations/{en,sv}.json` files, but
+for the `logs` namespace: create optional `translations/logs.en.json` and
+`translations/logs.sv.json` files inside your campaign folder. They are
+automatically discovered (via `import.meta.glob`) and deep-merged into the
+global `logs` namespace by `src/lib/translations/index.ts` — no code changes
+needed.
+
+Mirror the shape of the shared `logs.json` files (e.g. nest your custom item
+messages under `item.*`, and custom event messages under `events.*`) so that
+`addLog(state, 'logs.item.amuletOfWarding', ...)` /
+`addLog(state, 'logs.events.frozenMist', ...)` resolve correctly, and pick
+unique keys that won't collide with the shared ones or another campaign's.
+
+### Example: `translations/logs.en.json`
+
+```json
+{
+  "item": {
+    "amuletOfWarding": "{{user}} used {{item}}, gaining +1 defense."
+  },
+  "events": {
+    "frozenMist": "A frozen mist slows the heroes down."
+  }
+}
+```
+
+### Example: `translations/logs.sv.json`
+
+```json
+{
+  "item": {
+    "amuletOfWarding": "{{user}} använde {{item}} och fick +1 försvar."
+  },
+  "events": {
+    "frozenMist": "En frusen dimma saktar ner hjältarna."
+  }
+}
 ```
 
 ## Rules of thumb
