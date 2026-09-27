@@ -53,6 +53,7 @@ export type Campaign = {
   heroes: Actor[];
   itemDeck: Item[];
   magicItemDeck: Item[];
+  eventDeck?: TurnEvent[];
 };
 
 export type Actor = {

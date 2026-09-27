@@ -4,6 +4,10 @@
 
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
+## Creating Campaigns
+
+See [Campaign Readme](src/campaigns/README.md)
+
 ## Todo
 - [ ] Multiple saves
 - [ ] Diary on mobile

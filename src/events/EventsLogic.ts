@@ -28,13 +28,17 @@ import { events } from './events';
 import { ACTIVE, onDrop, onPickup } from '../items/ItemLogic';
 import { findVisibleMonsters } from '../monsters/MonsterLogic';
 
-export const getEventsForDungeon = (dungeon: Dungeon): TurnEvent[] => {
+export const getEventsForDungeon = (
+  dungeon: Dungeon,
+  campaignEvents: TurnEvent[] = [],
+): TurnEvent[] => {
+  const eventPool = [...events, ...campaignEvents];
   if (dungeon.events) {
     return shuffleEvents(
-      events.filter((event) => dungeon?.events?.includes(event.number)),
+      eventPool.filter((event) => dungeon?.events?.includes(event.number)),
     );
   } else {
-    return shuffleEvents(events);
+    return shuffleEvents(eventPool);
   }
 };
 
@@ -323,6 +327,13 @@ export const eventEffects: Record<
     }
     event.used = true;
   },
+};
+
+export const registerEventEffect = (
+  key: string,
+  handler: (state: GameState, event: TurnEvent) => void,
+): void => {
+  eventEffects[key] = handler;
 };
 
 export const executeGameEvent = (state: GameState, event: GameEvent): void => {

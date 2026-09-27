@@ -171,7 +171,7 @@ export const init = (campaignId: string = DEFAULT_CAMPAIGN_ID): GameState => {
       cellSize: 48,
       debug: false,
     },
-    eventDeck: getEventsForDungeon(campaign.dungeons[0]),
+    eventDeck: getEventsForDungeon(campaign.dungeons[0], campaign.eventDeck),
     reRender: true,
     drawEvents: true,
   };
@@ -242,7 +242,13 @@ export const next = async (
       if (state.drawEvents) {
         const event = drawNextEvent(state);
         state.currentEvent = event;
-        eventEffects[event.effect](state, event);
+        const effect = eventEffects[event.effect];
+        if (effect) {
+          effect(state, event);
+        } else {
+          // eslint-disable-next-line no-console
+          console.warn(`Unknown event effect: ${event.effect}`);
+        }
       } else {
         state.currentEvent = undefined;
       }
@@ -401,7 +407,10 @@ export const hasWon = (state: GameState) => {
         turn: 0,
       },
     ];
-    state.eventDeck = getEventsForDungeon(state.dungeon);
+    state.eventDeck = getEventsForDungeon(
+      state.dungeon,
+      getCampaign(state.campaignId).eventDeck,
+    );
     state.turnCount = 0;
     doReRender(state);
     rewardLiveHeroes(state);
