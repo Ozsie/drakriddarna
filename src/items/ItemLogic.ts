@@ -43,6 +43,39 @@ export const onDrop: {
       user.movement -= self.properties?.[MOVEMENT_BONUS] as number;
   },
 };
+
+// Registration API allowing campaigns (or any external module) to define
+// brand-new item behaviours without editing this shared file. A campaign's
+// own item definitions can reference a unique effect/reset/pickup/drop key
+// and register the corresponding handler by calling these functions once on
+// module load (e.g. from the campaign's items/*.ts file).
+export const registerItemEffect = (
+  key: string,
+  handler: (state: GameState, self: Item, user: Actor, target?: Actor) => void,
+): void => {
+  onUse[key] = handler;
+};
+
+export const registerItemReset = (
+  key: string,
+  handler: (state: GameState, self: Item) => void,
+): void => {
+  onReset[key] = handler;
+};
+
+export const registerItemPickup = (
+  key: string,
+  handler: (state: GameState, self: Item, user: Actor) => void,
+): void => {
+  onPickup[key] = handler;
+};
+
+export const registerItemDrop = (
+  key: string,
+  handler: (state: GameState, self: Item, user: Actor) => void,
+): void => {
+  onDrop[key] = handler;
+};
 export const resolveChaosSwordAttack = (
   state: GameState,
   user: Actor,
@@ -245,6 +278,10 @@ export const onReset: {
 export const useItem = (state: GameState, item: Item) => {
   if (item && item.effect && state.currentActor) {
     const use = onUse[item.effect];
+    if (!use) {
+      addLog(state, 'logs.item.cannotUse', { item: i18n(item.name) });
+      return;
+    }
     use(state, item, state.currentActor, state.targetActor);
     state.targetActor = undefined;
   }
@@ -257,7 +294,7 @@ export const resetOnNextDungeon = (state: GameState) => {
       .forEach((item) => {
         if (item && item.reset) {
           const reset = onReset[item.reset];
-          reset(state, item);
+          if (reset) reset(state, item);
         }
       });
   });
@@ -270,7 +307,7 @@ export const resetOnNext = (state: GameState) => {
       .forEach((item) => {
         if (item && item.reset) {
           const reset = onReset[item.reset];
-          reset(state, item);
+          if (reset) reset(state, item);
         }
       });
   });

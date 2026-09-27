@@ -408,7 +408,8 @@ export const dropItem = (state: GameState, item: Item, actor: Actor) => {
     position: actor.position,
   });
   if (item && item.drop) {
-    onDrop[item.drop](state, item, actor);
+    const drop = onDrop[item.drop];
+    if (drop) drop(state, item, actor);
   }
 };
 
@@ -418,7 +419,7 @@ export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
     hero.weapon = item as Weapon;
     if (item && item.pickup) {
       const pickup = onPickup[item.pickup];
-      pickup(state, item, hero);
+      if (pickup) pickup(state, item, hero);
     }
     return;
   }
@@ -441,7 +442,7 @@ export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
   }
   if (item && item.pickup) {
     const pickup = onPickup[item.pickup];
-    pickup(state, item, hero);
+    if (pickup) pickup(state, item, hero);
   }
 };
 

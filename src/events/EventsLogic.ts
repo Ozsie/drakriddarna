@@ -270,7 +270,8 @@ export const eventEffects: Record<
         const item = magicItems[randomMagicItemIndex];
         item.disabled = true;
         if (item && !item.properties?.[ACTIVE] && item.pickup && item.drop) {
-          onDrop[item.drop](state, item, hero);
+          const drop = onDrop[item.drop];
+          if (drop) drop(state, item, hero);
         }
       }
     }
@@ -385,7 +386,8 @@ const restoreDisabledItems = (state: GameState) => {
     liveHeroes(state).forEach((hero) => {
       hero.inventory.forEach((item) => {
         if (item && !item.properties?.[ACTIVE] && item.pickup) {
-          onPickup[item.pickup](state, item, hero);
+          const pickup = onPickup[item.pickup];
+          if (pickup) pickup(state, item, hero);
         }
         if (item) item.disabled = false;
       });

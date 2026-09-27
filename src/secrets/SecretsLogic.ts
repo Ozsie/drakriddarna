@@ -250,7 +250,10 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
             item: i18n(item.name),
           });
           hero.inventory.push(item);
-          if (item && item.pickup) onPickup[item.pickup](state, item, hero);
+          if (item && item.pickup) {
+            const pickup = onPickup[item.pickup];
+            if (pickup) pickup(state, item, hero);
+          }
         }
         break;
       }
