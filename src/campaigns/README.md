@@ -48,11 +48,44 @@ src/campaigns/
 
 1. **Create the folder**: `src/campaigns/myNewCampaign/`.
 2. **Add dungeons**: create `dungeons/*.ts` files, each exporting a
-   `Dungeon` object (mirror the shape used in `iceDragonTreasure/dungeons/`).
-   Chain them together via `nextDungeon`. Dungeons should only ever link to
-   other dungeons within the same campaign.
+   `Dungeon` object (see `src/types.ts` for the full type; mirror the shape
+   used in `iceDragonTreasure/dungeons/`). The most important fields are:
+   - `layout: Layout` — `grid` (the room/corridor ASCII layout), `doors`,
+     `monsters` (placed via `createMonster`, see
+     [Adding new monsters](#adding-new-monsters-optional)), `secrets`,
+     `notes`, `items` (placed via `ItemLocation`), `corridors`, `corners`.
+   - `startingPositions` — where heroes are placed when entering.
+   - `winConditions: WinCondition[]` — one or more `ConditionType`s (e.g.
+     `KILL_ALL`, `REACH_CELL`, `SECRET_FOUND`) that must be `fulfilled` to
+     beat the dungeon.
+   - `events?: number[]` — restricts which global/campaign event `number`s
+     can be drawn while inside this dungeon.
+   - `nextDungeon?: Dungeon` — chains to the next dungeon once beaten.
+     Dungeons should only ever link to other dungeons within the same
+     campaign — this is a convention, **not enforced by the type system**,
+     so double-check you never accidentally import and link to another
+     campaign's dungeon.
 3. **Add heroes**: reuse the shared hero templates, or define
-   campaign-specific ones if the campaign needs its own roster.
+   campaign-specific ones if the campaign needs its own roster. The
+   simplest way is `newHero(name, colour)` (exported from
+   `src/hero/HeroLogic.ts`), which builds a fully-stated starting `Hero`
+   (`Actor` + `isInventoryOpen`) with default level/stats/weapon:
+
+   ```ts
+   import { Colour } from '../../types';
+   import { newHero } from '../../hero/HeroLogic';
+
+   const heroes = [
+     newHero('Fearik', Colour.Yellow),
+     newHero('Helbran', Colour.Red),
+     newHero('Siedel', Colour.Green),
+     newHero('Wulf', Colour.Blue),
+   ];
+   ```
+
+   To fully customize a hero (starting weapon/armour/inventory/stats),
+   build an `Actor` object directly instead — see the `Actor` type in
+   `src/types.ts` for all available fields.
 4. **Create `campaign.ts`**, the campaign's entry point. It must have a
    **default export** of type `Campaign`:
 
@@ -62,7 +95,8 @@ src/campaigns/
    import { armours } from '../../items/armours';
    import { shields } from '../../items/shields';
    import { magicItems } from '../../items/magicItems';
-   import { heroes } from '../../hero/heroes'; // or your own heroes
+   import { Colour } from '../../types';
+   import { newHero } from '../../hero/HeroLogic'; // or build your own Actor[]
    import { e2m0 } from './dungeons/e2m0';
    // ... import the rest of your dungeons
 
@@ -84,9 +118,18 @@ src/campaigns/
 
    const campaignMyNewCampaign: Campaign = {
      id: 'myNewCampaign',
-     name: 'My New Campaign',
+     // `name` must be a translation key, not a plain string — it is passed
+     // through `$t(...)` wherever campaigns are listed (e.g. the in-game
+     // "New Game" campaign-select menu, see below). Define the actual text
+     // under this exact key in your own translations/{en,sv}.json.
+     name: 'campaign.myNewCampaign.name',
      dungeons: [e2m0 /* ... */],
-     heroes,
+     heroes: [
+       newHero('Fearik', Colour.Yellow),
+       newHero('Helbran', Colour.Red),
+       newHero('Siedel', Colour.Green),
+       newHero('Wulf', Colour.Blue),
+     ],
      itemDeck: getItemDeck(),
      magicItemDeck: getMagicItemDeck(),
    };
@@ -97,14 +140,26 @@ src/campaigns/
    The registry in `src/campaigns/index.ts` auto-discovers every
    `./*/campaign.ts` file via `import.meta.glob` and indexes campaigns by
    their `id`, so simply creating this file is enough for the campaign to
-   become selectable (e.g. via `init(campaignId)` in `game.ts`).
+   become selectable — both programmatically (`init(campaignId)` in
+   `game.ts`) and directly by players: the in-game "New Game" menu
+   (`src/components/ButtonPad.svelte`) lists every campaign from the
+   registry by its translated `name` and calls `init(campaign.id)` when
+   selected, so no UI changes are needed either.
 
 5. **Add translations**: create `translations/en.json` and
    `translations/sv.json`, namespaced under a unique key (e.g.
-   `campaign.myNewCampaign.*`). These are automatically discovered and
-   merged into the global `campaign` translation namespace by
-   `src/lib/translations/index.ts` (via `import.meta.glob`) — no code
-   changes needed there either.
+   `campaign.myNewCampaign.*`), and make sure to include the `name` key
+   used in `campaign.ts` (e.g. `campaign.myNewCampaign.name`). These are
+   automatically discovered and merged into the global `campaign`
+   translation namespace by `src/lib/translations/index.ts` (via
+   `import.meta.glob`) — no code changes needed there either.
+
+**Note on difficulty:** difficulty levels (`src/game.ts`'s `DifficultLevels`)
+are fully global and shared by every campaign — there is currently no
+`difficulties` field on `Campaign` to override them per campaign. If your
+campaign needs a different difficulty curve, that would require a small
+engine change first; it is not something you can configure from within your
+campaign folder today.
 
 ## Adding new items (optional)
 
