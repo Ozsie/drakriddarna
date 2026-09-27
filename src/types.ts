@@ -106,6 +106,7 @@ export enum Level {
 
 export type Dungeon = {
   name: string;
+  intro: string;
   nameTranslationKey?: string;
   layout: Layout;
   startingPositions: Position[];

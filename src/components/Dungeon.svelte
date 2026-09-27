@@ -27,12 +27,14 @@
     debugModeStore,
     handleCanvasClick,
   } from '../store/gameStateStore';
+  import DungeonIntro from './DungeonIntro.svelte';
 
   export let state: GameState | undefined = undefined;
   export let debugMode: boolean | undefined = undefined;
 
   $: activeState = state ?? $gameStateStore;
   $: activeDebugMode = debugMode ?? $debugModeStore;
+  $: dungeon = activeState.dungeon;
 
   let footerSize = 0;
   let screenSize = 0;
@@ -398,6 +400,7 @@
     ></canvas>
     <RadialMenu {cellSize} {state} />
   </div>
+  <DungeonIntro {dungeon} />
 </div>
 
 <style>

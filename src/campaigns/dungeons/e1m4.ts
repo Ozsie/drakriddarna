@@ -12,6 +12,7 @@ import { e1m5 } from './e1m5';
 
 export const e1m4: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m4.name',
+  intro: 'campaign.iceDragon.e1m4.intro',
   nextDungeon: e1m5,
   winConditions: [
     {

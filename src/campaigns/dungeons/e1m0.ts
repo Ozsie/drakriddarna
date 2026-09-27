@@ -4,7 +4,8 @@ import { defineDungeon } from '../../dungeon/DungeonLogic';
 import { e1m1 } from './e1m1';
 
 export const e1m0: Dungeon = defineDungeon({
-  name: 'campaign.iceDragon.e1mo.name',
+  name: 'campaign.iceDragon.e1m0.name',
+  intro: 'campaign.iceDragon.e1m0.intro',
   winConditions: [
     {
       type: ConditionType.KILL_ALL,

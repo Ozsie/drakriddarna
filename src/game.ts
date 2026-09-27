@@ -401,6 +401,7 @@ export const hasWon = (state: GameState) => {
       },
     ];
     state.eventDeck = getEventsForDungeon(state.dungeon);
+    state.turnCount = 0;
     doReRender(state);
     rewardLiveHeroes(state);
     levelUp(state);

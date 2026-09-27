@@ -5,10 +5,12 @@
     "randomItem": "Slumpmässigt Föremål",
     "trapDoor": "Fälla",
     "e1m0": {
-      "name": "Trollgrottan"
+      "name": "Trollgrottan",
+      "intro": "Ett otäckt troll sprider skräck i bygden. Drakriddarna har hittat monstrets håla och nu står de utanför den. En grov dörr av klumpigt tillyxade plankor leder in i berget. Tydliga spår avslöjar att de är på rätt väg..."
     },
     "e1m1": {
-      "name": "Maktens Tre Portar",
+      "name": "Maktens tre portar",
+      "intro": "Av den gamle alvmagikern Hippolektrion har ni fått höra legenden om isdrakens skatt, belägen långt under mörkerherrarnas citadell. Den första prövningen, för att ni överhuvudtaget ska komma in i citadellet, är att ta er igenom maktens tre portar, där den forne hjälten Sir Bonk lämnat efter sig ledtrådar och utrustning för att ni ska komma vidare. Lycka till, och se upp för gripens käftar. Utmana dem inte förrän ni funnit de magiska örterna!",
       "notes": {
         "hint1": "Bortom sten och eld ska du finna De Onda Gruvorna, vägen till Isdrakens skatt.",
         "hint2": "Vattenporten. <Det finns en bild av en havsdrake under texten>",
@@ -17,7 +19,8 @@
       }
     },
     "e1m2": {
-      "name": "De Onda Gruvorna",
+      "name": "Ondskans gruvor",
+      "intro": "Efter att ha tagit er igenom maktens tre portar kommer ni till en vindlande gång som leder nedåt, och så småningom når ni den första nivån. Ondskans gruvor är resterna au ett urgammalt dvärgrike, men numera finns det bara orcher och troll här. Enligt alvmagikern Hippolektrion finns flera gamla dvärgaföremål i gruvorna, och de är nödvändiga för er vidare färd. Var dock försiktiga, för dvärgarna har lämnat fällor som skydd mot plundrare och monster...",
       "notes": {
         "hint1": "Vaktrum",
         "hint2": "Titta i pelarrummet efter dvärgakungens arsenal",
@@ -26,7 +29,8 @@
       }
     },
     "e1m3": {
-      "name": "Den Fruktansvärda Labyrinten",
+      "name": "Fasornas labyrint",
+      "intro": "Bakom spegeln i Ondskans gruvor fann ni vägen in till Fasornas labyrint, resterna av dvärgarnas gamla ädelsilvergruvor. Alvmagikern Hippolektrions råd till er är att noga ge akt på de tecken som talar om var de tre hemliga dörrarna finns, annars kommer ni aldrig till det gruvschakt som leder upp till mörkerherrarnas citadell, som ni måste gå igenom för att komma till isdrakens skatt.",
       "notes": {
         "hint1": "En pil på den bortre väggen i korridoren pekar åt vänster.",
         "hint2": "En pil på den bortre väggen i korridoren pekar åt höger.",
@@ -35,7 +39,8 @@
       }
     },
     "e1m4": {
-      "name": "Det Mörka Citadellet",
+      "name": "Det mörka citadellet",
+      "intro": "Någonstans i den röde mörkerherrens citadell finns enligt sägnerna den legendomsusade Silvertrappan, som ska leda ner till isdrakens skatt. Legenden säger att trappan ska ligga 'under den sjunde kammarens sjunde sigill', synlig endast för den som 'sju gånger besegrat Ondskan'. Endast den som bär Ljusets halslänk kan tyda sigillen i den sjunde kammaren, för övriga väntar döden blott...",
       "secrets": {
         "note1": "Ödlan går åt höger och framåt. Ormen går åt vänster och framåt.",
         "stair": "En dold trappa, avslöjad av halsbandets ljus."
@@ -46,7 +51,8 @@
       }
     },
     "e1m5": {
-      "name": "Isdrakens Skatt",
+      "name": "Isdrakens skatt",
+      "intro": "Efter att ha klättrat ner för den långa, slingrande Silvertrappan befinner ni er vid ert mål — Isdrakens hålor. Enligt sägnerna ska detta vara en stor tronsal omgiven av tre mindre skattkammare med de mest fantastiska skatter. Men den är också mycket välbevakad, och det är möjligt att det rent av finns mer än en mörkerherre här.",
       "notes": {
         "magicNumber": "Tre är det magiska talet, men fyra är Mörkerherrarna",
         "stoneFace": "Ett stenansikte i väggen talar till er: 'Vägen till eldens sal ska återfinnas i den blå mörkerherrens kammare...'",
@@ -54,7 +60,8 @@
       }
     },
     "e1m6": {
-      "name": "Slutstriden"
+      "name": "Slutstriden",
+      "intro": "Det slutgiltiga målet är nära, men ni inser att det fortfarande är en bit kvar, en väg kantad av både motståndare och faror..."
     },
     "testingGrounds": {
       "name": "Testområde",

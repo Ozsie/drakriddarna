@@ -88,6 +88,9 @@
     {/if}
   {/if}
   <span>{i18n('content.diary.label', { turn: `${activeState.turnCount ?? 0}` })} </span>
+  <hr/>
+  <p class='header'>{i18n('content.diary.foundOn', { round: '0' })}</p>
+  <p class='note'>{$t(activeState.dungeon.intro)}</p>
   {#each activeState.dungeon.layout.notes as note}
     {#if note.found}
       <hr/>

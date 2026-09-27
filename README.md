@@ -5,7 +5,6 @@
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
 
 ## Todo
-- [ ] Dungeon intro screen
 - [ ] Multiple saves
 - [ ] Diary on mobile
 - [ ] Responsive layout
@@ -16,6 +15,7 @@
 - [ ] Support for additional campaigns
 - [ ] Earth Hour Campaign - [Dungeons](https://hearthelamentationoftheplayers.home.blog/tag/drakriddarna/)
 - [ ] Level editor
+- [X] Dungeon intro screen
 - [X] Difficulty levels
 - [X] e1m6 - The Final Battle
 - [X] e1m5 - The Ice Dragons Treasure

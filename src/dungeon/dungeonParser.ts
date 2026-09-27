@@ -157,6 +157,7 @@ export type DeclarativeLayout = {
 
 export type DeclarativeDungeon = {
   name: string;
+  intro: string;
   nameTranslationKey?: string;
   beaten?: boolean;
   winConditions: WinCondition[];
@@ -421,6 +422,7 @@ export const defineDungeon = (
 ): Dungeon => {
   const dungeon: Dungeon = {
     name: dungeonDef.name,
+    intro: dungeonDef.intro,
     nameTranslationKey: dungeonDef.nameTranslationKey ?? dungeonDef.name,
     beaten: dungeonDef.beaten ?? false,
     winConditions: dungeonDef.winConditions,
