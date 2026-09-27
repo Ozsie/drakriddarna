@@ -16,9 +16,9 @@ See [Campaign Readme](src/campaigns/README.md)
 - [ ] Doors blocking monsters?
 - [ ] Trade Items?
 - [ ] Monster cards?
-- [ ] Support for additional campaigns
 - [ ] Earth Hour Campaign - [Dungeons](https://hearthelamentationoftheplayers.home.blog/tag/drakriddarna/)
 - [ ] Level editor
+- [X] Support for additional campaigns
 - [X] Dungeon intro screen
 - [X] Difficulty levels
 - [X] e1m6 - The Final Battle
