@@ -25,6 +25,9 @@
     },
     "selectNextEvent": {
       "header": "Välj Nästa Händelse"
+    },
+    "selectCampaign": {
+      "header": "Välj Kampanj"
     }
   },
   "actions": {

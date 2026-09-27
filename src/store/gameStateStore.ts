@@ -128,8 +128,8 @@ export const isTurnInProgress = writable<boolean>(false);
 let isExecutingTurn = false;
 
 // Encapsulated Action Dispatchers
-export const initGame = (): GameState => {
-  const state = init();
+export const initGame = (campaignId?: string): GameState => {
+  const state = init(campaignId);
   syncStore(state, true);
   return state;
 };

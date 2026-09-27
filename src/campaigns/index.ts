@@ -27,3 +27,6 @@ export const getCampaign = (
   }
   return campaign;
 };
+
+export const isKnownCampaign = (campaignId: string): boolean =>
+  campaignId in campaigns;

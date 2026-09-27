@@ -1,7 +1,7 @@
 import type { GameState, Hero, Position } from './types';
 import { ConditionType } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
-import { getCampaign, DEFAULT_CAMPAIGN_ID } from './campaigns';
+import { getCampaign, isKnownCampaign, DEFAULT_CAMPAIGN_ID } from './campaigns';
 import {
   monsterActions,
   type MonsterTurnOptions,
@@ -110,6 +110,18 @@ export const loadState = (newState: GameState) => {
     newState.difficulty = DifficultLevels.find(
       (level) => level.id === DEFAULT_DIFFICULTY_ID,
     );
+  }
+  // Older saves may not have a campaignId at all, and any save could in
+  // theory reference a campaign that no longer exists (e.g. removed
+  // during development). Fall back to the default campaign rather than
+  // letting later `getCampaign(state.campaignId)` calls (e.g. in
+  // `hasWon()`) throw for an unresolvable id.
+  if (!newState.campaignId || !isKnownCampaign(newState.campaignId)) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `Unknown or missing campaignId "${newState.campaignId}" in loaded save, falling back to "${DEFAULT_CAMPAIGN_ID}".`,
+    );
+    newState.campaignId = DEFAULT_CAMPAIGN_ID;
   }
   addLog(newState, 'logs.gameLoaded');
   doReRender(newState);
@@ -290,6 +302,13 @@ export const resetLevel = (currentState: GameState): GameState => {
     const loadedRawState = localStorage.getItem('autosave');
     if (loadedRawState) {
       const state: GameState = JSON.parse(loadedRawState) as GameState;
+      if (!state.campaignId || !isKnownCampaign(state.campaignId)) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `Unknown or missing campaignId "${state.campaignId}" in autosave, falling back to "${DEFAULT_CAMPAIGN_ID}".`,
+        );
+        state.campaignId = DEFAULT_CAMPAIGN_ID;
+      }
       doReRender(state);
 
       replaceDeadHeroes(state);

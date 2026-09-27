@@ -24,6 +24,7 @@
   import { addLog, DifficultLevels, endAction, getDifficulty, hasWon, init, loadState, next, save } from '../game';
   import { testingGrounds } from '../dungeon/testingGrounds';
   import { getEventsForDungeon, selectNextEvent, shuffleEventDeck } from '../events/EventsLogic';
+  import { campaigns } from '../campaigns';
 
   export let state: GameState | undefined = undefined;
   export let debugMode: boolean | undefined = undefined;
@@ -35,9 +36,11 @@
   let showMenu: boolean = false;
   let showLoadMenu: boolean = false;
   let showEventMenu: boolean = false;
+  let showCampaignMenu: boolean = false;
   let savedGames: MenuButtonProps[] = [];
   let mainMenuButtons: MenuButtonProps[] = [];
   let eventMenuButtons: MenuButtonProps[] = [];
+  let campaignMenuButtons: MenuButtonProps[] = [];
 
   const setDebugMode = () => {
     const newDebug = !activeDebugMode;
@@ -81,14 +84,38 @@
     }
   };
 
-  const onNewGame = () => {
+  const onNewGame = (campaignId: string) => {
     if (state) {
-      state = init();
+      state = init(campaignId);
       gameStateStore.set(state);
     } else {
-      initGame();
+      initGame(campaignId);
     }
     showMenu = false;
+    showCampaignMenu = false;
+  };
+
+  const getCampaignMenu = (): MenuButtonProps[] => {
+    const buttons = Object.values(campaigns).map((campaign) => ({
+      debugModeOnly: false,
+      label: $t(campaign.name),
+      onClick: () => onNewGame(campaign.id),
+    }));
+    buttons.push({
+      debugModeOnly: false,
+      label: $t('content.menu.loadGame.buttons.back'),
+      onClick: () => {
+        showMenu = true;
+        showCampaignMenu = false;
+      },
+    });
+    return buttons;
+  };
+
+  const onNewGameButton = () => {
+    showMenu = false;
+    showCampaignMenu = true;
+    campaignMenuButtons = getCampaignMenu();
   };
 
   const onSaveGame = () => {
@@ -200,7 +227,7 @@
     {
       debugModeOnly: false,
       label: $t('content.menu.mainMenu.buttons.newGame'),
-      onClick: onNewGame,
+      onClick: onNewGameButton,
     },
     {
       debugModeOnly: false,
@@ -258,13 +285,14 @@
 
   const onMenuButton = () => {
     mainMenuButtons = getMainMenu();
-    if (showLoadMenu || showEventMenu) {
+    if (showLoadMenu || showEventMenu || showCampaignMenu) {
       showMenu = false;
     } else {
       showMenu = !showMenu;
     }
     showLoadMenu = false;
     showEventMenu = false;
+    showCampaignMenu = false;
   };
 
   const onChangeLanguage = () => {
@@ -365,6 +393,13 @@
     footer=""
     bind:showMenu={showEventMenu}
     bind:buttons={eventMenuButtons}
+  />
+  <Menu
+    header={$t('content.menu.selectCampaign.header')}
+    debugMode={activeDebugMode}
+    footer=""
+    bind:showMenu={showCampaignMenu}
+    bind:buttons={campaignMenuButtons}
   />
   <button class="menuButton" on:click={onMenuButton}>{$t('content.menu.menuButton')}</button>
   <div class="buttonGroup">

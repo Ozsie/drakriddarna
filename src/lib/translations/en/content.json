@@ -25,6 +25,9 @@
     },
     "selectNextEvent": {
       "header": "Select Next Event"
+    },
+    "selectCampaign": {
+      "header": "Select Campaign"
     }
   },
   "actions": {
