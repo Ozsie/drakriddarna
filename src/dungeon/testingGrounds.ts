@@ -1,18 +1,13 @@
-import {
-  Colour,
-  ConditionType,
-  MonsterType,
-  SecretType,
-  Side,
-} from '../../types';
-import type { Dungeon } from '../../types';
-import { defineDungeon } from '../../dungeon/DungeonLogic';
-import { weapons } from '../../items/weapons';
-import { e1m0 } from './e1m0';
-import { magicItems } from '../../items/magicItems';
+import { Colour, ConditionType, MonsterType, SecretType, Side } from '../types';
+import type { Dungeon } from '../types';
+import { defineDungeon } from './DungeonLogic';
+import { weapons } from '../items/weapons';
+import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
+import { magicItems } from '../items/magicItems';
 
 export const testingGrounds: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.testingGrounds.name',
+  intro: 'campaign.iceDragon.testingGrounds.name',
   beaten: true,
   winConditions: [
     {

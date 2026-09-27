@@ -1,7 +1,7 @@
 import type { GameState, Hero, Position } from './types';
 import { ConditionType } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
-import { campaignIceDragonTreasure } from './campaigns/campaignIceDragonTreasure';
+import { getCampaign, DEFAULT_CAMPAIGN_ID } from './campaigns';
 import {
   monsterActions,
   type MonsterTurnOptions,
@@ -128,9 +128,10 @@ export const load = (currentState: GameState): GameState => {
   return currentState;
 };
 
-export const init = (): GameState => {
-  const campaign = structuredClone(campaignIceDragonTreasure);
+export const init = (campaignId: string = DEFAULT_CAMPAIGN_ID): GameState => {
+  const campaign = structuredClone(getCampaign(campaignId));
   const state: GameState = {
+    campaignId: campaign.id,
     heroes: campaign.heroes,
     dungeon: campaign.dungeons[0],
     difficulty: DifficultLevels.find(

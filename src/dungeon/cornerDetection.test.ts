@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { autoDetectCorners, detectCornerType } from './cornerDetection';
 import { CornerType } from '../types';
-import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
-import { e1m0 } from '../campaigns/dungeons/e1m0';
+import { testingGrounds } from './testingGrounds';
+import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 
 describe('Corner Detection Algorithm', () => {
   it('detects inner corners of a simple rectangular room', () => {

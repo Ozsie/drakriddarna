@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { e1m0 } from './e1m0';
-import { e1m1 } from './e1m1';
-import { e1m2 } from './e1m2';
-import { e1m3 } from './e1m3';
-import { e1m4 } from './e1m4';
-import { e1m5 } from './e1m5';
-import { e1m6 } from './e1m6';
+import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
+import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
+import { e1m2 } from '../campaigns/iceDragonTreasure/dungeons/e1m2';
+import { e1m3 } from '../campaigns/iceDragonTreasure/dungeons/e1m3';
+import { e1m4 } from '../campaigns/iceDragonTreasure/dungeons/e1m4';
+import { e1m5 } from '../campaigns/iceDragonTreasure/dungeons/e1m5';
+import { e1m6 } from '../campaigns/iceDragonTreasure/dungeons/e1m6';
 import { testingGrounds } from './testingGrounds';
-import { validateDungeon } from '../../dungeon/DungeonLogic';
+import { validateDungeon } from './DungeonLogic';
 
 describe('Campaign Dungeons Validation', () => {
   const allDungeons = [

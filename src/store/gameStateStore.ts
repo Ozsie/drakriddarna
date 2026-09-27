@@ -33,7 +33,7 @@ import {
   type MonsterTurnOptions,
 } from '../monsters/MonsterLogic';
 import { doMouseLogic } from '../hero/ClickInputLogic';
-import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
+import { testingGrounds } from '../dungeon/testingGrounds';
 import { getEventsForDungeon } from '../events/EventsLogic';
 import { saveReloadGuard, debouncedSaveReloadGuard } from '../core';
 

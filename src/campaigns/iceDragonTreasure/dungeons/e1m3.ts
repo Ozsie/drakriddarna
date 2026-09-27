@@ -1,13 +1,13 @@
-import type { Dungeon } from '../../types';
+import type { Dungeon } from '../../../types';
 import {
   Colour,
   ConditionType,
   MonsterType,
   SecretType,
   Side,
-} from '../../types';
-import { defineDungeon } from '../../dungeon/DungeonLogic';
-import { magicItems } from '../../items/magicItems';
+} from '../../../types';
+import { defineDungeon } from '../../../dungeon/DungeonLogic';
+import { magicItems } from '../../../items/magicItems';
 import { e1m4 } from './e1m4';
 
 export const e1m3: Dungeon = defineDungeon({

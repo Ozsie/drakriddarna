@@ -1,12 +1,12 @@
-import type { Campaign, Item } from '../types';
+import type { Campaign, Item } from '../../types';
 import { e1m0 } from './dungeons/e1m0';
 import { e1m1 } from './dungeons/e1m1';
-import { weapons } from '../items/weapons';
-import { armour } from '../items/armours';
-import { shields } from '../items/shields';
-import { Colour } from '../types';
-import { newHero } from '../hero/HeroLogic';
-import { magicItems } from '../items/magicItems';
+import { weapons } from '../../items/weapons';
+import { armour } from '../../items/armours';
+import { shields } from '../../items/shields';
+import { Colour } from '../../types';
+import { newHero } from '../../hero/HeroLogic';
+import { magicItems } from '../../items/magicItems';
 import { e1m2 } from './dungeons/e1m2';
 import { e1m3 } from './dungeons/e1m3';
 import { e1m4 } from './dungeons/e1m4';
@@ -44,6 +44,7 @@ const getItemDeck = (): Item[] => {
 };
 
 export const campaignIceDragonTreasure: Campaign = {
+  id: 'iceDragonTreasure',
   name: 'campaign.iceDragon.name',
   dungeons: [e1m0, e1m1, e1m2, e1m3, e1m4, e1m5, e1m6],
   itemDeck: getItemDeck(),
@@ -55,3 +56,5 @@ export const campaignIceDragonTreasure: Campaign = {
     newHero('Wulf', Colour.Blue),
   ],
 };
+
+export default campaignIceDragonTreasure;

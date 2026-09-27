@@ -13,6 +13,7 @@ export interface GameSettings {
 }
 
 export type GameState = {
+  campaignId?: string;
   heroes: Actor[];
   dungeon: Dungeon;
   difficulty?: Difficulty;
@@ -45,6 +46,7 @@ export type LogEvent = {
 };
 
 export type Campaign = {
+  id: string;
   name: string;
   nameTranslationKey?: string;
   dungeons: Dungeon[];

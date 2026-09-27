@@ -1,12 +1,12 @@
-import type { Dungeon } from '../../types';
+import type { Dungeon } from '../../../types';
 import {
   Colour,
   ConditionType,
   MonsterType,
   SecretType,
   Side,
-} from '../../types';
-import { defineDungeon } from '../../dungeon/DungeonLogic';
+} from '../../../types';
+import { defineDungeon } from '../../../dungeon/DungeonLogic';
 
 export const e1m6: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m6.name',

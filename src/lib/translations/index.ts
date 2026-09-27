@@ -2,6 +2,27 @@ import i18n from 'sveltekit-i18n';
 import type { Config } from 'sveltekit-i18n';
 import lang from './lang.json';
 
+// Dynamically discover translations for every campaign under src/campaigns/*/translations/{en,sv}.json
+// so that additional, self-contained campaigns automatically have their translations included
+// without touching this file.
+const campaignEnModules = import.meta.glob<{
+  default: Record<string, unknown>;
+}>('../../campaigns/*/translations/en.json');
+const campaignSvModules = import.meta.glob<{
+  default: Record<string, unknown>;
+}>('../../campaigns/*/translations/sv.json');
+
+const loadCampaignTranslations = async (
+  modules: Record<string, () => Promise<{ default: Record<string, unknown> }>>,
+): Promise<Record<string, unknown>> => {
+  const merged: Record<string, unknown> = {};
+  for (const loader of Object.values(modules)) {
+    const mod = await loader();
+    Object.assign(merged, mod.default);
+  }
+  return merged;
+};
+
 export const config: Config = {
   translations: {
     en: { lang },
@@ -26,7 +47,7 @@ export const config: Config = {
     {
       locale: 'en',
       key: 'campaign',
-      loader: async () => (await import('./en/campaign.json')).default,
+      loader: async () => loadCampaignTranslations(campaignEnModules),
     },
     {
       locale: 'en',
@@ -51,7 +72,7 @@ export const config: Config = {
     {
       locale: 'sv',
       key: 'campaign',
-      loader: async () => (await import('./sv/campaign.json')).default,
+      loader: async () => loadCampaignTranslations(campaignSvModules),
     },
     {
       locale: 'sv',

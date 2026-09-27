@@ -22,7 +22,7 @@
   } from '../store/gameStateStore';
   import { resetLiveHeroes } from '../hero/HeroLogic';
   import { addLog, DifficultLevels, endAction, getDifficulty, hasWon, init, loadState, next, save } from '../game';
-  import { testingGrounds } from '../campaigns/dungeons/testingGrounds';
+  import { testingGrounds } from '../dungeon/testingGrounds';
   import { getEventsForDungeon, selectNextEvent, shuffleEventDeck } from '../events/EventsLogic';
 
   export let state: GameState | undefined = undefined;
