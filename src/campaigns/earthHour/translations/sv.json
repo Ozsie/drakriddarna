@@ -1,0 +1,18 @@
+{
+  "earthHour": {
+    "name": "Earth Hour",
+    "randomEquipment": "Slumpmässig Utrustning",
+    "randomItem": "Slumpmässigt Föremål",
+    "trapDoor": "Fälla",
+    "e2m1": {
+      "name": "Skräckens fem gravhögar",
+      "intro": "Ondskan har fått härja fritt i de västra skogarna. Undergångsprästinnan har samlat en skara av ondskefulla män och monster omkring sig. Detta kan inte tillåtas! Du har spårat upp henne och står nu vid ingången till hennes tillhåll – Skräckens fem gravhögar.",
+      "notes": {
+        "hint1": "Två fångar är fastkedjade vid söderväggen; en död och reducerad till inget annat än ett skelett, och en drakriddare likt du själv."
+      },
+      "secrets": {
+        "note1": "Ni hör grymtandet av två orcher på andra sidan dörren."
+      }
+    }
+  }
+}
