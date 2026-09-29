@@ -165,7 +165,25 @@ export type Layout = {
   pillars?: Position[];
   pits?: Position[];
   corners: Corner[];
+  interactables?: InteractableCell[];
 };
+
+export type InteractableCell = {
+  id?: string;
+  position: Position;
+  effect: string;
+  name?: string;
+  nameTranslationKey?: string;
+  description?: string;
+  descriptionTranslationKey?: string;
+  interacted?: boolean;
+  oneTime?: boolean;
+  args?: Record<string, unknown>;
+  icon?: string;
+  triggerOn?: 'interact' | 'step' | 'both';
+};
+
+export type Interactable = InteractableCell;
 
 export type Corner = {
   position: Position;

@@ -10,6 +10,7 @@ import type {
   Item,
   Weapon,
   MoveDirection,
+  InteractableCell,
 } from '../types';
 import { Colour, ItemType, Level, Side } from '../types';
 import { weapons } from '../items/weapons';
@@ -41,6 +42,11 @@ import {
   checkForTrapDoor,
   searchForSecret,
 } from '../secrets/SecretsLogic';
+import {
+  checkForInteractable,
+  findInteractableAtHero,
+  triggerInteractable,
+} from '../interactables/InteractableLogic';
 import { executeRoomDiscoveredEffect } from '../dungeon/RoomEffectsLogic';
 import {
   BREAK_LOCK,
@@ -286,6 +292,35 @@ export const search = (state: GameState) => {
   }
 };
 
+export const interact = (state: GameState, interactable?: InteractableCell) => {
+  doReRender(state);
+  const hero: Actor | undefined = state.currentActor;
+  if (!hero) return false;
+  const movementModifier = getDifficulty(state).modifiers.movement;
+  if (!canAct(hero, movementModifier)) {
+    addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
+    return false;
+  }
+  const target = interactable ?? findInteractableAtHero(state, hero as Hero);
+  if (!target) return false;
+  const success = triggerInteractable(state, target, hero as Hero);
+  if (success) {
+    if (
+      hero.actions > 1 &&
+      hero.movement < getEffectiveMaxMovement(hero, movementModifier)
+    ) {
+      hero.actions -= 2;
+    } else {
+      hero.actions--;
+    }
+    if (hero.actions === 0) {
+      hero.movement = 0;
+    }
+    return true;
+  }
+  return false;
+};
+
 export const isBlockedByMonster = (
   state: GameState,
   newX: number,
@@ -458,6 +493,7 @@ const move = (
   hero.position.y = newY;
   checkForNote(state, hero);
   checkForItemRevealedSecret(state, hero);
+  checkForInteractable(state, hero, 'step');
   const nextToMonster = checkForNextToMonster(state, hero);
   if (nextToMonster) {
     hero.movement = 0;

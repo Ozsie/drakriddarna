@@ -119,7 +119,9 @@ export const loadState = (newState: GameState) => {
   if (!newState.campaignId || !isKnownCampaign(newState.campaignId)) {
     // eslint-disable-next-line no-console
     console.warn(
-      `Unknown or missing campaignId "${newState.campaignId}" in loaded save, falling back to "${DEFAULT_CAMPAIGN_ID}".`,
+      `Unknown or missing campaignId "${
+        newState.campaignId ?? ''
+      }" in loaded save, falling back to "${DEFAULT_CAMPAIGN_ID}".`,
     );
     newState.campaignId = DEFAULT_CAMPAIGN_ID;
   }
@@ -305,7 +307,9 @@ export const resetLevel = (currentState: GameState): GameState => {
       if (!state.campaignId || !isKnownCampaign(state.campaignId)) {
         // eslint-disable-next-line no-console
         console.warn(
-          `Unknown or missing campaignId "${state.campaignId}" in autosave, falling back to "${DEFAULT_CAMPAIGN_ID}".`,
+          `Unknown or missing campaignId "${
+            state.campaignId ?? ''
+          }" in autosave, falling back to "${DEFAULT_CAMPAIGN_ID}".`,
         );
         state.campaignId = DEFAULT_CAMPAIGN_ID;
       }

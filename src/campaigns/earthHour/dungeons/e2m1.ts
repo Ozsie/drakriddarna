@@ -1,6 +1,12 @@
-import { Colour, ConditionType, type Dungeon, MonsterType, SecretType, Side } from '../../../types';
+import {
+  Colour,
+  ConditionType,
+  type Dungeon,
+  MonsterType,
+  SecretType,
+  Side,
+} from '../../../types';
 import { defineDungeon } from '../../../dungeon/DungeonLogic';
-import { magicItems } from '../../../items/magicItems';
 
 export const e2m1: Dungeon = defineDungeon({
   name: 'campaign.earthHour.e2m1.name',
@@ -56,8 +62,6 @@ export const e2m1: Dungeon = defineDungeon({
       [SecretType.EQUIPMENT, 8, 1],
       [SecretType.MAGIC_ITEM, 9, 1],
     ],
-    notes: [
-      [7, 8, 'campaign.earthHour.e2m1.notes.hint1'],
-    ],
+    notes: [[7, 8, 'campaign.earthHour.e2m1.notes.hint1']],
   },
 });

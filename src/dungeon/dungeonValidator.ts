@@ -2,6 +2,7 @@ import type {
   Corner,
   Door,
   Dungeon,
+  InteractableCell,
   ItemLocation,
   Layout,
   Monster,
@@ -219,7 +220,27 @@ export const validateLayout = (
     );
   });
 
-  // 8. Pits & Pillars
+  // 8. Interactables
+  const seenInteractableIds = new Set<string>();
+  (layout.interactables || []).forEach((interactable: InteractableCell) => {
+    checkPositionInBounds(
+      interactable.position,
+      `Interactable '${interactable.name || interactable.effect}'`,
+    );
+    if (interactable.id) {
+      if (seenInteractableIds.has(interactable.id)) {
+        errors.push({
+          type: 'duplicate_id',
+          message: `Duplicate interactable id '${interactable.id}'.`,
+          position: interactable.position,
+          entity: interactable.name || interactable.effect,
+        });
+      }
+      seenInteractableIds.add(interactable.id);
+    }
+  });
+
+  // 9. Pits & Pillars
   (layout.pits || []).forEach((pit: Position) => {
     checkPositionInBounds(pit, 'Pit');
   });
@@ -228,7 +249,7 @@ export const validateLayout = (
     checkPositionInBounds(pillar, 'Pillar');
   });
 
-  // 9. Corners
+  // 10. Corners
   (layout.corners || []).forEach((corner: Corner) => {
     if (isOutOfBounds(corner.position)) {
       errors.push({

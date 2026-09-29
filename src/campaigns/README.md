@@ -6,15 +6,16 @@ translations) that is automatically discovered and registered by
 `src/campaigns/index.ts` — no core code needs to be touched to add a new
 campaign.
 
-Items, magic items, monsters and world events are **global** and shared by
-every campaign (`src/items/*`, `src/monsters/*`, `src/events/*`). A campaign
+Items, magic items, monsters, interactables and world events are **global** and shared by
+every campaign (`src/items/*`, `src/monsters/*`, `src/events/*`, `src/interactables/*`). A campaign
 normally just imports these shared modules to build its `itemDeck` /
 `magicItemDeck` and places the built-in monster types in its dungeons, but it
-can also define brand-new items, monsters and events with brand-new
+can also define brand-new items, monsters, events and interactable effects with brand-new
 behaviour that live entirely inside its own folder (see
 [Adding new items](#adding-new-items-optional),
-[Adding new monsters](#adding-new-monsters-optional) and
-[Adding new events](#adding-new-events-optional) below).
+[Adding new monsters](#adding-new-monsters-optional),
+[Adding new events](#adding-new-events-optional) and
+[Adding interactable cells](#adding-interactable-cells-optional) below).
 
 ## Directory layout
 
@@ -53,7 +54,10 @@ src/campaigns/
    - `layout: Layout` — `grid` (the room/corridor ASCII layout), `doors`,
      `monsters` (placed via `createMonster`, see
      [Adding new monsters](#adding-new-monsters-optional)), `secrets`,
-     `notes`, `items` (placed via `ItemLocation`), `corridors`, `corners`.
+     `notes`, `items` (placed via `ItemLocation`), `interactables` (placed
+     via `defineLayout` or `parseTileMap`, see
+     [Adding interactable cells](#adding-interactable-cells-optional)),
+     `corridors`, `corners`.
    - `startingPositions` — where heroes are placed when entering.
    - `winConditions: WinCondition[]` — one or more `ConditionType`s (e.g.
      `KILL_ALL`, `REACH_CELL`, `SECRET_FOUND`) that must be `fulfilled` to
@@ -432,6 +436,160 @@ registerMonsterAbility('Bog Troll', POISON_CLOUD);
 Remember to add the `logs.monster.poisonCloud` message key to your campaign's
 own `translations/logs.en.json`/`logs.sv.json` (see
 [Adding new log messages](#adding-new-log-messages-optional) below).
+
+## Adding interactable cells (optional)
+
+Dungeon layouts can include **interactable cells** (`InteractableCell`) that
+trigger custom or built-in effects when heroes interact with them (via the radial
+menu when standing on the tile) or step on them. Like items, monsters and
+events, interactable effects use an open string-keyed registry
+(`src/interactables/InteractableLogic.ts`), allowing campaigns to introduce
+unique dungeon mechanics without editing shared engine code.
+
+### 1. Built-in effect handlers
+
+The engine includes built-in interactable effect handlers:
+
+- `'addHero'`: Recruits an ally into the player's party. Supports `args`:
+  - `name` / `heroName`: name of the hero (defaults to `'Allied Hero'`).
+  - `colour` / `color`: `Colour` enum value (defaults to `Colour.Yellow`).
+  - `hero`: optional full `Hero` object if custom stats or equipment are needed.
+  - `position`: optional spawn position (defaults to the interactable's position).
+- `'removeTrapsInRoom'`: Disarms trapped doors and reveals/disarms hidden trap doors
+  within the interactable's room (or the room specified in `args.room`).
+
+### 2. Placing interactable cells in a dungeon
+
+Interactables can be defined in dungeon files using either `defineLayout`
+(object or tuple shorthand) or `parseTileMap`:
+
+#### Using `defineLayout` (tuple or object format)
+
+```ts
+import { defineLayout } from '../../../dungeon/dungeonParser';
+import { Colour } from '../../../types';
+
+export const myDungeonLayout = defineLayout({
+  grid: [
+    'AAAA',
+    'AAAA',
+    'AAAA',
+  ],
+  doors: [/* ... */],
+  interactables: [
+    // Tuple shorthand: [x, y, effect]
+    [1, 1, 'removeTrapsInRoom'],
+
+    // Tuple with options/arguments: [x, y, effect, options]
+    [
+      2,
+      1,
+      'addHero',
+      {
+        name: 'Fearik',
+        colour: Colour.Yellow,
+        oneTime: true,
+      },
+    ],
+
+    // Object format
+    {
+      x: 3,
+      y: 1,
+      effect: 'leverSecretDoor',
+      id: 'secret_lever_1',
+      name: 'campaign.myNewCampaign.interactables.lever.name',
+      description: 'campaign.myNewCampaign.interactables.lever.description',
+      oneTime: true,
+      triggerOn: 'interact', // 'interact' | 'step' | 'both'
+      args: { targetSecretId: 'hidden_door_1' },
+    },
+  ],
+});
+```
+
+#### Using `parseTileMap`
+
+```ts
+import { parseTileMap } from '../../../dungeon/dungeonParser';
+import { Colour } from '../../../types';
+
+const tileMap = parseTileMap(
+  [
+    '######',
+    '#..L.#',
+    '#..H.#',
+    '######',
+  ],
+  {
+    '#': { room: 'A' },
+    '.': { room: 'A' },
+    'L': {
+      room: 'A',
+      interactable: {
+        effect: 'removeTrapsInRoom',
+        name: 'Trap Disarm Lever',
+        oneTime: true,
+      },
+    },
+    'H': {
+      room: 'A',
+      interactable: {
+        effect: 'addHero',
+        args: { name: 'Siedel', colour: Colour.Green },
+        oneTime: true,
+      },
+    },
+  },
+);
+```
+
+### 3. Creating custom interactable effects
+
+To introduce a new interactable effect:
+
+1. Pick a unique string key for the effect.
+2. Call `registerInteractableEffect(name, handler)` (exported from
+   `src/interactables/InteractableLogic.ts`) at module load.
+3. The handler function receives `(state: GameState, interactable: InteractableCell, actor?: Actor | Hero)`
+   and can modify state, trigger secrets, unlock doors, award items, or write to the action log.
+
+#### Example: `interactables/customInteractables.ts`
+
+```ts
+import type { Actor, GameState, Hero, InteractableCell } from '../../../types';
+import { registerInteractableEffect } from '../../../interactables/InteractableLogic';
+import { addLog, i18n } from '../../../core';
+
+export const HEALING_FOUNTAIN = 'healingFountain';
+
+registerInteractableEffect(
+  HEALING_FOUNTAIN,
+  (state: GameState, interactable: InteractableCell, actor?: Actor | Hero) => {
+    if (actor) {
+      actor.health = actor.maxHealth;
+      addLog(state, 'logs.interactable.healingFountain', {
+        hero: i18n(actor.name),
+      });
+    }
+    return true;
+  },
+);
+```
+
+### Interactable properties reference
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `position` / `x, y` | `Position` or numbers | Coordinate of the interactable cell on the dungeon grid. |
+| `effect` | `string` | Key identifying the registered effect handler to execute. |
+| `id` | `string` (optional) | Optional unique identifier for referencing the interactable. |
+| `name` / `nameTranslationKey` | `string` (optional) | Name or translation key for UI and logs. |
+| `description` / `descriptionTranslationKey` | `string` (optional) | Description or translation key for inspect/logs. |
+| `oneTime` | `boolean` (default: `true`) | When `true`, cannot be activated again once triggered. |
+| `triggerOn` | `'interact' \| 'step' \| 'both'` (default: `'interact'`) | When to trigger: player radial menu action (`'interact'`), walking onto tile (`'step'`), or either (`'both'`). |
+| `args` | `Record<string, unknown>` (optional) | Custom arguments passed to the effect handler. |
+| `icon` | `string` (optional) | Optional icon indicator identifier for rendering. |
 
 ## Adding new log messages (optional)
 

@@ -101,7 +101,10 @@ describe('getAvailableRadialActions', () => {
 
     const entries = getAvailableRadialActions(state, hero);
 
-    expect(entries.map((e) => e.action)).toEqual([RadialAction.SEARCH, RadialAction.NEXT]);
+    expect(entries.map((e) => e.action)).toEqual([
+      RadialAction.SEARCH,
+      RadialAction.NEXT,
+    ]);
   });
 
   it('returns PICK_LOCK and SEARCH when standing on a locked door with full action', () => {
@@ -220,6 +223,6 @@ describe('getAvailableRadialActions', () => {
 
     const entries = getAvailableRadialActions(state, hero);
 
-    expect(entries).toEqual([ { action: 'NEXT' } ]);
+    expect(entries).toEqual([{ action: 'NEXT' }]);
   });
 });

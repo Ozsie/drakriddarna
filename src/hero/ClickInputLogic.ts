@@ -8,7 +8,14 @@ import {
   isWalkable,
 } from '../core';
 import { doorAsActor, takeDamage } from '../core';
-import type { ItemLocation, GameState, Hero, Position, Door } from '../types';
+import type {
+  ItemLocation,
+  GameState,
+  Hero,
+  Position,
+  Door,
+  InteractableCell,
+} from '../types';
 import { ItemType, Side } from '../types';
 import {
   checkForTrapDoor,
@@ -16,6 +23,7 @@ import {
   removeFoundItemFromDeck,
   removeFoundMagicItemFromDeck,
 } from '../secrets/SecretsLogic';
+import { checkForInteractable } from '../interactables/InteractableLogic';
 import {
   attack,
   canAct,
@@ -24,6 +32,7 @@ import {
   checkForNote,
   consumeActions,
   hasGiantsGlove,
+  interact,
   isBlockedByHero,
   isBlockedByMonster,
   openDoor,
@@ -41,11 +50,6 @@ import {
   findDoorsAtHero,
 } from './RadialMenuLogic';
 import { radialMenuStore } from '../store/radialMenuStore';
-import {
-  gameStateStore,
-  isTurnInProgress,
-  nextTurn,
-} from '../store/gameStateStore';
 import { get } from 'svelte/store';
 
 export const distanceInGrid = (a: Position, b: Position) => {
@@ -175,6 +179,7 @@ export const executeRadialAction = (
   state: GameState,
   action: RadialAction,
   door?: Door,
+  interactable?: InteractableCell,
 ) => {
   const hero = state.currentActor as Hero;
   switch (action) {
@@ -195,15 +200,23 @@ export const executeRadialAction = (
       }
       break;
     }
+    case RadialAction.INTERACT: {
+      interact(state, interactable);
+      break;
+    }
     case RadialAction.NEXT: {
-      if (get(isTurnInProgress)) return;
-      nextTurn()
-        .then((newState) => {
-          gameStateStore.set(newState);
-        })
-        .catch(() => {
-          addLog(state, 'logs.heroAction.turnFailed');
-        });
+      void import('../store/gameStateStore').then(
+        ({ isTurnInProgress, nextTurn, gameStateStore }) => {
+          if (get(isTurnInProgress)) return;
+          nextTurn()
+            .then((newState) => {
+              gameStateStore.set(newState);
+            })
+            .catch(() => {
+              addLog(state, 'logs.heroAction.turnFailed');
+            });
+        },
+      );
       break;
     }
   }
@@ -233,6 +246,7 @@ export const onTargetCell = (state: GameState, target: Position) => {
       hero.movement = 0;
       checkForNote(state, hero);
       checkForNextToMonster(state, hero);
+      checkForInteractable(state, hero, 'step');
       addLog(state, 'logs.events.hexagramTeleport', { hero: i18n(hero.name) });
       if (checkForTrapDoor(state)) {
         return;
@@ -259,6 +273,7 @@ export const onTargetCell = (state: GameState, target: Position) => {
         recordActorStep(hero, cell);
         hero.position = cell;
         checkForNote(state, hero);
+        checkForInteractable(state, hero, 'step');
         const nextToMonster = checkForNextToMonster(state, hero);
         if (nextToMonster) {
           hero.movement = 0;

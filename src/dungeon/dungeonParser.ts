@@ -2,6 +2,7 @@ import type {
   Corner,
   Door,
   Dungeon,
+  InteractableCell,
   Item,
   ItemLocation,
   Layout,
@@ -142,6 +143,51 @@ export type DeclarativeItem =
   | DeclarativeItemObject
   | DeclarativeItemTuple;
 
+export type DeclarativeInteractableObject = {
+  x: number;
+  y: number;
+  effect: string;
+  id?: string;
+  name?: string;
+  nameTranslationKey?: string;
+  description?: string;
+  descriptionTranslationKey?: string;
+  interacted?: boolean;
+  oneTime?: boolean;
+  args?: Record<string, unknown>;
+  icon?: string;
+  triggerOn?: 'interact' | 'step' | 'both';
+};
+
+export type DeclarativeInteractableTuple =
+  | [x: number, y: number, effect: string]
+  | [
+      x: number,
+      y: number,
+      effect: string,
+      argsOrOptions?:
+        | Record<string, unknown>
+        | {
+            id?: string;
+            name?: string;
+            nameTranslationKey?: string;
+            description?: string;
+            descriptionTranslationKey?: string;
+            oneTime?: boolean;
+            interacted?: boolean;
+            args?: Record<string, unknown>;
+            icon?: string;
+            triggerOn?: 'interact' | 'step' | 'both';
+            [key: string]: unknown;
+          },
+      id?: string,
+    ];
+
+export type DeclarativeInteractable =
+  | InteractableCell
+  | DeclarativeInteractableObject
+  | DeclarativeInteractableTuple;
+
 export type DeclarativeLayout = {
   grid: string[];
   doors?: DeclarativeDoor[];
@@ -149,6 +195,7 @@ export type DeclarativeLayout = {
   secrets?: DeclarativeSecret[];
   notes?: DeclarativeNote[];
   items?: DeclarativeItem[];
+  interactables?: DeclarativeInteractable[];
   corridors?: string[];
   pillars?: DeclarativePosition[];
   pits?: DeclarativePosition[];
@@ -403,6 +450,124 @@ export const parseItem = (itemDef: DeclarativeItem): ItemLocation => {
   return createEquipment(itemDef.x, itemDef.y, itemDef.item);
 };
 
+export const parseInteractable = (
+  interactableDef: DeclarativeInteractable,
+): InteractableCell => {
+  if ('position' in interactableDef && 'effect' in interactableDef) {
+    return interactableDef;
+  }
+
+  if (Array.isArray(interactableDef)) {
+    const [x, y, effect, argsOrOptions, id] = interactableDef;
+    let name: string | undefined;
+    let nameTranslationKey: string | undefined;
+    let description: string | undefined;
+    let descriptionTranslationKey: string | undefined;
+    let oneTime = true;
+    let interacted = false;
+    let args: Record<string, unknown> | undefined;
+    let icon: string | undefined;
+    let triggerOn: 'interact' | 'step' | 'both' = 'interact';
+    let interactableId = id;
+
+    if (argsOrOptions && typeof argsOrOptions === 'object') {
+      const opts = argsOrOptions as Record<string, unknown>;
+      if (
+        'oneTime' in opts ||
+        'interacted' in opts ||
+        'triggerOn' in opts ||
+        'icon' in opts ||
+        'name' in opts ||
+        'description' in opts ||
+        'id' in opts ||
+        'args' in opts
+      ) {
+        if (opts.id && typeof opts.id === 'string') interactableId = opts.id;
+        if (opts.name && typeof opts.name === 'string') name = opts.name;
+        if (
+          opts.nameTranslationKey &&
+          typeof opts.nameTranslationKey === 'string'
+        )
+          nameTranslationKey = opts.nameTranslationKey;
+        if (opts.description && typeof opts.description === 'string')
+          description = opts.description;
+        if (
+          opts.descriptionTranslationKey &&
+          typeof opts.descriptionTranslationKey === 'string'
+        )
+          descriptionTranslationKey = opts.descriptionTranslationKey;
+        if (typeof opts.oneTime === 'boolean') oneTime = opts.oneTime;
+        if (typeof opts.interacted === 'boolean') interacted = opts.interacted;
+        if (opts.icon && typeof opts.icon === 'string') icon = opts.icon;
+        if (
+          opts.triggerOn === 'interact' ||
+          opts.triggerOn === 'step' ||
+          opts.triggerOn === 'both'
+        ) {
+          triggerOn = opts.triggerOn;
+        }
+        if (opts.args && typeof opts.args === 'object') {
+          args = opts.args as Record<string, unknown>;
+        }
+      } else {
+        args = opts;
+      }
+    }
+
+    return {
+      position: { x, y },
+      effect,
+      ...(interactableId ? { id: interactableId } : {}),
+      ...(name ? { name, nameTranslationKey: nameTranslationKey ?? name } : {}),
+      ...(description
+        ? {
+            description,
+            descriptionTranslationKey: descriptionTranslationKey ?? description,
+          }
+        : {}),
+      oneTime,
+      interacted,
+      ...(args ? { args } : {}),
+      ...(icon ? { icon } : {}),
+      triggerOn,
+    };
+  }
+
+  const {
+    x,
+    y,
+    effect,
+    id,
+    name,
+    nameTranslationKey,
+    description,
+    descriptionTranslationKey,
+    oneTime = true,
+    interacted = false,
+    args,
+    icon,
+    triggerOn = 'interact',
+  } = interactableDef;
+
+  return {
+    position: { x, y },
+    effect,
+    ...(id ? { id } : {}),
+    ...(name ? { name, nameTranslationKey: nameTranslationKey ?? name } : {}),
+    ...(description
+      ? {
+          description,
+          descriptionTranslationKey: descriptionTranslationKey ?? description,
+        }
+      : {}),
+    oneTime,
+    interacted,
+    ...(args ? { args } : {}),
+    ...(icon ? { icon } : {}),
+    triggerOn,
+  };
+};
+
 export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
   grid: layoutDef.grid,
   doors: (layoutDef.doors ?? []).map(parseDoor),
@@ -410,6 +575,7 @@ export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
   secrets: (layoutDef.secrets ?? []).map(parseSecret),
   notes: (layoutDef.notes ?? []).map(parseNote),
   items: (layoutDef.items ?? []).map(parseItem),
+  interactables: (layoutDef.interactables ?? []).map(parseInteractable),
   corridors: layoutDef.corridors ?? [],
   pillars: (layoutDef.pillars ?? []).map(parsePosition),
   pits: (layoutDef.pits ?? []).map(parsePosition),
@@ -454,6 +620,18 @@ export interface TileMapLegend {
     secret?: { type: SecretType; name?: string; item?: Item };
     item?: Item;
     note?: string;
+    interactable?: {
+      effect: string;
+      name?: string;
+      nameTranslationKey?: string;
+      description?: string;
+      descriptionTranslationKey?: string;
+      id?: string;
+      args?: Record<string, unknown>;
+      oneTime?: boolean;
+      icon?: string;
+      triggerOn?: 'interact' | 'step' | 'both';
+    };
     pit?: boolean;
     pillar?: boolean;
     startingPosition?: boolean;
@@ -476,6 +654,7 @@ export const parseTileMap = (
   secrets: Secret[];
   notes: Note[];
   items: ItemLocation[];
+  interactables: InteractableCell[];
   pits: Position[];
   pillars: Position[];
   startingPositions: Position[];
@@ -485,6 +664,7 @@ export const parseTileMap = (
   const secrets: Secret[] = [];
   const notes: Note[] = [];
   const items: ItemLocation[] = [];
+  const interactables: InteractableCell[] = [];
   const pits: Position[] = [];
   const pillars: Position[] = [];
   const startingPositions: Position[] = [];
@@ -533,6 +713,25 @@ export const parseTileMap = (
         if (mapping.note) {
           notes.push(parseNote({ x, y, message: mapping.note }));
         }
+        if (mapping.interactable) {
+          interactables.push(
+            parseInteractable({
+              x,
+              y,
+              effect: mapping.interactable.effect,
+              name: mapping.interactable.name,
+              nameTranslationKey: mapping.interactable.nameTranslationKey,
+              description: mapping.interactable.description,
+              descriptionTranslationKey:
+                mapping.interactable.descriptionTranslationKey,
+              id: mapping.interactable.id,
+              args: mapping.interactable.args,
+              oneTime: mapping.interactable.oneTime,
+              icon: mapping.interactable.icon,
+              triggerOn: mapping.interactable.triggerOn,
+            }),
+          );
+        }
         if (mapping.door) {
           doors.push(
             parseDoor({
@@ -559,6 +758,7 @@ export const parseTileMap = (
     secrets,
     notes,
     items,
+    interactables,
     pits,
     pillars,
     startingPositions,

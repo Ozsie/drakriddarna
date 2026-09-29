@@ -12,6 +12,7 @@
     background,
     renderDoors,
     renderGrid,
+    renderInteractables,
     renderPillars,
     renderPortal,
     renderSecrets,
@@ -119,6 +120,7 @@
     renderGrid(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderSecrets(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderItems(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
+    renderInteractables(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderDoors(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderPillars(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderPortal(ctx, cellSize, activeState, activeDebugMode ?? false);

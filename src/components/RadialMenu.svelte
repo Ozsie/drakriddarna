@@ -5,7 +5,8 @@
   import { gameStateStore } from '../store/gameStateStore';
   import { t } from '$lib/translations';
 
-  import type { GameState, Door } from '../types';
+  import type { GameState } from '../types';
+  import type { RadialMenuEntry } from '../hero/RadialMenuLogic';
 
   export let cellSize: number;
   export let state: GameState | undefined = undefined;
@@ -15,6 +16,7 @@
     [RadialAction.PICK_LOCK]: '🗝️',
     [RadialAction.OPEN_DOOR]: '🚪',
     [RadialAction.PICK_UP_ITEM]: '🎒',
+    [RadialAction.INTERACT]: '⚡',
     [RadialAction.NEXT]: '→'
   };
 
@@ -23,6 +25,7 @@
     [RadialAction.PICK_LOCK]: 'content.radialMenu.pickLock',
     [RadialAction.OPEN_DOOR]: 'content.radialMenu.openDoor',
     [RadialAction.PICK_UP_ITEM]: 'content.radialMenu.pickUpItem',
+    [RadialAction.INTERACT]: 'content.radialMenu.interact',
     [RadialAction.NEXT]: 'content.radialMenu.next',
   };
 
@@ -33,9 +36,9 @@
 
   const close = () => radialMenuStore.set(null);
 
-  const onSelect = (action: RadialAction, door?: Door) => {
+  const onSelect = (entry: RadialMenuEntry) => {
     const activeState = state ?? $gameStateStore;
-    executeRadialAction(activeState, action, door);
+    executeRadialAction(activeState, entry.action, entry.door, entry.interactable);
     if (!state) {
       gameStateStore.set(activeState);
     }
@@ -51,10 +54,10 @@
       <button
         class="radialButton"
         style="left: {x}px; top: {y}px;"
-        title={$t(labels[entry.action]) + (entry.door ? ` (${entry.door.side})` : '')}
-        on:click={() => onSelect(entry.action, entry.door)}
+        title={$t(entry.interactable?.nameTranslationKey ?? labels[entry.action]) + (entry.door ? ` (${entry.door.side})` : '')}
+        on:click={() => onSelect(entry)}
       >
-        {icons[entry.action]}
+        {entry.interactable?.icon ?? icons[entry.action]}
       </button>
     {/each}
   </div>

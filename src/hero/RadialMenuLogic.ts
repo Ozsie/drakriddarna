@@ -1,20 +1,29 @@
-import type { GameState, Hero, Door, ItemLocation } from '../types';
+import type {
+  GameState,
+  Hero,
+  Door,
+  ItemLocation,
+  InteractableCell,
+} from '../types';
 import { isSamePosition } from '../core';
 import { canAct } from '../core';
 import { canOpenDoor } from './HeroLogic';
 import { BREAK_LOCK } from '../items/ItemLogic';
+import { findInteractableAtHero } from '../interactables/InteractableLogic';
 
 export enum RadialAction {
   SEARCH = 'SEARCH',
   PICK_LOCK = 'PICK_LOCK',
   OPEN_DOOR = 'OPEN_DOOR',
   PICK_UP_ITEM = 'PICK_UP_ITEM',
+  INTERACT = 'INTERACT',
   NEXT = 'NEXT',
 }
 
 export type RadialMenuEntry = {
   action: RadialAction;
   door?: Door;
+  interactable?: InteractableCell;
 };
 
 export const findDoorAtHero = (
@@ -50,6 +59,11 @@ export const getAvailableRadialActions = (
 
   if (findItemAtHero(state, hero)) {
     entries.push({ action: RadialAction.PICK_UP_ITEM });
+  }
+
+  const interactable = findInteractableAtHero(state, hero);
+  if (interactable && canAct(hero)) {
+    entries.push({ action: RadialAction.INTERACT, interactable });
   }
 
   for (const door of doors) {
