@@ -3,6 +3,7 @@ import {
   canSearchThrough,
   findCell,
   getDist,
+  hasLineOfSight,
   isDoorEdge,
   isNeighbouring,
   isSamePosition,
@@ -13,7 +14,7 @@ import {
   EMPTY,
   WALL,
 } from './grid';
-import type { Door, Layout } from '../types';
+import type { Door, GameState, Layout } from '../types';
 import { Side } from '../types';
 
 describe('grid module', () => {
@@ -98,6 +99,7 @@ describe('grid module', () => {
     x: 1,
     y: 1,
     side: Side.RIGHT,
+    reinforced: false,
     trapAttacks: 0,
     ...overrides,
   });
@@ -180,5 +182,27 @@ describe('grid module', () => {
     expect(canSearchThrough(layout, { x: 0, y: 0 }, { x: 1, y: 1 })).toBe(
       false,
     );
+  });
+
+  it('hasLineOfSight disallows walking/seeing diagonally through a wall corner', () => {
+    const grid = ['####', '#A##', '##I#', '####'];
+    const state = {
+      dungeon: {
+        layout: {
+          grid,
+          monsters: [],
+          pits: [],
+          pillars: [],
+        },
+      },
+      heroes: [],
+    } as unknown as GameState;
+
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 2, y: 2 }, 48, state, true),
+    ).toBe(false);
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 2, y: 2 }, 48, state, false),
+    ).toBe(false);
   });
 });
