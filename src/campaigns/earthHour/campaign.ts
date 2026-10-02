@@ -6,6 +6,7 @@ import { shields } from '../../items/shields';
 import { Colour } from '../../types';
 import { newHero } from '../../hero/HeroLogic';
 import { magicItems } from '../../items/magicItems';
+import { e2m2 } from './dungeons/e2m2';
 
 const getMagicItemDeck = (): Item[] => {
   const itemDeck: Item[] = [];
@@ -40,7 +41,7 @@ const getItemDeck = (): Item[] => {
 export const campaignEarthHour: Campaign = {
   id: 'earthHour',
   name: 'campaign.earthHour.name',
-  dungeons: [e2m1],
+  dungeons: [e2m1, e2m2],
   itemDeck: getItemDeck(),
   magicItemDeck: getMagicItemDeck(),
   heroes: [

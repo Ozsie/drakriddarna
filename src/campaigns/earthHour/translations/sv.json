@@ -15,6 +15,23 @@
       "secrets": {
         "note1": "Ni hör grymtandet av två orcher på andra sidan dörren."
       }
+    },
+    "e2m2": {
+      "name": "Rötans djup",
+      "intro": "Hissplattformen dundrar nedåt. Tyngden från den omgivande jorden och stenen vilar tungt över dig medan en stank svider i näsborrarna. När plattformen stannar med ett dån är du säker på att du har nått Rötans djup.",
+      "interactables": {
+        "lever1": "Järnspak",
+        "lever2": "Rostig spak",
+        "lever3": "Tung spak"
+      },
+      "notes": {
+        "exit": "Kraftiga metallstänger blockerar vägen genom denna dörr. En mekanism utformad som en treögd spindel hänger ovanför dörren. De röda ögonen tycks trotsa riddarens framfart!",
+        "troll": "Du hör hur något stort smaskar på andra sidan dörren."
+      },
+      "logs": {
+        "leverPulled": "{{hero}} drog i en spak. {{remaining}} spak(ar) återstår.",
+        "allLeversPulled": "{{hero}} drog i den sista spaken. Ett tungt, malande ljud ekar när den låsta dörren låses upp!"
+      }
     }
   }
 }

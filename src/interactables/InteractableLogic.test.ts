@@ -17,7 +17,10 @@ import {
   registerInteractableEffect,
   triggerInteractable,
 } from './InteractableLogic';
-import { getAvailableRadialActions, RadialAction, } from '../hero/RadialMenuLogic';
+import {
+  getAvailableRadialActions,
+  RadialAction,
+} from '../hero/RadialMenuLogic';
 import { defineDungeon, parseTileMap } from '../dungeon/dungeonParser';
 import { validateLayout } from '../dungeon/dungeonValidator';
 import { interact, newHero, search } from '../hero/HeroLogic';

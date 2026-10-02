@@ -15,6 +15,7 @@ import {
   registerInteractableEffect,
 } from '../../../dungeon/DungeonLogic';
 import { addLog, findCell, i18n } from '../../../core';
+import { e2m2 } from './e2m2';
 
 export const CALL_ELEVATOR = 'CALL_ELEVATOR';
 
@@ -50,6 +51,7 @@ registerInteractableEffect(
 export const e2m1: Dungeon = defineDungeon({
   name: 'campaign.earthHour.e2m1.name',
   intro: 'campaign.earthHour.e2m1.intro',
+  nextDungeon: e2m2,
   winConditions: [
     {
       type: ConditionType.REACH_CELL,

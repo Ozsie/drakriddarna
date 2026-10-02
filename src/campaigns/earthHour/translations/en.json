@@ -15,6 +15,23 @@
       "secrets": {
         "note1": "You hear the grunting of two orcs on the other side of the door."
       }
+    },
+    "e2m2": {
+      "name": "The Rot Bowels",
+      "intro": "The elevator platform rumbles ever downward. The weight of the surrounding dirt and stone bears down on you as a stench sting your nostrils. As the platform rumbles to a stop you are sure you have entered the Rot Bowels.",
+      "interactables": {
+        "lever1": "Iron Lever",
+        "lever2": "Rusty Lever",
+        "lever3": "Heavy Lever"
+      },
+      "notes": {
+        "exit": "Thick metal bars block passage through this door. A mechanism stylized like a three-eyed spider hangs over the door. The red eyes seem to defy the knights progress!",
+        "troll": "You can hear the munching of something large on the other side of the door."
+      },
+      "logs": {
+        "leverPulled": "{{hero}} pulled a lever. {{remaining}} lever(s) remain.",
+        "allLeversPulled": "{{hero}} pulled the final lever. A heavy grinding sound echoes as the locked door unlocks!"
+      }
     }
   }
 }
