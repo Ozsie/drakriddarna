@@ -4,10 +4,38 @@ import type {
   Hero,
   InteractableCell,
   Position,
+  TurnEvent,
 } from '../types';
 import { Colour, SecretType } from '../types';
-import { addLog, findCell, i18n, isSamePosition } from '../core';
-import { newHero } from '../hero/HeroLogic';
+import {
+  addLog,
+  clearActorAnimations,
+  doReRender,
+  findCell,
+  i18n,
+  isSamePosition,
+} from '../core';
+import {
+  levelUp,
+  newHero,
+  replaceDeadHeroes,
+  resetLiveHeroes,
+  rewardLiveHeroes,
+} from '../hero/HeroLogic';
+import { resetOnNextDungeon } from '../items/ItemLogic';
+import { getEventsForDungeon } from '../events/EventsLogic';
+
+let getCampaignDeck:
+  | ((campaignId: string) => TurnEvent[] | undefined)
+  | undefined;
+
+export const setCampaignDeckProvider = (
+  provider: (campaignId: string) => TurnEvent[] | undefined,
+): void => {
+  getCampaignDeck = provider;
+};
+
+export const NEXT_DUNGEON = 'nextDungeon';
 
 export type InteractableEffectHandler = (
   state: GameState,
@@ -103,7 +131,56 @@ export const interactableEffects: Record<string, InteractableEffectHandler> = {
 
     return true;
   },
+
+  nextDungeon: (state: GameState, interactable: InteractableCell) => {
+    state.dungeon.beaten = true;
+    addLog(state, 'logs.clearedDungeon', { name: i18n(state.dungeon.name) });
+
+    const nextDungeon =
+      (interactable.args?.nextDungeon as typeof state.dungeon | undefined) ??
+      state.dungeon.nextDungeon;
+
+    if (!nextDungeon) {
+      addLog(state, 'logs.allConditionsFulfilled');
+      return true;
+    }
+
+    addLog(state, 'logs.moveToNext', {
+      name: i18n(nextDungeon.name),
+    });
+
+    clearActorAnimations();
+    state.dungeon = nextDungeon;
+    state.actionLog = [
+      {
+        key: 'logs.youHaveReached',
+        properties: { name: i18n(state.dungeon.name) },
+        turn: 0,
+      },
+    ];
+
+    const campaignDeck =
+      state.campaignId && getCampaignDeck
+        ? getCampaignDeck(state.campaignId)
+        : undefined;
+    state.eventDeck = getEventsForDungeon(state.dungeon, campaignDeck);
+    state.turnCount = 0;
+    doReRender(state);
+    rewardLiveHeroes(state);
+    levelUp(state);
+    replaceDeadHeroes(state);
+    resetLiveHeroes(state);
+    resetOnNextDungeon(state);
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('autosave', JSON.stringify(state));
+    }
+
+    return true;
+  },
 };
+
+interactableEffects['NEXT_SCENARIO'] = interactableEffects.nextDungeon;
 
 export const registerInteractableEffect = (
   name: string,
@@ -121,6 +198,9 @@ export const triggerInteractable = (
   interactable: InteractableCell,
   actor?: Actor | Hero,
 ): boolean => {
+  if (interactable.secret) {
+    return false;
+  }
   if (interactable.oneTime && interactable.interacted) {
     return false;
   }
@@ -142,7 +222,8 @@ export const findInteractableAtHero = (
   state.dungeon.layout.interactables?.find(
     (item) =>
       isSamePosition(item.position, hero.position) &&
-      (!item.oneTime || !item.interacted),
+      (!item.oneTime || !item.interacted) &&
+      !item.secret,
   );
 
 export const findInteractablesAt = (

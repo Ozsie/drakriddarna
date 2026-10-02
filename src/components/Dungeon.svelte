@@ -1,5 +1,12 @@
 <script lang="ts">
-  import type { Actor, Door, GameState, Monster, Secret } from '../types';
+  import type {
+    Actor,
+    Door,
+    GameState,
+    InteractableCell,
+    Monster,
+    Secret,
+  } from '../types';
   import { onMount, onDestroy } from 'svelte';
   import groundSprites from '$lib/DungeonTiles.png';
   import actorSprites from '$lib/Dungeon_Character_3.png';
@@ -69,6 +76,11 @@
       .map((dr: Door) => `${dr.x},${dr.y},${dr.open},${dr.locked},${dr.hidden}`)
       .join(';')}|${d.layout.secrets
       .map((s: Secret) => `${s.position.x},${s.position.y},${s.found}`)
+      .join(';')}|${(d.layout.interactables ?? [])
+      .map(
+        (i: InteractableCell) =>
+          `${i.position.x},${i.position.y},${i.secret},${i.interacted}`,
+      )
       .join(';')}|${d.layout.items.length}|${
       d.layout.pits?.length ?? 0
     }|${d.portal?.x},${d.portal?.y}|${size}|${dbg}`;

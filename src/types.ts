@@ -181,6 +181,7 @@ export type InteractableCell = {
   args?: Record<string, unknown>;
   icon?: string;
   triggerOn?: 'interact' | 'step' | 'both';
+  secret?: boolean;
 };
 
 export type Interactable = InteractableCell;

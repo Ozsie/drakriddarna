@@ -457,6 +457,9 @@ The engine includes built-in interactable effect handlers:
   - `position`: optional spawn position (defaults to the interactable's position).
 - `'removeTrapsInRoom'`: Disarms trapped doors and reveals/disarms hidden trap doors
   within the interactable's room (or the room specified in `args.room`).
+- `'nextDungeon'`: Completes the current dungeon, rewards and levels up party members,
+  resets scenario-bound items, and transitions to the chained `state.dungeon.nextDungeon`
+  (or `args.nextDungeon`). Supports `triggerOn: 'step'`, `'interact'`, or `'both'`.
 
 ### 2. Placing interactable cells in a dungeon
 
@@ -588,6 +591,7 @@ registerInteractableEffect(
 | `description` / `descriptionTranslationKey` | `string` (optional) | Description or translation key for inspect/logs. |
 | `oneTime` | `boolean` (default: `true`) | When `true`, cannot be activated again once triggered. |
 | `triggerOn` | `'interact' \| 'step' \| 'both'` (default: `'interact'`) | When to trigger: player radial menu action (`'interact'`), walking onto tile (`'step'`), or either (`'both'`). |
+| `secret` | `boolean` (optional) | When `true`, heroes need a successful search action before they can interact with the cell; renders highlight when `false`. |
 | `args` | `Record<string, unknown>` (optional) | Custom arguments passed to the effect handler. |
 | `icon` | `string` (optional) | Optional icon indicator identifier for rendering. |
 

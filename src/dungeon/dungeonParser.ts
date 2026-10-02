@@ -157,6 +157,7 @@ export type DeclarativeInteractableObject = {
   args?: Record<string, unknown>;
   icon?: string;
   triggerOn?: 'interact' | 'step' | 'both';
+  secret?: boolean;
 };
 
 export type DeclarativeInteractableTuple =
@@ -178,6 +179,7 @@ export type DeclarativeInteractableTuple =
             args?: Record<string, unknown>;
             icon?: string;
             triggerOn?: 'interact' | 'step' | 'both';
+            secret?: boolean;
             [key: string]: unknown;
           },
       id?: string,
@@ -468,6 +470,7 @@ export const parseInteractable = (
     let args: Record<string, unknown> | undefined;
     let icon: string | undefined;
     let triggerOn: 'interact' | 'step' | 'both' = 'interact';
+    let secret: boolean | undefined;
     let interactableId = id;
 
     if (argsOrOptions && typeof argsOrOptions === 'object') {
@@ -480,7 +483,8 @@ export const parseInteractable = (
         'name' in opts ||
         'description' in opts ||
         'id' in opts ||
-        'args' in opts
+        'args' in opts ||
+        'secret' in opts
       ) {
         if (opts.id && typeof opts.id === 'string') interactableId = opts.id;
         if (opts.name && typeof opts.name === 'string') name = opts.name;
@@ -499,6 +503,7 @@ export const parseInteractable = (
         if (typeof opts.oneTime === 'boolean') oneTime = opts.oneTime;
         if (typeof opts.interacted === 'boolean') interacted = opts.interacted;
         if (opts.icon && typeof opts.icon === 'string') icon = opts.icon;
+        if (typeof opts.secret === 'boolean') secret = opts.secret;
         if (
           opts.triggerOn === 'interact' ||
           opts.triggerOn === 'step' ||
@@ -527,6 +532,7 @@ export const parseInteractable = (
         : {}),
       oneTime,
       interacted,
+      ...(secret !== undefined ? { secret } : {}),
       ...(args ? { args } : {}),
       ...(icon ? { icon } : {}),
       triggerOn,
@@ -547,6 +553,7 @@ export const parseInteractable = (
     args,
     icon,
     triggerOn = 'interact',
+    secret,
   } = interactableDef;
 
   return {
@@ -562,6 +569,7 @@ export const parseInteractable = (
       : {}),
     oneTime,
     interacted,
+    ...(secret !== undefined ? { secret } : {}),
     ...(args ? { args } : {}),
     ...(icon ? { icon } : {}),
     triggerOn,
@@ -631,6 +639,7 @@ export interface TileMapLegend {
       oneTime?: boolean;
       icon?: string;
       triggerOn?: 'interact' | 'step' | 'both';
+      secret?: boolean;
     };
     pit?: boolean;
     pillar?: boolean;
@@ -729,6 +738,7 @@ export const parseTileMap = (
               oneTime: mapping.interactable.oneTime,
               icon: mapping.interactable.icon,
               triggerOn: mapping.interactable.triggerOn,
+              secret: mapping.interactable.secret,
             }),
           );
         }

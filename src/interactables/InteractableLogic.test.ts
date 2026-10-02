@@ -15,6 +15,7 @@ import {
   registerInteractableEffect,
   getInteractableEffect,
   triggerInteractable,
+  NEXT_DUNGEON,
 } from './InteractableLogic';
 import {
   getAvailableRadialActions,
@@ -22,7 +23,8 @@ import {
 } from '../hero/RadialMenuLogic';
 import { defineDungeon, parseTileMap } from '../dungeon/dungeonParser';
 import { validateLayout } from '../dungeon/dungeonValidator';
-import { interact, newHero } from '../hero/HeroLogic';
+import { interact, newHero, search } from '../hero/HeroLogic';
+import { resetRng, setRng } from '../core';
 
 const defaultWeapon: Weapon = {
   name: 'Sword',
@@ -335,6 +337,95 @@ describe('InteractableLogic', () => {
       expect(actions).not.toContain(RadialAction.INTERACT);
     });
 
+    it('blocks interaction when interactable has secret: true, until discovered via search action', () => {
+      setRng(() => 0.75); // Math.floor(0.75 * 6) + 1 = 5 (Apprentice success)
+      try {
+        const hero = createTestHero(2, 2);
+        const state = createTestState(hero);
+        state.dungeon.layout.interactables = [
+          {
+            position: { x: 2, y: 2 },
+            effect: 'addHero',
+            name: 'Hidden Oswin',
+            args: { name: 'Oswin' },
+            oneTime: true,
+            interacted: false,
+            secret: true,
+          },
+        ];
+
+        // 1. Secret interactable is not in radial menu
+        let entries = getAvailableRadialActions(state, hero);
+        expect(entries.map((e) => e.action)).not.toContain(
+          RadialAction.INTERACT,
+        );
+
+        // 2. Direct interact call fails
+        const directResult = interact(state);
+        expect(directResult).toBe(false);
+        expect(state.heroes.length).toBe(1);
+
+        // 3. Hero searches and finds the secret interactable
+        search(state);
+        expect(state.dungeon.layout.interactables[0].secret).toBe(false);
+        expect(
+          state.actionLog.some(
+            (log) => log.key === 'logs.heroAction.foundSecret',
+          ),
+        ).toBe(true);
+
+        // Reset hero actions for next step
+        hero.actions = 2;
+
+        // 4. Secret interactable is now available in radial menu and can be interacted with
+        entries = getAvailableRadialActions(state, hero);
+        expect(entries.map((e) => e.action)).toContain(RadialAction.INTERACT);
+
+        const interactResult = interact(state);
+        expect(interactResult).toBe(true);
+        expect(state.heroes.length).toBe(2);
+        expect(state.dungeon.layout.interactables[0].interacted).toBe(true);
+      } finally {
+        resetRng();
+      }
+    });
+
+    it('keeps interactable hidden when search roll fails or hero is out of range', () => {
+      setRng(() => 0.1); // Math.floor(0.1 * 6) + 1 = 1 (Apprentice fails)
+      try {
+        const hero = createTestHero(2, 2);
+        const state = createTestState(hero);
+        state.dungeon.layout.interactables = [
+          {
+            position: { x: 2, y: 2 },
+            effect: 'addHero',
+            secret: true,
+          },
+        ];
+
+        search(state);
+        expect(state.dungeon.layout.interactables[0].secret).toBe(true);
+        expect(interact(state)).toBe(false);
+      } finally {
+        resetRng();
+      }
+    });
+
+    it('triggerInteractable returns false directly when interactable is secret', () => {
+      const hero = createTestHero(2, 2);
+      const state = createTestState(hero);
+      const interactable = {
+        position: { x: 2, y: 2 },
+        effect: 'addHero',
+        args: { name: 'Hidden Ally' },
+        secret: true,
+      };
+
+      const result = triggerInteractable(state, interactable, hero);
+      expect(result).toBe(false);
+      expect(state.heroes.length).toBe(1);
+    });
+
     it('interact function consumes hero action and triggers effect', () => {
       const hero = createTestHero(2, 2);
       const state = createTestState(hero);
@@ -356,6 +447,107 @@ describe('InteractableLogic', () => {
       expect(state.heroes.length).toBe(2);
       expect(state.dungeon.layout.interactables[0].interacted).toBe(true);
     });
+
+    describe('nextDungeon effect', () => {
+      it('NEXT_DUNGEON constant is defined as nextDungeon', () => {
+        expect(NEXT_DUNGEON).toBe('nextDungeon');
+      });
+
+      it('transitions heroes to next dungeon when nextDungeon effect is triggered', () => {
+        const hero = createTestHero(2, 2);
+        const state = createTestState(hero);
+        state.campaignId = 'iceDragonTreasure';
+
+        const nextDungeonDef: Dungeon = {
+          ...state.dungeon,
+          name: 'campaign.iceDragon.e1m1.name',
+          startingPositions: [{ x: 1, y: 1 }],
+        };
+        state.dungeon.nextDungeon = nextDungeonDef;
+
+        const interactable = {
+          position: { x: 2, y: 2 },
+          effect: 'nextDungeon',
+          oneTime: true,
+        };
+
+        const result = triggerInteractable(state, interactable, hero);
+
+        expect(result).toBe(true);
+        expect(state.dungeon.name).toBe('campaign.iceDragon.e1m1.name');
+        expect(state.actionLog[0].key).toBe('logs.youHaveReached');
+        expect(state.turnCount).toBe(0);
+      });
+
+      it('transitions to next dungeon specified in args.nextDungeon', () => {
+        const hero = createTestHero(2, 2);
+        const state = createTestState(hero);
+        state.campaignId = 'iceDragonTreasure';
+
+        const customNextDungeon: Dungeon = {
+          ...state.dungeon,
+          name: 'campaign.custom.next.name',
+          startingPositions: [{ x: 3, y: 3 }],
+        };
+
+        const interactable = {
+          position: { x: 2, y: 2 },
+          effect: NEXT_DUNGEON,
+          args: { nextDungeon: customNextDungeon },
+          oneTime: true,
+        };
+
+        const result = triggerInteractable(state, interactable, hero);
+
+        expect(result).toBe(true);
+        expect(state.dungeon.name).toBe('campaign.custom.next.name');
+      });
+
+      it('marks dungeon beaten if no next dungeon is configured', () => {
+        const hero = createTestHero(2, 2);
+        const state = createTestState(hero);
+        state.dungeon.nextDungeon = undefined;
+
+        const interactable = {
+          position: { x: 2, y: 2 },
+          effect: 'nextDungeon',
+          oneTime: true,
+        };
+
+        const result = triggerInteractable(state, interactable, hero);
+
+        expect(result).toBe(true);
+        expect(state.dungeon.beaten).toBe(true);
+        expect(
+          state.actionLog.some(
+            (log) => log.key === 'logs.allConditionsFulfilled',
+          ),
+        ).toBe(true);
+      });
+
+      it('supports NEXT_SCENARIO alias', () => {
+        const hero = createTestHero(2, 2);
+        const state = createTestState(hero);
+
+        const nextDungeonDef: Dungeon = {
+          ...state.dungeon,
+          name: 'campaign.iceDragon.e1m1.name',
+          startingPositions: [{ x: 1, y: 1 }],
+        };
+        state.dungeon.nextDungeon = nextDungeonDef;
+
+        const interactable = {
+          position: { x: 2, y: 2 },
+          effect: 'NEXT_SCENARIO',
+          oneTime: true,
+        };
+
+        const result = triggerInteractable(state, interactable, hero);
+
+        expect(result).toBe(true);
+        expect(state.dungeon.name).toBe('campaign.iceDragon.e1m1.name');
+      });
+    });
   });
 
   describe('Dungeon Parser & Validator', () => {
@@ -368,13 +560,20 @@ describe('InteractableLogic', () => {
         layout: {
           grid: ['#####', '#AAA#', '#AAA#', '#####'],
           interactables: [
-            [2, 2, 'removeTrapsInRoom', { room: 'A' }, 'trap_lever'],
+            [
+              2,
+              2,
+              'removeTrapsInRoom',
+              { room: 'A', secret: true },
+              'trap_lever',
+            ],
             {
               x: 1,
               y: 2,
               effect: 'addHero',
               name: 'Rescue Cage',
               id: 'cage_1',
+              secret: false,
             },
           ],
         },
@@ -385,12 +584,14 @@ describe('InteractableLogic', () => {
         position: { x: 2, y: 2 },
         effect: 'removeTrapsInRoom',
         id: 'trap_lever',
+        secret: true,
       });
       expect(dungeon.layout.interactables?.[1]).toMatchObject({
         position: { x: 1, y: 2 },
         effect: 'addHero',
         name: 'Rescue Cage',
         id: 'cage_1',
+        secret: false,
       });
     });
 
@@ -403,6 +604,7 @@ describe('InteractableLogic', () => {
             effect: 'addHero',
             name: 'Rescued Ally',
             id: 'ally_lever',
+            secret: true,
           },
         },
       });
@@ -413,6 +615,7 @@ describe('InteractableLogic', () => {
         effect: 'addHero',
         name: 'Rescued Ally',
         id: 'ally_lever',
+        secret: true,
       });
     });
 

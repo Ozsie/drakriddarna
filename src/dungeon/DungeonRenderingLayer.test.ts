@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   renderDoors,
   renderGrid,
+  renderInteractables,
   renderPillars,
   renderSecrets,
 } from './DungeonRendering';
@@ -149,10 +150,43 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     renderGrid(staticCtx, mockGround, 48, state, false);
     renderSecrets(staticCtx, mockGround, 48, state, false);
     renderItems(staticCtx, mockGround, 48, state, false);
+    renderInteractables(staticCtx, mockGround, 48, state, false);
     renderDoors(staticCtx, mockGround, 48, state, false);
     renderPillars(staticCtx, mockGround, 48, state, false);
 
     expect(staticCtx.drawImage).toHaveBeenCalled();
+  });
+
+  it('renders a highlight on interactable cells when secret is false, and does not render highlight when secret is true', () => {
+    const state = createMockState();
+    state.dungeon.layout.interactables = [
+      {
+        position: { x: 1, y: 1 },
+        effect: 'visibleEffect',
+        secret: false,
+      },
+      {
+        position: { x: 2, y: 2 },
+        effect: 'secretEffect',
+        secret: true,
+      },
+    ];
+
+    const staticCtx = createMockCtx();
+    const mockGround = { src: 'ground.png' } as unknown as CanvasImageSource;
+
+    renderInteractables(staticCtx, mockGround, 48, state, false);
+
+    // Non-secret interactable gets highlight fillRect(1 * 48, 1 * 48, 48, 48)
+    expect(staticCtx.fillRect).toHaveBeenCalledWith(48, 48, 48, 48);
+    // Secret interactable (2, 2) is not rendered when debugMode is false
+    expect(staticCtx.fillRect).not.toHaveBeenCalledWith(96, 96, 48, 48);
+
+    // In debugMode, secret interactable overlay is rendered
+    const debugCtx = createMockCtx();
+    renderInteractables(debugCtx, mockGround, 48, state, true);
+    expect(debugCtx.fillRect).toHaveBeenCalledWith(96, 96, 48, 48);
+    expect(debugCtx.fillText).toHaveBeenCalledWith('secretEffect', 98, 108);
   });
 
   it('renders dynamic actors (heroes, monsters) onto dynamic context without touching static layer', () => {

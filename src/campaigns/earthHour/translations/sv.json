@@ -8,7 +8,9 @@
       "name": "Skräckens fem gravhögar",
       "intro": "Ondskan har fått härja fritt i de västra skogarna. Undergångsprästinnan har samlat en skara av ondskefulla män och monster omkring sig. Detta kan inte tillåtas! Du har spårat upp henne och står nu vid ingången till hennes tillhåll – Skräckens fem gravhögar.",
       "notes": {
-        "hint1": "Två fångar är fastkedjade vid söderväggen; en död och reducerad till inget annat än ett skelett, och en drakriddare likt du själv."
+        "hint1": "Två fångar är fastkedjade vid söderväggen; en död och reducerad till inget annat än ett skelett, och en drakriddare likt du själv.",
+        "elevatorCalled": "Du hör ett mullrande ljud bakom dörren, följt av ett klick.",
+        "darkRoom": "Du tar ett steg framåt in i det mörka rummet. När du sätter ner fötterna inser du att golvet under dig saknas."
       },
       "secrets": {
         "note1": "Ni hör grymtandet av två orcher på andra sidan dörren."

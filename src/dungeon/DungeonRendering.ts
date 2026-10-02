@@ -283,7 +283,7 @@ export const renderInteractables = (
     ) {
       return;
     }
-    if (debugMode) {
+    if (!interactable.secret) {
       ctx.fillStyle = 'rgba(50, 150, 255, 0.28)';
       ctx.fillRect(
         interactable.position.x * cellSize,
@@ -291,6 +291,17 @@ export const renderInteractables = (
         cellSize,
         cellSize,
       );
+    }
+    if (debugMode) {
+      if (interactable.secret) {
+        ctx.fillStyle = 'rgba(50, 150, 255, 0.28)';
+        ctx.fillRect(
+          interactable.position.x * cellSize,
+          interactable.position.y * cellSize,
+          cellSize,
+          cellSize,
+        );
+      }
       ctx.fillStyle = 'cyan';
       ctx.font = '10px Arial';
       ctx.fillText(

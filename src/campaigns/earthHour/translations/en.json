@@ -8,7 +8,9 @@
       "name": "Skräckens fem gravhögar",
       "intro": "Ondskan har fått härja fritt i de västra skogarna. Undergångsprästinnan har samlat en skara av ondskefulla män och monster omkring sig. Detta kan inte tillåtas! Du har spårat upp henne och står nu vid ingången till hennes tillhåll – Skräckens fem gravhögar.",
       "notes": {
-        "hint1": "Two prisoners are shackled to the south wall, one dead and reduced to nothing but a skeleton and one Dragon Knight such as yourself."
+        "hint1": "Two prisoners are shackled to the south wall, one dead and reduced to nothing but a skeleton and one Dragon Knight such as yourself.",
+        "elevatorCalled": "You hear a rumbling noise from behind the door, followed by a click.",
+        "darkRoom": "You take a step forward into the dark room. As you put your feet down, you realize the floor beneath you is missing."
       },
       "secrets": {
         "note1": "You hear the grunting of two orcs on the other side of the door."
