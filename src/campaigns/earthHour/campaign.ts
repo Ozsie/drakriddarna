@@ -47,7 +47,6 @@ export const campaignEarthHour: Campaign = {
     newHero('Fearik', Colour.Yellow),
     newHero('Helbran', Colour.Red),
     newHero('Siedel', Colour.Green),
-    newHero('Wulf', Colour.Blue),
   ],
 };
 

@@ -58,7 +58,6 @@ export const e2m1: Dungeon = defineDungeon({
     },
   ],
   startingPositions: [
-    [2, 2],
     [1, 1],
     [2, 1],
     [3, 1],
