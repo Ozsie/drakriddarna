@@ -12,15 +12,12 @@ import {
   type Weapon,
 } from '../types';
 import {
-  registerInteractableEffect,
   getInteractableEffect,
-  triggerInteractable,
   NEXT_DUNGEON,
+  registerInteractableEffect,
+  triggerInteractable,
 } from './InteractableLogic';
-import {
-  getAvailableRadialActions,
-  RadialAction,
-} from '../hero/RadialMenuLogic';
+import { getAvailableRadialActions, RadialAction, } from '../hero/RadialMenuLogic';
 import { defineDungeon, parseTileMap } from '../dungeon/dungeonParser';
 import { validateLayout } from '../dungeon/dungeonValidator';
 import { interact, newHero, search } from '../hero/HeroLogic';
@@ -458,12 +455,11 @@ describe('InteractableLogic', () => {
         const state = createTestState(hero);
         state.campaignId = 'iceDragonTreasure';
 
-        const nextDungeonDef: Dungeon = {
+        state.dungeon.nextDungeon = {
           ...state.dungeon,
           name: 'campaign.iceDragon.e1m1.name',
           startingPositions: [{ x: 1, y: 1 }],
         };
-        state.dungeon.nextDungeon = nextDungeonDef;
 
         const interactable = {
           position: { x: 2, y: 2 },
@@ -529,12 +525,11 @@ describe('InteractableLogic', () => {
         const hero = createTestHero(2, 2);
         const state = createTestState(hero);
 
-        const nextDungeonDef: Dungeon = {
+        state.dungeon.nextDungeon = {
           ...state.dungeon,
           name: 'campaign.iceDragon.e1m1.name',
           startingPositions: [{ x: 1, y: 1 }],
         };
-        state.dungeon.nextDungeon = nextDungeonDef;
 
         const interactable = {
           position: { x: 2, y: 2 },
