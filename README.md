@@ -10,6 +10,7 @@ See [Campaign Readme](src/campaigns/README.md)
 
 ## Todo
 - [ ] Multiple saves
+- [ ] Fully Canvas UI
 - [ ] Diary on mobile
 - [ ] Responsive layout
 - [ ] Graphics

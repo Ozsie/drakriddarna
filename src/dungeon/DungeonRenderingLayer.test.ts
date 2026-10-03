@@ -62,6 +62,7 @@ const createMockState = (): GameState => {
   return {
     dungeon: {
       name: 'Test Dungeon',
+      intro: 'test-dungeon',
       discoveredRooms: ['A'],
       layout: {
         grid: ['AAA', 'AAA', 'AAA'],
@@ -75,6 +76,7 @@ const createMockState = (): GameState => {
             hidden: false,
             trapped: false,
             trapAttacks: 0,
+            reinforced: false,
           },
         ],
         secrets: [
@@ -116,6 +118,7 @@ const createMockState = (): GameState => {
     settings: { cellSize: 48 },
     eventDeck: [],
     reRender: false,
+    drawEvents: true,
   };
 };
 

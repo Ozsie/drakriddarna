@@ -46,7 +46,12 @@
 </script>
 
 {#if menu}
-  <div class="radialOverlay" on:click|self={close}>
+  <div
+    class="radialOverlay"
+    role="presentation"
+    on:click|self={close}
+    on:keydown={(e) => e.key === 'Escape' && close()}
+  >
     {#each menu.entries as entry, i}
       {@const angle = (i / menu.entries.length) * 2 * Math.PI - Math.PI / 2}
       {@const x = centerX + radius * Math.cos(angle)}
