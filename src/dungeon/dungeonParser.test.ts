@@ -171,6 +171,7 @@ describe('dungeonParser', () => {
 
       const dungeon = defineDungeon({
         name: 'test.dungeon',
+        intro: 'test-dungeon',
         winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
         startingPositions: [[1, 1]],
         layout: {

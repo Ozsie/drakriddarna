@@ -21,6 +21,7 @@ const createMockState = (
 ): GameState => ({
   dungeon: {
     name: 'Test Dungeon',
+    intro: 'test-dungeon',
     discoveredRooms: ['A'],
     layout: {
       grid: ['AAA'],
@@ -45,6 +46,7 @@ const createMockState = (
   settings: { cellSize: 48 },
   eventDeck: [],
   reRender: false,
+  drawEvents: true,
   damageIndicators,
 });
 

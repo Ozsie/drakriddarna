@@ -1,4 +1,5 @@
 import type { Campaign } from '../types';
+import { setCampaignDeckProvider } from '../interactables/InteractableLogic';
 
 // Auto-discover every campaign under src/campaigns/*/campaign.ts so that
 // additional, self-contained campaigns are automatically registered without
@@ -30,3 +31,7 @@ export const getCampaign = (
 
 export const isKnownCampaign = (campaignId: string): boolean =>
   campaignId in campaigns;
+
+setCampaignDeckProvider(
+  (campaignId: string) => getCampaign(campaignId).eventDeck,
+);

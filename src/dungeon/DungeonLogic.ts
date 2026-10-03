@@ -1,6 +1,7 @@
 import type {
   Door,
   GameState,
+  InteractableCell,
   Item,
   ItemLocation,
   Monster,
@@ -52,6 +53,7 @@ registerMonsterTemplate(MonsterType.BLUE_DARK_LORD, {
 export { COLLAPSED, EMPTY, WALL };
 export * from './dungeonParser';
 export * from './dungeonValidator';
+export * from '../interactables/InteractableLogic';
 
 export const onCheckFulfilled: {
   [index: string]: (state: GameState, self: WinCondition) => boolean;
@@ -100,6 +102,46 @@ export const createSecret = (
   nameTranslationKey: name,
   position: { x, y },
   found: false,
+});
+
+export const createInteractable = (
+  x: number,
+  y: number,
+  effect: string,
+  options?: {
+    id?: string;
+    name?: string;
+    nameTranslationKey?: string;
+    description?: string;
+    descriptionTranslationKey?: string;
+    interacted?: boolean;
+    oneTime?: boolean;
+    args?: Record<string, unknown>;
+    icon?: string;
+    triggerOn?: 'interact' | 'step' | 'both';
+  },
+): InteractableCell => ({
+  id: options?.id ?? `interactable_${x}_${y}`,
+  position: { x, y },
+  effect,
+  ...(options?.name
+    ? {
+        name: options.name,
+        nameTranslationKey: options.nameTranslationKey ?? options.name,
+      }
+    : {}),
+  ...(options?.description
+    ? {
+        description: options.description,
+        descriptionTranslationKey:
+          options.descriptionTranslationKey ?? options.description,
+      }
+    : {}),
+  interacted: options?.interacted ?? false,
+  oneTime: options?.oneTime ?? true,
+  ...(options?.args ? { args: options.args } : {}),
+  ...(options?.icon ? { icon: options.icon } : {}),
+  triggerOn: options?.triggerOn ?? 'interact',
 });
 
 export const createSecretWithItem = (

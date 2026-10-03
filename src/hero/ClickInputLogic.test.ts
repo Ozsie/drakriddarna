@@ -47,6 +47,7 @@ const createTestHero = (name: string, x: number, y: number): Hero => ({
 const createTestState = (overrides?: Partial<GameState>): GameState => {
   const dungeon: Dungeon = {
     name: 'test-dungeon',
+    intro: 'test-dungeon',
     beaten: false,
     winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
     startingPositions: [{ x: 1, y: 1 }],
@@ -87,6 +88,7 @@ const createTestState = (overrides?: Partial<GameState>): GameState => {
     eventDeck: [],
     settings: {},
     reRender: false,
+    drawEvents: true,
     ...overrides,
   };
 };

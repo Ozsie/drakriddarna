@@ -79,6 +79,7 @@
     "pickLock": "Pick Lock",
     "openDoor": "Open Door",
     "pickUpItem": "Pick Up Item",
+    "interact": "Interact",
     "next": "Next"
   },
   "difficulty": {

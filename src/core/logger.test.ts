@@ -4,6 +4,7 @@ import type { Dungeon, GameState } from '../types';
 
 const dummyDungeon: Dungeon = {
   name: 'Test',
+  intro: 'test-dungeon',
   layout: {
     grid: [],
     corridors: [],
@@ -38,6 +39,7 @@ describe('logger module', () => {
       settings: {},
       eventDeck: [],
       reRender: false,
+      drawEvents: true,
     };
 
     doReRender(state);
@@ -55,6 +57,7 @@ describe('logger module', () => {
       eventDeck: [],
       reRender: false,
       turnCount: 3,
+      drawEvents: true,
     };
 
     addLog(state, 'test.message', { foo: 'bar' });

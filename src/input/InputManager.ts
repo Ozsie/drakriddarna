@@ -5,6 +5,7 @@ import {
   endHeroAction,
   pickLockAction,
   searchAction,
+  interactAction,
   winLevel,
 } from '../store/gameStateStore';
 
@@ -21,6 +22,7 @@ export enum InputAction {
   END_ACTION = 'END_ACTION',
   PICK_LOCK = 'PICK_LOCK',
   SEARCH = 'SEARCH',
+  INTERACT = 'INTERACT',
   WIN_LEVEL = 'WIN_LEVEL',
 }
 
@@ -64,6 +66,7 @@ export const DEFAULT_KEY_BINDINGS: KeyBindingMap = {
   [InputAction.END_ACTION]: ['End', 'Tab'],
   [InputAction.PICK_LOCK]: ['-', 'r', 'R'],
   [InputAction.SEARCH]: ['+', 'f', 'F'],
+  [InputAction.INTERACT]: ['i', 'I'],
   [InputAction.WIN_LEVEL]: [],
 };
 
@@ -121,6 +124,7 @@ export class InputManager {
     this.onAction(InputAction.END_ACTION, () => void endHeroAction());
     this.onAction(InputAction.PICK_LOCK, () => pickLockAction());
     this.onAction(InputAction.SEARCH, () => searchAction());
+    this.onAction(InputAction.INTERACT, () => interactAction());
     this.onAction(InputAction.WIN_LEVEL, () => winLevel());
   }
 

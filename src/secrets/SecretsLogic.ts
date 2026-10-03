@@ -61,7 +61,7 @@ export const searchForSecret = (state: GameState) => {
     .reduce((partial, bonus) => partial + bonus, 0);
   const searchDifficultyModifier = getDifficulty(state).modifiers.search;
   const result = roll(hero.level, 1 + searchBonus + searchDifficultyModifier);
-  let trapDoor, hiddenDoor, trap, secret;
+  let trapDoor, hiddenDoor, trap, secret, interactable;
   if (result >= 1) {
     trapDoor = lookForTrapDoor(state, hero, result);
     if (!trapDoor) {
@@ -74,6 +74,9 @@ export const searchForSecret = (state: GameState) => {
       secret = lookForSecret(state, hero, result);
     }
     if (!trapDoor && !hiddenDoor && !trap && !secret) {
+      interactable = lookForSecretInteractable(state, hero, result);
+    }
+    if (!trapDoor && !hiddenDoor && !trap && !secret && !interactable) {
       addLog(state, 'logs.heroAction.searchFoundNothing', {
         hero: i18n(hero.name),
       });
@@ -284,6 +287,37 @@ const lookForTrapDoor = (state: GameState, hero: Hero, result: number) => {
       secret: i18n(trapDoor.name),
     });
     trapDoor.found = true;
+    return true;
+  }
+  return false;
+};
+
+const findSecretInteractable = (state: GameState, pos: Position) =>
+  (state.dungeon.layout.interactables ?? [])
+    .filter((interactable) => interactable.secret)
+    .find(
+      (interactable) =>
+        isNeighbouring(interactable.position, pos.x, pos.y) &&
+        canSearchThrough(state.dungeon.layout, pos, interactable.position),
+    );
+
+const lookForSecretInteractable = (
+  state: GameState,
+  hero: Hero,
+  result: number,
+) => {
+  const interactable = findSecretInteractable(state, hero.position);
+  if (interactable) {
+    interactable.secret = false;
+    addLog(state, 'logs.heroAction.foundSecret', {
+      hero: i18n(hero.name),
+      result: `${result}`,
+      secret: i18n(
+        interactable.nameTranslationKey ??
+          interactable.name ??
+          interactable.effect,
+      ),
+    });
     return true;
   }
   return false;

@@ -1,0 +1,37 @@
+{
+  "earthHour": {
+    "name": "Parlours of Malice",
+    "randomEquipment": "Random Equipment",
+    "randomItem": "Random Item",
+    "trapDoor": "Trapdoor",
+    "e2m1": {
+      "name": "Skräckens fem gravhögar",
+      "intro": "Ondskan har fått härja fritt i de västra skogarna. Undergångsprästinnan har samlat en skara av ondskefulla män och monster omkring sig. Detta kan inte tillåtas! Du har spårat upp henne och står nu vid ingången till hennes tillhåll – Skräckens fem gravhögar.",
+      "notes": {
+        "hint1": "Two prisoners are shackled to the south wall, one dead and reduced to nothing but a skeleton and one Dragon Knight such as yourself.",
+        "elevatorCalled": "You hear a rumbling noise from behind the door, followed by a click.",
+        "darkRoom": "You take a step forward into the dark room. As you put your feet down, you realize the floor beneath you is missing."
+      },
+      "secrets": {
+        "note1": "You hear the grunting of two orcs on the other side of the door."
+      }
+    },
+    "e2m2": {
+      "name": "The Rot Bowels",
+      "intro": "The elevator platform rumbles ever downward. The weight of the surrounding dirt and stone bears down on you as a stench sting your nostrils. As the platform rumbles to a stop you are sure you have entered the Rot Bowels.",
+      "interactables": {
+        "lever1": "Iron Lever",
+        "lever2": "Rusty Lever",
+        "lever3": "Heavy Lever"
+      },
+      "notes": {
+        "exit": "Thick metal bars block passage through this door. A mechanism stylized like a three-eyed spider hangs over the door. The red eyes seem to defy the knights progress!",
+        "troll": "You can hear the munching of something large on the other side of the door."
+      },
+      "logs": {
+        "leverPulled": "{{hero}} pulled a lever. {{remaining}} lever(s) remain.",
+        "allLeversPulled": "{{hero}} pulled the final lever. A heavy grinding sound echoes as the locked door unlocks!"
+      }
+    }
+  }
+}

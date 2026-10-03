@@ -22,6 +22,7 @@ import {
 } from '../game';
 import {
   act,
+  interact,
   pickLock,
   search,
   resetLiveHeroes,
@@ -215,6 +216,13 @@ export const searchAction = (): void => {
   if (isExecutingTurn) return;
   const state = get(gameStateStore);
   search(state);
+  syncStore(state);
+};
+
+export const interactAction = (): void => {
+  if (isExecutingTurn) return;
+  const state = get(gameStateStore);
+  interact(state);
   syncStore(state);
 };
 

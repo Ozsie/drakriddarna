@@ -50,6 +50,7 @@ const createTestState = (
 ): GameState => {
   const dungeon: Dungeon = {
     name: 'test-dungeon',
+    intro: 'test',
     beaten: false,
     winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
     startingPositions: [{ x: 1, y: 1 }],
@@ -88,6 +89,7 @@ const createTestState = (
     magicItemDeck: [],
     eventDeck: [],
     settings: {},
+    drawEvents: true,
     reRender: false,
   };
 };
@@ -99,7 +101,10 @@ describe('getAvailableRadialActions', () => {
 
     const entries = getAvailableRadialActions(state, hero);
 
-    expect(entries.map((e) => e.action)).toEqual([RadialAction.SEARCH]);
+    expect(entries.map((e) => e.action)).toEqual([
+      RadialAction.SEARCH,
+      RadialAction.NEXT,
+    ]);
   });
 
   it('returns PICK_LOCK and SEARCH when standing on a locked door with full action', () => {
@@ -115,6 +120,7 @@ describe('getAvailableRadialActions', () => {
         hidden: false,
         trapped: false,
         trapAttacks: 0,
+        reinforced: false,
       },
     ];
 
@@ -136,6 +142,7 @@ describe('getAvailableRadialActions', () => {
       locked: true,
       hidden: false,
       trapped: false,
+      reinforced: false,
       trapAttacks: 0,
     };
     const downDoor = {
@@ -146,6 +153,7 @@ describe('getAvailableRadialActions', () => {
       locked: false,
       hidden: false,
       trapped: false,
+      reinforced: false,
       trapAttacks: 0,
     };
     state.dungeon.layout.doors = [rightDoor, downDoor];
@@ -159,9 +167,9 @@ describe('getAvailableRadialActions', () => {
       (e) => e.action === RadialAction.PICK_LOCK,
     );
 
-    expect(openDoorEntries).toHaveLength(2);
+    expect(openDoorEntries).toHaveLength(1);
     expect(openDoorEntries.map((e) => e.door)).toEqual(
-      expect.arrayContaining([rightDoor, downDoor]),
+      expect.arrayContaining([downDoor]),
     );
     expect(pickLockEntries).toHaveLength(1);
     expect(pickLockEntries[0].door).toEqual(rightDoor);
@@ -182,6 +190,7 @@ describe('getAvailableRadialActions', () => {
         hidden: false,
         trapped: false,
         trapAttacks: 0,
+        reinforced: false,
       },
     ];
 
@@ -214,6 +223,6 @@ describe('getAvailableRadialActions', () => {
 
     const entries = getAvailableRadialActions(state, hero);
 
-    expect(entries).toEqual([]);
+    expect(entries).toEqual([{ action: 'NEXT' }]);
   });
 });

@@ -13,6 +13,7 @@ import type { Actor, Dungeon, GameState } from '../types';
 
 const dummyDungeon: Dungeon = {
   name: 'Test',
+  intro: 'test-dungeon',
   layout: {
     grid: [],
     corridors: [],
@@ -87,6 +88,7 @@ describe('combat module', () => {
       open: false,
       hidden: false,
       trapAttacks: 3,
+      reinforced: false,
     });
 
     expect(doorActor.name).toBe('Door');
@@ -193,6 +195,7 @@ describe('combat module', () => {
       settings: {},
       eventDeck: [],
       reRender: false,
+      drawEvents: true,
     };
 
     takeDamage(state, source, target, false);
@@ -273,6 +276,7 @@ describe('combat module', () => {
       settings: {},
       eventDeck: [],
       reRender: false,
+      drawEvents: true,
     };
 
     takeDamage(state, source, target, false);
@@ -299,6 +303,7 @@ describe('combat module', () => {
       eventDeck: [],
       reRender: false,
       damageIndicators: [indicator],
+      drawEvents: true,
     };
 
     removeDamageIndicator(state, indicator.id);

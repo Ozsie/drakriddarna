@@ -63,6 +63,9 @@
     "foundTrapInDoor": "{{hero}} letade ({{result}}) och hittade en fälla i en dörr.",
     "foundSecret": "{{hero}} letade ({{result}}) och hittade {{secret}}.",
     "revealedSecretWithItem": "{{hero}} klev in i rummet med {{item}} och avslöjade {{secret}}.",
+    "interact": "{{hero}} interagerade med {{interactable}}.",
+    "heroJoined": "{{newHero}} anslöt sig till sällskapet!",
+    "trapsRemoved": "Alla fällor i rum {{room}} desarmerades.",
     "turnFailed": "Misslyckades med att gå vidare till nästa tur."
   },
   "item": {

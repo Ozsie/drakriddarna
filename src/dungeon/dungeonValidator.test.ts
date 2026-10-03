@@ -12,6 +12,7 @@ describe('dungeonValidator', () => {
   it('passes validation for valid layouts', () => {
     const dungeon = defineDungeon({
       name: 'valid.dungeon',
+      intro: 'test-dungeon',
       winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
       startingPositions: [[1, 1]],
       discoveredRooms: ['A'],
@@ -153,6 +154,7 @@ describe('dungeonValidator', () => {
   it('assertValidDungeon throws formatted descriptive error on invalid dungeon', () => {
     const invalidDungeon = {
       name: 'broken.dungeon',
+      intro: 'test-dungeon',
       winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
       startingPositions: [{ x: 99, y: 99 }],
       discoveredRooms: ['A'],

@@ -265,6 +265,54 @@ export const renderPortal = (
   ctx.restore();
 };
 
+export const renderInteractables = (
+  ctx: CanvasRenderingContext2D,
+  ground: CanvasImageSource,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+) => {
+  state.dungeon.layout.interactables?.forEach((interactable) => {
+    if (
+      !isDiscovered(
+        state.dungeon,
+        interactable.position.x,
+        interactable.position.y,
+      ) &&
+      !debugMode
+    ) {
+      return;
+    }
+    if (!interactable.secret) {
+      ctx.fillStyle = 'rgba(50, 150, 255, 0.28)';
+      ctx.fillRect(
+        interactable.position.x * cellSize,
+        interactable.position.y * cellSize,
+        cellSize,
+        cellSize,
+      );
+    }
+    if (debugMode) {
+      if (interactable.secret) {
+        ctx.fillStyle = 'rgba(50, 150, 255, 0.28)';
+        ctx.fillRect(
+          interactable.position.x * cellSize,
+          interactable.position.y * cellSize,
+          cellSize,
+          cellSize,
+        );
+      }
+      ctx.fillStyle = 'cyan';
+      ctx.font = '10px Arial';
+      ctx.fillText(
+        interactable.effect,
+        interactable.position.x * cellSize + 2,
+        interactable.position.y * cellSize + 12,
+      );
+    }
+  });
+};
+
 const randomFloorTileCoordinates = (seed: number) => {
   let rndX: number;
   let rndY: number;

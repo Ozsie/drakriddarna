@@ -160,6 +160,7 @@ export const stepAlongLine = (
   state: GameState,
   walking: boolean,
   seenCells: Position[],
+  lastCell: Position = source,
 ): boolean => {
   if (isNaN(startPixelPos.x) || isNaN(startPixelPos.y)) {
     return false;
@@ -199,6 +200,25 @@ export const stepAlongLine = (
     .filter((hero) => hero.health > 0)
     .filter((hero) => !isSamePosition(hero.position, source))
     .some((hero) => isSamePosition(hero.position, nextCellPosition));
+
+  // Diagonal step between grid cells: block cutting through a corner
+  // formed by two walls (no squeezing through a diagonal wall pinch point)
+  const cornerDx = nextCellPosition.x - lastCell.x;
+  const cornerDy = nextCellPosition.y - lastCell.y;
+  if (cornerDx !== 0 && cornerDy !== 0) {
+    const flank1Blocked = isBlockingCell(state, {
+      x: lastCell.x + cornerDx,
+      y: lastCell.y,
+    });
+    const flank2Blocked = isBlockingCell(state, {
+      x: lastCell.x,
+      y: lastCell.y + cornerDy,
+    });
+    if (flank1Blocked && flank2Blocked) {
+      return false;
+    }
+  }
+
   if (nextCellPosition.x === target.x && nextCellPosition.y === target.y) {
     seenCells.push(nextCellPosition);
     return true;
@@ -212,6 +232,7 @@ export const stepAlongLine = (
   ) {
     return false;
   } else {
+    let nextLastCell = lastCell;
     if (!(nextCellPosition.x === source.x && nextCellPosition.y === source.y)) {
       if (
         !seenCells.some(
@@ -220,6 +241,7 @@ export const stepAlongLine = (
       ) {
         seenCells.push(nextCellPosition);
       }
+      nextLastCell = nextCellPosition;
     }
     return stepAlongLine(
       nextPixelPosition,
@@ -230,6 +252,7 @@ export const stepAlongLine = (
       state,
       walking,
       seenCells,
+      nextLastCell,
     );
   }
 };
@@ -293,7 +316,33 @@ export const hasLineOfSight = (
 ): boolean => {
   if (walking) {
     const cells = cellsAlongLine(startPosition, targetPosition);
-    return cells.slice(0, -1).every((cell) => !isBlockingCell(state, cell));
+    let prev = startPosition;
+    for (const cell of cells) {
+      const dx = cell.x - prev.x;
+      const dy = cell.y - prev.y;
+      if (dx !== 0 && dy !== 0) {
+        // Diagonal step: block cutting through a corner formed by two walls
+        const flank1Blocked = isBlockingCell(state, {
+          x: prev.x + dx,
+          y: prev.y,
+        });
+        const flank2Blocked = isBlockingCell(state, {
+          x: prev.x,
+          y: prev.y + dy,
+        });
+        if (flank1Blocked && flank2Blocked) {
+          return false;
+        }
+      }
+      if (
+        !isSamePosition(cell, targetPosition) &&
+        isBlockingCell(state, cell)
+      ) {
+        return false;
+      }
+      prev = cell;
+    }
+    return true;
   }
   const startPixelPos = {
     x: startPosition.x * resolution - Math.floor(resolution / 2),

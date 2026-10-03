@@ -79,6 +79,7 @@
     "pickLock": "Dyrka lås",
     "openDoor": "Öppna dörr",
     "pickUpItem": "Plocka upp föremål",
+    "interact": "Interagera",
     "next": "Nästa"
   },
   "difficulty": {
