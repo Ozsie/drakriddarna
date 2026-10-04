@@ -14,6 +14,8 @@
     doMouseLogic,
     getCursorType,
     screenToGridPosition,
+    screenToWorldPosition,
+    executeRadialAction,
   } from '../hero/ClickInputLogic';
   import type { CursorType } from '../hero/ClickInputLogic';
   import { browser } from '$app/environment';
@@ -29,7 +31,11 @@
     renderSecrets,
   } from '../dungeon/DungeonRendering';
   import { renderItems } from '../items/ItemRendering';
-  import RadialMenu from './RadialMenu.svelte';
+  import {
+    renderRadialMenu,
+    findHoveredRadialButton,
+  } from '../ui/RadialMenuRendering';
+  import { radialMenuStore } from '../store/radialMenuStore';
   import { renderNotes } from '../notes/NotesRendering';
   import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
   import { clearTileTextureCache } from '../dungeon/TileTextureCache';
@@ -76,13 +82,16 @@
   let staticCanvas: HTMLCanvasElement | null = null;
   let actorCanvas: HTMLCanvasElement | null = null;
   let overlayCanvas: HTMLCanvasElement | null = null;
+  let uiCanvas: HTMLCanvasElement | null = null;
 
   let lastStaticSignature = '';
   let lastDynamicSignature = '';
   let lastOverlaySignature = '';
+  let lastUiSignature = '';
   let lastCellSize = cellSize;
   let overlayAnimationId: number | null = null;
   let dynamicAnimationId: number | null = null;
+  let hoveredRadialIndex: number | null = null;
 
   const getStaticSignature = (st: GameState, dbg: boolean, size: number) => {
     const d = st?.dungeon;
@@ -134,7 +143,7 @@
     const centerOffsetY = startPosition
       ? (startPosition.y + 0.5) * cellSize
       : 0;
-    for (const canvas of [staticCanvas, actorCanvas, overlayCanvas]) {
+    for (const canvas of [staticCanvas, actorCanvas, overlayCanvas, uiCanvas]) {
       if (canvas) {
         const ctx = canvas.getContext('2d');
         if (ctx) {
@@ -301,10 +310,31 @@
     }
   };
 
+  const renderUiLayer = (force = false) => {
+    if (!browser || !uiCanvas) return;
+    const menu = $radialMenuStore;
+    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize}`;
+    if (!force && sig === lastUiSignature) return;
+    lastUiSignature = sig;
+
+    const ctx = uiCanvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
+    ctx.restore();
+
+    if (menu) {
+      renderRadialMenu(ctx, cellSize, menu, hoveredRadialIndex);
+    }
+  };
+
   const renderCanvas = (force = false) => {
     renderStaticLayer(force);
     renderDynamicLayer(force);
     renderOverlayLayer(force);
+    renderUiLayer(force);
   };
 
   const initCanvas = (
@@ -348,6 +378,7 @@
       initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
       initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
       initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(uiCanvas, containerWidth, containerHeight, ratio);
       renderCanvas(true);
     }
   };
@@ -392,6 +423,11 @@
       initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
       initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
       initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(uiCanvas, containerWidth, containerHeight, ratio);
+    }
+
+    if (browser) {
+      window.addEventListener('keydown', onWindowKeyDown);
     }
 
     ground.onload = () => {
@@ -412,12 +448,22 @@
       renderDynamicLayer(true);
       renderOverlayLayer(true);
     }
+    renderUiLayer(true);
   });
+
+  const onWindowKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && $radialMenuStore) {
+      radialMenuStore.set(null);
+      hoveredRadialIndex = null;
+      renderUiLayer(true);
+    }
+  };
 
   onDestroy(() => {
     if (browser) {
       window.removeEventListener('mousemove', onWindowMouseMove);
       window.removeEventListener('mouseup', onWindowMouseUp);
+      window.removeEventListener('keydown', onWindowKeyDown);
     }
     if (overlayAnimationId) {
       cancelAnimationFrame(overlayAnimationId);
@@ -444,7 +490,12 @@
     initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
     initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
     initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
+    initCanvas(uiCanvas, containerWidth, containerHeight, ratio);
     renderCanvas(true);
+  }
+
+  $: if (isMounted && $radialMenuStore !== undefined) {
+    renderUiLayer(true);
   }
 
   $: if (isMounted && activeState && activeDebugMode !== undefined) {
@@ -481,6 +532,42 @@
       return;
     }
     if (event.button !== 0) return;
+
+    const menu = $radialMenuStore;
+    if (menu && uiCanvas) {
+      const rect = uiCanvas.getBoundingClientRect();
+      const screenX = event.clientX - rect.left;
+      const screenY = event.clientY - rect.top;
+      const worldPos = screenToWorldPosition(
+        screenX,
+        screenY,
+        rect.width,
+        rect.height,
+        panX,
+        panY,
+        cellSize,
+        startPosition,
+      );
+      const clickedBtn = findHoveredRadialButton(menu, cellSize, worldPos);
+      radialMenuStore.set(null);
+      hoveredRadialIndex = null;
+      renderUiLayer(true);
+
+      if (clickedBtn) {
+        const curState = state ?? $gameStateStore;
+        executeRadialAction(
+          curState,
+          clickedBtn.entry.action,
+          clickedBtn.entry.door,
+          clickedBtn.entry.interactable,
+        );
+        if (!state) {
+          gameStateStore.set(curState);
+        }
+      }
+      return;
+    }
+
     if (state) {
       doMouseLogic(event, cellSize, state, {
         panX,
@@ -527,14 +614,45 @@
 
   const onMouseMove = (event: MouseEvent) => {
     if (isDragging) return;
-    if (!activeState || !overlayCanvas) {
+    if (!activeState || !uiCanvas) {
       boardCursor = 'default';
       return;
     }
 
-    const rect = overlayCanvas.getBoundingClientRect();
+    const rect = uiCanvas.getBoundingClientRect();
     const screenX = event.clientX - rect.left;
     const screenY = event.clientY - rect.top;
+
+    const menu = $radialMenuStore;
+    if (menu) {
+      const worldPos = screenToWorldPosition(
+        screenX,
+        screenY,
+        rect.width,
+        rect.height,
+        panX,
+        panY,
+        cellSize,
+        startPosition,
+      );
+      const hoveredBtn = findHoveredRadialButton(menu, cellSize, worldPos);
+      if (hoveredBtn) {
+        boardCursor = 'pointer';
+        if (hoveredRadialIndex !== hoveredBtn.index) {
+          hoveredRadialIndex = hoveredBtn.index;
+          renderUiLayer(true);
+        }
+        return;
+      } else {
+        boardCursor = 'default';
+        if (hoveredRadialIndex !== null) {
+          hoveredRadialIndex = null;
+          renderUiLayer(true);
+        }
+        return;
+      }
+    }
+
     const pos = screenToGridPosition(
       screenX,
       screenY,
@@ -564,6 +682,10 @@
 
   const onMouseLeave = () => {
     boardCursor = 'default';
+    if (hoveredRadialIndex !== null) {
+      hoveredRadialIndex = null;
+      renderUiLayer(true);
+    }
   };
 
   const onWheel = (event: WheelEvent) => {
@@ -595,9 +717,14 @@
     ></canvas>
     <canvas
       id="gameBoard"
+      class="canvasLayer"
+      bind:this={overlayCanvas}
+    ></canvas>
+    <canvas
+      id="uiCanvas"
       class="canvasLayer interactiveLayer"
       style="cursor: {boardCursor};"
-      bind:this={overlayCanvas}
+      bind:this={uiCanvas}
       on:click={onClick}
       on:mousedown={onMouseDown}
       on:mousemove={onMouseMove}
@@ -605,15 +732,6 @@
       on:wheel={onWheel}
       on:contextmenu|preventDefault
     ></canvas>
-    <RadialMenu
-      {cellSize}
-      {state}
-      {panX}
-      {panY}
-      {startPosition}
-      viewWidth={containerWidth}
-      viewHeight={containerHeight}
-    />
   </div>
   <DungeonIntro {dungeon} state={activeState} />
 </div>

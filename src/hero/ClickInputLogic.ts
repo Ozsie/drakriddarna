@@ -334,6 +334,30 @@ export interface CameraOffset {
   centerPosition?: Position;
 }
 
+export const screenToWorldPosition = (
+  screenX: number,
+  screenY: number,
+  viewWidth: number,
+  viewHeight: number,
+  panX: number,
+  panY: number,
+  cellSize: number,
+  centerPosition?: Position,
+): { x: number; y: number } => {
+  const centerOffsetX = centerPosition
+    ? (centerPosition.x + 0.5) * cellSize
+    : 0;
+  const centerOffsetY = centerPosition
+    ? (centerPosition.y + 0.5) * cellSize
+    : 0;
+  const originX = viewWidth / 2 + panX - centerOffsetX;
+  const originY = viewHeight / 2 + panY - centerOffsetY;
+  return {
+    x: screenX - originX,
+    y: screenY - originY,
+  };
+};
+
 export const screenToGridPosition = (
   screenX: number,
   screenY: number,
@@ -344,19 +368,19 @@ export const screenToGridPosition = (
   cellSize: number,
   centerPosition?: Position,
 ): Position => {
-  const centerOffsetX = centerPosition
-    ? (centerPosition.x + 0.5) * cellSize
-    : 0;
-  const centerOffsetY = centerPosition
-    ? (centerPosition.y + 0.5) * cellSize
-    : 0;
-  const originX = viewWidth / 2 + panX - centerOffsetX;
-  const originY = viewHeight / 2 + panY - centerOffsetY;
-  const worldX = screenX - originX;
-  const worldY = screenY - originY;
+  const world = screenToWorldPosition(
+    screenX,
+    screenY,
+    viewWidth,
+    viewHeight,
+    panX,
+    panY,
+    cellSize,
+    centerPosition,
+  );
   return {
-    x: Math.floor(worldX / cellSize),
-    y: Math.floor(worldY / cellSize),
+    x: Math.floor(world.x / cellSize),
+    y: Math.floor(world.y / cellSize),
   };
 };
 
@@ -368,7 +392,8 @@ export const doMouseLogic = (
 ) => {
   const c =
     typeof document !== 'undefined'
-      ? document.getElementById('gameBoard')
+      ? document.getElementById('uiCanvas') ??
+        document.getElementById('gameBoard')
       : null;
   if (!c) return;
 
