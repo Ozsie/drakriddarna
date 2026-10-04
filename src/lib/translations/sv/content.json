@@ -95,5 +95,6 @@
       "name": "Svår",
       "description": "Svår: -1 skada, -1 försvar, -1 förflyttning, -1 leta"
     }
-  }
+  },
+  "turn": "Runda"
 }

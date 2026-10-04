@@ -11,6 +11,7 @@
 
   $: activeState = state ?? $gameStateStore;
   $: currentEvent = activeState.currentEvent
+  $: notes = activeState.dungeon.layout.notes.filter((note) => note.found).sort((a, b) => b.foundOn!! - a.foundOn!!)
 
   $: winConditions = activeState.dungeon.winConditions
     .slice()
@@ -88,10 +89,7 @@
     {/if}
   {/if}
   <span>{i18n('content.diary.label', { turn: `${activeState.turnCount ?? 0}` })} </span>
-  <hr/>
-  <p class='header'>{i18n('content.diary.foundOn', { round: '0' })}</p>
-  <p class='note'>{$t(activeState.dungeon.intro)}</p>
-  {#each activeState.dungeon.layout.notes as note}
+  {#each notes as note}
     {#if note.found}
       <hr/>
       <p class='header'>{i18n('content.diary.foundOn', { round: `${note.foundOn ?? ''}` })}</p>

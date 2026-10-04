@@ -95,5 +95,6 @@
       "name": "Hard",
       "description": "Hard: -1 attack, -1 defense, -1 moves, -1 search"
     }
-  }
+  },
+  "turn": "Turn"
 }

@@ -54,7 +54,7 @@ export const formatLatestLog = (log?: LogEvent | null): string => {
 };
 
 export const formatTurnCounter = (turnCount?: number | null): string =>
-  `Turn ${turnCount ?? 0}`;
+  `${i18n('content.turn') } ${turnCount ?? 0}`;
 
 export const truncateText = (
   ctx: CanvasRenderingContext2D | null | undefined,

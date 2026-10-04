@@ -31,6 +31,14 @@
     dismissed = true;
     if (activeDungeon?.intro && activeState) {
       addLog(activeState, activeDungeon.intro);
+      if (!activeDungeon.layout.notes.find((note) => note.message === dungeon.intro)) {
+        activeDungeon.layout.notes.push({
+          found: true,
+          foundOn: 0,
+          message: activeDungeon.intro,
+          position: { x: 0, y: 0 }
+        });
+      }
       if (!state) {
         gameStateStore.set(activeState);
       }
