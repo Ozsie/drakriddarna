@@ -2,7 +2,7 @@
   import type { GameState, Hero } from "../types";
   import Inventory from "./Inventory.svelte";
   import { t } from '$lib/translations';
-  import { gameStateStore, selectTargetHero, toggleHeroInventory } from '../store/gameStateStore';
+  import { gameStateStore, toggleHeroInventory } from '../store/gameStateStore';
 
   export let hero: Hero;
   export let state: GameState | undefined = undefined;
@@ -13,19 +13,6 @@
 
   let inventoryDisplayType = hero.isInventoryOpen ? "inline-block" : "none";
   $: inventoryDisplayType = hero.isInventoryOpen ? "inline-block" : "none";
-
-  const selectTarget = (target: Hero) => {
-    if (state) {
-      if (state.targetActor && state.targetActor.name === target.name) {
-        state.targetActor = undefined;
-      } else {
-        state.targetActor = target;
-      }
-      gameStateStore.set(state);
-    } else {
-      selectTargetHero(target);
-    }
-  };
 
   const toggleInventory = (currentHero: Hero) => {
     if (state) {
@@ -105,13 +92,6 @@
     {$t('content.level.' + hero.level)} ({hero.experience})</b>
   </div>
   <div>
-    <button on:click={() => selectTarget(hero)} title="select target hero">
-      {#if !isTarget}
-      ⛶
-      {:else}
-      ☑
-      {/if}
-    </button>
     <button on:click={() => toggleInventory(hero)} title="Open inventory">🎒</button>
   </div>
   
