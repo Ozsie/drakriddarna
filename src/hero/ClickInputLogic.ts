@@ -326,25 +326,81 @@ export const getCursorType = (
   return 'boot';
 };
 
+export interface CameraOffset {
+  panX: number;
+  panY: number;
+  viewWidth?: number;
+  viewHeight?: number;
+}
+
+export const screenToGridPosition = (
+  screenX: number,
+  screenY: number,
+  viewWidth: number,
+  viewHeight: number,
+  panX: number,
+  panY: number,
+  cellSize: number,
+): Position => {
+  const originX = viewWidth / 2 + panX;
+  const originY = viewHeight / 2 + panY;
+  const worldX = screenX - originX;
+  const worldY = screenY - originY;
+  return {
+    x: Math.floor(worldX / cellSize),
+    y: Math.floor(worldY / cellSize),
+  };
+};
+
 export const doMouseLogic = (
   event: MouseEvent,
   cellSize: number,
   state: GameState,
+  camera?: CameraOffset,
 ) => {
-  const c = document.getElementById('gameBoard');
+  const c =
+    typeof document !== 'undefined'
+      ? document.getElementById('gameBoard')
+      : null;
   if (!c) return;
 
   const rect = c.getBoundingClientRect();
-  const x = Math.min(
-    Math.floor((event.clientX - rect.left) / cellSize),
-    state.dungeon.layout.grid[0].length - 1,
-  );
-  const y = Math.min(
-    Math.floor((event.clientY - rect.top) / cellSize),
-    state.dungeon.layout.grid.length - 1,
-  );
+  const screenX = event.clientX - rect.left;
+  const screenY = event.clientY - rect.top;
+
+  let x: number;
+  let y: number;
+
+  if (camera) {
+    const viewWidth = camera.viewWidth ?? rect.width;
+    const viewHeight = camera.viewHeight ?? rect.height;
+    const pos = screenToGridPosition(
+      screenX,
+      screenY,
+      viewWidth,
+      viewHeight,
+      camera.panX,
+      camera.panY,
+      cellSize,
+    );
+    x = pos.x;
+    y = pos.y;
+  } else {
+    x = Math.floor(screenX / cellSize);
+    y = Math.floor(screenY / cellSize);
+  }
+
+  if (
+    y < 0 ||
+    y >= state.dungeon.layout.grid.length ||
+    x < 0 ||
+    x >= (state.dungeon.layout.grid[y]?.length ?? 0)
+  ) {
+    return;
+  }
 
   const cell = state.dungeon.layout.grid[y][x];
+  if (!cell) return;
 
   const hero = state.currentActor as Hero;
   if (x === hero.position.x && y === hero.position.y) {

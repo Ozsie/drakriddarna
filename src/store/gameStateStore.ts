@@ -33,7 +33,7 @@ import {
   findVisibleMonsters,
   type MonsterTurnOptions,
 } from '../monsters/MonsterLogic';
-import { doMouseLogic } from '../hero/ClickInputLogic';
+import { doMouseLogic, type CameraOffset } from '../hero/ClickInputLogic';
 import { testingGrounds } from '../dungeon/testingGrounds';
 import { getEventsForDungeon } from '../events/EventsLogic';
 import { saveReloadGuard, debouncedSaveReloadGuard } from '../core';
@@ -306,10 +306,11 @@ export const goToTestingGrounds = (): void => {
 export const handleCanvasClick = (
   event: MouseEvent,
   cellSize: number,
+  camera?: CameraOffset,
 ): void => {
   if (isExecutingTurn) return;
   const state = get(gameStateStore);
-  doMouseLogic(event, cellSize, state);
+  doMouseLogic(event, cellSize, state, camera);
   syncStore(state);
 };
 

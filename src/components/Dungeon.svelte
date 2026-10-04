@@ -10,7 +10,11 @@
   import { onMount, onDestroy } from 'svelte';
   import groundSprites from '$lib/DungeonTiles.png';
   import actorSprites from '$lib/Dungeon_Character_3.png';
-  import { doMouseLogic, getCursorType } from '../hero/ClickInputLogic';
+  import {
+    doMouseLogic,
+    getCursorType,
+    screenToGridPosition,
+  } from '../hero/ClickInputLogic';
   import type { CursorType } from '../hero/ClickInputLogic';
   import { browser } from '$app/environment';
   import { renderHeroes } from '../hero/HeroRendering';
@@ -44,8 +48,6 @@
   $: activeDebugMode = debugMode ?? $debugModeStore;
   $: dungeon = activeState.dungeon;
 
-  let footerSize = 0;
-  let screenSize = 0;
   $: cellSize = (activeState?.settings?.['cellSize'] as number) ?? 48;
   let totalReRenderCount = 0;
   let staticRenderCount = 0;
@@ -53,6 +55,31 @@
   let ground: HTMLImageElement | null = null;
   let actors: HTMLImageElement | null = null;
   let isMounted = false;
+
+  let containerElement: HTMLDivElement | null = null;
+  let containerWidth = 0;
+  let containerHeight = 0;
+  let lastContainerWidth = 0;
+  let lastContainerHeight = 0;
+
+  let panX = 0;
+  let panY = 0;
+
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let dragStartPanX = 0;
+  let dragStartPanY = 0;
+  let hasMovedDuringDrag = false;
+
+  let mouseInView = false;
+  let currentMouseX = 0;
+  let currentMouseY = 0;
+  let edgeScrollAnimId: number | null = null;
+  let lastEdgeScrollTime = 0;
+
+  const EDGE_MARGIN = 40;
+  const EDGE_MAX_SPEED = 600;
 
   let staticCanvas: HTMLCanvasElement | null = null;
   let actorCanvas: HTMLCanvasElement | null = null;
@@ -64,11 +91,6 @@
   let lastCellSize = cellSize;
   let overlayAnimationId: number | null = null;
   let dynamicAnimationId: number | null = null;
-
-  if (browser) {
-    screenSize = window.innerHeight;
-    footerSize = document.getElementById('footer')?.offsetHeight ?? 0;
-  }
 
   const getStaticSignature = (st: GameState, dbg: boolean, size: number) => {
     const d = st.dungeon;
@@ -110,6 +132,26 @@
     return !!img && img.complete && img.naturalWidth > 0;
   };
 
+  const updateAllCanvasTransforms = () => {
+    if (!containerWidth || !containerHeight) return;
+    const ratio = (browser && window.devicePixelRatio) || 1;
+    for (const canvas of [staticCanvas, actorCanvas, overlayCanvas]) {
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.setTransform(
+            ratio,
+            0,
+            0,
+            ratio,
+            ratio * (containerWidth / 2 + panX),
+            ratio * (containerHeight / 2 + panY),
+          );
+        }
+      }
+    }
+  };
+
   const renderStaticLayer = (force = false) => {
     if (!activeState || !browser || !ground || !staticCanvas) return;
     if (!isReady(ground)) return;
@@ -126,9 +168,15 @@
 
     staticRenderCount++;
     totalReRenderCount++;
-    ctx.clearRect(0, 0, cellSize * 40, cellSize * 30);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, staticCanvas.width, staticCanvas.height);
+    ctx.restore();
+
+    const gridCols = activeState.dungeon.layout.grid[0]?.length ?? 40;
+    const gridRows = activeState.dungeon.layout.grid.length ?? 30;
     ctx.fillStyle = background;
-    ctx.fillRect(0, 0, cellSize * 40, cellSize * 30);
+    ctx.fillRect(0, 0, cellSize * gridCols, cellSize * gridRows);
     renderGrid(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderSecrets(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderItems(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
@@ -156,7 +204,11 @@
     const currentTime = Date.now();
     dynamicRenderCount++;
     totalReRenderCount++;
-    ctx.clearRect(0, 0, cellSize * 40, cellSize * 30);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, actorCanvas.width, actorCanvas.height);
+    ctx.restore();
+
     const hasActiveMonsters = renderMonsters(
       ctx,
       actors,
@@ -205,7 +257,11 @@
     const ctx = overlayCanvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, cellSize * 40, cellSize * 30);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    ctx.restore();
+
     renderNotes(ctx, actors, cellSize, activeState, activeDebugMode ?? false);
     const hasActiveDamage = renderDamageIndicators(
       ctx,
@@ -214,13 +270,18 @@
       Date.now(),
     );
     if (activeDebugMode) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const ratio = (browser && window.devicePixelRatio) || 1;
+      ctx.scale(ratio, ratio);
       ctx.fillStyle = 'white';
-      ctx.font = '8px Arial';
+      ctx.font = '10px Arial';
       ctx.fillText(
         `Re-renders: ${totalReRenderCount} (Static: ${staticRenderCount}, Dynamic: ${dynamicRenderCount})`,
-        2,
         10,
+        14,
       );
+      ctx.restore();
     }
 
     if (overlayAnimationId) {
@@ -247,15 +308,136 @@
     renderOverlayLayer(force);
   };
 
-  const initCanvas = (canvas: HTMLCanvasElement | null, ratio: number) => {
-    if (!canvas) return;
-    canvas.width = cellSize * 40 * ratio;
-    canvas.height = cellSize * 30 * ratio;
-    canvas.style.width = `${cellSize * 40}px`;
-    canvas.style.height = `${cellSize * 30}px`;
+  const initCanvas = (
+    canvas: HTMLCanvasElement | null,
+    width: number,
+    height: number,
+    ratio: number,
+  ) => {
+    if (!canvas || width <= 0 || height <= 0) return;
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.setTransform(
+        ratio,
+        0,
+        0,
+        ratio,
+        ratio * (width / 2 + panX),
+        ratio * (height / 2 + panY),
+      );
+    }
+  };
+
+  const updateDimensions = () => {
+    if (
+      containerWidth !== lastContainerWidth ||
+      containerHeight !== lastContainerHeight
+    ) {
+      lastContainerWidth = containerWidth;
+      lastContainerHeight = containerHeight;
+      const ratio = (browser && window.devicePixelRatio) || 1;
+      initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
+      renderCanvas(true);
+    }
+  };
+
+  const stopEdgeScroll = () => {
+    if (edgeScrollAnimId !== null) {
+      cancelAnimationFrame(edgeScrollAnimId);
+      edgeScrollAnimId = null;
+    }
+  };
+
+  const edgeScrollStep = (now: number) => {
+    if (!mouseInView || !overlayCanvas) {
+      stopEdgeScroll();
+      return;
+    }
+    const rect = overlayCanvas.getBoundingClientRect();
+    const relX = currentMouseX - rect.left;
+    const relY = currentMouseY - rect.top;
+
+    let vx = 0;
+    let vy = 0;
+    if (relX >= 0 && relX < EDGE_MARGIN) {
+      vx = ((EDGE_MARGIN - relX) / EDGE_MARGIN) * EDGE_MAX_SPEED;
+    } else if (relX <= rect.width && relX > rect.width - EDGE_MARGIN) {
+      vx = -((relX - (rect.width - EDGE_MARGIN)) / EDGE_MARGIN) * EDGE_MAX_SPEED;
+    }
+    if (relY >= 0 && relY < EDGE_MARGIN) {
+      vy = ((EDGE_MARGIN - relY) / EDGE_MARGIN) * EDGE_MAX_SPEED;
+    } else if (relY <= rect.height && relY > rect.height - EDGE_MARGIN) {
+      vy = -((relY - (rect.height - EDGE_MARGIN)) / EDGE_MARGIN) * EDGE_MAX_SPEED;
+    }
+
+    if (vx === 0 && vy === 0) {
+      stopEdgeScroll();
+      return;
+    }
+
+    const dt = Math.min((now - lastEdgeScrollTime) / 1000, 0.1);
+    lastEdgeScrollTime = now;
+    panX += vx * dt;
+    panY += vy * dt;
+    updateAllCanvasTransforms();
+    renderCanvas(true);
+
+    edgeScrollAnimId = requestAnimationFrame(edgeScrollStep);
+  };
+
+  const checkEdgeScroll = () => {
+    if (!mouseInView || !overlayCanvas || isDragging) {
+      stopEdgeScroll();
+      return;
+    }
+    const rect = overlayCanvas.getBoundingClientRect();
+    const relX = currentMouseX - rect.left;
+    const relY = currentMouseY - rect.top;
+
+    const isNearEdge =
+      (relX >= 0 && relX < EDGE_MARGIN) ||
+      (relX <= rect.width && relX > rect.width - EDGE_MARGIN) ||
+      (relY >= 0 && relY < EDGE_MARGIN) ||
+      (relY <= rect.height && relY > rect.height - EDGE_MARGIN);
+
+    if (isNearEdge) {
+      if (!edgeScrollAnimId) {
+        lastEdgeScrollTime = performance.now();
+        edgeScrollAnimId = requestAnimationFrame(edgeScrollStep);
+      }
+    } else {
+      stopEdgeScroll();
+    }
+  };
+
+  const onWindowMouseMove = (event: MouseEvent) => {
+    if (isDragging) {
+      const dx = event.clientX - dragStartX;
+      const dy = event.clientY - dragStartY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        hasMovedDuringDrag = true;
+      }
+      panX = dragStartPanX + dx;
+      panY = dragStartPanY + dy;
+      updateAllCanvasTransforms();
+      renderCanvas(true);
+    }
+  };
+
+  const onWindowMouseUp = () => {
+    if (isDragging) {
+      isDragging = false;
+      if (hasMovedDuringDrag) {
+        setTimeout(() => {
+          hasMovedDuringDrag = false;
+        }, 50);
+      }
     }
   };
 
@@ -264,10 +446,17 @@
     ground = new Image();
     actors = new Image();
 
-    const ratio = window.devicePixelRatio || 1;
-    initCanvas(staticCanvas, ratio);
-    initCanvas(actorCanvas, ratio);
-    initCanvas(overlayCanvas, ratio);
+    if (browser) {
+      window.addEventListener('mousemove', onWindowMouseMove);
+      window.addEventListener('mouseup', onWindowMouseUp);
+    }
+
+    const ratio = (browser && window.devicePixelRatio) || 1;
+    if (containerWidth && containerHeight) {
+      initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
+    }
 
     ground.onload = () => {
       renderStaticLayer(true);
@@ -290,6 +479,11 @@
   });
 
   onDestroy(() => {
+    if (browser) {
+      window.removeEventListener('mousemove', onWindowMouseMove);
+      window.removeEventListener('mouseup', onWindowMouseUp);
+    }
+    stopEdgeScroll();
     if (overlayAnimationId) {
       cancelAnimationFrame(overlayAnimationId);
       overlayAnimationId = null;
@@ -300,13 +494,21 @@
     }
   });
 
+  $: if (
+    isMounted &&
+    (containerWidth !== lastContainerWidth ||
+      containerHeight !== lastContainerHeight)
+  ) {
+    updateDimensions();
+  }
+
   $: if (isMounted && cellSize !== lastCellSize) {
     lastCellSize = cellSize;
     clearTileTextureCache();
     const ratio = (browser && window.devicePixelRatio) || 1;
-    initCanvas(staticCanvas, ratio);
-    initCanvas(actorCanvas, ratio);
-    initCanvas(overlayCanvas, ratio);
+    initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
+    initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
+    initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
     renderCanvas(true);
   }
 
@@ -314,12 +516,40 @@
     renderCanvas(false);
   }
 
+  const onMouseDown = (event: MouseEvent) => {
+    if (event.button === 2 || event.button === 1) {
+      isDragging = true;
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
+      dragStartPanX = panX;
+      dragStartPanY = panY;
+      hasMovedDuringDrag = false;
+      stopEdgeScroll();
+      event.preventDefault();
+    }
+  };
+
   const onClick = (event: MouseEvent) => {
+    if (hasMovedDuringDrag) {
+      hasMovedDuringDrag = false;
+      return;
+    }
+    if (event.button !== 0) return;
     if (state) {
-      doMouseLogic(event, cellSize, state);
+      doMouseLogic(event, cellSize, state, {
+        panX,
+        panY,
+        viewWidth: containerWidth,
+        viewHeight: containerHeight,
+      });
       gameStateStore.set(state);
     } else {
-      handleCanvasClick(event, cellSize);
+      handleCanvasClick(event, cellSize, {
+        panX,
+        panY,
+        viewWidth: containerWidth,
+        viewHeight: containerHeight,
+      });
     }
   };
 
@@ -345,74 +575,101 @@
     return cursor;
   };
 
-  let boardCursor = 'pointer';
+  let boardCursor = 'default';
 
   const onMouseMove = (event: MouseEvent) => {
-    if (!activeState) {
-      boardCursor = 'pointer';
+    currentMouseX = event.clientX;
+    currentMouseY = event.clientY;
+    mouseInView = true;
+    checkEdgeScroll();
+
+    if (isDragging) return;
+    if (!activeState || !overlayCanvas) {
+      boardCursor = 'default';
       return;
     }
-    const c = overlayCanvas;
-    if (!c) return;
-    const rect = c.getBoundingClientRect();
-    const x = Math.min(
-      Math.floor((event.clientX - rect.left) / cellSize),
-      activeState.dungeon.layout.grid[0].length - 1,
+
+    const rect = overlayCanvas.getBoundingClientRect();
+    const screenX = event.clientX - rect.left;
+    const screenY = event.clientY - rect.top;
+    const pos = screenToGridPosition(
+      screenX,
+      screenY,
+      rect.width,
+      rect.height,
+      panX,
+      panY,
+      cellSize,
     );
-    const y = Math.min(
-      Math.floor((event.clientY - rect.top) / cellSize),
-      activeState.dungeon.layout.grid.length - 1,
-    );
-    if (x < 0 || y < 0) {
-      boardCursor = 'pointer';
+
+    const grid = activeState.dungeon.layout.grid;
+    if (
+      pos.y < 0 ||
+      pos.y >= grid.length ||
+      pos.x < 0 ||
+      pos.x >= (grid[pos.y]?.length ?? 0)
+    ) {
+      boardCursor = 'default';
       return;
     }
-    const cursorType = getCursorType(activeState, { x, y });
+
+    const cursorType = getCursorType(activeState, pos);
     boardCursor = emojiCursor(cursorType);
   };
 
   const onMouseLeave = () => {
-    boardCursor = 'pointer';
+    mouseInView = false;
+    stopEdgeScroll();
+    boardCursor = 'default';
   };
 
-  const getStyle = () => {
-    const maxHeight = screenSize - footerSize - 20;
-    return `max-height: ${maxHeight}px; max-width: ${cellSize * 40}px`;
+  const onWheel = (event: WheelEvent) => {
+    panX -= event.deltaX;
+    panY -= event.deltaY;
+    updateAllCanvasTransforms();
+    renderCanvas(true);
+    event.preventDefault();
   };
 </script>
 
-<div style={getStyle()} class="dungeon" id="gameBoardContainer">
-  <div
-    class="canvasContainer"
-    style="position: relative; width: {cellSize * 40}px; height: {cellSize *
-      30}px;"
-  >
+<div
+  class="dungeon"
+  id="gameBoardContainer"
+  bind:this={containerElement}
+  bind:clientWidth={containerWidth}
+  bind:clientHeight={containerHeight}
+>
+  <div class="canvasContainer">
     <canvas
-      width={cellSize * 40}
-      height={cellSize * 30}
       id="staticCanvas"
       class="canvasLayer"
       bind:this={staticCanvas}
     ></canvas>
     <canvas
-      width={cellSize * 40}
-      height={cellSize * 30}
       id="actorCanvas"
       class="canvasLayer"
       bind:this={actorCanvas}
     ></canvas>
     <canvas
-      width={cellSize * 40}
-      height={cellSize * 30}
       id="gameBoard"
       class="canvasLayer interactiveLayer"
       style="cursor: {boardCursor};"
       bind:this={overlayCanvas}
       on:click={onClick}
+      on:mousedown={onMouseDown}
       on:mousemove={onMouseMove}
       on:mouseleave={onMouseLeave}
+      on:wheel={onWheel}
+      on:contextmenu|preventDefault
     ></canvas>
-    <RadialMenu {cellSize} {state} />
+    <RadialMenu
+      {cellSize}
+      {state}
+      {panX}
+      {panY}
+      viewWidth={containerWidth}
+      viewHeight={containerHeight}
+    />
   </div>
   <DungeonIntro {dungeon} />
 </div>
@@ -420,17 +677,24 @@
 <style>
   .dungeon {
     background: var(--color-bg-dungeon, #121418);
-    overflow: auto;
-    height: 80%;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
     position: relative;
   }
   .canvasContainer {
     position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
   }
   .canvasLayer {
     position: absolute;
     top: 0;
     left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
   }
   .interactiveLayer {
     cursor: pointer;
