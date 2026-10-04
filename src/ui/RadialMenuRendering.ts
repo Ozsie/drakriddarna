@@ -46,7 +46,8 @@ export const getRadialButtonPositions = (
     const x = centerX + ringRadius * Math.cos(angle);
     const y = centerY + ringRadius * Math.sin(angle);
     const labelKey =
-      entry.interactable?.nameTranslationKey ?? RADIAL_MENU_LABELS[entry.action];
+      entry.interactable?.nameTranslationKey ??
+      RADIAL_MENU_LABELS[entry.action];
     const baseLabel = i18n(labelKey);
     const label = baseLabel + (entry.door ? ` (${entry.door.side})` : '');
     const icon =

@@ -124,8 +124,5 @@
     <div class="controls-panel">
       <ButtonPad buildInfo={buildInfo} />
     </div>
-    <div class="log-panel">
-      <Log />
-    </div>
   </footer>
 </div>

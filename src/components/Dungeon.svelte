@@ -34,7 +34,9 @@
   import {
     renderRadialMenu,
     findHoveredRadialButton,
-  } from '../ui/RadialMenuRendering';
+    renderTopBar,
+    getTopBarHit,
+  } from '../ui/UIRendering';
   import { radialMenuStore } from '../store/radialMenuStore';
   import { renderNotes } from '../notes/NotesRendering';
   import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
@@ -92,6 +94,7 @@
   let overlayAnimationId: number | null = null;
   let dynamicAnimationId: number | null = null;
   let hoveredRadialIndex: number | null = null;
+  let isMenuHovered = false;
 
   const getStaticSignature = (st: GameState, dbg: boolean, size: number) => {
     const d = st?.dungeon;
@@ -313,7 +316,11 @@
   const renderUiLayer = (force = false) => {
     if (!browser || !uiCanvas) return;
     const menu = $radialMenuStore;
-    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize}`;
+    const latestLog = activeState?.actionLog?.[0];
+    const latestLogSig = latestLog
+      ? `${latestLog.turn}:${latestLog.key}`
+      : '';
+    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${latestLogSig},${isMenuHovered}`;
     if (!force && sig === lastUiSignature) return;
     lastUiSignature = sig;
 
@@ -324,6 +331,16 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
     ctx.restore();
+
+    if (containerWidth > 0 && activeState) {
+      const ratio = (browser && window.devicePixelRatio) || 1;
+      ctx.save();
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      renderTopBar(ctx, containerWidth, activeState, {
+        isMenuHovered,
+      });
+      ctx.restore();
+    }
 
     if (menu) {
       renderRadialMenu(ctx, cellSize, menu, hoveredRadialIndex);
@@ -533,6 +550,21 @@
     }
     if (event.button !== 0) return;
 
+    if (uiCanvas && activeState && containerWidth > 0) {
+      const rect = uiCanvas.getBoundingClientRect();
+      const screenX = event.clientX - rect.left;
+      const screenY = event.clientY - rect.top;
+      const topBarHit = getTopBarHit(
+        containerWidth,
+        activeState,
+        screenX,
+        screenY,
+      );
+      if (topBarHit) {
+        return;
+      }
+    }
+
     const menu = $radialMenuStore;
     if (menu && uiCanvas) {
       const rect = uiCanvas.getBoundingClientRect();
@@ -623,6 +655,40 @@
     const screenX = event.clientX - rect.left;
     const screenY = event.clientY - rect.top;
 
+    if (containerWidth > 0) {
+      const topBarHit = getTopBarHit(
+        containerWidth,
+        activeState,
+        screenX,
+        screenY,
+      );
+      if (topBarHit) {
+        if (hoveredRadialIndex !== null) {
+          hoveredRadialIndex = null;
+          renderUiLayer(true);
+        }
+        if (topBarHit === 'menu') {
+          boardCursor = 'pointer';
+          if (!isMenuHovered) {
+            isMenuHovered = true;
+            renderUiLayer(true);
+          }
+        } else {
+          boardCursor = 'default';
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            renderUiLayer(true);
+          }
+        }
+        return;
+      }
+    }
+
+    if (isMenuHovered) {
+      isMenuHovered = false;
+      renderUiLayer(true);
+    }
+
     const menu = $radialMenuStore;
     if (menu) {
       const worldPos = screenToWorldPosition(
@@ -682,8 +748,16 @@
 
   const onMouseLeave = () => {
     boardCursor = 'default';
+    let needsRender = false;
     if (hoveredRadialIndex !== null) {
       hoveredRadialIndex = null;
+      needsRender = true;
+    }
+    if (isMenuHovered) {
+      isMenuHovered = false;
+      needsRender = true;
+    }
+    if (needsRender) {
       renderUiLayer(true);
     }
   };

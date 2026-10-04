@@ -7,13 +7,10 @@
   import {
     debugModeStore,
     dispatch,
-    endHeroAction,
     gameStateStore,
     goToTestingGrounds,
     initGame,
-    isTurnInProgress,
     loadGameState,
-    nextTurn,
     saveGame,
     setDebug,
     setDifficulty,
@@ -21,7 +18,7 @@
     winLevel,
   } from '../store/gameStateStore';
   import { resetLiveHeroes } from '../hero/HeroLogic';
-  import { addLog, DifficultLevels, endAction, getDifficulty, hasWon, init, loadState, next, save } from '../game';
+  import { addLog, DifficultLevels, getDifficulty, hasWon, init, loadState, save } from '../game';
   import { testingGrounds } from '../dungeon/testingGrounds';
   import { getEventsForDungeon, selectNextEvent, shuffleEventDeck } from '../events/EventsLogic';
   import { campaigns } from '../campaigns';
@@ -52,26 +49,6 @@
       gameStateStore.set(state);
     } else {
       setDebug(newDebug);
-    }
-  };
-
-  const handleNext = async () => {
-    if ($isTurnInProgress) return;
-    if (state) {
-      state = await next(state);
-      gameStateStore.set(state);
-    } else {
-      await nextTurn();
-    }
-  };
-
-  const handleEndAction = async () => {
-    if ($isTurnInProgress) return;
-    if (state) {
-      await endAction(state);
-      gameStateStore.set(state);
-    } else {
-      await endHeroAction();
     }
   };
 
@@ -361,15 +338,6 @@
     padding: 6px 8px;
     font-size: 13px;
   }
-  .buttonGroup {
-    display: flex;
-    gap: 6px;
-    width: 100%;
-  }
-  .twoColButton {
-    flex: 1;
-    width: 100%;
-  }
 </style>
 
 <div class="commands">
@@ -402,10 +370,6 @@
     bind:buttons={campaignMenuButtons}
   />
   <button class="menuButton" on:click={onMenuButton}>{$t('content.menu.menuButton')}</button>
-  <div class="buttonGroup">
-    <button class="menuButton twoColButton" on:click={handleNext}>{$t('content.actions.next')}</button>
-    <button class="menuButton twoColButton" on:click={handleEndAction}>{$t('content.actions.action')}</button>
-  </div>
   {#if activeState.dungeon.beaten}
     <button class="menuButton" on:click={handleWinLevel}>{$t('content.actions.nextLevel')}</button>
   {/if}

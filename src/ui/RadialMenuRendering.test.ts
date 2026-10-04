@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { describe, expect, it, vi } from 'vitest';
 import {
   findHoveredRadialButton,
@@ -5,15 +6,14 @@ import {
   RADIAL_MENU_ICONS,
   RADIAL_MENU_LABELS,
   renderRadialMenu,
-  renderRadialTooltip,
 } from './RadialMenuRendering';
 import { renderUI } from './UIRendering';
 import { RadialAction, type RadialMenuEntry } from '../hero/RadialMenuLogic';
 import type { RadialMenuState } from '../store/radialMenuStore';
 import { Side } from '../types';
 
-const createMockCtx = () => {
-  return {
+const createMockCtx = () =>
+  ({
     save: vi.fn(),
     restore: vi.fn(),
     beginPath: vi.fn(),
@@ -31,8 +31,7 @@ const createMockCtx = () => {
     font: '',
     textAlign: '',
     textBaseline: '',
-  } as unknown as CanvasRenderingContext2D;
-};
+  }) as unknown as CanvasRenderingContext2D;
 
 describe('RadialMenuRendering', () => {
   it('returns empty button list if menu is null or has no entries', () => {
