@@ -5,11 +5,16 @@
   import { gameStateStore } from '../store/gameStateStore';
   import { t } from '$lib/translations';
 
-  import type { GameState } from '../types';
+  import type { GameState, Position } from '../types';
   import type { RadialMenuEntry } from '../hero/RadialMenuLogic';
 
   export let cellSize: number;
   export let state: GameState | undefined = undefined;
+  export let panX = 0;
+  export let panY = 0;
+  export let viewWidth = 0;
+  export let viewHeight = 0;
+  export let startPosition: Position | undefined = undefined;
 
   const icons: Record<RadialAction, string> = {
     [RadialAction.SEARCH]: '🔍',
@@ -31,8 +36,18 @@
 
   $: menu = $radialMenuStore;
   $: radius = cellSize * 1.1;
-  $: centerX = menu ? menu.x * cellSize + cellSize / 2 : 0;
-  $: centerY = menu ? menu.y * cellSize + cellSize / 2 : 0;
+  $: activeStartPosition =
+    startPosition ?? (state ?? $gameStateStore)?.dungeon?.startingPositions?.[0];
+  $: centerOffsetX = activeStartPosition
+    ? (activeStartPosition.x + 0.5) * cellSize
+    : 0;
+  $: centerOffsetY = activeStartPosition
+    ? (activeStartPosition.y + 0.5) * cellSize
+    : 0;
+  $: originX = viewWidth > 0 ? viewWidth / 2 + panX - centerOffsetX : 0;
+  $: originY = viewHeight > 0 ? viewHeight / 2 + panY - centerOffsetY : 0;
+  $: centerX = menu ? originX + menu.x * cellSize + cellSize / 2 : 0;
+  $: centerY = menu ? originY + menu.y * cellSize + cellSize / 2 : 0;
 
   const close = () => radialMenuStore.set(null);
 

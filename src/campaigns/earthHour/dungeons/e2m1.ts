@@ -10,10 +10,8 @@ import {
   SecretType,
   Side,
 } from '../../../types';
-import {
-  defineDungeon,
-  registerInteractableEffect,
-} from '../../../dungeon/DungeonLogic';
+import { defineDungeon } from '../../../dungeon/dungeonParser';
+import { registerInteractableEffect } from '../../../interactables/InteractableLogic';
 import { addLog, findCell, i18n } from '../../../core';
 import { e2m2 } from './e2m2';
 

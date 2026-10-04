@@ -61,9 +61,11 @@
     background-color: var(--color-bg-dungeon, #121418);
     border: 1px solid var(--color-panel-border, #3a414d);
     border-radius: var(--radius-md, 8px);
-    overflow: auto;
+    overflow: hidden;
     display: flex;
     position: relative;
+    min-height: 0;
+    min-width: 0;
   }
 
   .footer-section {
