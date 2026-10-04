@@ -46,7 +46,8 @@
 
   $: activeState = state ?? $gameStateStore;
   $: activeDebugMode = debugMode ?? $debugModeStore;
-  $: dungeon = activeState.dungeon;
+  $: dungeon = activeState?.dungeon;
+  $: startPosition = dungeon?.startingPositions?.[0];
 
   $: cellSize = (activeState?.settings?.['cellSize'] as number) ?? 48;
   let totalReRenderCount = 0;
@@ -93,32 +94,33 @@
   let dynamicAnimationId: number | null = null;
 
   const getStaticSignature = (st: GameState, dbg: boolean, size: number) => {
-    const d = st.dungeon;
-    return `${d.name}|${d.discoveredRooms.join(',')}|${d.layout.doors
+    const d = st?.dungeon;
+    if (!d) return '';
+    return `${d.name}|${(d.discoveredRooms ?? []).join(',')}|${(d.layout?.doors ?? [])
       .map((dr: Door) => `${dr.x},${dr.y},${dr.open},${dr.locked},${dr.hidden}`)
-      .join(';')}|${d.layout.secrets
+      .join(';')}|${(d.layout?.secrets ?? [])
       .map((s: Secret) => `${s.position.x},${s.position.y},${s.found}`)
-      .join(';')}|${(d.layout.interactables ?? [])
+      .join(';')}|${(d.layout?.interactables ?? [])
       .map(
         (i: InteractableCell) =>
           `${i.position.x},${i.position.y},${i.secret},${i.interacted}`,
       )
-      .join(';')}|${d.layout.items.length}|${
-      d.layout.pits?.length ?? 0
+      .join(';')}|${d.layout?.items?.length ?? 0}|${
+      d.layout?.pits?.length ?? 0
     }|${d.portal?.x},${d.portal?.y}|${size}|${dbg}`;
   };
 
   const getDynamicSignature = (st: GameState, dbg: boolean, size: number) => {
-    const heroes = st.heroes
+    const heroes = (st?.heroes ?? [])
       .map(
         (h: Actor) =>
           `${h.name},${h.position.x},${h.position.y},${h.health},${h.actions},${h.movement},${h.incapacitated}`,
       )
       .join(';');
-    const monsters = st.dungeon.layout.monsters
+    const monsters = (st?.dungeon?.layout?.monsters ?? [])
       .map((m: Monster) => `${m.name},${m.position.x},${m.position.y},${m.health}`)
       .join(';');
-    const curActor = `${st.currentActor?.name},${st.currentActor?.position?.x},${st.currentActor?.position?.y}`;
+    const curActor = `${st?.currentActor?.name},${st?.currentActor?.position?.x},${st?.currentActor?.position?.y}`;
     return `${heroes}|${monsters}|${curActor}|${size}|${dbg}`;
   };
 
@@ -135,6 +137,12 @@
   const updateAllCanvasTransforms = () => {
     if (!containerWidth || !containerHeight) return;
     const ratio = (browser && window.devicePixelRatio) || 1;
+    const centerOffsetX = startPosition
+      ? (startPosition.x + 0.5) * cellSize
+      : 0;
+    const centerOffsetY = startPosition
+      ? (startPosition.y + 0.5) * cellSize
+      : 0;
     for (const canvas of [staticCanvas, actorCanvas, overlayCanvas]) {
       if (canvas) {
         const ctx = canvas.getContext('2d');
@@ -144,8 +152,8 @@
             0,
             0,
             ratio,
-            ratio * (containerWidth / 2 + panX),
-            ratio * (containerHeight / 2 + panY),
+            ratio * (containerWidth / 2 + panX - centerOffsetX),
+            ratio * (containerHeight / 2 + panY - centerOffsetY),
           );
         }
       }
@@ -173,8 +181,8 @@
     ctx.clearRect(0, 0, staticCanvas.width, staticCanvas.height);
     ctx.restore();
 
-    const gridCols = activeState.dungeon.layout.grid[0]?.length ?? 40;
-    const gridRows = activeState.dungeon.layout.grid.length ?? 30;
+    const gridCols = activeState.dungeon?.layout?.grid?.[0]?.length ?? 40;
+    const gridRows = activeState.dungeon?.layout?.grid?.length ?? 30;
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, cellSize * gridCols, cellSize * gridRows);
     renderGrid(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
@@ -321,13 +329,19 @@
     canvas.style.height = `${height}px`;
     const ctx = canvas.getContext('2d');
     if (ctx) {
+      const centerOffsetX = startPosition
+        ? (startPosition.x + 0.5) * cellSize
+        : 0;
+      const centerOffsetY = startPosition
+        ? (startPosition.y + 0.5) * cellSize
+        : 0;
       ctx.setTransform(
         ratio,
         0,
         0,
         ratio,
-        ratio * (width / 2 + panX),
-        ratio * (height / 2 + panY),
+        ratio * (width / 2 + panX - centerOffsetX),
+        ratio * (height / 2 + panY - centerOffsetY),
       );
     }
   };
@@ -516,6 +530,18 @@
     renderCanvas(false);
   }
 
+  let lastDungeonKey = '';
+  $: dungeonKey = dungeon
+    ? `${dungeon.name}|${startPosition?.x},${startPosition?.y}`
+    : '';
+  $: if (isMounted && dungeonKey !== lastDungeonKey) {
+    lastDungeonKey = dungeonKey;
+    panX = 0;
+    panY = 0;
+    updateAllCanvasTransforms();
+    renderCanvas(true);
+  }
+
   const onMouseDown = (event: MouseEvent) => {
     if (event.button === 2 || event.button === 1) {
       isDragging = true;
@@ -541,6 +567,7 @@
         panY,
         viewWidth: containerWidth,
         viewHeight: containerHeight,
+        centerPosition: startPosition,
       });
       gameStateStore.set(state);
     } else {
@@ -549,6 +576,7 @@
         panY,
         viewWidth: containerWidth,
         viewHeight: containerHeight,
+        centerPosition: startPosition,
       });
     }
   };
@@ -600,10 +628,12 @@
       panX,
       panY,
       cellSize,
+      startPosition,
     );
 
-    const grid = activeState.dungeon.layout.grid;
+    const grid = activeState.dungeon?.layout?.grid;
     if (
+      !grid ||
       pos.y < 0 ||
       pos.y >= grid.length ||
       pos.x < 0 ||
@@ -667,6 +697,7 @@
       {state}
       {panX}
       {panY}
+      {startPosition}
       viewWidth={containerWidth}
       viewHeight={containerHeight}
     />

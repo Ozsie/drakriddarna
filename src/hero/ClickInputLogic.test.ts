@@ -107,8 +107,7 @@ describe('screenToGridPosition', () => {
     const panX = 0;
     const panY = 0;
 
-    // View center is (400, 300) -> world (0, 0)
-    // Screen (400, 300) should map to cell (0, 0)
+    // View center is (400, 300) -> world (0, 0) when no centerPosition is provided
     const posCenter = screenToGridPosition(
       400,
       300,
@@ -143,6 +142,41 @@ describe('screenToGridPosition', () => {
       cellSize,
     );
     expect(posNeg).toEqual({ x: -1, y: -1 });
+  });
+
+  it('correctly centers on a given starting position', () => {
+    const viewWidth = 800;
+    const viewHeight = 600;
+    const cellSize = 48;
+    const panX = 0;
+    const panY = 0;
+    const startPos = { x: 3, y: 5 };
+
+    // View center (400, 300) should map to the starting position (3, 5)
+    const posCenter = screenToGridPosition(
+      400,
+      300,
+      viewWidth,
+      viewHeight,
+      panX,
+      panY,
+      cellSize,
+      startPos,
+    );
+    expect(posCenter).toEqual({ x: 3, y: 5 });
+
+    // One tile to the right (400 + 48, 300) should map to (4, 5)
+    const posRight = screenToGridPosition(
+      448,
+      300,
+      viewWidth,
+      viewHeight,
+      panX,
+      panY,
+      cellSize,
+      startPos,
+    );
+    expect(posRight).toEqual({ x: 4, y: 5 });
   });
 
   it('correctly shifts coordinates when panned', () => {
@@ -202,11 +236,10 @@ describe('doMouseLogic with camera', () => {
     } as unknown as Document;
 
     try {
-      // With origin at center (400, 300) and pan (0,0), cell (1,1) is at screen (400+48, 300+48) = (448, 348)
-      // Clicking on hero at (1,1) opens radial menu
+      // With starting position (1, 1) centered at screen (400, 300) and pan (0,0), clicking center opens radial menu
       const heroClickEvent = {
-        clientX: 448 + 10,
-        clientY: 348 + 10,
+        clientX: 400,
+        clientY: 300,
       } as MouseEvent;
 
       doMouseLogic(heroClickEvent, 48, state, {
@@ -221,10 +254,10 @@ describe('doMouseLogic with camera', () => {
       expect(menu?.x).toBe(1);
       expect(menu?.y).toBe(1);
 
-      // Now click on cell (2, 1) -> screen (400 + 2*48 + 10, 300 + 1*48 + 10) = (506, 358)
+      // Now click on cell (2, 1) -> one tile to the right of screen center = (400 + 48, 300) = (448, 300)
       const moveClickEvent = {
-        clientX: 506,
-        clientY: 358,
+        clientX: 448,
+        clientY: 300,
       } as MouseEvent;
 
       doMouseLogic(moveClickEvent, 48, state, {

@@ -331,6 +331,7 @@ export interface CameraOffset {
   panY: number;
   viewWidth?: number;
   viewHeight?: number;
+  centerPosition?: Position;
 }
 
 export const screenToGridPosition = (
@@ -341,9 +342,16 @@ export const screenToGridPosition = (
   panX: number,
   panY: number,
   cellSize: number,
+  centerPosition?: Position,
 ): Position => {
-  const originX = viewWidth / 2 + panX;
-  const originY = viewHeight / 2 + panY;
+  const centerOffsetX = centerPosition
+    ? (centerPosition.x + 0.5) * cellSize
+    : 0;
+  const centerOffsetY = centerPosition
+    ? (centerPosition.y + 0.5) * cellSize
+    : 0;
+  const originX = viewWidth / 2 + panX - centerOffsetX;
+  const originY = viewHeight / 2 + panY - centerOffsetY;
   const worldX = screenX - originX;
   const worldY = screenY - originY;
   return {
@@ -374,6 +382,8 @@ export const doMouseLogic = (
   if (camera) {
     const viewWidth = camera.viewWidth ?? rect.width;
     const viewHeight = camera.viewHeight ?? rect.height;
+    const centerPosition =
+      camera.centerPosition ?? state?.dungeon?.startingPositions?.[0];
     const pos = screenToGridPosition(
       screenX,
       screenY,
@@ -382,6 +392,7 @@ export const doMouseLogic = (
       camera.panX,
       camera.panY,
       cellSize,
+      centerPosition,
     );
     x = pos.x;
     y = pos.y;
