@@ -73,15 +73,6 @@
   let dragStartPanY = 0;
   let hasMovedDuringDrag = false;
 
-  let mouseInView = false;
-  let currentMouseX = 0;
-  let currentMouseY = 0;
-  let edgeScrollAnimId: number | null = null;
-  let lastEdgeScrollTime = 0;
-
-  const EDGE_MARGIN = 40;
-  const EDGE_MAX_SPEED = 600;
-
   let staticCanvas: HTMLCanvasElement | null = null;
   let actorCanvas: HTMLCanvasElement | null = null;
   let overlayCanvas: HTMLCanvasElement | null = null;
@@ -361,75 +352,6 @@
     }
   };
 
-  const stopEdgeScroll = () => {
-    if (edgeScrollAnimId !== null) {
-      cancelAnimationFrame(edgeScrollAnimId);
-      edgeScrollAnimId = null;
-    }
-  };
-
-  const edgeScrollStep = (now: number) => {
-    if (!mouseInView || !overlayCanvas) {
-      stopEdgeScroll();
-      return;
-    }
-    const rect = overlayCanvas.getBoundingClientRect();
-    const relX = currentMouseX - rect.left;
-    const relY = currentMouseY - rect.top;
-
-    let vx = 0;
-    let vy = 0;
-    if (relX >= 0 && relX < EDGE_MARGIN) {
-      vx = ((EDGE_MARGIN - relX) / EDGE_MARGIN) * EDGE_MAX_SPEED;
-    } else if (relX <= rect.width && relX > rect.width - EDGE_MARGIN) {
-      vx = -((relX - (rect.width - EDGE_MARGIN)) / EDGE_MARGIN) * EDGE_MAX_SPEED;
-    }
-    if (relY >= 0 && relY < EDGE_MARGIN) {
-      vy = ((EDGE_MARGIN - relY) / EDGE_MARGIN) * EDGE_MAX_SPEED;
-    } else if (relY <= rect.height && relY > rect.height - EDGE_MARGIN) {
-      vy = -((relY - (rect.height - EDGE_MARGIN)) / EDGE_MARGIN) * EDGE_MAX_SPEED;
-    }
-
-    if (vx === 0 && vy === 0) {
-      stopEdgeScroll();
-      return;
-    }
-
-    const dt = Math.min((now - lastEdgeScrollTime) / 1000, 0.1);
-    lastEdgeScrollTime = now;
-    panX += vx * dt;
-    panY += vy * dt;
-    updateAllCanvasTransforms();
-    renderCanvas(true);
-
-    edgeScrollAnimId = requestAnimationFrame(edgeScrollStep);
-  };
-
-  const checkEdgeScroll = () => {
-    if (!mouseInView || !overlayCanvas || isDragging) {
-      stopEdgeScroll();
-      return;
-    }
-    const rect = overlayCanvas.getBoundingClientRect();
-    const relX = currentMouseX - rect.left;
-    const relY = currentMouseY - rect.top;
-
-    const isNearEdge =
-      (relX >= 0 && relX < EDGE_MARGIN) ||
-      (relX <= rect.width && relX > rect.width - EDGE_MARGIN) ||
-      (relY >= 0 && relY < EDGE_MARGIN) ||
-      (relY <= rect.height && relY > rect.height - EDGE_MARGIN);
-
-    if (isNearEdge) {
-      if (!edgeScrollAnimId) {
-        lastEdgeScrollTime = performance.now();
-        edgeScrollAnimId = requestAnimationFrame(edgeScrollStep);
-      }
-    } else {
-      stopEdgeScroll();
-    }
-  };
-
   const onWindowMouseMove = (event: MouseEvent) => {
     if (isDragging) {
       const dx = event.clientX - dragStartX;
@@ -497,7 +419,6 @@
       window.removeEventListener('mousemove', onWindowMouseMove);
       window.removeEventListener('mouseup', onWindowMouseUp);
     }
-    stopEdgeScroll();
     if (overlayAnimationId) {
       cancelAnimationFrame(overlayAnimationId);
       overlayAnimationId = null;
@@ -550,7 +471,6 @@
       dragStartPanX = panX;
       dragStartPanY = panY;
       hasMovedDuringDrag = false;
-      stopEdgeScroll();
       event.preventDefault();
     }
   };
@@ -606,11 +526,6 @@
   let boardCursor = 'default';
 
   const onMouseMove = (event: MouseEvent) => {
-    currentMouseX = event.clientX;
-    currentMouseY = event.clientY;
-    mouseInView = true;
-    checkEdgeScroll();
-
     if (isDragging) return;
     if (!activeState || !overlayCanvas) {
       boardCursor = 'default';
@@ -648,8 +563,6 @@
   };
 
   const onMouseLeave = () => {
-    mouseInView = false;
-    stopEdgeScroll();
     boardCursor = 'default';
   };
 
