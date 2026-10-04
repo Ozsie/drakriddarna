@@ -97,7 +97,7 @@
   let isMenuHovered = false;
   let isLogHovered = false;
   let isLogHeld = false;
-  $: isLogOpen = isLogHovered || isLogHeld;
+  let isLogOpen = false;
 
   const getStaticSignature = (st: GameState, dbg: boolean, size: number) => {
     const d = st?.dungeon;
@@ -323,7 +323,7 @@
     const logSig = recentLogs
       ? recentLogs.map((l) => `${l.turn}:${l.key}`).join(';')
       : '';
-    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isLogOpen}`;
+    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isLogHovered},${isLogOpen}`;
     if (!force && sig === lastUiSignature) return;
     lastUiSignature = sig;
 
@@ -341,6 +341,7 @@
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       renderTopBar(ctx, containerWidth, activeState, {
         isMenuHovered,
+        isLogHovered,
         isLogOpen,
       });
       ctx.restore();
@@ -419,8 +420,9 @@
   };
 
   const onWindowMouseUp = () => {
-    if (isLogHeld) {
+    if (isLogHeld || isLogOpen) {
       isLogHeld = false;
+      isLogOpen = false;
       renderUiLayer(true);
     }
     if (isDragging) {
@@ -554,6 +556,7 @@
       );
       if (topBarHit === 'log' || topBarHit === 'logDropdown') {
         isLogHeld = true;
+        isLogOpen = true;
         renderUiLayer(true);
         return;
       }
@@ -698,40 +701,45 @@
           hoveredRadialIndex = null;
           renderUiLayer(true);
         }
-        let needsUiRender = false;
         if (topBarHit === 'menu') {
           boardCursor = 'pointer';
+          let changed = false;
           if (!isMenuHovered) {
             isMenuHovered = true;
-            needsUiRender = true;
+            changed = true;
           }
           if (isLogHovered) {
             isLogHovered = false;
-            needsUiRender = true;
+            changed = true;
           }
-        } else if (topBarHit === 'log' || topBarHit === 'logDropdown') {
-          boardCursor = 'default';
+          if (changed) renderUiLayer(true);
+        } else if (
+          topBarHit === 'log' ||
+          (isLogOpen && topBarHit === 'logDropdown')
+        ) {
+          boardCursor = 'pointer';
+          let changed = false;
           if (isMenuHovered) {
             isMenuHovered = false;
-            needsUiRender = true;
+            changed = true;
           }
           if (!isLogHovered) {
             isLogHovered = true;
-            needsUiRender = true;
+            changed = true;
           }
+          if (changed) renderUiLayer(true);
         } else {
           boardCursor = 'default';
+          let changed = false;
           if (isMenuHovered) {
             isMenuHovered = false;
-            needsUiRender = true;
+            changed = true;
           }
           if (isLogHovered) {
             isLogHovered = false;
-            needsUiRender = true;
+            changed = true;
           }
-        }
-        if (needsUiRender) {
-          renderUiLayer(true);
+          if (changed) renderUiLayer(true);
         }
         return;
       }
@@ -820,10 +828,6 @@
     }
     if (isLogHovered) {
       isLogHovered = false;
-      needsRender = true;
-    }
-    if (isLogHeld) {
-      isLogHeld = false;
       needsRender = true;
     }
     if (needsRender) {

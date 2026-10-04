@@ -18,6 +18,7 @@ export interface TopBarLayout {
 
 export interface RenderTopBarOptions {
   isMenuHovered?: boolean;
+  isLogHovered?: boolean;
   isLogOpen?: boolean;
 }
 
@@ -226,6 +227,7 @@ export const renderTopBar = (
 
   const layout = getTopBarLayout(viewWidth, state, ctx);
   const isMenuHovered = options?.isMenuHovered ?? false;
+  const isLogHovered = options?.isLogHovered ?? false;
   const isLogOpen = options?.isLogOpen ?? false;
 
   ctx.save();
@@ -257,10 +259,14 @@ export const renderTopBar = (
     drawRoundedRect(ctx, log.x, log.y, log.width, log.height, 4);
     ctx.fillStyle = isLogOpen
       ? 'rgba(28, 56, 40, 0.95)'
+      : isLogHovered
+      ? 'rgba(28, 56, 40, 0.9)'
       : 'rgba(20, 40, 29, 0.85)';
     ctx.fill();
     ctx.strokeStyle = isLogOpen
       ? 'rgba(74, 222, 128, 0.6)'
+      : isLogHovered
+      ? 'rgba(74, 222, 128, 0.5)'
       : 'rgba(30, 71, 50, 0.8)';
     ctx.lineWidth = 1;
     ctx.stroke();

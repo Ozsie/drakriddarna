@@ -283,6 +283,16 @@ describe('TopBarRendering', () => {
       expect(ctx.fill).toHaveBeenCalled();
     });
 
+    it('renders hovered log section styling when isLogHovered is true', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+
+      renderTopBar(ctx, 600, state, { isLogHovered: true });
+
+      expect(ctx.fillStyle).toBeDefined();
+      expect(ctx.fill).toHaveBeenCalled();
+    });
+
     it('renders log dropdown when isLogOpen is true and logs exist', () => {
       const logItems = Array.from({ length: 10 }, (_, i) => ({
         key: `logs.event${i}`,
