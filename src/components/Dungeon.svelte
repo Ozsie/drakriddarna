@@ -3,6 +3,7 @@
     Actor,
     Door,
     GameState,
+    Hero,
     InteractableCell,
     Monster,
     Secret,
@@ -36,7 +37,10 @@
     findHoveredRadialButton,
     renderTopBar,
     getTopBarHit,
+    renderHeroCards,
+    getHeroCardsHit,
   } from '../ui/UIRendering';
+  import { useItem } from '../items/ItemLogic';
   import { radialMenuStore } from '../store/radialMenuStore';
   import { renderNotes } from '../notes/NotesRendering';
   import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
@@ -46,6 +50,8 @@
     gameStateStore,
     debugModeStore,
     handleCanvasClick,
+    toggleHeroInventory,
+    useHeroItem,
   } from '../store/gameStateStore';
   import DungeonIntro from './DungeonIntro.svelte';
 
@@ -98,6 +104,9 @@
   let isLogHovered = false;
   let isLogHeld = false;
   let isLogOpen = false;
+  let hoveredInventoryHeroName: string | null = null;
+  let hoveredCloseHeroName: string | null = null;
+  let hoveredUseItem: { heroName: string; itemIndex: number } | null = null;
 
   const getStaticSignature = (st: GameState, dbg: boolean, size: number) => {
     const d = st?.dungeon;
@@ -323,7 +332,17 @@
     const logSig = recentLogs
       ? recentLogs.map((l) => `${l.turn}:${l.key}`).join(';')
       : '';
-    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isLogHovered},${isLogOpen}`;
+    const heroesSig = activeState?.heroes
+      ? (activeState.heroes as Hero[])
+          .map(
+            (h) =>
+              `${h.name}:${h.health}:${h.actions}:${h.movement}:${h.isInventoryOpen}:${h.experience}:${h.inventory?.length}`,
+          )
+          .join(';')
+      : '';
+    const hoverSig = `${hoveredInventoryHeroName}:${hoveredCloseHeroName}:${hoveredUseItem?.heroName}-${hoveredUseItem?.itemIndex}`;
+    const targetSig = `${activeState?.targetActor?.name}:${activeState?.currentActor?.name}`;
+    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isLogHovered},${isLogOpen},${heroesSig},${hoverSig},${targetSig}`;
     if (!force && sig === lastUiSignature) return;
     lastUiSignature = sig;
 
@@ -335,7 +354,7 @@
     ctx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
     ctx.restore();
 
-    if (containerWidth > 0 && activeState) {
+    if (containerWidth > 0 && containerHeight > 0 && activeState) {
       const ratio = (browser && window.devicePixelRatio) || 1;
       ctx.save();
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -343,6 +362,11 @@
         isMenuHovered,
         isLogHovered,
         isLogOpen,
+      });
+      renderHeroCards(ctx, containerWidth, containerHeight, activeState, {
+        hoveredInventoryHeroName,
+        hoveredCloseHeroName,
+        hoveredUseItem,
       });
       ctx.restore();
     }
@@ -542,7 +566,7 @@
   }
 
   const onMouseDown = (event: MouseEvent) => {
-    if (event.button === 0 && uiCanvas && activeState && containerWidth > 0) {
+    if (event.button === 0 && uiCanvas && activeState && containerWidth > 0 && containerHeight > 0) {
       const rect = uiCanvas.getBoundingClientRect();
       const screenX = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
@@ -558,6 +582,19 @@
         isLogHeld = true;
         isLogOpen = true;
         renderUiLayer(true);
+        return;
+      }
+      if (topBarHit) {
+        return;
+      }
+      const heroHit = getHeroCardsHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        screenX,
+        screenY,
+      );
+      if (heroHit) {
         return;
       }
     }
@@ -580,7 +617,7 @@
     }
     if (event.button !== 0) return;
 
-    if (uiCanvas && activeState && containerWidth > 0) {
+    if (uiCanvas && activeState && containerWidth > 0 && containerHeight > 0) {
       const rect = uiCanvas.getBoundingClientRect();
       const screenX = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
@@ -593,6 +630,43 @@
         { isLogOpen },
       );
       if (topBarHit) {
+        return;
+      }
+      const heroHit = getHeroCardsHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        screenX,
+        screenY,
+      );
+      if (heroHit) {
+        if (heroHit.type === 'inventoryButton') {
+          if (state) {
+            heroHit.hero.isInventoryOpen = !heroHit.hero.isInventoryOpen;
+            gameStateStore.set(state);
+          } else {
+            toggleHeroInventory(heroHit.hero);
+          }
+          renderCanvas(true);
+        } else if (heroHit.type === 'inventoryClose') {
+          if (state) {
+            heroHit.hero.isInventoryOpen = false;
+            gameStateStore.set(state);
+          } else {
+            if (heroHit.hero.isInventoryOpen) {
+              toggleHeroInventory(heroHit.hero);
+            }
+          }
+          renderCanvas(true);
+        } else if (heroHit.type === 'inventoryUseItem') {
+          if (state) {
+            useItem(state, heroHit.item);
+            gameStateStore.set(state);
+          } else {
+            useHeroItem(heroHit.item);
+          }
+          renderCanvas(true);
+        }
         return;
       }
     }
@@ -699,11 +773,22 @@
       if (topBarHit) {
         if (hoveredRadialIndex !== null) {
           hoveredRadialIndex = null;
-          renderUiLayer(true);
+        }
+        let changed = false;
+        if (hoveredInventoryHeroName !== null) {
+          hoveredInventoryHeroName = null;
+          changed = true;
+        }
+        if (hoveredCloseHeroName !== null) {
+          hoveredCloseHeroName = null;
+          changed = true;
+        }
+        if (hoveredUseItem !== null) {
+          hoveredUseItem = null;
+          changed = true;
         }
         if (topBarHit === 'menu') {
           boardCursor = 'pointer';
-          let changed = false;
           if (!isMenuHovered) {
             isMenuHovered = true;
             changed = true;
@@ -712,13 +797,11 @@
             isLogHovered = false;
             changed = true;
           }
-          if (changed) renderUiLayer(true);
         } else if (
           topBarHit === 'log' ||
           (isLogOpen && topBarHit === 'logDropdown')
         ) {
           boardCursor = 'pointer';
-          let changed = false;
           if (isMenuHovered) {
             isMenuHovered = false;
             changed = true;
@@ -727,9 +810,33 @@
             isLogHovered = true;
             changed = true;
           }
-          if (changed) renderUiLayer(true);
         } else {
           boardCursor = 'default';
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+        }
+        if (changed) renderUiLayer(true);
+        return;
+      }
+
+      if (containerHeight > 0) {
+        const heroHit = getHeroCardsHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+        );
+        if (heroHit) {
+          if (hoveredRadialIndex !== null) {
+            hoveredRadialIndex = null;
+          }
           let changed = false;
           if (isMenuHovered) {
             isMenuHovered = false;
@@ -739,9 +846,45 @@
             isLogHovered = false;
             changed = true;
           }
+
+          const newInvHero =
+            heroHit.type === 'inventoryButton' ? heroHit.hero.name : null;
+          const newCloseHero =
+            heroHit.type === 'inventoryClose' ? heroHit.hero.name : null;
+          const newUseItem =
+            heroHit.type === 'inventoryUseItem'
+              ? { heroName: heroHit.hero.name, itemIndex: heroHit.itemIndex }
+              : null;
+
+          if (hoveredInventoryHeroName !== newInvHero) {
+            hoveredInventoryHeroName = newInvHero;
+            changed = true;
+          }
+          if (hoveredCloseHeroName !== newCloseHero) {
+            hoveredCloseHeroName = newCloseHero;
+            changed = true;
+          }
+          if (
+            hoveredUseItem?.heroName !== newUseItem?.heroName ||
+            hoveredUseItem?.itemIndex !== newUseItem?.itemIndex
+          ) {
+            hoveredUseItem = newUseItem;
+            changed = true;
+          }
+
+          if (
+            heroHit.type === 'inventoryButton' ||
+            heroHit.type === 'inventoryClose' ||
+            heroHit.type === 'inventoryUseItem'
+          ) {
+            boardCursor = 'pointer';
+          } else {
+            boardCursor = 'default';
+          }
+
           if (changed) renderUiLayer(true);
+          return;
         }
-        return;
       }
     }
 
@@ -752,6 +895,18 @@
     }
     if (isLogHovered) {
       isLogHovered = false;
+      needsReset = true;
+    }
+    if (hoveredInventoryHeroName !== null) {
+      hoveredInventoryHeroName = null;
+      needsReset = true;
+    }
+    if (hoveredCloseHeroName !== null) {
+      hoveredCloseHeroName = null;
+      needsReset = true;
+    }
+    if (hoveredUseItem !== null) {
+      hoveredUseItem = null;
       needsReset = true;
     }
     if (needsReset) {
@@ -828,6 +983,18 @@
     }
     if (isLogHovered) {
       isLogHovered = false;
+      needsRender = true;
+    }
+    if (hoveredInventoryHeroName !== null) {
+      hoveredInventoryHeroName = null;
+      needsRender = true;
+    }
+    if (hoveredCloseHeroName !== null) {
+      hoveredCloseHeroName = null;
+      needsRender = true;
+    }
+    if (hoveredUseItem !== null) {
+      hoveredUseItem = null;
       needsRender = true;
     }
     if (needsRender) {

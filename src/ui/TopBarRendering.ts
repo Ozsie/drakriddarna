@@ -53,8 +53,11 @@ export const formatLatestLog = (log?: LogEvent | null): string => {
   return translated;
 };
 
-export const formatTurnCounter = (turnCount?: number | null): string =>
-  `${i18n('content.turn') } ${turnCount ?? 0}`;
+export const formatTurnCounter = (turnCount?: number | null): string => {
+  const turnLabel = i18n('content.turn');
+  const label = turnLabel === 'content.turn' ? 'Turn' : turnLabel || 'Turn';
+  return `${label} ${turnCount ?? 0}`;
+};
 
 export const truncateText = (
   ctx: CanvasRenderingContext2D | null | undefined,

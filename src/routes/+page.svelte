@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import Dungeon from '../components/Dungeon.svelte';
-  import Characters from '../components/Characters.svelte';
   import ButtonPad from '../components/ButtonPad.svelte';
   import buildInfo from '$lib/buildInfo.json';
   import Diary from '../components/Diary.svelte';
@@ -106,7 +105,6 @@
 <div class="app-container">
   <div class="main-section">
     <aside class="character-sidebar">
-      <Characters />
       <Diary />
     </aside>
     <main class="dungeon-view" bind:this={dungeonContainer}>
