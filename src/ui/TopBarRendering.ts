@@ -13,13 +13,15 @@ export interface TopBarLayout {
   menuButton: TopBarElementBounds & { label: string };
   logSection: TopBarElementBounds & { text: string };
   turnCounter: TopBarElementBounds & { text: string };
+  logDropdown: TopBarElementBounds & { entries: string[] };
 }
 
 export interface RenderTopBarOptions {
   isMenuHovered?: boolean;
+  isLogOpen?: boolean;
 }
 
-export type TopBarHitElement = 'menu' | 'log' | 'turn' | null;
+export type TopBarHitElement = 'menu' | 'log' | 'turn' | 'logDropdown' | null;
 
 const DEFAULT_FONT = '13px sans-serif';
 const LOG_FONT = '12px monospace, sans-serif';
@@ -118,6 +120,16 @@ export const getTopBarLayout = (
   const latestLog = state?.actionLog?.[0];
   const logText = formatLatestLog(latestLog);
 
+  const logEntries = state?.actionLog
+    ? state.actionLog.slice(0, 8).map(formatLatestLog)
+    : [];
+  const logItemHeight = 20;
+  const logPaddingY = 6;
+  const dropdownHeight =
+    logEntries.length > 0
+      ? logPaddingY * 2 + logEntries.length * logItemHeight
+      : 0;
+
   return {
     topBar: {
       x: margin,
@@ -146,6 +158,13 @@ export const getTopBarLayout = (
       height,
       text: turnText,
     },
+    logDropdown: {
+      x: logX,
+      y: top + height + 4,
+      width: logWidth,
+      height: dropdownHeight,
+      entries: logEntries,
+    },
   };
 };
 
@@ -165,11 +184,19 @@ export const getTopBarHit = (
   x: number,
   y: number,
   ctx?: CanvasRenderingContext2D | null,
+  options?: { isLogOpen?: boolean },
 ): TopBarHitElement => {
   const layout = getTopBarLayout(viewWidth, state, ctx);
   if (isPointInBounds(x, y, layout.menuButton)) return 'menu';
   if (isPointInBounds(x, y, layout.logSection)) return 'log';
   if (isPointInBounds(x, y, layout.turnCounter)) return 'turn';
+  if (
+    options?.isLogOpen &&
+    layout.logDropdown.height > 0 &&
+    isPointInBounds(x, y, layout.logDropdown)
+  ) {
+    return 'logDropdown';
+  }
   return null;
 };
 
@@ -199,6 +226,7 @@ export const renderTopBar = (
 
   const layout = getTopBarLayout(viewWidth, state, ctx);
   const isMenuHovered = options?.isMenuHovered ?? false;
+  const isLogOpen = options?.isLogOpen ?? false;
 
   ctx.save();
 
@@ -227,9 +255,13 @@ export const renderTopBar = (
   const log = layout.logSection;
   if (log.width > 0) {
     drawRoundedRect(ctx, log.x, log.y, log.width, log.height, 4);
-    ctx.fillStyle = 'rgba(20, 40, 29, 0.85)';
+    ctx.fillStyle = isLogOpen
+      ? 'rgba(28, 56, 40, 0.95)'
+      : 'rgba(20, 40, 29, 0.85)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(30, 71, 50, 0.8)';
+    ctx.strokeStyle = isLogOpen
+      ? 'rgba(74, 222, 128, 0.6)'
+      : 'rgba(30, 71, 50, 0.8)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -267,6 +299,46 @@ export const renderTopBar = (
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(turn.text, turn.x + turn.width / 2, turn.y + turn.height / 2);
+  }
+
+  // 4. Render Log Dropdown (if open)
+  const dropdown = layout.logDropdown;
+  if (isLogOpen && dropdown.width > 0 && dropdown.entries.length > 0) {
+    drawRoundedRect(
+      ctx,
+      dropdown.x,
+      dropdown.y,
+      dropdown.width,
+      dropdown.height,
+      4,
+    );
+    ctx.fillStyle = 'rgba(20, 40, 29, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(30, 71, 50, 0.85)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    const paddingInside = 8;
+    const paddingY = 6;
+    const itemHeight = 20;
+    const maxTextWidth = dropdown.width - paddingInside * 2;
+
+    dropdown.entries.forEach((entry, index) => {
+      const itemY = dropdown.y + paddingY + index * itemHeight;
+      const text = truncateText(ctx, entry, maxTextWidth, LOG_FONT);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(dropdown.x + 2, itemY, dropdown.width - 4, itemHeight);
+      ctx.clip();
+
+      ctx.fillStyle = index === 0 ? '#86efac' : '#4ade80';
+      ctx.font = LOG_FONT;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, dropdown.x + paddingInside, itemY + itemHeight / 2);
+      ctx.restore();
+    });
   }
 
   ctx.restore();

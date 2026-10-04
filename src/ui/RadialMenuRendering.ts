@@ -144,7 +144,7 @@ export const renderRadialMenu = (
 
     // Draw button icon
     ctx.fillStyle = '#ffffff';
-    ctx.font = `${Math.round(btn.radius * 1.0)}px sans-serif`;
+    ctx.font = `${Math.round(btn.radius)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(btn.icon, btn.x, btn.y);

@@ -196,6 +196,66 @@ describe('TopBarRendering', () => {
       const missHit = getTopBarHit(viewWidth, state, 100, 200, ctx);
       expect(missHit).toBeNull();
     });
+
+    it('detects hit on logDropdown when isLogOpen is true', () => {
+      const state = createMockState({
+        actionLog: [
+          { key: 'logs.1', turn: 1 },
+          { key: 'logs.2', turn: 2 },
+        ],
+      });
+      const ctx = createMockCtx();
+      const viewWidth = 600;
+      const layout = getTopBarLayout(viewWidth, state, ctx);
+
+      // When isLogOpen is false, hit inside dropdown area returns null
+      const closedHit = getTopBarHit(
+        viewWidth,
+        state,
+        layout.logDropdown.x + 5,
+        layout.logDropdown.y + 5,
+        ctx,
+        { isLogOpen: false },
+      );
+      expect(closedHit).toBeNull();
+
+      // When isLogOpen is true, hit inside dropdown area returns 'logDropdown'
+      const openHit = getTopBarHit(
+        viewWidth,
+        state,
+        layout.logDropdown.x + 5,
+        layout.logDropdown.y + 5,
+        ctx,
+        { isLogOpen: true },
+      );
+      expect(openHit).toBe('logDropdown');
+    });
+  });
+
+  describe('log dropdown layout', () => {
+    it('limits dropdown entries to the last 8 log events', () => {
+      const logItems = Array.from({ length: 15 }, (_, i) => ({
+        key: `logs.event${i}`,
+        turn: i,
+      }));
+      const state = createMockState({ actionLog: logItems });
+      const ctx = createMockCtx();
+      const layout = getTopBarLayout(600, state, ctx);
+
+      expect(layout.logDropdown.entries.length).toBe(8);
+      expect(layout.logDropdown.entries[0]).toBe('(0) logs.event0');
+      expect(layout.logDropdown.entries[7]).toBe('(7) logs.event7');
+      expect(layout.logDropdown.height).toBe(6 * 2 + 8 * 20);
+    });
+
+    it('has zero height when actionLog is empty', () => {
+      const state = createMockState({ actionLog: [] });
+      const ctx = createMockCtx();
+      const layout = getTopBarLayout(600, state, ctx);
+
+      expect(layout.logDropdown.entries.length).toBe(0);
+      expect(layout.logDropdown.height).toBe(0);
+    });
   });
 
   describe('renderTopBar', () => {
@@ -221,6 +281,35 @@ describe('TopBarRendering', () => {
 
       expect(ctx.fillStyle).toBeDefined();
       expect(ctx.fill).toHaveBeenCalled();
+    });
+
+    it('renders log dropdown when isLogOpen is true and logs exist', () => {
+      const logItems = Array.from({ length: 10 }, (_, i) => ({
+        key: `logs.event${i}`,
+        turn: i,
+      }));
+      const state = createMockState({ actionLog: logItems });
+      const ctx = createMockCtx();
+
+      renderTopBar(ctx, 600, state, { isLogOpen: true });
+
+      // Check that fillText was called for menu, latest log, turn counter, and dropdown entries (8 entries)
+      // Total at least 1 + 1 + 1 + 8 = 11 calls
+      expect(ctx.fillText).toHaveBeenCalledTimes(11);
+    });
+
+    it('does not render log dropdown when isLogOpen is false', () => {
+      const logItems = Array.from({ length: 10 }, (_, i) => ({
+        key: `logs.event${i}`,
+        turn: i,
+      }));
+      const state = createMockState({ actionLog: logItems });
+      const ctx = createMockCtx();
+
+      renderTopBar(ctx, 600, state, { isLogOpen: false });
+
+      // Menu, latest log, turn counter = 3 calls
+      expect(ctx.fillText).toHaveBeenCalledTimes(3);
     });
 
     it('does not crash when viewWidth is 0 or ctx is null', () => {

@@ -95,6 +95,9 @@
   let dynamicAnimationId: number | null = null;
   let hoveredRadialIndex: number | null = null;
   let isMenuHovered = false;
+  let isLogHovered = false;
+  let isLogHeld = false;
+  $: isLogOpen = isLogHovered || isLogHeld;
 
   const getStaticSignature = (st: GameState, dbg: boolean, size: number) => {
     const d = st?.dungeon;
@@ -316,11 +319,11 @@
   const renderUiLayer = (force = false) => {
     if (!browser || !uiCanvas) return;
     const menu = $radialMenuStore;
-    const latestLog = activeState?.actionLog?.[0];
-    const latestLogSig = latestLog
-      ? `${latestLog.turn}:${latestLog.key}`
+    const recentLogs = activeState?.actionLog?.slice(0, 8);
+    const logSig = recentLogs
+      ? recentLogs.map((l) => `${l.turn}:${l.key}`).join(';')
       : '';
-    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${latestLogSig},${isMenuHovered}`;
+    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isLogOpen}`;
     if (!force && sig === lastUiSignature) return;
     lastUiSignature = sig;
 
@@ -338,6 +341,7 @@
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       renderTopBar(ctx, containerWidth, activeState, {
         isMenuHovered,
+        isLogOpen,
       });
       ctx.restore();
     }
@@ -415,6 +419,10 @@
   };
 
   const onWindowMouseUp = () => {
+    if (isLogHeld) {
+      isLogHeld = false;
+      renderUiLayer(true);
+    }
     if (isDragging) {
       isDragging = false;
       if (hasMovedDuringDrag) {
@@ -532,6 +540,25 @@
   }
 
   const onMouseDown = (event: MouseEvent) => {
+    if (event.button === 0 && uiCanvas && activeState && containerWidth > 0) {
+      const rect = uiCanvas.getBoundingClientRect();
+      const screenX = event.clientX - rect.left;
+      const screenY = event.clientY - rect.top;
+      const topBarHit = getTopBarHit(
+        containerWidth,
+        activeState,
+        screenX,
+        screenY,
+        null,
+        { isLogOpen },
+      );
+      if (topBarHit === 'log' || topBarHit === 'logDropdown') {
+        isLogHeld = true;
+        renderUiLayer(true);
+        return;
+      }
+    }
+
     if (event.button === 2 || event.button === 1) {
       isDragging = true;
       dragStartX = event.clientX;
@@ -559,6 +586,8 @@
         activeState,
         screenX,
         screenY,
+        null,
+        { isLogOpen },
       );
       if (topBarHit) {
         return;
@@ -661,31 +690,63 @@
         activeState,
         screenX,
         screenY,
+        null,
+        { isLogOpen },
       );
       if (topBarHit) {
         if (hoveredRadialIndex !== null) {
           hoveredRadialIndex = null;
           renderUiLayer(true);
         }
+        let needsUiRender = false;
         if (topBarHit === 'menu') {
           boardCursor = 'pointer';
           if (!isMenuHovered) {
             isMenuHovered = true;
-            renderUiLayer(true);
+            needsUiRender = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            needsUiRender = true;
+          }
+        } else if (topBarHit === 'log' || topBarHit === 'logDropdown') {
+          boardCursor = 'default';
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            needsUiRender = true;
+          }
+          if (!isLogHovered) {
+            isLogHovered = true;
+            needsUiRender = true;
           }
         } else {
           boardCursor = 'default';
           if (isMenuHovered) {
             isMenuHovered = false;
-            renderUiLayer(true);
+            needsUiRender = true;
           }
+          if (isLogHovered) {
+            isLogHovered = false;
+            needsUiRender = true;
+          }
+        }
+        if (needsUiRender) {
+          renderUiLayer(true);
         }
         return;
       }
     }
 
+    let needsReset = false;
     if (isMenuHovered) {
       isMenuHovered = false;
+      needsReset = true;
+    }
+    if (isLogHovered) {
+      isLogHovered = false;
+      needsReset = true;
+    }
+    if (needsReset) {
       renderUiLayer(true);
     }
 
@@ -755,6 +816,14 @@
     }
     if (isMenuHovered) {
       isMenuHovered = false;
+      needsRender = true;
+    }
+    if (isLogHovered) {
+      isLogHovered = false;
+      needsRender = true;
+    }
+    if (isLogHeld) {
+      isLogHeld = false;
       needsRender = true;
     }
     if (needsRender) {

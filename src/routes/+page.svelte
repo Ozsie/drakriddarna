@@ -2,7 +2,6 @@
   import { onMount, onDestroy } from 'svelte';
   import Dungeon from '../components/Dungeon.svelte';
   import Characters from '../components/Characters.svelte';
-  import Log from '../components/Log.svelte';
   import ButtonPad from '../components/ButtonPad.svelte';
   import buildInfo from '$lib/buildInfo.json';
   import Diary from '../components/Diary.svelte';
@@ -79,12 +78,6 @@
     min-width: 200px;
     max-width: 260px;
     box-sizing: border-box;
-  }
-
-  .log-panel {
-    flex: 1;
-    box-sizing: border-box;
-    min-width: 0;
   }
 
   @media screen and (max-width: 768px) {
