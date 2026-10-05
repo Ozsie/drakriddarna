@@ -87,7 +87,7 @@ export const e2m2: Dungeon = defineDungeon({
         shield: shields[1],
       },
     ],
-    pillars: [[11, 6]],
+    pillars: [[11, 5]],
     doors: [
       [Side.LEFT, 10, 6],
       [Side.DOWN, 12, 6],
