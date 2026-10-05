@@ -27,6 +27,7 @@ import { COLLAPSED, createMonster } from '../dungeon/DungeonLogic';
 import { events } from './events';
 import { ACTIVE, onDrop, onPickup } from '../items/ItemLogic';
 import { findVisibleMonsters } from '../monsters/MonsterLogic';
+import { getMonsterTemplate } from '../monsters/MonsterRegistry';
 
 export const getEventsForDungeon = (
   dungeon: Dungeon,
@@ -415,7 +416,17 @@ export const resetEventEffects = (state: GameState) => {
   }
   restoreWeakened(state);
   restoreBlinded(state);
+  restoreOrcDrums(state);
   state.roundActionsDelta = 0;
+};
+
+const restoreOrcDrums = (state: GameState) => {
+  state.dungeon.layout.monsters
+    .filter((monster) => monster.type === MonsterType.ORC)
+    .forEach((monster) => {
+      const template = getMonsterTemplate(monster.type);
+      monster.actions = template?.actions ?? 2;
+    });
 };
 
 const restoreCorridor = (state: GameState) => {
