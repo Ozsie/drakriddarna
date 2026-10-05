@@ -6,10 +6,15 @@ import {
   renderHeroCards,
   type RenderHeroCardsOptions,
 } from './HeroCardRendering';
+import {
+  renderMonsterCards,
+  type RenderMonsterCardsOptions,
+} from './MonsterCardRendering';
 
 export interface RenderUIOptions {
   topBar?: RenderTopBarOptions;
   heroCards?: RenderHeroCardsOptions;
+  monsterCards?: RenderMonsterCardsOptions;
 }
 
 export const renderUI = (
@@ -26,6 +31,13 @@ export const renderUI = (
     renderTopBar(ctx, viewWidth, state, options?.topBar);
     if (viewHeight && viewHeight > 0) {
       renderHeroCards(ctx, viewWidth, viewHeight, state, options?.heroCards);
+      renderMonsterCards(
+        ctx,
+        viewWidth,
+        viewHeight,
+        state,
+        options?.monsterCards,
+      );
     }
   }
   if (radialMenu) {
@@ -47,3 +59,12 @@ export {
   type RenderHeroCardsOptions,
   type HeroCardsHitResult,
 } from './HeroCardRendering';
+export {
+  renderMonsterCards,
+  getMonsterCardsLayout,
+  getMonsterCardsHit,
+  type MonsterCardLayoutItem,
+  type MonsterCardsLayout,
+  type RenderMonsterCardsOptions,
+  type MonsterCardsHitResult,
+} from './MonsterCardRendering';

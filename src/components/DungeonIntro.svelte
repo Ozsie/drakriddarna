@@ -31,7 +31,7 @@
     dismissed = true;
     if (activeDungeon?.intro && activeState) {
       addLog(activeState, activeDungeon.intro);
-      if (!activeDungeon.layout.notes.find((note) => note.message === dungeon.intro)) {
+      if (!activeDungeon.layout.notes.find((note) => note.message === activeDungeon?.intro)) {
         activeDungeon.layout.notes.push({
           found: true,
           foundOn: 0,

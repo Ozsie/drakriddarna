@@ -39,6 +39,8 @@
     getTopBarHit,
     renderHeroCards,
     getHeroCardsHit,
+    renderMonsterCards,
+    getMonsterCardsHit,
   } from '../ui/UIRendering';
   import { useItem } from '../items/ItemLogic';
   import { radialMenuStore } from '../store/radialMenuStore';
@@ -340,9 +342,13 @@
           )
           .join(';')
       : '';
+    const monstersSig = (activeState?.dungeon?.layout?.monsters ?? [])
+      .map((m) => `${m.name}:${m.health}:${m.position.x},${m.position.y}`)
+      .join(';');
+    const roomsSig = (activeState?.dungeon?.discoveredRooms ?? []).join(',');
     const hoverSig = `${hoveredInventoryHeroName}:${hoveredCloseHeroName}:${hoveredUseItem?.heroName}-${hoveredUseItem?.itemIndex}`;
     const targetSig = `${activeState?.targetActor?.name}:${activeState?.currentActor?.name}`;
-    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isLogHovered},${isLogOpen},${heroesSig},${hoverSig},${targetSig}`;
+    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isLogHovered},${isLogOpen},${heroesSig},${monstersSig},${roomsSig},${hoverSig},${targetSig}`;
     if (!force && sig === lastUiSignature) return;
     lastUiSignature = sig;
 
@@ -368,6 +374,7 @@
         hoveredCloseHeroName,
         hoveredUseItem,
       });
+      renderMonsterCards(ctx, containerWidth, containerHeight, activeState);
       ctx.restore();
     }
 
@@ -597,6 +604,16 @@
       if (heroHit) {
         return;
       }
+      const monsterHit = getMonsterCardsHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        screenX,
+        screenY,
+      );
+      if (monsterHit) {
+        return;
+      }
     }
 
     if (event.button === 2 || event.button === 1) {
@@ -667,6 +684,16 @@
           }
           renderCanvas(true);
         }
+        return;
+      }
+      const monsterHit = getMonsterCardsHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        screenX,
+        screenY,
+      );
+      if (monsterHit) {
         return;
       }
     }
@@ -882,6 +909,43 @@
             boardCursor = 'default';
           }
 
+          if (changed) renderUiLayer(true);
+          return;
+        }
+
+        const monsterHit = getMonsterCardsHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+        );
+        if (monsterHit) {
+          if (hoveredRadialIndex !== null) {
+            hoveredRadialIndex = null;
+          }
+          let changed = false;
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+          if (hoveredInventoryHeroName !== null) {
+            hoveredInventoryHeroName = null;
+            changed = true;
+          }
+          if (hoveredCloseHeroName !== null) {
+            hoveredCloseHeroName = null;
+            changed = true;
+          }
+          if (hoveredUseItem !== null) {
+            hoveredUseItem = null;
+            changed = true;
+          }
+          boardCursor = 'default';
           if (changed) renderUiLayer(true);
           return;
         }
