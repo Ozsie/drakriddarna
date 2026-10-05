@@ -30,6 +30,7 @@ import {
   DEFAULT_DIFFICULTY_ID,
 } from './core';
 import { clearActorAnimations } from './core';
+import { setNextDungeonTransitionProvider } from './interactables/InteractableLogic';
 
 // Re-export core modules for backwards compatibility and ease of access
 export {
@@ -209,6 +210,10 @@ export const next = async (
   if (state.settings['debug']) console.log(state);
   doReRender(state);
   checkWinConditions(state);
+  if (state.dungeon.beaten && state.dungeon.nextDungeon) {
+    hasWon(state);
+    return state;
+  }
   if (state.currentActor === undefined) return state;
   else {
     addLog(state, 'logs.endedTurn', {
@@ -407,6 +412,7 @@ const checkWinConditions = (state: GameState) => {
 };
 
 const scrollTo = (pos: Position, cellSize: number) => {
+  if (typeof document === 'undefined') return;
   const container = document.getElementById('gameBoardContainer');
   const canvas = document.getElementById('gameBoard');
   if (container && canvas) {
@@ -430,10 +436,14 @@ export const hasWon = (state: GameState) => {
         turn: 0,
       },
     ];
-    state.eventDeck = getEventsForDungeon(
-      state.dungeon,
-      getCampaign(state.campaignId).eventDeck,
-    );
+    const campaignEvents =
+      state.campaignId && isKnownCampaign(state.campaignId)
+        ? getCampaign(state.campaignId).eventDeck
+        : undefined;
+    state.eventDeck = getEventsForDungeon(state.dungeon, campaignEvents);
+    state.currentEvent = undefined;
+    state.drawEvents = true;
+    state.roundActionsDelta = 0;
     state.turnCount = 0;
     doReRender(state);
     rewardLiveHeroes(state);
@@ -441,15 +451,20 @@ export const hasWon = (state: GameState) => {
     replaceDeadHeroes(state);
     resetLiveHeroes(state);
     resetOnNextDungeon(state);
-    scrollTo(
-      {
-        x: state.dungeon.startingPositions[0].x,
-        y: state.dungeon.startingPositions[0].y,
-      },
-      state.settings['cellSize'] as number,
-    );
+    state.currentActor = liveHeroes(state)[0] ?? state.heroes[0];
+    if (state.dungeon.startingPositions?.[0]) {
+      scrollTo(
+        {
+          x: state.dungeon.startingPositions[0].x,
+          y: state.dungeon.startingPositions[0].y,
+        },
+        state.settings['cellSize'] as number,
+      );
+    }
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('autosave', JSON.stringify(state));
     }
   }
 };
+
+setNextDungeonTransitionProvider(hasWon);

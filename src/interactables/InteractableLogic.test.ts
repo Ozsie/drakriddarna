@@ -12,6 +12,8 @@ import {
   type Weapon,
 } from '../types';
 import {
+  checkForInteractable,
+  findInteractableAtHero,
   getInteractableEffect,
   NEXT_DUNGEON,
   registerInteractableEffect,
@@ -317,6 +319,99 @@ describe('InteractableLogic', () => {
         (e) => e.action === RadialAction.INTERACT,
       );
       expect(interactEntry?.interactable).toBeDefined();
+    });
+
+    it('includes RadialAction.INTERACT and allows interaction from all 8 neighboring cells', () => {
+      const neighborOffsets = [
+        { x: -1, y: -1 },
+        { x: 0, y: -1 },
+        { x: 1, y: -1 },
+        { x: -1, y: 0 },
+        { x: 1, y: 0 },
+        { x: -1, y: 1 },
+        { x: 0, y: 1 },
+        { x: 1, y: 1 },
+      ];
+
+      for (const offset of neighborOffsets) {
+        const heroPos = { x: 2 + offset.x, y: 2 + offset.y };
+        const hero = createTestHero(heroPos.x, heroPos.y);
+        const state = createTestState(hero);
+        state.dungeon.layout.interactables = [
+          {
+            position: { x: 2, y: 2 },
+            effect: 'addHero',
+            args: { name: `Ally ${offset.x}_${offset.y}` },
+            oneTime: true,
+            interacted: false,
+          },
+        ];
+
+        const entries = getAvailableRadialActions(state, hero);
+        const actions = entries.map((e) => e.action);
+        expect(actions).toContain(RadialAction.INTERACT);
+
+        const found = findInteractableAtHero(state, hero);
+        expect(found).toBeDefined();
+        expect(found?.position).toEqual({ x: 2, y: 2 });
+
+        const result = interact(state);
+        expect(result).toBe(true);
+        expect(state.dungeon.layout.interactables[0].interacted).toBe(true);
+      }
+    });
+
+    it('does not allow interaction when hero is not adjacent or on the interactable cell', () => {
+      const hero = createTestHero(4, 4);
+      const state = createTestState(hero);
+      state.dungeon.layout.interactables = [
+        {
+          position: { x: 2, y: 2 },
+          effect: 'addHero',
+          args: { name: 'Distant Ally' },
+          oneTime: true,
+          interacted: false,
+        },
+      ];
+
+      const entries = getAvailableRadialActions(state, hero);
+      const actions = entries.map((e) => e.action);
+      expect(actions).not.toContain(RadialAction.INTERACT);
+
+      const found = findInteractableAtHero(state, hero);
+      expect(found).toBeUndefined();
+
+      const result = interact(state);
+      expect(result).toBe(false);
+      expect(state.dungeon.layout.interactables[0].interacted).toBe(false);
+    });
+
+    it('step trigger does not trigger on neighboring cells, only on exact cell', () => {
+      const hero = createTestHero(1, 2);
+      const state = createTestState(hero);
+      const handler = vi.fn();
+      registerInteractableEffect('pressurePlate', handler);
+
+      state.dungeon.layout.interactables = [
+        {
+          position: { x: 2, y: 2 },
+          effect: 'pressurePlate',
+          triggerOn: 'step',
+          oneTime: true,
+          interacted: false,
+        },
+      ];
+
+      // Stepping on neighboring cell (1, 2)
+      const stepNeighborResult = checkForInteractable(state, hero, 'step');
+      expect(stepNeighborResult).toBe(false);
+      expect(handler).not.toHaveBeenCalled();
+
+      // Moving to exact cell (2, 2)
+      hero.position = { x: 2, y: 2 };
+      const stepExactResult = checkForInteractable(state, hero, 'step');
+      expect(stepExactResult).toBe(true);
+      expect(handler).toHaveBeenCalledTimes(1);
     });
 
     it('does not include RadialAction.INTERACT if interactable has already been used and is oneTime', () => {

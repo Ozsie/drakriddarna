@@ -13,10 +13,12 @@ import {
   doReRender,
   findCell,
   i18n,
+  isNeighbouring,
   isSamePosition,
 } from '../core';
 import {
   levelUp,
+  liveHeroes,
   newHero,
   replaceDeadHeroes,
   resetLiveHeroes,
@@ -33,6 +35,14 @@ export const setCampaignDeckProvider = (
   provider: (campaignId: string) => TurnEvent[] | undefined,
 ): void => {
   getCampaignDeck = provider;
+};
+
+let nextDungeonTransition: ((state: GameState) => void) | undefined;
+
+export const setNextDungeonTransitionProvider = (
+  provider: (state: GameState) => void,
+): void => {
+  nextDungeonTransition = provider;
 };
 
 export const NEXT_DUNGEON = 'nextDungeon';
@@ -149,31 +159,39 @@ export const interactableEffects: Record<string, InteractableEffectHandler> = {
       name: i18n(nextDungeon.name),
     });
 
-    clearActorAnimations();
-    state.dungeon = nextDungeon;
-    state.actionLog = [
-      {
-        key: 'logs.youHaveReached',
-        properties: { name: i18n(state.dungeon.name) },
-        turn: 0,
-      },
-    ];
+    state.dungeon.nextDungeon = nextDungeon;
+    if (nextDungeonTransition) {
+      nextDungeonTransition(state);
+    } else {
+      clearActorAnimations();
+      state.dungeon = nextDungeon;
+      state.actionLog = [
+        {
+          key: 'logs.youHaveReached',
+          properties: { name: i18n(state.dungeon.name) },
+          turn: 0,
+        },
+      ];
+      const campaignDeck =
+        state.campaignId && getCampaignDeck
+          ? getCampaignDeck(state.campaignId)
+          : undefined;
+      state.eventDeck = getEventsForDungeon(state.dungeon, campaignDeck);
+      state.currentEvent = undefined;
+      state.drawEvents = true;
+      state.roundActionsDelta = 0;
+      state.turnCount = 0;
+      doReRender(state);
+      rewardLiveHeroes(state);
+      levelUp(state);
+      replaceDeadHeroes(state);
+      resetLiveHeroes(state);
+      resetOnNextDungeon(state);
+      state.currentActor = liveHeroes(state)[0] ?? state.heroes[0];
 
-    const campaignDeck =
-      state.campaignId && getCampaignDeck
-        ? getCampaignDeck(state.campaignId)
-        : undefined;
-    state.eventDeck = getEventsForDungeon(state.dungeon, campaignDeck);
-    state.turnCount = 0;
-    doReRender(state);
-    rewardLiveHeroes(state);
-    levelUp(state);
-    replaceDeadHeroes(state);
-    resetLiveHeroes(state);
-    resetOnNextDungeon(state);
-
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('autosave', JSON.stringify(state));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('autosave', JSON.stringify(state));
+      }
     }
 
     return true;
@@ -218,13 +236,23 @@ export const triggerInteractable = (
 export const findInteractableAtHero = (
   state: GameState,
   hero: Hero,
-): InteractableCell | undefined =>
-  state.dungeon.layout.interactables?.find(
+): InteractableCell | undefined => {
+  const activeInteractables = (state.dungeon.layout.interactables ?? []).filter(
     (item) =>
-      isSamePosition(item.position, hero.position) &&
       (!item.oneTime || !item.interacted) &&
-      !item.secret,
+      !item.secret &&
+      item.triggerOn !== 'step',
   );
+
+  return (
+    activeInteractables.find((item) =>
+      isSamePosition(item.position, hero.position),
+    ) ??
+    activeInteractables.find((item) =>
+      isNeighbouring(item.position, hero.position.x, hero.position.y),
+    )
+  );
+};
 
 export const findInteractablesAt = (
   state: GameState,
@@ -240,15 +268,27 @@ export const checkForInteractable = (
   hero: Hero,
   trigger: 'step' | 'interact' = 'interact',
 ): boolean => {
+  if (trigger === 'step') {
+    const interactable = state.dungeon.layout.interactables?.find(
+      (item) =>
+        isSamePosition(item.position, hero.position) &&
+        (!item.oneTime || !item.interacted) &&
+        !item.secret,
+    );
+    if (!interactable) return false;
+
+    const triggerMode = interactable.triggerOn ?? 'interact';
+    if (triggerMode === 'step' || triggerMode === 'both') {
+      return triggerInteractable(state, interactable, hero);
+    }
+    return false;
+  }
+
   const interactable = findInteractableAtHero(state, hero);
   if (!interactable) return false;
 
   const triggerMode = interactable.triggerOn ?? 'interact';
-  if (
-    triggerMode === trigger ||
-    triggerMode === 'both' ||
-    (trigger === 'interact' && triggerMode === 'interact')
-  ) {
+  if (triggerMode === 'interact' || triggerMode === 'both') {
     return triggerInteractable(state, interactable, hero);
   }
 

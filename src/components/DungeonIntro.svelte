@@ -1,37 +1,46 @@
 <script lang="ts">
   import { t } from '$lib/translations';
-  import type { Dungeon } from '../types';
+  import type { Dungeon, GameState } from '../types';
   import { turnCountStore, gameStateStore } from '../store/gameStateStore';
   import { addLog } from '../core';
 
-  export let dungeon: Dungeon;
+  export let dungeon: Dungeon | undefined = undefined;
+  export let state: GameState | undefined = undefined;
 
   let dismissed = false;
+  let lastDungeon: Dungeon | undefined = undefined;
   let lastDungeonName: string | undefined = undefined;
 
+  $: activeState = state ?? $gameStateStore;
+  $: activeDungeon = dungeon ?? activeState?.dungeon;
+  $: activeTurnCount = state ? (state.turnCount ?? 0) : ($turnCountStore ?? 0);
+
   // Reset dismissal whenever the dungeon actually changes (new level -> new intro).
-  // Comparing by name (identity) avoids resetting `dismissed` when the prop is
+  // Comparing by name/identity avoids resetting `dismissed` when the prop is
   // merely re-passed with the same dungeon (e.g. after a gameStateStore.set call).
-  $: if (dungeon?.name !== lastDungeonName) {
-    lastDungeonName = dungeon?.name;
+  $: if (activeDungeon !== lastDungeon || activeDungeon?.name !== lastDungeonName) {
+    lastDungeon = activeDungeon;
+    lastDungeonName = activeDungeon?.name;
     dismissed = false;
   }
 
-  $: isFirstRound = ($turnCountStore ?? 0) <= 0; // adjust to your round counting convention
-  $: showIntro = !!dungeon?.intro && isFirstRound && !dismissed;
+  $: isFirstRound = activeTurnCount <= 0;
+  $: showIntro = !!activeDungeon?.intro && isFirstRound && !dismissed;
 
   const onClose = () => {
     dismissed = true;
-    if (dungeon?.intro && $gameStateStore) {
-      addLog($gameStateStore, dungeon.intro);
-      gameStateStore.set($gameStateStore);
+    if (activeDungeon?.intro && activeState) {
+      addLog(activeState, activeDungeon.intro);
+      if (!state) {
+        gameStateStore.set(activeState);
+      }
     }
   };
 </script>
 
-{#if showIntro}
+{#if showIntro && activeDungeon}
   <div class="dungeonIntro">
-    <p>{$t(dungeon.intro)}</p>
+    <p>{$t(activeDungeon.intro)}</p>
     <button on:click={onClose}>
       {$t('content.winConditions.buttonClose')}
     </button>

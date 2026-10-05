@@ -615,7 +615,7 @@
       viewHeight={containerHeight}
     />
   </div>
-  <DungeonIntro {dungeon} />
+  <DungeonIntro {dungeon} state={activeState} />
 </div>
 
 <style>

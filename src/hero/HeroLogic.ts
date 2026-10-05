@@ -200,10 +200,27 @@ export const resetLiveHeroes = (state: GameState) => {
   clearActorAnimations();
   const movementModifier = getDifficulty(state).modifiers.movement;
   state.heroes.forEach((hero, index) => {
-    hero.position = state.dungeon.startingPositions[index];
+    const startPos =
+      state.dungeon.startingPositions[index] ??
+      state.dungeon.startingPositions[
+        state.dungeon.startingPositions.length - 1
+      ] ??
+      state.dungeon.startingPositions[0];
+    if (startPos) {
+      hero.position = { x: startPos.x, y: startPos.y };
+    }
     hero.movement = getEffectiveMaxMovement(hero, movementModifier);
     hero.actions = 2;
     hero.health = hero.maxHealth;
+    hero.blinded = false;
+    hero.weakened = false;
+    hero.incapacitated = false;
+    if (hero.weapon) {
+      hero.weapon.elemental = false;
+    }
+    hero.inventory.forEach((item) => {
+      if (item) item.disabled = false;
+    });
   });
 };
 
