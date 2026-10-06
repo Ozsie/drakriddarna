@@ -41,7 +41,13 @@
     getHeroCardsHit,
     renderMonsterCards,
     getMonsterCardsHit,
+    renderDiaryAndWinConditions,
+    renderMenuModal,
+    getMenuHit,
   } from '../ui/UIRendering';
+  import type { MenuView } from '../menu/MenuLogic';
+  import buildInfo from '$lib/buildInfo.json';
+  import { locale } from '$lib/translations';
   import { useItem } from '../items/ItemLogic';
   import { radialMenuStore } from '../store/radialMenuStore';
   import { renderNotes } from '../notes/NotesRendering';
@@ -61,7 +67,10 @@
   export let debugMode: boolean | undefined = undefined;
 
   $: activeState = state ?? $gameStateStore;
-  $: activeDebugMode = debugMode ?? $debugModeStore;
+  $: activeDebugMode =
+    debugMode !== undefined
+      ? debugMode
+      : Boolean(activeState?.settings?.['debug'] ?? $debugModeStore);
   $: dungeon = activeState?.dungeon;
   $: startPosition = dungeon?.startingPositions?.[0];
 
@@ -103,12 +112,36 @@
   let dynamicAnimationId: number | null = null;
   let hoveredRadialIndex: number | null = null;
   let isMenuHovered = false;
+  let isDebugHovered = false;
   let isLogHovered = false;
   let isLogHeld = false;
   let isLogOpen = false;
+  let isCanvasMenuOpen = false;
+  let currentMenuView: MenuView = 'main';
+  let hoveredMenuItemId: string | null = null;
   let hoveredInventoryHeroName: string | null = null;
   let hoveredCloseHeroName: string | null = null;
   let hoveredUseItem: { heroName: string; itemIndex: number } | null = null;
+
+  $: menuCallbacks = {
+    setView: (view: MenuView) => {
+      currentMenuView = view;
+      hoveredMenuItemId = null;
+      renderUiLayer(true);
+    },
+    closeMenu: () => {
+      isCanvasMenuOpen = false;
+      currentMenuView = 'main';
+      hoveredMenuItemId = null;
+      renderUiLayer(true);
+    },
+    setState: (newState: GameState) => {
+      if (state) {
+        state = newState;
+      }
+      renderCanvas(true);
+    },
+  };
 
   const getStaticSignature = (st: GameState, dbg: boolean, size: number) => {
     const d = st?.dungeon;
@@ -348,7 +381,14 @@
     const roomsSig = (activeState?.dungeon?.discoveredRooms ?? []).join(',');
     const hoverSig = `${hoveredInventoryHeroName}:${hoveredCloseHeroName}:${hoveredUseItem?.heroName}-${hoveredUseItem?.itemIndex}`;
     const targetSig = `${activeState?.targetActor?.name}:${activeState?.currentActor?.name}`;
-    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isLogHovered},${isLogOpen},${heroesSig},${monstersSig},${roomsSig},${hoverSig},${targetSig}`;
+    const winSig = `${activeState?.dungeon?.killCount}:${(activeState?.dungeon?.winConditions ?? []).map((w) => `${w.fulfilled}`).join(',')}`;
+    const diarySig = `${(activeState?.dungeon?.layout?.notes ?? []).filter((n) => n.found).map((n) => `${n.id}:${n.foundOn}`).join(',')}`;
+    const currentDebug =
+      debugMode !== undefined
+        ? debugMode
+        : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
+    const menuSig = `${isCanvasMenuOpen}:${currentMenuView}:${hoveredMenuItemId}:${currentDebug}:${$locale}:${activeState?.settings?.['locale']}:${activeState?.difficulty?.id}:${activeState?.dungeon?.beaten}`;
+    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isDebugHovered},${isLogHovered},${isLogOpen},${heroesSig},${monstersSig},${roomsSig},${hoverSig},${targetSig},${winSig},${diarySig},${menuSig}`;
     if (!force && sig === lastUiSignature) return;
     lastUiSignature = sig;
 
@@ -366,8 +406,10 @@
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       renderTopBar(ctx, containerWidth, activeState, {
         isMenuHovered,
+        isDebugHovered,
         isLogHovered,
         isLogOpen,
+        debugMode: currentDebug,
       });
       renderHeroCards(ctx, containerWidth, containerHeight, activeState, {
         hoveredInventoryHeroName,
@@ -375,6 +417,16 @@
         hoveredUseItem,
       });
       renderMonsterCards(ctx, containerWidth, containerHeight, activeState);
+      renderDiaryAndWinConditions(ctx, containerWidth, containerHeight, activeState);
+      if (isCanvasMenuOpen) {
+        renderMenuModal(ctx, containerWidth, containerHeight, activeState, {
+          view: currentMenuView,
+          hoveredItemId: hoveredMenuItemId,
+          buildInfo,
+          debugMode: currentDebug,
+          callbacks: menuCallbacks,
+        });
+      }
       ctx.restore();
     }
 
@@ -560,6 +612,10 @@
     renderCanvas(false);
   }
 
+  $: if (isMounted && $locale) {
+    renderCanvas(true);
+  }
+
   let lastDungeonKey = '';
   $: dungeonKey = dungeon
     ? `${dungeon.name}|${startPosition?.x},${startPosition?.y}`
@@ -577,13 +633,17 @@
       const rect = uiCanvas.getBoundingClientRect();
       const screenX = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
+      const currentDebug =
+        debugMode !== undefined
+          ? debugMode
+          : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
       const topBarHit = getTopBarHit(
         containerWidth,
         activeState,
         screenX,
         screenY,
         null,
-        { isLogOpen },
+        { isLogOpen, debugMode: currentDebug },
       );
       if (topBarHit === 'log' || topBarHit === 'logDropdown') {
         isLogHeld = true;
@@ -593,6 +653,24 @@
       }
       if (topBarHit) {
         return;
+      }
+      if (isCanvasMenuOpen) {
+        const menuHit = getMenuHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          {
+            view: currentMenuView,
+            debugMode: currentDebug,
+            callbacks: menuCallbacks,
+            buildInfo,
+          },
+          screenX,
+          screenY,
+        );
+        if (menuHit) {
+          return;
+        }
       }
       const heroHit = getHeroCardsHit(
         containerWidth,
@@ -638,17 +716,76 @@
       const rect = uiCanvas.getBoundingClientRect();
       const screenX = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
+      const currentDebug =
+        debugMode !== undefined
+          ? debugMode
+          : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
       const topBarHit = getTopBarHit(
         containerWidth,
         activeState,
         screenX,
         screenY,
         null,
-        { isLogOpen },
+        { isLogOpen, debugMode: currentDebug },
       );
+      if (topBarHit === 'menu') {
+        if (isCanvasMenuOpen && currentMenuView === 'main') {
+          isCanvasMenuOpen = false;
+        } else {
+          isCanvasMenuOpen = true;
+          currentMenuView = 'main';
+        }
+        hoveredMenuItemId = null;
+        renderUiLayer(true);
+        return;
+      }
+      if (topBarHit === 'debug') {
+        if (isCanvasMenuOpen && currentMenuView === 'debug') {
+          isCanvasMenuOpen = false;
+        } else {
+          isCanvasMenuOpen = true;
+          currentMenuView = 'debug';
+        }
+        hoveredMenuItemId = null;
+        renderUiLayer(true);
+        return;
+      }
       if (topBarHit) {
         return;
       }
+
+      if (isCanvasMenuOpen) {
+        const currentDebug =
+          debugMode !== undefined
+            ? debugMode
+            : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
+        const menuHit = getMenuHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          {
+            view: currentMenuView,
+            debugMode: currentDebug,
+            callbacks: menuCallbacks,
+            buildInfo,
+          },
+          screenX,
+          screenY,
+        );
+        if (menuHit) {
+          if (menuHit.type === 'item' && menuHit.item) {
+            menuHit.item.onClick(activeState);
+            renderCanvas(true);
+          } else if (menuHit.type === 'backdrop') {
+            isCanvasMenuOpen = false;
+            currentMenuView = 'main';
+            hoveredMenuItemId = null;
+            renderUiLayer(true);
+          }
+          return;
+        }
+      }
+
       const heroHit = getHeroCardsHit(
         containerWidth,
         containerHeight,
@@ -789,13 +926,17 @@
     const screenY = event.clientY - rect.top;
 
     if (containerWidth > 0) {
+      const currentDebug =
+        debugMode !== undefined
+          ? debugMode
+          : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
       const topBarHit = getTopBarHit(
         containerWidth,
         activeState,
         screenX,
         screenY,
         null,
-        { isLogOpen },
+        { isLogOpen, debugMode: currentDebug },
       );
       if (topBarHit) {
         if (hoveredRadialIndex !== null) {
@@ -820,6 +961,24 @@
             isMenuHovered = true;
             changed = true;
           }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+        } else if (topBarHit === 'debug') {
+          boardCursor = 'pointer';
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (!isDebugHovered) {
+            isDebugHovered = true;
+            changed = true;
+          }
           if (isLogHovered) {
             isLogHovered = false;
             changed = true;
@@ -833,6 +992,10 @@
             isMenuHovered = false;
             changed = true;
           }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
           if (!isLogHovered) {
             isLogHovered = true;
             changed = true;
@@ -843,6 +1006,10 @@
             isMenuHovered = false;
             changed = true;
           }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
           if (isLogHovered) {
             isLogHovered = false;
             changed = true;
@@ -850,6 +1017,63 @@
         }
         if (changed) renderUiLayer(true);
         return;
+      }
+
+      if (isCanvasMenuOpen) {
+        const menuHit = getMenuHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          {
+            view: currentMenuView,
+            debugMode: currentDebug,
+            callbacks: menuCallbacks,
+            buildInfo,
+          },
+          screenX,
+          screenY,
+        );
+        if (menuHit) {
+          if (hoveredRadialIndex !== null) {
+            hoveredRadialIndex = null;
+          }
+          let changed = false;
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+          if (hoveredInventoryHeroName !== null) {
+            hoveredInventoryHeroName = null;
+            changed = true;
+          }
+          if (hoveredCloseHeroName !== null) {
+            hoveredCloseHeroName = null;
+            changed = true;
+          }
+          if (hoveredUseItem !== null) {
+            hoveredUseItem = null;
+            changed = true;
+          }
+
+          const newHoveredId =
+            menuHit.type === 'item' && menuHit.item ? menuHit.item.id : null;
+          if (hoveredMenuItemId !== newHoveredId) {
+            hoveredMenuItemId = newHoveredId;
+            changed = true;
+          }
+
+          boardCursor = menuHit.type === 'item' ? 'pointer' : 'default';
+          if (changed) renderUiLayer(true);
+          return;
+        }
       }
 
       if (containerHeight > 0) {
@@ -867,6 +1091,10 @@
           let changed = false;
           if (isMenuHovered) {
             isMenuHovered = false;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
             changed = true;
           }
           if (isLogHovered) {
@@ -929,6 +1157,10 @@
             isMenuHovered = false;
             changed = true;
           }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
           if (isLogHovered) {
             isLogHovered = false;
             changed = true;
@@ -957,6 +1189,10 @@
       isMenuHovered = false;
       needsReset = true;
     }
+    if (isDebugHovered) {
+      isDebugHovered = false;
+      needsReset = true;
+    }
     if (isLogHovered) {
       isLogHovered = false;
       needsReset = true;
@@ -971,6 +1207,10 @@
     }
     if (hoveredUseItem !== null) {
       hoveredUseItem = null;
+      needsReset = true;
+    }
+    if (hoveredMenuItemId !== null) {
+      hoveredMenuItemId = null;
       needsReset = true;
     }
     if (needsReset) {
@@ -1045,6 +1285,10 @@
       isMenuHovered = false;
       needsRender = true;
     }
+    if (isDebugHovered) {
+      isDebugHovered = false;
+      needsRender = true;
+    }
     if (isLogHovered) {
       isLogHovered = false;
       needsRender = true;
@@ -1059,6 +1303,10 @@
     }
     if (hoveredUseItem !== null) {
       hoveredUseItem = null;
+      needsRender = true;
+    }
+    if (hoveredMenuItemId !== null) {
+      hoveredMenuItemId = null;
       needsRender = true;
     }
     if (needsRender) {

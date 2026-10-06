@@ -10,11 +10,14 @@ import {
   renderMonsterCards,
   type RenderMonsterCardsOptions,
 } from './MonsterCardRendering';
+import { renderMenuModal, type RenderMenuOptions } from './MenuRendering';
+import { renderDiaryAndWinConditions } from './DiaryAndWinConditionRendering';
 
 export interface RenderUIOptions {
   topBar?: RenderTopBarOptions;
   heroCards?: RenderHeroCardsOptions;
   monsterCards?: RenderMonsterCardsOptions;
+  menu?: RenderMenuOptions;
 }
 
 export const renderUI = (
@@ -38,10 +41,21 @@ export const renderUI = (
         state,
         options?.monsterCards,
       );
+      renderDiaryAndWinConditions(ctx, viewWidth, viewHeight, state);
     }
   }
   if (radialMenu) {
     renderRadialMenu(ctx, cellSize, radialMenu, hoveredRadialIndex);
+  }
+  if (
+    state &&
+    viewWidth &&
+    viewWidth > 0 &&
+    viewHeight &&
+    viewHeight > 0 &&
+    options?.menu
+  ) {
+    renderMenuModal(ctx, viewWidth, viewHeight, state, options.menu);
   }
 };
 
@@ -68,3 +82,23 @@ export {
   type RenderMonsterCardsOptions,
   type MonsterCardsHitResult,
 } from './MonsterCardRendering';
+export {
+  renderMenuModal,
+  getMenuLayout,
+  getMenuHit,
+  type MenuItemLayout,
+  type MenuLayout,
+  type RenderMenuOptions,
+  type MenuHitResult,
+} from './MenuRendering';
+export {
+  renderDiaryAndWinConditions,
+  getDiaryAndWinConditionsLayout,
+  formatWinCondition,
+  formatDiaryHeader,
+  formatNoteHeader,
+  formatNoteMessage,
+  type WinConditionLayoutItem,
+  type DiaryNoteLayoutItem,
+  type DiaryAndWinConditionsLayout,
+} from './DiaryAndWinConditionRendering';

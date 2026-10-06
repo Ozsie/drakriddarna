@@ -111,6 +111,30 @@ describe('TopBarRendering', () => {
       expect(
         layout.turnCounter.x + layout.turnCounter.width,
       ).toBeLessThanOrEqual(viewWidth);
+      expect(layout.debugButton).toBeUndefined();
+    });
+
+    it('creates layout with debug button between menu and log when debugMode is true', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+      const viewWidth = 600;
+      const layout = getTopBarLayout(viewWidth, state, ctx, {
+        debugMode: true,
+      });
+
+      expect(layout.debugButton).toBeDefined();
+      if (layout.debugButton) {
+        // Order: menu -> debug -> log -> turn
+        expect(
+          layout.menuButton.x + layout.menuButton.width,
+        ).toBeLessThanOrEqual(layout.debugButton.x);
+        expect(
+          layout.debugButton.x + layout.debugButton.width,
+        ).toBeLessThanOrEqual(layout.logSection.x);
+        expect(
+          layout.logSection.x + layout.logSection.width,
+        ).toBeLessThanOrEqual(layout.turnCounter.x);
+      }
     });
 
     it('allocates required width for menu button and at least 10 characters for turn counter', () => {
@@ -191,6 +215,22 @@ describe('TopBarRendering', () => {
         ctx,
       );
       expect(turnHit).toBe('turn');
+
+      // Debug button hit when debugMode is true
+      const debugLayout = getTopBarLayout(viewWidth, state, ctx, {
+        debugMode: true,
+      });
+      if (debugLayout.debugButton) {
+        const debugHit = getTopBarHit(
+          viewWidth,
+          state,
+          debugLayout.debugButton.x + 5,
+          debugLayout.debugButton.y + 5,
+          ctx,
+          { debugMode: true },
+        );
+        expect(debugHit).toBe('debug');
+      }
 
       // Miss outside top bar
       const missHit = getTopBarHit(viewWidth, state, 100, 200, ctx);
@@ -278,6 +318,16 @@ describe('TopBarRendering', () => {
       const ctx = createMockCtx();
 
       renderTopBar(ctx, 600, state, { isMenuHovered: true });
+
+      expect(ctx.fillStyle).toBeDefined();
+      expect(ctx.fill).toHaveBeenCalled();
+    });
+
+    it('renders debug button and hovered styling when debugMode is true', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+
+      renderTopBar(ctx, 600, state, { debugMode: true, isDebugHovered: true });
 
       expect(ctx.fillStyle).toBeDefined();
       expect(ctx.fill).toHaveBeenCalled();

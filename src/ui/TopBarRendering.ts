@@ -11,6 +11,7 @@ export interface TopBarElementBounds {
 export interface TopBarLayout {
   topBar: TopBarElementBounds;
   menuButton: TopBarElementBounds & { label: string };
+  debugButton?: TopBarElementBounds & { label: string };
   logSection: TopBarElementBounds & { text: string };
   turnCounter: TopBarElementBounds & { text: string };
   logDropdown: TopBarElementBounds & { entries: string[] };
@@ -18,11 +19,19 @@ export interface TopBarLayout {
 
 export interface RenderTopBarOptions {
   isMenuHovered?: boolean;
+  isDebugHovered?: boolean;
   isLogHovered?: boolean;
   isLogOpen?: boolean;
+  debugMode?: boolean;
 }
 
-export type TopBarHitElement = 'menu' | 'log' | 'turn' | 'logDropdown' | null;
+export type TopBarHitElement =
+  | 'menu'
+  | 'debug'
+  | 'log'
+  | 'turn'
+  | 'logDropdown'
+  | null;
 
 const DEFAULT_FONT = '13px sans-serif';
 const LOG_FONT = '12px monospace, sans-serif';
@@ -91,10 +100,15 @@ export const truncateText = (
   return best;
 };
 
+export interface TopBarLayoutOptions {
+  debugMode?: boolean;
+}
+
 export const getTopBarLayout = (
   viewWidth: number,
   state?: GameState | null,
   ctx?: CanvasRenderingContext2D | null,
+  options?: TopBarLayoutOptions,
 ): TopBarLayout => {
   const margin = 8;
   const top = 8;
@@ -102,9 +116,28 @@ export const getTopBarLayout = (
   const gap = 8;
   const paddingX = 12;
 
-  const menuLabel = i18n('content.menu.menuButton') || 'Menu';
+  const isDebug =
+    options?.debugMode !== undefined
+      ? options.debugMode
+      : Boolean(state?.settings?.['debug']);
+
+  const rawMenuLabel = i18n('content.menu.menuButton');
+  const menuLabel =
+    rawMenuLabel === 'content.menu.menuButton'
+      ? 'Menu'
+      : rawMenuLabel || 'Menu';
   const menuTextWidth = measureTextWidth(ctx, menuLabel, DEFAULT_FONT);
   const menuWidth = Math.max(48, Math.round(menuTextWidth + paddingX * 2));
+
+  const rawDebugLabel = i18n('content.menu.mainMenu.buttons.debug');
+  const debugLabel =
+    rawDebugLabel === 'content.menu.mainMenu.buttons.debug'
+      ? 'Debug'
+      : rawDebugLabel || 'Debug';
+  const debugTextWidth = measureTextWidth(ctx, debugLabel, DEFAULT_FONT);
+  const debugWidth = isDebug
+    ? Math.max(48, Math.round(debugTextWidth + paddingX * 2))
+    : 0;
 
   const turnText = formatTurnCounter(state?.turnCount);
   const tenCharsWidth = measureTextWidth(ctx, '0123456789', DEFAULT_FONT);
@@ -117,7 +150,8 @@ export const getTopBarLayout = (
   );
 
   const menuX = margin;
-  const logX = menuX + menuWidth + gap;
+  const debugX = menuX + menuWidth + gap;
+  const logX = isDebug ? debugX + debugWidth + gap : menuX + menuWidth + gap;
   const turnX = Math.max(logX, viewWidth - margin - turnCounterWidth);
   const logWidth = Math.max(0, turnX - gap - logX);
 
@@ -134,7 +168,7 @@ export const getTopBarLayout = (
       ? logPaddingY * 2 + logEntries.length * logItemHeight
       : 0;
 
-  return {
+  const layout: TopBarLayout = {
     topBar: {
       x: margin,
       y: top,
@@ -170,6 +204,18 @@ export const getTopBarLayout = (
       entries: logEntries,
     },
   };
+
+  if (isDebug) {
+    layout.debugButton = {
+      x: debugX,
+      y: top,
+      width: debugWidth,
+      height,
+      label: debugLabel,
+    };
+  }
+
+  return layout;
 };
 
 export const isPointInBounds = (
@@ -188,10 +234,19 @@ export const getTopBarHit = (
   x: number,
   y: number,
   ctx?: CanvasRenderingContext2D | null,
-  options?: { isLogOpen?: boolean },
+  options?: { isLogOpen?: boolean; debugMode?: boolean },
 ): TopBarHitElement => {
-  const layout = getTopBarLayout(viewWidth, state, ctx);
+  const layout = getTopBarLayout(viewWidth, state, ctx, {
+    debugMode: options?.debugMode,
+  });
   if (isPointInBounds(x, y, layout.menuButton)) return 'menu';
+  if (
+    layout.debugButton &&
+    layout.debugButton.width > 0 &&
+    isPointInBounds(x, y, layout.debugButton)
+  ) {
+    return 'debug';
+  }
   if (isPointInBounds(x, y, layout.logSection)) return 'log';
   if (isPointInBounds(x, y, layout.turnCounter)) return 'turn';
   if (
@@ -228,8 +283,11 @@ export const renderTopBar = (
 ) => {
   if (!ctx || viewWidth <= 0) return;
 
-  const layout = getTopBarLayout(viewWidth, state, ctx);
+  const layout = getTopBarLayout(viewWidth, state, ctx, {
+    debugMode: options?.debugMode,
+  });
   const isMenuHovered = options?.isMenuHovered ?? false;
+  const isDebugHovered = options?.isDebugHovered ?? false;
   const isLogHovered = options?.isLogHovered ?? false;
   const isLogOpen = options?.isLogOpen ?? false;
 
@@ -254,6 +312,31 @@ export const renderTopBar = (
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(menu.label, menu.x + menu.width / 2, menu.y + menu.height / 2);
+  }
+
+  // 1b. Render Debug Button (if present)
+  const debug = layout.debugButton;
+  if (debug && debug.width > 0) {
+    drawRoundedRect(ctx, debug.x, debug.y, debug.width, debug.height, 4);
+    ctx.fillStyle = isDebugHovered
+      ? 'rgba(71, 85, 105, 0.95)'
+      : 'rgba(37, 41, 50, 0.9)';
+    ctx.fill();
+    ctx.strokeStyle = isDebugHovered
+      ? 'rgba(255, 255, 255, 0.6)'
+      : 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = DEFAULT_FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      debug.label,
+      debug.x + debug.width / 2,
+      debug.y + debug.height / 2,
+    );
   }
 
   // 2. Render Latest Log Event
