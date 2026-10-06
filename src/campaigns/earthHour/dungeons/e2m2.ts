@@ -61,6 +61,7 @@ export const e2m2: Dungeon = defineDungeon({
   ],
   discoveredRooms: ['A'],
   startingPositions: [
+    [11, 4],
     [12, 4],
     [12, 5],
     [12, 6],
@@ -68,7 +69,7 @@ export const e2m2: Dungeon = defineDungeon({
   layout: {
     grid: [
       '           ###  ',
-      '     ##### #D#  ',
+      '     #######D#  ',
       '     #EEEDDDD#  ',
       '  ####EEE###D#  ',
       '  #EEEEEE#AAA#  ',
