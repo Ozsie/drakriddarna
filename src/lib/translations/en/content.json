@@ -96,5 +96,17 @@
       "description": "Hard: -1 attack, -1 defense, -1 moves, -1 search"
     }
   },
+  "indicators": {
+    "plusAction": "+{{actions}} action",
+    "plusActions": "+{{actions}} actions",
+    "minusAction": "-{{actions}} action",
+    "minusActions": "-{{actions}} actions",
+    "moreActions": "+ACTIONS",
+    "blinded": "BLINDED",
+    "elemental": "ELEMENTAL",
+    "weakened": "WEAKENED",
+    "invisible": "INVISIBLE",
+    "levelUp": "LEVEL UP!"
+  },
   "turn": "Turn"
 }

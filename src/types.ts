@@ -32,12 +32,22 @@ export type GameState = {
   drawEvents: boolean;
 };
 
+export type IndicatorEffect = 'float' | 'bounce' | 'crit' | 'fade' | 'static';
+
 export type DamageIndicator = {
   id: string;
-  damage: number;
+  damage?: number;
+  text?: string;
   position: Position;
+  color?: string;
+  effect?: IndicatorEffect;
   timestamp?: number;
+  durationMs?: number;
+  fontSizeScale?: number;
+  offset?: { x?: number; y?: number };
 };
+
+export type FloatingIndicator = DamageIndicator;
 
 export type LogEvent = {
   key: string;

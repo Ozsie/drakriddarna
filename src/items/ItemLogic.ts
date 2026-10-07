@@ -1,6 +1,6 @@
 import type { Actor, GameState, Item } from '../types';
 import { Level } from '../types';
-import { addLog, i18n } from '../core';
+import { addLog, createIndicator, i18n } from '../core';
 import { roll } from '../core';
 import {
   canAct,
@@ -85,6 +85,12 @@ export const resolveChaosSwordAttack = (
   const hits = roll(user.level, 4 + attackDifficultyModifier);
 
   const killTarget = () => {
+    if (!state.damageIndicators) {
+      state.damageIndicators = [];
+    }
+    state.damageIndicators.push(
+      createIndicator(target.health, target.position, { effect: 'crit' }),
+    );
     target.health = 0;
     target.level = Level.APPRENTICE;
     const monster = state.dungeon.layout.monsters.find((m) => m === target);
@@ -172,6 +178,15 @@ export const onUse: {
         target.maxHealth - target.health,
       );
       target.health += addedHealth;
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(addedHealth, target.position, {
+          color: '#0ab44e',
+          effect: 'fade',
+        }),
+      );
       addLog(state, 'logs.item.magicHerbs', {
         user: i18n(user.name),
         item: i18n(self.name),
@@ -230,6 +245,21 @@ export const onUse: {
         item: i18n(self.name),
         actions: String(self.properties?.[ACTIONS_BONUS] ?? ''),
       });
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      const actionsBonus = self.properties?.[ACTIONS_BONUS] ?? 1;
+      const key =
+        actionsBonus === 1
+          ? 'content.indicators.plusAction'
+          : 'content.indicators.plusActions';
+      state.damageIndicators.push(
+        createIndicator(
+          i18n(key, { actions: `${actionsBonus}` }),
+          user.position,
+          { color: '#7373ec', effect: 'float' },
+        ),
+      );
     } else {
       addLog(state, 'logs.item.consumed', { item: i18n(self.name) });
     }
@@ -255,6 +285,15 @@ export const onUse: {
     if (self.properties && !self.properties?.[USED]) {
       self.properties[USED] = true;
       target.ignoredByMonsters = true;
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(i18n('content.indicators.invisible'), target.position, {
+          color: '#ffff99',
+          effect: 'fade',
+        }),
+      );
       user.actions--;
     }
   },

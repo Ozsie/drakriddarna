@@ -19,7 +19,7 @@ import {
   isBlockedByMonster,
   liveHeroes,
 } from '../hero/HeroLogic';
-import { addLog, i18n } from '../core';
+import { addLog, createIndicator, i18n } from '../core';
 import { roll } from '../core';
 import { findCell, isRoomDiscovered, toArray } from '../core';
 import { takeDamage } from '../core';
@@ -97,6 +97,14 @@ export const eventEffects: Record<
       .forEach((monster) => {
         addLog(state, 'logs.events.sunStone', { monster: i18n(monster.name) });
         monster.health = 0;
+        if (!state.damageIndicators) {
+          state.damageIndicators = [];
+        }
+        state.damageIndicators.push(
+          createIndicator(0, monster.position, {
+            effect: 'crit',
+          }),
+        );
       });
     event.used = true;
   },
@@ -107,7 +115,22 @@ export const eventEffects: Record<
   },
   timePortal: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
-    if (state.currentActor) state.currentActor.actions++;
+    if (state.currentActor) {
+      state.currentActor.actions++;
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(
+          i18n('content.indicators.plusAction', { actions: '1' }),
+          state.currentActor.position,
+          {
+            color: '#7373ec',
+            effect: 'float',
+          },
+        ),
+      );
+    }
     state.roundActionsDelta = (state.roundActionsDelta ?? 0) + 1;
     event.used = true;
   },
@@ -116,7 +139,17 @@ export const eventEffects: Record<
     liveHeroes(state).forEach((hero) => {
       if (hero.health < hero.maxHealth) {
         const hits = roll(hero.level, 3);
-        hero.health += Math.min(hits, hero.maxHealth - hero.health);
+        const recoveredHealth = Math.min(hits, hero.maxHealth - hero.health);
+        hero.health += recoveredHealth;
+        if (!state.damageIndicators) {
+          state.damageIndicators = [];
+        }
+        state.damageIndicators.push(
+          createIndicator(recoveredHealth, hero.position, {
+            color: '#0ab44e',
+            effect: 'fade',
+          }),
+        );
       }
     });
     event.used = true;
@@ -125,6 +158,19 @@ export const eventEffects: Record<
     eventDescriptionLog(state, event);
     if (state.currentActor) {
       state.currentActor.actions = Math.max(1, state.currentActor.actions - 1);
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(
+          i18n('content.indicators.minusAction', { actions: '1' }),
+          state.currentActor.position,
+          {
+            color: '#ff3333',
+            effect: 'float',
+          },
+        ),
+      );
     }
     state.roundActionsDelta = (state.roundActionsDelta ?? 0) - 1;
     event.used = true;
@@ -141,7 +187,18 @@ export const eventEffects: Record<
   },
   theDragonsBreath: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
-    liveHeroes(state).forEach((hero) => (hero.blinded = true));
+    liveHeroes(state).forEach((hero) => {
+      hero.blinded = true;
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(i18n('content.indicators.blinded'), hero.position, {
+          color: '#e69500',
+          effect: 'float',
+        }),
+      );
+    });
     event.used = true;
   },
   landslide: (state: GameState, event: TurnEvent) => {
@@ -288,14 +345,40 @@ export const eventEffects: Record<
     const maxHeroIndex = heroes.length;
     const randomHeroIndex = Math.floor(Math.random() * maxHeroIndex);
     const hero = heroes[randomHeroIndex];
-    hero.weapon.elemental = true;
+    if (hero) {
+      hero.weapon.elemental = true;
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(i18n('content.indicators.elemental'), hero.position, {
+          color: '#FCFF4F',
+          effect: 'crit',
+        }),
+      );
+    }
     event.used = true;
   },
   theOrcDrums: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     state.dungeon.layout.monsters
       .filter((monster) => monster.type === MonsterType.ORC)
-      .forEach((monster) => (monster.actions = 3));
+      .forEach((monster) => {
+        monster.actions = 3;
+        if (!state.damageIndicators) {
+          state.damageIndicators = [];
+        }
+        state.damageIndicators.push(
+          createIndicator(
+            i18n('content.indicators.moreActions'),
+            monster.position,
+            {
+              color: '#ff3333',
+              effect: 'bounce',
+            },
+          ),
+        );
+      });
     event.used = true;
   },
   theOrchDrums: (state: GameState, event: TurnEvent) => {
@@ -303,7 +386,18 @@ export const eventEffects: Record<
   },
   theSymbolOfWeakness: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
-    liveHeroes(state).forEach((hero) => (hero.weakened = true));
+    liveHeroes(state).forEach((hero) => {
+      hero.weakened = true;
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(i18n('content.indicators.weakened'), hero.position, {
+          color: '#cc33ff',
+          effect: 'float',
+        }),
+      );
+    });
     event.used = true;
   },
   theHexagram: (state: GameState, event: TurnEvent) => {

@@ -32,6 +32,7 @@ import {
 import { roll } from '../core';
 import {
   canAct,
+  createIndicator,
   doorAsActor,
   getDifficulty,
   getEffectiveMaxMovement,
@@ -385,6 +386,15 @@ export const levelUp = (state: GameState) => {
         hero: i18n(hero.name),
         level: i18n(`content.level.${hero.level}`),
       });
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(i18n('content.indicators.levelUp'), hero.position, {
+          color: '#FCFF4F',
+          effect: 'crit',
+        }),
+      );
     }
   });
 };
