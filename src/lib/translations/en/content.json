@@ -85,7 +85,7 @@
   "difficulty": {
     "easy": {
       "name": "Easy",
-      "description": "Easy: +1 attack, +1 defense, +1 moves, +1 search"
+      "description": "Easy: +2 attack, +2 defense, +1 moves, +2 search"
     },
     "normal": {
       "name": "Normal",

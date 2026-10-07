@@ -8,10 +8,10 @@ export const DifficultLevels: Difficulty[] = [
     nameTranslationKey: 'content.difficulty.easy.name',
     descriptionTranslationKey: 'content.difficulty.easy.description',
     modifiers: {
-      attack: 1,
-      defense: 1,
+      attack: 2,
+      defense: 2,
       movement: 1,
-      search: 1,
+      search: 2,
     },
   },
   {

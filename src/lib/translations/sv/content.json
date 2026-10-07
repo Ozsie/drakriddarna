@@ -85,7 +85,7 @@
   "difficulty": {
     "easy": {
       "name": "Lätt",
-      "description": "Lätt: +1 skada, +1 försvar, +1 förflyttning, +1 leta"
+      "description": "Lätt: +2 skada, +2 försvar, +1 förflyttning, +2 leta"
     },
     "normal": {
       "name": "Normal",
