@@ -16,6 +16,9 @@ See [Campaign Readme](src/campaigns/README.md)
 - [ ] Diary on mobile
 - [ ] Responsive layout
 - [ ] Graphics
+  - [ ] Sprites for actors
+  - [ ] Tileset for dungeons
+  - [ ] Sprites for items etc
 - [ ] Doors blocking monsters?
 - [ ] Trade Items?
 - [ ] Alvkonungens Borg -  [Official Dungeon and Heroes](https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg)
