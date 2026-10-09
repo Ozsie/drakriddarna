@@ -2,6 +2,7 @@
   import type {
     Actor,
     Door,
+    Dungeon,
     GameState,
     Hero,
     InteractableCell,
@@ -46,6 +47,10 @@
     getEventCardHit,
     renderMenuModal,
     getMenuHit,
+    renderDungeonIntro,
+    getDungeonIntroHit,
+    shouldShowDungeonIntro,
+    dismissDungeonIntro,
   } from '../ui/UIRendering';
   import type { MenuView } from '../menu/MenuLogic';
   import buildInfo from '$lib/buildInfo.json';
@@ -63,7 +68,6 @@
     toggleHeroInventory,
     useHeroItem,
   } from '../store/gameStateStore';
-  import DungeonIntro from './DungeonIntro.svelte';
 
   export let state: GameState | undefined = undefined;
   export let debugMode: boolean | undefined = undefined;
@@ -126,6 +130,18 @@
   let hoveredUseItem: { heroName: string; itemIndex: number } | null = null;
   let isEventCardCollapsed = false;
   let isEventCardToggleHovered = false;
+  let isDungeonIntroDismissed = false;
+  let isDungeonIntroCloseHovered = false;
+  let lastDungeonIntroDungeon: Dungeon | undefined = undefined;
+  let lastDungeonIntroName: string | undefined = undefined;
+
+  $: if (dungeon !== lastDungeonIntroDungeon || dungeon?.name !== lastDungeonIntroName) {
+    lastDungeonIntroDungeon = dungeon;
+    lastDungeonIntroName = dungeon?.name;
+    isDungeonIntroDismissed = false;
+  }
+
+  $: showDungeonIntro = shouldShowDungeonIntro(activeState, isDungeonIntroDismissed);
 
   $: menuCallbacks = {
     setView: (view: MenuView) => {
@@ -388,12 +404,13 @@
     const winSig = `${activeState?.dungeon?.killCount}:${(activeState?.dungeon?.winConditions ?? []).map((w) => `${w.fulfilled}`).join(',')}`;
     const diarySig = `${(activeState?.dungeon?.layout?.notes ?? []).filter((n) => n.found).map((n) => `${n.id}:${n.foundOn}`).join(',')}`;
     const eventSig = `${activeState?.currentEvent?.id ?? ''}:${(activeState?.eventDeck ?? []).map((e) => `${e.number}-${e.used}`).join(',')}:${isEventCardCollapsed}:${isEventCardToggleHovered}`;
+    const introSig = `${showDungeonIntro}:${isDungeonIntroCloseHovered}:${activeState?.dungeon?.intro ?? ''}`;
     const currentDebug =
       debugMode !== undefined
         ? debugMode
         : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
     const menuSig = `${isCanvasMenuOpen}:${currentMenuView}:${hoveredMenuItemId}:${currentDebug}:${$locale}:${activeState?.settings?.['locale']}:${activeState?.difficulty?.id}:${activeState?.dungeon?.beaten}`;
-    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isDebugHovered},${isLogHovered},${isLogOpen},${heroesSig},${monstersSig},${roomsSig},${hoverSig},${targetSig},${winSig},${diarySig},${eventSig},${menuSig}`;
+    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isDebugHovered},${isLogHovered},${isLogOpen},${heroesSig},${monstersSig},${roomsSig},${hoverSig},${targetSig},${winSig},${diarySig},${eventSig},${introSig},${menuSig}`;
     if (!force && sig === lastUiSignature) return;
     lastUiSignature = sig;
 
@@ -434,6 +451,12 @@
           buildInfo,
           debugMode: currentDebug,
           callbacks: menuCallbacks,
+        });
+      }
+      if (showDungeonIntro) {
+        renderDungeonIntro(ctx, containerWidth, containerHeight, activeState, {
+          dismissed: isDungeonIntroDismissed,
+          isCloseHovered: isDungeonIntroCloseHovered,
         });
       }
       ctx.restore();
@@ -642,6 +665,21 @@
       const rect = uiCanvas.getBoundingClientRect();
       const screenX = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
+
+      if (showDungeonIntro) {
+        const introHit = getDungeonIntroHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+          { dismissed: isDungeonIntroDismissed },
+        );
+        if (introHit) {
+          return;
+        }
+      }
+
       const currentDebug =
         debugMode !== undefined
           ? debugMode
@@ -736,6 +774,30 @@
       const rect = uiCanvas.getBoundingClientRect();
       const screenX = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
+
+      if (showDungeonIntro) {
+        const introHit = getDungeonIntroHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+          { dismissed: isDungeonIntroDismissed },
+        );
+        if (introHit) {
+          if (introHit.type === 'close' || introHit.type === 'backdrop') {
+            dismissDungeonIntro(activeState);
+            isDungeonIntroDismissed = true;
+            isDungeonIntroCloseHovered = false;
+            if (!state) {
+              gameStateStore.set(activeState);
+            }
+            renderUiLayer(true);
+          }
+          return;
+        }
+      }
+
       const currentDebug =
         debugMode !== undefined
           ? debugMode
@@ -961,6 +1023,59 @@
     const screenY = event.clientY - rect.top;
 
     if (containerWidth > 0) {
+      if (showDungeonIntro) {
+        const introHit = getDungeonIntroHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+          { dismissed: isDungeonIntroDismissed },
+        );
+        if (introHit) {
+          if (hoveredRadialIndex !== null) {
+            hoveredRadialIndex = null;
+          }
+          let changed = false;
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+          if (hoveredInventoryHeroName !== null) {
+            hoveredInventoryHeroName = null;
+            changed = true;
+          }
+          if (hoveredCloseHeroName !== null) {
+            hoveredCloseHeroName = null;
+            changed = true;
+          }
+          if (hoveredUseItem !== null) {
+            hoveredUseItem = null;
+            changed = true;
+          }
+          if (isEventCardToggleHovered) {
+            isEventCardToggleHovered = false;
+            changed = true;
+          }
+          const isClose = introHit.type === 'close';
+          if (isDungeonIntroCloseHovered !== isClose) {
+            isDungeonIntroCloseHovered = isClose;
+            changed = true;
+          }
+          boardCursor = isClose ? 'pointer' : 'default';
+          if (changed) renderUiLayer(true);
+          return;
+        }
+      }
+
       const currentDebug =
         debugMode !== undefined
           ? debugMode
@@ -1267,6 +1382,10 @@
     }
 
     let needsReset = false;
+    if (isDungeonIntroCloseHovered) {
+      isDungeonIntroCloseHovered = false;
+      needsReset = true;
+    }
     if (isMenuHovered) {
       isMenuHovered = false;
       needsReset = true;
@@ -1363,6 +1482,10 @@
   const onMouseLeave = () => {
     boardCursor = 'default';
     let needsRender = false;
+    if (isDungeonIntroCloseHovered) {
+      isDungeonIntroCloseHovered = false;
+      needsRender = true;
+    }
     if (hoveredRadialIndex !== null) {
       hoveredRadialIndex = null;
       needsRender = true;
@@ -1449,7 +1572,6 @@
       on:contextmenu|preventDefault
     ></canvas>
   </div>
-  <DungeonIntro {dungeon} state={activeState} />
 </div>
 
 <style>

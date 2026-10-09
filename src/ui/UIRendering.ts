@@ -16,6 +16,10 @@ import {
   renderEventCard,
   type RenderEventCardOptions,
 } from './EventCardRendering';
+import {
+  renderDungeonIntro,
+  type RenderDungeonIntroOptions,
+} from './DungeonIntroRendering';
 
 export interface RenderUIOptions {
   topBar?: RenderTopBarOptions;
@@ -23,6 +27,7 @@ export interface RenderUIOptions {
   monsterCards?: RenderMonsterCardsOptions;
   eventCard?: RenderEventCardOptions;
   menu?: RenderMenuOptions;
+  dungeonIntro?: RenderDungeonIntroOptions;
 }
 
 export const renderUI = (
@@ -62,6 +67,16 @@ export const renderUI = (
     options?.menu
   ) {
     renderMenuModal(ctx, viewWidth, viewHeight, state, options.menu);
+  }
+  if (
+    state &&
+    viewWidth &&
+    viewWidth > 0 &&
+    viewHeight &&
+    viewHeight > 0 &&
+    options?.dungeonIntro
+  ) {
+    renderDungeonIntro(ctx, viewWidth, viewHeight, state, options.dungeonIntro);
   }
 };
 
@@ -120,3 +135,13 @@ export {
   type ActiveEventLayout,
   type DrawnEventItem,
 } from './EventCardRendering';
+export {
+  renderDungeonIntro,
+  getDungeonIntroLayout,
+  getDungeonIntroHit,
+  shouldShowDungeonIntro,
+  dismissDungeonIntro,
+  type DungeonIntroLayout,
+  type RenderDungeonIntroOptions,
+  type DungeonIntroHitResult,
+} from './DungeonIntroRendering';

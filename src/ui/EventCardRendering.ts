@@ -121,7 +121,12 @@ export const getEventCardLayout = (
     height: toggleSize,
   };
 
-  const headerText = `🎴 ${i18n('content.event.count')} (${remaining}/${total})`;
+  const rawEventCount = i18n('content.event.count');
+  const eventWord =
+    rawEventCount && rawEventCount !== 'content.event.count'
+      ? rawEventCount
+      : 'Events';
+  const headerText = `🎴 ${eventWord} (${remaining}/${total})`;
 
   if (isCollapsed) {
     const collapsedHeight = 28;
@@ -173,7 +178,10 @@ export const getEventCardLayout = (
     currentY += activeHeight + 8;
   }
 
-  const drawnEventsHeader = `${i18n('content.event.drawn')} (${drawn}):`;
+  const rawDrawn = i18n('content.event.drawn');
+  const drawnWord =
+    rawDrawn && rawDrawn !== 'content.event.drawn' ? rawDrawn : 'Drawn';
+  const drawnEventsHeader = `${drawnWord} (${drawn}):`;
   const drawnEventsHeaderY = currentY;
   currentY += 15;
 
@@ -181,7 +189,12 @@ export const getEventCardLayout = (
   const drawnEventsLayout: DrawnEventItem[] = [];
 
   if (drawnList.length === 0) {
-    const noneText = i18n('content.event.none');
+    const rawNone = 'content.event.none';
+    const translatedNone = i18n(rawNone);
+    const noneText =
+      translatedNone && translatedNone !== rawNone
+        ? translatedNone
+        : '(None drawn yet)';
     drawnEventsLayout.push({
       event: {} as TurnEvent,
       number: 0,
