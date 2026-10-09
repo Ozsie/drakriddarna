@@ -42,6 +42,8 @@
     renderMonsterCards,
     getMonsterCardsHit,
     renderDiaryAndWinConditions,
+    renderEventCard,
+    getEventCardHit,
     renderMenuModal,
     getMenuHit,
   } from '../ui/UIRendering';
@@ -122,6 +124,8 @@
   let hoveredInventoryHeroName: string | null = null;
   let hoveredCloseHeroName: string | null = null;
   let hoveredUseItem: { heroName: string; itemIndex: number } | null = null;
+  let isEventCardCollapsed = false;
+  let isEventCardToggleHovered = false;
 
   $: menuCallbacks = {
     setView: (view: MenuView) => {
@@ -383,12 +387,13 @@
     const targetSig = `${activeState?.targetActor?.name}:${activeState?.currentActor?.name}`;
     const winSig = `${activeState?.dungeon?.killCount}:${(activeState?.dungeon?.winConditions ?? []).map((w) => `${w.fulfilled}`).join(',')}`;
     const diarySig = `${(activeState?.dungeon?.layout?.notes ?? []).filter((n) => n.found).map((n) => `${n.id}:${n.foundOn}`).join(',')}`;
+    const eventSig = `${activeState?.currentEvent?.id ?? ''}:${(activeState?.eventDeck ?? []).map((e) => `${e.number}-${e.used}`).join(',')}:${isEventCardCollapsed}:${isEventCardToggleHovered}`;
     const currentDebug =
       debugMode !== undefined
         ? debugMode
         : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
     const menuSig = `${isCanvasMenuOpen}:${currentMenuView}:${hoveredMenuItemId}:${currentDebug}:${$locale}:${activeState?.settings?.['locale']}:${activeState?.difficulty?.id}:${activeState?.dungeon?.beaten}`;
-    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isDebugHovered},${isLogHovered},${isLogOpen},${heroesSig},${monstersSig},${roomsSig},${hoverSig},${targetSig},${winSig},${diarySig},${menuSig}`;
+    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isDebugHovered},${isLogHovered},${isLogOpen},${heroesSig},${monstersSig},${roomsSig},${hoverSig},${targetSig},${winSig},${diarySig},${eventSig},${menuSig}`;
     if (!force && sig === lastUiSignature) return;
     lastUiSignature = sig;
 
@@ -418,6 +423,10 @@
       });
       renderMonsterCards(ctx, containerWidth, containerHeight, activeState);
       renderDiaryAndWinConditions(ctx, containerWidth, containerHeight, activeState);
+      renderEventCard(ctx, containerWidth, containerHeight, activeState, {
+        isCollapsed: isEventCardCollapsed,
+        isToggleHovered: isEventCardToggleHovered,
+      });
       if (isCanvasMenuOpen) {
         renderMenuModal(ctx, containerWidth, containerHeight, activeState, {
           view: currentMenuView,
@@ -692,6 +701,17 @@
       if (monsterHit) {
         return;
       }
+      const eventHit = getEventCardHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        isEventCardCollapsed,
+        screenX,
+        screenY,
+      );
+      if (eventHit) {
+        return;
+      }
     }
 
     if (event.button === 2 || event.button === 1) {
@@ -831,6 +851,21 @@
         screenY,
       );
       if (monsterHit) {
+        return;
+      }
+      const eventHit = getEventCardHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        isEventCardCollapsed,
+        screenX,
+        screenY,
+      );
+      if (eventHit) {
+        if (eventHit.type === 'toggle') {
+          isEventCardCollapsed = !isEventCardCollapsed;
+          renderUiLayer(true);
+        }
         return;
       }
     }
@@ -1181,6 +1216,53 @@
           if (changed) renderUiLayer(true);
           return;
         }
+
+        const eventHit = getEventCardHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          isEventCardCollapsed,
+          screenX,
+          screenY,
+        );
+        if (eventHit) {
+          if (hoveredRadialIndex !== null) {
+            hoveredRadialIndex = null;
+          }
+          let changed = false;
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+          if (hoveredInventoryHeroName !== null) {
+            hoveredInventoryHeroName = null;
+            changed = true;
+          }
+          if (hoveredCloseHeroName !== null) {
+            hoveredCloseHeroName = null;
+            changed = true;
+          }
+          if (hoveredUseItem !== null) {
+            hoveredUseItem = null;
+            changed = true;
+          }
+          const isToggle = eventHit.type === 'toggle';
+          if (isEventCardToggleHovered !== isToggle) {
+            isEventCardToggleHovered = isToggle;
+            changed = true;
+          }
+          boardCursor = isToggle ? 'pointer' : 'default';
+          if (changed) renderUiLayer(true);
+          return;
+        }
       }
     }
 
@@ -1195,6 +1277,10 @@
     }
     if (isLogHovered) {
       isLogHovered = false;
+      needsReset = true;
+    }
+    if (isEventCardToggleHovered) {
+      isEventCardToggleHovered = false;
       needsReset = true;
     }
     if (hoveredInventoryHeroName !== null) {
@@ -1291,6 +1377,10 @@
     }
     if (isLogHovered) {
       isLogHovered = false;
+      needsRender = true;
+    }
+    if (isEventCardToggleHovered) {
+      isEventCardToggleHovered = false;
       needsRender = true;
     }
     if (hoveredInventoryHeroName !== null) {

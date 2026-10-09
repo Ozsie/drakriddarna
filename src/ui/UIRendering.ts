@@ -12,11 +12,16 @@ import {
 } from './MonsterCardRendering';
 import { renderMenuModal, type RenderMenuOptions } from './MenuRendering';
 import { renderDiaryAndWinConditions } from './DiaryAndWinConditionRendering';
+import {
+  renderEventCard,
+  type RenderEventCardOptions,
+} from './EventCardRendering';
 
 export interface RenderUIOptions {
   topBar?: RenderTopBarOptions;
   heroCards?: RenderHeroCardsOptions;
   monsterCards?: RenderMonsterCardsOptions;
+  eventCard?: RenderEventCardOptions;
   menu?: RenderMenuOptions;
 }
 
@@ -42,6 +47,7 @@ export const renderUI = (
         options?.monsterCards,
       );
       renderDiaryAndWinConditions(ctx, viewWidth, viewHeight, state);
+      renderEventCard(ctx, viewWidth, viewHeight, state, options?.eventCard);
     }
   }
   if (radialMenu) {
@@ -102,3 +108,15 @@ export {
   type DiaryNoteLayoutItem,
   type DiaryAndWinConditionsLayout,
 } from './DiaryAndWinConditionRendering';
+export {
+  renderEventCard,
+  getEventCardLayout,
+  getEventCardHit,
+  formatEventTitle,
+  formatEventDescription,
+  type EventCardLayout,
+  type RenderEventCardOptions,
+  type EventCardHitResult,
+  type ActiveEventLayout,
+  type DrawnEventItem,
+} from './EventCardRendering';
