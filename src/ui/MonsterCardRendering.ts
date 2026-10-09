@@ -16,6 +16,7 @@ export interface MonsterCardLayoutItem {
   title: string;
   hpText: string;
   weaponText: string;
+  rangedWeaponText: string;
   armourText: string;
   shieldText: string;
   row: number;
@@ -68,7 +69,7 @@ export const getMonsterCardsLayout = (
   const marginY = 8;
   const cardGap = 6;
   const rowGap = 6;
-  const cardHeight = 74;
+  const cardHeight = 85;
 
   const numMonsters = monsters.length;
   const maxTotalWidth = viewWidth * 0.5;
@@ -134,7 +135,15 @@ export const getMonsterCardsLayout = (
       ? i18n(monster.weapon.nameTranslationKey ?? monster.weapon.name)
       : noneLabel;
     const weaponDice = monster.weapon?.dice ?? 0;
-    const weaponText = `🗡️ ${weaponName} (${weaponDice})`;
+    const weaponText = `🗡 ${weaponName} (${weaponDice})`;
+
+    const rangedWeaponName = monster.rangedWeapon
+      ? i18n(
+          monster.rangedWeapon.nameTranslationKey ?? monster.rangedWeapon.name,
+        )
+      : noneLabel;
+    const rangedWeaponDice = monster.rangedWeapon?.dice ?? 0;
+    const rangedWeaponText = `🏹 ${rangedWeaponName} (${rangedWeaponDice})`;
 
     const armourName = monster.armour
       ? i18n(monster.armour.nameTranslationKey ?? monster.armour.name)
@@ -146,7 +155,7 @@ export const getMonsterCardsLayout = (
       ? i18n(monster.shield.nameTranslationKey ?? monster.shield.name)
       : noneLabel;
     const shieldDice = monster.shield?.dice ?? 0;
-    const shieldText = `🛡️ ${shieldName} (${shieldDice})`;
+    const shieldText = `🛡 ${shieldName} (${shieldDice})`;
 
     cards.push({
       monster,
@@ -156,6 +165,7 @@ export const getMonsterCardsLayout = (
       title,
       hpText,
       weaponText,
+      rangedWeaponText,
       armourText,
       shieldText,
       row,
@@ -262,6 +272,22 @@ export const renderMonsterCards = (
     );
     ctx.fillText(displayWeapon, bounds.x + 4, bounds.y + 37);
 
+    let armourYOffset = 50;
+    let shieldYOffset = 63;
+    if (monster.rangedWeapon) {
+      ctx.font = STAT_FONT;
+      ctx.fillStyle = '#374151';
+      const displayWeapon = truncateText(
+        ctx,
+        item.rangedWeaponText,
+        textMaxWidth,
+        STAT_FONT,
+      );
+      ctx.fillText(displayWeapon, bounds.x + 4, bounds.y + 50);
+      armourYOffset = 63;
+      shieldYOffset = 76;
+    }
+
     // Armour
     const displayArmour = truncateText(
       ctx,
@@ -269,7 +295,7 @@ export const renderMonsterCards = (
       textMaxWidth,
       STAT_FONT,
     );
-    ctx.fillText(displayArmour, bounds.x + 4, bounds.y + 50);
+    ctx.fillText(displayArmour, bounds.x + 4, bounds.y + armourYOffset);
 
     // Shield
     const displayShield = truncateText(
@@ -278,7 +304,7 @@ export const renderMonsterCards = (
       textMaxWidth,
       STAT_FONT,
     );
-    ctx.fillText(displayShield, bounds.x + 4, bounds.y + 63);
+    ctx.fillText(displayShield, bounds.x + 4, bounds.y + shieldYOffset);
   });
 
   ctx.restore();

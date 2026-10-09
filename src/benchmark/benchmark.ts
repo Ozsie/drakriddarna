@@ -1,8 +1,5 @@
 import type { Dungeon, Hero } from '../types';
-import {
-  DifficultLevels,
-  DEFAULT_DIFFICULTY_ID,
-} from '../core';
+import { DifficultLevels, DEFAULT_DIFFICULTY_ID } from '../core';
 import { createSeededRng, resetRng, setRng } from '../core';
 import { init, next } from '../game';
 import type { MonsterTurnOptions } from '../monsters/MonsterLogic';

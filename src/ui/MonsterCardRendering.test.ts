@@ -195,9 +195,9 @@ describe('MonsterCardRendering', () => {
       expect(card.col).toBe(0);
       expect(card.title).toBe('Orc 1');
       expect(card.hpText).toBe('HP: 5');
-      expect(card.weaponText).toBe('🗡️ Club (1)');
+      expect(card.weaponText).toBe('🗡 Club (1)');
       expect(card.armourText).toBe('🥋 Leather Armour (1)');
-      expect(card.shieldText).toBe('🛡️ Wooden Shield (1)');
+      expect(card.shieldText).toBe('🛡 Wooden Shield (1)');
 
       // Positioned near bottom right (right margin 8, bottom margin 8)
       expect(card.bounds.x + card.bounds.width).toBe(1000 - 8);
@@ -271,7 +271,7 @@ describe('MonsterCardRendering', () => {
       const layout = getMonsterCardsLayout(1000, 800, state);
       const card = layout.cards[0];
       expect(card.armourText).toBe('🥋 None (0)');
-      expect(card.shieldText).toBe('🛡️ None (0)');
+      expect(card.shieldText).toBe('🛡 None (0)');
     });
 
     it('marks targeted monster with asterisk in title and isTarget flag', () => {
@@ -345,9 +345,9 @@ describe('MonsterCardRendering', () => {
 
       expect(renderedTexts).toContain('Orc Leader');
       expect(renderedTexts).toContain('HP: 7');
-      expect(renderedTexts).toContain('🗡️ Club (1)');
+      expect(renderedTexts).toContain('🗡 Club (1)');
       expect(renderedTexts).toContain('🥋 Leather Armour (1)');
-      expect(renderedTexts).toContain('🛡️ Wooden Shield (1)');
+      expect(renderedTexts).toContain('🛡 Wooden Shield (1)');
     });
 
     it('handles null state and dimensions gracefully', () => {

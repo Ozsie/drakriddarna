@@ -102,14 +102,10 @@ export const findPath = (
       }
 
       // Check undiscovered rooms: can only step into undiscovered room if crossing an openable door
-      const nextDiscovered = isDiscovered(
-        state.dungeon,
-        nextPos.x,
-        nextPos.y,
-      );
+      const nextDiscovered = isDiscovered(state.dungeon, nextPos.x, nextPos.y);
       if (!nextDiscovered) {
-        const doorAtCurrent = state.dungeon.layout.doors.find(
-          (door) => isSamePosition(door, current.pos),
+        const doorAtCurrent = state.dungeon.layout.doors.find((door) =>
+          isSamePosition(door, current.pos),
         );
         if (
           !doorAtCurrent ||

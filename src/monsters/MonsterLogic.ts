@@ -340,7 +340,10 @@ const selectAction = (
   }
 };
 
-const selectRangedTarget = (possibleTargets: Hero[], monster: Monster): Hero => {
+const selectRangedTarget = (
+  possibleTargets: Hero[],
+  monster: Monster,
+): Hero => {
   const unshielded = possibleTargets.filter((hero) => !hero.shield);
   const targets = unshielded.length > 0 ? unshielded : possibleTargets;
   return targets
