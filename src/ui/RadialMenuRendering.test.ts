@@ -113,6 +113,46 @@ describe('RadialMenuRendering', () => {
     expect(buttons[0].label).toBe('custom.interactable.key');
   });
 
+  it('uses item icon and formats target name in label for item actions', () => {
+    const entries: RadialMenuEntry[] = [
+      {
+        action: RadialAction.USE_ITEM,
+        item: {
+          id: 'healing_herbs',
+          name: 'items.magicItems.healingHerbs.name',
+          nameTranslationKey: 'items.magicItems.healingHerbs.name',
+          type: 3,
+          value: 0,
+          amountInDeck: 1,
+          icon: '🌿',
+        },
+        targetHero: {
+          name: 'Fearik',
+          health: 10,
+          maxHealth: 10,
+          defense: 0,
+          actions: 2,
+          movement: 5,
+          maxMovement: 5,
+          colour: 'Yellow' as never,
+          incapacitated: false,
+          position: { x: 0, y: 0 },
+          experience: 0,
+          level: 'Apprentice' as never,
+          weapon: {} as never,
+          inventory: [],
+          isInventoryOpen: false,
+          ignoredByMonsters: false,
+        },
+      },
+    ];
+    const menu: RadialMenuState = { x: 1, y: 1, entries };
+    const buttons = getRadialButtonPositions(menu, 48);
+
+    expect(buttons[0].icon).toBe('🌿');
+    expect(buttons[0].label).toContain('(Fearik)');
+  });
+
   it('detects hovered button on hit-test', () => {
     const entries: RadialMenuEntry[] = [
       { action: RadialAction.SEARCH },

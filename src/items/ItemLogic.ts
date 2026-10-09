@@ -11,18 +11,71 @@ import {
 } from '../core';
 
 export const USED = 'USED';
+export const USED_ON = 'USED_ON';
+export const USED_HEROES = 'USED_HEROES';
 export { ATTACK_BONUS };
 export const SEARCH_BONUS = 'SEARCH_BONUS';
 export const BREAK_LOCK = 'BREAK_LOCK';
 export { RE_ROLL_ATTACK };
 export const DESCRIPTION = 'DESCRIPTION';
 export const ACTIVE = 'ACTIVE';
+export const TARGET = 'TARGET';
+export const TARGET_SELF = 'TARGET_SELF';
+export const TARGET_ANY_HERO = 'TARGET_ANY_HERO';
+export const TARGET_ALL_HEROES = 'TARGET_ALL_HEROES';
 export const MOVEMENT_BONUS = 'MOVEMENT_BONUS';
 export const ACTIONS_BONUS = 'ACTIONS_BONUS';
 export const RESET_ON = 'RESET_ON';
 export const NEXT_TURN = 'NEXT_TURN';
 export const TRADE = 'TRADE';
 export const NEXT_DUNGEON = 'NEXT_SCENARIO';
+
+export const isTargetAnyHero = (item?: Item | null): boolean => {
+  if (!item || !item.properties) return false;
+  if (item.properties.TARGET_ANY_HERO || item.properties.target_any_hero)
+    return true;
+  const targetType =
+    item.properties[TARGET] ??
+    item.properties.TARGET ??
+    item.properties.TARGET_TYPE ??
+    item.properties.target ??
+    item.properties.target_type;
+  if (typeof targetType === 'string') {
+    const norm = targetType.trim().toUpperCase();
+    return (
+      norm === 'TARGET_ANY_HERO' ||
+      norm === 'ANY_HERO' ||
+      norm === 'TARGET_ALL_HEROES' ||
+      norm === 'ALL_HEROES' ||
+      norm === 'HERO' ||
+      norm === 'HEROES' ||
+      norm === TARGET_ANY_HERO ||
+      norm === TARGET_ALL_HEROES
+    );
+  }
+  return false;
+};
+
+export const isTargetSelf = (item?: Item | null): boolean => {
+  if (!item || !item.properties) return false;
+  if (item.properties.TARGET_SELF || item.properties.target_self) return true;
+  const targetType =
+    item.properties[TARGET] ??
+    item.properties.TARGET ??
+    item.properties.TARGET_TYPE ??
+    item.properties.target ??
+    item.properties.target_type;
+  if (typeof targetType === 'string') {
+    const norm = targetType.trim().toUpperCase();
+    return (
+      norm === 'TARGET_SELF' ||
+      norm === 'SELF' ||
+      norm === 'OWNER' ||
+      norm === TARGET_SELF
+    );
+  }
+  return false;
+};
 export const onPickup: {
   [index: string]: (state: GameState, self: Item, user: Actor) => void;
 } = {
@@ -172,7 +225,30 @@ export const onUse: {
         addLog(state, 'logs.item.noUsesLeft', { item: i18n(self.name) });
         return;
       }
-      self.properties[USED] = true;
+      const rawUsedOn =
+        (self.properties[USED_ON] as string[]) ??
+        (self.properties.USED_ON as string[]) ??
+        (self.properties[USED_HEROES] as string[]) ??
+        (self.properties.USED_HEROES as string[]) ??
+        [];
+      const usedOn = Array.isArray(rawUsedOn) ? [...rawUsedOn] : [];
+
+      if (usedOn.includes(target.name)) {
+        addLog(state, 'logs.item.noUsesLeft', { item: i18n(self.name) });
+        return;
+      }
+
+      usedOn.push(target.name);
+      self.properties[USED_ON] = usedOn;
+      self.properties[USED_HEROES] = usedOn;
+
+      if (
+        state.heroes.length > 0 &&
+        state.heroes.every((h) => usedOn.includes(h.name))
+      ) {
+        self.properties[USED] = true;
+      }
+
       const addedHealth = Math.min(
         roll(user.level, 3),
         target.maxHealth - target.health,
@@ -302,7 +378,11 @@ export const onReset: {
   [index: string]: (state: GameState, self: Item) => void;
 } = {
   magicHerbsOnReset: (state: GameState, self: Item) => {
-    if (self.properties) self.properties[USED] = false;
+    if (self.properties) {
+      self.properties[USED] = false;
+      self.properties[USED_ON] = [];
+      self.properties[USED_HEROES] = [];
+    }
   },
   necklaceOfLightOnReset: (state: GameState, self: Item) => {
     if (self.properties) self.properties[USED] = false;

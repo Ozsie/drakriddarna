@@ -288,9 +288,21 @@ export enum ItemType {
 
 export type ResetTrigger = 'TRADE' | 'NEXT_SCENARIO' | 'NEXT_TURN' | string;
 
+export type ItemTarget =
+  | 'SELF'
+  | 'OWNER'
+  | 'ANY_HERO'
+  | 'ALL_HEROES'
+  | 'HERO'
+  | string;
+
 export interface ItemProperties {
   USED?: boolean;
+  USED_ON?: string[];
+  USED_HEROES?: string[];
   ACTIVE?: boolean;
+  TARGET?: ItemTarget;
+  TARGET_TYPE?: ItemTarget;
   DESCRIPTION?: string;
   RESET_ON?: ResetTrigger[];
   MOVEMENT_BONUS?: number;
@@ -300,6 +312,7 @@ export interface ItemProperties {
   BREAK_DOOR?: boolean;
   BREAK_LOCK?: boolean;
   RE_ROLL_ATTACK?: boolean;
+  ICON?: string;
   [key: string]: string | number | boolean | string[] | undefined;
 }
 
@@ -327,6 +340,7 @@ export type Item = {
   amountInDeck: number;
   type: ItemType;
   value: number;
+  icon?: string;
   properties?: ItemProperties;
   effect?: ItemEffectKey;
   reset?: ItemResetKey;

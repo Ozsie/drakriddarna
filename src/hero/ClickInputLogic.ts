@@ -15,6 +15,7 @@ import type {
   Position,
   Door,
   InteractableCell,
+  Item,
 } from '../types';
 import { ItemType, Side } from '../types';
 import {
@@ -35,18 +36,20 @@ import {
   interact,
   isBlockedByHero,
   isBlockedByMonster,
+  liveHeroes,
   openDoor,
   pickLock,
   pickupItem,
   search,
 } from './HeroLogic';
 
-import { BREAK_LOCK } from '../items/ItemLogic';
+import { BREAK_LOCK, useItem } from '../items/ItemLogic';
 import {
   RadialAction,
   findDoorAtHero,
   findItemAtHero,
   getAvailableRadialActions,
+  getAvailableRadialActionsForTarget,
   findDoorsAtHero,
 } from './RadialMenuLogic';
 import { radialMenuStore } from '../store/radialMenuStore';
@@ -180,6 +183,8 @@ export const executeRadialAction = (
   action: RadialAction,
   door?: Door,
   interactable?: InteractableCell,
+  item?: Item,
+  targetHero?: Hero,
 ) => {
   const hero = state.currentActor as Hero;
   switch (action) {
@@ -202,6 +207,15 @@ export const executeRadialAction = (
     }
     case RadialAction.INTERACT: {
       interact(state, interactable);
+      break;
+    }
+    case RadialAction.USE_ITEM: {
+      if (item) {
+        if (targetHero) {
+          state.targetActor = targetHero;
+        }
+        useItem(state, item);
+      }
       break;
     }
     case RadialAction.NEXT: {
@@ -302,6 +316,16 @@ export const getCursorType = (
   const hero = state.currentActor;
   if (!hero) return 'default';
   if (isSamePosition(hero.position, target)) return 'menu';
+
+  const otherHero = liveHeroes(state).find(
+    (h) =>
+      isSamePosition(h.position, target) &&
+      (h !== hero || h.name !== hero.name),
+  );
+  if (otherHero && distanceInGrid(hero.position, otherHero.position) <= 1) {
+    const actions = getAvailableRadialActionsForTarget(state, hero, otherHero);
+    if (actions.length > 0) return 'menu';
+  }
 
   const monster = state.dungeon.layout.monsters.find((m) =>
     isSamePosition(m.position, target),
@@ -441,8 +465,32 @@ export const doMouseLogic = (
   const hero = state.currentActor as Hero;
   if (x === hero.position.x && y === hero.position.y) {
     onHeroClicked(state, hero);
-  } else if (isRoomDiscovered(state.dungeon, cell)) {
-    radialMenuStore.set(null);
-    onTargetCell(state, { x, y });
+  } else {
+    const targetHero = liveHeroes(state).find(
+      (h) =>
+        h.position.x === x &&
+        h.position.y === y &&
+        (h !== hero || h.name !== hero.name),
+    );
+    if (targetHero && distanceInGrid(hero.position, targetHero.position) <= 1) {
+      const entries = getAvailableRadialActionsForTarget(
+        state,
+        hero,
+        targetHero,
+      );
+      if (entries.length > 0) {
+        doReRender(state);
+        radialMenuStore.set({
+          x: targetHero.position.x,
+          y: targetHero.position.y,
+          entries,
+        });
+        return;
+      }
+    }
+    if (isRoomDiscovered(state.dungeon, cell)) {
+      radialMenuStore.set(null);
+      onTargetCell(state, { x, y });
+    }
   }
 };

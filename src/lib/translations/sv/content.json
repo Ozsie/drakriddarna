@@ -83,6 +83,7 @@
     "openDoor": "Öppna dörr",
     "pickUpItem": "Plocka upp föremål",
     "interact": "Interagera",
+    "useItem": "Använd föremål",
     "next": "Nästa"
   },
   "difficulty": {

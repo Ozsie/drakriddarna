@@ -959,6 +959,8 @@
           clickedBtn.entry.action,
           clickedBtn.entry.door,
           clickedBtn.entry.interactable,
+          clickedBtn.entry.item,
+          clickedBtn.entry.targetHero,
         );
         if (!state) {
           gameStateStore.set(curState);

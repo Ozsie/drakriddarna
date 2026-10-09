@@ -96,6 +96,23 @@ export const canSearchThrough = (
 export const getDist = (a: Position, b: Position): number =>
   Math.sqrt(Math.pow(a.x - b?.x, 2) + Math.pow(a.y - b?.y, 2));
 
+export const distanceInGrid = (a: Position, b: Position): number => {
+  const dx = Math.abs(b.x - a.x);
+  const dy = Math.abs(b.y - a.y);
+
+  const min = Math.min(dx, dy);
+  const max = Math.max(dx, dy);
+
+  const diagonalSteps = min;
+  const straightSteps = max - min;
+  let factor = Math.sqrt(2);
+  if (straightSteps === 0) {
+    factor = 1;
+  }
+
+  return Math.floor(factor * diagonalSteps + straightSteps);
+};
+
 export const isRoomDiscovered = (dungeon: Dungeon, cell: string): boolean =>
   dungeon.discoveredRooms.includes(cell);
 

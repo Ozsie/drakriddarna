@@ -8,6 +8,7 @@ export const RADIAL_MENU_ICONS: Record<RadialAction, string> = {
   [RadialAction.OPEN_DOOR]: '🚪',
   [RadialAction.PICK_UP_ITEM]: '🎒',
   [RadialAction.INTERACT]: '⚡',
+  [RadialAction.USE_ITEM]: '✨',
   [RadialAction.NEXT]: '→',
 };
 
@@ -17,6 +18,7 @@ export const RADIAL_MENU_LABELS: Record<RadialAction, string> = {
   [RadialAction.OPEN_DOOR]: 'content.radialMenu.openDoor',
   [RadialAction.PICK_UP_ITEM]: 'content.radialMenu.pickUpItem',
   [RadialAction.INTERACT]: 'content.radialMenu.interact',
+  [RadialAction.USE_ITEM]: 'content.radialMenu.useItem',
   [RadialAction.NEXT]: 'content.radialMenu.next',
 };
 
@@ -45,13 +47,35 @@ export const getRadialButtonPositions = (
     const angle = (i / menu.entries.length) * 2 * Math.PI - Math.PI / 2;
     const x = centerX + ringRadius * Math.cos(angle);
     const y = centerY + ringRadius * Math.sin(angle);
-    const labelKey =
-      entry.interactable?.nameTranslationKey ??
-      RADIAL_MENU_LABELS[entry.action];
-    const baseLabel = i18n(labelKey);
-    const label = baseLabel + (entry.door ? ` (${entry.door.side})` : '');
-    const icon =
-      entry.interactable?.icon ?? RADIAL_MENU_ICONS[entry.action] ?? '';
+
+    let label: string;
+    let icon: string;
+
+    if (entry.interactable) {
+      const labelKey =
+        entry.interactable.nameTranslationKey ??
+        RADIAL_MENU_LABELS[entry.action];
+      label = i18n(labelKey);
+      icon = entry.interactable.icon ?? RADIAL_MENU_ICONS[entry.action] ?? '';
+    } else if (entry.item) {
+      const itemName = i18n(entry.item.nameTranslationKey ?? entry.item.name);
+      if (entry.targetHero) {
+        const targetName = i18n(entry.targetHero.name);
+        label = `${itemName} (${targetName})`;
+      } else {
+        label = itemName;
+      }
+      icon =
+        entry.item.icon ??
+        (entry.item.properties?.ICON as string) ??
+        RADIAL_MENU_ICONS[entry.action] ??
+        '✨';
+    } else {
+      const labelKey = RADIAL_MENU_LABELS[entry.action];
+      const baseLabel = i18n(labelKey);
+      label = baseLabel + (entry.door ? ` (${entry.door.side})` : '');
+      icon = RADIAL_MENU_ICONS[entry.action] ?? '';
+    }
 
     return {
       index: i,

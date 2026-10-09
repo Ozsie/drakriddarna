@@ -83,6 +83,7 @@
     "openDoor": "Open Door",
     "pickUpItem": "Pick Up Item",
     "interact": "Interact",
+    "useItem": "Use Item",
     "next": "Next"
   },
   "difficulty": {
