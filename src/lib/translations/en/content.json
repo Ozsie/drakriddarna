@@ -68,7 +68,10 @@
     }
   },
   "event": {
-    "current": "Current event"
+    "current": "Current event",
+    "count": "Events",
+    "drawn": "Drawn",
+    "none": "(None drawn yet)"
   },
   "diary": {
     "label": "Diary (turn {{turn}})",
