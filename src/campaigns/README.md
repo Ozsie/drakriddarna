@@ -146,7 +146,7 @@ src/campaigns/
    their `id`, so simply creating this file is enough for the campaign to
    become selectable — both programmatically (`init(campaignId)` in
    `game.ts`) and directly by players: the in-game "New Game" menu
-   (`src/components/ButtonPad.svelte`) lists every campaign from the
+   (`src/menu/MenuLogic.ts.svelte`) lists every campaign from the
    registry by its translated `name` and calls `init(campaign.id)` when
    selected, so no UI changes are needed either.
 

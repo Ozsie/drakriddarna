@@ -68,7 +68,10 @@
     }
   },
   "event": {
-    "current": "Current event"
+    "current": "Current event",
+    "count": "Events",
+    "drawn": "Drawn",
+    "none": "(None drawn yet)"
   },
   "diary": {
     "label": "Diary (turn {{turn}})",
@@ -80,6 +83,7 @@
     "openDoor": "Open Door",
     "pickUpItem": "Pick Up Item",
     "interact": "Interact",
+    "useItem": "Use Item",
     "next": "Next"
   },
   "difficulty": {
@@ -95,5 +99,18 @@
       "name": "Hard",
       "description": "Hard: -1 attack, -1 defense, -1 moves, -1 search"
     }
-  }
+  },
+  "indicators": {
+    "plusAction": "+{{actions}} action",
+    "plusActions": "+{{actions}} actions",
+    "minusAction": "-{{actions}} action",
+    "minusActions": "-{{actions}} actions",
+    "moreActions": "+ACTIONS",
+    "blinded": "BLINDED",
+    "elemental": "ELEMENTAL",
+    "weakened": "WEAKENED",
+    "invisible": "INVISIBLE",
+    "levelUp": "LEVEL UP!"
+  },
+  "turn": "Turn"
 }

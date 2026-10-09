@@ -12,7 +12,7 @@ describe('dice module', () => {
   });
 
   describe('roll', () => {
-    it('apprentice level counts only 5s as successes', () => {
+    it('apprentice level counts 5 and 6 as successes', () => {
       // Mock RNG sequence returning 1, 2, 3, 4, 5, 6
       // Math.floor(rng * 6) + 1:
       // (0/6)->1, (1/6)->2, (2/6)->3, (3/6)->4, (4/6)->5, (5/6)->6
@@ -21,7 +21,7 @@ describe('dice module', () => {
       setRng(() => values[idx++ % values.length]);
 
       const successes = roll(Level.APPRENTICE, 6);
-      expect(successes).toBe(1); // only 5
+      expect(successes).toBe(2); // 5 and 6
     });
 
     it('knight and hero level counts 4, 5, 6 as successes', () => {

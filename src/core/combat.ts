@@ -1,4 +1,11 @@
-import type { Actor, DamageIndicator, Door, GameState, Weapon } from '../types';
+import type {
+  Actor,
+  DamageIndicator,
+  Door,
+  GameState,
+  IndicatorEffect,
+  Weapon,
+} from '../types';
 import { Colour, ItemType, Level } from '../types';
 import { roll } from './dice';
 import { addLog, i18n } from './logger';
@@ -7,15 +14,43 @@ import { getDifficulty } from './DifficultLevels';
 export const ATTACK_BONUS = 'ATTACK_BONUS';
 export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
 
+export const createIndicator = (
+  textOrDamage: string | number,
+  position: { x: number; y: number },
+  options?: {
+    color?: string;
+    effect?: IndicatorEffect;
+    durationMs?: number;
+    fontSizeScale?: number;
+    offset?: { x?: number; y?: number };
+  },
+): DamageIndicator => {
+  const isNumber = typeof textOrDamage === 'number';
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    damage: isNumber ? textOrDamage : undefined,
+    text: `${textOrDamage}`,
+    position: { x: position.x, y: position.y },
+    color: options?.color ?? '#ff3333',
+    effect: options?.effect ?? 'float',
+    durationMs: options?.durationMs,
+    fontSizeScale: options?.fontSizeScale,
+    offset: options?.offset,
+    timestamp: Date.now(),
+  };
+};
+
 export const createDamageIndicator = (
   damage: number,
   position: { x: number; y: number },
-): DamageIndicator => ({
-  id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-  damage,
-  position: { x: position.x, y: position.y },
-  timestamp: Date.now(),
-});
+  options?: {
+    color?: string;
+    effect?: IndicatorEffect;
+    durationMs?: number;
+    fontSizeScale?: number;
+    offset?: { x?: number; y?: number };
+  },
+): DamageIndicator => createIndicator(damage, position, options);
 
 export const removeDamageIndicator = (state: GameState, id: string): void => {
   if (!state.damageIndicators) return;
@@ -150,7 +185,15 @@ export const takeDamage = (
     if (!state.damageIndicators) {
       state.damageIndicators = [];
     }
-    state.damageIndicators.push(createDamageIndicator(damage, target.position));
+    if (damage >= weapon.dice - (target.armour?.defense ?? 0)) {
+      state.damageIndicators.push(
+        createIndicator(damage, target.position, { effect: 'crit' }),
+      );
+    } else {
+      state.damageIndicators.push(
+        createDamageIndicator(damage, target.position),
+      );
+    }
   }
   addLog(state, 'logs.takeDamage.attackedWith', {
     actor: i18n(source.name),

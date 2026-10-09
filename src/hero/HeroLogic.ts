@@ -32,6 +32,7 @@ import {
 import { roll } from '../core';
 import {
   canAct,
+  createIndicator,
   doorAsActor,
   getDifficulty,
   getEffectiveMaxMovement,
@@ -133,7 +134,18 @@ export const act = (direction: MoveDirection | string, state: GameState) => {
       newPosition.x,
       newPosition.y,
     );
-    if (!discovered) {
+    const door = state.dungeon.layout.doors.find(
+      (d) => d.x === hero.position.x && d.y === hero.position.y && !d.open,
+    );
+    const side = openSide(
+      hero.position.x,
+      hero.position.y,
+      newPosition.x,
+      newPosition.y,
+    );
+    const hasClosedDoor = door && door.side === side;
+
+    if (!discovered || hasClosedDoor) {
       const moved = moveOverDoor(state, hero, newPosition.x, newPosition.y);
       if (moved) {
         openDoor(hero, state, newPosition.x, newPosition.y);
@@ -385,6 +397,15 @@ export const levelUp = (state: GameState) => {
         hero: i18n(hero.name),
         level: i18n(`content.level.${hero.level}`),
       });
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(i18n('content.indicators.levelUp'), hero.position, {
+          color: '#FCFF4F',
+          effect: 'crit',
+        }),
+      );
     }
   });
 };

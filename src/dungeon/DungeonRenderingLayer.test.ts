@@ -12,6 +12,8 @@ import { renderMonsters } from '../monsters/MonsterRendering';
 import { renderNotes } from '../notes/NotesRendering';
 import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
 import { renderItems } from '../items/ItemRendering';
+import { renderUI } from '../ui/UIRendering';
+import { RadialAction } from '../hero/RadialMenuLogic';
 import { recordActorStep, clearActorAnimations } from '../core';
 import { weapons, monsterWeapons } from '../items/weapons';
 import type { GameState, Hero, Monster } from '../types';
@@ -138,6 +140,7 @@ const createMockCtx = () =>
     roundRect: vi.fn(),
     fillText: vi.fn(),
     strokeText: vi.fn(),
+    measureText: vi.fn().mockReturnValue({ width: 50 }),
     save: vi.fn(),
     restore: vi.fn(),
     setTransform: vi.fn(),
@@ -287,5 +290,24 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     );
     expect(heroAnimFinished).toBe(false);
     expect(monsterAnimFinished).toBe(false);
+  });
+
+  it('renders fourth UI layer (radial menu) on top of overlay context', () => {
+    const uiCtx = createMockCtx();
+    const menu = {
+      x: 1,
+      y: 1,
+      entries: [
+        { action: RadialAction.SEARCH },
+        { action: RadialAction.OPEN_DOOR },
+      ],
+    };
+
+    renderUI(uiCtx, 48, menu, 0);
+
+    // Verifies radial buttons and hovered tooltip were rendered on the 4th canvas UI layer
+    expect(uiCtx.arc).toHaveBeenCalledTimes(2);
+    expect(uiCtx.fill).toHaveBeenCalledTimes(3); // 2 buttons + 1 tooltip
+    expect(uiCtx.fillText).toHaveBeenCalled();
   });
 });

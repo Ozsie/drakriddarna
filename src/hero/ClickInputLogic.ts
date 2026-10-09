@@ -15,6 +15,7 @@ import type {
   Position,
   Door,
   InteractableCell,
+  Item,
 } from '../types';
 import { ItemType, Side } from '../types';
 import {
@@ -35,18 +36,20 @@ import {
   interact,
   isBlockedByHero,
   isBlockedByMonster,
+  liveHeroes,
   openDoor,
   pickLock,
   pickupItem,
   search,
 } from './HeroLogic';
 
-import { BREAK_LOCK } from '../items/ItemLogic';
+import { BREAK_LOCK, useItem } from '../items/ItemLogic';
 import {
   RadialAction,
   findDoorAtHero,
   findItemAtHero,
   getAvailableRadialActions,
+  getAvailableRadialActionsForTarget,
   findDoorsAtHero,
 } from './RadialMenuLogic';
 import { radialMenuStore } from '../store/radialMenuStore';
@@ -180,6 +183,8 @@ export const executeRadialAction = (
   action: RadialAction,
   door?: Door,
   interactable?: InteractableCell,
+  item?: Item,
+  targetHero?: Hero,
 ) => {
   const hero = state.currentActor as Hero;
   switch (action) {
@@ -202,6 +207,15 @@ export const executeRadialAction = (
     }
     case RadialAction.INTERACT: {
       interact(state, interactable);
+      break;
+    }
+    case RadialAction.USE_ITEM: {
+      if (item) {
+        if (targetHero) {
+          state.targetActor = targetHero;
+        }
+        useItem(state, item);
+      }
       break;
     }
     case RadialAction.NEXT: {
@@ -303,6 +317,16 @@ export const getCursorType = (
   if (!hero) return 'default';
   if (isSamePosition(hero.position, target)) return 'menu';
 
+  const otherHero = liveHeroes(state).find(
+    (h) =>
+      isSamePosition(h.position, target) &&
+      (h !== hero || h.name !== hero.name),
+  );
+  if (otherHero && distanceInGrid(hero.position, otherHero.position) <= 1) {
+    const actions = getAvailableRadialActionsForTarget(state, hero, otherHero);
+    if (actions.length > 0) return 'menu';
+  }
+
   const monster = state.dungeon.layout.monsters.find((m) =>
     isSamePosition(m.position, target),
   );
@@ -334,6 +358,30 @@ export interface CameraOffset {
   centerPosition?: Position;
 }
 
+export const screenToWorldPosition = (
+  screenX: number,
+  screenY: number,
+  viewWidth: number,
+  viewHeight: number,
+  panX: number,
+  panY: number,
+  cellSize: number,
+  centerPosition?: Position,
+): { x: number; y: number } => {
+  const centerOffsetX = centerPosition
+    ? (centerPosition.x + 0.5) * cellSize
+    : 0;
+  const centerOffsetY = centerPosition
+    ? (centerPosition.y + 0.5) * cellSize
+    : 0;
+  const originX = viewWidth / 2 + panX - centerOffsetX;
+  const originY = viewHeight / 2 + panY - centerOffsetY;
+  return {
+    x: screenX - originX,
+    y: screenY - originY,
+  };
+};
+
 export const screenToGridPosition = (
   screenX: number,
   screenY: number,
@@ -344,19 +392,19 @@ export const screenToGridPosition = (
   cellSize: number,
   centerPosition?: Position,
 ): Position => {
-  const centerOffsetX = centerPosition
-    ? (centerPosition.x + 0.5) * cellSize
-    : 0;
-  const centerOffsetY = centerPosition
-    ? (centerPosition.y + 0.5) * cellSize
-    : 0;
-  const originX = viewWidth / 2 + panX - centerOffsetX;
-  const originY = viewHeight / 2 + panY - centerOffsetY;
-  const worldX = screenX - originX;
-  const worldY = screenY - originY;
+  const world = screenToWorldPosition(
+    screenX,
+    screenY,
+    viewWidth,
+    viewHeight,
+    panX,
+    panY,
+    cellSize,
+    centerPosition,
+  );
   return {
-    x: Math.floor(worldX / cellSize),
-    y: Math.floor(worldY / cellSize),
+    x: Math.floor(world.x / cellSize),
+    y: Math.floor(world.y / cellSize),
   };
 };
 
@@ -368,7 +416,8 @@ export const doMouseLogic = (
 ) => {
   const c =
     typeof document !== 'undefined'
-      ? document.getElementById('gameBoard')
+      ? document.getElementById('uiCanvas') ??
+        document.getElementById('gameBoard')
       : null;
   if (!c) return;
 
@@ -416,8 +465,32 @@ export const doMouseLogic = (
   const hero = state.currentActor as Hero;
   if (x === hero.position.x && y === hero.position.y) {
     onHeroClicked(state, hero);
-  } else if (isRoomDiscovered(state.dungeon, cell)) {
-    radialMenuStore.set(null);
-    onTargetCell(state, { x, y });
+  } else {
+    const targetHero = liveHeroes(state).find(
+      (h) =>
+        h.position.x === x &&
+        h.position.y === y &&
+        (h !== hero || h.name !== hero.name),
+    );
+    if (targetHero && distanceInGrid(hero.position, targetHero.position) <= 1) {
+      const entries = getAvailableRadialActionsForTarget(
+        state,
+        hero,
+        targetHero,
+      );
+      if (entries.length > 0) {
+        doReRender(state);
+        radialMenuStore.set({
+          x: targetHero.position.x,
+          y: targetHero.position.y,
+          entries,
+        });
+        return;
+      }
+    }
+    if (isRoomDiscovered(state.dungeon, cell)) {
+      radialMenuStore.set(null);
+      onTargetCell(state, { x, y });
+    }
   }
 };

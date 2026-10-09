@@ -80,6 +80,14 @@ describe('Orc Drums event and resetEventEffects', () => {
     expect(orc.actions).toBe(3);
     expect(troll.actions).toBe(2);
     expect(event.used).toBe(true);
+    expect(state.damageIndicators).toBeDefined();
+    expect(
+      state.damageIndicators?.some(
+        (ind) =>
+          ind.text === '+ACTIONS' ||
+          ind.text === 'content.indicators.moreActions',
+      ),
+    ).toBe(true);
 
     resetEventEffects(state);
 

@@ -1,5 +1,5 @@
 import type { GameState, Position } from '../types';
-import { i18n } from '../core';
+import { createIndicator, i18n } from '../core';
 import { isSamePosition } from '../core';
 
 export const renderTextBox = (
@@ -66,6 +66,15 @@ export const renderNotes = (
     );
     if (!onHiddenDoor) {
       const text = i18n(note.message);
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(text, note.position, {
+          color: '#7373ec',
+          effect: 'static',
+        }),
+      );
       renderTextBox(ctx, text, note.position, cellSize);
     }
   }

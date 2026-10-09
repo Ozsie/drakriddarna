@@ -2,7 +2,9 @@
   import type {
     Actor,
     Door,
+    Dungeon,
     GameState,
+    Hero,
     InteractableCell,
     Monster,
     Secret,
@@ -14,6 +16,8 @@
     doMouseLogic,
     getCursorType,
     screenToGridPosition,
+    screenToWorldPosition,
+    executeRadialAction,
   } from '../hero/ClickInputLogic';
   import type { CursorType } from '../hero/ClickInputLogic';
   import { browser } from '$app/environment';
@@ -29,7 +33,30 @@
     renderSecrets,
   } from '../dungeon/DungeonRendering';
   import { renderItems } from '../items/ItemRendering';
-  import RadialMenu from './RadialMenu.svelte';
+  import {
+    renderRadialMenu,
+    findHoveredRadialButton,
+    renderTopBar,
+    getTopBarHit,
+    renderHeroCards,
+    getHeroCardsHit,
+    renderMonsterCards,
+    getMonsterCardsHit,
+    renderDiaryAndWinConditions,
+    renderEventCard,
+    getEventCardHit,
+    renderMenuModal,
+    getMenuHit,
+    renderDungeonIntro,
+    getDungeonIntroHit,
+    shouldShowDungeonIntro,
+    dismissDungeonIntro,
+  } from '../ui/UIRendering';
+  import type { MenuView } from '../menu/MenuLogic';
+  import buildInfo from '$lib/buildInfo.json';
+  import { locale } from '$lib/translations';
+  import { useItem } from '../items/ItemLogic';
+  import { radialMenuStore } from '../store/radialMenuStore';
   import { renderNotes } from '../notes/NotesRendering';
   import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
   import { clearTileTextureCache } from '../dungeon/TileTextureCache';
@@ -38,14 +65,18 @@
     gameStateStore,
     debugModeStore,
     handleCanvasClick,
+    toggleHeroInventory,
+    useHeroItem,
   } from '../store/gameStateStore';
-  import DungeonIntro from './DungeonIntro.svelte';
 
   export let state: GameState | undefined = undefined;
   export let debugMode: boolean | undefined = undefined;
 
   $: activeState = state ?? $gameStateStore;
-  $: activeDebugMode = debugMode ?? $debugModeStore;
+  $: activeDebugMode =
+    debugMode !== undefined
+      ? debugMode
+      : Boolean(activeState?.settings?.['debug'] ?? $debugModeStore);
   $: dungeon = activeState?.dungeon;
   $: startPosition = dungeon?.startingPositions?.[0];
 
@@ -76,13 +107,61 @@
   let staticCanvas: HTMLCanvasElement | null = null;
   let actorCanvas: HTMLCanvasElement | null = null;
   let overlayCanvas: HTMLCanvasElement | null = null;
+  let uiCanvas: HTMLCanvasElement | null = null;
 
   let lastStaticSignature = '';
   let lastDynamicSignature = '';
   let lastOverlaySignature = '';
+  let lastUiSignature = '';
   let lastCellSize = cellSize;
   let overlayAnimationId: number | null = null;
   let dynamicAnimationId: number | null = null;
+  let hoveredRadialIndex: number | null = null;
+  let isMenuHovered = false;
+  let isDebugHovered = false;
+  let isLogHovered = false;
+  let isLogHeld = false;
+  let isLogOpen = false;
+  let isCanvasMenuOpen = false;
+  let currentMenuView: MenuView = 'main';
+  let hoveredMenuItemId: string | null = null;
+  let hoveredInventoryHeroName: string | null = null;
+  let hoveredCloseHeroName: string | null = null;
+  let hoveredUseItem: { heroName: string; itemIndex: number } | null = null;
+  let isEventCardCollapsed = false;
+  let isEventCardToggleHovered = false;
+  let isDungeonIntroDismissed = false;
+  let isDungeonIntroCloseHovered = false;
+  let lastDungeonIntroDungeon: Dungeon | undefined = undefined;
+  let lastDungeonIntroName: string | undefined = undefined;
+
+  $: if (dungeon !== lastDungeonIntroDungeon || dungeon?.name !== lastDungeonIntroName) {
+    lastDungeonIntroDungeon = dungeon;
+    lastDungeonIntroName = dungeon?.name;
+    isDungeonIntroDismissed = false;
+  }
+
+  $: showDungeonIntro = shouldShowDungeonIntro(activeState, isDungeonIntroDismissed);
+
+  $: menuCallbacks = {
+    setView: (view: MenuView) => {
+      currentMenuView = view;
+      hoveredMenuItemId = null;
+      renderUiLayer(true);
+    },
+    closeMenu: () => {
+      isCanvasMenuOpen = false;
+      currentMenuView = 'main';
+      hoveredMenuItemId = null;
+      renderUiLayer(true);
+    },
+    setState: (newState: GameState) => {
+      if (state) {
+        state = newState;
+      }
+      renderCanvas(true);
+    },
+  };
 
   const getStaticSignature = (st: GameState, dbg: boolean, size: number) => {
     const d = st?.dungeon;
@@ -134,7 +213,7 @@
     const centerOffsetY = startPosition
       ? (startPosition.y + 0.5) * cellSize
       : 0;
-    for (const canvas of [staticCanvas, actorCanvas, overlayCanvas]) {
+    for (const canvas of [staticCanvas, actorCanvas, overlayCanvas, uiCanvas]) {
       if (canvas) {
         const ctx = canvas.getContext('2d');
         if (ctx) {
@@ -301,10 +380,98 @@
     }
   };
 
+  const renderUiLayer = (force = false) => {
+    if (!browser || !uiCanvas) return;
+    const menu = $radialMenuStore;
+    const recentLogs = activeState?.actionLog?.slice(0, 8);
+    const logSig = recentLogs
+      ? recentLogs.map((l) => `${l.turn}:${l.key}`).join(';')
+      : '';
+    const heroesSig = activeState?.heroes
+      ? (activeState.heroes as Hero[])
+          .map(
+            (h) =>
+              `${h.name}:${h.health}:${h.actions}:${h.movement}:${h.isInventoryOpen}:${h.experience}:${h.inventory?.length}`,
+          )
+          .join(';')
+      : '';
+    const monstersSig = (activeState?.dungeon?.layout?.monsters ?? [])
+      .map((m) => `${m.name}:${m.health}:${m.position.x},${m.position.y}`)
+      .join(';');
+    const roomsSig = (activeState?.dungeon?.discoveredRooms ?? []).join(',');
+    const hoverSig = `${hoveredInventoryHeroName}:${hoveredCloseHeroName}:${hoveredUseItem?.heroName}-${hoveredUseItem?.itemIndex}`;
+    const targetSig = `${activeState?.targetActor?.name}:${activeState?.currentActor?.name}`;
+    const winSig = `${activeState?.dungeon?.killCount}:${(activeState?.dungeon?.winConditions ?? []).map((w) => `${w.fulfilled}`).join(',')}`;
+    const diarySig = `${(activeState?.dungeon?.layout?.notes ?? []).filter((n) => n.found).map((n) => `${n.id}:${n.foundOn}`).join(',')}`;
+    const eventSig = `${activeState?.currentEvent?.id ?? ''}:${(activeState?.eventDeck ?? []).map((e) => `${e.number}-${e.used}`).join(',')}:${isEventCardCollapsed}:${isEventCardToggleHovered}`;
+    const introSig = `${showDungeonIntro}:${isDungeonIntroCloseHovered}:${activeState?.dungeon?.intro ?? ''}`;
+    const currentDebug =
+      debugMode !== undefined
+        ? debugMode
+        : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
+    const menuSig = `${isCanvasMenuOpen}:${currentMenuView}:${hoveredMenuItemId}:${currentDebug}:${$locale}:${activeState?.settings?.['locale']}:${activeState?.difficulty?.id}:${activeState?.dungeon?.beaten}`;
+    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isDebugHovered},${isLogHovered},${isLogOpen},${heroesSig},${monstersSig},${roomsSig},${hoverSig},${targetSig},${winSig},${diarySig},${eventSig},${introSig},${menuSig}`;
+    if (!force && sig === lastUiSignature) return;
+    lastUiSignature = sig;
+
+    const ctx = uiCanvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
+    ctx.restore();
+
+    if (containerWidth > 0 && containerHeight > 0 && activeState) {
+      const ratio = (browser && window.devicePixelRatio) || 1;
+      ctx.save();
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      renderTopBar(ctx, containerWidth, activeState, {
+        isMenuHovered,
+        isDebugHovered,
+        isLogHovered,
+        isLogOpen,
+        debugMode: currentDebug,
+      });
+      renderHeroCards(ctx, containerWidth, containerHeight, activeState, {
+        hoveredInventoryHeroName,
+        hoveredCloseHeroName,
+        hoveredUseItem,
+      });
+      renderMonsterCards(ctx, containerWidth, containerHeight, activeState);
+      renderDiaryAndWinConditions(ctx, containerWidth, containerHeight, activeState);
+      renderEventCard(ctx, containerWidth, containerHeight, activeState, {
+        isCollapsed: isEventCardCollapsed,
+        isToggleHovered: isEventCardToggleHovered,
+      });
+      if (isCanvasMenuOpen) {
+        renderMenuModal(ctx, containerWidth, containerHeight, activeState, {
+          view: currentMenuView,
+          hoveredItemId: hoveredMenuItemId,
+          buildInfo,
+          debugMode: currentDebug,
+          callbacks: menuCallbacks,
+        });
+      }
+      if (showDungeonIntro) {
+        renderDungeonIntro(ctx, containerWidth, containerHeight, activeState, {
+          dismissed: isDungeonIntroDismissed,
+          isCloseHovered: isDungeonIntroCloseHovered,
+        });
+      }
+      ctx.restore();
+    }
+
+    if (menu) {
+      renderRadialMenu(ctx, cellSize, menu, hoveredRadialIndex);
+    }
+  };
+
   const renderCanvas = (force = false) => {
     renderStaticLayer(force);
     renderDynamicLayer(force);
     renderOverlayLayer(force);
+    renderUiLayer(force);
   };
 
   const initCanvas = (
@@ -348,6 +515,7 @@
       initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
       initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
       initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(uiCanvas, containerWidth, containerHeight, ratio);
       renderCanvas(true);
     }
   };
@@ -367,6 +535,11 @@
   };
 
   const onWindowMouseUp = () => {
+    if (isLogHeld || isLogOpen) {
+      isLogHeld = false;
+      isLogOpen = false;
+      renderUiLayer(true);
+    }
     if (isDragging) {
       isDragging = false;
       if (hasMovedDuringDrag) {
@@ -392,6 +565,11 @@
       initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
       initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
       initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(uiCanvas, containerWidth, containerHeight, ratio);
+    }
+
+    if (browser) {
+      window.addEventListener('keydown', onWindowKeyDown);
     }
 
     ground.onload = () => {
@@ -412,12 +590,22 @@
       renderDynamicLayer(true);
       renderOverlayLayer(true);
     }
+    renderUiLayer(true);
   });
+
+  const onWindowKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && $radialMenuStore) {
+      radialMenuStore.set(null);
+      hoveredRadialIndex = null;
+      renderUiLayer(true);
+    }
+  };
 
   onDestroy(() => {
     if (browser) {
       window.removeEventListener('mousemove', onWindowMouseMove);
       window.removeEventListener('mouseup', onWindowMouseUp);
+      window.removeEventListener('keydown', onWindowKeyDown);
     }
     if (overlayAnimationId) {
       cancelAnimationFrame(overlayAnimationId);
@@ -444,11 +632,20 @@
     initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
     initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
     initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
+    initCanvas(uiCanvas, containerWidth, containerHeight, ratio);
     renderCanvas(true);
+  }
+
+  $: if (isMounted && $radialMenuStore !== undefined) {
+    renderUiLayer(true);
   }
 
   $: if (isMounted && activeState && activeDebugMode !== undefined) {
     renderCanvas(false);
+  }
+
+  $: if (isMounted && $locale) {
+    renderCanvas(true);
   }
 
   let lastDungeonKey = '';
@@ -464,6 +661,97 @@
   }
 
   const onMouseDown = (event: MouseEvent) => {
+    if (event.button === 0 && uiCanvas && activeState && containerWidth > 0 && containerHeight > 0) {
+      const rect = uiCanvas.getBoundingClientRect();
+      const screenX = event.clientX - rect.left;
+      const screenY = event.clientY - rect.top;
+
+      if (showDungeonIntro) {
+        const introHit = getDungeonIntroHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+          { dismissed: isDungeonIntroDismissed },
+        );
+        if (introHit) {
+          return;
+        }
+      }
+
+      const currentDebug =
+        debugMode !== undefined
+          ? debugMode
+          : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
+      const topBarHit = getTopBarHit(
+        containerWidth,
+        activeState,
+        screenX,
+        screenY,
+        null,
+        { isLogOpen, debugMode: currentDebug },
+      );
+      if (topBarHit === 'log' || topBarHit === 'logDropdown') {
+        isLogHeld = true;
+        isLogOpen = true;
+        renderUiLayer(true);
+        return;
+      }
+      if (topBarHit) {
+        return;
+      }
+      if (isCanvasMenuOpen) {
+        const menuHit = getMenuHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          {
+            view: currentMenuView,
+            debugMode: currentDebug,
+            callbacks: menuCallbacks,
+            buildInfo,
+          },
+          screenX,
+          screenY,
+        );
+        if (menuHit) {
+          return;
+        }
+      }
+      const heroHit = getHeroCardsHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        screenX,
+        screenY,
+      );
+      if (heroHit) {
+        return;
+      }
+      const monsterHit = getMonsterCardsHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        screenX,
+        screenY,
+      );
+      if (monsterHit) {
+        return;
+      }
+      const eventHit = getEventCardHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        isEventCardCollapsed,
+        screenX,
+        screenY,
+      );
+      if (eventHit) {
+        return;
+      }
+    }
+
     if (event.button === 2 || event.button === 1) {
       isDragging = true;
       dragStartX = event.clientX;
@@ -481,6 +769,206 @@
       return;
     }
     if (event.button !== 0) return;
+
+    if (uiCanvas && activeState && containerWidth > 0 && containerHeight > 0) {
+      const rect = uiCanvas.getBoundingClientRect();
+      const screenX = event.clientX - rect.left;
+      const screenY = event.clientY - rect.top;
+
+      if (showDungeonIntro) {
+        const introHit = getDungeonIntroHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+          { dismissed: isDungeonIntroDismissed },
+        );
+        if (introHit) {
+          if (introHit.type === 'close' || introHit.type === 'backdrop') {
+            dismissDungeonIntro(activeState);
+            isDungeonIntroDismissed = true;
+            isDungeonIntroCloseHovered = false;
+            if (!state) {
+              gameStateStore.set(activeState);
+            }
+            renderUiLayer(true);
+          }
+          return;
+        }
+      }
+
+      const currentDebug =
+        debugMode !== undefined
+          ? debugMode
+          : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
+      const topBarHit = getTopBarHit(
+        containerWidth,
+        activeState,
+        screenX,
+        screenY,
+        null,
+        { isLogOpen, debugMode: currentDebug },
+      );
+      if (topBarHit === 'menu') {
+        if (isCanvasMenuOpen && currentMenuView === 'main') {
+          isCanvasMenuOpen = false;
+        } else {
+          isCanvasMenuOpen = true;
+          currentMenuView = 'main';
+        }
+        hoveredMenuItemId = null;
+        renderUiLayer(true);
+        return;
+      }
+      if (topBarHit === 'debug') {
+        if (isCanvasMenuOpen && currentMenuView === 'debug') {
+          isCanvasMenuOpen = false;
+        } else {
+          isCanvasMenuOpen = true;
+          currentMenuView = 'debug';
+        }
+        hoveredMenuItemId = null;
+        renderUiLayer(true);
+        return;
+      }
+      if (topBarHit) {
+        return;
+      }
+
+      if (isCanvasMenuOpen) {
+        const currentDebug =
+          debugMode !== undefined
+            ? debugMode
+            : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
+        const menuHit = getMenuHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          {
+            view: currentMenuView,
+            debugMode: currentDebug,
+            callbacks: menuCallbacks,
+            buildInfo,
+          },
+          screenX,
+          screenY,
+        );
+        if (menuHit) {
+          if (menuHit.type === 'item' && menuHit.item) {
+            menuHit.item.onClick(activeState);
+            renderCanvas(true);
+          } else if (menuHit.type === 'backdrop') {
+            isCanvasMenuOpen = false;
+            currentMenuView = 'main';
+            hoveredMenuItemId = null;
+            renderUiLayer(true);
+          }
+          return;
+        }
+      }
+
+      const heroHit = getHeroCardsHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        screenX,
+        screenY,
+      );
+      if (heroHit) {
+        if (heroHit.type === 'inventoryButton') {
+          if (state) {
+            heroHit.hero.isInventoryOpen = !heroHit.hero.isInventoryOpen;
+            gameStateStore.set(state);
+          } else {
+            toggleHeroInventory(heroHit.hero);
+          }
+          renderCanvas(true);
+        } else if (heroHit.type === 'inventoryClose') {
+          if (state) {
+            heroHit.hero.isInventoryOpen = false;
+            gameStateStore.set(state);
+          } else {
+            if (heroHit.hero.isInventoryOpen) {
+              toggleHeroInventory(heroHit.hero);
+            }
+          }
+          renderCanvas(true);
+        } else if (heroHit.type === 'inventoryUseItem') {
+          if (state) {
+            useItem(state, heroHit.item);
+            gameStateStore.set(state);
+          } else {
+            useHeroItem(heroHit.item);
+          }
+          renderCanvas(true);
+        }
+        return;
+      }
+      const monsterHit = getMonsterCardsHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        screenX,
+        screenY,
+      );
+      if (monsterHit) {
+        return;
+      }
+      const eventHit = getEventCardHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        isEventCardCollapsed,
+        screenX,
+        screenY,
+      );
+      if (eventHit) {
+        if (eventHit.type === 'toggle') {
+          isEventCardCollapsed = !isEventCardCollapsed;
+          renderUiLayer(true);
+        }
+        return;
+      }
+    }
+
+    const menu = $radialMenuStore;
+    if (menu && uiCanvas) {
+      const rect = uiCanvas.getBoundingClientRect();
+      const screenX = event.clientX - rect.left;
+      const screenY = event.clientY - rect.top;
+      const worldPos = screenToWorldPosition(
+        screenX,
+        screenY,
+        rect.width,
+        rect.height,
+        panX,
+        panY,
+        cellSize,
+        startPosition,
+      );
+      const clickedBtn = findHoveredRadialButton(menu, cellSize, worldPos);
+      radialMenuStore.set(null);
+      hoveredRadialIndex = null;
+      renderUiLayer(true);
+
+      if (clickedBtn) {
+        const curState = state ?? $gameStateStore;
+        executeRadialAction(
+          curState,
+          clickedBtn.entry.action,
+          clickedBtn.entry.door,
+          clickedBtn.entry.interactable,
+          clickedBtn.entry.item,
+          clickedBtn.entry.targetHero,
+        );
+        if (!state) {
+          gameStateStore.set(curState);
+        }
+      }
+      return;
+    }
+
     if (state) {
       doMouseLogic(event, cellSize, state, {
         panX,
@@ -527,14 +1015,445 @@
 
   const onMouseMove = (event: MouseEvent) => {
     if (isDragging) return;
-    if (!activeState || !overlayCanvas) {
+    if (!activeState || !uiCanvas) {
       boardCursor = 'default';
       return;
     }
 
-    const rect = overlayCanvas.getBoundingClientRect();
+    const rect = uiCanvas.getBoundingClientRect();
     const screenX = event.clientX - rect.left;
     const screenY = event.clientY - rect.top;
+
+    if (containerWidth > 0) {
+      if (showDungeonIntro) {
+        const introHit = getDungeonIntroHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+          { dismissed: isDungeonIntroDismissed },
+        );
+        if (introHit) {
+          if (hoveredRadialIndex !== null) {
+            hoveredRadialIndex = null;
+          }
+          let changed = false;
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+          if (hoveredInventoryHeroName !== null) {
+            hoveredInventoryHeroName = null;
+            changed = true;
+          }
+          if (hoveredCloseHeroName !== null) {
+            hoveredCloseHeroName = null;
+            changed = true;
+          }
+          if (hoveredUseItem !== null) {
+            hoveredUseItem = null;
+            changed = true;
+          }
+          if (isEventCardToggleHovered) {
+            isEventCardToggleHovered = false;
+            changed = true;
+          }
+          const isClose = introHit.type === 'close';
+          if (isDungeonIntroCloseHovered !== isClose) {
+            isDungeonIntroCloseHovered = isClose;
+            changed = true;
+          }
+          boardCursor = isClose ? 'pointer' : 'default';
+          if (changed) renderUiLayer(true);
+          return;
+        }
+      }
+
+      const currentDebug =
+        debugMode !== undefined
+          ? debugMode
+          : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
+      const topBarHit = getTopBarHit(
+        containerWidth,
+        activeState,
+        screenX,
+        screenY,
+        null,
+        { isLogOpen, debugMode: currentDebug },
+      );
+      if (topBarHit) {
+        if (hoveredRadialIndex !== null) {
+          hoveredRadialIndex = null;
+        }
+        let changed = false;
+        if (hoveredInventoryHeroName !== null) {
+          hoveredInventoryHeroName = null;
+          changed = true;
+        }
+        if (hoveredCloseHeroName !== null) {
+          hoveredCloseHeroName = null;
+          changed = true;
+        }
+        if (hoveredUseItem !== null) {
+          hoveredUseItem = null;
+          changed = true;
+        }
+        if (topBarHit === 'menu') {
+          boardCursor = 'pointer';
+          if (!isMenuHovered) {
+            isMenuHovered = true;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+        } else if (topBarHit === 'debug') {
+          boardCursor = 'pointer';
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (!isDebugHovered) {
+            isDebugHovered = true;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+        } else if (
+          topBarHit === 'log' ||
+          (isLogOpen && topBarHit === 'logDropdown')
+        ) {
+          boardCursor = 'pointer';
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (!isLogHovered) {
+            isLogHovered = true;
+            changed = true;
+          }
+        } else {
+          boardCursor = 'default';
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+        }
+        if (changed) renderUiLayer(true);
+        return;
+      }
+
+      if (isCanvasMenuOpen) {
+        const menuHit = getMenuHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          {
+            view: currentMenuView,
+            debugMode: currentDebug,
+            callbacks: menuCallbacks,
+            buildInfo,
+          },
+          screenX,
+          screenY,
+        );
+        if (menuHit) {
+          if (hoveredRadialIndex !== null) {
+            hoveredRadialIndex = null;
+          }
+          let changed = false;
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+          if (hoveredInventoryHeroName !== null) {
+            hoveredInventoryHeroName = null;
+            changed = true;
+          }
+          if (hoveredCloseHeroName !== null) {
+            hoveredCloseHeroName = null;
+            changed = true;
+          }
+          if (hoveredUseItem !== null) {
+            hoveredUseItem = null;
+            changed = true;
+          }
+
+          const newHoveredId =
+            menuHit.type === 'item' && menuHit.item ? menuHit.item.id : null;
+          if (hoveredMenuItemId !== newHoveredId) {
+            hoveredMenuItemId = newHoveredId;
+            changed = true;
+          }
+
+          boardCursor = menuHit.type === 'item' ? 'pointer' : 'default';
+          if (changed) renderUiLayer(true);
+          return;
+        }
+      }
+
+      if (containerHeight > 0) {
+        const heroHit = getHeroCardsHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+        );
+        if (heroHit) {
+          if (hoveredRadialIndex !== null) {
+            hoveredRadialIndex = null;
+          }
+          let changed = false;
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+
+          const newInvHero =
+            heroHit.type === 'inventoryButton' ? heroHit.hero.name : null;
+          const newCloseHero =
+            heroHit.type === 'inventoryClose' ? heroHit.hero.name : null;
+          const newUseItem =
+            heroHit.type === 'inventoryUseItem'
+              ? { heroName: heroHit.hero.name, itemIndex: heroHit.itemIndex }
+              : null;
+
+          if (hoveredInventoryHeroName !== newInvHero) {
+            hoveredInventoryHeroName = newInvHero;
+            changed = true;
+          }
+          if (hoveredCloseHeroName !== newCloseHero) {
+            hoveredCloseHeroName = newCloseHero;
+            changed = true;
+          }
+          if (
+            hoveredUseItem?.heroName !== newUseItem?.heroName ||
+            hoveredUseItem?.itemIndex !== newUseItem?.itemIndex
+          ) {
+            hoveredUseItem = newUseItem;
+            changed = true;
+          }
+
+          if (
+            heroHit.type === 'inventoryButton' ||
+            heroHit.type === 'inventoryClose' ||
+            heroHit.type === 'inventoryUseItem'
+          ) {
+            boardCursor = 'pointer';
+          } else {
+            boardCursor = 'default';
+          }
+
+          if (changed) renderUiLayer(true);
+          return;
+        }
+
+        const monsterHit = getMonsterCardsHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+        );
+        if (monsterHit) {
+          if (hoveredRadialIndex !== null) {
+            hoveredRadialIndex = null;
+          }
+          let changed = false;
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+          if (hoveredInventoryHeroName !== null) {
+            hoveredInventoryHeroName = null;
+            changed = true;
+          }
+          if (hoveredCloseHeroName !== null) {
+            hoveredCloseHeroName = null;
+            changed = true;
+          }
+          if (hoveredUseItem !== null) {
+            hoveredUseItem = null;
+            changed = true;
+          }
+          boardCursor = 'default';
+          if (changed) renderUiLayer(true);
+          return;
+        }
+
+        const eventHit = getEventCardHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          isEventCardCollapsed,
+          screenX,
+          screenY,
+        );
+        if (eventHit) {
+          if (hoveredRadialIndex !== null) {
+            hoveredRadialIndex = null;
+          }
+          let changed = false;
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+          if (hoveredInventoryHeroName !== null) {
+            hoveredInventoryHeroName = null;
+            changed = true;
+          }
+          if (hoveredCloseHeroName !== null) {
+            hoveredCloseHeroName = null;
+            changed = true;
+          }
+          if (hoveredUseItem !== null) {
+            hoveredUseItem = null;
+            changed = true;
+          }
+          const isToggle = eventHit.type === 'toggle';
+          if (isEventCardToggleHovered !== isToggle) {
+            isEventCardToggleHovered = isToggle;
+            changed = true;
+          }
+          boardCursor = isToggle ? 'pointer' : 'default';
+          if (changed) renderUiLayer(true);
+          return;
+        }
+      }
+    }
+
+    let needsReset = false;
+    if (isDungeonIntroCloseHovered) {
+      isDungeonIntroCloseHovered = false;
+      needsReset = true;
+    }
+    if (isMenuHovered) {
+      isMenuHovered = false;
+      needsReset = true;
+    }
+    if (isDebugHovered) {
+      isDebugHovered = false;
+      needsReset = true;
+    }
+    if (isLogHovered) {
+      isLogHovered = false;
+      needsReset = true;
+    }
+    if (isEventCardToggleHovered) {
+      isEventCardToggleHovered = false;
+      needsReset = true;
+    }
+    if (hoveredInventoryHeroName !== null) {
+      hoveredInventoryHeroName = null;
+      needsReset = true;
+    }
+    if (hoveredCloseHeroName !== null) {
+      hoveredCloseHeroName = null;
+      needsReset = true;
+    }
+    if (hoveredUseItem !== null) {
+      hoveredUseItem = null;
+      needsReset = true;
+    }
+    if (hoveredMenuItemId !== null) {
+      hoveredMenuItemId = null;
+      needsReset = true;
+    }
+    if (needsReset) {
+      renderUiLayer(true);
+    }
+
+    const menu = $radialMenuStore;
+    if (menu) {
+      const worldPos = screenToWorldPosition(
+        screenX,
+        screenY,
+        rect.width,
+        rect.height,
+        panX,
+        panY,
+        cellSize,
+        startPosition,
+      );
+      const hoveredBtn = findHoveredRadialButton(menu, cellSize, worldPos);
+      if (hoveredBtn) {
+        boardCursor = 'pointer';
+        if (hoveredRadialIndex !== hoveredBtn.index) {
+          hoveredRadialIndex = hoveredBtn.index;
+          renderUiLayer(true);
+        }
+        return;
+      } else {
+        boardCursor = 'default';
+        if (hoveredRadialIndex !== null) {
+          hoveredRadialIndex = null;
+          renderUiLayer(true);
+        }
+        return;
+      }
+    }
+
     const pos = screenToGridPosition(
       screenX,
       screenY,
@@ -564,6 +1483,50 @@
 
   const onMouseLeave = () => {
     boardCursor = 'default';
+    let needsRender = false;
+    if (isDungeonIntroCloseHovered) {
+      isDungeonIntroCloseHovered = false;
+      needsRender = true;
+    }
+    if (hoveredRadialIndex !== null) {
+      hoveredRadialIndex = null;
+      needsRender = true;
+    }
+    if (isMenuHovered) {
+      isMenuHovered = false;
+      needsRender = true;
+    }
+    if (isDebugHovered) {
+      isDebugHovered = false;
+      needsRender = true;
+    }
+    if (isLogHovered) {
+      isLogHovered = false;
+      needsRender = true;
+    }
+    if (isEventCardToggleHovered) {
+      isEventCardToggleHovered = false;
+      needsRender = true;
+    }
+    if (hoveredInventoryHeroName !== null) {
+      hoveredInventoryHeroName = null;
+      needsRender = true;
+    }
+    if (hoveredCloseHeroName !== null) {
+      hoveredCloseHeroName = null;
+      needsRender = true;
+    }
+    if (hoveredUseItem !== null) {
+      hoveredUseItem = null;
+      needsRender = true;
+    }
+    if (hoveredMenuItemId !== null) {
+      hoveredMenuItemId = null;
+      needsRender = true;
+    }
+    if (needsRender) {
+      renderUiLayer(true);
+    }
   };
 
   const onWheel = (event: WheelEvent) => {
@@ -595,9 +1558,14 @@
     ></canvas>
     <canvas
       id="gameBoard"
+      class="canvasLayer"
+      bind:this={overlayCanvas}
+    ></canvas>
+    <canvas
+      id="uiCanvas"
       class="canvasLayer interactiveLayer"
       style="cursor: {boardCursor};"
-      bind:this={overlayCanvas}
+      bind:this={uiCanvas}
       on:click={onClick}
       on:mousedown={onMouseDown}
       on:mousemove={onMouseMove}
@@ -605,17 +1573,7 @@
       on:wheel={onWheel}
       on:contextmenu|preventDefault
     ></canvas>
-    <RadialMenu
-      {cellSize}
-      {state}
-      {panX}
-      {panY}
-      {startPosition}
-      viewWidth={containerWidth}
-      viewHeight={containerHeight}
-    />
   </div>
-  <DungeonIntro {dungeon} state={activeState} />
 </div>
 
 <style>
