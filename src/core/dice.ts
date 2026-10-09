@@ -27,7 +27,7 @@ export const roll = (level: Level, dice: number): number => {
   }
   switch (level) {
     case Level.APPRENTICE:
-      results = results.filter((result) => result === 5);
+      results = results.filter((result) => result >= 5);
       break;
     case Level.KNIGHT:
     case Level.HERO:
