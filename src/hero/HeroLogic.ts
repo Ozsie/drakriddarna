@@ -448,12 +448,24 @@ export const checkForNote = (state: GameState, hero: Hero) => {
         }),
     );
     if (!onHiddenDoor) {
-      addLog(state, 'logs.heroAction.reads', {
-        hero: i18n(hero.name),
-        note: i18n(note.message),
-      });
-      note.found = true;
-      note.foundOn = state.turnCount;
+      if (!note.found) {
+        addLog(state, 'logs.heroAction.reads', {
+          hero: i18n(hero.name),
+          note: i18n(note.message),
+        });
+        const text = i18n(note.message);
+        if (!state.damageIndicators) {
+          state.damageIndicators = [];
+        }
+        state.damageIndicators.push(
+          createIndicator(text, note.position, {
+            color: '#7373ec',
+            effect: 'static',
+          }),
+        );
+        note.found = true;
+        note.foundOn = state.turnCount;
+      }
     }
   }
 };

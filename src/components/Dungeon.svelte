@@ -43,6 +43,7 @@
     renderMonsterCards,
     getMonsterCardsHit,
     renderDiaryAndWinConditions,
+    getDiaryAndWinConditionsHit,
     renderEventCard,
     getEventCardHit,
     renderMenuModal,
@@ -665,6 +666,7 @@
       const rect = uiCanvas.getBoundingClientRect();
       const screenX = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
+      const ctx = uiCanvas.getContext('2d');
 
       if (showDungeonIntro) {
         const introHit = getDungeonIntroHit(
@@ -674,6 +676,7 @@
           screenX,
           screenY,
           { dismissed: isDungeonIntroDismissed },
+          ctx,
         );
         if (introHit) {
           return;
@@ -689,7 +692,7 @@
         activeState,
         screenX,
         screenY,
-        null,
+        ctx,
         { isLogOpen, debugMode: currentDebug },
       );
       if (topBarHit === 'log' || topBarHit === 'logDropdown') {
@@ -739,6 +742,17 @@
       if (monsterHit) {
         return;
       }
+      const diaryHit = getDiaryAndWinConditionsHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        screenX,
+        screenY,
+        ctx,
+      );
+      if (diaryHit) {
+        return;
+      }
       const eventHit = getEventCardHit(
         containerWidth,
         containerHeight,
@@ -774,6 +788,7 @@
       const rect = uiCanvas.getBoundingClientRect();
       const screenX = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
+      const ctx = uiCanvas.getContext('2d');
 
       if (showDungeonIntro) {
         const introHit = getDungeonIntroHit(
@@ -783,6 +798,7 @@
           screenX,
           screenY,
           { dismissed: isDungeonIntroDismissed },
+          ctx,
         );
         if (introHit) {
           if (introHit.type === 'close' || introHit.type === 'backdrop') {
@@ -807,7 +823,7 @@
         activeState,
         screenX,
         screenY,
-        null,
+        ctx,
         { isLogOpen, debugMode: currentDebug },
       );
       if (topBarHit === 'menu') {
@@ -913,6 +929,17 @@
         screenY,
       );
       if (monsterHit) {
+        return;
+      }
+      const diaryHit = getDiaryAndWinConditionsHit(
+        containerWidth,
+        containerHeight,
+        activeState,
+        screenX,
+        screenY,
+        ctx,
+      );
+      if (diaryHit) {
         return;
       }
       const eventHit = getEventCardHit(
@@ -1023,6 +1050,7 @@
     const rect = uiCanvas.getBoundingClientRect();
     const screenX = event.clientX - rect.left;
     const screenY = event.clientY - rect.top;
+    const ctx = uiCanvas.getContext('2d');
 
     if (containerWidth > 0) {
       if (showDungeonIntro) {
@@ -1033,6 +1061,7 @@
           screenX,
           screenY,
           { dismissed: isDungeonIntroDismissed },
+          ctx,
         );
         if (introHit) {
           if (hoveredRadialIndex !== null) {
@@ -1087,7 +1116,7 @@
         activeState,
         screenX,
         screenY,
-        null,
+        ctx,
         { isLogOpen, debugMode: currentDebug },
       );
       if (topBarHit) {
@@ -1327,6 +1356,52 @@
           }
           if (hoveredUseItem !== null) {
             hoveredUseItem = null;
+            changed = true;
+          }
+          boardCursor = 'default';
+          if (changed) renderUiLayer(true);
+          return;
+        }
+
+        const diaryHit = getDiaryAndWinConditionsHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+          ctx,
+        );
+        if (diaryHit) {
+          if (hoveredRadialIndex !== null) {
+            hoveredRadialIndex = null;
+          }
+          let changed = false;
+          if (isMenuHovered) {
+            isMenuHovered = false;
+            changed = true;
+          }
+          if (isDebugHovered) {
+            isDebugHovered = false;
+            changed = true;
+          }
+          if (isLogHovered) {
+            isLogHovered = false;
+            changed = true;
+          }
+          if (hoveredInventoryHeroName !== null) {
+            hoveredInventoryHeroName = null;
+            changed = true;
+          }
+          if (hoveredCloseHeroName !== null) {
+            hoveredCloseHeroName = null;
+            changed = true;
+          }
+          if (hoveredUseItem !== null) {
+            hoveredUseItem = null;
+            changed = true;
+          }
+          if (isEventCardToggleHovered) {
+            isEventCardToggleHovered = false;
             changed = true;
           }
           boardCursor = 'default';

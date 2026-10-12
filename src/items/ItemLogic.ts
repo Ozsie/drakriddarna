@@ -137,12 +137,12 @@ export const resolveChaosSwordAttack = (
   const attackDifficultyModifier = getDifficulty(state).modifiers.attack;
   const hits = roll(user.level, 4 + attackDifficultyModifier);
 
-  const killTarget = () => {
+  const killTarget = (damageAmount: number = target.health) => {
     if (!state.damageIndicators) {
       state.damageIndicators = [];
     }
     state.damageIndicators.push(
-      createIndicator(target.health, target.position, { effect: 'crit' }),
+      createIndicator(damageAmount, target.position, { effect: 'crit' }),
     );
     target.health = 0;
     target.level = Level.APPRENTICE;
@@ -162,7 +162,7 @@ export const resolveChaosSwordAttack = (
         user: i18n(user.name),
         target: i18n(target.name),
       });
-      killTarget();
+      killTarget(target.health);
       break;
     case 1:
       addLog(state, 'logs.item.chaosSwordStumble', { user: i18n(user.name) });
@@ -184,7 +184,7 @@ export const resolveChaosSwordAttack = (
           actor: i18n(user.name),
           target: i18n(target.name),
         });
-        killTarget();
+        killTarget(damage);
       }
       break;
     }

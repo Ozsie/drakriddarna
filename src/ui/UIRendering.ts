@@ -115,6 +115,7 @@ export {
 export {
   renderDiaryAndWinConditions,
   getDiaryAndWinConditionsLayout,
+  getDiaryAndWinConditionsHit,
   formatWinCondition,
   formatDiaryHeader,
   formatNoteHeader,
@@ -122,6 +123,7 @@ export {
   type WinConditionLayoutItem,
   type DiaryNoteLayoutItem,
   type DiaryAndWinConditionsLayout,
+  type DiaryAndWinConditionsHitResult,
 } from './DiaryAndWinConditionRendering';
 export {
   renderEventCard,

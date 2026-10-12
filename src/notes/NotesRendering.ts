@@ -1,6 +1,5 @@
 import type { GameState, Position } from '../types';
-import { createIndicator, i18n } from '../core';
-import { isSamePosition } from '../core';
+import { isSamePosition, i18n } from '../core';
 
 export const renderTextBox = (
   ctx: CanvasRenderingContext2D,
@@ -66,15 +65,6 @@ export const renderNotes = (
     );
     if (!onHiddenDoor) {
       const text = i18n(note.message);
-      if (!state.damageIndicators) {
-        state.damageIndicators = [];
-      }
-      state.damageIndicators.push(
-        createIndicator(text, note.position, {
-          color: '#7373ec',
-          effect: 'static',
-        }),
-      );
       renderTextBox(ctx, text, note.position, cellSize);
     }
   }

@@ -309,6 +309,47 @@ export const getDiaryAndWinConditionsLayout = (
   };
 };
 
+export interface DiaryAndWinConditionsHitResult {
+  type: 'panel';
+}
+
+export const getDiaryAndWinConditionsHit = (
+  viewWidth: number,
+  viewHeight: number,
+  state: GameState | null | undefined,
+  x: number,
+  y: number,
+  ctx?: CanvasRenderingContext2D | null,
+): DiaryAndWinConditionsHitResult | null => {
+  if (!state || viewWidth <= 0 || viewHeight <= 0) return null;
+
+  const layout = getDiaryAndWinConditionsLayout(
+    viewWidth,
+    viewHeight,
+    state,
+    ctx,
+  );
+  if (
+    !layout.hasContent ||
+    layout.bounds.width <= 0 ||
+    layout.bounds.height <= 0
+  ) {
+    return null;
+  }
+
+  const { bounds } = layout;
+  if (
+    x >= bounds.x &&
+    x <= bounds.x + bounds.width &&
+    y >= bounds.y &&
+    y <= bounds.y + bounds.height
+  ) {
+    return { type: 'panel' };
+  }
+
+  return null;
+};
+
 export const renderDiaryAndWinConditions = (
   ctx: CanvasRenderingContext2D,
   viewWidth: number,

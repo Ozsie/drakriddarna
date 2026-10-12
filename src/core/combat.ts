@@ -185,7 +185,7 @@ export const takeDamage = (
     if (!state.damageIndicators) {
       state.damageIndicators = [];
     }
-    if (damage >= weapon.dice - (target.armour?.defense ?? 0)) {
+    if (damage > 0 && damage >= weapon.dice - (target.armour?.defense ?? 0)) {
       state.damageIndicators.push(
         createIndicator(damage, target.position, { effect: 'crit' }),
       );

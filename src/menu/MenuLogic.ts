@@ -325,11 +325,9 @@ export const onNewGame = (
   activeState?: GameState,
   setState?: (state: GameState) => void,
 ) => {
-  const newState = init(campaignId);
   if (setState) {
+    const newState = init(campaignId);
     setState(newState);
-    gameStateStore.set(newState);
-  } else if (activeState) {
     gameStateStore.set(newState);
   } else {
     initGame(campaignId);
@@ -343,11 +341,9 @@ export const onClickLoad = (
 ) => {
   try {
     const loaded = JSON.parse(stateString) as GameState;
-    const newState = loadState(loaded);
     if (setState) {
+      const newState = loadState(loaded);
       setState(newState);
-      gameStateStore.set(newState);
-    } else if (activeState) {
       gameStateStore.set(newState);
     } else {
       loadGameState(loaded);

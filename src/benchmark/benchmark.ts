@@ -67,61 +67,40 @@ export const runSingleGame = async (
     resetRng();
   }
 
-  const state = init(campaignId);
+  try {
+    const state = init(campaignId);
 
-  // Set difficulty
-  const difficulty = DifficultLevels.find((d) => d.id === difficultyId);
-  if (difficulty) {
-    state.difficulty = difficulty;
-  }
-
-  // Override specific dungeon if requested
-  if (dungeon) {
-    state.dungeon = structuredClone(dungeon);
-    resetLiveHeroes(state);
-    state.currentActor = state.heroes[0] as Hero | undefined;
-  }
-
-  let turn = 0;
-  let status: 'WON' | 'LOST' | 'TIMEOUT' = 'TIMEOUT';
-  let totalMonstersKilled = 0;
-  const initialDungeonName = state.dungeon.name;
-
-  while (turn < maxTurns) {
-    totalMonstersKilled = Math.max(
-      totalMonstersKilled,
-      state.dungeon.killCount,
-    );
-
-    // Check if heroes are all dead
-    if (liveHeroes(state).length === 0) {
-      status = 'LOST';
-      break;
+    // Set difficulty
+    const difficulty = DifficultLevels.find((d) => d.id === difficultyId);
+    if (difficulty) {
+      state.difficulty = difficulty;
     }
 
-    // Check if initial dungeon is won / beaten or transitioned to next
-    if (
-      state.dungeon.beaten ||
-      state.dungeon.name !== initialDungeonName ||
-      state.dungeon.winConditions.every((wc) => wc.fulfilled)
-    ) {
-      status = 'WON';
-      break;
+    // Override specific dungeon if requested
+    if (dungeon) {
+      state.dungeon = structuredClone(dungeon);
+      resetLiveHeroes(state);
+      state.currentActor = state.heroes[0] as Hero | undefined;
     }
 
-    // Execute hero round
-    const initialLiveHeroesCount = liveHeroes(state).length;
-    for (let hIdx = 0; hIdx < initialLiveHeroesCount; hIdx++) {
-      if (!state.currentActor) break;
+    let turn = 0;
+    let status: 'WON' | 'LOST' | 'TIMEOUT' = 'TIMEOUT';
+    let totalMonstersKilled = 0;
+    const initialDungeonName = state.dungeon.name;
 
-      playHeroTurn(state);
-      await next(state, HEADLESS_MONSTER_OPTIONS);
-
+    while (turn < maxTurns) {
       totalMonstersKilled = Math.max(
         totalMonstersKilled,
         state.dungeon.killCount,
       );
 
+      // Check if heroes are all dead
+      if (liveHeroes(state).length === 0) {
+        status = 'LOST';
+        break;
+      }
+
+      // Check if initial dungeon is won / beaten or transitioned to next
       if (
         state.dungeon.beaten ||
         state.dungeon.name !== initialDungeonName ||
@@ -130,33 +109,59 @@ export const runSingleGame = async (
         status = 'WON';
         break;
       }
-      if (liveHeroes(state).length === 0) {
-        status = 'LOST';
-        break;
+
+      // Execute hero round
+      const initialLiveHeroesCount = liveHeroes(state).length;
+      for (let hIdx = 0; hIdx < initialLiveHeroesCount; hIdx++) {
+        if (!state.currentActor) break;
+
+        playHeroTurn(state);
+        await next(state, HEADLESS_MONSTER_OPTIONS);
+
+        totalMonstersKilled = Math.max(
+          totalMonstersKilled,
+          state.dungeon.killCount,
+        );
+
+        if (
+          state.dungeon.beaten ||
+          state.dungeon.name !== initialDungeonName ||
+          state.dungeon.winConditions.every((wc) => wc.fulfilled)
+        ) {
+          status = 'WON';
+          break;
+        }
+        if (liveHeroes(state).length === 0) {
+          status = 'LOST';
+          break;
+        }
       }
+
+      turn++;
+
+      if (status !== 'TIMEOUT') break;
     }
 
-    turn++;
+    const surviving = liveHeroes(state);
+    const survivingCount = surviving.length;
+    const casualties = state.heroes.length - survivingCount;
+    const totalHp = surviving.reduce(
+      (sum, h) => sum + Math.max(0, h.health),
+      0,
+    );
 
-    if (status !== 'TIMEOUT') break;
+    return {
+      runId: seed ?? 0,
+      status,
+      turns: turn,
+      monstersKilled: totalMonstersKilled,
+      survivingHeroes: survivingCount,
+      heroCasualties: casualties,
+      remainingHeroHealth: totalHp,
+    };
+  } finally {
+    resetRng();
   }
-
-  const surviving = liveHeroes(state);
-  const survivingCount = surviving.length;
-  const casualties = state.heroes.length - survivingCount;
-  const totalHp = surviving.reduce((sum, h) => sum + Math.max(0, h.health), 0);
-
-  resetRng();
-
-  return {
-    runId: seed ?? 0,
-    status,
-    turns: turn,
-    monstersKilled: totalMonstersKilled,
-    survivingHeroes: survivingCount,
-    heroCasualties: casualties,
-    remainingHeroHealth: totalHp,
-  };
 };
 
 /**

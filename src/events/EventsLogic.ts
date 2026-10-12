@@ -96,12 +96,13 @@ export const eventEffects: Record<
       )
       .forEach((monster) => {
         addLog(state, 'logs.events.sunStone', { monster: i18n(monster.name) });
+        const remainingHealth = monster.health;
         monster.health = 0;
         if (!state.damageIndicators) {
           state.damageIndicators = [];
         }
         state.damageIndicators.push(
-          createIndicator(0, monster.position, {
+          createIndicator(remainingHealth, monster.position, {
             effect: 'crit',
           }),
         );
