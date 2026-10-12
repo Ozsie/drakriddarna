@@ -64,7 +64,6 @@ export {
   canAct,
   createDamageIndicator,
   createIndicator,
-  createIndicator as createFloatingIndicator,
   doorAsActor,
   getDamageString,
   getEffectiveMaxMovement,

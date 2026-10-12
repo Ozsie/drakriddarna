@@ -84,7 +84,7 @@ export const eventEffects: Record<
       hero.position.x,
       hero.position.y,
     );
-    state.dungeon.layout.monsters
+    findVisibleMonsters(state)
       .filter((monster) => monster.type === MonsterType.TROLL)
       .filter(
         (monster) =>
@@ -287,7 +287,7 @@ export const eventEffects: Record<
       inventory: [],
       defense: 0,
     };
-    state.dungeon.layout.monsters
+    findVisibleMonsters(state)
       .filter((monster) => monster.type === MonsterType.TROLL)
       .filter(
         (monster) =>
@@ -362,7 +362,7 @@ export const eventEffects: Record<
   },
   theOrcDrums: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
-    state.dungeon.layout.monsters
+    findVisibleMonsters(state)
       .filter((monster) => monster.type === MonsterType.ORC)
       .forEach((monster) => {
         monster.actions = 3;
