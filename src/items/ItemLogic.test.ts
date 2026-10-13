@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { GameState, Hero, Item } from '../types';
 import { Colour, ItemType, Level } from '../types';
 import {
@@ -11,6 +11,7 @@ import {
   useItem,
 } from './ItemLogic';
 import { magicItems } from './magicItems';
+import { resetRng, setRng } from '../core';
 
 const createHero = (
   name: string,
@@ -86,6 +87,8 @@ describe('ItemLogic - Healing Herbs rework', () => {
   let state: GameState;
 
   beforeEach(() => {
+    // Math.floor((5/6) * 6) + 1 = 6 (guarantees Apprentice success)
+    setRng(() => 5 / 6);
     hero1 = createHero('Fearik', 1, 1, 5, 10);
     hero2 = createHero('Helga', 1, 2, 4, 10);
     hero3 = createHero('Althea', 1, 3, 3, 10);
@@ -95,6 +98,10 @@ describe('ItemLogic - Healing Herbs rework', () => {
     hero1.inventory = [herbs];
 
     state = createGameState([hero1, hero2, hero3]);
+  });
+
+  afterEach(() => {
+    resetRng();
   });
 
   it('healing_herbs definition in magicItems does not reset on TRADE and only on NEXT_DUNGEON', () => {
