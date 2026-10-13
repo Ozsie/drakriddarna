@@ -1,4 +1,12 @@
-import  { type Actor, type GameState, type Hero, Level, type Monster, type Position, type Weapon } from '../types';
+import {
+  type Actor,
+  type GameState,
+  type Hero,
+  Level,
+  type Monster,
+  type Position,
+  type Weapon,
+} from '../types';
 import { MonsterType } from '../types';
 import {
   getMonsterAbilities,

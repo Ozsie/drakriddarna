@@ -1,6 +1,7 @@
 import { MonsterType } from '../../../types';
 import { isDarkLord } from '../../MonsterRegistry';
 import type { MonsterBehavior } from '../types';
+import { getMonsterBehaviors } from '../registry';
 import { ORC_BEHAVIORS } from './orcs';
 import { TROLL_BEHAVIORS } from './trolls';
 import { DARK_LORD_BEHAVIORS } from './darkLords';
@@ -8,6 +9,7 @@ import { DARK_LORD_BEHAVIORS } from './darkLords';
 export * from './orcs';
 export * from './trolls';
 export * from './darkLords';
+export * from '../registry';
 
 export const DEFAULT_FALLBACK_BEHAVIORS: MonsterBehavior[] = [
   {
@@ -39,6 +41,10 @@ export const DEFAULT_FALLBACK_BEHAVIORS: MonsterBehavior[] = [
 export const getBehaviorsForMonsterType = (
   monsterType: string,
 ): MonsterBehavior[] => {
+  const customBehaviors = getMonsterBehaviors(monsterType);
+  if (customBehaviors) {
+    return customBehaviors;
+  }
   if (monsterType === MonsterType.ORC || monsterType === MonsterType.ORCH) {
     return ORC_BEHAVIORS;
   }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { describe, expect, it, vi } from 'vitest';
 import {
   Colour,
@@ -27,7 +28,7 @@ import {
   selectRangedTarget,
 } from '../MonsterLogic';
 import { attack } from '../../hero/HeroLogic';
-import { takeDamage } from '../../core/combat';
+import { takeDamage } from '../../core';
 
 const defaultWeapon: Weapon = {
   name: 'Sword',
@@ -544,10 +545,14 @@ describe('Target Scoring System', () => {
       const heroA = createTestHero('HeroA', 1, 2, 10);
       const heroB = createTestHero('HeroB', 1, 3, 8);
 
-      const groupSpy = vi.spyOn(console, 'groupCollapsed').mockImplementation(() => {});
+      const groupSpy = vi
+        .spyOn(console, 'groupCollapsed')
+        .mockImplementation(() => {});
       const tableSpy = vi.spyOn(console, 'table').mockImplementation(() => {});
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const groupEndSpy = vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+      const groupEndSpy = vi
+        .spyOn(console, 'groupEnd')
+        .mockImplementation(() => {});
 
       logMonsterTargetSelection({
         monster,
@@ -582,8 +587,16 @@ describe('Target Scoring System', () => {
       );
       expect(tableSpy).toHaveBeenCalledWith(
         expect.arrayContaining([
-          expect.objectContaining({ Hero: 'HeroA', Score: '13.00', 'Last Attacker': '+3' }),
-          expect.objectContaining({ Hero: 'HeroB', Score: '7.00', Steps: '-3 (1 steps)' }),
+          expect.objectContaining({
+            Hero: 'HeroA',
+            Score: '13.00',
+            'Last Attacker': '+3',
+          }),
+          expect.objectContaining({
+            Hero: 'HeroB',
+            Score: '7.00',
+            Steps: '-3 (1 steps)',
+          }),
         ]),
       );
       expect(logSpy).toHaveBeenCalledWith(
@@ -604,7 +617,9 @@ describe('Target Scoring System', () => {
       const heroA = createTestHero('HeroA', 1, 2, 10);
       const heroB = createTestHero('HeroB', 1, 3, 8);
 
-      const groupSpy = vi.spyOn(console, 'groupCollapsed').mockImplementation(() => {});
+      const groupSpy = vi
+        .spyOn(console, 'groupCollapsed')
+        .mockImplementation(() => {});
       const tableSpy = vi.spyOn(console, 'table').mockImplementation(() => {});
 
       selectScoredTarget([heroA, heroB], {
@@ -613,7 +628,9 @@ describe('Target Scoring System', () => {
         randomVal: 0,
       });
 
-      expect(groupSpy).toHaveBeenCalledWith(expect.stringContaining('[AI Target] Orc'));
+      expect(groupSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[AI Target] Orc'),
+      );
       expect(tableSpy).toHaveBeenCalled();
 
       groupSpy.mockRestore();

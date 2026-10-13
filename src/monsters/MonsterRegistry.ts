@@ -88,3 +88,10 @@ export const registerMonsterAbilityHandler = (
 export const getMonsterAbilityHandler = (
   ability: string,
 ): MonsterAbilityHandler | undefined => monsterAbilityHandlers[ability];
+
+export {
+  registerMonsterBehaviors,
+  getMonsterBehaviors,
+  hasMonsterBehaviors,
+  clearMonsterBehaviors,
+} from './behavior/registry';

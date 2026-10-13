@@ -16,7 +16,9 @@ export const logMonsterTargetSelection = (
   if (!logData.candidates || logData.candidates.length === 0) return;
 
   const targetType = logData.actionType
-    ? `${logData.actionType.charAt(0).toUpperCase() + logData.actionType.slice(1)} Target`
+    ? `${
+        logData.actionType.charAt(0).toUpperCase() + logData.actionType.slice(1)
+      } Target`
     : 'Target Selection';
 
   const groupLabel = `[AI Target] ${logData.monster.name} (${targetType})`;
@@ -48,12 +50,14 @@ export const logMonsterTargetSelection = (
     );
   } else {
     logData.candidates.forEach((c) => {
+      const isLastAttacker = c.isLastAttacker ? 'YES' : 'NO';
+      const noticedKill = c.noticedKill ? 'YES' : 'NO';
       console.log(
         `${c.hero.name}: Score=${c.score.toFixed(2)}, Steps=${
           c.stepsNeeded
-        }, LastAttacker=${c.isLastAttacker}, Targeted=${
+        }, LastAttacker=${isLastAttacker}, Targeted=${
           c.targetedTimes
-        }, KillNoticed=${c.noticedKill}, Random=+${c.randomBonus.toFixed(2)}`,
+        }, KillNoticed=${noticedKill}, Random=+${c.randomBonus.toFixed(2)}`,
       );
     });
   }
