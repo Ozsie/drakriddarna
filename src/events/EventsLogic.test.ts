@@ -59,6 +59,8 @@ describe('Orc Drums event and resetEventEffects', () => {
     const orc = createMonster(MonsterType.ORC, Colour.Red, 1, 1);
     const troll = createMonster(MonsterType.TROLL, Colour.Green, 2, 2);
     state.dungeon.layout.monsters = [orc, troll];
+    state.dungeon.layout.grid = ['AA', 'AA'];
+    state.dungeon.discoveredRooms = ['A'];
 
     expect(orc.actions).toBe(2);
     expect(troll.actions).toBe(2);
@@ -80,6 +82,14 @@ describe('Orc Drums event and resetEventEffects', () => {
     expect(orc.actions).toBe(3);
     expect(troll.actions).toBe(2);
     expect(event.used).toBe(true);
+    expect(state.damageIndicators).toBeDefined();
+    expect(
+      state.damageIndicators?.some(
+        (ind) =>
+          ind.text === '+ACTIONS' ||
+          ind.text === 'content.indicators.moreActions',
+      ),
+    ).toBe(true);
 
     resetEventEffects(state);
 

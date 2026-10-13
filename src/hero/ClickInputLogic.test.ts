@@ -15,8 +15,10 @@ import {
   screenToGridPosition,
   doMouseLogic,
 } from './ClickInputLogic';
+import { RadialAction } from './RadialMenuLogic';
 import { get } from 'svelte/store';
 import { radialMenuStore } from '../store/radialMenuStore';
+import { TARGET, TARGET_ANY_HERO } from '../items/ItemLogic';
 
 const defaultWeapon: Weapon = {
   name: 'Sword',
@@ -313,6 +315,138 @@ describe('doMouseLogic with camera', () => {
 
       // Hero should not have moved
       expect(hero.position).toEqual({ x: 1, y: 1 });
+    } finally {
+      globalThis.document = origDocument;
+    }
+  });
+
+  it('opens radial menu when clicking adjacent hero if current hero has a TARGET_ANY_HERO item', () => {
+    const state = createTestState();
+    const hero1 = state.currentActor as Hero;
+    const hero2 = createTestHero('Helga', 2, 1);
+    state.heroes = [hero1, hero2];
+
+    const healingHerbs = {
+      id: 'healing_herbs',
+      name: 'Healing Herbs',
+      type: ItemType.MAGIC,
+      value: 0,
+      amountInDeck: 1,
+      properties: {
+        ACTIVE: true,
+        USED: false,
+        USED_ON: [],
+        [TARGET]: TARGET_ANY_HERO,
+      },
+    };
+    hero1.inventory = [healingHerbs];
+
+    const mockElement = {
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        width: 800,
+        height: 600,
+        right: 800,
+        bottom: 600,
+      }),
+    };
+    const origDocument = globalThis.document;
+    globalThis.document = {
+      getElementById: (id: string) => {
+        if (id === 'gameBoard') return mockElement as unknown as HTMLElement;
+        return null;
+      },
+    } as unknown as Document;
+
+    try {
+      // Click on cell (2, 1) where hero2 is located -> screen center (400, 300) is (1, 1), so (2, 1) is (448, 300)
+      const clickAdjacentHeroEvent = {
+        clientX: 448,
+        clientY: 300,
+      } as MouseEvent;
+
+      doMouseLogic(clickAdjacentHeroEvent, 48, state, {
+        panX: 0,
+        panY: 0,
+        viewWidth: 800,
+        viewHeight: 600,
+      });
+
+      const menu = get(radialMenuStore);
+      expect(menu).not.toBeNull();
+      expect(menu?.x).toBe(2);
+      expect(menu?.y).toBe(1);
+      expect(menu?.entries).toHaveLength(1);
+      expect(menu?.entries[0].action).toBe(RadialAction.USE_ITEM);
+      expect(menu?.entries[0].item).toEqual(healingHerbs);
+      expect(menu?.entries[0].targetHero).toEqual(hero2);
+    } finally {
+      globalThis.document = origDocument;
+    }
+  });
+
+  it('opens radial menu when clicking adjacent hero with TARGET: "TARGET_ANY_HERO" even on corridor/undiscovered cell', () => {
+    const state = createTestState();
+    const hero1 = state.currentActor as Hero;
+    const hero2 = createTestHero('Helga', 2, 1);
+    state.heroes = [hero1, hero2];
+    state.dungeon.discoveredRooms = []; // unlisted cell
+
+    const magicItemWithTargetAnyHero = {
+      id: 'custom_herbs',
+      name: 'Custom Herbs',
+      type: ItemType.MAGIC,
+      value: 0,
+      amountInDeck: 1,
+      properties: {
+        ACTIVE: true,
+        USED: false,
+        USED_ON: [],
+        TARGET: 'TARGET_ANY_HERO',
+      },
+    };
+    hero1.inventory = [magicItemWithTargetAnyHero];
+
+    const mockElement = {
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        width: 800,
+        height: 600,
+        right: 800,
+        bottom: 600,
+      }),
+    };
+    const origDocument = globalThis.document;
+    globalThis.document = {
+      getElementById: (id: string) => {
+        if (id === 'gameBoard') return mockElement as unknown as HTMLElement;
+        return null;
+      },
+    } as unknown as Document;
+
+    try {
+      const clickAdjacentHeroEvent = {
+        clientX: 448,
+        clientY: 300,
+      } as MouseEvent;
+
+      doMouseLogic(clickAdjacentHeroEvent, 48, state, {
+        panX: 0,
+        panY: 0,
+        viewWidth: 800,
+        viewHeight: 600,
+      });
+
+      const menu = get(radialMenuStore);
+      expect(menu).not.toBeNull();
+      expect(menu?.x).toBe(2);
+      expect(menu?.y).toBe(1);
+      expect(menu?.entries).toHaveLength(1);
+      expect(menu?.entries[0].action).toBe(RadialAction.USE_ITEM);
+      expect(menu?.entries[0].item).toEqual(magicItemWithTargetAnyHero);
+      expect(menu?.entries[0].targetHero).toEqual(hero2);
     } finally {
       globalThis.document = origDocument;
     }

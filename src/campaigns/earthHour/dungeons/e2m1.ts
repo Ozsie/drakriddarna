@@ -119,8 +119,8 @@ export const e2m1: Dungeon = defineDungeon({
         10,
         'addHero',
         {
-          name: 'Oswin',
-          colour: Colour.Yellow,
+          name: 'Wulf',
+          colour: Colour.Blue,
           oneTime: true,
         },
       ],

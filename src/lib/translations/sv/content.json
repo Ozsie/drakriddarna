@@ -68,7 +68,10 @@
     }
   },
   "event": {
-    "current": "Nuvarande händelse"
+    "current": "Nuvarande händelse",
+    "count": "Händelser",
+    "drawn": "Dragna",
+    "none": "(Inga dragna än)"
   },
   "diary": {
     "label": "Dagbok (runda {{turn}})",
@@ -80,6 +83,7 @@
     "openDoor": "Öppna dörr",
     "pickUpItem": "Plocka upp föremål",
     "interact": "Interagera",
+    "useItem": "Använd föremål",
     "next": "Nästa"
   },
   "difficulty": {
@@ -95,5 +99,18 @@
       "name": "Svår",
       "description": "Svår: -1 skada, -1 försvar, -1 förflyttning, -1 leta"
     }
-  }
+  },
+  "indicators": {
+    "plusAction": "+{{actions}} handling",
+    "plusActions": "+{{actions}} handlingar",
+    "minusAction": "-{{actions}} handling",
+    "minusActions": "-{{actions}} handlingar",
+    "moreActions": "+HANDLINGAR",
+    "blinded": "BLÄNDAD",
+    "elemental": "ELEMENTÄR",
+    "weakened": "FÖRSVAGAD",
+    "invisible": "OSYNLIG",
+    "levelUp": "NY NIVÅ!"
+  },
+  "turn": "Runda"
 }

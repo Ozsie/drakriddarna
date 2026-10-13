@@ -63,6 +63,7 @@ export {
   RE_ROLL_ATTACK,
   canAct,
   createDamageIndicator,
+  createIndicator,
   doorAsActor,
   getDamageString,
   getEffectiveMaxMovement,

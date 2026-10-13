@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   createDamageIndicator,
+  createIndicator,
   doorAsActor,
   getDamageString,
   getEffectiveMaxMovement,
@@ -290,6 +291,7 @@ describe('combat module', () => {
   it('createDamageIndicator and removeDamageIndicator manage indicator state', () => {
     const indicator = createDamageIndicator(4, { x: 3, y: 5 });
     expect(indicator.damage).toBe(4);
+    expect(indicator.text).toBe('4');
     expect(indicator.position).toEqual({ x: 3, y: 5 });
     expect(indicator.id).toBeDefined();
 
@@ -308,5 +310,26 @@ describe('combat module', () => {
 
     removeDamageIndicator(state, indicator.id);
     expect(state.damageIndicators).toEqual([]);
+  });
+
+  it('createIndicator supports string, custom color, effects, and options', () => {
+    const indicator = createIndicator(
+      'HEAL +3',
+      { x: 2, y: 4 },
+      {
+        color: '#33ff33',
+        effect: 'bounce',
+        durationMs: 1500,
+        fontSizeScale: 1.2,
+        offset: { y: 10 },
+      },
+    );
+    expect(indicator.text).toBe('HEAL +3');
+    expect(indicator.color).toBe('#33ff33');
+    expect(indicator.effect).toBe('bounce');
+    expect(indicator.durationMs).toBe(1500);
+    expect(indicator.fontSizeScale).toBe(1.2);
+    expect(indicator.offset).toEqual({ y: 10 });
+    expect(indicator.position).toEqual({ x: 2, y: 4 });
   });
 });

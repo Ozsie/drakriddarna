@@ -340,9 +340,14 @@ const selectAction = (
   }
 };
 
-const selectRangedTarget = (possibleTargets: Hero[], monster: Monster): Hero =>
-  possibleTargets
-    .filter((hero) => !hero.shield)
+const selectRangedTarget = (
+  possibleTargets: Hero[],
+  monster: Monster,
+): Hero => {
+  const unshielded = possibleTargets.filter((hero) => !hero.shield);
+  const targets = unshielded.length > 0 ? unshielded : possibleTargets;
+  return targets
+    .slice()
     .sort((hero) => getDist(monster.position, hero.position))
     .sort(
       (a, b) =>
@@ -350,6 +355,7 @@ const selectRangedTarget = (possibleTargets: Hero[], monster: Monster): Hero =>
         getDist(monster.position, a.position) -
           getDist(monster.position, b.position),
     )[0];
+};
 
 const selectMeleeTarget = (possibleTargets: Hero[]): Hero =>
   possibleTargets.sort((a, b) => b.health - a.health)[0];

@@ -1,6 +1,12 @@
 import type { Item, Weapon } from '../types';
 import { ItemType } from '../types';
-import { NEXT_DUNGEON, NEXT_TURN, TRADE } from './ItemLogic';
+import {
+  NEXT_DUNGEON,
+  NEXT_TURN,
+  TARGET,
+  TARGET_ANY_HERO,
+  TARGET_SELF,
+} from './ItemLogic';
 
 export const magicItems: Item[] = [
   {
@@ -8,13 +14,16 @@ export const magicItems: Item[] = [
     name: 'items.magicItems.healingHerbs.name',
     nameTranslationKey: 'items.magicItems.healingHerbs.name',
     type: ItemType.MAGIC,
+    icon: '🌿',
     value: 0,
     amountInDeck: 1,
     properties: {
       USED: false,
+      USED_ON: [],
       ACTIVE: true,
+      [TARGET]: TARGET_ANY_HERO,
       DESCRIPTION: 'items.magicItems.healingHerbs.description',
-      RESET_ON: [TRADE, NEXT_DUNGEON],
+      RESET_ON: [NEXT_DUNGEON],
     },
     effect: 'magicHerbsOnUse',
     reset: 'magicHerbsOnReset',
@@ -94,6 +103,7 @@ export const magicItems: Item[] = [
     name: 'items.magicItems.potionOfSpeed.name',
     nameTranslationKey: 'items.magicItems.potionOfSpeed.name',
     type: ItemType.MAGIC,
+    icon: '⚡',
     value: 0,
     amountInDeck: 1,
     properties: {
@@ -101,6 +111,7 @@ export const magicItems: Item[] = [
       USED: false,
       ACTIONS_BONUS: 2,
       ACTIVE: true,
+      [TARGET]: TARGET_SELF,
     },
     effect: 'potionOfSpeedOnUse',
   },
@@ -109,12 +120,14 @@ export const magicItems: Item[] = [
     name: 'items.magicItems.necklaceOfLight.name',
     nameTranslationKey: 'items.magicItems.necklaceOfLight.name',
     type: ItemType.MAGIC,
+    icon: '📿',
     value: 0,
     amountInDeck: 1,
     properties: {
       USED: false,
       RESET_ON: [NEXT_TURN],
       ACTIVE: true,
+      [TARGET]: TARGET_SELF,
       DESCRIPTION: 'items.magicItems.necklaceOfLight.description',
     },
     effect: 'necklaceOfLightOnUse',
