@@ -69,6 +69,12 @@
     toggleHeroInventory,
     useHeroItem,
   } from '../store/gameStateStore';
+  import {
+    createTouchPanState,
+    handleTwoFingerTouchStart,
+    handleTwoFingerTouchMove,
+    handleTwoFingerTouchEnd,
+  } from '../input/TouchPanLogic';
 
   export let state: GameState | undefined = undefined;
   export let debugMode: boolean | undefined = undefined;
@@ -104,6 +110,7 @@
   let dragStartPanX = 0;
   let dragStartPanY = 0;
   let hasMovedDuringDrag = false;
+  let touchPanState = createTouchPanState();
 
   let staticCanvas: HTMLCanvasElement | null = null;
   let actorCanvas: HTMLCanvasElement | null = null;
@@ -551,6 +558,60 @@
     }
   };
 
+  const onTouchStart = (event: TouchEvent) => {
+    const started = handleTwoFingerTouchStart(
+      event.touches,
+      { x: panX, y: panY },
+      touchPanState,
+    );
+    if (started) {
+      hasMovedDuringDrag = false;
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+    }
+  };
+
+  const onTouchMove = (event: TouchEvent) => {
+    const result = handleTwoFingerTouchMove(event.touches, touchPanState);
+    if (result) {
+      panX = result.panX;
+      panY = result.panY;
+      if (result.moved) {
+        hasMovedDuringDrag = true;
+      }
+      updateAllCanvasTransforms();
+      renderCanvas(true);
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+    }
+  };
+
+  const onTouchEnd = (event: TouchEvent) => {
+    const result = handleTwoFingerTouchEnd(
+      event.touches,
+      touchPanState,
+      { x: panX, y: panY },
+    );
+    if (result.shouldEnd) {
+      if (hasMovedDuringDrag) {
+        setTimeout(() => {
+          hasMovedDuringDrag = false;
+        }, 50);
+      }
+    }
+  };
+
+  const onTouchCancel = () => {
+    touchPanState.isDragging = false;
+    if (hasMovedDuringDrag) {
+      setTimeout(() => {
+        hasMovedDuringDrag = false;
+      }, 50);
+    }
+  };
+
   onMount(() => {
     isMounted = true;
     ground = new Image();
@@ -559,6 +620,9 @@
     if (browser) {
       window.addEventListener('mousemove', onWindowMouseMove);
       window.addEventListener('mouseup', onWindowMouseUp);
+      window.addEventListener('touchmove', onTouchMove, { passive: false });
+      window.addEventListener('touchend', onTouchEnd);
+      window.addEventListener('touchcancel', onTouchCancel);
     }
 
     const ratio = (browser && window.devicePixelRatio) || 1;
@@ -606,6 +670,9 @@
     if (browser) {
       window.removeEventListener('mousemove', onWindowMouseMove);
       window.removeEventListener('mouseup', onWindowMouseUp);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchcancel', onTouchCancel);
       window.removeEventListener('keydown', onWindowKeyDown);
     }
     if (overlayAnimationId) {
@@ -1645,6 +1712,10 @@
       on:mousedown={onMouseDown}
       on:mousemove={onMouseMove}
       on:mouseleave={onMouseLeave}
+      on:touchstart={onTouchStart}
+      on:touchmove={onTouchMove}
+      on:touchend={onTouchEnd}
+      on:touchcancel={onTouchCancel}
       on:wheel={onWheel}
       on:contextmenu|preventDefault
     ></canvas>
@@ -1658,6 +1729,7 @@
     width: 100%;
     height: 100%;
     position: relative;
+    touch-action: none;
   }
   .canvasContainer {
     position: relative;

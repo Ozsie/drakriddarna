@@ -271,7 +271,10 @@ export class InputManager {
    * Touch / Gesture Handlers
    */
   public handleTouchStart = (event: TouchEvent): void => {
-    if (!this.enabled || event.touches.length === 0) return;
+    if (!this.enabled || event.touches.length !== 1) {
+      this.touchStartPos = null;
+      return;
+    }
     const touch = event.touches[0];
     this.touchStartPos = {
       x: touch.clientX,
@@ -284,7 +287,8 @@ export class InputManager {
     if (
       !this.enabled ||
       !this.touchStartPos ||
-      event.changedTouches.length === 0
+      event.changedTouches.length === 0 ||
+      (event.touches && event.touches.length > 0)
     ) {
       this.touchStartPos = null;
       return false;

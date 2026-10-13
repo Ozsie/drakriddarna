@@ -305,6 +305,42 @@ describe('InputManager', () => {
       expect(handled).toBe(true);
       expect(store.moveHero).toHaveBeenCalledWith('DR');
     });
+
+    it('ignores multi-finger touches to prevent moving heroes during two-finger pan', () => {
+      // 2 fingers on touchstart
+      manager.handleTouchStart({
+        touches: [
+          { clientX: 100, clientY: 100 },
+          { clientX: 200, clientY: 200 },
+        ],
+      } as unknown as TouchEvent);
+
+      let handled = manager.handleTouchEnd({
+        changedTouches: [{ clientX: 180, clientY: 100 }],
+      } as unknown as TouchEvent);
+
+      expect(handled).toBe(false);
+      expect(store.moveHero).not.toHaveBeenCalled();
+
+      // Start with 1 finger then 2nd finger placed down
+      manager.handleTouchStart({
+        touches: [{ clientX: 100, clientY: 100 }],
+      } as unknown as TouchEvent);
+
+      manager.handleTouchStart({
+        touches: [
+          { clientX: 100, clientY: 100 },
+          { clientX: 200, clientY: 200 },
+        ],
+      } as unknown as TouchEvent);
+
+      handled = manager.handleTouchEnd({
+        changedTouches: [{ clientX: 180, clientY: 100 }],
+      } as unknown as TouchEvent);
+
+      expect(handled).toBe(false);
+      expect(store.moveHero).not.toHaveBeenCalled();
+    });
   });
 
   describe('Lifecycle (Attach / Detach)', () => {
