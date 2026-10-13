@@ -134,6 +134,10 @@ export const resolveChaosSwordAttack = (
   user: Actor,
   target: Actor,
 ): void => {
+  if (state.heroes.includes(user)) {
+    target.lastAttackedBy = user.id ?? user.name;
+    target.lastAttackedByHero = user;
+  }
   const attackDifficultyModifier = getDifficulty(state).modifiers.attack;
   const hits = roll(user.level, 4 + attackDifficultyModifier);
 

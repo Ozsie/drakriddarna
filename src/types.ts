@@ -30,6 +30,7 @@ export type GameState = {
   damageIndicators?: DamageIndicator[];
   roundActionsDelta?: number;
   drawEvents: boolean;
+  roundTargetCounts?: Record<string, number>;
 };
 
 export type IndicatorEffect = 'float' | 'bounce' | 'crit' | 'fade' | 'static';
@@ -88,6 +89,9 @@ export type Actor = {
   ignoredByMonsters?: boolean;
   blinded?: boolean;
   weakened?: boolean;
+  lastAttackedBy?: string;
+  lastAttackedByHero?: Actor;
+  roundTargetCount?: number;
 };
 
 export type Hero = Actor & {
@@ -100,6 +104,8 @@ export type Monster = Actor & {
   temperament?: 'bold' | 'wary';
   passiveStreak?: number;
   forgotBowThisTurn?: boolean;
+  lastAttackedBy?: string;
+  lastAttackedByHero?: Actor;
 };
 
 // `MonsterType` is intentionally not a closed `enum`: campaigns need to be

@@ -1,4 +1,4 @@
-import type { Actor, GameState, Hero, Monster, Position } from '../types';
+import  { type Actor, type GameState, type Hero, Level, type Monster, type Position, type Weapon } from '../types';
 import { MonsterType } from '../types';
 import {
   getMonsterAbilities,
@@ -18,7 +18,6 @@ import {
 import {
   findCell,
   findNeighbouringHeroes,
-  getDist,
   hasLineOfSight,
   isNeighbouring,
   isRoomDiscovered,
@@ -39,9 +38,13 @@ import {
   getBehaviorsForMonsterType,
   getDirectorState,
   logMonsterBehaviorDecision,
+  resetRoundTargetCounters,
   rollBowForgotten,
   selectBehavior,
+  selectScoredTarget,
 } from './behavior';
+
+export { resetRoundTargetCounters } from './behavior';
 
 export interface MonsterTurnOptions {
   delayBetweenMonsters?: number;
@@ -102,6 +105,7 @@ export const monsterActions = async (
   state: GameState,
   options?: MonsterTurnOptions,
 ): Promise<void> => {
+  resetRoundTargetCounters(state);
   const opts = { ...DEFAULT_MONSTER_TURN_OPTIONS, ...options };
   const visibleMonsters = findVisibleMonsters(state);
   if (visibleMonsters.length === 0) {
@@ -246,7 +250,7 @@ export const monsterActions = async (
       const visible = findVisibleHeroes(state, monster);
 
       if (neighbours.length > 0) {
-        const target = selectMeleeTarget(neighbours);
+        const target = selectMeleeTarget(neighbours, monster, state);
         monsterAttack(state, monster, target, false);
         performedAttack = true;
         doReRender(state);
@@ -259,7 +263,7 @@ export const monsterActions = async (
         monster.rangedWeapon &&
         !monster.forgotBowThisTurn
       ) {
-        const target = selectRangedTarget(visible, monster);
+        const target = selectRangedTarget(visible, monster, state);
         monsterAttack(state, monster, target, true);
         performedAttack = true;
         doReRender(state);
@@ -327,7 +331,7 @@ const executeSlotAction = async (
         (h) => !h.ignoredByMonsters,
       );
       if (neighbours.length > 0) {
-        const target = selectMeleeTarget(neighbours);
+        const target = selectMeleeTarget(neighbours, monster, state);
         monsterAttack(state, monster, target, false);
         onAttack();
         doReRender(state);
@@ -347,7 +351,7 @@ const executeSlotAction = async (
         monster.rangedWeapon &&
         !monster.forgotBowThisTurn
       ) {
-        const target = selectRangedTarget(visible, monster);
+        const target = selectRangedTarget(visible, monster, state);
         monsterAttack(state, monster, target, true);
         onAttack();
         doReRender(state);
@@ -445,7 +449,7 @@ const executeSlotAction = async (
         (h) => !h.ignoredByMonsters,
       );
       if (neighbours.length > 0) {
-        const target = selectMeleeTarget(neighbours);
+        const target = selectMeleeTarget(neighbours, monster, state);
         monsterAttack(state, monster, target, false);
         onAttack();
         doReRender(state);
@@ -474,22 +478,57 @@ const executeSlotAction = async (
 export const selectRangedTarget = (
   possibleTargets: Hero[],
   monster: Monster,
+  state?: GameState,
+  rng?: () => number,
 ): Hero => {
+  if (possibleTargets.length === 0) return possibleTargets[0];
   const unshielded = possibleTargets.filter((hero) => !hero.shield);
   const targets = unshielded.length > 0 ? unshielded : possibleTargets;
-  return targets
-    .slice()
-    .sort((hero) => getDist(monster.position, hero.position))
-    .sort(
-      (a, b) =>
-        b.health - a.health ||
-        getDist(monster.position, a.position) -
-          getDist(monster.position, b.position),
-    )[0];
+  if (targets.length === 1) return targets[0];
+
+  return selectScoredTarget(targets, {
+    state,
+    monster,
+    ranged: true,
+    stepsByHero: () => 0,
+    rng,
+  });
 };
 
-export const selectMeleeTarget = (possibleTargets: Hero[]): Hero =>
-  possibleTargets.slice().sort((a, b) => b.health - a.health)[0];
+export const selectMeleeTarget = (
+  possibleTargets: Hero[],
+  monsterOrState?: Monster | GameState,
+  stateOrMonster?: GameState | Monster,
+  rng?: () => number,
+): Hero => {
+  if (possibleTargets.length === 0) return possibleTargets[0];
+  if (possibleTargets.length === 1) return possibleTargets[0];
+
+  let monster: Monster | undefined;
+  let state: GameState | undefined;
+  if (monsterOrState && 'type' in monsterOrState) {
+    monster = monsterOrState;
+    state = stateOrMonster as GameState | undefined;
+  } else if (monsterOrState && 'dungeon' in monsterOrState) {
+    state = monsterOrState;
+    monster = stateOrMonster as Monster | undefined;
+  }
+
+  if (!monster) {
+    monster = {
+      level: Level.MASTER,
+      weapon: { dice: 3 } as Weapon,
+    } as Monster;
+  }
+
+  return selectScoredTarget(possibleTargets, {
+    state,
+    monster,
+    ranged: false,
+    stepsByHero: () => 0,
+    rng,
+  });
+};
 
 const findVisibleHeroes = (state: GameState, monster: Monster): Hero[] =>
   liveHeroes(state)
@@ -514,6 +553,13 @@ export const monsterAttack = (
   hero: Hero,
   ranged: boolean,
 ) => {
+  hero.roundTargetCount = (hero.roundTargetCount ?? 0) + 1;
+  if (!state.roundTargetCounts) {
+    state.roundTargetCounts = {};
+  }
+  const heroKey = hero.id ?? hero.name;
+  state.roundTargetCounts[heroKey] =
+    (state.roundTargetCounts[heroKey] ?? 0) + 1;
   takeDamage(state, monster, hero, ranged);
   monster.actions--;
 };
@@ -708,6 +754,15 @@ const performFireAttack = (
   targets: Actor[],
 ) => {
   targets.forEach((target) => {
+    if (state.heroes.includes(target as Hero)) {
+      target.roundTargetCount = (target.roundTargetCount ?? 0) + 1;
+      if (!state.roundTargetCounts) {
+        state.roundTargetCounts = {};
+      }
+      const heroKey = target.id ?? target.name;
+      state.roundTargetCounts[heroKey] =
+        (state.roundTargetCounts[heroKey] ?? 0) + 1;
+    }
     if (target.armour?.magicProtection) {
       addLog(state, 'logs.monsterAction.fireAttackDeflected', {
         monster: i18n(source.name),
