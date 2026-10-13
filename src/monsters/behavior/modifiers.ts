@@ -1,3 +1,5 @@
+import type { Difficulty, GameState } from '../../types';
+import { DifficultLevels, getDifficulty } from '../../core/DifficultLevels';
 import type {
   BehaviorContext,
   DirectorState,
@@ -19,15 +21,22 @@ export const getDirectorState = (
   return 'NEUTRAL';
 };
 
-export const rollBowForgotten = (difficultyId?: string): boolean => {
-  if (difficultyId === 'easy') {
-    return Math.random() < 0.25;
+export const rollBowForgotten = (
+  difficultyOrState?: Difficulty | GameState | string,
+): boolean => {
+  let difficulty: Difficulty | undefined;
+  if (typeof difficultyOrState === 'string') {
+    difficulty = DifficultLevels.find((d) => d.id === difficultyOrState);
+  } else if (difficultyOrState && 'modifiers' in difficultyOrState) {
+    difficulty = difficultyOrState;
+  } else if (difficultyOrState && 'heroes' in difficultyOrState) {
+    difficulty = getDifficulty(difficultyOrState);
+  } else {
+    difficulty = getDifficulty(undefined);
   }
-  if (difficultyId === 'hard') {
-    return false;
-  }
-  // Normal difficulty: 15%
-  return Math.random() < 0.15;
+
+  const chance = difficulty?.monsterBehavior?.bowForgottenChance ?? 0.15;
+  return Math.random() < chance;
 };
 
 export const calculateBehaviorWeight = (

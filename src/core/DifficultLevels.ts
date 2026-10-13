@@ -13,6 +13,9 @@ export const DifficultLevels: Difficulty[] = [
       movement: 1,
       search: 2,
     },
+    monsterBehavior: {
+      bowForgottenChance: 0.25,
+    },
   },
   {
     id: 'normal',
@@ -24,6 +27,9 @@ export const DifficultLevels: Difficulty[] = [
       movement: 0,
       search: 0,
     },
+    monsterBehavior: {
+      bowForgottenChance: 0.15,
+    },
   },
   {
     id: 'hard',
@@ -34,6 +40,9 @@ export const DifficultLevels: Difficulty[] = [
       defense: -1,
       movement: -1,
       search: -1,
+    },
+    monsterBehavior: {
+      bowForgottenChance: 0,
     },
   },
 ];

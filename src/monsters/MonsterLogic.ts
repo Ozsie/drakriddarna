@@ -124,7 +124,7 @@ export const monsterActions = async (
     if (!monster.temperament) {
       monster.temperament = Math.random() < 0.5 ? 'bold' : 'wary';
     }
-    monster.forgotBowThisTurn = rollBowForgotten(state.difficulty?.id);
+    monster.forgotBowThisTurn = rollBowForgotten(state);
 
     // Compute director context
     const allHeroes = state.heroes;

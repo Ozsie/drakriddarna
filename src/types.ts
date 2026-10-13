@@ -577,6 +577,10 @@ export function assertNever(x: never, message = 'Unexpected object'): never {
   throw new Error(`${message}: ${JSON.stringify(x)}`);
 }
 
+export type MonsterBehaviorDifficulty = {
+  bowForgottenChance: number;
+};
+
 export type Difficulty = {
   id: string;
   nameTranslationKey: string;
@@ -587,4 +591,5 @@ export type Difficulty = {
     movement: number;
     search: number;
   };
+  monsterBehavior?: MonsterBehaviorDifficulty;
 };

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   Colour,
   ConditionType,
@@ -10,6 +10,7 @@ import {
   MonsterType,
   type Weapon,
 } from '../../types';
+import { DifficultLevels } from '../../core/DifficultLevels';
 import { createMonster } from '../../dungeon/DungeonLogic';
 import { createPassableGrid } from '../pathfinding';
 import {
@@ -124,11 +125,31 @@ describe('Monster Behavioral Modifiers & Formulas', () => {
     expect(getDirectorState(false, 0.6, 1)).toBe('NEUTRAL');
   });
 
-  it('bow forgotten rolls accurately per difficulty', () => {
+  it('bow forgotten rolls accurately per difficulty level definition', () => {
     // Hard difficulty should never forget bow
     for (let i = 0; i < 20; i++) {
       expect(rollBowForgotten('hard')).toBe(false);
     }
+
+    // Easy difficulty (25%) with custom difficulty object or string
+    const easyDiff = DifficultLevels.find((d) => d.id === 'easy');
+    expect(easyDiff?.monsterBehavior?.bowForgottenChance).toBe(0.25);
+
+    const normalDiff = DifficultLevels.find((d) => d.id === 'normal');
+    expect(normalDiff?.monsterBehavior?.bowForgottenChance).toBe(0.15);
+
+    const hardDiff = DifficultLevels.find((d) => d.id === 'hard');
+    expect(hardDiff?.monsterBehavior?.bowForgottenChance).toBe(0);
+
+    const randomSpy = vi.spyOn(Math, 'random');
+    randomSpy.mockReturnValue(0.2); // 0.2 < 0.25 (easy) but >= 0.15 (normal)
+    expect(rollBowForgotten('easy')).toBe(true);
+    expect(rollBowForgotten(easyDiff)).toBe(true);
+    expect(rollBowForgotten('normal')).toBe(false);
+    expect(rollBowForgotten(normalDiff)).toBe(false);
+    expect(rollBowForgotten('hard')).toBe(false);
+    expect(rollBowForgotten(hardDiff)).toBe(false);
+    randomSpy.mockRestore();
   });
 
   it('applies temperament, director, and anti-stall multipliers to weights', () => {
