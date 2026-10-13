@@ -12,6 +12,7 @@ export interface TargetScoreOptions {
   rng?: () => number;
   noticeRoll?: number;
   randomVal?: number;
+  debug?: boolean;
 }
 
 export interface ScoredHero {
@@ -160,6 +161,8 @@ export const selectScoredTarget = (
     candidates: scored,
     selectedHero: scored[0].hero,
     actionType: options.ranged ? 'ranged' : 'melee',
+    state: options.state,
+    debug: options.debug,
   });
 
   return scored[0].hero;

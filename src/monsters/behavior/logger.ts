@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import type { BehaviorDecision } from './types';
-import type { Hero, Monster } from '../../types';
+import type { GameState, Hero, Monster } from '../../types';
 import type { ScoredHero } from './scoring';
 
 export interface TargetSelectionLog {
@@ -8,11 +8,15 @@ export interface TargetSelectionLog {
   candidates: ScoredHero[];
   selectedHero?: Hero;
   actionType?: 'melee' | 'ranged' | 'pathfinding' | string;
+  state?: GameState;
+  debug?: boolean;
 }
 
 export const logMonsterTargetSelection = (
   logData: TargetSelectionLog,
 ): void => {
+  const isDebug = logData.debug ?? Boolean(logData.state?.settings?.['debug']);
+  if (!isDebug) return;
   if (!logData.candidates || logData.candidates.length === 0) return;
 
   const targetType = logData.actionType

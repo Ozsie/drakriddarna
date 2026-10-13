@@ -416,8 +416,8 @@ describe('Target Scoring System', () => {
       const state = createTestState();
       const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
 
-      const hero1 = state.heroes[0]; // 10 HP
-      const hero2 = state.heroes[1]; // 5 HP
+      const hero1 = state.heroes[0] as Hero; // 10 HP
+      const hero2 = state.heroes[1] as Hero; // 5 HP
 
       // Set hero1 as last attacker (+3) and hero2 targeted 2 times (-4)
       monster.lastAttackedBy = hero1.name;
@@ -479,7 +479,7 @@ describe('Target Scoring System', () => {
     it('monsterAttack increments roundTargetCount on hero and state', () => {
       const state = createTestState();
       const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
-      const hero = state.heroes[0];
+      const hero = state.heroes[0] as Hero;
 
       expect(hero.roundTargetCount).toBe(0);
       monsterAttack(state, monster, hero, false);
@@ -514,7 +514,7 @@ describe('Target Scoring System', () => {
 
     it('records lastAttackedBy on monster when hero attacks in combat', () => {
       const state = createTestState();
-      const hero = state.heroes[0];
+      const hero = state.heroes[0] as Hero;
       const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 3);
       state.dungeon.layout.monsters = [monster];
 
@@ -527,7 +527,7 @@ describe('Target Scoring System', () => {
 
     it('records lastAttackedBy when hero executes attack action', () => {
       const state = createTestState();
-      const hero = state.heroes[0];
+      const hero = state.heroes[0] as Hero;
       hero.position = { x: 1, y: 2 };
       state.heroes[1].position = { x: 5, y: 5 };
       const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 3);
@@ -540,7 +540,7 @@ describe('Target Scoring System', () => {
   });
 
   describe('AI Console Logging for Target Selection', () => {
-    it('logs target evaluation table and chosen target', () => {
+    it('logs target evaluation table and chosen target when debug is true', () => {
       const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
       const heroA = createTestHero('HeroA', 1, 2, 10);
       const heroB = createTestHero('HeroB', 1, 3, 8);
@@ -580,6 +580,7 @@ describe('Target Scoring System', () => {
         ],
         selectedHero: heroA,
         actionType: 'melee',
+        debug: true,
       });
 
       expect(groupSpy).toHaveBeenCalledWith(
@@ -612,7 +613,49 @@ describe('Target Scoring System', () => {
       groupEndSpy.mockRestore();
     });
 
-    it('selectScoredTarget triggers target selection logging', () => {
+    it('does not log target selection when debug mode is inactive', () => {
+      const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
+      const heroA = createTestHero('HeroA', 1, 2, 10);
+
+      const groupSpy = vi
+        .spyOn(console, 'groupCollapsed')
+        .mockImplementation(() => {});
+      const tableSpy = vi.spyOn(console, 'table').mockImplementation(() => {});
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const groupEndSpy = vi
+        .spyOn(console, 'groupEnd')
+        .mockImplementation(() => {});
+
+      logMonsterTargetSelection({
+        monster,
+        candidates: [
+          {
+            hero: heroA,
+            score: 13,
+            stepsNeeded: 0,
+            expectedDamage: 2,
+            isLastAttacker: false,
+            targetedTimes: 0,
+            noticedKill: false,
+            randomBonus: 0,
+          },
+        ],
+        selectedHero: heroA,
+        actionType: 'melee',
+      });
+
+      expect(groupSpy).not.toHaveBeenCalled();
+      expect(tableSpy).not.toHaveBeenCalled();
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(groupEndSpy).not.toHaveBeenCalled();
+
+      groupSpy.mockRestore();
+      tableSpy.mockRestore();
+      logSpy.mockRestore();
+      groupEndSpy.mockRestore();
+    });
+
+    it('selectScoredTarget logs only when debug mode is active via options or state', () => {
       const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
       const heroA = createTestHero('HeroA', 1, 2, 10);
       const heroB = createTestHero('HeroB', 1, 3, 8);
@@ -622,10 +665,40 @@ describe('Target Scoring System', () => {
         .mockImplementation(() => {});
       const tableSpy = vi.spyOn(console, 'table').mockImplementation(() => {});
 
+      // Without debug mode
       selectScoredTarget([heroA, heroB], {
         monster,
         noticeRoll: 0.9,
         randomVal: 0,
+      });
+
+      expect(groupSpy).not.toHaveBeenCalled();
+      expect(tableSpy).not.toHaveBeenCalled();
+
+      // With debug flag in options
+      selectScoredTarget([heroA, heroB], {
+        monster,
+        noticeRoll: 0.9,
+        randomVal: 0,
+        debug: true,
+      });
+
+      expect(groupSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[AI Target] Orc'),
+      );
+      expect(tableSpy).toHaveBeenCalled();
+
+      groupSpy.mockClear();
+      tableSpy.mockClear();
+
+      // With debug setting in state
+      const stateWithDebug = createTestState();
+      stateWithDebug.settings['debug'] = true;
+      selectScoredTarget([heroA, heroB], {
+        monster,
+        noticeRoll: 0.9,
+        randomVal: 0,
+        state: stateWithDebug,
       });
 
       expect(groupSpy).toHaveBeenCalledWith(

@@ -2,8 +2,8 @@ import type { GameState, Hero, Monster, Position } from '../types';
 import { Side } from '../types';
 import { getDist, isDiscovered, isNeighbouring, isWalkable } from '../core';
 import { liveHeroes } from '../hero/HeroLogic';
-import { scoreHero, type ScoredHero } from './behavior/scoring';
-import { logMonsterTargetSelection } from './behavior/logger';
+import { scoreHero, type ScoredHero } from './behavior';
+import { logMonsterTargetSelection } from './behavior';
 
 export interface PassableGrid {
   width: number;
@@ -303,6 +303,7 @@ export const findBestPathToHeroes = (
     candidates: candidates.map((c) => c.scored),
     selectedHero: candidates[0].hero,
     actionType: 'pathfinding',
+    state,
   });
 
   return {
