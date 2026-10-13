@@ -297,5 +297,7 @@ export const createMonster = (
     position: { x, y },
     incapacitated: false,
     inventory: [],
+    temperament: Math.random() < 0.5 ? 'bold' : 'wary',
+    passiveStreak: 0,
   };
 };

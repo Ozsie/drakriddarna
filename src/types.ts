@@ -97,6 +97,9 @@ export type Hero = Actor & {
 export type Monster = Actor & {
   type: MonsterType;
   rangedWeapon?: Weapon;
+  temperament?: 'bold' | 'wary';
+  passiveStreak?: number;
+  forgotBowThisTurn?: boolean;
 };
 
 // `MonsterType` is intentionally not a closed `enum`: campaigns need to be
