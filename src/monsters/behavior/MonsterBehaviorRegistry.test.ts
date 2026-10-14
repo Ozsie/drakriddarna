@@ -84,7 +84,7 @@ describe('MonsterBehaviorRegistry', () => {
     const customBehaviors: MonsterBehavior[] = [
       {
         name: 'Custom',
-        slots: ['melee'],
+        slots: ['melee', 'melee'],
         tags: ['aggressive'],
         isEligible: () => true,
         getBaseWeight: () => 1,

@@ -87,6 +87,20 @@ When choosing which hero to attack or move towards, monsters evaluate all potent
 
 The hero with the highest final score is selected as the monster's target.
 
+## Turn Events: Monster Spawns & Difficulty Scaling
+
+Turn events that spawn monsters (`The Hungry Troll` and `The Lost Orc`) include difficulty-scaled balancing rules to prevent unfair early encounters and immediate spawn-adjacent ambushes:
+
+- **Minimum Spawn Distance**: Spawning monsters are placed at a safe minimum distance away from any live hero:
+  - **Easy**: Minimum 4 tiles away.
+  - **Normal**: Minimum 3 tiles away.
+  - **Hard**: Minimum 1 tile away.
+- **Early Round Protection**: Monster spawn events are skipped if drawn too early in the dungeon crawl:
+  - **Easy**: Earliest in round 4 (skipped during rounds 1–3).
+  - **Normal**: Earliest in round 3 (skipped during rounds 1–2).
+  - **Hard**: Earliest in round 2 (skipped during round 1).
+- **Party Health Safeguard**: If the hero party's combined health is below 50% of maximum health, the `The Hungry Troll` event is skipped on **Easy** and **Normal** difficulties.
+
 ## Todo
 - [ ] Reset caved in corridor
 - [ ] Multiple saves

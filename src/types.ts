@@ -587,6 +587,14 @@ export type MonsterBehaviorDifficulty = {
   bowForgottenChance: number;
 };
 
+export type EventDifficulty = {
+  minMonsterSpawnDistance?: number;
+  minSpawnDistance?: number;
+  earliestMonsterRound?: number;
+  earliestRound?: number;
+  skipHungryTrollBelowHalfHealth?: boolean;
+};
+
 export type Difficulty = {
   id: string;
   nameTranslationKey: string;
@@ -598,4 +606,5 @@ export type Difficulty = {
     search: number;
   };
   monsterBehavior?: MonsterBehaviorDifficulty;
+  events?: EventDifficulty;
 };
