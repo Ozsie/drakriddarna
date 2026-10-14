@@ -1,4 +1,6 @@
 import type { Difficulty, GameState } from '../types';
+import { shields } from '../items/shields';
+import { weapons } from '../items/weapons';
 
 export const DEFAULT_DIFFICULTY_ID = 'normal';
 
@@ -9,7 +11,7 @@ export const DifficultLevels: Difficulty[] = [
     descriptionTranslationKey: 'content.difficulty.easy.description',
     modifiers: {
       attack: 1,
-      defense: 1,
+      defense: 0,
       movement: 1,
       search: 2,
     },
@@ -20,6 +22,11 @@ export const DifficultLevels: Difficulty[] = [
       minMonsterSpawnDistance: 4,
       earliestMonsterRound: 4,
       skipHungryTrollBelowHalfHealth: true,
+    },
+    startingEquipment: {
+      shield: shields[1],
+      weapon: weapons[0],
+      inventory: [],
     },
   },
   {
@@ -40,6 +47,10 @@ export const DifficultLevels: Difficulty[] = [
       earliestMonsterRound: 3,
       skipHungryTrollBelowHalfHealth: true,
     },
+    startingEquipment: {
+      weapon: weapons[0],
+      inventory: [],
+    },
   },
   {
     id: 'hard',
@@ -58,6 +69,10 @@ export const DifficultLevels: Difficulty[] = [
       minMonsterSpawnDistance: 1,
       earliestMonsterRound: 2,
       skipHungryTrollBelowHalfHealth: false,
+    },
+    startingEquipment: {
+      weapon: weapons[0],
+      inventory: [],
     },
   },
 ];

@@ -10,8 +10,18 @@ import {
   Level,
   type Weapon,
   MonsterType,
+  type Difficulty,
 } from '../types';
-import { attack, canOpenDoor } from './HeroLogic';
+import {
+  attack,
+  canOpenDoor,
+  newHero,
+  applyStartingEquipment,
+} from './HeroLogic';
+import { DifficultLevels } from '../core';
+import { weapons } from '../items/weapons';
+import { shields } from '../items/shields';
+import { armour } from '../items/armours';
 import type { Door } from '../types';
 import { Side } from '../types';
 
@@ -198,5 +208,113 @@ describe('canOpenDoor', () => {
     const door = createTestDoor({ reinforced: false });
 
     expect(canOpenDoor(hero, false, door)).toBe(true);
+  });
+});
+
+describe('newHero and applyStartingEquipment', () => {
+  it('creates hero with default equipment when difficulty is not provided', () => {
+    const hero = newHero('Thor', Colour.Yellow);
+
+    expect(hero.name).toBe('Thor');
+    expect(hero.colour).toBe(Colour.Yellow);
+    expect(hero.weapon).toEqual(weapons[0]);
+    expect(hero.shield).toBeUndefined();
+    expect(hero.armour).toBeUndefined();
+    expect(hero.inventory).toEqual([]);
+  });
+
+  it('creates hero with starting equipment configured for easy difficulty', () => {
+    const easyDiff = DifficultLevels.find((d) => d.id === 'easy');
+    expect(easyDiff).toBeDefined();
+
+    const hero = newHero('Thor', Colour.Yellow, easyDiff);
+
+    expect(hero.weapon.id).toBe(weapons[0].id);
+    expect(hero.shield).toBeDefined();
+    expect(hero.shield?.id).toBe(shields[1].id);
+    expect(hero.inventory).toEqual([]);
+  });
+
+  it('clones starting equipment so heroes do not share mutable references', () => {
+    const customDifficulty: Difficulty = {
+      id: 'custom',
+      nameTranslationKey: 'custom',
+      modifiers: { attack: 0, defense: 0, movement: 0, search: 0 },
+      startingEquipment: {
+        weapon: weapons[0],
+        shield: shields[0],
+        armour: armour[0],
+        inventory: [
+          {
+            id: 'potion_1',
+            name: 'Potion',
+            amountInDeck: 1,
+            type: ItemType.MAGIC,
+            value: 5,
+          },
+        ],
+      },
+    };
+
+    const hero1 = newHero('Hero1', Colour.Red, customDifficulty);
+    const hero2 = newHero('Hero2', Colour.Blue, customDifficulty);
+
+    expect(hero1.shield).toBeDefined();
+    expect(hero2.shield).toBeDefined();
+    expect(hero1.shield).not.toBe(hero2.shield);
+    expect(hero1.shield).not.toBe(customDifficulty.startingEquipment?.shield);
+
+    expect(hero1.inventory[0]).toBeDefined();
+    expect(hero2.inventory[0]).toBeDefined();
+    expect(hero1.inventory[0]).not.toBe(hero2.inventory[0]);
+
+    // Mutating hero1's shield or inventory does not mutate hero2
+    hero1.shield!.dice = 99;
+    expect(hero2.shield!.dice).not.toBe(99);
+
+    hero1.inventory.push({
+      id: 'extra',
+      name: 'Extra',
+      amountInDeck: 1,
+      type: ItemType.MAGIC,
+      value: 1,
+    });
+    expect(hero2.inventory.length).toBe(1);
+  });
+
+  it('applyStartingEquipment applies equipment and clones items across hero list', () => {
+    const hero1 = newHero('Hero1', Colour.Red);
+    const hero2 = newHero('Hero2', Colour.Blue);
+
+    const customDifficulty: Difficulty = {
+      id: 'custom',
+      nameTranslationKey: 'custom',
+      modifiers: { attack: 0, defense: 0, movement: 0, search: 0 },
+      startingEquipment: {
+        weapon: weapons[1],
+        shield: shields[0],
+        inventory: [
+          {
+            id: 'potion_1',
+            name: 'Potion',
+            amountInDeck: 1,
+            type: ItemType.MAGIC,
+            value: 5,
+          },
+        ],
+      },
+    };
+
+    applyStartingEquipment([hero1, hero2], customDifficulty);
+
+    expect(hero1.weapon.id).toBe(weapons[1].id);
+    expect(hero2.weapon.id).toBe(weapons[1].id);
+    expect(hero1.shield?.id).toBe(shields[0].id);
+    expect(hero2.shield?.id).toBe(shields[0].id);
+    expect(hero1.shield).not.toBe(hero2.shield);
+
+    expect(hero1.inventory.length).toBe(1);
+    expect(hero2.inventory.length).toBe(1);
+    expect(hero1.inventory[0]).not.toBe(hero2.inventory[0]);
   });
 });

@@ -11,6 +11,25 @@ describe('game orchestrator', () => {
     expect(state.currentActor).toBeDefined();
     expect(state.actionLog.length).toBeGreaterThan(0);
     expect(state.reRender).toBe(true);
+    expect(state.difficulty?.id).toBe('normal');
+  });
+
+  it('init with easy difficulty equips heroes with starting shields', () => {
+    const state = init('iceDragonTreasure', 'easy');
+    expect(state.difficulty?.id).toBe('easy');
+    expect(state.heroes.length).toBeGreaterThan(0);
+    state.heroes.forEach((hero) => {
+      expect(hero.shield).toBeDefined();
+    });
+  });
+
+  it('init with hard difficulty initializes with hard difficulty and without extra starting shields', () => {
+    const state = init('iceDragonTreasure', 'hard');
+    expect(state.difficulty?.id).toBe('hard');
+    expect(state.heroes.length).toBeGreaterThan(0);
+    state.heroes.forEach((hero) => {
+      expect(hero.shield).toBeUndefined();
+    });
   });
 
   it('endAction decrements actor actions and triggers next when actions reach 0', async () => {
