@@ -335,7 +335,11 @@ can invent its own type identifiers freely.
 4. Or, define a **brand-new ability** with entirely new behaviour (see
    [Adding new monster abilities](#adding-new-monster-abilities-optional)
    below) instead of reusing one of the 3 built-in fire attacks.
-5. Use `createMonster(type, colour, x, y)` (or
+5. Optionally call `registerMonsterBehaviors(type, behaviors)` (exported from
+   `src/monsters/MonsterRegistry.ts`) to configure custom AI behavior sets
+   (decision slots, conditions, and weights). If not provided, custom monsters
+   fall back to default behaviors (`DEFAULT_FALLBACK_BEHAVIORS`).
+6. Use `createMonster(type, colour, x, y)` (or
    `createMonsterWithInventory`) with your new type identifier when placing
    monsters in your campaign's own `dungeons/*.ts` files — exactly like the
    built-in `MonsterType.ORC`/`MonsterType.TROLL`/etc.

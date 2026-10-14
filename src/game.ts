@@ -256,6 +256,9 @@ export const next = async (
       state.currentActor,
       getDifficulty(state).modifiers.movement,
     );
+    if (nextIndex === 0) {
+      state.turnCount = (state.turnCount ?? 0) + 1;
+    }
     const hasKilledAll = killAllMonstersAchieved(state);
     if (nextIndex === 0 && !hasKilledAll) {
       resetEventEffects(state);
@@ -277,9 +280,6 @@ export const next = async (
         1,
         state.currentActor.actions + state.roundActionsDelta,
       );
-    }
-    if (nextIndex === 0) {
-      state.turnCount = (state.turnCount ?? 0) + 1;
     }
     addLog(state, 'logs.startedTurn', { name: i18n(state.currentActor.name) });
     doReRender(state);

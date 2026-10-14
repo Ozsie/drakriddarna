@@ -5,6 +5,11 @@ export default defineConfig({
   plugins: [sveltekit()],
   test: {
     include: ['src/**/*.{test,spec}.{js,ts}'],
-    exclude: ['src/benchmark/**', 'node_modules/**']
+    exclude: [
+      'node_modules/**',
+      ...(process.env.BENCHMARK || process.env.npm_lifecycle_event === 'benchmark'
+        ? []
+        : ['src/benchmark/**']),
+    ],
   },
 });

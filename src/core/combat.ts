@@ -122,6 +122,10 @@ export const takeDamage = (
   }
   const isHeroSource = state.heroes.includes(source);
   const isHeroTarget = state.heroes.includes(target);
+  if (isHeroSource && !isHeroTarget) {
+    target.lastAttackedBy = source.id ?? source.name;
+    target.lastAttackedByHero = source;
+  }
   const difficultyModifiers = getDifficulty(state).modifiers;
   let defense = 0;
   let shield = 0;

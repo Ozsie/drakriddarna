@@ -19,7 +19,16 @@ import {
   isBlockedByMonster,
   liveHeroes,
 } from '../hero/HeroLogic';
-import { addLog, createIndicator, i18n } from '../core';
+import {
+  addLog,
+  createIndicator,
+  distanceInGrid,
+  getDifficulty,
+  getEarliestMonsterEventRound,
+  getEventMinSpawnDistance,
+  i18n,
+  isPartyBelowHalfHealth,
+} from '../core';
 import { roll } from '../core';
 import { findCell, isRoomDiscovered, toArray } from '../core';
 import { takeDamage } from '../core';
@@ -111,6 +120,20 @@ export const eventEffects: Record<
   },
   theHungryTroll: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
+    const earliestRound = getEarliestMonsterEventRound(state);
+    const currentRound = (state.turnCount ?? 0) + 1;
+    if (currentRound < earliestRound) {
+      event.used = true;
+      return;
+    }
+    const difficulty = getDifficulty(state);
+    const skipLowHealth =
+      difficulty?.events?.skipHungryTrollBelowHalfHealth ??
+      (difficulty?.id === 'easy' || difficulty?.id === 'normal');
+    if (skipLowHealth && isPartyBelowHalfHealth(state)) {
+      event.used = true;
+      return;
+    }
     spawnRandomMonster(state, MonsterType.TROLL);
     event.used = true;
   },
@@ -178,13 +201,17 @@ export const eventEffects: Record<
   },
   theLostOrc: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
+    const earliestRound = getEarliestMonsterEventRound(state);
+    const currentRound = (state.turnCount ?? 0) + 1;
+    if (currentRound < earliestRound) {
+      event.used = true;
+      return;
+    }
     spawnRandomMonster(state, MonsterType.ORC);
     event.used = true;
   },
   theLostOrch: (state: GameState, event: TurnEvent) => {
-    eventDescriptionLog(state, event);
-    spawnRandomMonster(state, MonsterType.ORC);
-    event.used = true;
+    eventEffects.theLostOrc(state, event);
   },
   theDragonsBreath: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
@@ -568,29 +595,61 @@ const spawnRandomMonster = (state: GameState, monsterType: MonsterType) => {
   );
   const monsterCount = activeMonsters.length;
   if (monsterCount === 4) return;
-  const randomRoom = getRandomRoom(state);
   const colours = [Colour.Red, Colour.Green, Colour.Yellow, Colour.Blue];
   activeMonsters.forEach((monster) => {
     const colourIndex = colours.indexOf(monster.colour);
     if (colourIndex !== -1) colours.splice(colourIndex, 1);
   });
-  let hasSpawned = false;
+
+  const minDistance = getEventMinSpawnDistance(state);
+  const heroes = liveHeroes(state);
+
+  const isEligibleCell = (x: number, y: number) => {
+    if (isBlockedByHero(state, x, y) || isBlockedByMonster(state, x, y)) {
+      return false;
+    }
+    if (minDistance > 0 && heroes.length > 0) {
+      const farEnough = heroes.every(
+        (hero) => distanceInGrid(hero.position, { x, y }) >= minDistance,
+      );
+      if (!farEnough) return false;
+    }
+    return true;
+  };
+
+  const discoveredRooms = state.dungeon.discoveredRooms;
+  if (!discoveredRooms || discoveredRooms.length === 0) return;
+
+  const randomRoom = getRandomRoom(state);
+  const candidateCells: { x: number; y: number }[] = [];
+
   for (let y = 0; y < state.dungeon.layout.grid.length; y++) {
     const row = toArray(state.dungeon.layout.grid[y]);
     for (let x = 0; x < row.length; x++) {
-      const cell = row[x];
-      if (cell === randomRoom) {
-        if (!isBlockedByHero(state, x, y) && !isBlockedByMonster(state, x, y)) {
-          state.dungeon.layout.monsters.push(
-            createMonster(monsterType, colours[0], x, y),
-          );
-          hasSpawned = true;
-          break;
+      if (row[x] === randomRoom && isEligibleCell(x, y)) {
+        candidateCells.push({ x, y });
+      }
+    }
+  }
+
+  if (candidateCells.length === 0) {
+    for (let y = 0; y < state.dungeon.layout.grid.length; y++) {
+      const row = toArray(state.dungeon.layout.grid[y]);
+      for (let x = 0; x < row.length; x++) {
+        const cell = row[x];
+        if (discoveredRooms.includes(cell) && isEligibleCell(x, y)) {
+          candidateCells.push({ x, y });
         }
       }
     }
-    if (hasSpawned) break;
   }
+
+  if (candidateCells.length === 0) return;
+
+  const chosenCell = candidateCells[0];
+  state.dungeon.layout.monsters.push(
+    createMonster(monsterType, colours[0], chosenCell.x, chosenCell.y),
+  );
 };
 
 const eventDescriptionLog = (state: GameState, event: TurnEvent) => {

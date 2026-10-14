@@ -2,6 +2,8 @@ import type { GameState, Hero, Monster, Position } from '../types';
 import { Side } from '../types';
 import { getDist, isDiscovered, isNeighbouring, isWalkable } from '../core';
 import { liveHeroes } from '../hero/HeroLogic';
+import { scoreHero, type ScoredHero } from './behavior';
+import { logMonsterTargetSelection } from './behavior';
 
 export interface PassableGrid {
   width: number;
@@ -239,7 +241,8 @@ export const findBestPathToHeroes = (
   state: GameState,
   monster: Monster,
   passableGrid: PassableGrid,
-): { hero: Hero; path: Position[] } | null => {
+  rng?: () => number,
+): { hero: Hero; path: Position[]; score?: number } | null => {
   const heroes = liveHeroes(state).filter((hero) => !hero.ignoredByMonsters);
   if (heroes.length === 0) return null;
 
@@ -261,6 +264,8 @@ export const findBestPathToHeroes = (
     hero: Hero;
     path: Position[];
     dist: number;
+    score: number;
+    scored: ScoredHero;
   };
 
   const candidates: Candidate[] = [];
@@ -273,31 +278,37 @@ export const findBestPathToHeroes = (
       occupiedPositions,
     );
     if (path && path.length > 0) {
+      const scored = scoreHero(hero, {
+        state,
+        monster,
+        stepsNeeded: path.length,
+        rng,
+      });
       candidates.push({
         hero,
         path,
         dist: getDist(monster.position, hero.position),
+        score: scored.score,
+        scored,
       });
     }
   }
 
   if (candidates.length === 0) return null;
 
-  candidates.sort((a, b) => {
-    // Shorter path first
-    if (a.path.length !== b.path.length) {
-      return a.path.length - b.path.length;
-    }
-    // Lower health hero on tie
-    if (a.hero.health !== b.hero.health) {
-      return a.hero.health - b.hero.health;
-    }
-    // Euclidean distance
-    return a.dist - b.dist;
+  candidates.sort((a, b) => b.score - a.score);
+
+  logMonsterTargetSelection({
+    monster,
+    candidates: candidates.map((c) => c.scored),
+    selectedHero: candidates[0].hero,
+    actionType: 'pathfinding',
+    state,
   });
 
   return {
     hero: candidates[0].hero,
     path: candidates[0].path,
+    score: candidates[0].score,
   };
 };

@@ -30,6 +30,7 @@ export type GameState = {
   damageIndicators?: DamageIndicator[];
   roundActionsDelta?: number;
   drawEvents: boolean;
+  roundTargetCounts?: Record<string, number>;
 };
 
 export type IndicatorEffect = 'float' | 'bounce' | 'crit' | 'fade' | 'static';
@@ -88,6 +89,9 @@ export type Actor = {
   ignoredByMonsters?: boolean;
   blinded?: boolean;
   weakened?: boolean;
+  lastAttackedBy?: string;
+  lastAttackedByHero?: Actor;
+  roundTargetCount?: number;
 };
 
 export type Hero = Actor & {
@@ -97,6 +101,11 @@ export type Hero = Actor & {
 export type Monster = Actor & {
   type: MonsterType;
   rangedWeapon?: Weapon;
+  temperament?: 'bold' | 'wary';
+  passiveStreak?: number;
+  forgotBowThisTurn?: boolean;
+  lastAttackedBy?: string;
+  lastAttackedByHero?: Actor;
 };
 
 // `MonsterType` is intentionally not a closed `enum`: campaigns need to be
@@ -574,6 +583,18 @@ export function assertNever(x: never, message = 'Unexpected object'): never {
   throw new Error(`${message}: ${JSON.stringify(x)}`);
 }
 
+export type MonsterBehaviorDifficulty = {
+  bowForgottenChance: number;
+};
+
+export type EventDifficulty = {
+  minMonsterSpawnDistance?: number;
+  minSpawnDistance?: number;
+  earliestMonsterRound?: number;
+  earliestRound?: number;
+  skipHungryTrollBelowHalfHealth?: boolean;
+};
+
 export type Difficulty = {
   id: string;
   nameTranslationKey: string;
@@ -584,4 +605,6 @@ export type Difficulty = {
     movement: number;
     search: number;
   };
+  monsterBehavior?: MonsterBehaviorDifficulty;
+  events?: EventDifficulty;
 };
