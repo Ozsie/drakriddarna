@@ -1,20 +1,9 @@
 import type { GameState, Hero, Monster, Position } from '../../types';
-import {
-  findCell,
-  getDist,
-  hasLineOfSight,
-  isNeighbouring,
-  isWalkable,
-  WALL,
-  COLLAPSED,
-} from '../../core';
+import type { BehaviorContext } from './types';
+import { COLLAPSED, findCell, getDist, hasLineOfSight, isNeighbouring, isWalkable, WALL, } from '../../core';
 import { liveHeroes } from '../../hero/HeroLogic';
 import { distanceInGrid } from '../../hero/ClickInputLogic';
-import {
-  createPassableGrid,
-  findBestPathToHeroes,
-  type PassableGrid,
-} from '../pathfinding';
+import { createPassableGrid, findBestPathToHeroes, type PassableGrid, } from '../pathfinding';
 import { hasMonsterAbility } from '../MonsterRegistry';
 
 export interface ReachableTile {
@@ -102,12 +91,45 @@ export const getReachablePositions = (
   return results;
 };
 
-export const findChargePath = (
+export function findChargePath(
+  context: BehaviorContext,
+  maxSteps?: number,
+): { hero: Hero; path: Position[] } | null;
+export function findChargePath(
   state: GameState,
   monster: Monster,
   passableGrid?: PassableGrid,
+  maxSteps?: number,
+): { hero: Hero; path: Position[] } | null;
+export function findChargePath(
+  stateOrContext: GameState | BehaviorContext,
+  monsterOrMaxSteps?: Monster | number,
+  passableGrid?: PassableGrid,
   maxSteps = 3,
-): { hero: Hero; path: Position[] } | null => {
+): { hero: Hero; path: Position[] } | null {
+  if ('monster' in stateOrContext && 'passableGrid' in stateOrContext) {
+    const ctx = stateOrContext;
+    const steps =
+      typeof monsterOrMaxSteps === 'number' ? monsterOrMaxSteps : maxSteps;
+    if (ctx.chargePath !== undefined) {
+      return ctx.chargePath;
+    }
+    const grid = ctx.passableGrid;
+    const best = findBestPathToHeroes(ctx.state, ctx.monster, grid);
+    if (!best) {
+      ctx.chargePath = null;
+      return null;
+    }
+    if (best.path.length >= 1 && best.path.length <= steps) {
+      ctx.chargePath = best;
+      return best;
+    }
+    ctx.chargePath = null;
+    return null;
+  }
+
+  const state = stateOrContext;
+  const monster = monsterOrMaxSteps as Monster;
   const grid = passableGrid ?? createPassableGrid(state);
   const best = findBestPathToHeroes(state, monster, grid);
   if (!best) return null;
@@ -115,7 +137,7 @@ export const findChargePath = (
     return best;
   }
   return null;
-};
+}
 
 export const findCoverPositions = (
   state: GameState,
@@ -210,10 +232,9 @@ export const findRepositionRangedPosition = (
     if (isAdjacentToHero) return false;
 
     // Must have LoS to at least one hero
-    const hasLos = heroes.some((h) =>
+    return heroes.some((h) =>
       hasLineOfSight(tile.position, h.position, 48, state, false),
     );
-    return hasLos;
   });
 
   if (valid.length === 0) return null;
@@ -344,16 +365,19 @@ export const countHeroesInSpray = (
     const dx = Math.abs(position.x - hero.position.x);
     const dy = Math.abs(position.y - hero.position.y);
     const gridDist = distanceInGrid(position, hero.position);
+    const hasLos = hasLineOfSight(position, hero.position, 48, state, false);
 
     const isDiagonal =
       hasMonsterAbility(monster.type, 'diagonalFireAttack') &&
       dx === dy &&
-      gridDist > 1;
+      gridDist > 1 &&
+      hasLos;
 
     const isOrthogonal =
       hasMonsterAbility(monster.type, 'orthogonalFireAttack') &&
       (position.x === hero.position.x || position.y === hero.position.y) &&
-      gridDist > 1;
+      gridDist > 1 &&
+      hasLos;
 
     const isSameRoom =
       hasMonsterAbility(monster.type, 'sameRoomFireAttack') &&

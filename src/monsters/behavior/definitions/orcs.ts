@@ -22,15 +22,9 @@ export const ORC_BEHAVIORS: MonsterBehavior[] = [
     slots: ['move', 'melee'],
     tags: ['aggressive'],
     isEligible: (ctx) =>
-      ctx.neighbouringHeroes.length === 0 &&
-      findChargePath(ctx.state, ctx.monster, ctx.passableGrid, 3) !== null,
+      ctx.neighbouringHeroes.length === 0 && findChargePath(ctx) !== null,
     getBaseWeight: (ctx) => {
-      const charge = findChargePath(
-        ctx.state,
-        ctx.monster,
-        ctx.passableGrid,
-        3,
-      );
+      const charge = findChargePath(ctx);
       if (charge && charge.hero.health <= charge.hero.maxHealth / 2) {
         return 11;
       }
@@ -69,7 +63,7 @@ export const ORC_BEHAVIORS: MonsterBehavior[] = [
     tags: ['aggressive'],
     isEligible: (ctx) =>
       ctx.neighbouringHeroes.length === 0 &&
-      findChargePath(ctx.state, ctx.monster, ctx.passableGrid, 3) === null &&
+      findChargePath(ctx) === null &&
       (ctx.visibleHeroes.length > 0 ||
         findBestPathToHeroes(ctx.state, ctx.monster, ctx.passableGrid) !==
           null),
@@ -81,7 +75,7 @@ export const ORC_BEHAVIORS: MonsterBehavior[] = [
     tags: ['defensive'],
     isEligible: (ctx) =>
       ctx.neighbouringHeroes.length === 0 &&
-      findChargePath(ctx.state, ctx.monster, ctx.passableGrid, 3) === null &&
+      findChargePath(ctx) === null &&
       findCoverPositions(ctx.state, ctx.monster, ctx.passableGrid, 3).length >
         0,
     getBaseWeight: () => 4,
@@ -92,7 +86,7 @@ export const ORC_BEHAVIORS: MonsterBehavior[] = [
     tags: ['defensive'],
     isEligible: (ctx) =>
       ctx.neighbouringHeroes.length === 0 &&
-      findChargePath(ctx.state, ctx.monster, ctx.passableGrid, 3) === null &&
+      findChargePath(ctx) === null &&
       isHeroesApproachingChokepoint(ctx.state, ctx.monster),
     getBaseWeight: () => 3,
   },
@@ -105,7 +99,7 @@ export const ORC_BEHAVIORS: MonsterBehavior[] = [
       Boolean(ctx.monster.rangedWeapon) &&
       ctx.visibleHeroes.length > 0 &&
       ctx.neighbouringHeroes.length === 0 &&
-      findChargePath(ctx.state, ctx.monster, ctx.passableGrid, 3) === null &&
+      findChargePath(ctx) === null &&
       findCoverPositions(ctx.state, ctx.monster, ctx.passableGrid, 3).length >
         0,
     getBaseWeight: () => 2,

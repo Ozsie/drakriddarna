@@ -135,11 +135,11 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     const normalDiff = DifficultLevels.find((d) => d.id === 'normal');
     const hardDiff = DifficultLevels.find((d) => d.id === 'hard');
 
-    expect(easyDiff?.events?.minMonsterSpawnDistance).toBe(3);
+    expect(easyDiff?.events?.minMonsterSpawnDistance).toBe(4);
     expect(easyDiff?.events?.earliestMonsterRound).toBe(4);
     expect(easyDiff?.events?.skipHungryTrollBelowHalfHealth).toBe(true);
 
-    expect(normalDiff?.events?.minMonsterSpawnDistance).toBe(2);
+    expect(normalDiff?.events?.minMonsterSpawnDistance).toBe(3);
     expect(normalDiff?.events?.earliestMonsterRound).toBe(3);
     expect(normalDiff?.events?.skipHungryTrollBelowHalfHealth).toBe(true);
 
@@ -147,8 +147,8 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     expect(hardDiff?.events?.earliestMonsterRound).toBe(2);
     expect(hardDiff?.events?.skipHungryTrollBelowHalfHealth).toBe(false);
 
-    expect(getEventMinSpawnDistance('easy')).toBe(3);
-    expect(getEventMinSpawnDistance('normal')).toBe(2);
+    expect(getEventMinSpawnDistance('easy')).toBe(4);
+    expect(getEventMinSpawnDistance('normal')).toBe(3);
     expect(getEventMinSpawnDistance('hard')).toBe(1);
 
     expect(getEarliestMonsterEventRound('easy')).toBe(4);

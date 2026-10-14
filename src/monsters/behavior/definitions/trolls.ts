@@ -23,15 +23,9 @@ export const TROLL_BEHAVIORS: MonsterBehavior[] = [
     slots: ['move', 'melee'],
     tags: ['aggressive'],
     isEligible: (ctx) =>
-      ctx.neighbouringHeroes.length === 0 &&
-      findChargePath(ctx.state, ctx.monster, ctx.passableGrid, 3) !== null,
+      ctx.neighbouringHeroes.length === 0 && findChargePath(ctx) !== null,
     getBaseWeight: (ctx) => {
-      const charge = findChargePath(
-        ctx.state,
-        ctx.monster,
-        ctx.passableGrid,
-        3,
-      );
+      const charge = findChargePath(ctx);
       if (charge && charge.hero.health <= charge.hero.maxHealth / 2) {
         return 11;
       }
@@ -43,8 +37,7 @@ export const TROLL_BEHAVIORS: MonsterBehavior[] = [
     slots: ['move', 'move'],
     tags: ['aggressive'],
     isEligible: (ctx) =>
-      ctx.neighbouringHeroes.length === 0 &&
-      findChargePath(ctx.state, ctx.monster, ctx.passableGrid, 3) === null,
+      ctx.neighbouringHeroes.length === 0 && findChargePath(ctx) === null,
     getBaseWeight: () => 6,
   },
 ];

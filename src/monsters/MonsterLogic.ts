@@ -38,11 +38,14 @@ import {
   findBestPathToHeroes,
   type PassableGrid,
 } from './pathfinding';
-import type { BehaviorContext, SlotAction } from './behavior';
+import type { BehaviorContext, MonsterBehavior, SlotAction } from './behavior';
 import {
   findCoverPositions,
+  findKitePosition,
   findOverwatchPositions,
+  findRepositionRangedPosition,
   findRetreatPosition,
+  findSprayAlignPosition,
   getBehaviorsForMonsterType,
   getDirectorState,
   logMonsterBehaviorDecision,
@@ -181,15 +184,18 @@ export const monsterActions = async (
       context,
     );
 
-    logMonsterBehaviorDecision({
-      monster,
-      temperament: monster.temperament,
-      directorState,
-      passiveStreak: monster.passiveStreak ?? 0,
-      forgotBowThisTurn: monster.forgotBowThisTurn,
-      evaluatedBehaviors,
-      chosenBehavior,
-    });
+    logMonsterBehaviorDecision(
+      {
+        monster,
+        temperament: monster.temperament,
+        directorState,
+        passiveStreak: monster.passiveStreak ?? 0,
+        forgotBowThisTurn: monster.forgotBowThisTurn,
+        evaluatedBehaviors,
+        chosenBehavior,
+      },
+      Boolean(state.settings?.['debug']),
+    );
 
     let performedAttack = false;
 
@@ -216,9 +222,17 @@ export const monsterActions = async (
         continue;
       }
 
-      await executeSlotAction(slot, state, monster, passableGrid, opts, () => {
-        performedAttack = true;
-      });
+      await executeSlotAction(
+        slot,
+        state,
+        monster,
+        passableGrid,
+        opts,
+        () => {
+          performedAttack = true;
+        },
+        chosenBehavior,
+      );
 
       monster.movement = getEffectiveMaxMovement(monster);
 
@@ -305,7 +319,7 @@ export const monsterActions = async (
     }
 
     // End of turn updates
-    if (chosenBehavior.tags.includes('defensive') || !performedAttack) {
+    if (!performedAttack) {
       monster.passiveStreak = (monster.passiveStreak ?? 0) + 1;
     } else {
       monster.passiveStreak = 0;
@@ -332,6 +346,7 @@ const executeSlotAction = async (
   passableGrid: PassableGrid,
   opts: MonsterTurnOptions,
   onAttack: () => void,
+  chosenBehavior?: MonsterBehavior,
 ): Promise<void> => {
   switch (slot) {
     case 'melee': {
@@ -373,7 +388,33 @@ const executeSlotAction = async (
       break;
     }
     case 'move': {
-      monsterMove(state, monster, passableGrid);
+      if (chosenBehavior?.name === 'Reposition and shoot') {
+        const repo = findRepositionRangedPosition(
+          state,
+          monster,
+          passableGrid,
+          monster.movement,
+        );
+        if (repo && repo.path.length > 0) {
+          monsterMoveToPosition(state, monster, repo.path);
+        } else {
+          monsterMove(state, monster, passableGrid);
+        }
+      } else if (chosenBehavior?.name === 'Line up') {
+        const align = findSprayAlignPosition(
+          state,
+          monster,
+          passableGrid,
+          monster.movement,
+        );
+        if (align && align.path.length > 0) {
+          monsterMoveToPosition(state, monster, align.path);
+        } else {
+          monsterMove(state, monster, passableGrid);
+        }
+      } else {
+        monsterMove(state, monster, passableGrid);
+      }
       doReRender(state);
       opts.onActionCallback?.(state);
       if (opts.waitForMovement !== false) {
@@ -387,7 +428,21 @@ const executeSlotAction = async (
       break;
     }
     case 'move_away': {
-      monsterMoveAway(state, monster, passableGrid);
+      if (chosenBehavior?.name === 'Kite') {
+        const kite = findKitePosition(
+          state,
+          monster,
+          passableGrid,
+          monster.movement,
+        );
+        if (kite && kite.path.length > 0) {
+          monsterMoveToPosition(state, monster, kite.path);
+        } else {
+          monsterMoveAway(state, monster, passableGrid);
+        }
+      } else {
+        monsterMoveAway(state, monster, passableGrid);
+      }
       doReRender(state);
       opts.onActionCallback?.(state);
       if (opts.waitForMovement !== false) {

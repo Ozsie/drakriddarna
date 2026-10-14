@@ -498,7 +498,7 @@ describe('Target Scoring System', () => {
 
       state.heroes[0].roundTargetCount = 5;
       state.heroes[1].roundTargetCount = 4;
-      state.roundTargetCounts = { Fearik: 5, Helga: 4 };
+      state.roundTargetCounts = { Fearik: 5, Helga: 4, StaleHero: 10 };
 
       await monsterActions(state, {
         delayBetweenActions: 0,
@@ -507,9 +507,10 @@ describe('Target Scoring System', () => {
         waitForMovement: false,
       });
 
-      // At start of monsterActions, counters were reset (heroes might be attacked during the turn)
-      // But initial 5 and 4 were wiped.
-      expect(state.heroes[1].roundTargetCount).toBeLessThan(4);
+      // At start of monsterActions, counters were reset (stale entries cleared)
+      expect(state.roundTargetCounts['StaleHero']).toBeUndefined();
+      expect(state.roundTargetCounts['Fearik'] ?? 0).toBeLessThanOrEqual(2);
+      expect(state.roundTargetCounts['Helga'] ?? 0).toBeLessThanOrEqual(2);
     });
 
     it('records lastAttackedBy on monster when hero attacks in combat', () => {

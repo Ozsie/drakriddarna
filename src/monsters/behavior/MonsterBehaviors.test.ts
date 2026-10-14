@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   Colour,
   ConditionType,
@@ -10,7 +10,7 @@ import {
   MonsterType,
   type Weapon,
 } from '../../types';
-import { DifficultLevels } from '../../core/DifficultLevels';
+import { DifficultLevels } from '../../core';
 import { createMonster } from '../../dungeon/DungeonLogic';
 import { createPassableGrid } from '../pathfinding';
 import {
@@ -111,6 +111,10 @@ const createTestState = (): GameState => {
 };
 
 describe('Monster Behavioral Modifiers & Formulas', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('correctly calculates Director state', () => {
     // Dead hero -> EASE
     expect(getDirectorState(true, 1.0, 3)).toBe('EASE');
@@ -149,7 +153,6 @@ describe('Monster Behavioral Modifiers & Formulas', () => {
     expect(rollBowForgotten(normalDiff)).toBe(false);
     expect(rollBowForgotten('hard')).toBe(false);
     expect(rollBowForgotten(hardDiff)).toBe(false);
-    randomSpy.mockRestore();
   });
 
   it('applies temperament, director, and anti-stall multipliers to weights', () => {
@@ -339,11 +342,11 @@ describe('Dark Lord Behaviors Evaluation', () => {
     const monster = createMonster(
       MonsterType.YELLOW_DARK_LORD,
       Colour.Yellow,
-      2,
-      2,
+      3,
+      3,
     );
-    // Yellow Dark Lord has diagonalFireAttack. Heroes at (4,4) and (5,5)
-    const hero1 = createTestHero('Fearik', 4, 4);
+    // Yellow Dark Lord has diagonalFireAttack. Heroes at (1,1) and (5,5)
+    const hero1 = createTestHero('Fearik', 1, 1);
     const hero2 = createTestHero('Helbran', 5, 5);
     state.heroes = [hero1, hero2];
 

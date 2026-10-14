@@ -134,7 +134,9 @@ export const resolveChaosSwordAttack = (
   user: Actor,
   target: Actor,
 ): void => {
-  if (state.heroes.includes(user)) {
+  const isHeroSource = state.heroes.includes(user);
+  const isHeroTarget = state.heroes.includes(target);
+  if (isHeroSource && !isHeroTarget) {
     target.lastAttackedBy = user.id ?? user.name;
     target.lastAttackedByHero = user;
   }

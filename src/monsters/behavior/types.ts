@@ -25,6 +25,7 @@ export interface BehaviorContext {
   hasDeadHero: boolean;
   aliveMonsterCount: number;
   directorState: DirectorState;
+  chargePath?: { hero: Hero; path: { x: number; y: number }[] } | null;
 }
 
 export interface MonsterBehavior {
@@ -53,4 +54,5 @@ export interface BehaviorDecision {
   forgotBowThisTurn: boolean;
   evaluatedBehaviors: EvaluatedBehavior[];
   chosenBehavior: MonsterBehavior;
+  debug?: boolean;
 }

@@ -89,7 +89,11 @@ export const logTargetSelection = logMonsterTargetSelection;
 
 export const logMonsterBehaviorDecision = (
   decision: BehaviorDecision,
+  debug?: boolean,
 ): void => {
+  const isDebug = debug ?? decision.debug ?? false;
+  if (!isDebug) return;
+
   const totalWeight = decision.evaluatedBehaviors
     .filter((b) => b.eligible)
     .reduce((sum, b) => sum + b.finalWeight, 0);
