@@ -130,6 +130,11 @@ export const monsterActions = async (
     const monster = visibleMonsters[mIdx];
     if (monster.health <= 0) continue;
 
+    if (monster.exhausted) {
+      monster.exhausted = false;
+      continue;
+    }
+
     const maxActions = monster.actions;
     addLog(state, 'logs.monsterAction.acted', { monster: i18n(monster.name) });
     doReRender(state);

@@ -455,4 +455,81 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
       state.actionLog.some((l) => l.key === 'logs.monsterAction.noMonsterAct'),
     ).toBe(true);
   });
+
+  it('exhausted monster skips turn and clears exhausted flag for subsequent turn', async () => {
+    const state = createTestState();
+    const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
+    monster.exhausted = true;
+    state.dungeon.layout.monsters = [monster];
+
+    const hero = createTestHero('Fearik', 1, 3, 10);
+    state.heroes = [hero];
+
+    // First activation: skips because exhausted
+    await monsterActions(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    expect(monster.exhausted).toBe(false);
+    expect(
+      state.actionLog.some((l) => l.key === 'logs.monsterAction.acted'),
+    ).toBe(false);
+
+    // Second activation: acts normally
+    await monsterActions(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    expect(
+      state.actionLog.some((l) => l.key === 'logs.monsterAction.acted'),
+    ).toBe(true);
+  });
+
+  it('Peek shot resets passiveStreak to 0 because it performs an attack', async () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    const state = createTestState();
+    // Grid with cover: hero at (1, 4), monster at (1, 1), cover tile at (2, 1) behind wall (2, 2)
+    state.dungeon.layout.grid = [
+      '#######',
+      '#AAAAA#',
+      '#.#AAA#',
+      '#AAAAA#',
+      '#AAAAA#',
+      '#######',
+    ];
+    const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
+    monster.rangedWeapon = {
+      name: 'Bow',
+      dice: 1,
+      range: 4,
+      amountInDeck: 1,
+      ignoresArmour: false,
+      ignoresShield: false,
+      twoHanded: true,
+      type: ItemType.WEAPON,
+      useHearHeroes: false,
+      value: 10,
+    };
+    monster.passiveStreak = 1;
+    state.dungeon.layout.monsters = [monster];
+
+    const hero = createTestHero('Fearik', 1, 4, 10);
+    state.heroes = [hero];
+
+    await monsterActions(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    expect(monster.passiveStreak).toBe(0);
+    randomSpy.mockRestore();
+  });
 });

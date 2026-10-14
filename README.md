@@ -18,7 +18,7 @@ Drakriddarna supports three difficulty settings (`Easy`, `Normal`, and `Hard`) t
 | :--- | :---: | :---: | :---: | :---: | :--- | :---: | :---: | :---: | :---: |
 | **Easy** | +1 | 0 | +1 | +2 | Sword + Small Shield | 25% | 4 tiles | Round 4 | Enabled (Party HP < 50%) |
 | **Normal** *(Default)* | 0 | 0 | 0 | 0 | Sword | 15% | 3 tiles | Round 3 | Enabled (Party HP < 50%) |
-| **Hard** | 0 | -1 | -1 | -1 | Sword | 0% | 1 tile | Round 2 | Disabled |
+| **Hard** | -1 | 0 | 0 | -1 | Sword | 0% | 1 tile | Round 2 | Disabled |
 
 ---
 
@@ -85,7 +85,6 @@ On its turn, a monster chooses a tactical behavior composed of two action slots 
 
 | Behavior | Action Slots | Tags | Base Weight | Prerequisites / Eligibility |
 | :--- | :--- | :--- | :--- | :--- |
-| **Block the corridor** | `hold` + `melee` | Aggressive | 14 | Adjacent hero present AND troll is located in a 1-tile wide corridor or doorway. |
 | **Brawl** | `melee` + `melee` | Aggressive | 10 | At least one adjacent hero. |
 | **Charge** | `move` + `melee` | Aggressive | 8 *(11 if target HP ≤ 50%)* | No adjacent heroes, and a hero is reachable within charge range (≤ 3 steps). |
 | **Advance** | `move` + `move` | Aggressive | 6 | No adjacent heroes AND no charge path available within 3 steps. |

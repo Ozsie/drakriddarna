@@ -26,6 +26,7 @@ import {
   getDifficulty,
   getEarliestMonsterEventRound,
   getEventMinSpawnDistance,
+  hasLineOfSight,
   i18n,
   isPartyBelowHalfHealth,
 } from '../core';
@@ -620,36 +621,36 @@ const spawnRandomMonster = (state: GameState, monsterType: MonsterType) => {
   const discoveredRooms = state.dungeon.discoveredRooms;
   if (!discoveredRooms || discoveredRooms.length === 0) return;
 
-  const randomRoom = getRandomRoom(state);
   const candidateCells: { x: number; y: number }[] = [];
 
   for (let y = 0; y < state.dungeon.layout.grid.length; y++) {
     const row = toArray(state.dungeon.layout.grid[y]);
     for (let x = 0; x < row.length; x++) {
-      if (row[x] === randomRoom && isEligibleCell(x, y)) {
+      const cell = row[x];
+      if (discoveredRooms.includes(cell) && isEligibleCell(x, y)) {
         candidateCells.push({ x, y });
-      }
-    }
-  }
-
-  if (candidateCells.length === 0) {
-    for (let y = 0; y < state.dungeon.layout.grid.length; y++) {
-      const row = toArray(state.dungeon.layout.grid[y]);
-      for (let x = 0; x < row.length; x++) {
-        const cell = row[x];
-        if (discoveredRooms.includes(cell) && isEligibleCell(x, y)) {
-          candidateCells.push({ x, y });
-        }
       }
     }
   }
 
   if (candidateCells.length === 0) return;
 
-  const chosenCell = candidateCells[0];
-  state.dungeon.layout.monsters.push(
-    createMonster(monsterType, colours[0], chosenCell.x, chosenCell.y),
+  const outOfLosCells = candidateCells.filter((cell) =>
+    heroes.every(
+      (hero) => !hasLineOfSight(hero.position, cell, 48, state, false),
+    ),
   );
+  const pool = outOfLosCells.length > 0 ? outOfLosCells : candidateCells;
+  const chosenCell = pool[0];
+
+  const monster = createMonster(
+    monsterType,
+    colours[0],
+    chosenCell.x,
+    chosenCell.y,
+  );
+  monster.exhausted = true;
+  state.dungeon.layout.monsters.push(monster);
 };
 
 const eventDescriptionLog = (state: GameState, event: TurnEvent) => {

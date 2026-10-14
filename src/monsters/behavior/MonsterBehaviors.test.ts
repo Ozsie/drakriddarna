@@ -23,7 +23,7 @@ import type { BehaviorContext, MonsterBehavior } from './types';
 import { ORC_BEHAVIORS } from './definitions';
 import { TROLL_BEHAVIORS } from './definitions';
 import { DARK_LORD_BEHAVIORS } from './definitions';
-import { isInOneWideCorridorOrDoorway, countHeroesInSpray } from './tactics';
+import { countHeroesInSpray } from './tactics';
 
 const defaultWeapon: Weapon = {
   name: 'Sword',
@@ -306,15 +306,11 @@ describe('Orc Behaviors Evaluation', () => {
 });
 
 describe('Troll Behaviors Evaluation', () => {
-  it('Troll Block the corridor gives 14 base weight when in 1-wide corridor or doorway', () => {
+  it('Troll Brawl gives 10 base weight when adjacent to hero', () => {
     const state = createTestState();
-    // Grid layout with 1-wide corridor at y=1: walls around except (1,1) and (2,1)
-    state.dungeon.layout.grid = ['#######', '#.#####', '#######'];
     const monster = createMonster(MonsterType.TROLL, Colour.Green, 1, 1);
     const hero = createTestHero('Fearik', 2, 1);
     state.heroes = [hero];
-
-    expect(isInOneWideCorridorOrDoorway(state, monster.position)).toBe(true);
 
     const passableGrid = createPassableGrid(state);
     const ctx: BehaviorContext = {
@@ -330,9 +326,9 @@ describe('Troll Behaviors Evaluation', () => {
     };
 
     const evaluated = evaluateBehaviors(TROLL_BEHAVIORS, ctx);
-    const block = evaluated.find((b) => b.name === 'Block the corridor');
-    expect(block?.eligible).toBe(true);
-    expect(block?.baseWeight).toBe(14);
+    const brawl = evaluated.find((b) => b.name === 'Brawl');
+    expect(brawl?.eligible).toBe(true);
+    expect(brawl?.baseWeight).toBe(10);
   });
 });
 

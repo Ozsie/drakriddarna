@@ -57,10 +57,10 @@ export const DifficultLevels: Difficulty[] = [
     nameTranslationKey: 'content.difficulty.hard.name',
     descriptionTranslationKey: 'content.difficulty.hard.description',
     modifiers: {
-      attack: 0,
-      defense: -1,
+      attack: -1,
+      defense: 0,
       movement: -1,
-      search: -1,
+      search: 0,
     },
     monsterBehavior: {
       bowForgottenChance: 0,

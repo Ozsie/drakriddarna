@@ -104,6 +104,7 @@ export type Monster = Actor & {
   temperament?: 'bold' | 'wary';
   passiveStreak?: number;
   forgotBowThisTurn?: boolean;
+  exhausted?: boolean;
   lastAttackedBy?: string;
   lastAttackedByHero?: Actor;
 };

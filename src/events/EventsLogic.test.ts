@@ -414,6 +414,31 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       const spawnedMonster = state.dungeon.layout.monsters[0];
       const dist = distanceInGrid({ x: 0, y: 0 }, spawnedMonster.position);
       expect(dist).toBeGreaterThanOrEqual(3);
+      expect(spawnedMonster.exhausted).toBe(true);
+    });
+
+    it('prefers spawn positions out of line of sight of heroes when available', () => {
+      const state = init();
+      state.difficulty = DifficultLevels.find((d) => d.id === 'hard'); // minDistance = 1
+      state.turnCount = 5;
+      // Grid with room A (0,0)-(2,0) and room B (0,2)-(2,2), separated by a wall at y=1 except a corner
+      state.dungeon.layout.grid = ['AAA', '###', 'BBB'];
+      state.dungeon.discoveredRooms = ['A', 'B'];
+      state.dungeon.layout.monsters = [];
+
+      // Hero at (0, 0) in room A. Hero has LoS to room A cells, but no LoS to room B cells behind wall
+      state.heroes.forEach((h) => {
+        h.position = { x: 0, y: 0 };
+      });
+
+      const event = { ...orcEvent, used: false };
+      eventEffects.theLostOrc(state, event);
+
+      expect(state.dungeon.layout.monsters.length).toBe(1);
+      const spawnedOrc = state.dungeon.layout.monsters[0];
+      // Should prefer room B which is out of LoS
+      expect(spawnedOrc.position.y).toBe(2);
+      expect(spawnedOrc.exhausted).toBe(true);
     });
 
     it('does not spawn monster if all room cells are closer than the required distance', () => {

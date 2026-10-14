@@ -89,7 +89,7 @@
   "difficulty": {
     "easy": {
       "name": "Easy",
-      "description": "Easy: +2 attack, +2 defense, +1 moves, +2 search"
+      "description": "Easy: +1 attack, +0 defense, +1 moves, +2 search"
     },
     "normal": {
       "name": "Normal",
@@ -97,7 +97,7 @@
     },
     "hard": {
       "name": "Hard",
-      "description": "Hard: -1 attack, -1 defense, -1 moves, -1 search"
+      "description": "Hard: -1 attack, +0 defense, -1 moves, +0 search"
     }
   },
   "indicators": {

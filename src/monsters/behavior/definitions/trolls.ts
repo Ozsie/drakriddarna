@@ -1,16 +1,7 @@
 import type { MonsterBehavior } from '../types';
-import { findChargePath, isInOneWideCorridorOrDoorway } from '../tactics';
+import { findChargePath } from '../tactics';
 
 export const TROLL_BEHAVIORS: MonsterBehavior[] = [
-  {
-    name: 'Block the corridor',
-    slots: ['hold', 'melee'],
-    tags: ['aggressive'],
-    isEligible: (ctx) =>
-      ctx.neighbouringHeroes.length > 0 &&
-      isInOneWideCorridorOrDoorway(ctx.state, ctx.monster.position),
-    getBaseWeight: () => 14,
-  },
   {
     name: 'Brawl',
     slots: ['melee', 'melee'],
