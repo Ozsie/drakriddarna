@@ -7,6 +7,7 @@ import {
   type MonsterTurnOptions,
 } from './monsters/MonsterLogic';
 import {
+  applyStartingEquipment,
   levelUp,
   liveHeroes,
   replaceDeadHeroes,
@@ -144,15 +145,21 @@ export const load = (currentState: GameState): GameState => {
   return currentState;
 };
 
-export const init = (campaignId: string = DEFAULT_CAMPAIGN_ID): GameState => {
+export const init = (
+  campaignId: string = DEFAULT_CAMPAIGN_ID,
+  difficultyId: string = DEFAULT_DIFFICULTY_ID,
+): GameState => {
   const campaign = structuredClone(getCampaign(campaignId));
+  const selectedDifficulty =
+    DifficultLevels.find((level) => level.id === difficultyId) ??
+    DifficultLevels.find((level) => level.id === DEFAULT_DIFFICULTY_ID) ??
+    DifficultLevels[1];
+
   const state: GameState = {
     campaignId: campaign.id,
     heroes: campaign.heroes,
     dungeon: campaign.dungeons[0],
-    difficulty: DifficultLevels.find(
-      (level) => level.id === DEFAULT_DIFFICULTY_ID,
-    ),
+    difficulty: selectedDifficulty,
     currentActor: campaign.heroes[0] as Hero | undefined,
     actionLog: [
       {
@@ -191,6 +198,7 @@ export const init = (campaignId: string = DEFAULT_CAMPAIGN_ID): GameState => {
     reRender: true,
     drawEvents: true,
   };
+  applyStartingEquipment(state.heroes as Hero[], selectedDifficulty);
   resetLiveHeroes(state);
   if (browser) {
     localStorage.setItem('autosave', JSON.stringify(state));

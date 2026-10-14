@@ -11,6 +11,7 @@ import type {
   Weapon,
   MoveDirection,
   InteractableCell,
+  Difficulty,
 } from '../types';
 import { Colour, ItemType, Level, Side } from '../types';
 import { weapons } from '../items/weapons';
@@ -57,8 +58,15 @@ import {
 } from '../items/ItemLogic';
 import { COLLAPSED, EMPTY, WALL } from '../core';
 
-export const newHero = (name: string, colour: Colour): Hero => {
-  weapons[0].amountInDeck--;
+export const newHero = (
+  name: string,
+  colour: Colour,
+  difficulty?: Difficulty,
+): Hero => {
+  const startingEquipment = difficulty?.startingEquipment;
+  const initialWeapon = startingEquipment?.weapon ?? weapons[0];
+
+  initialWeapon.amountInDeck--;
   return {
     id: name.toLowerCase().replace(/ /g, '_'),
     name: name,
@@ -73,9 +81,17 @@ export const newHero = (name: string, colour: Colour): Hero => {
     colour: colour,
     experience: 0,
     position: { x: -1, y: -1 },
-    weapon: weapons[0],
+    weapon: structuredClone(initialWeapon),
+    shield: startingEquipment?.shield
+      ? structuredClone(startingEquipment.shield)
+      : undefined,
+    armour: startingEquipment?.armour
+      ? structuredClone(startingEquipment.armour)
+      : undefined,
+    inventory: startingEquipment?.inventory
+      ? structuredClone(startingEquipment.inventory)
+      : [],
     incapacitated: false,
-    inventory: [],
     isInventoryOpen: false,
   };
 };
@@ -205,6 +221,35 @@ export const pickLock = (state: GameState, door?: Door) => {
       hero.movement = 0;
     }
   }
+};
+
+export const applyStartingEquipment = (
+  heroes: Hero[],
+  difficulty: Difficulty,
+): void => {
+  const config = difficulty.startingEquipment;
+  if (!config) return;
+
+  heroes.forEach((hero) => {
+    if (config.weapon) {
+      hero.weapon = structuredClone(config.weapon);
+    }
+
+    if (config.shield) {
+      hero.shield = structuredClone(config.shield);
+    }
+
+    if (config.armour) {
+      hero.armour = structuredClone(config.armour);
+    }
+
+    if (config.inventory && config.inventory.length > 0) {
+      hero.inventory = [
+        ...hero.inventory,
+        ...structuredClone(config.inventory),
+      ];
+    }
+  });
 };
 
 export const resetLiveHeroes = (state: GameState) => {

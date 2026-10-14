@@ -27,6 +27,7 @@ import { defineDungeon, parseTileMap } from '../dungeon/dungeonParser';
 import { validateLayout } from '../dungeon/dungeonValidator';
 import { interact, newHero, search } from '../hero/HeroLogic';
 import { resetRng, setRng } from '../core';
+import { DifficultLevels } from '../core/DifficultLevels';
 
 const defaultWeapon: Weapon = {
   name: 'Sword',
@@ -183,6 +184,28 @@ describe('InteractableLogic', () => {
       expect(state.heroes.length).toBe(2);
       expect(state.heroes).toContain(alliedHero);
       expect(alliedHero.position).toEqual({ x: 4, y: 4 });
+    });
+
+    it('equips newly created ally with difficulty-based starting equipment', () => {
+      const hero = createTestHero(1, 1);
+      const state = createTestState(hero);
+      state.difficulty = DifficultLevels.find((d) => d.id === 'easy');
+
+      const interactable = {
+        position: { x: 2, y: 2 },
+        effect: 'addHero',
+        args: {
+          name: 'Rescued Paladin',
+          colour: Colour.Green,
+        },
+        oneTime: true,
+      };
+
+      triggerInteractable(state, interactable, hero);
+
+      const added = state.heroes.find((h) => h.name === 'Rescued Paladin');
+      expect(added).toBeDefined();
+      expect(added?.shield).toBeDefined();
     });
   });
 

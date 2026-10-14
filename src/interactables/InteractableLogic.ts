@@ -12,6 +12,7 @@ import {
   clearActorAnimations,
   doReRender,
   findCell,
+  getDifficulty,
   i18n,
   isNeighbouring,
   isSamePosition,
@@ -69,7 +70,7 @@ export const interactableEffects: Record<string, InteractableEffectHandler> = {
         (args.name as string) ?? (args.heroName as string) ?? 'Allied Hero';
       const heroColour =
         (args.colour as Colour) ?? (args.color as Colour) ?? Colour.Yellow;
-      heroToAdd = newHero(heroName, heroColour);
+      heroToAdd = newHero(heroName, heroColour, getDifficulty(state));
     }
 
     const targetPos: Position = (args.position as Position) ?? {

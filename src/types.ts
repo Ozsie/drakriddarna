@@ -595,6 +595,13 @@ export type EventDifficulty = {
   skipHungryTrollBelowHalfHealth?: boolean;
 };
 
+export type StartingEquipment = {
+  weapon?: Weapon;
+  shield?: Shield;
+  armour?: Armour;
+  inventory?: Item[];
+};
+
 export type Difficulty = {
   id: string;
   nameTranslationKey: string;
@@ -607,4 +614,5 @@ export type Difficulty = {
   };
   monsterBehavior?: MonsterBehaviorDifficulty;
   events?: EventDifficulty;
+  startingEquipment?: StartingEquipment;
 };
