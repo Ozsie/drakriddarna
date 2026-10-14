@@ -1,9 +1,21 @@
 import type { GameState, Hero, Monster, Position } from '../../types';
 import type { BehaviorContext } from './types';
-import { COLLAPSED, findCell, getDist, hasLineOfSight, isNeighbouring, isWalkable, WALL, } from '../../core';
+import {
+  COLLAPSED,
+  findCell,
+  getDist,
+  hasLineOfSight,
+  isNeighbouring,
+  isWalkable,
+  WALL,
+} from '../../core';
 import { liveHeroes } from '../../hero/HeroLogic';
 import { distanceInGrid } from '../../hero/ClickInputLogic';
-import { createPassableGrid, findBestPathToHeroes, type PassableGrid, } from '../pathfinding';
+import {
+  createPassableGrid,
+  findBestPathToHeroes,
+  type PassableGrid,
+} from '../pathfinding';
 import { hasMonsterAbility } from '../MonsterRegistry';
 
 export interface ReachableTile {
