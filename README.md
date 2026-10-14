@@ -8,6 +8,40 @@
 
 See [Campaign Readme](src/campaigns/README.md)
 
+## Difficulty Levels
+
+Drakriddarna supports three difficulty settings (`Easy`, `Normal`, and `Hard`) that influence hero attributes, starting equipment, monster behavior, and event pacing.
+
+### Comparison Overview
+
+| Setting | Attack Mod | Defense Mod | Movement Mod | Search Mod | Starting Equipment | Bow Forgotten Chance | Min Spawn Distance | Earliest Spawn Round | Low-Health Troll Safeguard |
+| :--- | :---: | :---: | :---: | :---: | :--- | :---: | :---: | :---: | :---: |
+| **Easy** | +1 | 0 | +1 | +2 | Sword + Small Shield | 25% | 4 tiles | Round 4 | Enabled (Party HP < 50%) |
+| **Normal** *(Default)* | 0 | 0 | 0 | 0 | Sword | 15% | 3 tiles | Round 3 | Enabled (Party HP < 50%) |
+| **Hard** | 0 | -1 | -1 | -1 | Sword | 0% | 1 tile | Round 2 | Disabled |
+
+---
+
+### Key Mechanics
+
+1. **Hero Modifiers**:
+   - **Easy**: Heroes gain +1 Attack dice, +1 Movement tile per move action, and +2 bonus to Search rolls.
+   - **Normal**: Standard unmodified baseline.
+   - **Hard**: Heroes suffer -1 Defense dice, -1 Movement tile, and -1 penalty to Search rolls.
+
+2. **Starting Equipment**:
+   - On **Easy**, each hero begins with a basic **Sword** and an additional **Small Shield** (1 defense die).
+   - On **Normal** and **Hard**, heroes begin with a standard **Sword** only.
+   - Starting equipment configurations also automatically apply to newly recruited heroes and allies added during gameplay.
+
+3. **Monster Behavior**:
+   - Archer monsters evaluate a random chance each turn to forget their ranged weapon, forcing them to engage in melee or advance tactics (25% on Easy, 15% on Normal, 0% on Hard).
+
+4. **Event & Monster Spawn Balancing**:
+   - **Minimum Distance**: Newly spawned monsters from events are placed at a safe buffer distance from live heroes (4 tiles on Easy, 3 on Normal, 1 on Hard).
+   - **Early-Round Delay**: Turn events spawning monsters are suppressed in early rounds (rounds 1–3 skipped on Easy, rounds 1–2 on Normal, round 1 on Hard).
+   - **Troll Safeguard**: The `The Hungry Troll` spawn event is skipped if the party's total health is below 50% on Easy and Normal.
+
 ## Monster AI: Behavior Selection & Targeting
 
 Monsters in Drakriddarna follow a tactical decision-making and target-scoring system designed to create engaging, unpredictable combat while preventing unfair focus-firing or stalemates.
