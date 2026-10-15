@@ -11,7 +11,7 @@ import {
   useItem,
 } from './ItemLogic';
 import { magicItems } from './magicItems';
-import { resetRng, setRng } from '../core';
+import { DifficultLevels, resetRng, setRng } from '../core';
 
 const createHero = (
   name: string,
@@ -177,5 +177,19 @@ describe('ItemLogic - Healing Herbs rework', () => {
 
     expect(herbs.properties![USED]).toBe(false);
     expect(herbs.properties![USED_ON]).toEqual([]);
+  });
+
+  it('caps healing herbs recovery to max health adjusted by difficulty modifier', () => {
+    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+
+    hero2.health = 8;
+    hero2.maxHealth = 10; // Effective max health is 9 (10 - 1)
+    state.currentActor = hero1;
+    state.targetActor = hero2;
+
+    useItem(state, herbs);
+
+    // Roll gave 3 hits, but max health is 9, so health becomes 9, not 10 or 11
+    expect(hero2.health).toBe(9);
   });
 });

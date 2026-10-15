@@ -612,6 +612,7 @@ export type Difficulty = {
     defense: number;
     movement: number;
     search: number;
+    health: number;
   };
   monsterBehavior?: MonsterBehaviorDifficulty;
   events?: EventDifficulty;

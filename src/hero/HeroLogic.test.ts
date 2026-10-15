@@ -17,6 +17,8 @@ import {
   canOpenDoor,
   newHero,
   applyStartingEquipment,
+  resetLiveHeroes,
+  replaceDeadHeroes,
 } from './HeroLogic';
 import { DifficultLevels } from '../core';
 import { weapons } from '../items/weapons';
@@ -239,7 +241,7 @@ describe('newHero and applyStartingEquipment', () => {
     const customDifficulty: Difficulty = {
       id: 'custom',
       nameTranslationKey: 'custom',
-      modifiers: { attack: 0, defense: 0, movement: 0, search: 0 },
+      modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
       startingEquipment: {
         weapon: weapons[0],
         shield: shields[0],
@@ -289,7 +291,7 @@ describe('newHero and applyStartingEquipment', () => {
     const customDifficulty: Difficulty = {
       id: 'custom',
       nameTranslationKey: 'custom',
-      modifiers: { attack: 0, defense: 0, movement: 0, search: 0 },
+      modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
       startingEquipment: {
         weapon: weapons[1],
         shield: shields[0],
@@ -316,5 +318,39 @@ describe('newHero and applyStartingEquipment', () => {
     expect(hero1.inventory.length).toBe(1);
     expect(hero2.inventory.length).toBe(1);
     expect(hero1.inventory[0]).not.toBe(hero2.inventory[0]);
+  });
+
+  it('creates hero with health adjusted by difficulty modifier', () => {
+    const hardDiff = DifficultLevels.find((d) => d.id === 'hard');
+    expect(hardDiff).toBeDefined();
+
+    const hero = newHero('Thor', Colour.Yellow, hardDiff);
+
+    expect(hero.maxHealth).toBe(7);
+    expect(hero.health).toBe(6);
+  });
+});
+
+describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier', () => {
+  it('resetLiveHeroes sets hero health considering difficulty health modifier', () => {
+    const hero = createTestHero({ maxHealth: 7, health: 1 });
+    const monster = createTestMonster();
+    const state = createTestState(hero, monster);
+    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+
+    resetLiveHeroes(state);
+
+    expect(hero.health).toBe(6);
+  });
+
+  it('replaceDeadHeroes resets dead hero health considering difficulty health modifier', () => {
+    const hero = createTestHero({ maxHealth: 7, health: 0 });
+    const monster = createTestMonster();
+    const state = createTestState(hero, monster);
+    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+
+    replaceDeadHeroes(state);
+
+    expect(hero.health).toBe(6);
   });
 });

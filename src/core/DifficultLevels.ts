@@ -14,6 +14,7 @@ export const DifficultLevels: Difficulty[] = [
       defense: 0,
       movement: 1,
       search: 2,
+      health: 0,
     },
     monsterBehavior: {
       bowForgottenChance: 0.25,
@@ -38,6 +39,7 @@ export const DifficultLevels: Difficulty[] = [
       defense: 0,
       movement: 0,
       search: 0,
+      health: 0,
     },
     monsterBehavior: {
       bowForgottenChance: 0.15,
@@ -57,10 +59,11 @@ export const DifficultLevels: Difficulty[] = [
     nameTranslationKey: 'content.difficulty.hard.name',
     descriptionTranslationKey: 'content.difficulty.hard.description',
     modifiers: {
-      attack: -1,
+      attack: 0,
       defense: 0,
       movement: -1,
       search: 0,
+      health: -1,
     },
     monsterBehavior: {
       bowForgottenChance: 0,
@@ -125,7 +128,11 @@ export const getEarliestMonsterEventRound = (
 export const isPartyBelowHalfHealth = (state: GameState): boolean => {
   const heroes = state.heroes;
   if (!heroes || heroes.length === 0) return false;
-  const totalMaxHp = heroes.reduce((sum, h) => sum + (h.maxHealth || 0), 0);
+  const healthModifier = getDifficulty(state).modifiers.health ?? 0;
+  const totalMaxHp = heroes.reduce((sum, h) => {
+    const heroMaxHealth = h.maxHealth + healthModifier;
+    return sum + (heroMaxHealth || 0);
+  }, 0);
   const totalCurrentHp = heroes.reduce(
     (sum, h) => sum + Math.max(0, h.health || 0),
     0,

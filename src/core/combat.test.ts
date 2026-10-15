@@ -5,6 +5,7 @@ import {
   doorAsActor,
   getDamageString,
   getEffectiveMaxMovement,
+  getEffectiveMaxHealth,
   removeDamageIndicator,
   takeDamage,
 } from './combat';
@@ -77,6 +78,39 @@ describe('combat module', () => {
     };
 
     expect(getEffectiveMaxMovement(actor)).toBe(2);
+  });
+
+  it('getEffectiveMaxHealth applies health modifier to maxHealth', () => {
+    const actor: Actor = {
+      name: 'Hero',
+      actions: 2,
+      movement: 3,
+      maxMovement: 3,
+      defense: 0,
+      health: 7,
+      maxHealth: 7,
+      colour: Colour.Blue,
+      experience: 0,
+      position: { x: 0, y: 0 },
+      level: Level.APPRENTICE,
+      weapon: {
+        name: 'Sword',
+        dice: 2,
+        amountInDeck: 1,
+        range: 1,
+        twoHanded: false,
+        useHearHeroes: true,
+        type: ItemType.WEAPON,
+        value: 10,
+        ignoresArmour: false,
+        ignoresShield: false,
+      },
+      inventory: [],
+    };
+
+    expect(getEffectiveMaxHealth(actor, 0)).toBe(7);
+    expect(getEffectiveMaxHealth(actor, -1)).toBe(6);
+    expect(getEffectiveMaxHealth(actor, 2)).toBe(9);
   });
 
   it('doorAsActor converts door trap into actor', () => {

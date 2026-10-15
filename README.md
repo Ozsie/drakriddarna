@@ -137,7 +137,6 @@ Turn events that spawn monsters (`The Hungry Troll` and `The Lost Orc`) include 
 ## Todo
 - [ ] Reset caved in corridor
 - [ ] Multiple saves
-- [ ] Diary on mobile
 - [ ] Responsive layout
 - [ ] Graphics
   - [ ] Sprites for actors
@@ -148,6 +147,7 @@ Turn events that spawn monsters (`The Hungry Troll` and `The Lost Orc`) include 
 - [ ] Alvkonungens Borg -  [Official Dungeon and Heroes](https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg)
   - [ ] Edge based walls
 - [ ] Level editor
+- [X] Diary on mobile
 - [X] Use items from radial menu
 - [X] Indicators show on not yet revealed monsters
 - [X] Fully Canvas UI

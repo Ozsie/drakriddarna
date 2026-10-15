@@ -30,7 +30,12 @@ import {
   isNeighbouring,
   isRoomDiscovered,
 } from '../core';
-import { getEffectiveMaxMovement, takeDamage } from '../core';
+import {
+  getDifficulty,
+  getEffectiveMaxHealth,
+  getEffectiveMaxMovement,
+  takeDamage,
+} from '../core';
 import { liveHeroes } from '../hero/HeroLogic';
 import { distanceInGrid } from '../hero/ClickInputLogic';
 import {
@@ -148,7 +153,11 @@ export const monsterActions = async (
 
     // Compute director context
     const allHeroes = state.heroes;
-    const totalMaxHp = allHeroes.reduce((sum, h) => sum + h.maxHealth, 0);
+    const healthModifier = getDifficulty(state).modifiers.health;
+    const totalMaxHp = allHeroes.reduce(
+      (sum, h) => sum + getEffectiveMaxHealth(h, healthModifier),
+      0,
+    );
     const totalCurrentHp = allHeroes.reduce(
       (sum, h) => sum + Math.max(0, h.health),
       0,
@@ -344,6 +353,14 @@ export const monsterActions = async (
   }
 };
 
+export const isAttackSlot = (slot: SlotAction): boolean =>
+  slot === 'melee' || slot === 'shoot' || slot === 'fire_spray';
+
+export const hasTwoAttackActions = (behavior?: MonsterBehavior): boolean => {
+  if (!behavior) return false;
+  return behavior.slots.filter(isAttackSlot).length >= 2;
+};
+
 const executeSlotAction = async (
   slot: SlotAction,
   state: GameState,
@@ -367,6 +384,16 @@ const executeSlotAction = async (
         if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
           await sleep(opts.delayAfterAttack);
         }
+      } else if (hasTwoAttackActions(chosenBehavior)) {
+        await executeSlotAction(
+          'move',
+          state,
+          monster,
+          passableGrid,
+          opts,
+          onAttack,
+          chosenBehavior,
+        );
       } else {
         monster.actions--;
       }
@@ -387,6 +414,16 @@ const executeSlotAction = async (
         if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
           await sleep(opts.delayAfterAttack);
         }
+      } else if (hasTwoAttackActions(chosenBehavior)) {
+        await executeSlotAction(
+          'move',
+          state,
+          monster,
+          passableGrid,
+          opts,
+          onAttack,
+          chosenBehavior,
+        );
       } else {
         monster.actions--;
       }
@@ -497,18 +534,42 @@ const executeSlotAction = async (
       if (sameRoom.length > 0) {
         performFireAttack(state, monster, sameRoom);
         onAttack();
+        monster.actions--;
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+          await sleep(opts.delayAfterAttack);
+        }
       } else if (orth.length > 0) {
         performFireAttack(state, monster, orth);
         onAttack();
+        monster.actions--;
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+          await sleep(opts.delayAfterAttack);
+        }
       } else if (diag.length > 0) {
         performFireAttack(state, monster, diag);
         onAttack();
-      }
-      monster.actions--;
-      doReRender(state);
-      opts.onActionCallback?.(state);
-      if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
-        await sleep(opts.delayAfterAttack);
+        monster.actions--;
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+          await sleep(opts.delayAfterAttack);
+        }
+      } else if (hasTwoAttackActions(chosenBehavior)) {
+        await executeSlotAction(
+          'move',
+          state,
+          monster,
+          passableGrid,
+          opts,
+          onAttack,
+          chosenBehavior,
+        );
+      } else {
+        monster.actions--;
       }
       break;
     }

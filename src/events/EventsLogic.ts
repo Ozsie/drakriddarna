@@ -25,6 +25,7 @@ import {
   distanceInGrid,
   getDifficulty,
   getEarliestMonsterEventRound,
+  getEffectiveMaxHealth,
   getEventMinSpawnDistance,
   hasLineOfSight,
   i18n,
@@ -135,6 +136,13 @@ export const eventEffects: Record<
       event.used = true;
       return;
     }
+    const visibleTrolls = findVisibleMonsters(state).filter(
+      (monster) => monster.type === MonsterType.TROLL,
+    );
+    if (visibleTrolls.length >= 4) {
+      event.used = true;
+      return;
+    }
     spawnRandomMonster(state, MonsterType.TROLL);
     event.used = true;
   },
@@ -161,10 +169,12 @@ export const eventEffects: Record<
   },
   fountainOfYouth: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
+    const healthModifier = getDifficulty(state).modifiers.health;
     liveHeroes(state).forEach((hero) => {
-      if (hero.health < hero.maxHealth) {
+      const maxHealth = getEffectiveMaxHealth(hero, healthModifier);
+      if (hero.health < maxHealth) {
         const hits = roll(hero.level, 3);
-        const recoveredHealth = Math.min(hits, hero.maxHealth - hero.health);
+        const recoveredHealth = Math.min(hits, maxHealth - hero.health);
         hero.health += recoveredHealth;
         if (!state.damageIndicators) {
           state.damageIndicators = [];
@@ -390,24 +400,29 @@ export const eventEffects: Record<
   },
   theOrcDrums: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
-    findVisibleMonsters(state)
-      .filter((monster) => monster.type === MonsterType.ORC)
-      .forEach((monster) => {
-        monster.actions = 3;
-        if (!state.damageIndicators) {
-          state.damageIndicators = [];
-        }
-        state.damageIndicators.push(
-          createIndicator(
-            i18n('content.indicators.moreActions'),
-            monster.position,
-            {
-              color: '#ff3333',
-              effect: 'bounce',
-            },
-          ),
-        );
-      });
+    const visibleOrcs = findVisibleMonsters(state).filter(
+      (monster) => monster.type === MonsterType.ORC,
+    );
+    if (visibleOrcs.length >= 4) {
+      event.used = true;
+      return;
+    }
+    visibleOrcs.forEach((monster) => {
+      monster.actions = 3;
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(
+          i18n('content.indicators.moreActions'),
+          monster.position,
+          {
+            color: '#ff3333',
+            effect: 'bounce',
+          },
+        ),
+      );
+    });
     event.used = true;
   },
   theOrchDrums: (state: GameState, event: TurnEvent) => {
@@ -595,7 +610,7 @@ const spawnRandomMonster = (state: GameState, monsterType: MonsterType) => {
     (monster) => monster.type === monsterType,
   );
   const monsterCount = activeMonsters.length;
-  if (monsterCount === 4) return;
+  if (monsterCount >= 4) return;
   const colours = [Colour.Red, Colour.Green, Colour.Yellow, Colour.Blue];
   activeMonsters.forEach((monster) => {
     const colourIndex = colours.indexOf(monster.colour);

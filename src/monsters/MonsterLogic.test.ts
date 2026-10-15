@@ -12,7 +12,12 @@ import {
   type Weapon,
 } from '../types';
 import { createDoor, createMonster } from '../dungeon/DungeonLogic';
-import { monsterActions, monsterMove } from './MonsterLogic';
+import {
+  hasTwoAttackActions,
+  isAttackSlot,
+  monsterActions,
+  monsterMove,
+} from './MonsterLogic';
 import { createPassableGrid } from './pathfinding';
 
 const defaultWeapon: Weapon = {
@@ -531,5 +536,135 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
 
     expect(monster.passiveStreak).toBe(0);
     randomSpy.mockRestore();
+  });
+
+  describe('Multi-attack charge fallback', () => {
+    it('identifies attack slots and behaviors with two attack actions', () => {
+      expect(isAttackSlot('melee')).toBe(true);
+      expect(isAttackSlot('shoot')).toBe(true);
+      expect(isAttackSlot('fire_spray')).toBe(true);
+      expect(isAttackSlot('move')).toBe(false);
+      expect(isAttackSlot('move_to_cover')).toBe(false);
+      expect(isAttackSlot('move_away')).toBe(false);
+      expect(isAttackSlot('hold')).toBe(false);
+      expect(isAttackSlot('move_or_melee')).toBe(false);
+
+      expect(
+        hasTwoAttackActions({
+          name: 'Brawl',
+          slots: ['melee', 'melee'],
+          tags: ['aggressive'],
+          isEligible: () => true,
+          getBaseWeight: () => 10,
+        }),
+      ).toBe(true);
+
+      expect(
+        hasTwoAttackActions({
+          name: 'Volley',
+          slots: ['shoot', 'shoot'],
+          tags: ['aggressive', 'ranged'],
+          isEligible: () => true,
+          getBaseWeight: () => 10,
+        }),
+      ).toBe(true);
+
+      expect(
+        hasTwoAttackActions({
+          name: 'Charge',
+          slots: ['move', 'melee'],
+          tags: ['aggressive'],
+          isEligible: () => true,
+          getBaseWeight: () => 10,
+        }),
+      ).toBe(false);
+
+      expect(
+        hasTwoAttackActions({
+          name: 'Hit and run',
+          slots: ['melee', 'move_to_cover'],
+          tags: ['defensive'],
+          isEligible: () => true,
+          getBaseWeight: () => 10,
+        }),
+      ).toBe(false);
+    });
+
+    it('monster with Brawl (2 attacks) charges towards distant hero if first attack kills adjacent hero', async () => {
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+      const state = createTestState();
+      // Monster at (2, 2)
+      const monster = createMonster(MonsterType.ORC, Colour.Green, 2, 2);
+      monster.actions = 2;
+      monster.movement = 3;
+      monster.rangedWeapon = undefined;
+      state.dungeon.layout.monsters = [monster];
+
+      // Adjacent hero with 1 HP at (2, 3)
+      const hero1 = createTestHero('Fearik', 2, 3, 1);
+      // Distant hero at (2, 5)
+      const hero2 = createTestHero('Elisa', 2, 5, 10);
+      state.heroes = [hero1, hero2];
+
+      await monsterActions(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      // Hero1 took damage and died
+      expect(hero1.health).toBeLessThanOrEqual(0);
+
+      // Monster charged towards Hero2 (moved down towards (2, 5))
+      expect(monster.position.x).toBe(2);
+      // After killing hero1 at (2, 3), the path towards (2, 5) becomes passable, monster moves along path
+      expect(monster.position.y).toBeGreaterThan(2);
+      expect(
+        state.actionLog.some(
+          (l) =>
+            l.key === 'logs.takeDamage.attackedWith' &&
+            l.properties?.target === hero1.name,
+        ),
+      ).toBe(true);
+      expect(
+        state.actionLog.some(
+          (l) => l.key === 'logs.monsterAction.movedTowards',
+        ),
+      ).toBe(true);
+
+      randomSpy.mockRestore();
+    });
+
+    it('monster with Brawl attacks second hero instead of charging if another valid adjacent target exists', async () => {
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+      const state = createTestState();
+      const monster = createMonster(MonsterType.ORC, Colour.Green, 2, 2);
+      monster.actions = 2;
+      monster.movement = 3;
+      monster.rangedWeapon = undefined;
+      state.dungeon.layout.monsters = [monster];
+
+      // Two adjacent heroes
+      const hero1 = createTestHero('Fearik', 2, 3, 1);
+      const hero2 = createTestHero('Elisa', 3, 2, 10);
+      state.heroes = [hero1, hero2];
+
+      await monsterActions(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      // Monster should stay at (2, 2) and attack both heroes
+      expect(monster.position).toEqual({ x: 2, y: 2 });
+      const attacks = state.actionLog.filter(
+        (l) => l.key === 'logs.takeDamage.attackedWith',
+      );
+      expect(attacks.length).toBe(2);
+
+      randomSpy.mockRestore();
+    });
   });
 });

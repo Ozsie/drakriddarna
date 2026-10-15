@@ -68,6 +68,7 @@ export {
   doorAsActor,
   getDamageString,
   getEffectiveMaxMovement,
+  getEffectiveMaxHealth,
   removeDamageIndicator,
   takeDamage,
 } from './core/combat';

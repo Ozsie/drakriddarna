@@ -103,6 +103,96 @@ describe('Orc Drums event and resetEventEffects', () => {
     expect(orc.actions).toBe(2);
     expect(troll.actions).toBe(2);
   });
+
+  it('does nothing when 4 orcs are visible and Orc Drums is drawn', () => {
+    const state = init();
+    const orc1 = createMonster(MonsterType.ORC, Colour.Red, 1, 1);
+    const orc2 = createMonster(MonsterType.ORC, Colour.Green, 2, 1);
+    const orc3 = createMonster(MonsterType.ORC, Colour.Blue, 1, 2);
+    const orc4 = createMonster(MonsterType.ORC, Colour.Yellow, 2, 2);
+    state.dungeon.layout.monsters = [orc1, orc2, orc3, orc4];
+    state.dungeon.layout.grid = ['AAAA', 'AAAA', 'AAAA', 'AAAA'];
+    state.dungeon.discoveredRooms = ['A'];
+
+    const event = {
+      id: 'orc_drums',
+      type: 'ORC_DRUMS' as const,
+      name: 'events.orchDrums.name',
+      nameTranslationKey: 'events.orchDrums.name',
+      number: 14,
+      description: 'events.orchDrums.description',
+      descriptionTranslationKey: 'events.orchDrums.description',
+      effect: 'theOrchDrums' as const,
+      used: false,
+    };
+
+    eventEffects.theOrcDrums(state, event);
+
+    expect(orc1.actions).toBe(2);
+    expect(orc2.actions).toBe(2);
+    expect(orc3.actions).toBe(2);
+    expect(orc4.actions).toBe(2);
+    expect(event.used).toBe(true);
+    expect(state.damageIndicators).toBeUndefined();
+  });
+
+  it('still boosts visible orcs if there are 4 orcs in layout but 1 is dead or undiscovered', () => {
+    const state = init();
+    const orc1 = createMonster(MonsterType.ORC, Colour.Red, 1, 1);
+    const orc2 = createMonster(MonsterType.ORC, Colour.Green, 2, 1);
+    const orc3 = createMonster(MonsterType.ORC, Colour.Blue, 1, 2);
+    const deadOrc = createMonster(MonsterType.ORC, Colour.Yellow, 2, 2);
+    deadOrc.health = 0;
+    state.dungeon.layout.monsters = [orc1, orc2, orc3, deadOrc];
+    state.dungeon.layout.grid = ['AAAA', 'AAAA', 'AAAA', 'AAAA'];
+    state.dungeon.discoveredRooms = ['A'];
+
+    const event = {
+      id: 'orc_drums',
+      type: 'ORC_DRUMS' as const,
+      name: 'events.orchDrums.name',
+      nameTranslationKey: 'events.orchDrums.name',
+      number: 14,
+      description: 'events.orchDrums.description',
+      descriptionTranslationKey: 'events.orchDrums.description',
+      effect: 'theOrchDrums' as const,
+      used: false,
+    };
+
+    eventEffects.theOrcDrums(state, event);
+
+    expect(orc1.actions).toBe(3);
+    expect(orc2.actions).toBe(3);
+    expect(orc3.actions).toBe(3);
+    expect(deadOrc.actions).toBe(2);
+    expect(event.used).toBe(true);
+    expect(state.damageIndicators?.length).toBe(3);
+  });
+
+  it('fountainOfYouth respects max health adjusted by difficulty modifier', () => {
+    const state = init();
+    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+    const hero = state.heroes[0];
+    hero.maxHealth = 10;
+    hero.health = 8; // Effective max is 9 (10 - 1)
+
+    const event: TurnEvent = {
+      id: 'fountain_of_youth',
+      type: 'FOUNTAIN_OF_YOUTH',
+      name: 'events.fountainOfYouth.name',
+      nameTranslationKey: 'events.fountainOfYouth.name',
+      number: 8,
+      description: 'events.fountainOfYouth.description',
+      descriptionTranslationKey: 'events.fountainOfYouth.description',
+      effect: 'fountainOfYouth',
+      used: false,
+    };
+
+    eventEffects.fountainOfYouth(state, event);
+
+    expect(hero.health).toBeLessThanOrEqual(9);
+    expect(event.used).toBe(true);
+  });
 });
 
 describe('Monster spawn events: difficulty distance, early round skip, and party health check', () => {
@@ -174,6 +264,19 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     // Total health 19 / 40 < 50%
     state.heroes[0].health = 4;
+    expect(isPartyBelowHalfHealth(state)).toBe(true);
+
+    // With hard difficulty (-1 max health per hero => 4 * 9 = 36 max health)
+    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+    // Total health 18 / 36 = 50% (not below 50%)
+    state.heroes[0].health = 3;
+    state.heroes[1].health = 5;
+    state.heroes[2].health = 5;
+    state.heroes[3].health = 5;
+    expect(isPartyBelowHalfHealth(state)).toBe(false);
+
+    // Total health 17 / 36 < 50%
+    state.heroes[0].health = 2;
     expect(isPartyBelowHalfHealth(state)).toBe(true);
   });
 
@@ -466,7 +569,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       state.difficulty = {
         id: 'custom',
         nameTranslationKey: 'custom',
-        modifiers: { attack: 0, defense: 0, movement: 0, search: 0 },
+        modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
         events: {
           minMonsterSpawnDistance: 4,
           earliestMonsterRound: 1,
@@ -494,6 +597,53 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       const spawnedOrc = state.dungeon.layout.monsters[0];
       const dist = distanceInGrid({ x: 0, y: 0 }, spawnedOrc.position);
       expect(dist).toBeGreaterThanOrEqual(4);
+    });
+
+    it('does not spawn a troll when 4 trolls are already visible and Hungry Troll is drawn', () => {
+      const state = init();
+      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.turnCount = 5;
+      state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
+      state.dungeon.discoveredRooms = ['A'];
+      const troll1 = createMonster(MonsterType.TROLL, Colour.Red, 1, 1);
+      const troll2 = createMonster(MonsterType.TROLL, Colour.Green, 2, 1);
+      const troll3 = createMonster(MonsterType.TROLL, Colour.Blue, 3, 1);
+      const troll4 = createMonster(MonsterType.TROLL, Colour.Yellow, 4, 1);
+      state.dungeon.layout.monsters = [troll1, troll2, troll3, troll4];
+
+      state.heroes.forEach((h) => {
+        h.position = { x: 0, y: 0 };
+      });
+
+      const event = { ...trollEvent, used: false };
+      eventEffects.theHungryTroll(state, event);
+
+      expect(event.used).toBe(true);
+      expect(state.dungeon.layout.monsters.length).toBe(4);
+    });
+
+    it('spawns a troll when 4 trolls are in layout but 1 is dead', () => {
+      const state = init();
+      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.turnCount = 5;
+      state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
+      state.dungeon.discoveredRooms = ['A'];
+      const troll1 = createMonster(MonsterType.TROLL, Colour.Red, 1, 1);
+      const troll2 = createMonster(MonsterType.TROLL, Colour.Green, 2, 1);
+      const troll3 = createMonster(MonsterType.TROLL, Colour.Blue, 3, 1);
+      const deadTroll = createMonster(MonsterType.TROLL, Colour.Yellow, 4, 1);
+      deadTroll.health = 0;
+      state.dungeon.layout.monsters = [troll1, troll2, troll3, deadTroll];
+
+      state.heroes.forEach((h) => {
+        h.position = { x: 0, y: 0 };
+      });
+
+      const event = { ...trollEvent, used: false };
+      eventEffects.theHungryTroll(state, event);
+
+      expect(event.used).toBe(true);
+      expect(state.dungeon.layout.monsters.length).toBe(5);
     });
   });
 });

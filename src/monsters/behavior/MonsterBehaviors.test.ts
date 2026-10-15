@@ -276,6 +276,43 @@ describe('Orc Behaviors Evaluation', () => {
     expect(charge?.finalWeight).toBeCloseTo(14.3);
   });
 
+  it('Orc Charge accounts for difficulty health modifier when checking <= 50%', () => {
+    const state = createTestState();
+    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+    const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
+    monster.temperament = 'bold';
+    // Base maxHealth is 10, with modifier -1 effective max is 9.
+    // Hero with health 5 would be <= 50% of base 10 (5 <= 5), but > 50% of effective 9 (5 > 4.5).
+    const hero = createTestHero('Fearik', 1, 3, 10);
+    hero.health = 5;
+    state.heroes = [hero];
+
+    const passableGrid = createPassableGrid(state);
+    const ctx: BehaviorContext = {
+      state,
+      monster,
+      passableGrid,
+      neighbouringHeroes: [],
+      visibleHeroes: [hero],
+      partyHpPercentage: 5 / 9,
+      hasDeadHero: false,
+      aliveMonsterCount: 1,
+      directorState: 'NEUTRAL',
+    };
+
+    const evaluated = evaluateBehaviors(ORC_BEHAVIORS, ctx);
+    const charge = evaluated.find((b) => b.name === 'Charge');
+    expect(charge?.eligible).toBe(true);
+    // Base weight should be 8 (not 11) because 5 > 9 / 2 (4.5)
+    expect(charge?.baseWeight).toBe(8);
+
+    // If hero health is 4 (<= 9 / 2 = 4.5), base weight becomes 11
+    hero.health = 4;
+    const evaluated2 = evaluateBehaviors(ORC_BEHAVIORS, ctx);
+    const charge2 = evaluated2.find((b) => b.name === 'Charge');
+    expect(charge2?.baseWeight).toBe(11);
+  });
+
   it('disqualifies shoot behaviors when bow is forgotten this turn', () => {
     const state = createTestState();
     const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);

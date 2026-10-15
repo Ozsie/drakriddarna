@@ -37,6 +37,7 @@ import {
   doorAsActor,
   getDifficulty,
   getEffectiveMaxMovement,
+  getEffectiveMaxHealth,
   takeDamage,
 } from '../core';
 import {
@@ -76,7 +77,7 @@ export const newHero = (
     maxMovement: 3,
     defense: 0,
     level: Level.APPRENTICE,
-    health: 7,
+    health: 7 + (difficulty?.modifiers.health ?? 0),
     maxHealth: 7,
     colour: colour,
     experience: 0,
@@ -256,6 +257,7 @@ export const resetLiveHeroes = (state: GameState) => {
   doReRender(state);
   clearActorAnimations();
   const movementModifier = getDifficulty(state).modifiers.movement;
+  const healthModifier = getDifficulty(state).modifiers.health;
   state.heroes.forEach((hero, index) => {
     const startPos =
       state.dungeon.startingPositions[index] ??
@@ -268,7 +270,7 @@ export const resetLiveHeroes = (state: GameState) => {
     }
     hero.movement = getEffectiveMaxMovement(hero, movementModifier);
     hero.actions = 2;
-    hero.health = hero.maxHealth;
+    hero.health = getEffectiveMaxHealth(hero, healthModifier);
     hero.blinded = false;
     hero.weakened = false;
     hero.incapacitated = false;
@@ -284,7 +286,7 @@ export const resetLiveHeroes = (state: GameState) => {
 export const liveHeroes = (state: GameState): Hero[] =>
   state.heroes.filter((hero) => hero.health > 0).map((hero) => hero as Hero);
 
-export { canAct, getEffectiveMaxMovement };
+export { canAct, getEffectiveMaxMovement, getEffectiveMaxHealth };
 
 export const openDoor = (
   hero: Hero,
@@ -461,9 +463,10 @@ export const rewardLiveHeroes = (state: GameState) => {
 
 export const replaceDeadHeroes = (state: GameState) => {
   const movementModifier = getDifficulty(state).modifiers.movement;
+  const healthModifier = getDifficulty(state).modifiers.health;
   deadHeroes(state).forEach((hero) => {
     hero.experience = 0;
-    hero.health = hero.maxHealth;
+    hero.health = getEffectiveMaxHealth(hero, healthModifier);
     hero.movement = getEffectiveMaxMovement(hero, movementModifier);
     hero.actions = 2;
   });

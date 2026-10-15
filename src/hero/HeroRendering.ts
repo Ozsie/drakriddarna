@@ -1,4 +1,4 @@
-import type { GameState, Hero } from '../types';
+import type { Difficulty, GameState, Hero } from '../types';
 import {
   getActorVisualPosition,
   hasLineOfSight,
@@ -27,6 +27,7 @@ export const renderHeroes = (
       cellSize,
       debugMode,
       currentTime,
+      state.difficulty,
     );
     if (isAnim) hasActiveAnimation = true;
   });
@@ -42,6 +43,7 @@ const renderHero = (
   cellSize: number,
   debugMode: boolean,
   currentTime: number = Date.now(),
+  difficulty?: Difficulty,
 ): boolean => {
   const visualPos = getActorVisualPosition(hero, currentTime);
   const x = visualPos.x;
@@ -60,7 +62,7 @@ const renderHero = (
   );
   renderActionOnActor(ctx, hero, x, y, cellSize);
   renderActorBar(ctx, hero, x, y, cellSize);
-  renderHealthBar(ctx, hero, x, y, cellSize);
+  renderHealthBar(ctx, hero, x, y, cellSize, difficulty);
   if (debugMode) {
     const debugText = `(${hero.position.x},${hero.position.y})`;
     ctx.fillStyle = 'black';
@@ -120,7 +122,12 @@ const renderHealthBar = (
   x: number,
   y: number,
   cellSize: number,
+  difficulty?: Difficulty,
 ) => {
+  const effectiveMaxHealth = Math.max(
+    1,
+    hero.maxHealth + (difficulty?.modifiers.health ?? 0),
+  );
   ctx.beginPath();
   ctx.strokeStyle = 'black';
   ctx.fillStyle = 'red';
@@ -129,7 +136,7 @@ const renderHealthBar = (
   ctx.fillRect(
     x * cellSize + 4,
     y * cellSize,
-    (cellSize - 8) * (hero.health / hero.maxHealth),
+    (cellSize - 8) * (hero.health / effectiveMaxHealth),
     4,
   );
   ctx.rect(x * cellSize + 4, y * cellSize, cellSize - 8, 4);

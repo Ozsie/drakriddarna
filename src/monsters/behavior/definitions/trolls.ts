@@ -17,8 +17,12 @@ export const TROLL_BEHAVIORS: MonsterBehavior[] = [
       ctx.neighbouringHeroes.length === 0 && findChargePath(ctx) !== null,
     getBaseWeight: (ctx) => {
       const charge = findChargePath(ctx);
-      if (charge && charge.hero.health <= charge.hero.maxHealth / 2) {
-        return 11;
+      if (charge) {
+        const healthModifier = ctx.state.difficulty?.modifiers.health ?? 0;
+        const maxHealth = charge.hero.maxHealth + healthModifier;
+        if (charge.hero.health <= maxHealth / 2) {
+          return 11;
+        }
       }
       return 8;
     },

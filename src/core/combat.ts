@@ -65,6 +65,11 @@ export const getEffectiveMaxMovement = (
 ): number =>
   actor.maxMovement - (actor.armour?.movementReduction ?? 0) + movementModifier;
 
+export const getEffectiveMaxHealth = (
+  actor: Actor,
+  healthModifier = 0,
+): number => actor.maxHealth + healthModifier;
+
 export const canAct = (hero: Actor, movementModifier = 0): boolean => {
   if (hero.movement < getEffectiveMaxMovement(hero, movementModifier)) {
     return hero.actions > 1;

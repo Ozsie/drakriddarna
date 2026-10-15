@@ -8,6 +8,7 @@ import {
   RE_ROLL_ATTACK,
   getDifficulty,
   getEffectiveMaxMovement,
+  getEffectiveMaxHealth,
 } from '../core';
 
 export const USED = 'USED';
@@ -255,9 +256,11 @@ export const onUse: {
         self.properties[USED] = true;
       }
 
+      const healthModifier = getDifficulty(state).modifiers.health;
+      const effectiveMaxHealth = getEffectiveMaxHealth(target, healthModifier);
       const addedHealth = Math.min(
         roll(user.level, 3),
-        target.maxHealth - target.health,
+        effectiveMaxHealth - target.health,
       );
       target.health += addedHealth;
       if (!state.damageIndicators) {
