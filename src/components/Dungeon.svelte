@@ -81,6 +81,7 @@
     handleTwoFingerTouchEnd,
   } from '../input/TouchPanLogic';
   import { musicManager } from '../audio/MusicManager';
+  import { soundEffectManager } from '../audio/SoundEffectManager';
 
   export let state: GameState | undefined = undefined;
   export let debugMode: boolean | undefined = undefined;
@@ -93,8 +94,12 @@
   $: dungeon = activeState?.dungeon;
   $: startPosition = dungeon?.startingPositions?.[0];
   $: isMusicEnabled = activeState?.settings?.['music'] !== false;
+  $: isSoundEnabled =
+    activeState?.settings?.['sound'] !== false &&
+    activeState?.settings?.['soundEffects'] !== false;
   $: if (browser) {
     musicManager.setMuted(!isMusicEnabled);
+    soundEffectManager.setMuted(!isSoundEnabled);
     if (dungeon && isMusicEnabled) {
       musicManager.playDungeonMusic(dungeon.music);
     }
@@ -745,6 +750,7 @@
       window.removeEventListener('touchcancel', onTouchCancel);
       window.removeEventListener('keydown', onWindowKeyDown);
       musicManager.stop();
+      soundEffectManager.stop();
     }
     if (overlayAnimationId) {
       cancelAnimationFrame(overlayAnimationId);

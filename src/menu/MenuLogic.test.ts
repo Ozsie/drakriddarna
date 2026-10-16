@@ -300,12 +300,13 @@ describe('MenuLogic', () => {
   });
 
   describe('getRightsMenuItems', () => {
-    it('returns ownership, music, graphics, and back items', () => {
+    it('returns ownership, music, sfx, graphics, and back items', () => {
       const items = getRightsMenuItems(mockState);
       const ids = items.map((i) => i.id);
       expect(ids).toEqual([
         'rights_implementation',
         'rights_music',
+        'rights_sfx',
         'rights_graphics',
         'rights_back',
       ]);

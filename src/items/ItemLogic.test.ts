@@ -47,6 +47,9 @@ const createHero = (
   inventory: [],
   isInventoryOpen: false,
   ignoredByMonsters: false,
+  walkSound: 'sfx/walk_knight.wav',
+  hurtSound: 'sfx/hurt_knight.wav',
+  deathSound: 'sfx/die_knight.wav',
 });
 
 const createGameState = (heroes: Hero[]): GameState =>

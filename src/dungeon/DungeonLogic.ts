@@ -32,6 +32,9 @@ registerMonsterTemplate(MonsterType.ORC, {
   weapon: monsterWeapons[0],
   rangedWeapon: monsterWeapons[1],
   armour: monsterArmour[0],
+  walkSound: 'sfx/walk_boss.wav',
+  hurtSound: 'sfx/hurt_monster.wav',
+  deathSound: 'sfx/die_monster.wav',
 });
 registerMonsterTemplate(MonsterType.TROLL, {
   level: Level.KNIGHT,
@@ -41,13 +44,27 @@ registerMonsterTemplate(MonsterType.TROLL, {
   experience: 2,
   weapon: monsterWeapons[2],
   armour: monsterArmour[1],
+  walkSound: 'sfx/walk_boss.wav',
+  hurtSound: 'sfx/hurt2_monster.wav',
+  deathSound: 'sfx/die2_monster.wav',
 });
-registerMonsterTemplate(MonsterType.YELLOW_DARK_LORD, { actions: 3 });
+registerMonsterTemplate(MonsterType.YELLOW_DARK_LORD, {
+  actions: 3,
+  walkSound: 'sfx/walk_boss.wav',
+  hurtSound: 'sfx/hurt3_monster.wav',
+  deathSound: 'sfx/die_boss.wav',
+});
 registerMonsterTemplate(MonsterType.GREEN_DARK_LORD, {
   weapon: monsterWeapons[4],
+  walkSound: 'sfx/walk_boss.wav',
+  hurtSound: 'sfx/hurt3_monster.wav',
+  deathSound: 'sfx/die_boss.wav',
 });
 registerMonsterTemplate(MonsterType.BLUE_DARK_LORD, {
   shield: monsterShields[0],
+  walkSound: 'sfx/walk_boss.wav',
+  hurtSound: 'sfx/hurt3_monster.wav',
+  deathSound: 'sfx/die_boss.wav',
 });
 
 export { COLLAPSED, EMPTY, WALL };
@@ -255,6 +272,9 @@ export const createMonster = (
   let armour = monsterArmour[2];
   let rangedWeapon = undefined;
   let shield = undefined;
+  let walkSound: string | undefined = undefined;
+  let hurtSound: string | undefined = undefined;
+  let deathSound: string | undefined = undefined;
 
   const template = getMonsterTemplate(type);
   if (template) {
@@ -268,6 +288,9 @@ export const createMonster = (
     armour = template.armour ?? armour;
     rangedWeapon = template.rangedWeapon ?? rangedWeapon;
     shield = template.shield ?? shield;
+    walkSound = template.walkSound ?? template.walk;
+    hurtSound = template.hurtSound ?? template.hurt;
+    deathSound = template.deathSound ?? template.death;
   }
 
   const monsterName = type + ' (' + colourName + ')';
@@ -299,5 +322,8 @@ export const createMonster = (
     inventory: [],
     temperament: Math.random() < 0.5 ? 'bold' : 'wary',
     passiveStreak: 0,
+    ...(walkSound ? { walkSound, walk: walkSound } : {}),
+    ...(hurtSound ? { hurtSound, hurt: hurtSound } : {}),
+    ...(deathSound ? { deathSound, death: deathSound } : {}),
   };
 };

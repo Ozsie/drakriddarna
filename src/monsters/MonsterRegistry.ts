@@ -16,6 +16,12 @@ export type MonsterStatOverrides = Partial<{
   armour: Armour;
   rangedWeapon: Weapon;
   shield: Shield;
+  walkSound: string;
+  hurtSound: string;
+  deathSound: string;
+  walk: string;
+  hurt: string;
+  death: string;
 }>;
 
 const monsterTemplates: Record<string, MonsterStatOverrides> = {};

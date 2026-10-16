@@ -12,6 +12,7 @@ import { addLog, i18n } from './logger';
 import { getDifficulty } from './DifficultLevels';
 import { flashActor } from './ActorAnimation';
 import { createBloodSplatter, createProjectile } from '../combat';
+import { soundEffectManager } from '../audio/SoundEffectManager';
 
 export const ATTACK_BONUS = 'ATTACK_BONUS';
 export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
@@ -132,6 +133,7 @@ export const takeDamage = (
   if (ranged && source.rangedWeapon) {
     weapon = source.rangedWeapon;
   }
+  soundEffectManager.playWeaponAttack(weapon);
   const isHeroSource = state.heroes.includes(source);
   const isHeroTarget = state.heroes.includes(target);
   if (isHeroSource && !isHeroTarget) {
@@ -265,13 +267,19 @@ export const takeDamage = (
     });
     target.health = 0;
     target.level = Level.APPRENTICE;
-  } else if (weapon.id === 'green_dark_lord_sword') {
-    addLog(state, 'logs.takeDamage.paralyzed', {
-      target: i18n(target.name),
-      weapon: i18n(weapon.name),
-    });
-    target.movement = 0;
-    target.actions = 0;
-    target.incapacitated = true;
+    soundEffectManager.playActorDeath(target);
+  } else {
+    if (damage > 0) {
+      soundEffectManager.playActorHurt(target);
+    }
+    if (weapon.id === 'green_dark_lord_sword') {
+      addLog(state, 'logs.takeDamage.paralyzed', {
+        target: i18n(target.name),
+        weapon: i18n(weapon.name),
+      });
+      target.movement = 0;
+      target.actions = 0;
+      target.incapacitated = true;
+    }
   }
 };

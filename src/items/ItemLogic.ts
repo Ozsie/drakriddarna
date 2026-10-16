@@ -8,6 +8,7 @@ import {
   i18n,
 } from '../core';
 import { createBloodSplatter } from '../combat';
+import { soundEffectManager } from '../audio/SoundEffectManager';
 import { roll } from '../core';
 import {
   canAct,
@@ -142,6 +143,7 @@ export const resolveChaosSwordAttack = (
   user: Actor,
   target: Actor,
 ): void => {
+  soundEffectManager.playWeaponAttack(user.weapon);
   const isHeroSource = state.heroes.includes(user);
   const isHeroTarget = state.heroes.includes(target);
   if (isHeroSource && !isHeroTarget) {
@@ -160,6 +162,7 @@ export const resolveChaosSwordAttack = (
     );
     target.health = 0;
     target.level = Level.APPRENTICE;
+    soundEffectManager.playActorDeath(target);
     const monster = state.dungeon.layout.monsters.find((m) => m === target);
     if (monster) {
       state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter(
@@ -223,6 +226,8 @@ export const resolveChaosSwordAttack = (
           target: i18n(target.name),
         });
         killTarget(damage);
+      } else {
+        soundEffectManager.playActorHurt(target);
       }
       break;
     }

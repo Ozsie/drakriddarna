@@ -10,6 +10,8 @@ export interface GameSettings {
   debug?: boolean;
   locale?: string;
   music?: boolean;
+  sound?: boolean;
+  soundEffects?: boolean;
   [key: string]: string | number | boolean | undefined;
 }
 
@@ -140,6 +142,15 @@ export type Actor = {
   lastAttackedBy?: string;
   lastAttackedByHero?: Actor;
   roundTargetCount?: number;
+  walkSound?: string;
+  hurtSound?: string;
+  deathSound?: string;
+  walk?: string;
+  hurt?: string;
+  death?: string;
+  soundWalk?: string;
+  soundHurt?: string;
+  soundDeath?: string;
 };
 
 export type Hero = Actor & {
@@ -416,6 +427,10 @@ export type Weapon = Item & {
   ignoresShield: boolean;
   ignoresArmour: boolean;
   elemental?: boolean;
+  sound?: string;
+  attackSound?: string;
+  soundEffect?: string;
+  soundFile?: string;
 };
 
 export type Shield = Item & {

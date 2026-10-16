@@ -1,4 +1,5 @@
-const DEFAULT_TRACK = '/music/Lost in The Forest - Silence Unbroken I & II - 01 An Old Wizard\'s Promise.mp3';
+const DEFAULT_TRACK =
+  "/music/Lost in The Forest - Silence Unbroken I & II - 01 An Old Wizard's Promise.mp3";
 
 class MusicManager {
   private audio: HTMLAudioElement | null = null;

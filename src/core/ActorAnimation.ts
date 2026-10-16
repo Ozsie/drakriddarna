@@ -1,4 +1,5 @@
 import type { Actor, Position } from '../types';
+import { soundEffectManager } from '../audio/SoundEffectManager';
 
 export const DEFAULT_ACTOR_MOVEMENT_DURATION_MS = 200;
 let currentMovementDurationMs = DEFAULT_ACTOR_MOVEMENT_DURATION_MS;
@@ -62,6 +63,8 @@ export const recordActorStep = (
   if (from.x === to.x && from.y === to.y) {
     return;
   }
+
+  soundEffectManager.playActorWalk(actor);
 
   const startTime = Math.max(currentTime, state.lastStepEndTime);
   const stepDuration = Math.max(10, duration);

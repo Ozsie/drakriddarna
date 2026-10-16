@@ -332,6 +332,20 @@ export const getRightsMenuItems = (
     },
   },
   {
+    id: 'rights_sfx',
+    debugOnly: false,
+    label: i18n('content.menu.rights.sfx'),
+    onClick: () => {
+      if (typeof window !== 'undefined' && window.open) {
+        window.open(
+          'https://rgbin.itch.io/knight-monsters-sounds-pack',
+          '_blank',
+          'noopener,noreferrer',
+        );
+      }
+    },
+  },
+  {
     id: 'rights_graphics',
     debugOnly: false,
     label: i18n('content.menu.rights.graphics'),
