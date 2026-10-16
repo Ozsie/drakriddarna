@@ -7,7 +7,7 @@ import {
   flashActor,
   i18n,
 } from '../core';
-import { createBloodSplatter } from '../combat/CombatEffects';
+import { createBloodSplatter } from '../combat';
 import { roll } from '../core';
 import {
   canAct,
@@ -309,8 +309,13 @@ export const onUse: {
         target: i18n(target.name),
         addedHealth: `${addedHealth}`,
       });
-      user.actions--;
-      user.movement = user.maxMovement;
+      user.actions = Math.max(0, user.actions - 1);
+      const movementModifier = getDifficulty(state).modifiers.movement;
+      if (user.actions === 0) {
+        user.movement = 0;
+      } else {
+        user.movement = getEffectiveMaxMovement(user, movementModifier);
+      }
     }
   },
   chaosSwordOnUse: (
@@ -333,16 +338,18 @@ export const onUse: {
       return;
     }
     resolveChaosSwordAttack(state, user, target);
-    if (user.actions === 0) {
+    if (user.actions <= 0) {
+      user.actions = 0;
+      user.movement = 0;
       return;
     }
     if (
       user.actions > 1 &&
       user.movement < getEffectiveMaxMovement(user, movementModifier)
     ) {
-      user.actions -= 2;
+      user.actions = Math.max(0, user.actions - 2);
     } else {
-      user.actions--;
+      user.actions = Math.max(0, user.actions - 1);
     }
     if (user.actions === 0) {
       user.movement = 0;
@@ -410,7 +417,10 @@ export const onUse: {
           effect: 'fade',
         }),
       );
-      user.actions--;
+      user.actions = Math.max(0, user.actions - 1);
+      if (user.actions === 0) {
+        user.movement = 0;
+      }
     }
   },
 };

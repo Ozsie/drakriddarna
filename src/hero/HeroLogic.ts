@@ -100,7 +100,11 @@ export const newHero = (
 export const act = (direction: MoveDirection | string, state: GameState) => {
   doReRender(state);
   const hero: Hero | undefined = state.currentActor;
-  if (!hero || hero.actions === 0) {
+  if (!hero || hero.actions <= 0) {
+    if (hero) {
+      hero.actions = 0;
+      hero.movement = 0;
+    }
     return;
   }
   const newPosition = { x: hero.position.x, y: hero.position.y };
@@ -177,8 +181,12 @@ export const act = (direction: MoveDirection | string, state: GameState) => {
   } else {
     addLog(state, 'logs.heroAction.illegalMove', { hero: i18n(hero.name) });
   }
-  if (!checkForTrapDoor(state)) {
+  if (!blockedByMonster && !checkForTrapDoor(state)) {
     consumeActions(hero, getDifficulty(state).modifiers.movement);
+  }
+  if (hero.actions <= 0) {
+    hero.actions = 0;
+    hero.movement = 0;
   }
 };
 
@@ -190,7 +198,8 @@ export const pickLock = (state: GameState, door?: Door) => {
     addLog(state, 'logs.heroAction.blinded', { hero: i18n(hero.name) });
     return;
   }
-  if (!canAct(hero, getDifficulty(state).modifiers.movement)) {
+  const movementModifier = getDifficulty(state).modifiers.movement;
+  if (!canAct(hero, movementModifier)) {
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
   }
@@ -209,17 +218,18 @@ export const pickLock = (state: GameState, door?: Door) => {
         hero: i18n(hero.name),
       });
     }
-    if (hero.actions > 1 && hero.movement < 3) {
-      hero.actions -= 2;
+    if (
+      hero.actions > 1 &&
+      hero.movement < getEffectiveMaxMovement(hero, movementModifier)
+    ) {
+      hero.actions = Math.max(0, hero.actions - 2);
     } else {
-      hero.actions--;
+      hero.actions = Math.max(0, hero.actions - 1);
     }
-    hero.movement = getEffectiveMaxMovement(
-      hero,
-      getDifficulty(state).modifiers.movement,
-    );
-    if (hero.actions == 0) {
+    if (hero.actions === 0) {
       hero.movement = 0;
+    } else {
+      hero.movement = getEffectiveMaxMovement(hero, movementModifier);
     }
   }
 };
@@ -308,7 +318,8 @@ export const openDoor = (
 
 export const attack = (hero: Hero, state: GameState, target: Position) => {
   doReRender(state);
-  if (!canAct(hero, getDifficulty(state).modifiers.movement)) {
+  const movementModifier = getDifficulty(state).modifiers.movement;
+  if (!canAct(hero, movementModifier)) {
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
   }
@@ -336,13 +347,21 @@ export const attack = (hero: Hero, state: GameState, target: Position) => {
     if (monster.health <= 0) {
       killMonster(state, monster, hero);
     }
-    if (hero.actions === 0) {
+    if (hero.actions <= 0) {
+      hero.actions = 0;
+      hero.movement = 0;
       return;
     }
-    if (hero.actions > 1 && hero.movement < 3) {
-      hero.actions -= 2;
+    if (
+      hero.actions > 1 &&
+      hero.movement < getEffectiveMaxMovement(hero, movementModifier)
+    ) {
+      hero.actions = Math.max(0, hero.actions - 2);
     } else {
-      hero.actions--;
+      hero.actions = Math.max(0, hero.actions - 1);
+    }
+    if (hero.actions === 0) {
+      hero.movement = 0;
     }
   }
 };
@@ -365,11 +384,11 @@ export const search = (state: GameState) => {
     hero.actions > 1 &&
     hero.movement < getEffectiveMaxMovement(hero, movementModifier)
   ) {
-    hero.actions -= 2;
+    hero.actions = Math.max(0, hero.actions - 2);
   } else {
-    hero.actions--;
+    hero.actions = Math.max(0, hero.actions - 1);
   }
-  if (hero.actions == 0) {
+  if (hero.actions === 0) {
     hero.movement = 0;
   }
 };
@@ -391,9 +410,9 @@ export const interact = (state: GameState, interactable?: InteractableCell) => {
       hero.actions > 1 &&
       hero.movement < getEffectiveMaxMovement(hero, movementModifier)
     ) {
-      hero.actions -= 2;
+      hero.actions = Math.max(0, hero.actions - 2);
     } else {
-      hero.actions--;
+      hero.actions = Math.max(0, hero.actions - 1);
     }
     if (hero.actions === 0) {
       hero.movement = 0;
@@ -421,13 +440,20 @@ export const isBlockedByHero = (state: GameState, newX: number, newY: number) =>
   );
 
 export const consumeActions = (hero: Actor, movementModifier = 0) => {
-  if (hero.movement === 0) {
-    hero.actions--;
-    if (hero.actions !== 0) {
+  if (hero.actions <= 0) {
+    hero.actions = 0;
+    hero.movement = 0;
+    return;
+  }
+  if (hero.movement <= 0) {
+    hero.actions = Math.max(0, hero.actions - 1);
+    if (hero.actions > 0) {
       hero.movement = getEffectiveMaxMovement(hero, movementModifier);
+    } else {
+      hero.movement = 0;
     }
   }
-  if (hero.actions == 0) {
+  if (hero.actions <= 0) {
     hero.movement = 0;
   }
 };

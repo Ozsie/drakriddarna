@@ -14,6 +14,9 @@ import {
 } from '../types';
 import {
   attack,
+  pickLock,
+  act,
+  consumeActions,
   canOpenDoor,
   newHero,
   applyStartingEquipment,
@@ -164,6 +167,165 @@ describe('attack', () => {
     // stumble, or miss), so at least the resolution should have run without
     // being blocked by the incapacitated guard.
     expect(hero.actions).toBeLessThanOrEqual(2);
+  });
+
+  it('deducts only 1 action when attacking with full movement on reduced movement hero', () => {
+    const hero = createTestHero({
+      actions: 2,
+      movement: 2,
+      maxMovement: 3,
+      armour: {
+        id: 'plate_mail',
+        name: 'Plate Mail',
+        type: ItemType.ARMOUR,
+        amountInDeck: 1,
+        defense: 2,
+        magicProtection: false,
+        movementReduction: 1,
+        value: 3,
+      },
+      weapon: weapons[0], // Standard sword
+    });
+    const monster = createTestMonster();
+    const state = createTestState(hero, monster);
+
+    attack(hero, state, monster.position);
+
+    // Hero had full effective movement (2 of 2), so attack should cost 1 action, not 2
+    expect(hero.actions).toBe(1);
+    expect(hero.movement).toBe(2);
+  });
+
+  it('deducts 2 actions when attacking after moving on reduced movement hero', () => {
+    const hero = createTestHero({
+      actions: 2,
+      movement: 1, // Took 1 step from effective max 2
+      maxMovement: 3,
+      armour: {
+        id: 'plate_mail',
+        name: 'Plate Mail',
+        type: ItemType.ARMOUR,
+        amountInDeck: 1,
+        defense: 2,
+        magicProtection: false,
+        movementReduction: 1,
+        value: 3,
+      },
+      weapon: weapons[0],
+    });
+    const monster = createTestMonster();
+    const state = createTestState(hero, monster);
+
+    attack(hero, state, monster.position);
+
+    // Moved before attacking: consumes 2 actions and clears movement
+    expect(hero.actions).toBe(0);
+    expect(hero.movement).toBe(0);
+  });
+
+  it('clears movement to 0 when last action is spent on attack', () => {
+    const hero = createTestHero({
+      actions: 1,
+      movement: 3,
+      weapon: weapons[0],
+    });
+    const monster = createTestMonster();
+    const state = createTestState(hero, monster);
+
+    attack(hero, state, monster.position);
+
+    expect(hero.actions).toBe(0);
+    expect(hero.movement).toBe(0);
+  });
+});
+
+describe('pickLock', () => {
+  it('deducts only 1 action when picking a lock with full movement on reduced movement hero', () => {
+    const hero = createTestHero({
+      actions: 2,
+      movement: 2,
+      maxMovement: 3,
+      level: Level.MASTER,
+      armour: {
+        id: 'plate_mail',
+        name: 'Plate Mail',
+        type: ItemType.ARMOUR,
+        amountInDeck: 1,
+        defense: 2,
+        magicProtection: false,
+        movementReduction: 1,
+        value: 3,
+      },
+    });
+    const monster = createTestMonster();
+    const state = createTestState(hero, monster);
+    const door: Door = {
+      x: 1,
+      y: 1,
+      side: Side.RIGHT,
+      open: false,
+      locked: true,
+      trapped: false,
+      hidden: false,
+      reinforced: false,
+      trapAttacks: 0,
+    };
+    state.dungeon.layout.doors = [door];
+
+    pickLock(state, door);
+
+    expect(hero.actions).toBe(1);
+    expect(hero.movement).toBe(2);
+  });
+});
+
+describe('consumeActions and action bounds', () => {
+  it('resets actions and movement to 0 when actions are 0 or negative', () => {
+    const hero = createTestHero({ actions: 0, movement: 3 });
+    consumeActions(hero, 0);
+    expect(hero.actions).toBe(0);
+    expect(hero.movement).toBe(0);
+
+    const negativeHero = createTestHero({ actions: -1, movement: 3 });
+    consumeActions(negativeHero, 0);
+    expect(negativeHero.actions).toBe(0);
+    expect(negativeHero.movement).toBe(0);
+  });
+
+  it('resets movement to 0 when last action is consumed by movement exhaustion', () => {
+    const hero = createTestHero({ actions: 1, movement: 0 });
+    consumeActions(hero, 0);
+    expect(hero.actions).toBe(0);
+    expect(hero.movement).toBe(0);
+  });
+
+  it('refreshes movement when movement reaches 0 but hero has actions left', () => {
+    const hero = createTestHero({ actions: 2, movement: 0, maxMovement: 3 });
+    consumeActions(hero, 0);
+    expect(hero.actions).toBe(1);
+    expect(hero.movement).toBe(3);
+  });
+});
+
+describe('act against monster', () => {
+  it('does not cause negative actions or leftover movement when attacking via act', () => {
+    const hero = createTestHero({
+      actions: 2,
+      movement: 2, // moved 1 step earlier
+      maxMovement: 3,
+      position: { x: 1, y: 1 },
+      weapon: weapons[0],
+    });
+    const monster = createTestMonster({ position: { x: 2, y: 1 } });
+    const state = createTestState(hero, monster);
+    state.currentActor = hero;
+
+    // Moving right (R) into adjacent monster triggers attack
+    act('R', state);
+
+    // Hero consumed remaining 2 actions on attack after moving; actions & movement must be 0
+    expect(hero.actions).toBe(0);
+    expect(hero.movement).toBe(0);
   });
 });
 

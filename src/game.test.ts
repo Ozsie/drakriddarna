@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { init, endAction, loadState, next, hasWon } from './game';
 import { liveHeroes } from './hero/HeroLogic';
 import { eventEffects } from './events/EventsLogic';
+import type { Hero } from './types';
 
 describe('game orchestrator', () => {
   it('init initializes campaign and hero state properly', () => {
@@ -60,6 +61,51 @@ describe('game orchestrator', () => {
     const loaded = loadState(state);
     expect(loaded.currentActor?.name).toBe(state.heroes[0].name);
     expect(loaded.actionLog[0].key).toBe('logs.gameLoaded');
+  });
+
+  it('clears actions and movement to 0 when a hero ends their turn', async () => {
+    const state = init();
+    expect(state.currentActor).toBeDefined();
+
+    const hero0 = state.heroes[0];
+    const hero1 = state.heroes[1];
+    expect(hero0.actions).toBe(2);
+    expect(hero0.movement).toBeGreaterThan(0);
+
+    // End hero 0 turn
+    await next(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    // Hero 0 must have actions and movement cleared to 0
+    expect(hero0.actions).toBe(0);
+    expect(hero0.movement).toBe(0);
+
+    // Hero 1 is now active
+    expect(state.currentActor?.name).toBe(hero1.name);
+    expect(hero1.actions).toBe(2);
+    expect(hero1.movement).toBeGreaterThan(0);
+  });
+
+  it('endAction decrements actions and clears movement when actions hit 0', async () => {
+    const state = init();
+    const hero0 = state.heroes[0] as Hero;
+    hero0.actions = 1;
+    hero0.movement = 2;
+    state.currentActor = hero0;
+
+    await endAction(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    expect(hero0.actions).toBe(0);
+    expect(hero0.movement).toBe(0);
   });
 
   it('next() does not lock up when the last hero in turn order is incapacitated', async () => {

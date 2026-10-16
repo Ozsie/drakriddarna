@@ -1,13 +1,18 @@
-import { addLog, doReRender, i18n, recordActorStep } from '../core';
 import {
+  addLog,
   cellsAlongLine,
+  doReRender,
+  doorAsActor,
   findCell,
+  getDifficulty,
   hasLineOfSight,
+  i18n,
   isRoomDiscovered,
   isSamePosition,
   isWalkable,
+  recordActorStep,
+  takeDamage,
 } from '../core';
-import { doorAsActor, takeDamage } from '../core';
 import type {
   ItemLocation,
   GameState,
@@ -125,6 +130,10 @@ const openDoorAtHero = (
       break;
   }
   consumeActions(hero);
+  if (hero.actions <= 0) {
+    hero.actions = 0;
+    hero.movement = 0;
+  }
 };
 
 export const onTargetSelf = (state: GameState, target: Position) => {
@@ -240,7 +249,8 @@ export const executeRadialAction = (
 export const onTargetCell = (state: GameState, target: Position) => {
   doReRender(state);
   const hero = state.currentActor as Hero;
-  if (hero.actions === 0) {
+  if (hero.actions <= 0) {
+    hero.actions = 0;
     hero.movement = 0;
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
@@ -265,7 +275,11 @@ export const onTargetCell = (state: GameState, target: Position) => {
       if (checkForTrapDoor(state)) {
         return;
       }
-      consumeActions(hero);
+      consumeActions(hero, getDifficulty(state).modifiers.movement);
+      if (hero.actions <= 0) {
+        hero.actions = 0;
+        hero.movement = 0;
+      }
       return;
     }
   }
@@ -296,6 +310,7 @@ export const onTargetCell = (state: GameState, target: Position) => {
           return;
         }
       }
+      consumeActions(hero, getDifficulty(state).modifiers.movement);
     } else if (blockedByMonster) {
       if (distance <= hero.weapon.range) {
         attack(hero, state, target);
@@ -304,7 +319,10 @@ export const onTargetCell = (state: GameState, target: Position) => {
       }
     }
   }
-  consumeActions(hero);
+  if (hero.actions <= 0) {
+    hero.actions = 0;
+    hero.movement = 0;
+  }
 };
 
 export type CursorType = 'sword' | 'boot' | 'menu' | 'default';

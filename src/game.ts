@@ -241,6 +241,8 @@ export const next = async (
     addLog(state, 'logs.endedTurn', {
       name: i18n(state.currentActor.name),
     });
+    state.currentActor.actions = 0;
+    state.currentActor.movement = 0;
     const currentIndex = liveHeroes(state).indexOf(state.currentActor);
     let nextIndex = currentIndex + 1;
     if (nextIndex >= liveHeroes(state).length) {
@@ -262,6 +264,8 @@ export const next = async (
         name: i18n(liveHeroes(state)[nextIndex].name),
       });
       liveHeroes(state)[nextIndex].incapacitated = false;
+      liveHeroes(state)[nextIndex].actions = 0;
+      liveHeroes(state)[nextIndex].movement = 0;
       nextIndex++;
       if (nextIndex >= liveHeroes(state).length) {
         state.currentActor = undefined;
@@ -315,11 +319,15 @@ export const endAction = async (
   doReRender(state);
   const hero = state.currentActor;
   if (!hero) return;
-  hero.actions--;
-  hero.movement = getEffectiveMaxMovement(
-    hero,
-    getDifficulty(state).modifiers.movement,
-  );
+  hero.actions = Math.max(0, hero.actions - 1);
+  if (hero.actions > 0) {
+    hero.movement = getEffectiveMaxMovement(
+      hero,
+      getDifficulty(state).modifiers.movement,
+    );
+  } else {
+    hero.movement = 0;
+  }
   if (hero.actions === 0) {
     await next(state, monsterOptions);
   }

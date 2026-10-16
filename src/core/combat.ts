@@ -11,7 +11,7 @@ import { roll } from './dice';
 import { addLog, i18n } from './logger';
 import { getDifficulty } from './DifficultLevels';
 import { flashActor } from './ActorAnimation';
-import { createBloodSplatter, createProjectile } from '../combat/CombatEffects';
+import { createBloodSplatter, createProjectile } from '../combat';
 
 export const ATTACK_BONUS = 'ATTACK_BONUS';
 export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
@@ -75,6 +75,9 @@ export const getEffectiveMaxHealth = (
 ): number => actor.maxHealth + healthModifier;
 
 export const canAct = (hero: Actor, movementModifier = 0): boolean => {
+  if (hero.actions <= 0) {
+    return false;
+  }
   if (hero.movement < getEffectiveMaxMovement(hero, movementModifier)) {
     return hero.actions > 1;
   }
