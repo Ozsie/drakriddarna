@@ -7,6 +7,7 @@ import {
   stepAlongLine,
 } from '../core';
 import { drawCachedTile } from '../dungeon/TileTextureCache';
+import { renderActorFlash } from '../combat/CombatEffects';
 
 export const renderMonsters = (
   ctx: CanvasRenderingContext2D,
@@ -59,6 +60,7 @@ const renderMonster = (
         renderDefaultMonster(ctx, actors, cellSize, x, y);
         break;
     }
+    renderActorFlash(ctx, monster, x, y, cellSize, currentTime);
     renderActorBar(ctx, monster, cellSize, x, y);
     renderHealthBar(ctx, monster, cellSize, x, y);
     renderLineOfSight(

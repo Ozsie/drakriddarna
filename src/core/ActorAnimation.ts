@@ -15,6 +15,8 @@ export interface ActorAnimationState {
   targetPos: Position;
   waypoints: MovementWaypoint[];
   lastStepEndTime: number;
+  flashStartTime?: number;
+  flashDurationMs?: number;
 }
 
 const actorAnimations = new WeakMap<Actor, ActorAnimationState>();
@@ -130,7 +132,9 @@ export const getActorVisualPosition = (
 
   if (state.waypoints.length === 0) {
     state.currentPos = { x: state.targetPos.x, y: state.targetPos.y };
-    activeActors.delete(actor);
+    if (!isActorFlashing(actor, currentTime)) {
+      activeActors.delete(actor);
+    }
     return { x: state.targetPos.x, y: state.targetPos.y };
   }
 
@@ -157,15 +161,69 @@ export const getActorVisualPosition = (
   return { x: visualX, y: visualY };
 };
 
+export const flashActor = (
+  actor: Actor,
+  durationMs = 200,
+  currentTime: number = Date.now(),
+): void => {
+  if (!actor) return;
+  let state = actorAnimations.get(actor);
+  if (!state) {
+    state = {
+      currentPos: { x: actor.position.x, y: actor.position.y },
+      targetPos: { x: actor.position.x, y: actor.position.y },
+      waypoints: [],
+      lastStepEndTime: currentTime,
+    };
+    actorAnimations.set(actor, state);
+  }
+  state.flashStartTime = currentTime;
+  state.flashDurationMs = Math.max(10, durationMs);
+  activeActors.add(actor);
+};
+
+export const getActorFlashIntensity = (
+  actor: Actor,
+  currentTime: number = Date.now(),
+): number => {
+  if (!actor) return 0;
+  const state = actorAnimations.get(actor);
+  if (
+    !state ||
+    state.flashStartTime === undefined ||
+    state.flashDurationMs === undefined
+  ) {
+    return 0;
+  }
+  const elapsed = currentTime - state.flashStartTime;
+  if (elapsed < 0 || elapsed > state.flashDurationMs) {
+    return 0;
+  }
+  const progress = elapsed / state.flashDurationMs;
+  return Math.max(0, 1 - progress);
+};
+
+export const isActorFlashing = (
+  actor: Actor,
+  currentTime: number = Date.now(),
+): boolean => getActorFlashIntensity(actor, currentTime) > 0;
+
 export const isActorAnimating = (
   actor: Actor,
   currentTime: number = Date.now(),
 ): boolean => {
   const state = actorAnimations.get(actor);
-  if (!state || state.waypoints.length === 0) {
+  if (!state) {
     return false;
   }
-  return currentTime < state.lastStepEndTime;
+  const isMoving =
+    state.waypoints.length > 0 && currentTime < state.lastStepEndTime;
+  const isFlashing =
+    state.flashStartTime !== undefined &&
+    state.flashDurationMs !== undefined &&
+    currentTime >= state.flashStartTime &&
+    currentTime < state.flashStartTime + state.flashDurationMs;
+  return isMoving || isFlashing;
 };
 
 export const hasActiveActorAnimations = (
@@ -195,6 +253,8 @@ export const snapActorPosition = (
     state.currentPos = { x: position.x, y: position.y };
     state.targetPos = { x: position.x, y: position.y };
     state.lastStepEndTime = Date.now();
+    delete state.flashStartTime;
+    delete state.flashDurationMs;
   }
   activeActors.delete(actor);
 };

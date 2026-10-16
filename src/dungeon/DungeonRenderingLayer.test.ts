@@ -11,6 +11,12 @@ import { renderHeroes } from '../hero/HeroRendering';
 import { renderMonsters } from '../monsters/MonsterRendering';
 import { renderNotes } from '../notes/NotesRendering';
 import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
+import {
+  renderBloodSplatters,
+  renderProjectiles,
+  createBloodSplatter,
+  createProjectile,
+} from '../combat/CombatEffects';
 import { renderItems } from '../items/ItemRendering';
 import { renderUI } from '../ui/UIRendering';
 import { RadialAction } from '../hero/RadialMenuLogic';
@@ -207,17 +213,26 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     expect(actorCtx.fillRect).toHaveBeenCalled();
   });
 
-  it('renders overlay notes and damage indicators onto overlay context', () => {
+  it('renders overlay notes, damage indicators, blood splatters, and projectiles onto overlay context', () => {
     const state = createMockState();
     state.damageIndicators = [{ id: '1', damage: 4, position: { x: 1, y: 1 } }];
+    state.bloodSplatters = [
+      createBloodSplatter({ x: 1, y: 1 }, { timestamp: 1000 }),
+    ];
+    state.projectiles = [
+      createProjectile({ x: 0, y: 0 }, { x: 2, y: 2 }, { timestamp: 1000 }),
+    ];
     const overlayCtx = createMockCtx();
     const mockActors = { src: 'actors.png' } as unknown as CanvasImageSource;
 
     renderNotes(overlayCtx, mockActors, 48, state, false);
-    renderDamageIndicators(overlayCtx, 48, state, Date.now());
+    renderDamageIndicators(overlayCtx, 48, state, 1050);
+    renderBloodSplatters(overlayCtx, 48, state, 1050);
+    renderProjectiles(overlayCtx, 48, state, 1050);
 
     expect(overlayCtx.fillText).toHaveBeenCalled();
     expect(overlayCtx.fill).toHaveBeenCalled();
+    expect(overlayCtx.arc).toHaveBeenCalled();
   });
 
   it('tracks active actor animations during dynamic render loop', () => {

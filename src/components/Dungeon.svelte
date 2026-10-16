@@ -59,7 +59,12 @@
   import { useItem } from '../items/ItemLogic';
   import { radialMenuStore } from '../store/radialMenuStore';
   import { renderNotes } from '../notes/NotesRendering';
-  import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
+  import {
+    renderDamageIndicators,
+    renderBloodSplatters,
+    renderProjectiles,
+    renderFlameEffects,
+  } from '../combat';
   import { clearTileTextureCache } from '../dungeon/TileTextureCache';
   import { hasActiveActorAnimations } from '../core';
   import {
@@ -205,7 +210,10 @@
   const getOverlaySignature = (st: GameState, dbg: boolean, size: number) => {
     const curActor = `${st.currentActor?.name},${st.currentActor?.position?.x},${st.currentActor?.position?.y}`;
     const dmgCount = st.damageIndicators?.length ?? 0;
-    return `${curActor}|${dmgCount}|${size}|${dbg}`;
+    const bloodCount = st.bloodSplatters?.length ?? 0;
+    const projCount = st.projectiles?.length ?? 0;
+    const flameCount = st.flameEffects?.length ?? 0;
+    return `${curActor}|${dmgCount}|${bloodCount}|${projCount}|${flameCount}|${size}|${dbg}`;
   };
 
   const isReady = (img: HTMLImageElement | null): boolean => {
@@ -332,12 +340,26 @@
     if (!activeState || !browser || !actors || !overlayCanvas) return;
     if (!isReady(actors)) return;
     const hasDamageIndicators = (activeState.damageIndicators?.length ?? 0) > 0;
+    const hasBloodSplatters = (activeState.bloodSplatters?.length ?? 0) > 0;
+    const hasProjectiles = (activeState.projectiles?.length ?? 0) > 0;
+    const hasFlameEffects = (activeState.flameEffects?.length ?? 0) > 0;
+    const hasOverlayEffects =
+      hasDamageIndicators ||
+      hasBloodSplatters ||
+      hasProjectiles ||
+      hasFlameEffects;
     const sig = getOverlaySignature(
       activeState,
       activeDebugMode ?? false,
       cellSize,
     );
-    if (!force && !hasDamageIndicators && sig === lastOverlaySignature && !activeDebugMode) return;
+    if (
+      !force &&
+      !hasOverlayEffects &&
+      sig === lastOverlaySignature &&
+      !activeDebugMode
+    )
+      return;
     lastOverlaySignature = sig;
 
     const ctx = overlayCanvas.getContext('2d');
@@ -349,12 +371,37 @@
     ctx.restore();
 
     renderNotes(ctx, actors, cellSize, activeState, activeDebugMode ?? false);
+    const now = Date.now();
+    const hasActiveProjectiles = renderProjectiles(
+      ctx,
+      cellSize,
+      activeState,
+      now,
+    );
+    const hasActiveBlood = renderBloodSplatters(
+      ctx,
+      cellSize,
+      activeState,
+      now,
+    );
     const hasActiveDamage = renderDamageIndicators(
       ctx,
       cellSize,
       activeState,
-      Date.now(),
+      now,
     );
+    const hasActiveFlames = renderFlameEffects(
+      ctx,
+      cellSize,
+      activeState,
+      now,
+    );
+    const hasActiveEffects =
+      hasActiveProjectiles ||
+      hasActiveBlood ||
+      hasActiveDamage ||
+      hasActiveFlames;
+
     if (activeDebugMode) {
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -375,14 +422,29 @@
       overlayAnimationId = null;
     }
 
-    if (hasActiveDamage) {
+    if (hasActiveEffects) {
       overlayAnimationId = requestAnimationFrame(() => {
         renderOverlayLayer(true);
       });
-    } else if (hasDamageIndicators) {
-      // Clean up finished indicators
-      activeState.damageIndicators = [];
-      if (!state) {
+    } else {
+      let stateChanged = false;
+      if (hasDamageIndicators) {
+        activeState.damageIndicators = [];
+        stateChanged = true;
+      }
+      if (hasBloodSplatters) {
+        activeState.bloodSplatters = [];
+        stateChanged = true;
+      }
+      if (hasProjectiles) {
+        activeState.projectiles = [];
+        stateChanged = true;
+      }
+      if (hasFlameEffects) {
+        activeState.flameEffects = [];
+        stateChanged = true;
+      }
+      if (stateChanged && !state) {
         gameStateStore.set(activeState);
       }
     }

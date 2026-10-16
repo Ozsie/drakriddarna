@@ -10,6 +10,8 @@ import { Colour, ItemType, Level } from '../types';
 import { roll } from './dice';
 import { addLog, i18n } from './logger';
 import { getDifficulty } from './DifficultLevels';
+import { flashActor } from './ActorAnimation';
+import { createBloodSplatter, createProjectile } from '../combat/CombatEffects';
 
 export const ATTACK_BONUS = 'ATTACK_BONUS';
 export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
@@ -23,6 +25,7 @@ export const createIndicator = (
     durationMs?: number;
     fontSizeScale?: number;
     offset?: { x?: number; y?: number };
+    timestamp?: number;
   },
 ): DamageIndicator => {
   const isNumber = typeof textOrDamage === 'number';
@@ -36,7 +39,7 @@ export const createIndicator = (
     durationMs: options?.durationMs,
     fontSizeScale: options?.fontSizeScale,
     offset: options?.offset,
-    timestamp: Date.now(),
+    timestamp: options?.timestamp ?? Date.now(),
   };
 };
 
@@ -49,6 +52,7 @@ export const createDamageIndicator = (
     durationMs?: number;
     fontSizeScale?: number;
     offset?: { x?: number; y?: number };
+    timestamp?: number;
   },
 ): DamageIndicator => createIndicator(damage, position, options);
 
@@ -190,17 +194,58 @@ export const takeDamage = (
     damage = Math.max(hits - (defense + defenseDifficultyModifier + shield), 0);
   }
   target.health -= damage;
+  const isRanged =
+    ranged &&
+    Boolean(
+      source.position &&
+        target.position &&
+        (source.position.x !== target.position.x ||
+          source.position.y !== target.position.y),
+    );
+  const now = Date.now();
+  let impactTime = now;
+  if (isRanged && source.position && target.position) {
+    const projectile = createProjectile(source.position, target.position, {
+      timestamp: now,
+      color: weapon.elemental ? '#ff7700' : '#ffdd44',
+    });
+    if (!state.projectiles) {
+      state.projectiles = [];
+    }
+    state.projectiles.push(projectile);
+    impactTime = now + (projectile.durationMs ?? 200);
+  }
+
+  flashActor(target, 200, impactTime);
+
   if (target.position) {
+    if (damage > 0) {
+      if (!state.bloodSplatters) {
+        state.bloodSplatters = [];
+      }
+      state.bloodSplatters.push(
+        createBloodSplatter(target.position, {
+          damage,
+          timestamp: impactTime,
+        }),
+      );
+    }
+
     if (!state.damageIndicators) {
       state.damageIndicators = [];
     }
     if (damage > 0 && damage >= weapon.dice - (target.armour?.defense ?? 0)) {
       state.damageIndicators.push(
-        createIndicator(damage, target.position, { effect: 'crit' }),
+        createIndicator(damage, target.position, {
+          effect: 'crit',
+          timestamp: impactTime,
+        }),
       );
     } else {
       state.damageIndicators.push(
-        createDamageIndicator(damage, target.position),
+        createDamageIndicator(damage, target.position, {
+          timestamp: impactTime,
+        }),
       );
     }
   }

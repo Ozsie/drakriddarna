@@ -12,6 +12,7 @@ import {
   type Weapon,
 } from '../types';
 import { createDoor, createMonster } from '../dungeon/DungeonLogic';
+import { resetRng, setRng } from '../core/dice';
 import {
   hasTwoAttackActions,
   isAttackSlot,
@@ -591,19 +592,23 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
     });
 
     it('monster with Brawl (2 attacks) charges towards distant hero if first attack kills adjacent hero', async () => {
+      setRng(() => 5 / 6);
       const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
       const state = createTestState();
       // Monster at (2, 2)
       const monster = createMonster(MonsterType.ORC, Colour.Green, 2, 2);
       monster.actions = 2;
       monster.movement = 3;
+      monster.temperament = 'bold';
       monster.rangedWeapon = undefined;
       state.dungeon.layout.monsters = [monster];
 
       // Adjacent hero with 1 HP at (2, 3)
       const hero1 = createTestHero('Fearik', 2, 3, 1);
+      hero1.defense = 0;
       // Distant hero at (2, 5)
       const hero2 = createTestHero('Elisa', 2, 5, 10);
+      hero2.defense = 0;
       state.heroes = [hero1, hero2];
 
       await monsterActions(state, {
@@ -634,6 +639,7 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
       ).toBe(true);
 
       randomSpy.mockRestore();
+      resetRng();
     });
 
     it('monster with Brawl attacks second hero instead of charging if another valid adjacent target exists', async () => {
@@ -642,6 +648,7 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
       const monster = createMonster(MonsterType.ORC, Colour.Green, 2, 2);
       monster.actions = 2;
       monster.movement = 3;
+      monster.temperament = 'bold';
       monster.rangedWeapon = undefined;
       state.dungeon.layout.monsters = [monster];
 

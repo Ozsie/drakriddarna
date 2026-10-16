@@ -8,6 +8,7 @@ import {
 } from '../core';
 import { isBlockedByHero, isBlockedByMonster, liveHeroes } from './HeroLogic';
 import { drawCachedTile } from '../dungeon/TileTextureCache';
+import { renderActorFlash } from '../combat/CombatEffects';
 
 export const renderHeroes = (
   ctx: CanvasRenderingContext2D,
@@ -60,6 +61,7 @@ const renderHero = (
     32,
     32,
   );
+  renderActorFlash(ctx, hero, x, y, cellSize, currentTime);
   renderActionOnActor(ctx, hero, x, y, cellSize);
   renderActorBar(ctx, hero, x, y, cellSize);
   renderHealthBar(ctx, hero, x, y, cellSize, difficulty);

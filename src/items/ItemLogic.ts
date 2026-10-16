@@ -1,6 +1,13 @@
 import type { Actor, GameState, Item } from '../types';
 import { Level } from '../types';
-import { addLog, createIndicator, i18n } from '../core';
+import {
+  addLog,
+  createDamageIndicator,
+  createIndicator,
+  flashActor,
+  i18n,
+} from '../core';
+import { createBloodSplatter } from '../combat/CombatEffects';
 import { roll } from '../core';
 import {
   canAct,
@@ -169,6 +176,15 @@ export const resolveChaosSwordAttack = (
         user: i18n(user.name),
         target: i18n(target.name),
       });
+      flashActor(target);
+      if (target.position) {
+        if (!state.bloodSplatters) {
+          state.bloodSplatters = [];
+        }
+        state.bloodSplatters.push(
+          createBloodSplatter(target.position, { damage: target.health }),
+        );
+      }
       killTarget(target.health);
       break;
     case 1:
@@ -181,6 +197,21 @@ export const resolveChaosSwordAttack = (
     case 3: {
       const damage = hits === 2 ? 2 : 1;
       target.health -= damage;
+      flashActor(target);
+      if (target.position) {
+        if (!state.bloodSplatters) {
+          state.bloodSplatters = [];
+        }
+        state.bloodSplatters.push(
+          createBloodSplatter(target.position, { damage }),
+        );
+        if (!state.damageIndicators) {
+          state.damageIndicators = [];
+        }
+        state.damageIndicators.push(
+          createDamageIndicator(damage, target.position),
+        );
+      }
       addLog(state, 'logs.item.chaosSwordHit', {
         user: i18n(user.name),
         target: i18n(target.name),

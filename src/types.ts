@@ -28,6 +28,9 @@ export type GameState = {
   currentEvent?: TurnEvent;
   turnCount?: number;
   damageIndicators?: DamageIndicator[];
+  bloodSplatters?: BloodSplatter[];
+  projectiles?: ProjectileAnimation[];
+  flameEffects?: FlameEffect[];
   roundActionsDelta?: number;
   drawEvents: boolean;
   roundTargetCounts?: Record<string, number>;
@@ -49,6 +52,49 @@ export type DamageIndicator = {
 };
 
 export type FloatingIndicator = DamageIndicator;
+
+export type BloodParticle = {
+  angle: number;
+  speed: number;
+  radius: number;
+  color: string;
+  distance: number;
+};
+
+export type BloodSplatter = {
+  id: string;
+  position: Position;
+  particles: BloodParticle[];
+  timestamp?: number;
+  durationMs?: number;
+};
+
+export type ProjectileAnimation = {
+  id: string;
+  from: Position;
+  to: Position;
+  timestamp?: number;
+  durationMs?: number;
+  color?: string;
+};
+
+export type FlameParticle = {
+  offsetX: number;
+  offsetY: number;
+  speedY: number;
+  driftX: number;
+  radius: number;
+  color: string;
+  delay: number;
+};
+
+export type FlameEffect = {
+  id: string;
+  position: Position;
+  particles: FlameParticle[];
+  timestamp?: number;
+  durationMs?: number;
+};
 
 export type LogEvent = {
   key: string;

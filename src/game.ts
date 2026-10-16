@@ -89,8 +89,20 @@ export {
   setActorMovementDuration,
   getActorMovementDuration,
   resetActorMovementDuration,
+  flashActor,
+  getActorFlashIntensity,
+  isActorFlashing,
   DEFAULT_ACTOR_MOVEMENT_DURATION_MS,
 } from './core/ActorAnimation';
+export {
+  createBloodSplatter,
+  createProjectile,
+  renderBloodSplatters,
+  renderProjectiles,
+  renderActorFlash,
+  BLOOD_SPLATTER_DURATION_MS,
+  PROJECTILE_DURATION_MS,
+} from './combat/CombatEffects';
 export {
   monsterActions,
   DEFAULT_MONSTER_TURN_OPTIONS,

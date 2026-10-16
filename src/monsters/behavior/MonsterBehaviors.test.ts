@@ -153,6 +153,7 @@ describe('Monster Behavioral Modifiers & Formulas', () => {
     expect(rollBowForgotten(normalDiff)).toBe(false);
     expect(rollBowForgotten('hard')).toBe(false);
     expect(rollBowForgotten(hardDiff)).toBe(false);
+    randomSpy.mockRestore();
   });
 
   it('applies temperament, director, and anti-stall multipliers to weights', () => {

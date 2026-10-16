@@ -59,6 +59,7 @@ import {
   selectBehavior,
   selectScoredTarget,
 } from './behavior';
+import { createFlameEffect } from '../combat/CombatEffects';
 
 export { resetRoundTargetCounters } from './behavior';
 
@@ -389,7 +390,7 @@ const executeSlotAction = async (
           'move',
           state,
           monster,
-          passableGrid,
+          createPassableGrid(state),
           opts,
           onAttack,
           chosenBehavior,
@@ -419,7 +420,7 @@ const executeSlotAction = async (
           'move',
           state,
           monster,
-          passableGrid,
+          createPassableGrid(state),
           opts,
           onAttack,
           chosenBehavior,
@@ -563,7 +564,7 @@ const executeSlotAction = async (
           'move',
           state,
           monster,
-          passableGrid,
+          createPassableGrid(state),
           opts,
           onAttack,
           chosenBehavior,
@@ -883,6 +884,12 @@ const performFireAttack = (
   targets: Actor[],
 ) => {
   targets.forEach((target) => {
+    if (target.position) {
+      if (!state.flameEffects) {
+        state.flameEffects = [];
+      }
+      state.flameEffects.push(createFlameEffect(target.position));
+    }
     if (state.heroes.includes(target as Hero)) {
       target.roundTargetCount = (target.roundTargetCount ?? 0) + 1;
       if (!state.roundTargetCounts) {

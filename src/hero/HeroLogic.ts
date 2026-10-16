@@ -325,7 +325,13 @@ export const attack = (hero: Hero, state: GameState, target: Position) => {
     if (hero.weapon.id === 'sword_of_chaos') {
       resolveChaosSwordAttack(state, hero, monster);
     } else {
-      takeDamage(state, hero, monster, false);
+      const isRanged = Boolean(
+        hero.weapon.range &&
+          hero.weapon.range > 1 &&
+          (Math.abs(hero.position.x - monster.position.x) > 1 ||
+            Math.abs(hero.position.y - monster.position.y) > 1),
+      );
+      takeDamage(state, hero, monster, isRanged);
     }
     if (monster.health <= 0) {
       killMonster(state, monster, hero);

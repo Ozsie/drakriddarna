@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   createDamageIndicator,
   createIndicator,
@@ -37,6 +37,10 @@ const dummyDungeon: Dungeon = {
 
 describe('combat module', () => {
   beforeEach(() => {
+    resetRng();
+  });
+
+  afterEach(() => {
     resetRng();
   });
 
