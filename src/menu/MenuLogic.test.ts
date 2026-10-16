@@ -5,6 +5,7 @@ import {
   getCampaignMenuItems,
   getSavedGameMenuItems,
   getEventMenuItems,
+  getRightsMenuItems,
   getMenuItemsForView,
   getMenuHeader,
   getDifficultyMenuLabel,
@@ -130,6 +131,7 @@ describe('MenuLogic', () => {
       expect(ids).toContain('music');
       expect(ids).toContain('language');
       expect(ids).toContain('difficulty');
+      expect(ids).toContain('rights');
       expect(ids).not.toContain('testing_grounds');
       expect(ids).not.toContain('shuffle_deck');
       expect(ids).not.toContain('select_next_event');
@@ -186,6 +188,14 @@ describe('MenuLogic', () => {
       const loadGameItem = items.find((i) => i.id === 'load_game');
       loadGameItem?.onClick(mockState);
       expect(setView).toHaveBeenCalledWith('load');
+    });
+
+    it('navigates to rights view on rights click', () => {
+      const setView = vi.fn();
+      const items = getMainMenuItems(mockState, { setView });
+      const rightsItem = items.find((i) => i.id === 'rights');
+      rightsItem?.onClick(mockState);
+      expect(setView).toHaveBeenCalledWith('rights');
     });
 
     it('toggles debug mode on debug item click', () => {
@@ -289,6 +299,42 @@ describe('MenuLogic', () => {
     });
   });
 
+  describe('getRightsMenuItems', () => {
+    it('returns ownership, music, graphics, and back items', () => {
+      const items = getRightsMenuItems(mockState);
+      const ids = items.map((i) => i.id);
+      expect(ids).toEqual([
+        'rights_implementation',
+        'rights_music',
+        'rights_graphics',
+        'rights_back',
+      ]);
+    });
+
+    it('navigates back to main on back button click', () => {
+      const setView = vi.fn();
+      const items = getRightsMenuItems(mockState, { setView });
+      const backItem = items.find((i) => i.id === 'rights_back');
+      backItem?.onClick(mockState);
+      expect(setView).toHaveBeenCalledWith('main');
+    });
+
+    it('opens AlkaKrab website when music links are clicked', () => {
+      const openSpy = vi.fn();
+      vi.stubGlobal('window', { open: openSpy });
+
+      const items = getRightsMenuItems(mockState);
+      const musicItem = items.find((i) => i.id === 'rights_music');
+
+      musicItem?.onClick(mockState);
+      expect(openSpy).toHaveBeenCalledWith(
+        'https://alkakrab04.wixsite.com/alkakrab-game-music',
+        '_blank',
+        'noopener,noreferrer',
+      );
+    });
+  });
+
   describe('getMenuItemsForView', () => {
     it('returns main menu items for main view', () => {
       const items = getMenuItemsForView('main', mockState);
@@ -304,6 +350,14 @@ describe('MenuLogic', () => {
         'select_next_event',
       ]);
     });
+
+    it('returns rights menu items for rights view', () => {
+      const items = getMenuItemsForView('rights', mockState);
+      const ids = items.map((i) => i.id);
+      expect(ids).toContain('rights_implementation');
+      expect(ids).toContain('rights_music');
+      expect(ids).toContain('rights_back');
+    });
   });
 
   describe('getMenuHeader and getDifficultyMenuLabel', () => {
@@ -313,6 +367,7 @@ describe('MenuLogic', () => {
       expect(getMenuHeader('campaign')).toBeTruthy();
       expect(getMenuHeader('load')).toBeTruthy();
       expect(getMenuHeader('event')).toBeTruthy();
+      expect(getMenuHeader('rights')).toBeTruthy();
     });
 
     it('returns formatted difficulty label', () => {

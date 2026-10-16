@@ -17,11 +17,7 @@ import {
 import { locale, setLocale } from '$lib/translations';
 import { hasWon, init, loadState, save } from '../game';
 import { testingGrounds } from '../dungeon/testingGrounds';
-import {
-  getEventsForDungeon,
-  selectNextEvent,
-  shuffleEventDeck,
-} from '../events/EventsLogic';
+import { getEventsForDungeon, selectNextEvent, shuffleEventDeck, } from '../events/EventsLogic';
 import { resetLiveHeroes } from '../hero/HeroLogic';
 import { campaigns } from '../campaigns';
 
@@ -33,7 +29,13 @@ export interface CanvasMenuItem {
   onClick: (activeState: GameState) => void;
 }
 
-export type MenuView = 'main' | 'campaign' | 'load' | 'event' | 'debug';
+export type MenuView =
+  | 'main'
+  | 'campaign'
+  | 'load'
+  | 'event'
+  | 'debug'
+  | 'rights';
 
 export interface MenuCallbacks {
   setView?: (view: MenuView) => void;
@@ -138,6 +140,14 @@ export const getMainMenuItems = (
         onClickDifficulty(state);
       },
     },
+    {
+      id: 'rights',
+      debugOnly: false,
+      label: i18n('content.menu.mainMenu.buttons.rights'),
+      onClick: () => {
+        callbacks?.setView?.('rights');
+      },
+    },
   ];
 
   if (activeState?.dungeon?.beaten) {
@@ -159,7 +169,7 @@ export const getDebugMenuItems = (
   activeState: GameState,
   callbacks?: MenuCallbacks,
 ): CanvasMenuItem[] => {
-  const items: CanvasMenuItem[] = [
+  return [
     {
       id: 'testing_grounds',
       debugOnly: false,
@@ -187,8 +197,6 @@ export const getDebugMenuItems = (
       },
     },
   ];
-
-  return items;
 };
 
 export const getCampaignMenuItems = (
@@ -296,6 +304,52 @@ export const getEventMenuItems = (
   return items;
 };
 
+export const getRightsMenuItems = (
+  activeState: GameState,
+  callbacks?: MenuCallbacks,
+): CanvasMenuItem[] => {
+  return [
+    {
+      id: 'rights_implementation',
+      debugOnly: false,
+      label: i18n('content.menu.rights.implementation'),
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      onClick: () => {
+      },
+    },
+    {
+      id: 'rights_music',
+      debugOnly: false,
+      label: i18n('content.menu.rights.musicLicense'),
+      onClick: () => {
+        if (typeof window !== 'undefined' && window.open) {
+          window.open(
+            'https://alkakrab04.wixsite.com/alkakrab-game-music',
+            '_blank',
+            'noopener,noreferrer',
+          );
+        }
+      },
+    },
+    {
+      id: 'rights_graphics',
+      debugOnly: false,
+      label: i18n('content.menu.rights.graphics'),
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      onClick: () => {
+      },
+    },
+    {
+      id: 'rights_back',
+      debugOnly: false,
+      label: i18n('content.menu.loadGame.buttons.back'),
+      onClick: () => {
+        callbacks?.setView?.('main');
+      },
+    },
+  ];
+};
+
 export const getMenuItemsForView = (
   view: MenuView,
   activeState: GameState,
@@ -318,6 +372,9 @@ export const getMenuItemsForView = (
       break;
     case 'event':
       items = getEventMenuItems(activeState, callbacks);
+      break;
+    case 'rights':
+      items = getRightsMenuItems(activeState, callbacks);
       break;
   }
   const isDebug = debugMode ?? Boolean(activeState?.settings?.['debug']);
@@ -343,6 +400,8 @@ export const getMenuHeader = (view: MenuView): string => {
       return i18n('content.menu.loadGame.header');
     case 'event':
       return i18n('content.menu.selectNextEvent.header');
+    case 'rights':
+      return i18n('content.menu.rights.header');
   }
 };
 
@@ -390,8 +449,7 @@ export const onWinLevel = (activeState?: GameState) => {
 
 export const setDebugMode = (activeState?: GameState) => {
   if (activeState) {
-    const newDebug = !activeState.settings['debug'];
-    activeState.settings['debug'] = newDebug;
+    activeState.settings['debug'] = !activeState.settings['debug'];
     gameStateStore.set(activeState);
   } else {
     const isDebug = Boolean(get(gameStateStore).settings?.['debug']);

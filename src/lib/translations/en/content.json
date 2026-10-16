@@ -13,7 +13,8 @@
         "language": "-> Svenska",
         "shuffleDeck": "Shuffle Deck",
         "selectNextEvent": "Select Next Event",
-        "difficulty": "Difficulty:"
+        "difficulty": "Difficulty:",
+        "rights": "Rights & Licenses"
       }
     },
     "loadGame": {
@@ -29,6 +30,15 @@
     },
     "selectCampaign": {
       "header": "Select Campaign"
+    },
+    "rights": {
+      "header": "Rights & Licenses",
+      "implementation": "Implementation: © Oscar Djupfeldt",
+      "musicLicense": "Music: © AlkaKrab",
+      "graphics": "Graphics: TBD",
+      "buttons": {
+        "back": "Back"
+      }
     }
   },
   "actions": {

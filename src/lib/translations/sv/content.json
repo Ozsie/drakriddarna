@@ -13,7 +13,8 @@
         "language": "-> English",
         "shuffleDeck": "Blanda Kortleken",
         "selectNextEvent": "Välj Nästa Händelse",
-        "difficulty": "Svårighetsgrad:"
+        "difficulty": "Svårighetsgrad:",
+        "rights": "Rättigheter & Licenser"
       }
     },
     "loadGame": {
@@ -29,6 +30,15 @@
     },
     "selectCampaign": {
       "header": "Välj Kampanj"
+    },
+    "rights": {
+      "header": "Rättigheter & Licenser",
+      "implementation": "Implementation: © Oscar Djupfeldt",
+      "musicLicense": "Musik: © AlkaKrab",
+      "graphics": "Grafik: Tillkommer senare",
+      "buttons": {
+        "back": "Tillbaka"
+      }
     }
   },
   "actions": {

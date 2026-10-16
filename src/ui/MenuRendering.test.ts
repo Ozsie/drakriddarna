@@ -1,12 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { describe, it, expect, vi } from 'vitest';
-import {
-  getMenuLayout,
-  getMenuHit,
-  renderMenuModal,
-  isPointInBounds,
-} from './MenuRendering';
-import { Colour, ItemType, Level, type GameState, type Hero } from '../types';
+import { describe, expect, it, vi } from 'vitest';
+import { getMenuHit, getMenuLayout, isPointInBounds, renderMenuModal, } from './MenuRendering';
+import { Colour, type GameState, type Hero, ItemType, Level } from '../types';
 
 const createMockHero = (name = 'Hero1'): Hero => ({
   name,
@@ -72,7 +67,7 @@ const createMockState = (overrides: Partial<GameState> = {}): GameState => ({
 });
 
 const createMockCtx = () => {
-  const ctx = {
+  return {
     font: '',
     fillStyle: '',
     strokeStyle: '',
@@ -95,7 +90,6 @@ const createMockCtx = () => {
     fillText: vi.fn(),
     measureText: vi.fn((text: string) => ({ width: text.length * 7 })),
   } as unknown as CanvasRenderingContext2D;
-  return ctx;
 };
 
 describe('MenuRendering', () => {
@@ -178,6 +172,24 @@ describe('MenuRendering', () => {
       expect(layout.items.some((i) => i.item.id === 'select_next_event')).toBe(
         true,
       );
+    });
+
+    it('creates rights view layout with ownership and license info', () => {
+      const state = createMockState();
+      const layout = getMenuLayout(800, 600, state, {
+        view: 'rights',
+      });
+
+      expect(layout.view).toBe('rights');
+      expect(layout.headerBounds.text).toBeTruthy();
+      expect(
+        layout.items.some((i) => i.item.id === 'rights_implementation'),
+      ).toBe(true);
+      expect(layout.items.some((i) => i.item.id === 'rights_music')).toBe(true);
+      expect(layout.items.some((i) => i.item.id === 'rights_graphics')).toBe(
+        true,
+      );
+      expect(layout.items.some((i) => i.item.id === 'rights_back')).toBe(true);
     });
 
     it('shows debug status label in main menu layout', () => {
