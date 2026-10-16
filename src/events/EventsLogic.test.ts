@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { init } from '../game';
 import {
+  drawNextEvent,
   shuffleEventDeck,
   selectNextEvent,
   eventEffects,
@@ -818,6 +819,110 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       eventEffects.theHungryTroll(state, event);
       expect(event.used).toBe(true);
       expect(state.dungeon.layout.monsters.length).toBe(3); // Spawned 1 more in Room A
+    });
+  });
+
+  describe('Fountain of Youth draw probability and conditions', () => {
+    it('draws fountain_of_youth with 50% probability when party average health is below 50% and not played previous round', () => {
+      const state = init();
+      const fountain = state.eventDeck.find(
+        (e) => e.id === 'fountain_of_youth',
+      )!;
+      const otherEvent = state.eventDeck.find(
+        (e) => e.id !== 'fountain_of_youth',
+      )!;
+
+      // Arrange deck with otherEvent first
+      state.eventDeck = [
+        { ...otherEvent, used: false },
+        { ...fountain, used: false },
+      ];
+
+      // Party health below 50%
+      state.heroes.forEach((h) => {
+        h.health = 2;
+        h.maxHealth = 10;
+      });
+
+      // Math.random < 0.5 triggers fountain_of_youth selection
+      vi.spyOn(Math, 'random').mockReturnValue(0.2);
+      const drawn1 = drawNextEvent(state);
+      expect(drawn1.id).toBe('fountain_of_youth');
+      expect(state.eventDeck[0].id).toBe('fountain_of_youth');
+
+      // Math.random >= 0.5 draws normally from top of unused events
+      state.eventDeck = [
+        { ...otherEvent, used: false },
+        { ...fountain, used: false },
+      ];
+      vi.spyOn(Math, 'random').mockReturnValue(0.7);
+      const drawn2 = drawNextEvent(state);
+      expect(drawn2.id).toBe(otherEvent.id);
+
+      vi.restoreAllMocks();
+    });
+
+    it('does NOT trigger 50% fountain_of_youth chance if it was played in the previous round', () => {
+      const state = init();
+      const fountain = state.eventDeck.find(
+        (e) => e.id === 'fountain_of_youth',
+      )!;
+      const otherEvent = state.eventDeck.find(
+        (e) => e.id !== 'fountain_of_youth',
+      )!;
+
+      state.eventDeck = [
+        { ...otherEvent, used: false },
+        { ...fountain, used: false },
+      ];
+
+      // Party health below 50%
+      state.heroes.forEach((h) => {
+        h.health = 2;
+        h.maxHealth = 10;
+      });
+
+      // Fountain of youth was played previous round
+      state.previousEvent = { ...fountain };
+
+      vi.spyOn(Math, 'random').mockReturnValue(0.1);
+      const drawn = drawNextEvent(state);
+      expect(drawn.id).toBe(otherEvent.id);
+
+      // Also if state.currentEvent was fountain_of_youth before next draw
+      state.previousEvent = undefined;
+      state.currentEvent = { ...fountain };
+      const drawn2 = drawNextEvent(state);
+      expect(drawn2.id).toBe(otherEvent.id);
+
+      vi.restoreAllMocks();
+    });
+
+    it('does NOT trigger 50% fountain_of_youth chance if party average health is 50% or above', () => {
+      const state = init();
+      const fountain = state.eventDeck.find(
+        (e) => e.id === 'fountain_of_youth',
+      )!;
+      const otherEvent = state.eventDeck.find(
+        (e) => e.id !== 'fountain_of_youth',
+      )!;
+
+      state.eventDeck = [
+        { ...otherEvent, used: false },
+        { ...fountain, used: false },
+      ];
+
+      // Party health exactly 50%
+      state.heroes.forEach((h) => {
+        h.health = 5;
+        h.maxHealth = 10;
+      });
+
+      vi.spyOn(Math, 'random').mockReturnValue(0.1);
+      const drawn = drawNextEvent(state);
+      expect(drawn.id).toBe(otherEvent.id);
+
+      vi.restoreAllMocks();
     });
   });
 });

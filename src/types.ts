@@ -27,6 +27,7 @@ export type GameState = {
   eventDeck: TurnEvent[];
   reRender: boolean;
   currentEvent?: TurnEvent;
+  previousEvent?: TurnEvent;
   turnCount?: number;
   damageIndicators?: DamageIndicator[];
   bloodSplatters?: BloodSplatter[];

@@ -38,6 +38,8 @@ Welcome to **Drakriddarna** (Dragonfire), a tactical turn-based dungeon-crawling
    - [2. Predefined Monster Behaviors](#2-predefined-monster-behaviors)
    - [3. Target Selection (Target Scoring)](#3-target-selection-target-scoring)
 8. [Turn Events & Difficulty Scaling](#turn-events--difficulty-scaling)
+   - [Monster Spawn Events](#monster-spawn-events-the-hungry-troll-the-lost-orc)
+   - [Recovery Events](#recovery-events-fountain-of-youth)
 
 ---
 
@@ -381,7 +383,9 @@ The hero with the highest final score is selected as the monster's target.
 
 ## Turn Events & Difficulty Scaling
 
-Turn events that spawn monsters (`The Hungry Troll` and `The Lost Orc`) include difficulty-scaled balancing rules to prevent unfair early encounters and immediate spawn-adjacent ambushes:
+Turn events introduce dynamic occurrences each round, including monster reinforcements, environmental changes, and blessings. Several events feature balancing rules and difficulty-scaled protections:
+
+### Monster Spawn Events (`The Hungry Troll`, `The Lost Orc`)
 
 - **Minimum Spawn Distance**: Spawning monsters are placed at a safe minimum distance away from any live hero:
   - **Easy**: Minimum 4 tiles away.
@@ -391,4 +395,12 @@ Turn events that spawn monsters (`The Hungry Troll` and `The Lost Orc`) include 
   - **Easy**: Earliest in round 4 (skipped during rounds 1–3).
   - **Normal**: Earliest in round 3 (skipped during rounds 1–2).
   - **Hard**: Earliest in round 2 (skipped during round 1).
-- **Party Health Safeguard**: If the hero party's combined health is below 50% of maximum health, the `The Hungry Troll` event is skipped on **Easy** and **Normal** difficulties.
+- **Party Health Safeguard**: If the hero party's combined health is below 50% of total starting HP, `The Hungry Troll` event is skipped on **Easy** and **Normal** difficulties.
+- **Party Level & Visible Troll Thresholds**: `The Hungry Troll` scales its spawn limit based on the average level of the heroes:
+  - **Apprentice average**: Skipped if there is already **1 or more** visible trolls in the dungeon.
+  - **Knight average**: Skipped if there are already **2 or more** visible trolls in the dungeon.
+  - **Hero / Lord / Master average**: Standard limit applies (skipped if **4 or more** visible trolls are present).
+
+### Recovery Events (`Fountain of Youth`)
+
+- **Low-Health Priority Draw**: If the party's average health is below 50%, the `Fountain of Youth` event has a **50% chance** to be the next event drawn from the deck, unless it was already played in the previous round.

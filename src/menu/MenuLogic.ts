@@ -17,7 +17,11 @@ import {
 import { locale, setLocale } from '$lib/translations';
 import { hasWon, init, loadState, save } from '../game';
 import { testingGrounds } from '../dungeon/testingGrounds';
-import { getEventsForDungeon, selectNextEvent, shuffleEventDeck, } from '../events/EventsLogic';
+import {
+  getEventsForDungeon,
+  selectNextEvent,
+  shuffleEventDeck,
+} from '../events/EventsLogic';
 import { resetLiveHeroes } from '../hero/HeroLogic';
 import { campaigns } from '../campaigns';
 
@@ -168,36 +172,34 @@ export const getMainMenuItems = (
 export const getDebugMenuItems = (
   activeState: GameState,
   callbacks?: MenuCallbacks,
-): CanvasMenuItem[] => {
-  return [
-    {
-      id: 'testing_grounds',
-      debugOnly: false,
-      label: i18n('content.menu.mainMenu.buttons.testingGrounds'),
-      onClick: (state) => {
-        toTestingGrounds(state);
-        callbacks?.closeMenu?.();
-      },
+): CanvasMenuItem[] => [
+  {
+    id: 'testing_grounds',
+    debugOnly: false,
+    label: i18n('content.menu.mainMenu.buttons.testingGrounds'),
+    onClick: (state) => {
+      toTestingGrounds(state);
+      callbacks?.closeMenu?.();
     },
-    {
-      id: 'shuffle_deck',
-      debugOnly: false,
-      label: i18n('content.menu.mainMenu.buttons.shuffleDeck'),
-      onClick: (state) => {
-        onShuffleDeck(state);
-        callbacks?.closeMenu?.();
-      },
+  },
+  {
+    id: 'shuffle_deck',
+    debugOnly: false,
+    label: i18n('content.menu.mainMenu.buttons.shuffleDeck'),
+    onClick: (state) => {
+      onShuffleDeck(state);
+      callbacks?.closeMenu?.();
     },
-    {
-      id: 'select_next_event',
-      debugOnly: false,
-      label: i18n('content.menu.mainMenu.buttons.selectNextEvent'),
-      onClick: () => {
-        callbacks?.setView?.('event');
-      },
+  },
+  {
+    id: 'select_next_event',
+    debugOnly: false,
+    label: i18n('content.menu.mainMenu.buttons.selectNextEvent'),
+    onClick: () => {
+      callbacks?.setView?.('event');
     },
-  ];
-};
+  },
+];
 
 export const getCampaignMenuItems = (
   activeState: GameState,
@@ -307,48 +309,44 @@ export const getEventMenuItems = (
 export const getRightsMenuItems = (
   activeState: GameState,
   callbacks?: MenuCallbacks,
-): CanvasMenuItem[] => {
-  return [
-    {
-      id: 'rights_implementation',
-      debugOnly: false,
-      label: i18n('content.menu.rights.implementation'),
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      onClick: () => {
-      },
+): CanvasMenuItem[] => [
+  {
+    id: 'rights_implementation',
+    debugOnly: false,
+    label: i18n('content.menu.rights.implementation'),
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    onClick: () => {},
+  },
+  {
+    id: 'rights_music',
+    debugOnly: false,
+    label: i18n('content.menu.rights.musicLicense'),
+    onClick: () => {
+      if (typeof window !== 'undefined' && window.open) {
+        window.open(
+          'https://alkakrab04.wixsite.com/alkakrab-game-music',
+          '_blank',
+          'noopener,noreferrer',
+        );
+      }
     },
-    {
-      id: 'rights_music',
-      debugOnly: false,
-      label: i18n('content.menu.rights.musicLicense'),
-      onClick: () => {
-        if (typeof window !== 'undefined' && window.open) {
-          window.open(
-            'https://alkakrab04.wixsite.com/alkakrab-game-music',
-            '_blank',
-            'noopener,noreferrer',
-          );
-        }
-      },
+  },
+  {
+    id: 'rights_graphics',
+    debugOnly: false,
+    label: i18n('content.menu.rights.graphics'),
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    onClick: () => {},
+  },
+  {
+    id: 'rights_back',
+    debugOnly: false,
+    label: i18n('content.menu.loadGame.buttons.back'),
+    onClick: () => {
+      callbacks?.setView?.('main');
     },
-    {
-      id: 'rights_graphics',
-      debugOnly: false,
-      label: i18n('content.menu.rights.graphics'),
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      onClick: () => {
-      },
-    },
-    {
-      id: 'rights_back',
-      debugOnly: false,
-      label: i18n('content.menu.loadGame.buttons.back'),
-      onClick: () => {
-        callbacks?.setView?.('main');
-      },
-    },
-  ];
-};
+  },
+];
 
 export const getMenuItemsForView = (
   view: MenuView,

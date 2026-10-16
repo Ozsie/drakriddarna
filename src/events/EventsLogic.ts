@@ -57,12 +57,26 @@ export const getEventsForDungeon = (
 
 export const drawNextEvent = (state: GameState): TurnEvent => {
   const unUsedEvents = state.eventDeck.filter((event) => !event.used);
-  if (unUsedEvents.length > 0) {
-    return unUsedEvents[0];
-  } else {
+  if (unUsedEvents.length === 0) {
     shuffleEvents(state.eventDeck);
     return drawNextEvent(state);
   }
+
+  const wasPlayedPreviousRound =
+    state.previousEvent?.id === 'fountain_of_youth' ||
+    (!state.previousEvent && state.currentEvent?.id === 'fountain_of_youth');
+
+  if (isPartyBelowHalfHealth(state) && !wasPlayedPreviousRound) {
+    const hasFountain = state.eventDeck.some(
+      (event) => event.id === 'fountain_of_youth',
+    );
+    if (hasFountain && Math.random() < 0.5) {
+      selectNextEvent(state, 'fountain_of_youth');
+      return state.eventDeck[0];
+    }
+  }
+
+  return unUsedEvents[0];
 };
 
 export const shuffleEventDeck = (state: GameState): void => {

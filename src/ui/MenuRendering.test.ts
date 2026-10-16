@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { describe, expect, it, vi } from 'vitest';
-import { getMenuHit, getMenuLayout, isPointInBounds, renderMenuModal, } from './MenuRendering';
+import {
+  getMenuHit,
+  getMenuLayout,
+  isPointInBounds,
+  renderMenuModal,
+} from './MenuRendering';
 import { Colour, type GameState, type Hero, ItemType, Level } from '../types';
 
 const createMockHero = (name = 'Hero1'): Hero => ({
@@ -66,8 +71,8 @@ const createMockState = (overrides: Partial<GameState> = {}): GameState => ({
   ...overrides,
 });
 
-const createMockCtx = () => {
-  return {
+const createMockCtx = () =>
+  ({
     font: '',
     fillStyle: '',
     strokeStyle: '',
@@ -89,8 +94,7 @@ const createMockCtx = () => {
     fillRect: vi.fn(),
     fillText: vi.fn(),
     measureText: vi.fn((text: string) => ({ width: text.length * 7 })),
-  } as unknown as CanvasRenderingContext2D;
-};
+  }) as unknown as CanvasRenderingContext2D;
 
 describe('MenuRendering', () => {
   describe('isPointInBounds', () => {

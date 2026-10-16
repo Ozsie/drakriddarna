@@ -297,6 +297,7 @@ export const next = async (
     if (nextIndex === 0 && !hasKilledAll) {
       resetEventEffects(state);
       if (state.drawEvents) {
+        state.previousEvent = state.currentEvent;
         const event = drawNextEvent(state);
         state.currentEvent = event;
         const effect = eventEffects[event.effect];
@@ -307,6 +308,7 @@ export const next = async (
           console.warn(`Unknown event effect: ${event.effect}`);
         }
       } else {
+        state.previousEvent = state.currentEvent;
         state.currentEvent = undefined;
       }
     } else if (state.roundActionsDelta) {
