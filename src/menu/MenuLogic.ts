@@ -11,6 +11,7 @@ import {
   setDebug,
   setDifficulty,
   setGameLocale,
+  setMusic,
   winLevel,
 } from '../store/gameStateStore';
 import { locale, setLocale } from '$lib/translations';
@@ -57,6 +58,23 @@ export const getDebugMenuLabel = (
   return `${prefix}: ${status}`;
 };
 
+export const getMusicMenuLabel = (
+  activeState?: GameState | null,
+  musicMode?: boolean,
+): string => {
+  const isMusic =
+    musicMode !== undefined
+      ? musicMode
+      : activeState?.settings?.['music'] !== false;
+  const translated = i18n('content.menu.mainMenu.buttons.music');
+  const prefix =
+    translated === 'content.menu.mainMenu.buttons.music'
+      ? 'Music'
+      : translated || 'Music';
+  const status = isMusic ? 'On' : 'Off';
+  return `${prefix}: ${status}`;
+};
+
 export const getMainMenuItems = (
   activeState: GameState,
   callbacks?: MenuCallbacks,
@@ -94,6 +112,14 @@ export const getMainMenuItems = (
       label: getDebugMenuLabel(activeState, debugMode),
       onClick: (state) => {
         setDebugMode(state);
+      },
+    },
+    {
+      id: 'music',
+      debugOnly: false,
+      label: getMusicMenuLabel(activeState),
+      onClick: (state) => {
+        setMusicMode(state);
       },
     },
     {
@@ -370,6 +396,17 @@ export const setDebugMode = (activeState?: GameState) => {
   } else {
     const isDebug = Boolean(get(gameStateStore).settings?.['debug']);
     setDebug(!isDebug);
+  }
+};
+
+export const setMusicMode = (activeState?: GameState) => {
+  if (activeState) {
+    const isMusic = activeState.settings['music'] !== false;
+    activeState.settings['music'] = !isMusic;
+    gameStateStore.set(activeState);
+  } else {
+    const isMusic = get(gameStateStore).settings?.['music'] !== false;
+    setMusic(!isMusic);
   }
 };
 

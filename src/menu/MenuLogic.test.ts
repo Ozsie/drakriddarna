@@ -9,6 +9,7 @@ import {
   getMenuHeader,
   getDifficultyMenuLabel,
   getDebugMenuLabel,
+  getMusicMenuLabel,
 } from './MenuLogic';
 import { DifficultLevels } from '../core';
 import { Colour, ItemType, Level, type GameState, type Hero } from '../types';
@@ -126,6 +127,7 @@ describe('MenuLogic', () => {
       expect(ids).toContain('save_game');
       expect(ids).toContain('load_game');
       expect(ids).toContain('debug');
+      expect(ids).toContain('music');
       expect(ids).toContain('language');
       expect(ids).toContain('difficulty');
       expect(ids).not.toContain('testing_grounds');
@@ -144,6 +146,23 @@ describe('MenuLogic', () => {
       const onItems = getMainMenuItems(mockState);
       const debugOn = onItems.find((i) => i.id === 'debug');
       expect(debugOn?.label).toBe('Debug: On');
+    });
+
+    it('shows active or inactive state in music label and defaults to on', () => {
+      delete mockState.settings['music'];
+      const defaultItems = getMainMenuItems(mockState);
+      const musicDefault = defaultItems.find((i) => i.id === 'music');
+      expect(musicDefault?.label).toBe('Music: On');
+
+      mockState.settings['music'] = false;
+      const offItems = getMainMenuItems(mockState);
+      const musicOff = offItems.find((i) => i.id === 'music');
+      expect(musicOff?.label).toBe('Music: Off');
+
+      mockState.settings['music'] = true;
+      const onItems = getMainMenuItems(mockState);
+      const musicOn = onItems.find((i) => i.id === 'music');
+      expect(musicOn?.label).toBe('Music: On');
     });
 
     it('includes next_level when dungeon is beaten', () => {
@@ -177,6 +196,16 @@ describe('MenuLogic', () => {
       expect(mockState.settings['debug']).toBe(true);
       debugItem?.onClick(mockState);
       expect(mockState.settings['debug']).toBe(false);
+    });
+
+    it('toggles music mode on music item click', () => {
+      delete mockState.settings['music'];
+      const items = getMainMenuItems(mockState);
+      const musicItem = items.find((i) => i.id === 'music');
+      musicItem?.onClick(mockState);
+      expect(mockState.settings['music']).toBe(false);
+      musicItem?.onClick(mockState);
+      expect(mockState.settings['music']).toBe(true);
     });
 
     it('cycles difficulty on difficulty item click', () => {
@@ -295,6 +324,11 @@ describe('MenuLogic', () => {
     it('returns formatted debug menu label', () => {
       expect(getDebugMenuLabel(mockState, true)).toBe('Debug: On');
       expect(getDebugMenuLabel(mockState, false)).toBe('Debug: Off');
+    });
+
+    it('returns formatted music menu label', () => {
+      expect(getMusicMenuLabel(mockState, true)).toBe('Music: On');
+      expect(getMusicMenuLabel(mockState, false)).toBe('Music: Off');
     });
   });
 });

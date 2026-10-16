@@ -9,6 +9,7 @@ export interface GameSettings {
   cellSize?: number;
   debug?: boolean;
   locale?: string;
+  music?: boolean;
   [key: string]: string | number | boolean | undefined;
 }
 
@@ -198,6 +199,7 @@ export type Dungeon = {
   collapsedCorridor?: string;
   portal?: Position;
   onRoomDiscovered?: Record<string, string>;
+  music?: string;
 };
 
 export type WinCondition = {
@@ -621,6 +623,7 @@ export type GameAction =
   | { type: 'LOAD_GAME'; state: GameState }
   | { type: 'SAVE_GAME' }
   | { type: 'SET_DEBUG'; debug: boolean }
+  | { type: 'SET_MUSIC'; music: boolean }
   | { type: 'SET_LOCALE'; locale: string }
   | { type: 'WIN_LEVEL' }
   | { type: 'RESET_LEVEL' }

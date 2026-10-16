@@ -80,6 +80,7 @@
     handleTwoFingerTouchMove,
     handleTwoFingerTouchEnd,
   } from '../input/TouchPanLogic';
+  import { musicManager } from '../audio/MusicManager';
 
   export let state: GameState | undefined = undefined;
   export let debugMode: boolean | undefined = undefined;
@@ -91,6 +92,13 @@
       : Boolean(activeState?.settings?.['debug'] ?? $debugModeStore);
   $: dungeon = activeState?.dungeon;
   $: startPosition = dungeon?.startingPositions?.[0];
+  $: isMusicEnabled = activeState?.settings?.['music'] !== false;
+  $: if (browser) {
+    musicManager.setMuted(!isMusicEnabled);
+    if (dungeon && isMusicEnabled) {
+      musicManager.playDungeonMusic(dungeon.music);
+    }
+  }
 
   $: cellSize = (activeState?.settings?.['cellSize'] as number) ?? 48;
   let totalReRenderCount = 0;
@@ -479,7 +487,7 @@
       debugMode !== undefined
         ? debugMode
         : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
-    const menuSig = `${isCanvasMenuOpen}:${currentMenuView}:${hoveredMenuItemId}:${currentDebug}:${$locale}:${activeState?.settings?.['locale']}:${activeState?.difficulty?.id}:${activeState?.dungeon?.beaten}`;
+    const menuSig = `${isCanvasMenuOpen}:${currentMenuView}:${hoveredMenuItemId}:${currentDebug}:${$locale}:${activeState?.settings?.['locale']}:${activeState?.difficulty?.id}:${activeState?.dungeon?.beaten}:${activeState?.settings?.['music']}`;
     const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isDebugHovered},${isLogHovered},${isLogOpen},${heroesSig},${monstersSig},${roomsSig},${hoverSig},${targetSig},${winSig},${diarySig},${eventSig},${introSig},${menuSig}`;
     if (!force && sig === lastUiSignature) return;
     lastUiSignature = sig;
@@ -736,6 +744,7 @@
       window.removeEventListener('touchend', onTouchEnd);
       window.removeEventListener('touchcancel', onTouchCancel);
       window.removeEventListener('keydown', onWindowKeyDown);
+      musicManager.stop();
     }
     if (overlayAnimationId) {
       cancelAnimationFrame(overlayAnimationId);

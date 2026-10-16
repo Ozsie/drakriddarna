@@ -165,11 +165,13 @@ describe('Type Safety & Domain Modeling', () => {
         cellSize: 48,
         debug: true,
         locale: 'sv',
+        music: false,
         customProperty: 'validValue',
       };
       expect(settings.cellSize).toBe(48);
       expect(settings.debug).toBe(true);
       expect(settings.locale).toBe('sv');
+      expect(settings.music).toBe(false);
     });
 
     it('ItemProperties supports typed properties', () => {
@@ -227,6 +229,13 @@ describe('Type Safety & Domain Modeling', () => {
 
       dispatchAction(action);
       expect(get(gameStateStore).settings.debug).toBe(true);
+
+      const musicAction: GameAction = {
+        type: 'SET_MUSIC',
+        music: false,
+      };
+      dispatchAction(musicAction);
+      expect(get(gameStateStore).settings.music).toBe(false);
 
       const moveAction: GameAction = {
         type: 'MOVE',

@@ -125,6 +125,11 @@ export const debugModeStore = derived(gameStateStore, ($state) =>
   Boolean($state.settings?.['debug']),
 );
 
+export const musicModeStore = derived(
+  gameStateStore,
+  ($state) => $state.settings?.['music'] !== false,
+);
+
 export const isTurnInProgress = writable<boolean>(false);
 let isExecutingTurn = false;
 
@@ -264,6 +269,12 @@ export const setDebug = (debug: boolean): void => {
   syncStore(state);
 };
 
+export const setMusic = (music: boolean): void => {
+  const state = get(gameStateStore);
+  state.settings['music'] = music;
+  syncStore(state);
+};
+
 export const removeDamageIndicatorAction = (id: string): void => {
   const state = get(gameStateStore);
   removeDamageIndicator(state, id);
@@ -357,6 +368,9 @@ export const dispatchAction = (action: GameAction): void => {
       break;
     case 'SET_DEBUG':
       setDebug(action.debug);
+      break;
+    case 'SET_MUSIC':
+      setMusic(action.music);
       break;
     case 'SET_LOCALE':
       setGameLocale(action.locale);
