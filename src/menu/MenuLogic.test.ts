@@ -328,7 +328,7 @@ describe('MenuLogic', () => {
 
       musicItem?.onClick(mockState);
       expect(openSpy).toHaveBeenCalledWith(
-        'https://alkakrab04.wixsite.com/alkakrab-game-music',
+        'https://lostintheforest.bandcamp.com/',
         '_blank',
         'noopener,noreferrer',
       );

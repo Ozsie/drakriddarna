@@ -324,7 +324,7 @@ export const getRightsMenuItems = (
     onClick: () => {
       if (typeof window !== 'undefined' && window.open) {
         window.open(
-          'https://alkakrab04.wixsite.com/alkakrab-game-music',
+          'https://lostintheforest.bandcamp.com/',
           '_blank',
           'noopener,noreferrer',
         );
