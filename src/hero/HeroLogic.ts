@@ -296,6 +296,25 @@ export const resetLiveHeroes = (state: GameState) => {
 export const liveHeroes = (state: GameState): Hero[] =>
   state.heroes.filter((hero) => hero.health > 0).map((hero) => hero as Hero);
 
+export const getPartyAverageLevel = (state: GameState): Level => {
+  const heroes = state.heroes;
+  if (!heroes || heroes.length === 0) return Level.APPRENTICE;
+  const levelOrder = [
+    Level.APPRENTICE,
+    Level.KNIGHT,
+    Level.HERO,
+    Level.LORD,
+    Level.MASTER,
+  ];
+  const total = heroes.reduce((sum, hero) => {
+    const idx = levelOrder.indexOf(hero.level);
+    return sum + (idx !== -1 ? idx : 0);
+  }, 0);
+  const avgIndex = Math.round(total / heroes.length);
+  const clampedIndex = Math.max(0, Math.min(levelOrder.length - 1, avgIndex));
+  return levelOrder[clampedIndex];
+};
+
 export { canAct, getEffectiveMaxMovement, getEffectiveMaxHealth };
 
 export const openDoor = (

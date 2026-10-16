@@ -6,8 +6,9 @@ import {
   eventEffects,
   resetEventEffects,
 } from './EventsLogic';
-import { Colour, MonsterType, type TurnEvent } from '../types';
+import { Colour, Level, MonsterType, type TurnEvent } from '../types';
 import { createMonster } from '../dungeon/DungeonLogic';
+import { getPartyAverageLevel } from '../hero/HeroLogic';
 import {
   DifficultLevels,
   distanceInGrid,
@@ -622,7 +623,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       expect(state.dungeon.layout.monsters.length).toBe(4);
     });
 
-    it('spawns a troll when 4 trolls are in layout but 1 is dead', () => {
+    it('spawns a troll when 4 trolls are in layout but 1 is dead and party level is HERO', () => {
       const state = init();
       state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
       state.turnCount = 5;
@@ -637,6 +638,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
       state.heroes.forEach((h) => {
         h.position = { x: 0, y: 0 };
+        h.level = Level.HERO;
       });
 
       const event = { ...trollEvent, used: false };
@@ -644,6 +646,178 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
       expect(event.used).toBe(true);
       expect(state.dungeon.layout.monsters.length).toBe(5);
+    });
+  });
+
+  describe('Party average level and Hungry Troll visible troll limits', () => {
+    it('calculates party average level correctly', () => {
+      const state = init();
+      // Default: all APPRENTICE
+      expect(getPartyAverageLevel(state)).toBe(Level.APPRENTICE);
+
+      // All KNIGHT
+      state.heroes.forEach((h) => {
+        h.level = Level.KNIGHT;
+      });
+      expect(getPartyAverageLevel(state)).toBe(Level.KNIGHT);
+
+      // All HERO
+      state.heroes.forEach((h) => {
+        h.level = Level.HERO;
+      });
+      expect(getPartyAverageLevel(state)).toBe(Level.HERO);
+
+      // All LORD
+      state.heroes.forEach((h) => {
+        h.level = Level.LORD;
+      });
+      expect(getPartyAverageLevel(state)).toBe(Level.LORD);
+
+      // All MASTER
+      state.heroes.forEach((h) => {
+        h.level = Level.MASTER;
+      });
+      expect(getPartyAverageLevel(state)).toBe(Level.MASTER);
+
+      // 3 APPRENTICE (0) + 1 KNIGHT (1) = 1/4 = 0.25 -> APPRENTICE
+      state.heroes[0].level = Level.APPRENTICE;
+      state.heroes[1].level = Level.APPRENTICE;
+      state.heroes[2].level = Level.APPRENTICE;
+      state.heroes[3].level = Level.KNIGHT;
+      expect(getPartyAverageLevel(state)).toBe(Level.APPRENTICE);
+
+      // 1 APPRENTICE (0) + 3 KNIGHT (1) = 3/4 = 0.75 -> KNIGHT
+      state.heroes[0].level = Level.APPRENTICE;
+      state.heroes[1].level = Level.KNIGHT;
+      state.heroes[2].level = Level.KNIGHT;
+      state.heroes[3].level = Level.KNIGHT;
+      expect(getPartyAverageLevel(state)).toBe(Level.KNIGHT);
+
+      // Empty heroes list fallback
+      expect(getPartyAverageLevel({ ...state, heroes: [] })).toBe(
+        Level.APPRENTICE,
+      );
+    });
+
+    it('when average level is APPRENTICE, skips hungry_troll if 1 or more trolls are visible', () => {
+      const state = init();
+      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.turnCount = 5;
+      state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
+      state.dungeon.discoveredRooms = ['A'];
+      state.heroes.forEach((h) => {
+        h.position = { x: 0, y: 0 };
+        h.level = Level.APPRENTICE;
+      });
+
+      // 0 visible trolls: should spawn
+      state.dungeon.layout.monsters = [];
+      const event1 = { ...trollEvent, used: false };
+      eventEffects.theHungryTroll(state, event1);
+      expect(event1.used).toBe(true);
+      expect(state.dungeon.layout.monsters.length).toBe(1);
+
+      // 1 visible troll: should skip
+      const event2 = { ...trollEvent, used: false };
+      eventEffects.theHungryTroll(state, event2);
+      expect(event2.used).toBe(true);
+      expect(state.dungeon.layout.monsters.length).toBe(1); // not spawned, remains 1
+
+      // 2 visible trolls: should skip
+      const troll2 = createMonster(MonsterType.TROLL, Colour.Green, 2, 1);
+      state.dungeon.layout.monsters.push(troll2);
+      const event3 = { ...trollEvent, used: false };
+      eventEffects.theHungryTroll(state, event3);
+      expect(event3.used).toBe(true);
+      expect(state.dungeon.layout.monsters.length).toBe(2);
+    });
+
+    it('when average level is KNIGHT, spawns with 0 or 1 visible troll, but skips if 2 or more visible trolls', () => {
+      const state = init();
+      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.turnCount = 5;
+      state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
+      state.dungeon.discoveredRooms = ['A'];
+      state.heroes.forEach((h) => {
+        h.position = { x: 0, y: 0 };
+        h.level = Level.KNIGHT;
+      });
+
+      // 0 visible trolls: spawns 1st troll
+      state.dungeon.layout.monsters = [];
+      const event1 = { ...trollEvent, used: false };
+      eventEffects.theHungryTroll(state, event1);
+      expect(event1.used).toBe(true);
+      expect(state.dungeon.layout.monsters.length).toBe(1);
+
+      // 1 visible troll: spawns 2nd troll (since only skipped at 2 visible trolls)
+      const event2 = { ...trollEvent, used: false };
+      eventEffects.theHungryTroll(state, event2);
+      expect(event2.used).toBe(true);
+      expect(state.dungeon.layout.monsters.length).toBe(2);
+
+      // 2 visible trolls: should skip
+      const event3 = { ...trollEvent, used: false };
+      eventEffects.theHungryTroll(state, event3);
+      expect(event3.used).toBe(true);
+      expect(state.dungeon.layout.monsters.length).toBe(2); // remains 2
+    });
+
+    it('when average level is HERO or higher, uses normal limit (allows up to 4 trolls)', () => {
+      const state = init();
+      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.turnCount = 5;
+      state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
+      state.dungeon.discoveredRooms = ['A'];
+      state.heroes.forEach((h) => {
+        h.position = { x: 0, y: 0 };
+        h.level = Level.HERO;
+      });
+
+      // 2 visible trolls: spawns 3rd troll (normal allows up to 4)
+      const troll1 = createMonster(MonsterType.TROLL, Colour.Red, 1, 1);
+      const troll2 = createMonster(MonsterType.TROLL, Colour.Green, 2, 1);
+      state.dungeon.layout.monsters = [troll1, troll2];
+
+      const event = { ...trollEvent, used: false };
+      eventEffects.theHungryTroll(state, event);
+      expect(event.used).toBe(true);
+      expect(state.dungeon.layout.monsters.length).toBe(3);
+
+      // 3 visible trolls: spawns 4th troll
+      const event2 = { ...trollEvent, used: false };
+      eventEffects.theHungryTroll(state, event2);
+      expect(event2.used).toBe(true);
+      expect(state.dungeon.layout.monsters.length).toBe(4);
+
+      // 4 visible trolls: skips
+      const event3 = { ...trollEvent, used: false };
+      eventEffects.theHungryTroll(state, event3);
+      expect(event3.used).toBe(true);
+      expect(state.dungeon.layout.monsters.length).toBe(4);
+    });
+
+    it('does not count invisible (undiscovered room) or dead trolls towards visibility limits', () => {
+      const state = init();
+      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.turnCount = 5;
+      state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'BBBBBB', 'BBBBBB'];
+      state.dungeon.discoveredRooms = ['A']; // Room B is undiscovered
+      state.heroes.forEach((h) => {
+        h.position = { x: 0, y: 0 };
+        h.level = Level.APPRENTICE;
+      });
+
+      // 1 dead troll in Room A + 1 alive troll in undiscovered Room B -> 0 visible alive trolls
+      const deadTroll = createMonster(MonsterType.TROLL, Colour.Red, 1, 1);
+      deadTroll.health = 0;
+      const hiddenTroll = createMonster(MonsterType.TROLL, Colour.Green, 1, 2);
+      state.dungeon.layout.monsters = [deadTroll, hiddenTroll];
+
+      const event = { ...trollEvent, used: false };
+      eventEffects.theHungryTroll(state, event);
+      expect(event.used).toBe(true);
+      expect(state.dungeon.layout.monsters.length).toBe(3); // Spawned 1 more in Room A
     });
   });
 });

@@ -18,6 +18,7 @@ import {
   isBlockedByHero,
   isBlockedByMonster,
   liveHeroes,
+  getPartyAverageLevel,
 } from '../hero/HeroLogic';
 import {
   addLog,
@@ -136,10 +137,17 @@ export const eventEffects: Record<
       event.used = true;
       return;
     }
+    const avgLevel = getPartyAverageLevel(state);
     const visibleTrolls = findVisibleMonsters(state).filter(
       (monster) => monster.type === MonsterType.TROLL,
     );
-    if (visibleTrolls.length >= 4) {
+    let maxVisibleTrolls = 4;
+    if (avgLevel === Level.APPRENTICE) {
+      maxVisibleTrolls = 1;
+    } else if (avgLevel === Level.KNIGHT) {
+      maxVisibleTrolls = 2;
+    }
+    if (visibleTrolls.length >= maxVisibleTrolls) {
       event.used = true;
       return;
     }

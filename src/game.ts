@@ -14,6 +14,15 @@ import {
   resetLiveHeroes,
   rewardLiveHeroes,
 } from './hero/HeroLogic';
+export {
+  applyStartingEquipment,
+  getPartyAverageLevel,
+  levelUp,
+  liveHeroes,
+  replaceDeadHeroes,
+  resetLiveHeroes,
+  rewardLiveHeroes,
+} from './hero/HeroLogic';
 import { resetOnNext, resetOnNextDungeon } from './items/ItemLogic';
 import {
   drawNextEvent,
