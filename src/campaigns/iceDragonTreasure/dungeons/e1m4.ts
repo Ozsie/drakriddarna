@@ -74,7 +74,7 @@ export const e1m4: Dungeon = defineDungeon({
       [Side.DOWN, 11, 10],
       [Side.DOWN, 2, 11],
       [Side.RIGHT, 3, 12, { hidden: true }],
-      [Side.DOWN, 3, 15],
+      [Side.RIGHT, 3, 15],
       [Side.DOWN, 11, 13, { trapped: 2 }],
       [Side.RIGHT, 13, 10, { trapped: 2, hidden: true }],
       [Side.RIGHT, 13, 14, { trapped: 2, hidden: true }],
