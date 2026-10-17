@@ -80,8 +80,8 @@
     handleTwoFingerTouchMove,
     handleTwoFingerTouchEnd,
   } from '../input/TouchPanLogic';
-  import { musicManager } from '../audio/MusicManager';
-  import { soundEffectManager } from '../audio/SoundEffectManager';
+  import { musicManager } from '../audio';
+  import { soundEffectManager } from '../audio';
 
   export let state: GameState | undefined = undefined;
   export let debugMode: boolean | undefined = undefined;

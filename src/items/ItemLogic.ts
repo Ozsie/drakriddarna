@@ -8,7 +8,7 @@ import {
   i18n,
 } from '../core';
 import { createBloodSplatter } from '../combat';
-import { soundEffectManager } from '../audio/SoundEffectManager';
+import { soundEffectManager } from '../audio';
 import { roll } from '../core';
 import {
   canAct,

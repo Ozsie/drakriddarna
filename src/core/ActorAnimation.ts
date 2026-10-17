@@ -1,5 +1,5 @@
 import type { Actor, Position } from '../types';
-import { soundEffectManager } from '../audio/SoundEffectManager';
+import { soundEffectManager } from '../audio';
 
 export const DEFAULT_ACTOR_MOVEMENT_DURATION_MS = 200;
 let currentMovementDurationMs = DEFAULT_ACTOR_MOVEMENT_DURATION_MS;

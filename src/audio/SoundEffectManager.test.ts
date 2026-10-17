@@ -8,8 +8,8 @@ import {
   getActorHurtSound,
   getActorDeathSound,
 } from './SoundEffectManager';
-import { takeDamage } from '../core/combat';
-import { recordActorStep, clearActorAnimations } from '../core/ActorAnimation';
+import { takeDamage } from '../core';
+import { recordActorStep, clearActorAnimations } from '../core';
 import { createMonster } from '../dungeon/DungeonLogic';
 import { registerMonsterTemplate } from '../monsters/MonsterRegistry';
 import { Colour, ItemType, Level } from '../types';

@@ -1,5 +1,5 @@
 import type { Difficulty, GameState } from '../../types';
-import { DifficultLevels, getDifficulty } from '../../core/DifficultLevels';
+import { DifficultLevels, getDifficulty } from '../../core';
 import type {
   BehaviorContext,
   DirectorState,

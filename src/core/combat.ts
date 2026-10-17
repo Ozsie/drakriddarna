@@ -12,7 +12,7 @@ import { addLog, i18n } from './logger';
 import { getDifficulty } from './DifficultLevels';
 import { flashActor } from './ActorAnimation';
 import { createBloodSplatter, createProjectile } from '../combat';
-import { soundEffectManager } from '../audio/SoundEffectManager';
+import { soundEffectManager } from '../audio';
 
 export const ATTACK_BONUS = 'ATTACK_BONUS';
 export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
