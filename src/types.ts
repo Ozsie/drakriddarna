@@ -145,12 +145,6 @@ export type Actor = {
   walkSound?: string;
   hurtSound?: string;
   deathSound?: string;
-  walk?: string;
-  hurt?: string;
-  death?: string;
-  soundWalk?: string;
-  soundHurt?: string;
-  soundDeath?: string;
 };
 
 export type Hero = Actor & {
@@ -427,14 +421,12 @@ export type Weapon = Item & {
   ignoresShield: boolean;
   ignoresArmour: boolean;
   elemental?: boolean;
-  sound?: string;
   attackSound?: string;
-  soundEffect?: string;
-  soundFile?: string;
 };
 
 export type Shield = Item & {
   dice: number;
+  blockSound?: string;
 };
 
 export type Armour = Item & {
@@ -622,6 +614,7 @@ export type TurnEvent = {
   descriptionTranslationKey?: string;
   effect: TurnEventEffect;
   used: boolean;
+  eventSound?: string;
 };
 
 export type MoveDirection = 'UL' | 'U' | 'UR' | 'L' | 'R' | 'DL' | 'D' | 'DR';

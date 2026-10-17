@@ -108,7 +108,7 @@ export const monsterWeapons: Weapon[] = [
     value: 0,
     ignoresShield: true,
     ignoresArmour: false,
-    attackSound: 'sfx/attack_monster.wav',
+    attackSound: 'sfx/arrow.mp3',
   },
   {
     id: 'troll_club',

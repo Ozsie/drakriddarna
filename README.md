@@ -13,6 +13,7 @@ See [Campaign Readme](src/campaigns/README.md)
 See [Rules Readme](./RULES.md)
 
 ## Todo
+- [ ] Sound Effects
 - [ ] Multiple saves
 - [ ] Responsive layout
 - [ ] Graphics
@@ -84,6 +85,54 @@ See [Rules Readme](./RULES.md)
 - [X] Monster close combat attack
 - [X] Locked doors
 - [X] Saving & loading
+
+### Sound Effects
+
+#### Combat & Defense
+- [X] Weapon attack (`attackSound`)
+- [X] Shield block / deflection (`blockSound`)
+- [X] Actor hurt / damage taken (`hurtSound`)
+- [X] Actor death (`deathSound`)
+- [ ] Attack miss / whiff
+- [ ] Critical hit / heavy blow (e.g. `sword_of_chaos`)
+- [ ] Ranged projectile flight / launch
+- [ ] Ranged impact (hitting wall or obstacle)
+
+#### Environment & Exploration
+- [X] Door open (`door_open`)
+- [X] Lock picking (`pick_lock`)
+- [X] Locked door attempt
+- [ ] Hidden / secret door slide
+- [ ] Room discovered
+- [ ] Level exit
+
+#### Traps & Secrets
+- [ ] Secret found cue / chime
+- [ ] Trap triggered / sprung (pit, spikes)
+- [ ] Trap disarm success
+- [ ] Trap disarm failure
+
+#### Movement & Actions
+- [X] Actor movement / step (`walkSound`)
+- [ ] Search action (searching room/tile)
+
+#### Items & Inventory
+- [ ] Chest opened
+- [ ] Potion consume / drink
+- [ ] Magic scroll / artifact use
+- [ ] Equip / unequip gear
+
+#### Magic & Status Effects
+- [ ] Spell cast / magical blast
+- [ ] Healing effect
+- [ ] Buff applied
+- [ ] Debuff applied
+
+#### Tabletop & Game Flow
+- [ ] UI button click
+- [ ] Victory fanfare
+- [ ] Defeat / party wipe
+- [ ] Hero level up
 
 ## Controls
 ### Mouse/touch

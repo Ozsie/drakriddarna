@@ -58,6 +58,7 @@ import {
   resolveChaosSwordAttack,
 } from '../items/ItemLogic';
 import { COLLAPSED, EMPTY, WALL } from '../core';
+import { soundEffectManager } from '../audio';
 
 export const newHero = (
   name: string,
@@ -94,6 +95,9 @@ export const newHero = (
       : [],
     incapacitated: false,
     isInventoryOpen: false,
+    walkSound: 'sfx/walk_knight.wav',
+    hurtSound: 'sfx/hurt_knight.wav',
+    deathSound: 'sfx/die_knight.wav',
   };
 };
 
@@ -213,10 +217,12 @@ export const pickLock = (state: GameState, door?: Door) => {
     if (result >= 1) {
       door.locked = false;
       addLog(state, 'logs.heroAction.pickedLock', { hero: i18n(hero.name) });
+      soundEffectManager.playSound('sfx/unlock.mp3');
     } else {
       addLog(state, 'logs.heroAction.failedToPickLock', {
         hero: i18n(hero.name),
       });
+      soundEffectManager.playSound('sfx/locked.mp3');
     }
     if (
       hero.actions > 1 &&
@@ -333,6 +339,7 @@ export const openDoor = (
   }
   move(hero, state, hero.position.x, hero.position.y, 1);
   addLog(state, 'logs.heroAction.openedDoor', { hero: i18n(hero.name) });
+  soundEffectManager.playDoorOpen();
 };
 
 export const attack = (hero: Hero, state: GameState, target: Position) => {

@@ -1,21 +1,17 @@
-import type { Actor, Weapon } from '../types';
+import type { Actor, Shield, Weapon } from '../types';
 
 export const getWeaponAttackSound = (
   weapon?: Weapon | null,
-): string | undefined =>
-  weapon?.sound ??
-  weapon?.attackSound ??
-  weapon?.soundEffect ??
-  weapon?.soundFile;
+): string | undefined => weapon?.attackSound;
 
 export const getActorWalkSound = (actor?: Actor | null): string | undefined =>
-  actor?.walkSound ?? actor?.walk ?? actor?.soundWalk;
+  actor?.walkSound;
 
 export const getActorHurtSound = (actor?: Actor | null): string | undefined =>
-  actor?.hurtSound ?? actor?.hurt ?? actor?.soundHurt;
+  actor?.hurtSound;
 
 export const getActorDeathSound = (actor?: Actor | null): string | undefined =>
-  actor?.deathSound ?? actor?.death ?? actor?.soundDeath;
+  actor?.deathSound;
 
 export class SoundEffectManager {
   private volume = 0.5;
@@ -68,8 +64,8 @@ export class SoundEffectManager {
     }
   }
 
-  public play(soundPath?: string | null): HTMLAudioElement | null {
-    return this.playSound(soundPath);
+  public playDoorOpen(): HTMLAudioElement | null {
+    return this.playSound('sfx/door_open.mp3');
   }
 
   public playWeaponAttack(weapon?: Weapon | null): HTMLAudioElement | null {
@@ -90,6 +86,10 @@ export class SoundEffectManager {
   public playActorDeath(actor?: Actor | null): HTMLAudioElement | null {
     const sound = getActorDeathSound(actor);
     return this.playSound(sound);
+  }
+
+  public playShieldBlockSound(shield?: Shield | null): HTMLAudioElement | null {
+    return this.playSound(shield?.blockSound);
   }
 
   public setVolume(volume: number): void {

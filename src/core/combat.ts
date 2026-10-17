@@ -153,6 +153,9 @@ export const takeDamage = (
   }
   if (!weapon.ignoresShield) {
     shield = roll(target.level, target.shield?.dice ?? 0);
+    if (shield > 0) {
+      soundEffectManager.playShieldBlockSound(target.shield);
+    }
   } else if (target.shield) {
     addLog(state, 'logs.takeDamage.shieldUseless', {
       actor: i18n(target.name),

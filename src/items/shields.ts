@@ -10,6 +10,7 @@ export const shields: Shield[] = [
     amountInDeck: 2,
     dice: 2,
     value: 2,
+    blockSound: 'sfx/shield_block.mp3',
   },
   {
     id: 'small_shield',
@@ -19,6 +20,7 @@ export const shields: Shield[] = [
     amountInDeck: 2,
     dice: 1,
     value: 1,
+    blockSound: 'sfx/shield_block.mp3',
   },
 ];
 
