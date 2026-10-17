@@ -416,13 +416,8 @@ export const findSprayAlignPosition = (
     passableGrid,
     maxSteps,
   );
-  // Also include current position with dist 0
-  const allPositions: ReachableTile[] = [
-    { position: monster.position, distance: 0, path: [] },
-    ...reachable,
-  ];
 
-  const aligned = allPositions
+  const aligned = reachable
     .map((tile) => ({
       tile,
       count: countHeroesInSpray(state, monster, tile.position),

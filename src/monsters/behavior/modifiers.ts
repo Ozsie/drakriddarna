@@ -130,7 +130,9 @@ export const selectBehavior = (
 
   if (eligibleEvaluated.length === 0) {
     // Fallback behavior
-    const fallback: MonsterBehavior = behaviors[0] ?? {
+    const fallback: MonsterBehavior = behaviors.find(
+      (b) => b.name === 'Advance',
+    ) ?? {
       name: 'Advance',
       slots: ['move', 'move'],
       tags: ['aggressive'],

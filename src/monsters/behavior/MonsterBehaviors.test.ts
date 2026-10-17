@@ -18,6 +18,7 @@ import {
   evaluateBehaviors,
   getDirectorState,
   rollBowForgotten,
+  selectBehavior,
 } from './modifiers';
 import type { BehaviorContext, MonsterBehavior } from './types';
 import { ORC_BEHAVIORS } from './definitions';
@@ -404,5 +405,115 @@ describe('Dark Lord Behaviors Evaluation', () => {
     expect(spray?.eligible).toBe(true);
     // Base weight: 8 + 2 * (2 - 1) = 10
     expect(spray?.baseWeight).toBe(10);
+  });
+
+  it('Dark Lord chooses Spray and does NOT choose Line up when already lined up', () => {
+    const state = createTestState();
+    const monster = createMonster(
+      MonsterType.YELLOW_DARK_LORD,
+      Colour.Yellow,
+      3,
+      3,
+    );
+    const hero = createTestHero('Fearik', 1, 1);
+    state.heroes = [hero];
+
+    const passableGrid = createPassableGrid(state);
+    const ctx: BehaviorContext = {
+      state,
+      monster,
+      passableGrid,
+      neighbouringHeroes: [],
+      visibleHeroes: [hero],
+      partyHpPercentage: 1,
+      hasDeadHero: false,
+      aliveMonsterCount: 1,
+      directorState: 'NEUTRAL',
+    };
+
+    const evaluated = evaluateBehaviors(DARK_LORD_BEHAVIORS, ctx);
+    const spray = evaluated.find((b) => b.name === 'Spray');
+    const lineUp = evaluated.find((b) => b.name === 'Line up');
+    const advance = evaluated.find((b) => b.name === 'Advance');
+
+    expect(spray?.eligible).toBe(true);
+    expect(lineUp?.eligible).toBe(false);
+    expect(advance?.eligible).toBe(false);
+  });
+
+  it('Dark Lord chooses Line up when not currently in spray but reachable tile aligns', () => {
+    const state = createTestState();
+    const monster = createMonster(
+      MonsterType.YELLOW_DARK_LORD,
+      Colour.Yellow,
+      1,
+      1,
+    );
+    // Hero at (4, 2) is not diagonal from (1, 1), but reachable within 3 steps
+    const hero = createTestHero('Fearik', 4, 2);
+    state.heroes = [hero];
+
+    const passableGrid = createPassableGrid(state);
+    const ctx: BehaviorContext = {
+      state,
+      monster,
+      passableGrid,
+      neighbouringHeroes: [],
+      visibleHeroes: [hero],
+      partyHpPercentage: 1,
+      hasDeadHero: false,
+      aliveMonsterCount: 1,
+      directorState: 'NEUTRAL',
+    };
+
+    const evaluated = evaluateBehaviors(DARK_LORD_BEHAVIORS, ctx);
+    const spray = evaluated.find((b) => b.name === 'Spray');
+    const lineUp = evaluated.find((b) => b.name === 'Line up');
+    const advance = evaluated.find((b) => b.name === 'Advance');
+
+    expect(spray?.eligible).toBe(false);
+    expect(lineUp?.eligible).toBe(true);
+    expect(advance?.eligible).toBe(false);
+  });
+
+  it('Dark Lord chooses Advance when unable to spray or align with heroes', () => {
+    const state = createTestState();
+    const monster = createMonster(
+      MonsterType.YELLOW_DARK_LORD,
+      Colour.Yellow,
+      1,
+      1,
+    );
+    // Hero is far away in another part of map / blocked so no tile within 3 steps aligns
+    const hero = createTestHero('Fearik', 20, 20);
+    state.heroes = [hero];
+
+    const passableGrid = createPassableGrid(state);
+    const ctx: BehaviorContext = {
+      state,
+      monster,
+      passableGrid,
+      neighbouringHeroes: [],
+      visibleHeroes: [],
+      partyHpPercentage: 1,
+      hasDeadHero: false,
+      aliveMonsterCount: 1,
+      directorState: 'NEUTRAL',
+    };
+
+    const evaluated = evaluateBehaviors(DARK_LORD_BEHAVIORS, ctx);
+    const spray = evaluated.find((b) => b.name === 'Spray');
+    const lineUp = evaluated.find((b) => b.name === 'Line up');
+    const brawl = evaluated.find((b) => b.name === 'Brawl');
+    const advance = evaluated.find((b) => b.name === 'Advance');
+
+    expect(spray?.eligible).toBe(false);
+    expect(lineUp?.eligible).toBe(false);
+    expect(brawl?.eligible).toBe(false);
+    expect(advance?.eligible).toBe(true);
+
+    const { chosenBehavior } = selectBehavior(DARK_LORD_BEHAVIORS, ctx);
+    expect(chosenBehavior.name).toBe('Advance');
+    expect(chosenBehavior.slots).toEqual(['move', 'move']);
   });
 });

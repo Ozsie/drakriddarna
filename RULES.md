@@ -353,6 +353,7 @@ On its turn, a monster chooses a tactical behavior composed of two action slots 
 | **Spray** | `fire_spray` + `move_or_melee` | Aggressive | 8 + 2 × *(extra heroes hit)* | At least 1 hero is currently in the special attack area / line of fire. |
 | **Line up** | `move` + `fire_spray` | Aggressive | 6 | Can reach a tile within 3 steps that aligns one or more heroes in the special attack pattern. |
 | **Brawl** | `melee` + `melee` | Aggressive | 5 | At least one adjacent hero. |
+| **Advance** | `move` + `move` | Aggressive | 5 | No adjacent heroes, no hero in line of fire, and cannot align spray within 3 steps. |
 
 #### Default / Fallback Behaviors
 

@@ -22,8 +22,9 @@ export const DARK_LORD_BEHAVIORS: MonsterBehavior[] = [
     slots: ['move', 'fire_spray'],
     tags: ['aggressive'],
     isEligible: (ctx) =>
+      countHeroesInSpray(ctx.state, ctx.monster, ctx.monster.position) === 0 &&
       findSprayAlignPosition(ctx.state, ctx.monster, ctx.passableGrid, 3) !==
-      null,
+        null,
     getBaseWeight: () => 6,
   },
   {
@@ -31,6 +32,17 @@ export const DARK_LORD_BEHAVIORS: MonsterBehavior[] = [
     slots: ['melee', 'melee'],
     tags: ['aggressive'],
     isEligible: (ctx) => ctx.neighbouringHeroes.length > 0,
+    getBaseWeight: () => 5,
+  },
+  {
+    name: 'Advance',
+    slots: ['move', 'move'],
+    tags: ['aggressive'],
+    isEligible: (ctx) =>
+      ctx.neighbouringHeroes.length === 0 &&
+      countHeroesInSpray(ctx.state, ctx.monster, ctx.monster.position) === 0 &&
+      findSprayAlignPosition(ctx.state, ctx.monster, ctx.passableGrid, 3) ===
+        null,
     getBaseWeight: () => 5,
   },
 ];

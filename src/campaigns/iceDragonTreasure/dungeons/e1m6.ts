@@ -47,6 +47,7 @@ export const e1m6: Dungeon = defineDungeon({
     pillars: [],
     doors: [
       [Side.LEFT, 10, 2, { reinforced: true }],
+      [Side.LEFT, 7, 2, { reinforced: true }],
       [Side.DOWN, 2, 3, { reinforced: true }],
       [Side.RIGHT, 3, 13, { reinforced: true }],
     ],
