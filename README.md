@@ -93,7 +93,7 @@ See [Rules Readme](./RULES.md)
 - [X] Shield block / deflection (`blockSound`)
 - [X] Actor hurt / damage taken (`hurtSound`)
 - [X] Actor death (`deathSound`)
-- [ ] Attack miss / whiff
+- [X] Attack miss / whiff
 - [ ] Critical hit / heavy blow (e.g. `sword_of_chaos`)
 - [ ] Ranged projectile flight / launch
 - [ ] Ranged impact (hitting wall or obstacle)
@@ -102,9 +102,7 @@ See [Rules Readme](./RULES.md)
 - [X] Door open (`door_open`)
 - [X] Lock picking (`pick_lock`)
 - [X] Locked door attempt
-- [ ] Hidden / secret door slide
-- [ ] Room discovered
-- [ ] Level exit
+- [X] Hidden / secret door slide
 
 #### Traps & Secrets
 - [ ] Secret found cue / chime
@@ -125,8 +123,8 @@ See [Rules Readme](./RULES.md)
 #### Magic & Status Effects
 - [ ] Spell cast / magical blast
 - [ ] Healing effect
-- [ ] Buff applied
-- [ ] Debuff applied
+- [X] Buff applied
+- [X] Debuff applied
 
 #### Tabletop & Game Flow
 - [ ] UI button click

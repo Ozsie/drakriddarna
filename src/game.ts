@@ -41,6 +41,7 @@ import {
 } from './core';
 import { clearActorAnimations } from './core';
 import { setNextDungeonTransitionProvider } from './interactables/InteractableLogic';
+import { soundEffectManager } from './audio';
 
 // Re-export core modules for backwards compatibility and ease of access
 export {
@@ -300,6 +301,7 @@ export const next = async (
         state.previousEvent = state.currentEvent;
         const event = drawNextEvent(state);
         state.currentEvent = event;
+        soundEffectManager.playEventSound(event);
         const effect = eventEffects[event.effect];
         if (effect) {
           effect(state, event);

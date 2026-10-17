@@ -1,4 +1,4 @@
-import type { Actor, Shield, Weapon } from '../types';
+import type { Actor, Shield, TurnEvent, Weapon } from '../types';
 
 export const getWeaponAttackSound = (
   weapon?: Weapon | null,
@@ -90,6 +90,26 @@ export class SoundEffectManager {
 
   public playShieldBlockSound(shield?: Shield | null): HTMLAudioElement | null {
     return this.playSound(shield?.blockSound);
+  }
+
+  public playEventSound(event?: TurnEvent | null): HTMLAudioElement | null {
+    return this.playSound(event?.eventSound);
+  }
+
+  public playSearch(searchResult: number): HTMLAudioElement | null {
+    if (searchResult < 1) {
+      return this.playFailure();
+    }
+    return this.playSound('sfx/search.mp3');
+  }
+
+  public playMiss(): HTMLAudioElement | null {
+    return this.playSound('sfx/miss.mp3');
+  }
+
+  public playFailure(): HTMLAudioElement | null {
+    this.stop();
+    return this.playSound('sfx/failure.mp3');
   }
 
   public setVolume(volume: number): void {

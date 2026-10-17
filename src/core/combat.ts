@@ -274,6 +274,8 @@ export const takeDamage = (
   } else {
     if (damage > 0) {
       soundEffectManager.playActorHurt(target);
+    } else {
+      soundEffectManager.playMiss();
     }
     if (weapon.id === 'green_dark_lord_sword') {
       addLog(state, 'logs.takeDamage.paralyzed', {

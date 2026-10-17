@@ -11,6 +11,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.hungryTroll.description',
     effect: 'theHungryTroll',
     used: false,
+    eventSound: 'sfx/roar.mp3'
   },
   {
     id: 'sun_stone',
@@ -22,6 +23,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.sunStone.description',
     effect: 'sunStone',
     used: false,
+    eventSound: 'sfx/sun.mp3'
   },
   {
     id: 'time_portal',
@@ -33,6 +35,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.timePortal.description',
     effect: 'timePortal',
     used: false,
+    eventSound: 'sfx/buff.mp3',
   },
   {
     id: 'fountain_of_youth',
@@ -44,6 +47,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.fountainOfYouth.description',
     effect: 'fountainOfYouth',
     used: false,
+    eventSound: 'sfx/buff.mp3',
   },
   {
     id: 'sleeping_gas',
@@ -55,6 +59,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.sleepingGas.description',
     effect: 'sleepingGasCloud',
     used: false,
+    eventSound: 'sfx/debuff.mp3',
   },
   {
     id: 'lost_orc',
@@ -66,6 +71,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.lostOrch.description',
     effect: 'theLostOrch',
     used: false,
+    eventSound: 'sfx/monster_scream.mp3'
   },
   {
     id: 'dragons_breath',
@@ -77,6 +83,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.dragonsBreath.description',
     effect: 'theDragonsBreath',
     used: false,
+    eventSound: 'sfx/debuff.mp3',
   },
   {
     id: 'landslide',
@@ -88,6 +95,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.landslide.description',
     effect: 'landslide',
     used: false,
+    eventSound: 'sfx/rubble.mp3',
   },
   {
     id: 'magic_node',
@@ -99,6 +107,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.magicNode.description',
     effect: 'fountainOfYouth',
     used: false,
+    eventSound: 'sfx/buff.mp3',
   },
   {
     id: 'foresight',
@@ -110,6 +119,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.foresight.description',
     effect: 'foresight',
     used: false,
+    eventSound: 'sfx/buff.mp3',
   },
   {
     id: 'earthquake',
@@ -121,6 +131,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.earthquake.description',
     effect: 'earthquake',
     used: false,
+    eventSound: 'sfx/rubble.mp3',
   },
   {
     id: 'magic_storm',
@@ -132,6 +143,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.magicStorm.description',
     effect: 'theMagicStorm',
     used: false,
+    eventSound: 'sfx/debuff.mp3',
   },
   {
     id: 'elemental_weapon',
@@ -143,6 +155,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.elementalWeapon.description',
     effect: 'theElementalWeapon',
     used: false,
+    eventSound: 'sfx/buff.mp3',
   },
   {
     id: 'orc_drums',
@@ -154,6 +167,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.orchDrums.description',
     effect: 'theOrchDrums',
     used: false,
+    eventSound: 'sfx/drums.mp3'
   },
   {
     id: 'weakness',
@@ -165,6 +179,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.weakness.description',
     effect: 'theSymbolOfWeakness',
     used: false,
+    eventSound: 'sfx/debuff.mp3',
   },
   {
     id: 'hexagram',
@@ -176,5 +191,6 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.hexagram.description',
     effect: 'theHexagram',
     used: false,
+    eventSound: 'sfx/buff.mp3',
   },
 ];

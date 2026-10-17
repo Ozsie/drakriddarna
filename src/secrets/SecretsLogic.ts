@@ -13,6 +13,7 @@ import { roll } from '../core';
 import { takeDamage } from '../core';
 import { pickupItem } from '../hero/HeroLogic';
 import { onPickup, SEARCH_BONUS } from '../items/ItemLogic';
+import { soundEffectManager } from '../audio';
 
 export const checkForItemRevealedSecret = (state: GameState, hero: Hero) => {
   const heroRoom = findCell(
@@ -61,6 +62,7 @@ export const searchForSecret = (state: GameState) => {
     .reduce((partial, bonus) => partial + bonus, 0);
   const searchDifficultyModifier = getDifficulty(state).modifiers.search;
   const result = roll(hero.level, 1 + searchBonus + searchDifficultyModifier);
+  soundEffectManager.playSearch(result);
   let trapDoor, hiddenDoor, trap, secret, interactable;
   if (result >= 1) {
     trapDoor = lookForTrapDoor(state, hero, result);
