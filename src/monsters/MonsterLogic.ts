@@ -59,7 +59,7 @@ import {
   selectBehavior,
   selectScoredTarget,
 } from './behavior';
-import { createFlameEffect } from '../combat/CombatEffects';
+import { createFlameEffect } from '../combat';
 import { soundEffectManager } from '../audio';
 
 export { resetRoundTargetCounters } from './behavior';

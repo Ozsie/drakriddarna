@@ -58,7 +58,6 @@
   import { locale } from '$lib/translations';
   import { useItem } from '../items/ItemLogic';
   import { radialMenuStore } from '../store/radialMenuStore';
-  import { renderNotes } from '../notes/NotesRendering';
   import {
     renderDamageIndicators,
     renderBloodSplatters,

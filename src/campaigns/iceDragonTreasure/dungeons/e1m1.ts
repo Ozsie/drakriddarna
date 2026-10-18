@@ -58,7 +58,7 @@ export const e1m1: Dungeon = defineDungeon({
       [Side.RIGHT, 13, 9],
       [Side.RIGHT, 12, 3],
       [Side.UP, 10, 4, { hidden: true }],
-      [Side.RIGHT, 15, 2, { hidden: true }],
+      [Side.RIGHT, 16, 2, { hidden: true }],
     ],
     monsters: [
       [MonsterType.ORC, Colour.Blue, 10, 8],
