@@ -248,6 +248,7 @@ describe('MenuLogic', () => {
     });
 
     it('logs game state to console and closes menu on output_game_state click', () => {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       const closeMenu = vi.fn();
       const items = getDebugMenuItems(mockState, { closeMenu });

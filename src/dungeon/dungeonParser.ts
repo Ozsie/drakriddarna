@@ -519,7 +519,8 @@ export const parseInteractable = (
         if (opts.args && typeof opts.args === 'object') {
           args = opts.args as Record<string, unknown>;
         }
-        if (typeof opts.interactSound === 'string') interactSound = opts.interactSound;
+        if (typeof opts.interactSound === 'string')
+          interactSound = opts.interactSound;
       } else {
         args = opts;
       }

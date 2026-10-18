@@ -145,6 +145,10 @@ export class SoundEffectManager {
     return this.playSound('sfx/button.mp3');
   }
 
+  public playLevelUp(): HTMLAudioElement | null {
+    return this.playSound('sfx/level_up.mp3');
+  }
+
   public setVolume(volume: number): void {
     this.volume = Math.max(0, Math.min(1, volume));
     for (const audio of this.activeAudios) {

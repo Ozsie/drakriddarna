@@ -498,6 +498,7 @@ export const levelUp = (state: GameState) => {
       hero.level = Level.KNIGHT;
     }
     if (currentLevel !== hero.level) {
+      soundEffectManager.playLevelUp();
       addLog(state, 'logs.heroAction.leveledUp', {
         hero: i18n(hero.name),
         level: i18n(`content.level.${hero.level}`),

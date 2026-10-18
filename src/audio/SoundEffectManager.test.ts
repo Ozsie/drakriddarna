@@ -47,7 +47,7 @@ describe('SoundEffectManager', () => {
 
   it('initializes with default volume and not muted', () => {
     const manager = new SoundEffectManager();
-    expect(manager.getVolume()).toBe(0.5);
+    expect(manager.getVolume()).toBe(0.8);
     expect(manager.isSoundMuted()).toBe(false);
   });
 
