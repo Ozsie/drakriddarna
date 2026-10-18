@@ -38,7 +38,37 @@ export type GameState = {
   roundActionsDelta?: number;
   drawEvents: boolean;
   roundTargetCounts?: Record<string, number>;
+  betweenDungeons?: BetweenDungeonsState;
 };
+
+export type BetweenDungeonsStep = 'levelUp' | 'trade';
+
+export type TradeItemSlot = 'weapon' | 'armour' | 'shield' | number;
+
+export interface HeroLevelUpInfo {
+  heroName: string;
+  heroColour: Colour;
+  previousLevel: Level;
+  newLevel: Level;
+  previousExperience: number;
+  newExperience: number;
+  leveledUp: boolean;
+  levelMeaning: string;
+  xpToNextLevel?: number;
+  nextLevel?: Level;
+}
+
+export interface BetweenDungeonsState {
+  completedDungeonName: string;
+  nextDungeon?: Dungeon;
+  step: BetweenDungeonsStep;
+  levelUps: HeroLevelUpInfo[];
+  selectedTradeItem?: {
+    heroIndex: number;
+    slot: TradeItemSlot;
+    itemIndex?: number;
+  } | null;
+}
 
 export type IndicatorEffect = 'float' | 'bounce' | 'crit' | 'fade' | 'static';
 

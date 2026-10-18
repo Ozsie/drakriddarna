@@ -52,7 +52,15 @@
     getDungeonIntroHit,
     shouldShowDungeonIntro,
     dismissDungeonIntro,
+    renderBetweenDungeons,
+    getBetweenDungeonsHit,
   } from '../ui/UIRendering';
+  import {
+    setBetweenDungeonsStep,
+    selectTradeItem,
+    tradeItem,
+    completeBetweenDungeonsAndStartNext,
+  } from '../dungeon/BetweenDungeonsLogic';
   import type { MenuView } from '../menu/MenuLogic';
   import buildInfo from '$lib/buildInfo.json';
   import { locale } from '$lib/translations';
@@ -159,6 +167,11 @@
   let isDungeonIntroCloseHovered = false;
   let lastDungeonIntroDungeon: Dungeon | undefined = undefined;
   let lastDungeonIntroName: string | undefined = undefined;
+
+  let isBdActionHovered = false;
+  let isBdSecondaryHovered = false;
+  let hoveredBdItem: { heroIndex: number; itemIndex: number } | null = null;
+  let hoveredBdGiveHeroIndex: number | null = null;
 
   $: if (dungeon !== lastDungeonIntroDungeon || dungeon?.name !== lastDungeonIntroName) {
     lastDungeonIntroDungeon = dungeon;
@@ -540,6 +553,14 @@
           isCloseHovered: isDungeonIntroCloseHovered,
         });
       }
+      if (activeState.betweenDungeons) {
+        renderBetweenDungeons(ctx, containerWidth, containerHeight, activeState, {
+          hoveredAction: isBdActionHovered,
+          hoveredSecondary: isBdSecondaryHovered,
+          hoveredItem: hoveredBdItem,
+          hoveredGiveHeroIndex: hoveredBdGiveHeroIndex,
+        });
+      }
       ctx.restore();
     }
 
@@ -810,6 +831,26 @@
       const screenY = event.clientY - rect.top;
       const ctx = uiCanvas.getContext('2d');
 
+      if (activeState.betweenDungeons) {
+        const bdHit = getBetweenDungeonsHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+          {
+            hoveredAction: isBdActionHovered,
+            hoveredSecondary: isBdSecondaryHovered,
+            hoveredItem: hoveredBdItem,
+            hoveredGiveHeroIndex: hoveredBdGiveHeroIndex,
+          },
+          ctx,
+        );
+        if (bdHit) {
+          return;
+        }
+      }
+
       if (showDungeonIntro) {
         const introHit = getDungeonIntroHit(
           containerWidth,
@@ -931,6 +972,70 @@
       const screenX = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
       const ctx = uiCanvas.getContext('2d');
+
+      if (activeState.betweenDungeons) {
+        const bdHit = getBetweenDungeonsHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+          {
+            hoveredAction: isBdActionHovered,
+            hoveredSecondary: isBdSecondaryHovered,
+            hoveredItem: hoveredBdItem,
+            hoveredGiveHeroIndex: hoveredBdGiveHeroIndex,
+          },
+          ctx,
+        );
+        if (bdHit) {
+          if (bdHit.type === 'actionButton') {
+            soundEffectManager.playButtonClick();
+            if (activeState.betweenDungeons.step === 'levelUp') {
+              setBetweenDungeonsStep(activeState, 'trade');
+            } else {
+              completeBetweenDungeonsAndStartNext(activeState);
+              if (activeState.dungeon?.startingPositions?.[0]) {
+                panX = 0;
+                panY = 0;
+                updateAllCanvasTransforms();
+              }
+            }
+            if (!state) {
+              gameStateStore.set(activeState);
+            }
+            renderCanvas(true);
+          } else if (bdHit.type === 'secondaryButton') {
+            soundEffectManager.playButtonClick();
+            setBetweenDungeonsStep(activeState, 'levelUp');
+            if (!state) {
+              gameStateStore.set(activeState);
+            }
+            renderUiLayer(true);
+          } else if (bdHit.type === 'item') {
+            soundEffectManager.playButtonClick();
+            selectTradeItem(activeState, bdHit.heroIndex, bdHit.slot ?? bdHit.itemIndex);
+            if (!state) {
+              gameStateStore.set(activeState);
+            }
+            renderUiLayer(true);
+          } else if (bdHit.type === 'giveItem') {
+            if (activeState.betweenDungeons.selectedTradeItem) {
+              tradeItem(
+                activeState,
+                activeState.betweenDungeons.selectedTradeItem.heroIndex,
+                bdHit.targetHeroIndex,
+                activeState.betweenDungeons.selectedTradeItem.slot ?? activeState.betweenDungeons.selectedTradeItem.itemIndex,
+              );
+              if (!state) {
+                gameStateStore.set(activeState);
+              }
+              renderUiLayer(true);
+            }
+          }
+          return;
+        }
+      }
 
       if (showDungeonIntro) {
         const introHit = getDungeonIntroHit(
@@ -1203,6 +1308,51 @@
     const ctx = uiCanvas.getContext('2d');
 
     if (containerWidth > 0) {
+      if (activeState.betweenDungeons) {
+        const bdHit = getBetweenDungeonsHit(
+          containerWidth,
+          containerHeight,
+          activeState,
+          screenX,
+          screenY,
+          {
+            hoveredAction: isBdActionHovered,
+            hoveredSecondary: isBdSecondaryHovered,
+            hoveredItem: hoveredBdItem,
+            hoveredGiveHeroIndex: hoveredBdGiveHeroIndex,
+          },
+          ctx,
+        );
+        let changed = false;
+        const isAction = bdHit?.type === 'actionButton';
+        const isSecondary = bdHit?.type === 'secondaryButton';
+        const isItem = bdHit?.type === 'item';
+        const isGive = bdHit?.type === 'giveItem';
+
+        if (isBdActionHovered !== isAction) {
+          isBdActionHovered = isAction;
+          changed = true;
+        }
+        if (isBdSecondaryHovered !== isSecondary) {
+          isBdSecondaryHovered = isSecondary;
+          changed = true;
+        }
+        const itemVal = isItem && bdHit.type === 'item' ? { heroIndex: bdHit.heroIndex, itemIndex: bdHit.itemIndex } : null;
+        if (JSON.stringify(hoveredBdItem) !== JSON.stringify(itemVal)) {
+          hoveredBdItem = itemVal;
+          changed = true;
+        }
+        const giveVal = isGive && bdHit.type === 'giveItem' ? bdHit.targetHeroIndex : null;
+        if (hoveredBdGiveHeroIndex !== giveVal) {
+          hoveredBdGiveHeroIndex = giveVal;
+          changed = true;
+        }
+
+        boardCursor = (isAction || isSecondary || isItem || isGive) ? 'pointer' : 'default';
+        if (changed) renderUiLayer(true);
+        return;
+      }
+
       if (showDungeonIntro) {
         const introHit = getDungeonIntroHit(
           containerWidth,

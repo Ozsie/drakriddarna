@@ -125,5 +125,31 @@
     "invisible": "OSYNLIG",
     "levelUp": "NY NIVÅ!"
   },
+  "betweenDungeons": {
+    "titleLevelUp": "Grotta klarad: {{name}}",
+    "subtitleLevelUp": "Hjältarna fick +1 erfarenhet och utvecklades:",
+    "titleTrade": "Läger: Byt utrustning & föremål",
+    "subtitleTrade": "Byt föremål mellan hjältarna innan ni går vidare till {{nextDungeon}}.",
+    "buttons": {
+      "tradeItems": "Byt föremål",
+      "backToLevelUp": "Tillbaka",
+      "startNextDungeon": "Fortsätt till nästa grotta",
+      "finishCampaign": "Avsluta kampanj",
+      "giveItem": "Ge",
+      "trade": "Byt"
+    },
+    "noItems": "Inga föremål att byta",
+    "xpProgress": "{{xp}} XP",
+    "nextLevelXp": "({{needed}} XP till {{nextLevel}})",
+    "maxLevel": "(Högsta nivå)",
+    "leveledUpBadge": "NY NIVÅ!",
+    "meanings": {
+      "apprentice": "Lärling (5+ på tärning): Slag på 5 eller 6 lyckas (33% chans per tärning).",
+      "knight": "Riddare (4+ på tärning): Slag på 4, 5 eller 6 lyckas (50% chans på anfall, sköld, lås & leta).",
+      "hero": "Hjälte (4+ på tärning): Erfaren hjältestatus; ökar gruppens medelnivå.",
+      "lord": "Herre (3+ på tärning): Slag på 3, 4, 5 eller 6 lyckas (67% chans på alla tärningsslag).",
+      "master": "Mästare (3+ på tärning): Mästarnivå med 67% chans på alla tärningsslag."
+    }
+  },
   "turn": "Runda"
 }

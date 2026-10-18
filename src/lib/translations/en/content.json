@@ -125,5 +125,31 @@
     "invisible": "INVISIBLE",
     "levelUp": "LEVEL UP!"
   },
+  "betweenDungeons": {
+    "titleLevelUp": "Dungeon Completed: {{name}}",
+    "subtitleLevelUp": "Heroes gained +1 Experience and progressed:",
+    "titleTrade": "Camp: Trade Equipment & Items",
+    "subtitleTrade": "Trade items between heroes before moving on to {{nextDungeon}}.",
+    "buttons": {
+      "tradeItems": "Trade Items",
+      "backToLevelUp": "Back",
+      "startNextDungeon": "Embark on Next Dungeon",
+      "finishCampaign": "Finish Campaign",
+      "giveItem": "Give",
+      "trade": "Trade"
+    },
+    "noItems": "No items to trade",
+    "xpProgress": "{{xp}} XP",
+    "nextLevelXp": "({{needed}} XP to {{nextLevel}})",
+    "maxLevel": "(Max Level)",
+    "leveledUpBadge": "LEVEL UP!",
+    "meanings": {
+      "apprentice": "Apprentice (5+ on dice): Rolls of 5 or 6 succeed (33% chance per die).",
+      "knight": "Knight (4+ on dice): Rolls of 4, 5, or 6 succeed (50% chance on attacks, shields, locks & search).",
+      "hero": "Hero (4+ on dice): Veteran status; increases average party level.",
+      "lord": "Lord (3+ on dice): Rolls of 3, 4, 5, or 6 succeed (67% chance on all dice rolls).",
+      "master": "Master (3+ on dice): Elite mastery with 67% chance on all dice rolls."
+    }
+  },
   "turn": "Turn"
 }

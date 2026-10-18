@@ -468,34 +468,21 @@ const scrollTo = (pos: Position, cellSize: number) => {
   }
 };
 
+import {
+  openBetweenDungeons,
+  completeBetweenDungeonsAndStartNext,
+} from './dungeon/BetweenDungeonsLogic';
+
 export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
-    clearActorAnimations();
-    state.dungeon = state.dungeon.nextDungeon;
-    state.actionLog = [
-      {
-        key: 'logs.youHaveReached',
-        properties: { name: i18n(state.dungeon.name) },
-        turn: 0,
-      },
-    ];
-    const campaignEvents =
-      state.campaignId && isKnownCampaign(state.campaignId)
-        ? getCampaign(state.campaignId).eventDeck
-        : undefined;
-    state.eventDeck = getEventsForDungeon(state.dungeon, campaignEvents);
-    state.currentEvent = undefined;
-    state.drawEvents = true;
-    state.roundActionsDelta = 0;
-    state.turnCount = 0;
-    doReRender(state);
-    rewardLiveHeroes(state);
-    levelUp(state);
-    replaceDeadHeroes(state);
-    resetLiveHeroes(state);
-    resetOnNextDungeon(state);
-    state.currentActor = liveHeroes(state)[0] ?? state.heroes[0];
-    if (state.dungeon.startingPositions?.[0]) {
+    openBetweenDungeons(state);
+  }
+};
+
+export const advanceToNextDungeon = (state: GameState) => {
+  if (state.betweenDungeons) {
+    completeBetweenDungeonsAndStartNext(state);
+    if (state.dungeon?.startingPositions?.[0]) {
       scrollTo(
         {
           x: state.dungeon.startingPositions[0].x,
@@ -503,9 +490,6 @@ export const hasWon = (state: GameState) => {
         },
         state.settings['cellSize'] as number,
       );
-    }
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('autosave', JSON.stringify(state));
     }
   }
 };

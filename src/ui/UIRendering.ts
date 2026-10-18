@@ -20,6 +20,10 @@ import {
   renderDungeonIntro,
   type RenderDungeonIntroOptions,
 } from './DungeonIntroRendering';
+import {
+  renderBetweenDungeons,
+  type RenderBetweenDungeonsOptions,
+} from './BetweenDungeonsRendering';
 
 export interface RenderUIOptions {
   topBar?: RenderTopBarOptions;
@@ -28,6 +32,7 @@ export interface RenderUIOptions {
   eventCard?: RenderEventCardOptions;
   menu?: RenderMenuOptions;
   dungeonIntro?: RenderDungeonIntroOptions;
+  betweenDungeons?: RenderBetweenDungeonsOptions;
 }
 
 export const renderUI = (
@@ -77,6 +82,16 @@ export const renderUI = (
     options?.dungeonIntro
   ) {
     renderDungeonIntro(ctx, viewWidth, viewHeight, state, options.dungeonIntro);
+  }
+  if (
+    state &&
+    viewWidth &&
+    viewWidth > 0 &&
+    viewHeight &&
+    viewHeight > 0 &&
+    state.betweenDungeons
+  ) {
+    renderBetweenDungeons(ctx, viewWidth, viewHeight, state, options?.betweenDungeons);
   }
 };
 
@@ -147,3 +162,11 @@ export {
   type RenderDungeonIntroOptions,
   type DungeonIntroHitResult,
 } from './DungeonIntroRendering';
+export {
+  renderBetweenDungeons,
+  getBetweenDungeonsLayout,
+  getBetweenDungeonsHit,
+  type BetweenDungeonsLayout,
+  type RenderBetweenDungeonsOptions,
+  type BetweenDungeonsHitResult,
+} from './BetweenDungeonsRendering';
