@@ -76,6 +76,7 @@ export class SoundEffectManager {
   }
 
   public playEventSound(event?: TurnEvent | null): HTMLAudioElement | null {
+    this.playSound('sfx/draw_event.mp3');
     return this.playSound(event?.eventSound);
   }
 
@@ -109,6 +110,10 @@ export class SoundEffectManager {
 
   public playPickUpItem(): HTMLAudioElement | null {
     return this.playSound('sfx/pick_up.mp3');
+  }
+
+  public playShuffle(): HTMLAudioElement | null {
+    return this.playSound('sfx/shuffle.mp3');
   }
 
   public setVolume(volume: number): void {

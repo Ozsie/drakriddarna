@@ -121,6 +121,10 @@ See [Rules Readme](./RULES.md)
 - [X] Buff applied
 - [X] Debuff applied
 
+#### Events
+- [X] Draw card
+- [X] Shuffle
+
 #### Tabletop & Game Flow
 - [ ] UI button click
 - [ ] Victory fanfare

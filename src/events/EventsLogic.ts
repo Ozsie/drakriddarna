@@ -40,6 +40,7 @@ import { events } from './events';
 import { ACTIVE, onDrop, onPickup } from '../items/ItemLogic';
 import { findVisibleMonsters } from '../monsters/MonsterLogic';
 import { getMonsterTemplate } from '../monsters/MonsterRegistry';
+import { soundEffectManager } from '../audio';
 
 export const getEventsForDungeon = (
   dungeon: Dungeon,
@@ -696,6 +697,7 @@ const eventDescriptionLog = (state: GameState, event: TurnEvent) => {
 };
 
 const shuffleEvents = (array: TurnEvent[]): TurnEvent[] => {
+  soundEffectManager.playShuffle();
   let currentIndex = array.length,
     randomIndex;
   while (currentIndex > 0) {
