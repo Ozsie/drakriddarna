@@ -109,6 +109,7 @@ export const doorAsActor = (door: Door): Actor => ({
     value: 0,
     ignoresShield: true,
     ignoresArmour: false,
+    attackSound: 'sfx/arrow.mp3',
   },
   inventory: [],
 });
@@ -249,6 +250,7 @@ export const takeDamage = (
           timestamp: impactTime,
         }),
       );
+      soundEffectManager.playCriticalHit();
     } else {
       state.damageIndicators.push(
         createDamageIndicator(damage, target.position, {

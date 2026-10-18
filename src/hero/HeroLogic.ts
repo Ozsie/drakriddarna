@@ -600,8 +600,11 @@ export const dropItem = (state: GameState, item: Item, actor: Actor) => {
   });
   if (item && item.drop) {
     const drop = onDrop[item.drop];
-    if (drop) drop(state, item, actor);
+    if (drop) {
+      drop(state, item, actor);
+    }
   }
+  soundEffectManager.playDropItem();
 };
 
 export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
@@ -635,6 +638,7 @@ export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
     const pickup = onPickup[item.pickup];
     if (pickup) pickup(state, item, hero);
   }
+  soundEffectManager.playPickUpItem();
 };
 
 const move = (

@@ -65,26 +65,6 @@ export const isTargetAnyHero = (item?: Item | null): boolean => {
   return false;
 };
 
-export const isTargetSelf = (item?: Item | null): boolean => {
-  if (!item || !item.properties) return false;
-  if (item.properties.TARGET_SELF || item.properties.target_self) return true;
-  const targetType =
-    item.properties[TARGET] ??
-    item.properties.TARGET ??
-    item.properties.TARGET_TYPE ??
-    item.properties.target ??
-    item.properties.target_type;
-  if (typeof targetType === 'string') {
-    const norm = targetType.trim().toUpperCase();
-    return (
-      norm === 'TARGET_SELF' ||
-      norm === 'SELF' ||
-      norm === 'OWNER' ||
-      norm === TARGET_SELF
-    );
-  }
-  return false;
-};
 export const onPickup: {
   [index: string]: (state: GameState, self: Item, user: Actor) => void;
 } = {
@@ -160,6 +140,7 @@ export const resolveChaosSwordAttack = (
     state.damageIndicators.push(
       createIndicator(damageAmount, target.position, { effect: 'crit' }),
     );
+    soundEffectManager.playCriticalHit();
     target.health = 0;
     target.level = Level.APPRENTICE;
     soundEffectManager.playActorDeath(target);
@@ -457,6 +438,7 @@ export const useItem = (state: GameState, item: Item) => {
       return;
     }
     use(state, item, state.currentActor, state.targetActor);
+    soundEffectManager.playItemUse(item);
     state.targetActor = undefined;
   }
 };

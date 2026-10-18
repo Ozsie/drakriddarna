@@ -159,6 +159,7 @@ const secretAsActor = (secret: Secret): Actor => ({
     value: 0,
     ignoresShield: true,
     ignoresArmour: true,
+    attackSound: 'sfx/trap_fall.mp3',
   },
   inventory: [],
 });

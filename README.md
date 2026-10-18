@@ -94,35 +94,30 @@ See [Rules Readme](./RULES.md)
 - [X] Actor hurt / damage taken (`hurtSound`)
 - [X] Actor death (`deathSound`)
 - [X] Attack miss / whiff
-- [ ] Critical hit / heavy blow (e.g. `sword_of_chaos`)
-- [ ] Ranged projectile flight / launch
-- [ ] Ranged impact (hitting wall or obstacle)
+- [X] Critical hit / heavy blow (e.g. `sword_of_chaos`)
+- [X] Ranged projectile flight / launch
 
 #### Environment & Exploration
 - [X] Door open (`door_open`)
 - [X] Lock picking (`pick_lock`)
 - [X] Locked door attempt
-- [X] Hidden / secret door slide
 
 #### Traps & Secrets
-- [ ] Secret found cue / chime
-- [ ] Trap triggered / sprung (pit, spikes)
-- [ ] Trap disarm success
-- [ ] Trap disarm failure
+- [X] Secret found cue / chime
+- [X] Trap triggered / sprung (pit, spikes)
 
 #### Movement & Actions
 - [X] Actor movement / step (`walkSound`)
-- [ ] Search action (searching room/tile)
+- [X] Search action (searching room/tile)
 
 #### Items & Inventory
-- [ ] Chest opened
-- [ ] Potion consume / drink
-- [ ] Magic scroll / artifact use
-- [ ] Equip / unequip gear
+- [X] Item pick up
+- [X] Item use
+- [X] Items drop
 
 #### Magic & Status Effects
 - [ ] Spell cast / magical blast
-- [ ] Healing effect
+- [X] Healing effect
 - [X] Buff applied
 - [X] Debuff applied
 

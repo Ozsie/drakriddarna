@@ -1,17 +1,4 @@
-import type { Actor, Shield, TurnEvent, Weapon } from '../types';
-
-export const getWeaponAttackSound = (
-  weapon?: Weapon | null,
-): string | undefined => weapon?.attackSound;
-
-export const getActorWalkSound = (actor?: Actor | null): string | undefined =>
-  actor?.walkSound;
-
-export const getActorHurtSound = (actor?: Actor | null): string | undefined =>
-  actor?.hurtSound;
-
-export const getActorDeathSound = (actor?: Actor | null): string | undefined =>
-  actor?.deathSound;
+import type { Actor, Item, Shield, TurnEvent, Weapon } from '../types';
 
 export class SoundEffectManager {
   private volume = 0.5;
@@ -69,23 +56,19 @@ export class SoundEffectManager {
   }
 
   public playWeaponAttack(weapon?: Weapon | null): HTMLAudioElement | null {
-    const sound = getWeaponAttackSound(weapon);
-    return this.playSound(sound);
+    return this.playSound(weapon?.attackSound);
   }
 
   public playActorWalk(actor?: Actor | null): HTMLAudioElement | null {
-    const sound = getActorWalkSound(actor);
-    return this.playSound(sound);
+    return this.playSound(actor?.walkSound);
   }
 
   public playActorHurt(actor?: Actor | null): HTMLAudioElement | null {
-    const sound = getActorHurtSound(actor);
-    return this.playSound(sound);
+    return this.playSound(actor?.hurtSound);
   }
 
   public playActorDeath(actor?: Actor | null): HTMLAudioElement | null {
-    const sound = getActorDeathSound(actor);
-    return this.playSound(sound);
+    return this.playSound(actor?.deathSound);
   }
 
   public playShieldBlockSound(shield?: Shield | null): HTMLAudioElement | null {
@@ -110,6 +93,22 @@ export class SoundEffectManager {
   public playFailure(): HTMLAudioElement | null {
     this.stop();
     return this.playSound('sfx/failure.mp3');
+  }
+
+  public playCriticalHit(): HTMLAudioElement | null {
+    return this.playSound('sfx/critical_hit.mp3');
+  }
+
+  public playItemUse(item?: Item): HTMLAudioElement | null {
+    return this.playSound(item?.useSound);
+  }
+
+  public playDropItem(): HTMLAudioElement | null {
+    return this.playSound('sfx/drop.mp3');
+  }
+
+  public playPickUpItem(): HTMLAudioElement | null {
+    return this.playSound('sfx/pick_up.mp3');
   }
 
   public setVolume(volume: number): void {

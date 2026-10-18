@@ -411,6 +411,7 @@ export type Item = {
   pickup?: ItemPickupKey;
   drop?: ItemDropKey;
   disabled?: boolean;
+  useSound?: string;
 };
 
 export type Weapon = Item & {

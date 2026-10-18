@@ -27,6 +27,7 @@ export const magicItems: Item[] = [
     },
     effect: 'magicHerbsOnUse',
     reset: 'magicHerbsOnReset',
+    useSound: 'sfx/buff.mp3',
   },
   {
     id: 'boots_of_speed',
@@ -114,6 +115,7 @@ export const magicItems: Item[] = [
       [TARGET]: TARGET_SELF,
     },
     effect: 'potionOfSpeedOnUse',
+    useSound: 'sfx/buff.mp3',
   },
   {
     id: 'necklace_of_light',
@@ -132,5 +134,6 @@ export const magicItems: Item[] = [
     },
     effect: 'necklaceOfLightOnUse',
     reset: 'necklaceOfLightOnReset',
+    useSound: 'sfx/buff.mp3',
   },
 ];
