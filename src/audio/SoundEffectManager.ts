@@ -116,6 +116,10 @@ export class SoundEffectManager {
     return this.playSound('sfx/shuffle.mp3');
   }
 
+  public playFireBall(): HTMLAudioElement | null {
+    return this.playSound('sfx/fireball.mp3');
+  }
+
   public setVolume(volume: number): void {
     this.volume = Math.max(0, Math.min(1, volume));
     for (const audio of this.activeAudios) {

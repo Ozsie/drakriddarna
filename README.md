@@ -116,7 +116,7 @@ See [Rules Readme](./RULES.md)
 - [X] Items drop
 
 #### Magic & Status Effects
-- [ ] Spell cast / magical blast
+- [X] Dark Lord fire attack
 - [X] Healing effect
 - [X] Buff applied
 - [X] Debuff applied

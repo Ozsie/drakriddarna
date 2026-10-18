@@ -60,6 +60,7 @@ import {
   selectScoredTarget,
 } from './behavior';
 import { createFlameEffect } from '../combat/CombatEffects';
+import { soundEffectManager } from '../audio';
 
 export { resetRoundTargetCounters } from './behavior';
 
@@ -884,6 +885,7 @@ const performFireAttack = (
   targets: Actor[],
 ) => {
   targets.forEach((target) => {
+    soundEffectManager.playFireBall();
     if (target.position) {
       if (!state.flameEffects) {
         state.flameEffects = [];
