@@ -554,15 +554,21 @@ export const executeGameEvent = (state: GameState, event: GameEvent): void => {
 };
 
 const restoreDisabledItems = (state: GameState) => {
-  if (liveHeroes(state).some((hero) => hero.weapon.elemental)) {
+  if (
+    liveHeroes(state).some((hero) =>
+      hero.inventory.some((item) => item && item.disabled),
+    )
+  ) {
     addLog(state, 'logs.events.magicStormRestored');
     liveHeroes(state).forEach((hero) => {
       hero.inventory.forEach((item) => {
-        if (item && !item.properties?.[ACTIVE] && item.pickup) {
-          const pickup = onPickup[item.pickup];
-          if (pickup) pickup(state, item, hero);
+        if (item && item.disabled) {
+          if (!item.properties?.[ACTIVE] && item.pickup) {
+            const pickup = onPickup[item.pickup];
+            if (pickup) pickup(state, item, hero);
+          }
+          item.disabled = false;
         }
-        if (item) item.disabled = false;
       });
     });
   }

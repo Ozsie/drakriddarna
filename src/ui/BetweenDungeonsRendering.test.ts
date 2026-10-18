@@ -4,11 +4,14 @@ import {
   getBetweenDungeonsHit,
   renderBetweenDungeons,
 } from './BetweenDungeonsRendering';
-import { openBetweenDungeons, setBetweenDungeonsStep } from '../dungeon/BetweenDungeonsLogic';
+import {
+  openBetweenDungeons,
+  setBetweenDungeonsStep,
+} from '../dungeon/BetweenDungeonsLogic';
 import { init } from '../game';
 
-const createMockCtx = () => {
-  const ctx = {
+const createMockCtx = () =>
+  ({
     font: '',
     fillStyle: '',
     strokeStyle: '',
@@ -28,9 +31,7 @@ const createMockCtx = () => {
     fillRect: vi.fn(),
     arc: vi.fn(),
     measureText: vi.fn((text: string) => ({ width: text.length * 8 })),
-  } as unknown as CanvasRenderingContext2D;
-  return ctx;
-};
+  }) as unknown as CanvasRenderingContext2D;
 
 describe('BetweenDungeonsRendering', () => {
   it('returns empty layout if betweenDungeons is not present', () => {

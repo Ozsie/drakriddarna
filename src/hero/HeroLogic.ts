@@ -52,6 +52,7 @@ import {
 } from '../interactables/InteractableLogic';
 import { executeRoomDiscoveredEffect } from '../dungeon/RoomEffectsLogic';
 import {
+  ACTIVE,
   BREAK_LOCK,
   onDrop,
   onPickup,
@@ -261,10 +262,14 @@ export const applyStartingEquipment = (
     }
 
     if (config.inventory && config.inventory.length > 0) {
-      hero.inventory = [
-        ...hero.inventory,
-        ...structuredClone(config.inventory),
-      ];
+      const clonedInventory = structuredClone(config.inventory);
+      clonedInventory.forEach((item: Item) => {
+        if (item && item.pickup && !item.disabled) {
+          const pickup = onPickup[item.pickup];
+          if (pickup) pickup({} as GameState, item, hero);
+        }
+      });
+      hero.inventory = [...hero.inventory, ...clonedInventory];
     }
   });
 };
@@ -294,7 +299,13 @@ export const resetLiveHeroes = (state: GameState) => {
       hero.weapon.elemental = false;
     }
     hero.inventory.forEach((item) => {
-      if (item) item.disabled = false;
+      if (item && item.disabled) {
+        if (!item.properties?.[ACTIVE] && item.pickup) {
+          const pickup = onPickup[item.pickup];
+          if (pickup) pickup(state, item, hero);
+        }
+        item.disabled = false;
+      }
     });
   });
 };

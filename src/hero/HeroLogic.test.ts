@@ -11,6 +11,7 @@ import {
   type Weapon,
   MonsterType,
   type Difficulty,
+  type Item,
 } from '../types';
 import {
   attack,
@@ -503,6 +504,38 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
     resetLiveHeroes(state);
 
     expect(hero.health).toBe(6);
+  });
+
+  it('resetLiveHeroes re-enables disabled items with pickup and re-applies their stat bonus', () => {
+    const hero = createTestHero({
+      maxHealth: 7,
+      health: 7,
+      maxMovement: 3,
+      movement: 3,
+    });
+    const boots: Item = {
+      id: 'boots_of_speed',
+      name: 'Boots',
+      type: ItemType.MAGIC,
+      value: 0,
+      amountInDeck: 1,
+      properties: {
+        MOVEMENT_BONUS: 1,
+      },
+      pickup: 'movementBonusOnPickup',
+      drop: 'movementBonusOnDrop',
+      disabled: true,
+    };
+    hero.inventory.push(boots);
+
+    const monster = createTestMonster();
+    const state = createTestState(hero, monster);
+
+    resetLiveHeroes(state);
+
+    expect(boots.disabled).toBe(false);
+    expect(hero.maxMovement).toBe(4);
+    expect(hero.movement).toBe(4);
   });
 
   it('replaceDeadHeroes resets dead hero health considering difficulty health modifier', () => {

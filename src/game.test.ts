@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { init, endAction, loadState, next, hasWon, advanceToNextDungeon } from './game';
+import {
+  init,
+  endAction,
+  loadState,
+  next,
+  hasWon,
+  advanceToNextDungeon,
+} from './game';
 import { liveHeroes } from './hero/HeroLogic';
 import { eventEffects } from './events/EventsLogic';
 import type { Hero } from './types';
@@ -212,7 +219,9 @@ describe('game orchestrator', () => {
 
       expect(state.betweenDungeons).toBeDefined();
       expect(state.betweenDungeons?.step).toBe('levelUp');
-      expect(state.betweenDungeons?.completedDungeonName).toBe('campaign.iceDragon.e1m0.name');
+      expect(state.betweenDungeons?.completedDungeonName).toBe(
+        'campaign.iceDragon.e1m0.name',
+      );
 
       // Complete between dungeons and start next dungeon
       advanceToNextDungeon(state);

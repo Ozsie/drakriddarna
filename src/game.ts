@@ -8,11 +8,9 @@ import {
 } from './monsters/MonsterLogic';
 import {
   applyStartingEquipment,
-  levelUp,
   liveHeroes,
   replaceDeadHeroes,
   resetLiveHeroes,
-  rewardLiveHeroes,
 } from './hero/HeroLogic';
 export {
   applyStartingEquipment,

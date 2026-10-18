@@ -60,7 +60,8 @@
     "knight": "Riddare",
     "hero": "Hjälte",
     "lord": "Herre",
-    "master": "Mästare"
+    "master": "Mästare",
+    "max": "-"
   },
   "inventory": {
     "label": "{{hero}}s packning",

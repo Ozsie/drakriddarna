@@ -838,13 +838,6 @@
           activeState,
           screenX,
           screenY,
-          {
-            hoveredAction: isBdActionHovered,
-            hoveredSecondary: isBdSecondaryHovered,
-            hoveredItem: hoveredBdItem,
-            hoveredGiveHeroIndex: hoveredBdGiveHeroIndex,
-          },
-          ctx,
         );
         if (bdHit) {
           return;
@@ -980,13 +973,6 @@
           activeState,
           screenX,
           screenY,
-          {
-            hoveredAction: isBdActionHovered,
-            hoveredSecondary: isBdSecondaryHovered,
-            hoveredItem: hoveredBdItem,
-            hoveredGiveHeroIndex: hoveredBdGiveHeroIndex,
-          },
-          ctx,
         );
         if (bdHit) {
           if (bdHit.type === 'actionButton') {
@@ -1315,13 +1301,6 @@
           activeState,
           screenX,
           screenY,
-          {
-            hoveredAction: isBdActionHovered,
-            hoveredSecondary: isBdSecondaryHovered,
-            hoveredItem: hoveredBdItem,
-            hoveredGiveHeroIndex: hoveredBdGiveHeroIndex,
-          },
-          ctx,
         );
         let changed = false;
         const isAction = bdHit?.type === 'actionButton';

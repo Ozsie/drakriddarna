@@ -91,7 +91,13 @@ export const renderUI = (
     viewHeight > 0 &&
     state.betweenDungeons
   ) {
-    renderBetweenDungeons(ctx, viewWidth, viewHeight, state, options?.betweenDungeons);
+    renderBetweenDungeons(
+      ctx,
+      viewWidth,
+      viewHeight,
+      state,
+      options?.betweenDungeons,
+    );
   }
 };
 

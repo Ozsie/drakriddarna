@@ -1,9 +1,21 @@
-import type { GameState, Hero, Item, Weapon, Armour, Shield, TradeItemSlot } from '../types';
+import {
+  type GameState,
+  type Hero,
+  type Item,
+  type Weapon,
+  type Armour,
+  type Shield,
+  type TradeItemSlot,
+  Colour,
+} from '../types';
 import { ItemType } from '../types';
 import { i18n } from '../core';
 import { getHeroTradableItems } from '../dungeon/BetweenDungeonsLogic';
-import { drawRoundedRect, isPointInBounds, type CardBounds } from './HeroCardRendering';
-import { wrapText } from './DiaryAndWinConditionRendering';
+import {
+  drawRoundedRect,
+  isPointInBounds,
+  type CardBounds,
+} from './HeroCardRendering';
 
 export interface BetweenDungeonsLayout {
   hasContent: boolean;
@@ -52,7 +64,11 @@ export interface GiveButtonLayoutItem {
 export interface RenderBetweenDungeonsOptions {
   hoveredAction?: boolean;
   hoveredSecondary?: boolean;
-  hoveredItem?: { heroIndex: number; slot?: TradeItemSlot; itemIndex?: number } | null;
+  hoveredItem?: {
+    heroIndex: number;
+    slot?: TradeItemSlot;
+    itemIndex?: number;
+  } | null;
   hoveredGiveHeroIndex?: number | null;
 }
 
@@ -77,8 +93,6 @@ export const getBetweenDungeonsLayout = (
   viewWidth: number,
   viewHeight: number,
   state: GameState | null | undefined,
-  options?: RenderBetweenDungeonsOptions,
-  ctx?: CanvasRenderingContext2D | null,
 ): BetweenDungeonsLayout => {
   const emptyLayout: BetweenDungeonsLayout = {
     hasContent: false,
@@ -112,7 +126,9 @@ export const getBetweenDungeonsLayout = (
   const contentWidth = panelWidth - paddingX * 2;
 
   const nextDungeonName = bd.nextDungeon?.name ? i18n(bd.nextDungeon.name) : '';
-  const completedName = bd.completedDungeonName ? i18n(bd.completedDungeonName) : '';
+  const completedName = bd.completedDungeonName
+    ? i18n(bd.completedDungeonName)
+    : '';
 
   const titleText = isLevelUp
     ? i18n('content.betweenDungeons.titleLevelUp', { name: completedName })
@@ -120,7 +136,9 @@ export const getBetweenDungeonsLayout = (
 
   const subtitleText = isLevelUp
     ? i18n('content.betweenDungeons.subtitleLevelUp')
-    : i18n('content.betweenDungeons.subtitleTrade', { nextDungeon: nextDungeonName || completedName });
+    : i18n('content.betweenDungeons.subtitleTrade', {
+        nextDungeon: nextDungeonName || completedName,
+      });
 
   const btnHeight = 36;
   const btnWidth = isLevelUp ? 180 : 220;
@@ -137,8 +155,8 @@ export const getBetweenDungeonsLayout = (
   const actionButtonLabel = isLevelUp
     ? i18n('content.betweenDungeons.buttons.tradeItems')
     : bd.nextDungeon
-      ? i18n('content.betweenDungeons.buttons.startNextDungeon')
-      : i18n('content.betweenDungeons.buttons.finishCampaign');
+    ? i18n('content.betweenDungeons.buttons.startNextDungeon')
+    : i18n('content.betweenDungeons.buttons.finishCampaign');
 
   let secondaryButtonBounds: CardBounds | undefined = undefined;
   let secondaryButtonLabel: string | undefined = undefined;
@@ -151,7 +169,9 @@ export const getBetweenDungeonsLayout = (
       width: secWidth,
       height: btnHeight,
     };
-    secondaryButtonLabel = i18n('content.betweenDungeons.buttons.backToLevelUp');
+    secondaryButtonLabel = i18n(
+      'content.betweenDungeons.buttons.backToLevelUp',
+    );
   }
 
   // Calculate layout for heroes
@@ -166,7 +186,13 @@ export const getBetweenDungeonsLayout = (
   if (isLevelUp) {
     // Vertical list of heroes with level up details
     const cardGap = 8;
-    const cardHeight = Math.max(50, Math.floor((availableHeroHeight - (heroCount - 1) * cardGap) / Math.max(1, heroCount)));
+    const cardHeight = Math.max(
+      50,
+      Math.floor(
+        (availableHeroHeight - (heroCount - 1) * cardGap) /
+          Math.max(1, heroCount),
+      ),
+    );
 
     heroList.forEach((hero, index) => {
       const cardY = heroesY + index * (cardHeight + cardGap);
@@ -182,8 +208,15 @@ export const getBetweenDungeonsLayout = (
       const levelName = i18n(`content.level.${hero.level}`);
       const xpText = info
         ? info.xpToNextLevel
-          ? `${i18n('content.betweenDungeons.xpProgress', { xp: String(hero.experience) })} ${i18n('content.betweenDungeons.nextLevelXp', { needed: String(info.xpToNextLevel), nextLevel: i18n(`content.level.${info.nextLevel}`) })}`
-          : `${i18n('content.betweenDungeons.xpProgress', { xp: String(hero.experience) })} ${i18n('content.betweenDungeons.maxLevel')}`
+          ? `${i18n('content.betweenDungeons.xpProgress', {
+              xp: String(hero.experience),
+            })} ${i18n('content.betweenDungeons.nextLevelXp', {
+              needed: String(info.xpToNextLevel),
+              nextLevel: i18n(`content.level.${info.nextLevel ?? 'max'}`),
+            })}`
+          : `${i18n('content.betweenDungeons.xpProgress', {
+              xp: String(hero.experience),
+            })} ${i18n('content.betweenDungeons.maxLevel')}`
         : `${hero.experience} XP`;
 
       const levelMeaning = info?.levelMeaning || '';
@@ -193,7 +226,9 @@ export const getBetweenDungeonsLayout = (
         hero,
         bounds: cardBounds,
         title: i18n(hero.name),
-        levelBadge: isLeveledUp ? i18n('content.betweenDungeons.leveledUpBadge') : levelName,
+        levelBadge: isLeveledUp
+          ? i18n('content.betweenDungeons.leveledUpBadge')
+          : levelName,
         isLeveledUp,
         xpText,
         levelMeaningText: levelMeaning,
@@ -203,7 +238,9 @@ export const getBetweenDungeonsLayout = (
   } else {
     // Trading step: Columns for heroes
     const colGap = 8;
-    const colWidth = Math.floor((contentWidth - (heroCount - 1) * colGap) / Math.max(1, heroCount));
+    const colWidth = Math.floor(
+      (contentWidth - (heroCount - 1) * colGap) / Math.max(1, heroCount),
+    );
 
     heroList.forEach((hero, hIndex) => {
       const colX = panelX + paddingX + hIndex * (colWidth + colGap);
@@ -233,7 +270,8 @@ export const getBetweenDungeonsLayout = (
         const isSelected =
           bd.selectedTradeItem?.heroIndex === hIndex &&
           (bd.selectedTradeItem?.slot === entry.slot ||
-            (typeof entry.slot === 'number' && bd.selectedTradeItem?.itemIndex === entry.slot));
+            (typeof entry.slot === 'number' &&
+              bd.selectedTradeItem?.itemIndex === entry.slot));
 
         let nameText = i18n(entry.item.nameTranslationKey ?? entry.item.name);
         if (entry.category === 'weapon') {
@@ -267,10 +305,7 @@ export const getBetweenDungeonsLayout = (
       });
 
       // If an item is selected from another hero, add a "Give" button here
-      if (
-        bd.selectedTradeItem &&
-        bd.selectedTradeItem.heroIndex !== hIndex
-      ) {
+      if (bd.selectedTradeItem && bd.selectedTradeItem.heroIndex !== hIndex) {
         const giveBtnY = Math.min(
           colBounds.y + colBounds.height - 30,
           itemStartY + tradableItems.length * (itemRowHeight + itemGap) + 4,
@@ -306,7 +341,12 @@ export const getBetweenDungeonsLayout = (
     hasContent: true,
     step: bd.step,
     backdropBounds: { x: 0, y: 0, width: viewWidth, height: viewHeight },
-    panelBounds: { x: panelX, y: panelY, width: panelWidth, height: panelHeight },
+    panelBounds: {
+      x: panelX,
+      y: panelY,
+      width: panelWidth,
+      height: panelHeight,
+    },
     titleText,
     subtitleText,
     heroes: heroesLayout,
@@ -324,21 +364,22 @@ export const getBetweenDungeonsHit = (
   state: GameState | null | undefined,
   x: number,
   y: number,
-  options?: RenderBetweenDungeonsOptions,
-  ctx?: CanvasRenderingContext2D | null,
 ): BetweenDungeonsHitResult | null => {
   if (!state || !state.betweenDungeons || viewWidth <= 0 || viewHeight <= 0) {
     return null;
   }
 
-  const layout = getBetweenDungeonsLayout(viewWidth, viewHeight, state, options, ctx);
+  const layout = getBetweenDungeonsLayout(viewWidth, viewHeight, state);
   if (!layout.hasContent) return null;
 
   if (isPointInBounds(x, y, layout.actionButtonBounds)) {
     return { type: 'actionButton' };
   }
 
-  if (layout.secondaryButtonBounds && isPointInBounds(x, y, layout.secondaryButtonBounds)) {
+  if (
+    layout.secondaryButtonBounds &&
+    isPointInBounds(x, y, layout.secondaryButtonBounds)
+  ) {
     return { type: 'secondaryButton' };
   }
 
@@ -383,7 +424,7 @@ export const renderBetweenDungeons = (
     return;
   }
 
-  const layout = getBetweenDungeonsLayout(viewWidth, viewHeight, state, options, ctx);
+  const layout = getBetweenDungeonsLayout(viewWidth, viewHeight, state);
   if (!layout.hasContent) return;
 
   ctx.save();
@@ -424,7 +465,9 @@ export const renderBetweenDungeons = (
   if (layout.step === 'levelUp') {
     for (const h of layout.heroes) {
       const hb = h.bounds;
-      ctx.fillStyle = h.isLeveledUp ? 'rgba(212, 175, 55, 0.12)' : 'rgba(255, 255, 255, 0.04)';
+      ctx.fillStyle = h.isLeveledUp
+        ? 'rgba(212, 175, 55, 0.12)'
+        : 'rgba(255, 255, 255, 0.04)';
       drawRoundedRect(ctx, hb.x, hb.y, hb.width, hb.height, 6);
       ctx.fill();
 
@@ -434,7 +477,14 @@ export const renderBetweenDungeons = (
       ctx.stroke();
 
       // Hero name & color dot
-      ctx.fillStyle = h.hero.colour === 'Red' ? '#ef4444' : h.hero.colour === 'Blue' ? '#3b82f6' : h.hero.colour === 'Yellow' ? '#eab308' : '#10b981';
+      ctx.fillStyle =
+        h.hero.colour === Colour.Red
+          ? '#ef4444'
+          : h.hero.colour === Colour.Blue
+          ? '#3b82f6'
+          : h.hero.colour === Colour.Yellow
+          ? '#eab308'
+          : '#10b981';
       ctx.beginPath();
       ctx.arc(hb.x + 14, hb.y + 16, 5, 0, Math.PI * 2);
       ctx.fill();
@@ -486,7 +536,14 @@ export const renderBetweenDungeons = (
       ctx.stroke();
 
       // Hero header
-      ctx.fillStyle = h.hero.colour === 'Red' ? '#ef4444' : h.hero.colour === 'Blue' ? '#3b82f6' : h.hero.colour === 'Yellow' ? '#eab308' : '#10b981';
+      ctx.fillStyle =
+        h.hero.colour === Colour.Red
+          ? '#ef4444'
+          : h.hero.colour === Colour.Blue
+          ? '#3b82f6'
+          : h.hero.colour === Colour.Yellow
+          ? '#eab308'
+          : '#10b981';
       ctx.beginPath();
       ctx.arc(hb.x + 12, hb.y + 14, 4, 0, Math.PI * 2);
       ctx.fill();
@@ -500,7 +557,11 @@ export const renderBetweenDungeons = (
       if (h.items.length === 0) {
         ctx.fillStyle = '#64748b';
         ctx.font = ITEM_FONT;
-        ctx.fillText(i18n('content.betweenDungeons.noItems'), hb.x + 10, hb.y + 42);
+        ctx.fillText(
+          i18n('content.betweenDungeons.noItems'),
+          hb.x + 10,
+          hb.y + 42,
+        );
       }
 
       // Render Items
@@ -513,8 +574,8 @@ export const renderBetweenDungeons = (
         ctx.fillStyle = it.isSelected
           ? '#854d0e'
           : isHovered
-            ? '#334155'
-            : '#1e293b';
+          ? '#334155'
+          : '#1e293b';
         drawRoundedRect(ctx, ib.x, ib.y, ib.width, ib.height, 4);
         ctx.fill();
 
@@ -569,7 +630,11 @@ export const renderBetweenDungeons = (
     ctx.font = BUTTON_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(layout.secondaryButtonLabel, sb.x + sb.width / 2, sb.y + sb.height / 2);
+    ctx.fillText(
+      layout.secondaryButtonLabel,
+      sb.x + sb.width / 2,
+      sb.y + sb.height / 2,
+    );
   }
 
   // Action Button
@@ -588,7 +653,11 @@ export const renderBetweenDungeons = (
   ctx.font = BUTTON_FONT;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(layout.actionButtonLabel, ab.x + ab.width / 2, ab.y + ab.height / 2);
+  ctx.fillText(
+    layout.actionButtonLabel,
+    ab.x + ab.width / 2,
+    ab.y + ab.height / 2,
+  );
 
   ctx.restore();
 };

@@ -9,10 +9,14 @@ import {
   tradeItem,
   completeBetweenDungeonsAndStartNext,
 } from './BetweenDungeonsLogic';
-import { Level, Colour, ItemType, type GameState, type Hero, type Item } from '../types';
+import { Level, Colour, ItemType, type Hero, type Item } from '../types';
 import { init } from '../game';
 
-const createMockHero = (name: string, xp = 0, level = Level.APPRENTICE): Hero => ({
+const createMockHero = (
+  name: string,
+  xp = 0,
+  level = Level.APPRENTICE,
+): Hero => ({
   name,
   actions: 2,
   movement: 3,
@@ -24,7 +28,18 @@ const createMockHero = (name: string, xp = 0, level = Level.APPRENTICE): Hero =>
   experience: xp,
   position: { x: 0, y: 0 },
   level,
-  weapon: { name: 'Sword', dice: 2 },
+  weapon: {
+    name: 'Sword',
+    dice: 2,
+    amountInDeck: 0,
+    type: ItemType.WEAPON,
+    value: 1,
+    range: 1,
+    twoHanded: false,
+    useHearHeroes: true,
+    ignoresArmour: false,
+    ignoresShield: false,
+  },
   inventory: [],
   isInventoryOpen: false,
 });
@@ -131,7 +146,11 @@ describe('BetweenDungeonsLogic', () => {
       openBetweenDungeons(state);
 
       selectTradeItem(state, 0, 1);
-      expect(state.betweenDungeons?.selectedTradeItem).toEqual({ heroIndex: 0, slot: 1, itemIndex: 1 });
+      expect(state.betweenDungeons?.selectedTradeItem).toEqual({
+        heroIndex: 0,
+        slot: 1,
+        itemIndex: 1,
+      });
 
       // Selecting the same item deselects it
       selectTradeItem(state, 0, 1);
@@ -139,12 +158,23 @@ describe('BetweenDungeonsLogic', () => {
 
       // Selecting equipment slot
       selectTradeItem(state, 0, 'weapon');
-      expect(state.betweenDungeons?.selectedTradeItem).toEqual({ heroIndex: 0, slot: 'weapon', itemIndex: undefined });
+      expect(state.betweenDungeons?.selectedTradeItem).toEqual({
+        heroIndex: 0,
+        slot: 'weapon',
+        itemIndex: undefined,
+      });
     });
 
     it('transfers an inventory item from one hero to another', () => {
       const state = init();
-      const item1: Item = { id: 'torch', name: 'Torch', reset: undefined };
+      const item1: Item = {
+        id: 'torch',
+        name: 'Torch',
+        reset: undefined,
+        amountInDeck: 1,
+        type: ItemType.MAGIC,
+        value: 1,
+      };
       const hero0 = createMockHero('Hero0');
       const hero1 = createMockHero('Hero1');
       hero0.inventory = [item1];
@@ -166,13 +196,51 @@ describe('BetweenDungeonsLogic', () => {
       const state = init();
       const hero0 = createMockHero('Hero0');
       const hero1 = createMockHero('Hero1');
-      hero0.weapon = { id: 'two_handed_sword', name: 'Two-Handed Sword', dice: 4, type: ItemType.WEAPON, range: 1, twoHanded: true, useHearHeroes: false, amountInDeck: 1, value: 3, ignoresShield: false, ignoresArmour: false };
-      hero0.armour = { id: 'chainmail', name: 'Chainmail', defense: 2, type: ItemType.ARMOUR, amountInDeck: 1, value: 2 };
-      hero0.shield = { id: 'wooden_shield', name: 'Wooden Shield', dice: 1, type: ItemType.SHIELD, amountInDeck: 1, value: 1 };
+      hero0.weapon = {
+        id: 'two_handed_sword',
+        name: 'Two-Handed Sword',
+        dice: 4,
+        type: ItemType.WEAPON,
+        range: 1,
+        twoHanded: true,
+        useHearHeroes: false,
+        amountInDeck: 1,
+        value: 3,
+        ignoresShield: false,
+        ignoresArmour: false,
+      };
+      hero0.armour = {
+        id: 'chainmail',
+        name: 'Chainmail',
+        defense: 2,
+        type: ItemType.ARMOUR,
+        amountInDeck: 1,
+        value: 2,
+        magicProtection: true,
+        movementReduction: 0,
+      };
+      hero0.shield = {
+        id: 'wooden_shield',
+        name: 'Wooden Shield',
+        dice: 1,
+        type: ItemType.SHIELD,
+        amountInDeck: 1,
+        value: 1,
+      };
 
-      hero1.weapon = { id: 'sword', name: 'Sword', dice: 3, type: ItemType.WEAPON, range: 1, twoHanded: false, useHearHeroes: true, amountInDeck: 0, value: 0, ignoresShield: false, ignoresArmour: false };
-      hero1.armour = undefined;
-      hero1.shield = undefined;
+      hero1.weapon = {
+        id: 'sword',
+        name: 'Sword',
+        dice: 3,
+        type: ItemType.WEAPON,
+        range: 1,
+        twoHanded: false,
+        useHearHeroes: true,
+        amountInDeck: 0,
+        value: 0,
+        ignoresShield: false,
+        ignoresArmour: false,
+      };
       state.heroes = [hero0, hero1];
 
       openBetweenDungeons(state);
@@ -196,7 +264,13 @@ describe('BetweenDungeonsLogic', () => {
 
     it('does not allow trading to the same hero', () => {
       const state = init();
-      const item1: Item = { id: 'torch', name: 'Torch' };
+      const item1: Item = {
+        id: 'torch',
+        name: 'Torch',
+        amountInDeck: 1,
+        type: ItemType.MAGIC,
+        value: 1,
+      };
       const hero0 = createMockHero('Hero0');
       hero0.inventory = [item1];
       state.heroes = [hero0];
@@ -206,17 +280,53 @@ describe('BetweenDungeonsLogic', () => {
       expect(success).toBe(false);
       expect(hero0.inventory).toHaveLength(1);
     });
+
+    it('triggers drop and pickup effects when trading items with passive bonuses', () => {
+      const state = init();
+      const boots: Item = {
+        id: 'boots_of_speed',
+        name: 'Boots',
+        type: ItemType.MAGIC,
+        value: 0,
+        amountInDeck: 1,
+        properties: {
+          MOVEMENT_BONUS: 1,
+        },
+        pickup: 'movementBonusOnPickup',
+        drop: 'movementBonusOnDrop',
+      };
+
+      const hero0 = createMockHero('Hero0');
+      hero0.maxMovement = 4;
+      hero0.movement = 4;
+      hero0.inventory = [boots];
+
+      const hero1 = createMockHero('Hero1');
+      hero1.maxMovement = 3;
+      hero1.movement = 3;
+      hero1.inventory = [];
+
+      state.heroes = [hero0, hero1];
+
+      openBetweenDungeons(state);
+      const success = tradeItem(state, 0, 1, 0);
+      expect(success).toBe(true);
+
+      expect(hero0.maxMovement).toBe(3);
+      expect(hero0.movement).toBe(3);
+      expect(hero1.maxMovement).toBe(4);
+      expect(hero1.movement).toBe(4);
+    });
   });
 
   describe('completeBetweenDungeonsAndStartNext', () => {
     it('transitions to the next dungeon when completed', () => {
       const state = init();
-      const nextDungeon = {
+      state.dungeon.nextDungeon = {
         ...state.dungeon,
         name: 'Next Dungeon',
         startingPositions: [{ x: 2, y: 3 }],
       };
-      state.dungeon.nextDungeon = nextDungeon;
 
       openBetweenDungeons(state);
       expect(state.betweenDungeons).toBeDefined();

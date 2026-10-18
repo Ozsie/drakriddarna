@@ -7,7 +7,15 @@ import {
   eventEffects,
   resetEventEffects,
 } from './EventsLogic';
-import { Colour, Level, MonsterType, type TurnEvent } from '../types';
+import { events } from './events';
+import {
+  Colour,
+  ItemType,
+  Level,
+  MonsterType,
+  type Item,
+  type TurnEvent,
+} from '../types';
 import { createMonster } from '../dungeon/DungeonLogic';
 import { getPartyAverageLevel } from '../hero/HeroLogic';
 import {
@@ -923,6 +931,54 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       expect(drawn.id).toBe(otherEvent.id);
 
       vi.restoreAllMocks();
+    });
+  });
+
+  describe('Magic Storm and restoreDisabledItems', () => {
+    it('disables item on Magic Storm, drops bonus, and restores item and bonus when event deck runs out', () => {
+      const state = init();
+      const boots: Item = {
+        id: 'boots_of_speed',
+        name: 'Boots',
+        type: ItemType.MAGIC,
+        value: 0,
+        amountInDeck: 1,
+        properties: {
+          MOVEMENT_BONUS: 1,
+        },
+        pickup: 'movementBonusOnPickup',
+        drop: 'movementBonusOnDrop',
+      };
+
+      const hero = state.heroes[0];
+      hero.maxMovement = 3;
+      hero.movement = 3;
+      hero.inventory.push(boots);
+
+      // Pickup boots initially
+      hero.maxMovement += 1; // 4
+      hero.movement += 1; // 4
+
+      const magicStormEvent = events.find((e) => e.id === 'magic_storm')!;
+      eventEffects.theMagicStorm(state, magicStormEvent);
+
+      expect(boots.disabled).toBe(true);
+      expect(hero.maxMovement).toBe(3);
+      expect(hero.movement).toBe(3);
+
+      // Even if no heroes have elemental weapon, exhausted event deck should restore disabled item
+      state.heroes.forEach((h) => {
+        if (h.weapon) h.weapon.elemental = false;
+      });
+      state.eventDeck.forEach((e) => {
+        e.used = true;
+      });
+
+      resetEventEffects(state);
+
+      expect(boots.disabled).toBe(false);
+      expect(hero.maxMovement).toBe(4);
+      expect(hero.movement).toBe(4);
     });
   });
 });

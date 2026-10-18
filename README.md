@@ -14,6 +14,9 @@ See [Rules Readme](./RULES.md)
 
 ## Todo
 - [ ] e1m4 hidden stare requirement not working
+- [ ] e1m5
+  - [ ] multiple copies of items in treasure room
+  - [ ] hidden door in treasure room can't be opened
 - [ ] Sound Effects
 - [ ] Multiple saves
 - [ ] Responsive layout

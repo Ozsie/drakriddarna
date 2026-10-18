@@ -8,7 +8,6 @@ import type {
   Weapon,
   Armour,
   Shield,
-  Dungeon,
   TradeItemSlot,
 } from '../types';
 import { ItemType, Level } from '../types';
@@ -19,7 +18,14 @@ import {
   replaceDeadHeroes,
   resetLiveHeroes,
 } from '../hero/HeroLogic';
-import { resetOnNextDungeon, onReset, TRADE, RESET_ON } from '../items/ItemLogic';
+import {
+  resetOnNextDungeon,
+  onReset,
+  onPickup,
+  onDrop,
+  TRADE,
+  RESET_ON,
+} from '../items/ItemLogic';
 import { soundEffectManager } from '../audio';
 import { i18n, clearActorAnimations, doReRender } from '../core';
 import { isKnownCampaign, getCampaign } from '../campaigns';
@@ -72,7 +78,9 @@ export const LEVEL_THRESHOLDS: { level: Level; xp: number }[] = [
   { level: Level.MASTER, xp: 28 },
 ];
 
-export const getNextLevelInfo = (xp: number): { nextLevel?: Level; xpNeeded?: number } => {
+export const getNextLevelInfo = (
+  xp: number,
+): { nextLevel?: Level; xpNeeded?: number } => {
   for (const threshold of LEVEL_THRESHOLDS) {
     if (xp < threshold.xp) {
       return {
@@ -113,8 +121,6 @@ export const openBetweenDungeons = (state: GameState): BetweenDungeonsState => {
   const completedDungeonName = state.dungeon.name;
   const nextDungeon = state.dungeon.nextDungeon;
 
-  // Track previous levels & XP before rewarding
-  const live = liveHeroes(state);
   const heroProgression: {
     hero: Hero;
     prevXp: number;
@@ -130,28 +136,30 @@ export const openBetweenDungeons = (state: GameState): BetweenDungeonsState => {
 
   // Compute new levels and level-up info
   let anyHeroLeveledUp = false;
-  const levelUps: HeroLevelUpInfo[] = heroProgression.map(({ hero, prevXp, prevLevel }) => {
-    const newXp = hero.experience;
-    const newLevel = calculateLevel(newXp);
-    hero.level = newLevel;
-    const leveledUp = prevLevel !== newLevel;
-    if (leveledUp) {
-      anyHeroLeveledUp = true;
-    }
-    const nextInfo = getNextLevelInfo(newXp);
-    return {
-      heroName: hero.name,
-      heroColour: hero.colour,
-      previousLevel: prevLevel,
-      newLevel,
-      previousExperience: prevXp,
-      newExperience: newXp,
-      leveledUp,
-      levelMeaning: getLevelMeaning(newLevel),
-      xpToNextLevel: nextInfo.xpNeeded,
-      nextLevel: nextInfo.nextLevel,
-    };
-  });
+  const levelUps: HeroLevelUpInfo[] = heroProgression.map(
+    ({ hero, prevXp, prevLevel }) => {
+      const newXp = hero.experience;
+      const newLevel = calculateLevel(newXp);
+      hero.level = newLevel;
+      const leveledUp = prevLevel !== newLevel;
+      if (leveledUp) {
+        anyHeroLeveledUp = true;
+      }
+      const nextInfo = getNextLevelInfo(newXp);
+      return {
+        heroName: hero.name,
+        heroColour: hero.colour,
+        previousLevel: prevLevel,
+        newLevel,
+        previousExperience: prevXp,
+        newExperience: newXp,
+        leveledUp,
+        levelMeaning: getLevelMeaning(newLevel),
+        xpToNextLevel: nextInfo.xpNeeded,
+        nextLevel: nextInfo.nextLevel,
+      };
+    },
+  );
 
   if (anyHeroLeveledUp) {
     soundEffectManager.playLevelUp();
@@ -212,7 +220,8 @@ export const tradeItem = (
 ): boolean => {
   const sourceHero = state.heroes[sourceHeroIndex];
   const targetHero = state.heroes[targetHeroIndex];
-  if (!sourceHero || !targetHero || sourceHeroIndex === targetHeroIndex) return false;
+  if (!sourceHero || !targetHero || sourceHeroIndex === targetHeroIndex)
+    return false;
 
   let item: Item | undefined;
 
@@ -234,6 +243,13 @@ export const tradeItem = (
 
   if (!item) return false;
 
+  if (item.drop && !item.disabled) {
+    const drop = onDrop[item.drop];
+    if (drop) {
+      drop(state, item, sourceHero);
+    }
+  }
+
   // Check if item resets on TRADE
   if (item.properties && item.reset) {
     const resetTriggers = (item.properties[RESET_ON] as string[]) ?? [];
@@ -247,7 +263,11 @@ export const tradeItem = (
 
   // Add/Equip to target hero
   if (item.type === ItemType.WEAPON) {
-    if (!targetHero.weapon || targetHero.weapon.id === weapons[0].id || targetHero.weapon.value === 0) {
+    if (
+      !targetHero.weapon ||
+      targetHero.weapon.id === weapons[0].id ||
+      targetHero.weapon.value === 0
+    ) {
       targetHero.weapon = item as Weapon;
     } else {
       targetHero.inventory.push(item);
@@ -268,6 +288,13 @@ export const tradeItem = (
     targetHero.inventory.push(item);
   }
 
+  if (item.pickup && !item.disabled) {
+    const pickup = onPickup[item.pickup];
+    if (pickup) {
+      pickup(state, item, targetHero);
+    }
+  }
+
   soundEffectManager.playPickUpItem();
 
   if (state.betweenDungeons) {
@@ -277,9 +304,7 @@ export const tradeItem = (
   return true;
 };
 
-export const completeBetweenDungeonsAndStartNext = (
-  state: GameState,
-): void => {
+export const completeBetweenDungeonsAndStartNext = (state: GameState): void => {
   if (!state.betweenDungeons) return;
   const nextDungeon = state.betweenDungeons.nextDungeon;
   state.betweenDungeons = undefined;
