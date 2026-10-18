@@ -27,6 +27,7 @@ import {
 } from '../hero/HeroLogic';
 import { resetOnNextDungeon } from '../items/ItemLogic';
 import { getEventsForDungeon } from '../events/EventsLogic';
+import { soundEffectManager } from '../audio';
 
 let getCampaignDeck:
   | ((campaignId: string) => TurnEvent[] | undefined)
@@ -230,6 +231,7 @@ export const triggerInteractable = (
   }
 
   interactable.interacted = true;
+  soundEffectManager.playInteractSound(interactable);
   handler(state, interactable, actor);
   return true;
 };

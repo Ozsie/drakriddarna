@@ -383,7 +383,6 @@
     ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
     ctx.restore();
 
-    renderNotes(ctx, actors, cellSize, activeState, activeDebugMode ?? false);
     const now = Date.now();
     const hasActiveProjectiles = renderProjectiles(
       ctx,
@@ -971,6 +970,7 @@
         { isLogOpen, debugMode: currentDebug },
       );
       if (topBarHit === 'menu') {
+        soundEffectManager.playButtonClick();
         if (isCanvasMenuOpen && currentMenuView === 'main') {
           isCanvasMenuOpen = false;
         } else {
@@ -982,6 +982,7 @@
         return;
       }
       if (topBarHit === 'debug') {
+        soundEffectManager.playButtonClick();
         if (isCanvasMenuOpen && currentMenuView === 'debug') {
           isCanvasMenuOpen = false;
         } else {
@@ -1016,6 +1017,7 @@
         );
         if (menuHit) {
           if (menuHit.type === 'item' && menuHit.item) {
+            soundEffectManager.playButtonClick();
             menuHit.item.onClick(activeState);
             renderCanvas(true);
           } else if (menuHit.type === 'backdrop') {
@@ -1037,6 +1039,7 @@
       );
       if (heroHit) {
         if (heroHit.type === 'inventoryButton') {
+          soundEffectManager.playButtonClick();
           if (state) {
             heroHit.hero.isInventoryOpen = !heroHit.hero.isInventoryOpen;
             gameStateStore.set(state);
@@ -1045,6 +1048,7 @@
           }
           renderCanvas(true);
         } else if (heroHit.type === 'inventoryClose') {
+          soundEffectManager.playButtonClick();
           if (state) {
             heroHit.hero.isInventoryOpen = false;
             gameStateStore.set(state);
@@ -1055,6 +1059,7 @@
           }
           renderCanvas(true);
         } else if (heroHit.type === 'inventoryUseItem') {
+          soundEffectManager.playButtonClick();
           if (state) {
             useItem(state, heroHit.item);
             gameStateStore.set(state);
@@ -1096,6 +1101,7 @@
       );
       if (eventHit) {
         if (eventHit.type === 'toggle') {
+          soundEffectManager.playButtonClick();
           isEventCardCollapsed = !isEventCardCollapsed;
           renderUiLayer(true);
         }
@@ -1124,6 +1130,7 @@
       renderUiLayer(true);
 
       if (clickedBtn) {
+        soundEffectManager.playButtonClick();
         const curState = state ?? $gameStateStore;
         executeRadialAction(
           curState,

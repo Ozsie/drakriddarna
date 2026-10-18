@@ -1,13 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
-import {
-  SoundEffectManager,
-  soundEffectManager,
-  getWeaponAttackSound,
-  getActorWalkSound,
-  getActorHurtSound,
-  getActorDeathSound,
-} from './SoundEffectManager';
+import { SoundEffectManager, soundEffectManager } from './SoundEffectManager';
 import { takeDamage } from '../core';
 import { recordActorStep, clearActorAnimations } from '../core';
 import { createMonster } from '../dungeon/DungeonLogic';
@@ -109,109 +102,12 @@ describe('SoundEffectManager', () => {
     expect(pauseSpy).toHaveBeenCalled();
   });
 
-  it('getWeaponAttackSound resolves weapon sound properties', () => {
-    const w1: Weapon = {
-      name: 'Sword',
-      sound: '/sounds/slash.mp3',
-      dice: 3,
-      range: 1,
-      twoHanded: false,
-      useHearHeroes: true,
-      amountInDeck: 1,
-      type: ItemType.WEAPON,
-      value: 10,
-      ignoresShield: false,
-      ignoresArmour: false,
-    };
-    expect(getWeaponAttackSound(w1)).toBe('/sounds/slash.mp3');
-
-    const w2: Weapon = {
-      name: 'Bow',
-      attackSound: '/sounds/arrow.mp3',
-      dice: 3,
-      range: 5,
-      twoHanded: true,
-      useHearHeroes: true,
-      amountInDeck: 1,
-      type: ItemType.WEAPON,
-      value: 10,
-      ignoresShield: true,
-      ignoresArmour: false,
-    };
-    expect(getWeaponAttackSound(w2)).toBe('/sounds/arrow.mp3');
-
-    const w3: Weapon = {
-      name: 'Axe',
-      soundEffect: '/sounds/axe.mp3',
-      dice: 4,
-      range: 1,
-      twoHanded: true,
-      useHearHeroes: true,
-      amountInDeck: 1,
-      type: ItemType.WEAPON,
-      value: 10,
-      ignoresShield: false,
-      ignoresArmour: false,
-    };
-    expect(getWeaponAttackSound(w3)).toBe('/sounds/axe.mp3');
-  });
-
-  it('getActorWalkSound, getActorHurtSound, getActorDeathSound resolve actor properties', () => {
-    const actor: Actor = {
-      name: 'Hero',
-      walkSound: '/sounds/step.mp3',
-      hurtSound: '/sounds/hero_hurt.mp3',
-      deathSound: '/sounds/hero_death.mp3',
-      actions: 2,
-      movement: 3,
-      maxMovement: 3,
-      defense: 0,
-      health: 10,
-      maxHealth: 10,
-      colour: Colour.Red,
-      experience: 0,
-      position: { x: 0, y: 0 },
-      level: Level.APPRENTICE,
-      weapon: {
-        name: 'Sword',
-        dice: 3,
-        range: 1,
-        twoHanded: false,
-        useHearHeroes: true,
-        amountInDeck: 1,
-        type: ItemType.WEAPON,
-        value: 10,
-        ignoresShield: false,
-        ignoresArmour: false,
-      },
-      inventory: [],
-    };
-
-    expect(getActorWalkSound(actor)).toBe('/sounds/step.mp3');
-    expect(getActorHurtSound(actor)).toBe('/sounds/hero_hurt.mp3');
-    expect(getActorDeathSound(actor)).toBe('/sounds/hero_death.mp3');
-
-    // Also supports walk / hurt / death shorthand
-    const actorAlt: Actor = {
-      ...actor,
-      walkSound: undefined,
-      hurtSound: undefined,
-      deathSound: undefined,
-      walk: '/sounds/step_alt.mp3',
-      hurt: '/sounds/hurt_alt.mp3',
-      death: '/sounds/death_alt.mp3',
-    };
-    expect(getActorWalkSound(actorAlt)).toBe('/sounds/step_alt.mp3');
-    expect(getActorHurtSound(actorAlt)).toBe('/sounds/hurt_alt.mp3');
-    expect(getActorDeathSound(actorAlt)).toBe('/sounds/death_alt.mp3');
-  });
-
   it('playWeaponAttack, playActorWalk, playActorHurt, playActorDeath trigger sound playback', () => {
     const playSoundSpy = vi.spyOn(soundEffectManager, 'playSound');
 
     const weapon: Weapon = {
       name: 'Mace',
-      sound: '/sounds/mace.mp3',
+      attackSound: '/sounds/mace.mp3',
       dice: 3,
       range: 1,
       twoHanded: false,
@@ -322,7 +218,7 @@ describe('Sound system integration with gameplay events', () => {
     const state = createTestState();
     const attackerWeapon: Weapon = {
       name: 'Sword',
-      sound: '/sounds/sword_attack.mp3',
+      attackSound: '/sounds/sword_attack.mp3',
       dice: 10,
       range: 1,
       twoHanded: false,
@@ -383,7 +279,7 @@ describe('Sound system integration with gameplay events', () => {
     const state = createTestState();
     const attackerWeapon: Weapon = {
       name: 'Sword',
-      sound: '/sounds/sword_attack.mp3',
+      attackSound: '/sounds/sword_attack.mp3',
       dice: 10,
       range: 1,
       twoHanded: false,

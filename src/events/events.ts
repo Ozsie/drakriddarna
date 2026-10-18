@@ -11,7 +11,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.hungryTroll.description',
     effect: 'theHungryTroll',
     used: false,
-    eventSound: 'sfx/roar.mp3'
+    eventSound: 'sfx/roar.mp3',
   },
   {
     id: 'sun_stone',
@@ -23,7 +23,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.sunStone.description',
     effect: 'sunStone',
     used: false,
-    eventSound: 'sfx/sun.mp3'
+    eventSound: 'sfx/sun.mp3',
   },
   {
     id: 'time_portal',
@@ -71,7 +71,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.lostOrch.description',
     effect: 'theLostOrch',
     used: false,
-    eventSound: 'sfx/monster_scream.mp3'
+    eventSound: 'sfx/monster_scream.mp3',
   },
   {
     id: 'dragons_breath',
@@ -167,7 +167,7 @@ export const events: TurnEvent[] = [
     descriptionTranslationKey: 'events.orchDrums.description',
     effect: 'theOrchDrums',
     used: false,
-    eventSound: 'sfx/drums.mp3'
+    eventSound: 'sfx/drums.mp3',
   },
   {
     id: 'weakness',

@@ -235,6 +235,7 @@ describe('MenuLogic', () => {
         'testing_grounds',
         'shuffle_deck',
         'select_next_event',
+        'output_game_state',
       ]);
     });
 
@@ -244,6 +245,19 @@ describe('MenuLogic', () => {
       const selectEventItem = items.find((i) => i.id === 'select_next_event');
       selectEventItem?.onClick(mockState);
       expect(setView).toHaveBeenCalledWith('event');
+    });
+
+    it('logs game state to console and closes menu on output_game_state click', () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const closeMenu = vi.fn();
+      const items = getDebugMenuItems(mockState, { closeMenu });
+      const outputGameStateItem = items.find(
+        (i) => i.id === 'output_game_state',
+      );
+      outputGameStateItem?.onClick(mockState);
+      expect(consoleSpy).toHaveBeenCalledWith(mockState);
+      expect(closeMenu).toHaveBeenCalled();
+      consoleSpy.mockRestore();
     });
   });
 
@@ -349,6 +363,7 @@ describe('MenuLogic', () => {
         'testing_grounds',
         'shuffle_deck',
         'select_next_event',
+        'output_game_state',
       ]);
     });
 

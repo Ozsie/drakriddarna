@@ -287,6 +287,7 @@ export const takeDamage = (
       target.movement = 0;
       target.actions = 0;
       target.incapacitated = true;
+      soundEffectManager.playParalyze();
     }
   }
 };

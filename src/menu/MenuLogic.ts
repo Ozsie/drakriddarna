@@ -199,6 +199,16 @@ export const getDebugMenuItems = (
       callbacks?.setView?.('event');
     },
   },
+  {
+    id: 'output_game_state',
+    debugOnly: false,
+    label: i18n('content.menu.mainMenu.buttons.outputGameState'),
+    onClick: (state) => {
+      // eslint-disable-next-line no-console
+      console.log(state);
+      callbacks?.closeMenu?.();
+    },
+  },
 ];
 
 export const getCampaignMenuItems = (

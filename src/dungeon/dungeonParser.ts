@@ -158,6 +158,7 @@ export type DeclarativeInteractableObject = {
   icon?: string;
   triggerOn?: 'interact' | 'step' | 'both';
   secret?: boolean;
+  interactSound?: string;
 };
 
 export type DeclarativeInteractableTuple =
@@ -180,6 +181,7 @@ export type DeclarativeInteractableTuple =
             icon?: string;
             triggerOn?: 'interact' | 'step' | 'both';
             secret?: boolean;
+            interactSound?: string;
             [key: string]: unknown;
           },
       id?: string,
@@ -473,6 +475,7 @@ export const parseInteractable = (
     let triggerOn: 'interact' | 'step' | 'both' = 'interact';
     let secret: boolean | undefined;
     let interactableId = id;
+    let interactSound: string | undefined;
 
     if (argsOrOptions && typeof argsOrOptions === 'object') {
       const opts = argsOrOptions as Record<string, unknown>;
@@ -485,7 +488,8 @@ export const parseInteractable = (
         'description' in opts ||
         'id' in opts ||
         'args' in opts ||
-        'secret' in opts
+        'secret' in opts ||
+        'interactSound' in opts
       ) {
         if (opts.id && typeof opts.id === 'string') interactableId = opts.id;
         if (opts.name && typeof opts.name === 'string') name = opts.name;
@@ -515,6 +519,7 @@ export const parseInteractable = (
         if (opts.args && typeof opts.args === 'object') {
           args = opts.args as Record<string, unknown>;
         }
+        if (typeof opts.interactSound === 'string') interactSound = opts.interactSound;
       } else {
         args = opts;
       }
@@ -537,6 +542,7 @@ export const parseInteractable = (
       ...(args ? { args } : {}),
       ...(icon ? { icon } : {}),
       triggerOn,
+      interactSound,
     };
   }
 
@@ -555,6 +561,7 @@ export const parseInteractable = (
     icon,
     triggerOn = 'interact',
     secret,
+    interactSound,
   } = interactableDef;
 
   return {
@@ -574,6 +581,7 @@ export const parseInteractable = (
     ...(args ? { args } : {}),
     ...(icon ? { icon } : {}),
     triggerOn,
+    interactSound,
   };
 };
 

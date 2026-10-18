@@ -13,6 +13,7 @@
         "language": "-> Svenska",
         "shuffleDeck": "Shuffle Deck",
         "selectNextEvent": "Select Next Event",
+        "outputGameState": "Output Game State",
         "difficulty": "Difficulty:",
         "rights": "Rights & Licenses"
       }

@@ -13,6 +13,7 @@
         "language": "-> English",
         "shuffleDeck": "Blanda Kortleken",
         "selectNextEvent": "Välj Nästa Händelse",
+        "outputGameState": "Skriv ut spelläge",
         "difficulty": "Svårighetsgrad:",
         "rights": "Rättigheter & Licenser"
       }

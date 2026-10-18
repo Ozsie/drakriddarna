@@ -1,7 +1,14 @@
-import type { Actor, Item, Shield, TurnEvent, Weapon } from '../types';
+import type {
+  Actor,
+  InteractableCell,
+  Item,
+  Shield,
+  TurnEvent,
+  Weapon,
+} from '../types';
 
 export class SoundEffectManager {
-  private volume = 0.5;
+  private volume = 0.8;
   private isMuted = false;
   private isUnlocked = false;
   private activeAudios: Set<HTMLAudioElement> = new Set();
@@ -104,6 +111,12 @@ export class SoundEffectManager {
     return this.playSound(item?.useSound);
   }
 
+  public playInteractSound(
+    interactable?: InteractableCell,
+  ): HTMLAudioElement | null {
+    return this.playSound(interactable?.interactSound);
+  }
+
   public playDropItem(): HTMLAudioElement | null {
     return this.playSound('sfx/drop.mp3');
   }
@@ -118,6 +131,18 @@ export class SoundEffectManager {
 
   public playFireBall(): HTMLAudioElement | null {
     return this.playSound('sfx/fireball.mp3');
+  }
+
+  public playDiaryAdd(): HTMLAudioElement | null {
+    return this.playSound('sfx/diary_add.mp3');
+  }
+
+  public playParalyze(): HTMLAudioElement | null {
+    return this.playSound('sfx/paralyze.mp3');
+  }
+
+  public playButtonClick(): HTMLAudioElement | null {
+    return this.playSound('sfx/button.mp3');
   }
 
   public setVolume(volume: number): void {

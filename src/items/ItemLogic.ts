@@ -176,6 +176,7 @@ export const resolveChaosSwordAttack = (
       user.movement = 0;
       user.actions = 0;
       user.incapacitated = true;
+      soundEffectManager.playParalyze();
       break;
     case 2:
     case 3: {
@@ -214,6 +215,7 @@ export const resolveChaosSwordAttack = (
     }
     default:
       addLog(state, 'logs.item.chaosSwordMiss', { user: i18n(user.name) });
+      soundEffectManager.playMiss();
       break;
   }
 };

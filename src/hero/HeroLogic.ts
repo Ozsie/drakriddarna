@@ -559,6 +559,7 @@ export const checkForNote = (state: GameState, hero: Hero) => {
           hero: i18n(hero.name),
           note: i18n(note.message),
         });
+        soundEffectManager.playDiaryAdd();
         const text = i18n(note.message);
         if (!state.damageIndicators) {
           state.damageIndicators = [];
@@ -567,6 +568,7 @@ export const checkForNote = (state: GameState, hero: Hero) => {
           createIndicator(text, note.position, {
             color: '#7373ec',
             effect: 'static',
+            durationMs: 5000,
           }),
         );
         note.found = true;

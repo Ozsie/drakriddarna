@@ -256,9 +256,8 @@ export type InteractableCell = {
   icon?: string;
   triggerOn?: 'interact' | 'step' | 'both';
   secret?: boolean;
+  interactSound?: string;
 };
-
-export type Interactable = InteractableCell;
 
 export type Corner = {
   position: Position;
