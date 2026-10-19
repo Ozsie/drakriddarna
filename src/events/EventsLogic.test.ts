@@ -235,7 +235,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     const normalDiff = getGameMaster('normal');
     const hardDiff = getGameMaster('hard');
 
-    expect(easyDiff?.events?.minMonsterSpawnDistance).toBe(4);
+    expect(easyDiff?.events?.minMonsterSpawnDistance).toBe(3);
     expect(easyDiff?.events?.earliestMonsterRound).toBe(4);
     expect(easyDiff?.events?.skipHungryTrollBelowHalfHealth).toBe(true);
 

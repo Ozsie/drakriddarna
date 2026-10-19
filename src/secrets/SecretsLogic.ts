@@ -60,8 +60,13 @@ export const searchForSecret = (state: GameState) => {
       return item.properties?.[SEARCH_BONUS] as number;
     })
     .reduce((partial, bonus) => partial + bonus, 0);
-  const searchDifficultyModifier = getDifficulty(state).modifiers.search;
-  const result = roll(hero.level, 1 + searchBonus + searchDifficultyModifier);
+  const gm = getDifficulty(state);
+  const searchDifficultyModifier = gm.modifiers.search;
+  let result = roll(hero.level, 1 + searchBonus + searchDifficultyModifier);
+  const modifySearch = gm.rules?.modifySearchRoll ?? gm.modifySearchRoll;
+  if (modifySearch) {
+    result = modifySearch(result, hero, state);
+  }
   soundEffectManager.playSearch(result);
   let trapDoor, hiddenDoor, trap, secret, interactable;
   if (result >= 1) {
@@ -79,11 +84,15 @@ export const searchForSecret = (state: GameState) => {
       interactable = lookForSecretInteractable(state, hero, result);
     }
     if (!trapDoor && !hiddenDoor && !trap && !secret && !interactable) {
+      const onSearchFailed = gm.rules?.onSearchFailed ?? gm.onSearchFailed;
+      onSearchFailed?.(hero, state);
       addLog(state, 'logs.heroAction.searchFoundNothing', {
         hero: i18n(hero.name),
       });
     }
   } else {
+    const onSearchFailed = gm.rules?.onSearchFailed ?? gm.onSearchFailed;
+    onSearchFailed?.(hero, state);
     addLog(state, 'logs.heroAction.searchFoundNothing', {
       hero: i18n(hero.name),
     });

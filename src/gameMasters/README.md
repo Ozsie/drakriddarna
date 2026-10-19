@@ -112,6 +112,12 @@ export const myCustomGameMaster: GameMaster = {
   nameTranslationKey: 'content.gameMaster.myCustomGameMaster.name',
   descriptionTranslationKey: 'content.gameMaster.myCustomGameMaster.description',
 
+  // Persistent Custom State Factory
+  initialState: () => ({
+    tensionMeter: 0,
+    hazardsSpawned: 0,
+  }),
+
   // 1. Hero Stat Modifiers
   modifiers: {
     attack: 0,
@@ -179,6 +185,40 @@ export const myCustomGameMaster: GameMaster = {
       return event;
     },
   },
+
+  // 5. Lifecycle & Turn Flow Callbacks
+  onGameInit: (state) => {
+    // Called once when scenario or campaign initializes
+  },
+  onRoundStart: (round, state) => {
+    // Called at the start of each new round
+  },
+  onHeroTurnStart: (hero, state) => {
+    // Called at the start of an individual hero's turn
+  },
+  onHeroPhaseEnd: (state) => {
+    // Called after all heroes finish turns, before monsters act
+  },
+  onMonsterPhaseEnd: (state) => {
+    // Called after all monsters have acted
+  },
+  onPartyDefeat: (state) => {
+    // Called when the party is wiped out or level is reset
+  },
+  onDungeonComplete: (state) => {
+    // Called when all win conditions are met
+  },
+
+  // 6. Search & Combat Rule Overrides
+  modifySearchRoll: (baseRoll, hero, state) => baseRoll,
+  onSearchFailed: (hero, state) => {
+    // Trigger wandering monster or dungeon trap on failed search
+  },
+  modifyHeroDamageDealt: (damage, attacker, defender, state) => damage,
+  modifyMonsterDamageDealt: (damage, attacker, defender, state) => damage,
+  onHeroDowned: (hero, state) => {
+    // Trigger special penalty or narrative event when hero falls
+  },
 };
 
 export default myCustomGameMaster;
@@ -220,6 +260,26 @@ Controls how turn events spawn monsters and manipulate the event deck:
 - `skipHungryTrollBelowHalfHealth` (`boolean`): If `true`, the `The Hungry Troll` event is skipped if the party's total HP is under 50%.
 - `modifyEventDeck(deck, state)`: Intercepts and transforms the full `TurnEvent[]` deck at initialization.
 - `onEventDrawn(event, state)`: Intercepts an event before resolution; return `null` to discard and skip, or return a modified `TurnEvent`.
+
+### 5. `initialState` & Custom State Management (optional)
+- `initialState()`: Factory function returning initial state for this GM.
+- The returned object is stored on `state.gameMasterState` on `GameState` and persisted across actions and save files.
+
+### 6. Lifecycle & Turn Flow Callbacks (optional)
+- `onGameInit(state)`: Called when the game/scenario initializes in `init()`.
+- `onRoundStart(round, state)`: Called when a new round begins and `turnCount` increments.
+- `onHeroTurnStart(hero, state)`: Called at the beginning of each hero's turn.
+- `onHeroPhaseEnd(state)`: Called after all hero turns complete, immediately prior to `monsterActions()`.
+- `onMonsterPhaseEnd(state)`: Called immediately after `monsterActions()` completes.
+- `onPartyDefeat(state)`: Called when all heroes fall or when `resetLevel()` is triggered.
+- `onDungeonComplete(state)`: Called when all dungeon win conditions are fulfilled.
+
+### 7. Search & Combat Rule Hooks (optional)
+- `modifySearchRoll(baseRoll, hero, state)`: Intercepts and alters the final D6 roll result during `searchForSecret`.
+- `onSearchFailed(hero, state)`: Triggered when a search roll yields no discoveries (allows spawning wandering hazards, traps, or ambush monsters).
+- `modifyHeroDamageDealt(damage, attacker, defender, state)`: Alters damage inflicted by a hero attacking a monster before applying damage.
+- `modifyMonsterDamageDealt(damage, attacker, defender, state)`: Alters damage inflicted by a monster attacking a hero before applying damage.
+- `onHeroDowned(hero, state)`: Triggered immediately when a hero's health is reduced to 0.
 
 ---
 

@@ -53,6 +53,7 @@ Each dungeon scenario presents specific win conditions (e.g., eliminating all mo
 ### User Interface & Controls
 
 #### Mouse / Touch Controls
+
 - **Move**: Click on any highlighted or walkable tile within range to move there.
 - **Attack**: Click on an adjacent enemy (or a visible enemy in range if wielding a reach/ranged weapon) to initiate an attack.
 - **Interact / Open Door**: Click the active hero when standing next to a door or interactable object (or use the radial action menu).
@@ -60,19 +61,19 @@ Each dungeon scenario presents specific win conditions (e.g., eliminating all mo
 
 #### Keyboard Controls
 
-| Action | Keyboard | Numpad | Description |
-| :--- | :---: | :---: | :--- |
-| **Move Up** | `W` | `8` | Move one tile north |
-| **Move Down** | `X` | `2` | Move one tile south |
-| **Move Left** | `A` | `4` | Move one tile west |
-| **Move Right** | `D` | `6` | Move one tile east |
-| **Move Up-Left** | `Q` | `7` | Move one tile northwest |
-| **Move Up-Right** | `E` | `9` | Move one tile northeast |
-| **Move Down-Left** | `Z` | `1` | Move one tile southwest |
-| **Move Down-Right** | `C` | `3` | Move one tile southeast |
-| **Search** | `F` | `+` | Search current area for hidden doors, chests, or traps |
-| **Pick Lock** | `R` | `-` | Attempt to pick the lock of an adjacent locked door |
-| **Next / End Turn** | `Space` | `0` | End current hero's turn and pass to the next hero |
+| Action              | Keyboard | Numpad | Description                                            |
+| :------------------ | :------: | :----: | :----------------------------------------------------- |
+| **Move Up**         |   `W`    |  `8`   | Move one tile north                                    |
+| **Move Down**       |   `X`    |  `2`   | Move one tile south                                    |
+| **Move Left**       |   `A`    |  `4`   | Move one tile west                                     |
+| **Move Right**      |   `D`    |  `6`   | Move one tile east                                     |
+| **Move Up-Left**    |   `Q`    |  `7`   | Move one tile northwest                                |
+| **Move Up-Right**   |   `E`    |  `9`   | Move one tile northeast                                |
+| **Move Down-Left**  |   `Z`    |  `1`   | Move one tile southwest                                |
+| **Move Down-Right** |   `C`    |  `3`   | Move one tile southeast                                |
+| **Search**          |   `F`    |  `+`   | Search current area for hidden doors, chests, or traps |
+| **Pick Lock**       |   `R`    |  `-`   | Attempt to pick the lock of an adjacent locked door    |
+| **Next / End Turn** | `Space`  |  `0`   | End current hero's turn and pass to the next hero      |
 
 ### Turn Structure at a Glance
 
@@ -118,15 +119,16 @@ Every test in Drakriddarna—combat attacks, shield defense blocks, lockpicking,
 
 The required face value for a die to count as a **Success** depends directly on the character's **Level**:
 
-| Level | Required Experience (XP) | Dice Roll Success Threshold | Success Chance per Die |
-| :--- | :---: | :---: | :---: |
-| **Apprentice** | 0 XP | **5+** (rolls of 5 or 6) | 33.3% |
-| **Knight** | 4 XP | **4+** (rolls of 4, 5, or 6) | 50.0% |
-| **Hero** | 10 XP | **4+** (rolls of 4, 5, or 6) | 50.0% |
-| **Lord** | 18 XP | **3+** (rolls of 3, 4, 5, or 6) | 66.7% |
-| **Master** | 28 XP | **3+** (rolls of 3, 4, 5, or 6) | 66.7% |
+| Level          | Required Experience (XP) |   Dice Roll Success Threshold   | Success Chance per Die |
+| :------------- | :----------------------: | :-----------------------------: | :--------------------: |
+| **Apprentice** |           0 XP           |    **5+** (rolls of 5 or 6)     |         33.3%          |
+| **Knight**     |           4 XP           |  **4+** (rolls of 4, 5, or 6)   |         50.0%          |
+| **Hero**       |          10 XP           |  **4+** (rolls of 4, 5, or 6)   |         50.0%          |
+| **Lord**       |          18 XP           | **3+** (rolls of 3, 4, 5, or 6) |         66.7%          |
+| **Master**     |          28 XP           | **3+** (rolls of 3, 4, 5, or 6) |         66.7%          |
 
 #### Gaining Experience
+
 - Whenever an enemy monster is slain, **every surviving hero in the party earns +1 Experience (XP)**.
 - If all heroes fall in battle, the scenario restarts with revived heroes starting at 0 XP (Apprentice level).
 
@@ -166,7 +168,8 @@ The defender protects themselves through armor and shields:
 2. **Shield Roll**: If equipped with a shield, the defender rolls the shield's dice pool (e.g., Small Shield = 1 die, Large Shield = 2 dice) against their own Level threshold. Each success adds **+1 Shield Block**.
 3. **Defense Modifiers**: Any global difficulty defense modifiers apply.
 
-*Special properties:*
+_Special properties:_
+
 - Attacks marked `ignoresArmour` bypass passive armor reduction.
 - Attacks marked `ignoresShield` (e.g., Orc bows, Sword of Chaos) bypass shield defense rolls.
 
@@ -198,9 +201,9 @@ Heroes and monsters may be affected by temporary conditions:
 Dungeons are divided into distinct rooms and corridors separated by doors:
 
 - **Standard Doors**: Moving into the doorway opens the door and immediately reveals the connected room, illuminating its layout and revealing any monsters inside.
-- **Locked Doors**: Cannot be opened by simple movement. A hero standing at the door can attempt to **Pick Lock** (`R`), rolling 1 die against their Level threshold. Alternatively, items with the `BREAK_LOCK` property (like the *Giant's Glove* or *Ring of the Ram*) instantly smash the lock.
+- **Locked Doors**: Cannot be opened by simple movement. A hero standing at the door can attempt to **Pick Lock** (`R`), rolling 1 die against their Level threshold. Alternatively, items with the `BREAK_LOCK` property (like the _Giant's Glove_ or _Ring of the Ram_) instantly smash the lock.
 - **Trapped Doors**: Open like normal doors but detonate a trap attack against the hero upon opening.
-- **Reinforced Doors**: Heavy reinforced iron doors that cannot be opened or picked without the *Giant's Glove*.
+- **Reinforced Doors**: Heavy reinforced iron doors that cannot be opened or picked without the _Giant's Glove_.
 - **Hidden Doors**: Secret doors concealed within walls. They only appear when revealed by a successful **Search** action.
 
 ### Searching for Secrets & Traps
@@ -230,24 +233,24 @@ Using the **Search** action (`F`) scans the current room/corridor for concealed 
 
 ### Weapons
 
-| Weapon | Range | Attack Dice | Properties |
-| :--- | :---: | :---: | :--- |
-| **Sword** | 1 (Melee) | 3 | Standard one-handed blade. Starting weapon for heroes. |
-| **Two-Handed Sword** | 1 (Melee) | 4 | Heavy blade. Two-handed (cannot be used with a shield). Cannot be used if adjacent to friendly heroes. |
-| **Halberd** | 2 (Reach) | 3 | Long polearm allowing melee attacks up to 2 tiles away. Two-handed. |
-| **Flail** | 1 (Melee) | 4 | Powerful one-handed crushing weapon. |
-| **Double-Headed Axe** | 1 (Melee) | 4 | Heavy cleaving axe. Two-handed. |
-| **Orc Bow** | Ranged | 3 | Monster ranged weapon. Ignores shield blocking. |
+| Weapon                |   Range   | Attack Dice | Properties                                                                                             |
+| :-------------------- | :-------: | :---------: | :----------------------------------------------------------------------------------------------------- |
+| **Sword**             | 1 (Melee) |      3      | Standard one-handed blade. Starting weapon for heroes.                                                 |
+| **Two-Handed Sword**  | 1 (Melee) |      4      | Heavy blade. Two-handed (cannot be used with a shield). Cannot be used if adjacent to friendly heroes. |
+| **Halberd**           | 2 (Reach) |      3      | Long polearm allowing melee attacks up to 2 tiles away. Two-handed.                                    |
+| **Flail**             | 1 (Melee) |      4      | Powerful one-handed crushing weapon.                                                                   |
+| **Double-Headed Axe** | 1 (Melee) |      4      | Heavy cleaving axe. Two-handed.                                                                        |
+| **Orc Bow**           |  Ranged   |      3      | Monster ranged weapon. Ignores shield blocking.                                                        |
 
 ### Armour & Shields
 
-| Item | Type | Defense / Dice | Special Properties |
-| :--- | :---: | :---: | :--- |
-| **Small Shield** | Shield | 1 die | Adds 1 shield defense roll against incoming attacks. |
-| **Large Shield** | Shield | 2 dice | Adds 2 shield defense rolls against incoming attacks. |
-| **Chain Mail** | Armour | 1 Flat Def | Provides 1 flat damage reduction. No movement penalty. |
-| **Plate Mail** | Armour | 2 Flat Def | Heavy protection. Reduces hero max movement by `-1 tile`. |
-| **Dragon Skin Mail** | Armour | 2 Flat Def | Superior protection. Provides magic protection with 0 movement penalty. |
+| Item                 |  Type  | Defense / Dice | Special Properties                                                      |
+| :------------------- | :----: | :------------: | :---------------------------------------------------------------------- |
+| **Small Shield**     | Shield |     1 die      | Adds 1 shield defense roll against incoming attacks.                    |
+| **Large Shield**     | Shield |     2 dice     | Adds 2 shield defense rolls against incoming attacks.                   |
+| **Chain Mail**       | Armour |   1 Flat Def   | Provides 1 flat damage reduction. No movement penalty.                  |
+| **Plate Mail**       | Armour |   2 Flat Def   | Heavy protection. Reduces hero max movement by `-1 tile`.               |
+| **Dragon Skin Mail** | Armour |   2 Flat Def   | Superior protection. Provides magic protection with 0 movement penalty. |
 
 ### Magic Items & Consumables
 
@@ -270,38 +273,42 @@ Drakriddarna uses a pluggable **Game Master (GM)** system that unifies difficult
 
 Rather than relying purely on static stat adjustments, Game Masters provide distinct tabletop narrative styles and AI personalities. Drakriddarna ships with three primary Game Masters representing classic difficulty tiers:
 
-- **Story Teller** (`storyTeller` / *Easy*): A forgiving narrator focused on adventure flow, offering generous hero modifiers, bonus search capabilities, starting shields, high archer distraction rates, and responsive AI easing when heroes are wounded.
-- **Tactician** (`tactician` / *Normal / Default*): A balanced, tactical Game Master offering fair, classic tabletop pacing without artificial buffs or penalties.
-- **Brutal Overlord** (`brutalOverlord` / *Hard*): A ruthless dungeon master who suppresses hero health and movement, spawns monsters in close proximity, aggressively pushes monster behaviors, and grants no quarter.
+- **Story Teller** (`storyTeller` / _Easy_): A forgiving narrator focused on adventure flow, offering generous hero modifiers, bonus search capabilities, starting shields, high archer distraction rates, and responsive AI easing when heroes are wounded.
+- **Tactician** (`tactician` / _Normal / Default_): A balanced, tactical Game Master offering fair, classic tabletop pacing without artificial buffs or penalties.
+- **Brutal Overlord** (`brutalOverlord` / _Hard_): A ruthless dungeon master who suppresses hero health and movement, spawns monsters in close proximity, aggressively pushes monster behaviors, and grants no quarter.
 
 ### Comparison Overview
 
-| Game Master | Difficulty Equivalent | Attack Mod | Defense Mod | Movement Mod | Search Mod | Health Mod | Starting Equipment | Bow Forgotten Chance | Min Spawn Distance | Earliest Spawn Round | Low-Health Troll Safeguard |
-| :--- | :---: | :---: | :---: | :---: | :---: | :--- | :---: | :---: | :---: | :---: |
-| **Story Teller** | Easy | +1 | 0 | +1 | +2 | 0 | Sword + Small Shield | 25% | 4 tiles | Round 4 | Enabled (Party HP < 50%) |
-| **Tactician** *(Default)* | Normal | 0 | 0 | 0 | 0 | 0 | Sword | 15% | 3 tiles | Round 3 | Enabled (Party HP < 50%) |
-| **Brutal Overlord** | Hard | 0 | 0 | -1 | 0 | -1 | Sword | 0% | 1 tile | Round 2 | Disabled |
+| Game Master               | Difficulty Equivalent | Attack Mod | Defense Mod | Movement Mod | Search Mod | Health Mod |  Starting Equipment  | Bow Forgotten Chance | Min Spawn Distance | Earliest Spawn Round | Low-Health Troll Safeguard |
+| :------------------------ | :-------------------: | :--------: | :---------: | :----------: | :--------: | :--------- | :------------------: | :------------------: | :----------------: | :------------------: | -------------------------- |
+| **Story Teller**          |         Easy          |     +1     |      0      |      0       |     +2     | 0          | Sword + Small Shield |         20%          |      3 tiles       |       Round 4        | Enabled (Party HP < 50%)   |
+| **Tactician** _(Default)_ |        Normal         |     0      |      0      |      0       |     0      | 0          |        Sword         |         15%          |      3 tiles       |       Round 3        | Enabled (Party HP < 50%)   |
+| **Brutal Overlord**       |         Hard          |     0      |      0      |      0       |     0      | 0          |        Sword         |          0%          |       2 tile       |       Round 2        | Disabled                   |
 
 ---
 
 ### Key Mechanics & Distinct Personas
 
 1. **Hero Modifiers**:
+
    - **Story Teller**: Heroes gain +1 Attack dice, +1 Movement tile per turn, and +2 bonus to Search rolls. Starting HP is 7.
    - **Tactician**: Standard unmodified baseline (7 Max HP, 3 Movement tiles, 2 Actions).
    - **Brutal Overlord**: Heroes suffer -1 Max Health (6 Max HP) and -1 Movement tile per turn (2 Movement tiles).
 
 2. **Starting Equipment**:
+
    - Under the **Story Teller**, each hero begins with a basic **Sword** and an additional **Small Shield** (1 defense die).
    - Under the **Tactician** and **Brutal Overlord**, heroes begin with a standard **Sword** only.
    - Starting equipment configurations also automatically apply to newly recruited heroes and allies added during gameplay.
 
 3. **AI Director & Dynamic Pacing**:
+
    - **Story Teller**: Highly merciful. Switches to **EASE** mode whenever any hero is down or party total HP is below 50%; only enters **PUSH** mode when party HP exceeds 85% and at most 1 monster remains.
    - **Tactician**: Balanced pacing. Switches to **EASE** mode if a hero is dead or party HP is below 45%; enters **PUSH** mode when party HP exceeds 80% and at most 1 monster remains.
-   - **Brutal Overlord**: Relentless. Only eases off (**EASE**) if a hero is dead *and* party HP is critically low (< 25%); pushes aggressively (**PUSH**) whenever party HP is above 65% or 2 or fewer monsters remain. In addition, aggressive monster behaviors receive a passive **+25% bonus weight** (`baseWeight * 1.25`).
+   - **Brutal Overlord**: Relentless. Only eases off (**EASE**) if a hero is dead _and_ party HP is critically low (< 25%); pushes aggressively (**PUSH**) whenever party HP is above 65% or 2 or fewer monsters remain. In addition, aggressive monster behaviors receive a passive **+25% bonus weight** (`baseWeight * 1.25`).
 
 4. **Equipment Quirks & Archer Accuracy**:
+
    - Archer monsters evaluate a random chance each turn to forget their ranged weapon, forcing them into melee or advance tactics: **25%** under the Story Teller, **15%** under the Tactician, and **0%** under the Brutal Overlord (flawless archer discipline).
 
 5. **Event & Monster Spawn Balancing**:
@@ -339,46 +346,46 @@ On its turn, a monster chooses a tactical behavior composed of two action slots 
 
 #### Orcs & Orc Archers (`Orc`, `Orch`)
 
-| Behavior | Action Slots | Tags | Base Weight | Prerequisites / Eligibility |
-| :--- | :--- | :--- | :--- | :--- |
-| **Brawl** | `melee` + `melee` | Aggressive | 10 | At least one adjacent hero. |
-| **Charge** | `move` + `melee` | Aggressive | 8 *(11 if target HP ≤ 50%)* | No adjacent heroes, and a hero is reachable within charge range (≤ 3 steps). |
-| **Volley and advance** | `shoot` + `move` | Aggressive, Ranged | 6 (Bold) / 4 (Wary) | Has ranged weapon, bow not forgotten, no adjacent heroes, and at least one hero visible in line of sight. |
-| **Reposition and shoot** | `move` + `shoot` | Aggressive, Ranged | 6 (Bold) / 4 (Wary) | Has ranged weapon, bow not forgotten, and can reach a tile within 3 steps with line of sight to a hero. |
-| **Advance** | `move` + `move` | Aggressive | 5 | No adjacent heroes, no charge path available, and heroes are visible or pathfindable. |
-| **Fall back to cover** | `move_to_cover` + `hold` | Defensive | 4 | No adjacent heroes, no charge path, and at least one cover tile exists within 3 steps. |
-| **Ambush** | `hold` + `hold` | Defensive | 3 | No adjacent heroes, no charge path, and heroes are approaching a chokepoint or doorway. |
-| **Peek shot** | `shoot` + `move_to_cover` | Defensive, Ranged | 2 | Has ranged weapon, bow not forgotten, visible heroes present, no adjacent heroes, no charge path, and cover exists within 3 steps. |
-| **Kite** | `move_away` + `shoot` | Defensive, Ranged | 1.5 | Adjacent hero present, has ranged weapon, bow not forgotten, and can move away within 3 steps to a tile with line of sight. |
-| **Hit and run** | `melee` + `move_to_cover` | Defensive | 1 | Adjacent hero present, and valid cover exists within 3 steps. |
-| **Retreat** | `move_away` + `move_away` | Defensive | 1 | Monster HP ≤ 1, and alive heroes outnumber alive monsters. |
+| Behavior                 | Action Slots              | Tags               | Base Weight                 | Prerequisites / Eligibility                                                                                                        |
+| :----------------------- | :------------------------ | :----------------- | :-------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
+| **Brawl**                | `melee` + `melee`         | Aggressive         | 10                          | At least one adjacent hero.                                                                                                        |
+| **Charge**               | `move` + `melee`          | Aggressive         | 8 _(11 if target HP ≤ 50%)_ | No adjacent heroes, and a hero is reachable within charge range (≤ 3 steps).                                                       |
+| **Volley and advance**   | `shoot` + `move`          | Aggressive, Ranged | 6 (Bold) / 4 (Wary)         | Has ranged weapon, bow not forgotten, no adjacent heroes, and at least one hero visible in line of sight.                          |
+| **Reposition and shoot** | `move` + `shoot`          | Aggressive, Ranged | 6 (Bold) / 4 (Wary)         | Has ranged weapon, bow not forgotten, and can reach a tile within 3 steps with line of sight to a hero.                            |
+| **Advance**              | `move` + `move`           | Aggressive         | 5                           | No adjacent heroes, no charge path available, and heroes are visible or pathfindable.                                              |
+| **Fall back to cover**   | `move_to_cover` + `hold`  | Defensive          | 4                           | No adjacent heroes, no charge path, and at least one cover tile exists within 3 steps.                                             |
+| **Ambush**               | `hold` + `hold`           | Defensive          | 3                           | No adjacent heroes, no charge path, and heroes are approaching a chokepoint or doorway.                                            |
+| **Peek shot**            | `shoot` + `move_to_cover` | Defensive, Ranged  | 2                           | Has ranged weapon, bow not forgotten, visible heroes present, no adjacent heroes, no charge path, and cover exists within 3 steps. |
+| **Kite**                 | `move_away` + `shoot`     | Defensive, Ranged  | 1.5                         | Adjacent hero present, has ranged weapon, bow not forgotten, and can move away within 3 steps to a tile with line of sight.        |
+| **Hit and run**          | `melee` + `move_to_cover` | Defensive          | 1                           | Adjacent hero present, and valid cover exists within 3 steps.                                                                      |
+| **Retreat**              | `move_away` + `move_away` | Defensive          | 1                           | Monster HP ≤ 1, and alive heroes outnumber alive monsters.                                                                         |
 
 #### Trolls (`Troll`)
 
-| Behavior | Action Slots | Tags | Base Weight | Prerequisites / Eligibility |
-| :--- | :--- | :--- | :--- | :--- |
-| **Brawl** | `melee` + `melee` | Aggressive | 10 | At least one adjacent hero. |
-| **Charge** | `move` + `melee` | Aggressive | 8 *(11 if target HP ≤ 50%)* | No adjacent heroes, and a hero is reachable within charge range (≤ 3 steps). |
-| **Advance** | `move` + `move` | Aggressive | 6 | No adjacent heroes AND no charge path available within 3 steps. |
+| Behavior    | Action Slots      | Tags       | Base Weight                 | Prerequisites / Eligibility                                                  |
+| :---------- | :---------------- | :--------- | :-------------------------- | :--------------------------------------------------------------------------- |
+| **Brawl**   | `melee` + `melee` | Aggressive | 10                          | At least one adjacent hero.                                                  |
+| **Charge**  | `move` + `melee`  | Aggressive | 8 _(11 if target HP ≤ 50%)_ | No adjacent heroes, and a hero is reachable within charge range (≤ 3 steps). |
+| **Advance** | `move` + `move`   | Aggressive | 6                           | No adjacent heroes AND no charge path available within 3 steps.              |
 
 #### Dark Lords (`Yellow`, `Red`, `Green`, `Blue`)
 
-| Behavior | Action Slots | Tags | Base Weight | Prerequisites / Eligibility |
-| :--- | :--- | :--- | :--- | :--- |
-| **Spray** | `fire_spray` + `move_or_melee` | Aggressive | 8 + 2 × *(extra heroes hit)* | At least 1 hero is currently in the special attack area / line of fire. |
-| **Line up** | `move` + `fire_spray` | Aggressive | 6 | Can reach a tile within 3 steps that aligns one or more heroes in the special attack pattern. |
-| **Brawl** | `melee` + `melee` | Aggressive | 5 | At least one adjacent hero. |
-| **Advance** | `move` + `move` | Aggressive | 5 | No adjacent heroes, no hero in line of fire, and cannot align spray within 3 steps. |
+| Behavior    | Action Slots                   | Tags       | Base Weight                  | Prerequisites / Eligibility                                                                   |
+| :---------- | :----------------------------- | :--------- | :--------------------------- | :-------------------------------------------------------------------------------------------- |
+| **Spray**   | `fire_spray` + `move_or_melee` | Aggressive | 8 + 2 × _(extra heroes hit)_ | At least 1 hero is currently in the special attack area / line of fire.                       |
+| **Line up** | `move` + `fire_spray`          | Aggressive | 6                            | Can reach a tile within 3 steps that aligns one or more heroes in the special attack pattern. |
+| **Brawl**   | `melee` + `melee`              | Aggressive | 5                            | At least one adjacent hero.                                                                   |
+| **Advance** | `move` + `move`                | Aggressive | 5                            | No adjacent heroes, no hero in line of fire, and cannot align spray within 3 steps.           |
 
 #### Default / Fallback Behaviors
 
 Used for custom monsters that do not register dedicated behavior sets:
 
-| Behavior | Action Slots | Tags | Base Weight | Prerequisites / Eligibility |
-| :--- | :--- | :--- | :--- | :--- |
-| **Brawl** | `melee` + `melee` | Aggressive | 10 | At least one adjacent hero. |
-| **Volley** | `shoot` + `shoot` | Aggressive, Ranged | 8 | Has ranged weapon, bow not forgotten, and at least one hero visible in line of sight. |
-| **Advance** | `move` + `move` | Aggressive | 5 | Always eligible (fallback movement). |
+| Behavior    | Action Slots      | Tags               | Base Weight | Prerequisites / Eligibility                                                           |
+| :---------- | :---------------- | :----------------- | :---------- | :------------------------------------------------------------------------------------ |
+| **Brawl**   | `melee` + `melee` | Aggressive         | 10          | At least one adjacent hero.                                                           |
+| **Volley**  | `shoot` + `shoot` | Aggressive, Ranged | 8           | Has ranged weapon, bow not forgotten, and at least one hero visible in line of sight. |
+| **Advance** | `move` + `move`   | Aggressive         | 5           | Always eligible (fallback movement).                                                  |
 
 ---
 

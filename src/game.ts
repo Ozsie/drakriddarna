@@ -255,8 +255,15 @@ export const init = (
     reRender: true,
     drawEvents: true,
   };
+  if (selectedGameMaster?.initialState) {
+    state.gameMasterState = selectedGameMaster.initialState();
+  }
   applyStartingEquipment(state.heroes as Hero[], selectedGameMaster);
   resetLiveHeroes(state);
+  selectedGameMaster?.onGameInit?.(state);
+  if (state.currentActor) {
+    selectedGameMaster?.onHeroTurnStart?.(state.currentActor, state);
+  }
   if (browser) {
     localStorage.setItem('autosave', JSON.stringify(state));
   }
@@ -291,7 +298,10 @@ export const next = async (
     let nextIndex = currentIndex + 1;
     if (nextIndex >= liveHeroes(state).length) {
       state.currentActor = undefined;
+      const gm = getDifficulty(state);
+      gm.onHeroPhaseEnd?.(state);
       await monsterActions(state, monsterOptions);
+      gm.onMonsterPhaseEnd?.(state);
       nextIndex = 0;
       resetOnNext(state);
     }
@@ -314,7 +324,10 @@ export const next = async (
       nextIndex++;
       if (nextIndex >= liveHeroes(state).length) {
         state.currentActor = undefined;
+        const gm = getDifficulty(state);
+        gm.onHeroPhaseEnd?.(state);
         await monsterActions(state, monsterOptions);
+        gm.onMonsterPhaseEnd?.(state);
         nextIndex = 0;
         resetOnNext(state);
       }
@@ -332,6 +345,8 @@ export const next = async (
     );
     if (nextIndex === 0) {
       state.turnCount = (state.turnCount ?? 0) + 1;
+      const gm = getDifficulty(state);
+      gm.onRoundStart?.(state.turnCount, state);
     }
     const hasKilledAll = killAllMonstersAchieved(state);
     if (nextIndex === 0 && !hasKilledAll) {
@@ -358,6 +373,8 @@ export const next = async (
         state.currentActor.actions + state.roundActionsDelta,
       );
     }
+    const gm = getDifficulty(state);
+    gm.onHeroTurnStart?.(state.currentActor, state);
     addLog(state, 'logs.startedTurn', { name: i18n(state.currentActor.name) });
     doReRender(state);
   }
@@ -387,6 +404,8 @@ export const endAction = async (
 
 export const resetLevel = (currentState: GameState): GameState => {
   clearActorAnimations();
+  const gm = getDifficulty(currentState);
+  gm.onPartyDefeat?.(currentState);
   if (typeof localStorage !== 'undefined') {
     const loadedRawState = localStorage.getItem('autosave');
     if (loadedRawState) {
@@ -479,10 +498,15 @@ const checkWinConditions = (state: GameState) => {
       );
     }
   });
+  const previouslyBeaten = state.dungeon.beaten;
   state.dungeon.beaten = state.dungeon.winConditions
     .map((condition) => condition.fulfilled)
     .reduce((partial, fulfilled) => partial && fulfilled, true);
   if (state.dungeon.beaten) {
+    if (!previouslyBeaten) {
+      const gm = getDifficulty(state);
+      gm.onDungeonComplete?.(state);
+    }
     addLog(state, 'logs.allConditionsFulfilled');
     addLog(state, 'logs.clearedDungeon', { name: i18n(state.dungeon.name) });
     if (state.dungeon.nextDungeon?.name) {

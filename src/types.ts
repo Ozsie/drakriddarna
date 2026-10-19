@@ -19,6 +19,7 @@ export type GameState = {
   campaignId?: string;
   gameMasterId?: string;
   gameMaster?: GameMaster;
+  gameMasterState?: Record<string, unknown>;
   heroes: Actor[];
   dungeon: Dungeon;
   difficulty?: Difficulty;
@@ -713,14 +714,49 @@ export type GameMasterModifiers = {
   health: number;
 };
 
-export type GameMaster = {
-  id: string;
-  nameTranslationKey: string;
-  descriptionTranslationKey?: string;
-  modifiers: GameMasterModifiers;
-  monsterBehavior?: MonsterBehaviorDifficulty;
-  events?: EventDifficulty;
-  startingEquipment?: StartingEquipment;
+export type GameMasterRules = {
+  // Search Mechanics
+  modifySearchRoll?: (baseRoll: number, hero: Hero, state: GameState) => number;
+  onSearchFailed?: (hero: Hero, state: GameState) => void;
+
+  // Combat Resolution
+  modifyHeroDamageDealt?: (
+    damage: number,
+    attacker: Hero,
+    defender: Monster,
+    state: GameState,
+  ) => number;
+  modifyMonsterDamageDealt?: (
+    damage: number,
+    attacker: Monster,
+    defender: Hero,
+    state: GameState,
+  ) => number;
+  onHeroDowned?: (hero: Hero, state: GameState) => void;
 };
+
+export type GameMasterLifecycleHooks = {
+  onGameInit?: (state: GameState) => void;
+  onRoundStart?: (round: number, state: GameState) => void;
+  onHeroTurnStart?: (hero: Hero, state: GameState) => void;
+  onHeroPhaseEnd?: (state: GameState) => void;
+  onMonsterPhaseEnd?: (state: GameState) => void;
+  onPartyDefeat?: (state: GameState) => void;
+  onDungeonComplete?: (state: GameState) => void;
+};
+
+export type GameMaster<TState = Record<string, unknown>> =
+  GameMasterLifecycleHooks &
+    GameMasterRules & {
+      id: string;
+      nameTranslationKey: string;
+      descriptionTranslationKey?: string;
+      initialState?: () => TState;
+      modifiers: GameMasterModifiers;
+      monsterBehavior?: MonsterBehaviorDifficulty;
+      events?: EventDifficulty;
+      startingEquipment?: StartingEquipment;
+      rules?: GameMasterRules;
+    };
 
 export type Difficulty = GameMaster;

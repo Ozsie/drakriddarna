@@ -3,7 +3,9 @@ import type {
   DamageIndicator,
   Door,
   GameState,
+  Hero,
   IndicatorEffect,
+  Monster,
   Weapon,
 } from '../types';
 import { Colour, ItemType, Level } from '../types';
@@ -202,6 +204,26 @@ export const takeDamage = (
     addLog(state, 'logs.takeDamage.reRoll', { actor: i18n(source.name) });
     damage = Math.max(hits - (defense + defenseDifficultyModifier + shield), 0);
   }
+  const gm = getDifficulty(state);
+  if (isHeroSource && !isHeroTarget) {
+    const modifyHeroDmg =
+      gm.rules?.modifyHeroDamageDealt ?? gm.modifyHeroDamageDealt;
+    if (modifyHeroDmg) {
+      damage = Math.max(
+        0,
+        modifyHeroDmg(damage, source as Hero, target as Monster, state),
+      );
+    }
+  } else if (!isHeroSource && isHeroTarget) {
+    const modifyMonsterDmg =
+      gm.rules?.modifyMonsterDamageDealt ?? gm.modifyMonsterDamageDealt;
+    if (modifyMonsterDmg) {
+      damage = Math.max(
+        0,
+        modifyMonsterDmg(damage, source as Monster, target as Hero, state),
+      );
+    }
+  }
   target.health -= damage;
   const isRanged =
     ranged &&
@@ -272,6 +294,10 @@ export const takeDamage = (
     });
     target.health = 0;
     target.level = Level.APPRENTICE;
+    if (isHeroTarget) {
+      const onHeroDowned = gm.rules?.onHeroDowned ?? gm.onHeroDowned;
+      onHeroDowned?.(target as Hero, state);
+    }
     soundEffectManager.playActorDeath(target);
   } else {
     if (damage > 0) {
