@@ -26,8 +26,7 @@ import {
 import { defineDungeon, parseTileMap } from '../dungeon/dungeonParser';
 import { validateLayout } from '../dungeon/dungeonValidator';
 import { interact, newHero, search } from '../hero/HeroLogic';
-import { resetRng, setRng } from '../core';
-import { DifficultLevels } from '../core/DifficultLevels';
+import { resetRng, setRng, getGameMaster } from '../core';
 
 const defaultWeapon: Weapon = {
   name: 'Sword',
@@ -189,7 +188,7 @@ describe('InteractableLogic', () => {
     it('equips newly created ally with difficulty-based starting equipment', () => {
       const hero = createTestHero(1, 1);
       const state = createTestState(hero);
-      state.difficulty = DifficultLevels.find((d) => d.id === 'easy');
+      state.difficulty = getGameMaster('easy');
 
       const interactable = {
         position: { x: 2, y: 2 },

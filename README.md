@@ -8,6 +8,10 @@
 
 See [Campaign Readme](src/campaigns/README.md)
 
+## Creating Game Masters
+
+See [Game Master Readme](src/gameMasters/README.md)
+
 ## Rules and playability adaptions
 
 See [Rules Readme](./RULES.md)
@@ -24,11 +28,11 @@ See [Rules Readme](./RULES.md)
   - [ ] Sprites for actors
   - [ ] Tileset for dungeons
   - [ ] Sprites for items etc
-- [X] Between dungeons screen (level up, trade, more?)
-- [X] Trade Items?
 - [ ] Alvkonungens Borg -  [Official Dungeon and Heroes](https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg)
   - [ ] Edge based walls
 - [ ] Level editor
+- [X] Between dungeons screen (level up, trade, more?)
+- [X] Trade Items?
 - [X] Reset caved in corridor
 - [X] Doors blocking monsters
 - [X] Diary on mobile

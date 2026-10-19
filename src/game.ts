@@ -34,8 +34,8 @@ import { shuffle } from './core';
 import {
   getEffectiveMaxMovement,
   getDifficulty,
-  DifficultLevels,
-  DEFAULT_DIFFICULTY_ID,
+  getGameMaster,
+  DEFAULT_GAME_MASTER_ID,
 } from './core';
 import { clearActorAnimations } from './core';
 import { setNextDungeonTransitionProvider } from './interactables/InteractableLogic';
@@ -84,6 +84,10 @@ export {
   DifficultLevels,
   DEFAULT_DIFFICULTY_ID,
   getDifficulty,
+  gameMasters,
+  getGameMaster,
+  DEFAULT_GAME_MASTER_ID,
+  GAME_MASTER_ALIASES,
 } from './core/DifficultLevels';
 export {
   recordActorStep,
@@ -130,10 +134,23 @@ export const loadState = (newState: GameState) => {
   newState.currentActor = newState.heroes.find(
     (hero) => hero.name === newState.currentActor?.name,
   ) as Hero | undefined;
-  if (!newState.difficulty) {
-    newState.difficulty = DifficultLevels.find(
-      (level) => level.id === DEFAULT_DIFFICULTY_ID,
-    );
+  if (!newState.gameMaster && !newState.difficulty && !newState.gameMasterId) {
+    const defaultGM = getGameMaster(DEFAULT_GAME_MASTER_ID);
+    newState.gameMaster = defaultGM;
+    newState.difficulty = defaultGM;
+    newState.gameMasterId = defaultGM.id;
+  } else if (!newState.gameMaster && newState.difficulty) {
+    const resolvedGM = getGameMaster(newState.difficulty.id);
+    newState.gameMaster = newState.difficulty.modifiers
+      ? newState.difficulty
+      : resolvedGM;
+    newState.gameMasterId = newState.gameMaster.id;
+  } else if (!newState.gameMaster && newState.gameMasterId) {
+    newState.gameMaster = getGameMaster(newState.gameMasterId);
+    newState.difficulty = newState.gameMaster;
+  } else if (newState.gameMaster) {
+    newState.difficulty = newState.gameMaster;
+    newState.gameMasterId = newState.gameMaster.id;
   }
   // Older saves may not have a campaignId at all, and any save could in
   // theory reference a campaign that no longer exists (e.g. removed
@@ -168,19 +185,38 @@ export const load = (currentState: GameState): GameState => {
 
 export const init = (
   campaignId: string = DEFAULT_CAMPAIGN_ID,
-  difficultyId: string = DEFAULT_DIFFICULTY_ID,
+  gameMasterId: string = DEFAULT_GAME_MASTER_ID,
 ): GameState => {
   const campaign = structuredClone(getCampaign(campaignId));
-  const selectedDifficulty =
-    DifficultLevels.find((level) => level.id === difficultyId) ??
-    DifficultLevels.find((level) => level.id === DEFAULT_DIFFICULTY_ID) ??
-    DifficultLevels[1];
+  const selectedGameMaster = getGameMaster(gameMasterId);
+
+  let dungeonEvents = getEventsForDungeon(
+    campaign.dungeons[0],
+    campaign.eventDeck,
+  );
+  if (selectedGameMaster?.events?.modifyEventDeck) {
+    // Temp partial state for modifier hook if needed
+    const partialState = {
+      campaignId: campaign.id,
+      gameMasterId: selectedGameMaster.id,
+      gameMaster: selectedGameMaster,
+      heroes: campaign.heroes,
+      dungeon: campaign.dungeons[0],
+      difficulty: selectedGameMaster,
+    } as GameState;
+    dungeonEvents = selectedGameMaster.events.modifyEventDeck(
+      dungeonEvents,
+      partialState,
+    );
+  }
 
   const state: GameState = {
     campaignId: campaign.id,
+    gameMasterId: selectedGameMaster.id,
+    gameMaster: selectedGameMaster,
     heroes: campaign.heroes,
     dungeon: campaign.dungeons[0],
-    difficulty: selectedDifficulty,
+    difficulty: selectedGameMaster,
     currentActor: campaign.heroes[0] as Hero | undefined,
     actionLog: [
       {
@@ -215,11 +251,11 @@ export const init = (
       cellSize: 48,
       debug: false,
     },
-    eventDeck: getEventsForDungeon(campaign.dungeons[0], campaign.eventDeck),
+    eventDeck: dungeonEvents,
     reRender: true,
     drawEvents: true,
   };
-  applyStartingEquipment(state.heroes as Hero[], selectedDifficulty);
+  applyStartingEquipment(state.heroes as Hero[], selectedGameMaster);
   resetLiveHeroes(state);
   if (browser) {
     localStorage.setItem('autosave', JSON.stringify(state));
@@ -260,6 +296,7 @@ export const next = async (
       resetOnNext(state);
     }
     if (liveHeroes(state).length === 0) {
+      state.currentActor = undefined;
       return resetLevel(state);
     }
     let guard = 0;
@@ -282,6 +319,10 @@ export const next = async (
         resetOnNext(state);
       }
       guard++;
+    }
+    if (liveHeroes(state).length === 0 || !liveHeroes(state)[nextIndex]) {
+      state.currentActor = undefined;
+      return resetLevel(state);
     }
     state.currentActor = liveHeroes(state)[nextIndex];
     state.currentActor.actions = 2;

@@ -24,7 +24,7 @@ import {
   resetLiveHeroes,
   replaceDeadHeroes,
 } from './HeroLogic';
-import { DifficultLevels } from '../core';
+import { getGameMaster } from '../core';
 import { weapons } from '../items/weapons';
 import { shields } from '../items/shields';
 import { armour } from '../items/armours';
@@ -389,7 +389,7 @@ describe('newHero and applyStartingEquipment', () => {
   });
 
   it('creates hero with starting equipment configured for easy difficulty', () => {
-    const easyDiff = DifficultLevels.find((d) => d.id === 'easy');
+    const easyDiff = getGameMaster('easy');
     expect(easyDiff).toBeDefined();
 
     const hero = newHero('Thor', Colour.Yellow, easyDiff);
@@ -484,7 +484,7 @@ describe('newHero and applyStartingEquipment', () => {
   });
 
   it('creates hero with health adjusted by difficulty modifier', () => {
-    const hardDiff = DifficultLevels.find((d) => d.id === 'hard');
+    const hardDiff = getGameMaster('hard');
     expect(hardDiff).toBeDefined();
 
     const hero = newHero('Thor', Colour.Yellow, hardDiff);
@@ -499,7 +499,7 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
     const hero = createTestHero({ maxHealth: 7, health: 1 });
     const monster = createTestMonster();
     const state = createTestState(hero, monster);
-    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+    state.difficulty = getGameMaster('hard');
 
     resetLiveHeroes(state);
 
@@ -542,7 +542,7 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
     const hero = createTestHero({ maxHealth: 7, health: 0 });
     const monster = createTestMonster();
     const state = createTestState(hero, monster);
-    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+    state.difficulty = getGameMaster('hard');
 
     replaceDeadHeroes(state);
 

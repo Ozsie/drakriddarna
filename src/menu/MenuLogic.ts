@@ -1,4 +1,10 @@
-import { addLog, DifficultLevels, getDifficulty, i18n } from '../core';
+import {
+  addLog,
+  DEFAULT_GAME_MASTER_ID,
+  DifficultLevels,
+  getDifficulty,
+  i18n,
+} from '../core';
 import type { GameState, TurnEvent } from '../types';
 import { get } from 'svelte/store';
 import {
@@ -23,7 +29,7 @@ import {
   shuffleEventDeck,
 } from '../events/EventsLogic';
 import { resetLiveHeroes } from '../hero/HeroLogic';
-import { campaigns } from '../campaigns';
+import { campaigns, DEFAULT_CAMPAIGN_ID } from '../campaigns';
 
 export interface CanvasMenuItem {
   id: string;
@@ -36,6 +42,7 @@ export interface CanvasMenuItem {
 export type MenuView =
   | 'main'
   | 'campaign'
+  | 'gameMaster'
   | 'load'
   | 'event'
   | 'debug'
@@ -45,7 +52,16 @@ export interface MenuCallbacks {
   setView?: (view: MenuView) => void;
   closeMenu?: () => void;
   setState?: (state: GameState) => void;
+  setSelectedCampaign?: (campaignId: string) => void;
 }
+
+let selectedCampaignId: string = DEFAULT_CAMPAIGN_ID;
+
+export const setSelectedCampaign = (campaignId: string): void => {
+  selectedCampaignId = campaignId;
+};
+
+export const getSelectedCampaign = (): string => selectedCampaignId;
 
 export const getDebugMenuLabel = (
   activeState?: GameState | null,
@@ -219,10 +235,10 @@ export const getCampaignMenuItems = (
     id: `campaign_${campaign.id}`,
     debugOnly: false,
     label: i18n(campaign.name),
-    onClick: (state) => {
-      onNewGame(campaign.id, state, callbacks?.setState);
-      callbacks?.closeMenu?.();
-      callbacks?.setView?.('main');
+    onClick: () => {
+      setSelectedCampaign(campaign.id);
+      callbacks?.setSelectedCampaign?.(campaign.id);
+      callbacks?.setView?.('gameMaster');
     },
   }));
 
@@ -232,6 +248,35 @@ export const getCampaignMenuItems = (
     label: i18n('content.menu.loadGame.buttons.back'),
     onClick: () => {
       callbacks?.setView?.('main');
+    },
+  });
+
+  return items;
+};
+
+export const getGameMasterMenuItems = (
+  activeState: GameState,
+  callbacks?: MenuCallbacks,
+  campaignId?: string,
+): CanvasMenuItem[] => {
+  const items: CanvasMenuItem[] = DifficultLevels.map((gm) => ({
+    id: `gameMaster_${gm.id}`,
+    debugOnly: false,
+    label: i18n(gm.nameTranslationKey ?? gm.id),
+    onClick: (state) => {
+      const targetCampaign = campaignId ?? getSelectedCampaign();
+      onNewGame(targetCampaign, gm.id, state, callbacks?.setState);
+      callbacks?.closeMenu?.();
+      callbacks?.setView?.('main');
+    },
+  }));
+
+  items.push({
+    id: 'gameMaster_back',
+    debugOnly: false,
+    label: i18n('content.menu.loadGame.buttons.back'),
+    onClick: () => {
+      callbacks?.setView?.('campaign');
     },
   });
 
@@ -389,6 +434,9 @@ export const getMenuItemsForView = (
     case 'campaign':
       items = getCampaignMenuItems(activeState, callbacks);
       break;
+    case 'gameMaster':
+      items = getGameMasterMenuItems(activeState, callbacks);
+      break;
     case 'load':
       items = getSavedGameMenuItems(activeState, callbacks);
       break;
@@ -418,6 +466,8 @@ export const getMenuHeader = (view: MenuView): string => {
     }
     case 'campaign':
       return i18n('content.menu.selectCampaign.header');
+    case 'gameMaster':
+      return i18n('content.menu.selectGameMaster.header');
     case 'load':
       return i18n('content.menu.loadGame.header');
     case 'event':
@@ -428,16 +478,17 @@ export const getMenuHeader = (view: MenuView): string => {
 };
 
 export const onNewGame = (
-  campaignId: string,
+  campaignId: string = DEFAULT_CAMPAIGN_ID,
+  gameMasterId: string = DEFAULT_GAME_MASTER_ID,
   activeState?: GameState,
   setState?: (state: GameState) => void,
 ) => {
   if (setState) {
-    const newState = init(campaignId);
+    const newState = init(campaignId, gameMasterId);
     setState(newState);
     gameStateStore.set(newState);
   } else {
-    initGame(campaignId);
+    initGame(campaignId, gameMasterId);
   }
 };
 
@@ -559,6 +610,8 @@ export const onClickDifficulty = (activeState: GameState) => {
   const nextDifficulty = DifficultLevels[nextIndex];
   if (activeState) {
     activeState.difficulty = nextDifficulty;
+    activeState.gameMaster = nextDifficulty;
+    activeState.gameMasterId = nextDifficulty.id;
     addLog(activeState, nextDifficulty.descriptionTranslationKey ?? '');
     gameStateStore.set(activeState);
   } else {
@@ -569,7 +622,7 @@ export const onClickDifficulty = (activeState: GameState) => {
 export const getDifficultyMenuLabel = (activeState: GameState) => {
   const difficulty = getDifficulty(activeState);
   return (
-    i18n('content.menu.mainMenu.buttons.difficulty') +
+    i18n('content.menu.mainMenu.buttons.gameMaster') +
     ' ' +
     i18n(difficulty?.nameTranslationKey)
   );

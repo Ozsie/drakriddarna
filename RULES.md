@@ -30,9 +30,10 @@ Welcome to **Drakriddarna** (Dragonfire), a tactical turn-based dungeon-crawling
    - [Weapons](#weapons)
    - [Armour & Shields](#armour--shields)
    - [Magic Items & Consumables](#magic-items--consumables)
-6. [Difficulty Levels](#difficulty-levels)
+6. [Game Masters & Difficulty Settings](#game-masters--difficulty-settings)
+   - [Pluggable Game Master System](#pluggable-game-master-system)
    - [Comparison Overview](#comparison-overview)
-   - [Key Mechanics](#key-mechanics)
+   - [Key Mechanics & Distinct Personas](#key-mechanics--distinct-personas)
 7. [Monster AI: Behavior Selection & Targeting](#monster-ai-behavior-selection--targeting)
    - [1. Behavior Selection System](#1-behavior-selection-system)
    - [2. Predefined Monster Behaviors](#2-predefined-monster-behaviors)
@@ -261,39 +262,53 @@ Using the **Search** action (`F`) scans the current room/corridor for concealed 
 
 ---
 
-## Difficulty Levels
+## Game Masters & Difficulty Settings
 
-Drakriddarna supports three difficulty settings (`Easy`, `Normal`, and `Hard`) that influence hero attributes, starting equipment, monster behavior, and event pacing.
+Drakriddarna uses a pluggable **Game Master (GM)** system that unifies difficulty levels, hero modifiers, starting equipment, AI director pacing, monster behavior weights, and event deck manipulation. After choosing a campaign, players select a Game Master to guide their adventure.
+
+### Pluggable Game Master System
+
+Rather than relying purely on static stat adjustments, Game Masters provide distinct tabletop narrative styles and AI personalities. Drakriddarna ships with three primary Game Masters representing classic difficulty tiers:
+
+- **Story Teller** (`storyTeller` / *Easy*): A forgiving narrator focused on adventure flow, offering generous hero modifiers, bonus search capabilities, starting shields, high archer distraction rates, and responsive AI easing when heroes are wounded.
+- **Tactician** (`tactician` / *Normal / Default*): A balanced, tactical Game Master offering fair, classic tabletop pacing without artificial buffs or penalties.
+- **Brutal Overlord** (`brutalOverlord` / *Hard*): A ruthless dungeon master who suppresses hero health and movement, spawns monsters in close proximity, aggressively pushes monster behaviors, and grants no quarter.
 
 ### Comparison Overview
 
-| Setting | Attack Mod | Defense Mod | Movement Mod | Search Mod | Health Mod | Starting Equipment | Bow Forgotten Chance | Min Spawn Distance | Earliest Spawn Round | Low-Health Troll Safeguard |
+| Game Master | Difficulty Equivalent | Attack Mod | Defense Mod | Movement Mod | Search Mod | Health Mod | Starting Equipment | Bow Forgotten Chance | Min Spawn Distance | Earliest Spawn Round | Low-Health Troll Safeguard |
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- | :---: | :---: | :---: | :---: |
-| **Easy** | +1 | 0 | +1 | +2 | 0 | Sword + Small Shield | 25% | 4 tiles | Round 4 | Enabled (Party HP < 50%) |
-| **Normal** *(Default)* | 0 | 0 | 0 | 0 | 0 | Sword | 15% | 3 tiles | Round 3 | Enabled (Party HP < 50%) |
-| **Hard** | 0 | 0 | -1 | 0 | -1 | Sword | 0% | 1 tile | Round 2 | Disabled |
+| **Story Teller** | Easy | +1 | 0 | +1 | +2 | 0 | Sword + Small Shield | 25% | 4 tiles | Round 4 | Enabled (Party HP < 50%) |
+| **Tactician** *(Default)* | Normal | 0 | 0 | 0 | 0 | 0 | Sword | 15% | 3 tiles | Round 3 | Enabled (Party HP < 50%) |
+| **Brutal Overlord** | Hard | 0 | 0 | -1 | 0 | -1 | Sword | 0% | 1 tile | Round 2 | Disabled |
 
 ---
 
-### Key Mechanics
+### Key Mechanics & Distinct Personas
 
 1. **Hero Modifiers**:
-   - **Easy**: Heroes gain +1 Attack dice, +1 Movement tile per turn, and +2 bonus to Search rolls. Starting HP is 7.
-   - **Normal**: Standard unmodified baseline (7 Max HP, 3 Movement tiles, 2 Actions).
-   - **Hard**: Heroes suffer -1 Max Health (6 Max HP) and -1 Movement tile per turn (2 Movement tiles).
+   - **Story Teller**: Heroes gain +1 Attack dice, +1 Movement tile per turn, and +2 bonus to Search rolls. Starting HP is 7.
+   - **Tactician**: Standard unmodified baseline (7 Max HP, 3 Movement tiles, 2 Actions).
+   - **Brutal Overlord**: Heroes suffer -1 Max Health (6 Max HP) and -1 Movement tile per turn (2 Movement tiles).
 
 2. **Starting Equipment**:
-   - On **Easy**, each hero begins with a basic **Sword** and an additional **Small Shield** (1 defense die).
-   - On **Normal** and **Hard**, heroes begin with a standard **Sword** only.
+   - Under the **Story Teller**, each hero begins with a basic **Sword** and an additional **Small Shield** (1 defense die).
+   - Under the **Tactician** and **Brutal Overlord**, heroes begin with a standard **Sword** only.
    - Starting equipment configurations also automatically apply to newly recruited heroes and allies added during gameplay.
 
-3. **Monster Behavior**:
-   - Archer monsters evaluate a random chance each turn to forget their ranged weapon, forcing them to engage in melee or advance tactics (25% on Easy, 15% on Normal, 0% on Hard).
+3. **AI Director & Dynamic Pacing**:
+   - **Story Teller**: Highly merciful. Switches to **EASE** mode whenever any hero is down or party total HP is below 50%; only enters **PUSH** mode when party HP exceeds 85% and at most 1 monster remains.
+   - **Tactician**: Balanced pacing. Switches to **EASE** mode if a hero is dead or party HP is below 45%; enters **PUSH** mode when party HP exceeds 80% and at most 1 monster remains.
+   - **Brutal Overlord**: Relentless. Only eases off (**EASE**) if a hero is dead *and* party HP is critically low (< 25%); pushes aggressively (**PUSH**) whenever party HP is above 65% or 2 or fewer monsters remain. In addition, aggressive monster behaviors receive a passive **+25% bonus weight** (`baseWeight * 1.25`).
 
-4. **Event & Monster Spawn Balancing**:
-   - **Minimum Distance**: Newly spawned monsters from events are placed at a safe buffer distance from live heroes (4 tiles on Easy, 3 on Normal, 1 on Hard).
-   - **Early-Round Delay**: Turn events spawning monsters are suppressed in early rounds (rounds 1–3 skipped on Easy, rounds 1–2 on Normal, round 1 on Hard).
-   - **Troll Safeguard**: The `The Hungry Troll` spawn event is skipped if the party's total combined health is below 50% on Easy and Normal.
+4. **Equipment Quirks & Archer Accuracy**:
+   - Archer monsters evaluate a random chance each turn to forget their ranged weapon, forcing them into melee or advance tactics: **25%** under the Story Teller, **15%** under the Tactician, and **0%** under the Brutal Overlord (flawless archer discipline).
+
+5. **Event & Monster Spawn Balancing**:
+   - **Minimum Distance**: Newly spawned monsters from events are placed at a safe buffer distance from live heroes (4 tiles for Story Teller, 3 for Tactician, 1 for Brutal Overlord).
+   - **Early-Round Delay**: Turn events spawning monsters are suppressed in early rounds (rounds 1–3 skipped for Story Teller, rounds 1–2 for Tactician, round 1 for Brutal Overlord).
+   - **Troll Safeguard**: The `The Hungry Troll` spawn event is skipped if the party's total combined health is below 50% for Story Teller and Tactician.
+   - **Pluggable Event Hooks**: Game Masters can also supply custom deck manipulation (`modifyEventDeck`) and event draw interceptors (`onEventDrawn`).
 
 ---
 

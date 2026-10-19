@@ -1,5 +1,5 @@
 import type { Difficulty, GameState } from '../../types';
-import { DifficultLevels, getDifficulty } from '../../core';
+import { getDifficulty, getGameMaster } from '../../core';
 import type {
   BehaviorContext,
   DirectorState,
@@ -11,7 +11,25 @@ export const getDirectorState = (
   hasDeadHero: boolean,
   partyHpPercentage: number,
   aliveMonsterCount: number,
+  difficultyOrState?: Difficulty | GameState | string,
 ): DirectorState => {
+  let difficulty: Difficulty | undefined;
+  if (typeof difficultyOrState === 'string') {
+    difficulty = getGameMaster(difficultyOrState);
+  } else if (difficultyOrState && 'modifiers' in difficultyOrState) {
+    difficulty = difficultyOrState;
+  } else if (difficultyOrState && 'heroes' in difficultyOrState) {
+    difficulty = getDifficulty(difficultyOrState);
+  }
+
+  if (difficulty?.monsterBehavior?.getDirectorState) {
+    return difficulty.monsterBehavior.getDirectorState({
+      hasDeadHero,
+      partyHpPercentage,
+      aliveMonsterCount,
+    });
+  }
+
   if (hasDeadHero || partyHpPercentage < 0.45) {
     return 'EASE';
   }
@@ -26,7 +44,7 @@ export const rollBowForgotten = (
 ): boolean => {
   let difficulty: Difficulty | undefined;
   if (typeof difficultyOrState === 'string') {
-    difficulty = DifficultLevels.find((d) => d.id === difficultyOrState);
+    difficulty = getGameMaster(difficultyOrState);
   } else if (difficultyOrState && 'modifiers' in difficultyOrState) {
     difficulty = difficultyOrState;
   } else if (difficultyOrState && 'heroes' in difficultyOrState) {
@@ -43,7 +61,18 @@ export const calculateBehaviorWeight = (
   behavior: MonsterBehavior,
   context: BehaviorContext,
 ): number => {
-  let weight = behavior.getBaseWeight(context);
+  let baseWeight = behavior.getBaseWeight(context);
+
+  const difficulty = getDifficulty(context.state);
+  if (difficulty?.monsterBehavior?.calculateBehaviorWeight) {
+    baseWeight = difficulty.monsterBehavior.calculateBehaviorWeight(
+      behavior,
+      context,
+      baseWeight,
+    );
+  }
+
+  let weight = baseWeight;
   const isAggressive = behavior.tags.includes('aggressive');
   const isDefensive = behavior.tags.includes('defensive');
 

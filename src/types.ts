@@ -17,6 +17,8 @@ export interface GameSettings {
 
 export type GameState = {
   campaignId?: string;
+  gameMasterId?: string;
+  gameMaster?: GameMaster;
   heroes: Actor[];
   dungeon: Dungeon;
   difficulty?: Difficulty;
@@ -673,7 +675,17 @@ export function assertNever(x: never, message = 'Unexpected object'): never {
 }
 
 export type MonsterBehaviorDifficulty = {
-  bowForgottenChance: number;
+  bowForgottenChance?: number;
+  getDirectorState?: (context: {
+    hasDeadHero: boolean;
+    partyHpPercentage: number;
+    aliveMonsterCount: number;
+  }) => import('./monsters/behavior/types').DirectorState;
+  calculateBehaviorWeight?: (
+    behavior: import('./monsters/behavior/types').MonsterBehavior,
+    context: import('./monsters/behavior/types').BehaviorContext,
+    baseWeight: number,
+  ) => number;
 };
 
 export type EventDifficulty = {
@@ -682,6 +694,8 @@ export type EventDifficulty = {
   earliestMonsterRound?: number;
   earliestRound?: number;
   skipHungryTrollBelowHalfHealth?: boolean;
+  modifyEventDeck?: (deck: TurnEvent[], state: GameState) => TurnEvent[];
+  onEventDrawn?: (event: TurnEvent, state: GameState) => TurnEvent | null;
 };
 
 export type StartingEquipment = {
@@ -691,18 +705,22 @@ export type StartingEquipment = {
   inventory?: Item[];
 };
 
-export type Difficulty = {
+export type GameMasterModifiers = {
+  attack: number;
+  defense: number;
+  movement: number;
+  search: number;
+  health: number;
+};
+
+export type GameMaster = {
   id: string;
   nameTranslationKey: string;
   descriptionTranslationKey?: string;
-  modifiers: {
-    attack: number;
-    defense: number;
-    movement: number;
-    search: number;
-    health: number;
-  };
+  modifiers: GameMasterModifiers;
   monsterBehavior?: MonsterBehaviorDifficulty;
   events?: EventDifficulty;
   startingEquipment?: StartingEquipment;
 };
+
+export type Difficulty = GameMaster;

@@ -173,6 +173,7 @@ export const monsterActions = async (
       hasDeadHero,
       partyHpPercentage,
       aliveMonsterCount,
+      state,
     );
 
     const passableGrid = createPassableGrid(state);

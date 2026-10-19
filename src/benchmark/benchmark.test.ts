@@ -2,14 +2,14 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { loadTranslations } from '$lib/translations';
 import {
-  runDifficultyBenchmark,
+  runGameMasterBenchmark,
   runSingleGame,
   formatBenchmarkReport,
 } from './benchmark';
 import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
 import { e2m1 } from '../campaigns/earthHour/dungeons/e2m1';
 
-describe('e1m0 Difficulty & Playability Benchmark', () => {
+describe('e1m0 Game Master & Playability Benchmark', () => {
   beforeAll(async () => {
     try {
       await loadTranslations('en');
@@ -21,7 +21,7 @@ describe('e1m0 Difficulty & Playability Benchmark', () => {
   it('runs a single game of e1m0 successfully', async () => {
     const result = await runSingleGame({
       dungeon: e1m0,
-      difficultyId: 'easy',
+      gameMasterId: 'storyTeller',
       seed: 42,
       maxTurns: 100,
     });
@@ -30,53 +30,52 @@ describe('e1m0 Difficulty & Playability Benchmark', () => {
     expect(result.turns).toBeGreaterThan(0);
   });
 
-  it('evaluates e1m0 playability across easy, normal, and hard difficulties', async () => {
-    const runsPerDifficulty = 50;
+  it('evaluates e1m0 playability across storyTeller, tactician, and brutalOverlord game masters', async () => {
+    const runsPerGameMaster = 100;
 
-    const easySummary = await runDifficultyBenchmark({
+    const storyTellerSummary = await runGameMasterBenchmark({
       dungeon: e1m0,
-      difficultyId: 'easy',
-      runs: runsPerDifficulty,
+      gameMasterId: 'storyTeller',
+      runs: runsPerGameMaster,
       startSeed: 100,
       maxTurns: 100,
     });
 
-    const normalSummary = await runDifficultyBenchmark({
+    const tacticianSummary = await runGameMasterBenchmark({
       dungeon: e1m0,
-      difficultyId: 'normal',
-      runs: runsPerDifficulty,
+      gameMasterId: 'tactician',
+      runs: runsPerGameMaster,
       startSeed: 100,
       maxTurns: 100,
     });
 
-    const hardSummary = await runDifficultyBenchmark({
+    const brutalOverlordSummary = await runGameMasterBenchmark({
       dungeon: e1m0,
-      difficultyId: 'hard',
-      runs: runsPerDifficulty,
+      gameMasterId: 'brutalOverlord',
+      runs: runsPerGameMaster,
       startSeed: 100,
       maxTurns: 100,
     });
 
     const report = formatBenchmarkReport(
-      [easySummary, normalSummary, hardSummary],
+      [storyTellerSummary, tacticianSummary, brutalOverlordSummary],
       'Ice Dragon Treasure - e1m0 (Troll Cave) Benchmark',
     );
 
     // eslint-disable-next-line no-console
     console.log('\n' + report + '\n');
 
-    expect(easySummary.totalRuns).toBe(runsPerDifficulty);
-    expect(normalSummary.totalRuns).toBe(runsPerDifficulty);
-    expect(hardSummary.totalRuns).toBe(runsPerDifficulty);
+    expect(storyTellerSummary.totalRuns).toBe(runsPerGameMaster);
+    expect(tacticianSummary.totalRuns).toBe(runsPerGameMaster);
+    expect(brutalOverlordSummary.totalRuns).toBe(runsPerGameMaster);
 
-    // Easy should generally have higher or equal win rate / surviving health than hard
-    expect(easySummary.winRate).toBeGreaterThanOrEqual(0);
-    expect(normalSummary.winRate).toBeGreaterThanOrEqual(0);
-    expect(hardSummary.winRate).toBeGreaterThanOrEqual(0);
+    expect(storyTellerSummary.winRate).toBeGreaterThanOrEqual(0);
+    expect(tacticianSummary.winRate).toBeGreaterThanOrEqual(0);
+    expect(brutalOverlordSummary.winRate).toBeGreaterThanOrEqual(0);
   });
 });
 
-describe('e1m1 Difficulty & Playability Benchmark', () => {
+describe('e1m1 Game Master & Playability Benchmark', () => {
   beforeAll(async () => {
     try {
       await loadTranslations('en');
@@ -88,7 +87,7 @@ describe('e1m1 Difficulty & Playability Benchmark', () => {
   it('runs a single game of e1m1 successfully', async () => {
     const result = await runSingleGame({
       dungeon: e1m1,
-      difficultyId: 'easy',
+      gameMasterId: 'storyTeller',
       seed: 42,
       maxTurns: 100,
     });
@@ -97,53 +96,52 @@ describe('e1m1 Difficulty & Playability Benchmark', () => {
     expect(result.turns).toBeGreaterThan(0);
   });
 
-  it('evaluates e1m1 playability across easy, normal, and hard difficulties', async () => {
-    const runsPerDifficulty = 50;
+  it('evaluates e1m1 playability across storyTeller, tactician, and brutalOverlord game masters', async () => {
+    const runsPerGameMaster = 100;
 
-    const easySummary = await runDifficultyBenchmark({
+    const storyTellerSummary = await runGameMasterBenchmark({
       dungeon: e1m1,
-      difficultyId: 'easy',
-      runs: runsPerDifficulty,
+      gameMasterId: 'storyTeller',
+      runs: runsPerGameMaster,
       startSeed: 100,
       maxTurns: 100,
     });
 
-    const normalSummary = await runDifficultyBenchmark({
+    const tacticianSummary = await runGameMasterBenchmark({
       dungeon: e1m1,
-      difficultyId: 'normal',
-      runs: runsPerDifficulty,
+      gameMasterId: 'tactician',
+      runs: runsPerGameMaster,
       startSeed: 100,
       maxTurns: 100,
     });
 
-    const hardSummary = await runDifficultyBenchmark({
+    const brutalOverlordSummary = await runGameMasterBenchmark({
       dungeon: e1m1,
-      difficultyId: 'hard',
-      runs: runsPerDifficulty,
+      gameMasterId: 'brutalOverlord',
+      runs: runsPerGameMaster,
       startSeed: 100,
       maxTurns: 100,
     });
 
     const report = formatBenchmarkReport(
-      [easySummary, normalSummary, hardSummary],
+      [storyTellerSummary, tacticianSummary, brutalOverlordSummary],
       'Ice Dragon Treasure - e1m1 (The Three Gates of Power) Benchmark',
     );
 
     // eslint-disable-next-line no-console
     console.log('\n' + report + '\n');
 
-    expect(easySummary.totalRuns).toBe(runsPerDifficulty);
-    expect(normalSummary.totalRuns).toBe(runsPerDifficulty);
-    expect(hardSummary.totalRuns).toBe(runsPerDifficulty);
+    expect(storyTellerSummary.totalRuns).toBe(runsPerGameMaster);
+    expect(tacticianSummary.totalRuns).toBe(runsPerGameMaster);
+    expect(brutalOverlordSummary.totalRuns).toBe(runsPerGameMaster);
 
-    // Easy should generally have higher or equal win rate / surviving health than hard
-    expect(easySummary.winRate).toBeGreaterThanOrEqual(0);
-    expect(normalSummary.winRate).toBeGreaterThanOrEqual(0);
-    expect(hardSummary.winRate).toBeGreaterThanOrEqual(0);
+    expect(storyTellerSummary.winRate).toBeGreaterThanOrEqual(0);
+    expect(tacticianSummary.winRate).toBeGreaterThanOrEqual(0);
+    expect(brutalOverlordSummary.winRate).toBeGreaterThanOrEqual(0);
   });
 });
 
-describe('e2m1 Difficulty & Playability Benchmark', () => {
+describe('e2m1 Game Master & Playability Benchmark', () => {
   beforeAll(async () => {
     try {
       await loadTranslations('en');
@@ -155,7 +153,7 @@ describe('e2m1 Difficulty & Playability Benchmark', () => {
   it('runs a single game of e2m1 successfully', async () => {
     const result = await runSingleGame({
       dungeon: e2m1,
-      difficultyId: 'easy',
+      gameMasterId: 'storyTeller',
       seed: 42,
       maxTurns: 100,
     });
@@ -164,48 +162,47 @@ describe('e2m1 Difficulty & Playability Benchmark', () => {
     expect(result.turns).toBeGreaterThan(0);
   });
 
-  it('evaluates e2m1 playability across easy, normal, and hard difficulties', async () => {
-    const runsPerDifficulty = 50;
+  it('evaluates e2m1 playability across storyTeller, tactician, and brutalOverlord game masters', async () => {
+    const runsPerGameMaster = 100;
 
-    const easySummary = await runDifficultyBenchmark({
+    const storyTellerSummary = await runGameMasterBenchmark({
       dungeon: e2m1,
-      difficultyId: 'easy',
-      runs: runsPerDifficulty,
+      gameMasterId: 'storyTeller',
+      runs: runsPerGameMaster,
       startSeed: 100,
       maxTurns: 100,
     });
 
-    const normalSummary = await runDifficultyBenchmark({
+    const tacticianSummary = await runGameMasterBenchmark({
       dungeon: e2m1,
-      difficultyId: 'normal',
-      runs: runsPerDifficulty,
+      gameMasterId: 'tactician',
+      runs: runsPerGameMaster,
       startSeed: 100,
       maxTurns: 100,
     });
 
-    const hardSummary = await runDifficultyBenchmark({
+    const brutalOverlordSummary = await runGameMasterBenchmark({
       dungeon: e2m1,
-      difficultyId: 'hard',
-      runs: runsPerDifficulty,
+      gameMasterId: 'brutalOverlord',
+      runs: runsPerGameMaster,
       startSeed: 100,
       maxTurns: 100,
     });
 
     const report = formatBenchmarkReport(
-      [easySummary, normalSummary, hardSummary],
+      [storyTellerSummary, tacticianSummary, brutalOverlordSummary],
       'Parlours of Malice - e2m1 (The Five Mounds of Terror) Benchmark',
     );
 
     // eslint-disable-next-line no-console
     console.log('\n' + report + '\n');
 
-    expect(easySummary.totalRuns).toBe(runsPerDifficulty);
-    expect(normalSummary.totalRuns).toBe(runsPerDifficulty);
-    expect(hardSummary.totalRuns).toBe(runsPerDifficulty);
+    expect(storyTellerSummary.totalRuns).toBe(runsPerGameMaster);
+    expect(tacticianSummary.totalRuns).toBe(runsPerGameMaster);
+    expect(brutalOverlordSummary.totalRuns).toBe(runsPerGameMaster);
 
-    // Easy should generally have higher or equal win rate / surviving health than hard
-    expect(easySummary.winRate).toBeGreaterThanOrEqual(0);
-    expect(normalSummary.winRate).toBeGreaterThanOrEqual(0);
-    expect(hardSummary.winRate).toBeGreaterThanOrEqual(0);
+    expect(storyTellerSummary.winRate).toBeGreaterThanOrEqual(0);
+    expect(tacticianSummary.winRate).toBeGreaterThanOrEqual(0);
+    expect(brutalOverlordSummary.winRate).toBeGreaterThanOrEqual(0);
   });
 });

@@ -1,7 +1,7 @@
 import type { Dungeon, Hero } from '../types';
-import { DifficultLevels, DEFAULT_DIFFICULTY_ID } from '../core';
 import { createSeededRng, resetRng, setRng } from '../core';
 import { init, next } from '../game';
+import { getGameMaster, DEFAULT_GAME_MASTER_ID } from '../gameMasters';
 import type { MonsterTurnOptions } from '../monsters/MonsterLogic';
 import { liveHeroes, resetLiveHeroes } from '../hero/HeroLogic';
 import { playHeroTurn } from './bot';
@@ -23,7 +23,8 @@ export interface GameSimulationResult {
   remainingHeroHealth: number;
 }
 
-export interface DifficultyBenchmarkSummary {
+export interface GameMasterBenchmarkSummary {
+  gameMaster: string;
   difficulty: string;
   totalRuns: number;
   wins: number;
@@ -39,9 +40,12 @@ export interface DifficultyBenchmarkSummary {
   results: GameSimulationResult[];
 }
 
+export type DifficultyBenchmarkSummary = GameMasterBenchmarkSummary;
+
 export interface RunDungeonOptions {
   dungeon?: Dungeon;
   campaignId?: string;
+  gameMasterId?: string;
   difficultyId?: string;
   seed?: number;
   maxTurns?: number;
@@ -55,11 +59,14 @@ export const runSingleGame = async (
 ): Promise<GameSimulationResult> => {
   const {
     campaignId = 'iceDragonTreasure',
-    difficultyId = DEFAULT_DIFFICULTY_ID,
+    gameMasterId,
+    difficultyId,
     dungeon,
     seed,
     maxTurns = 150,
   } = options;
+
+  const gmId = gameMasterId ?? difficultyId ?? DEFAULT_GAME_MASTER_ID;
 
   if (seed !== undefined) {
     setRng(createSeededRng(seed));
@@ -68,13 +75,11 @@ export const runSingleGame = async (
   }
 
   try {
-    const state = init(campaignId);
-
-    // Set difficulty
-    const difficulty = DifficultLevels.find((d) => d.id === difficultyId);
-    if (difficulty) {
-      state.difficulty = difficulty;
-    }
+    const state = init(campaignId, gmId);
+    const gameMaster = getGameMaster(gmId);
+    state.gameMaster = gameMaster;
+    state.difficulty = gameMaster;
+    state.gameMasterId = gameMaster.id;
 
     // Override specific dungeon if requested
     if (dungeon) {
@@ -165,17 +170,19 @@ export const runSingleGame = async (
 };
 
 /**
- * Runs a full benchmark across multiple runs for a given dungeon and difficulty.
+ * Runs a full benchmark across multiple runs for a given dungeon and game master.
  */
-export const runDifficultyBenchmark = async (options: {
+export const runGameMasterBenchmark = async (options: {
   dungeon?: Dungeon;
   campaignId?: string;
-  difficultyId: string;
+  gameMasterId?: string;
+  difficultyId?: string;
   runs: number;
   startSeed?: number;
   maxTurns?: number;
-}): Promise<DifficultyBenchmarkSummary> => {
+}): Promise<GameMasterBenchmarkSummary> => {
   const {
+    gameMasterId,
     difficultyId,
     runs,
     startSeed = 1000,
@@ -184,6 +191,8 @@ export const runDifficultyBenchmark = async (options: {
     maxTurns,
   } = options;
 
+  const gmId = gameMasterId ?? difficultyId ?? DEFAULT_GAME_MASTER_ID;
+  const gm = getGameMaster(gmId);
   const results: GameSimulationResult[] = [];
 
   for (let i = 0; i < runs; i++) {
@@ -191,7 +200,7 @@ export const runDifficultyBenchmark = async (options: {
     const res = await runSingleGame({
       dungeon,
       campaignId,
-      difficultyId,
+      gameMasterId: gm.id,
       seed,
       maxTurns,
     });
@@ -208,7 +217,8 @@ export const runDifficultyBenchmark = async (options: {
   const sumHealth = results.reduce((acc, r) => acc + r.remainingHeroHealth, 0);
 
   return {
-    difficulty: difficultyId,
+    gameMaster: gm.id,
+    difficulty: gm.id,
     totalRuns: runs,
     wins,
     losses,
@@ -224,30 +234,32 @@ export const runDifficultyBenchmark = async (options: {
   };
 };
 
+export const runDifficultyBenchmark = runGameMasterBenchmark;
+
 /**
  * Formats benchmark summaries as a readable ASCII report table.
  */
 export const formatBenchmarkReport = (
-  summaries: DifficultyBenchmarkSummary[],
-  title = 'Difficulty Benchmark Report',
+  summaries: GameMasterBenchmarkSummary[],
+  title = 'Game Master Benchmark Report',
 ): string => {
   const lines: string[] = [];
   lines.push(
-    '========================================================================',
+    '==================================================================================',
   );
   lines.push(`  ${title}`);
   lines.push(
-    '========================================================================',
+    '==================================================================================',
   );
   lines.push(
-    'Difficulty | Runs | Win Rate | Loss Rate | Avg Turns | Avg Casualties | Avg Kills | Avg Rem HP',
+    'Game Master    | Runs | Win Rate | Loss Rate | Avg Turns | Avg Casualties | Avg Kills | Avg Rem HP',
   );
   lines.push(
-    '-----------+------+----------+-----------+-----------+----------------+-----------+-----------',
+    '---------------+------+----------+-----------+-----------+----------------+-----------+-----------',
   );
 
   for (const s of summaries) {
-    const diff = s.difficulty.padEnd(10);
+    const gm = (s.gameMaster ?? s.difficulty).padEnd(14);
     const runs = String(s.totalRuns).padStart(4);
     const winR = `${s.winRate}%`.padStart(8);
     const lossR = `${s.lossRate}%`.padStart(9);
@@ -256,11 +268,11 @@ export const formatBenchmarkReport = (
     const kills = String(s.avgMonstersKilled).padStart(9);
     const hp = String(s.avgRemainingHealth).padStart(10);
     lines.push(
-      `${diff} | ${runs} | ${winR} | ${lossR} | ${turns} | ${cas} | ${kills} | ${hp}`,
+      `${gm} | ${runs} | ${winR} | ${lossR} | ${turns} | ${cas} | ${kills} | ${hp}`,
     );
   }
   lines.push(
-    '========================================================================',
+    '==================================================================================',
   );
   return lines.join('\n');
 };

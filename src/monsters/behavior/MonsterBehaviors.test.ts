@@ -10,7 +10,7 @@ import {
   MonsterType,
   type Weapon,
 } from '../../types';
-import { DifficultLevels } from '../../core';
+import { getGameMaster } from '../../core';
 import { createMonster } from '../../dungeon/DungeonLogic';
 import { createPassableGrid } from '../pathfinding';
 import {
@@ -137,13 +137,13 @@ describe('Monster Behavioral Modifiers & Formulas', () => {
     }
 
     // Easy difficulty (25%) with custom difficulty object or string
-    const easyDiff = DifficultLevels.find((d) => d.id === 'easy');
+    const easyDiff = getGameMaster('easy');
     expect(easyDiff?.monsterBehavior?.bowForgottenChance).toBe(0.25);
 
-    const normalDiff = DifficultLevels.find((d) => d.id === 'normal');
+    const normalDiff = getGameMaster('normal');
     expect(normalDiff?.monsterBehavior?.bowForgottenChance).toBe(0.15);
 
-    const hardDiff = DifficultLevels.find((d) => d.id === 'hard');
+    const hardDiff = getGameMaster('hard');
     expect(hardDiff?.monsterBehavior?.bowForgottenChance).toBe(0);
 
     const randomSpy = vi.spyOn(Math, 'random');
@@ -280,7 +280,7 @@ describe('Orc Behaviors Evaluation', () => {
 
   it('Orc Charge accounts for difficulty health modifier when checking <= 50%', () => {
     const state = createTestState();
-    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+    state.difficulty = getGameMaster('hard');
     const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
     monster.temperament = 'bold';
     // Base maxHealth is 10, with modifier -1 effective max is 9.
