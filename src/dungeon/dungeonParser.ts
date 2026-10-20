@@ -199,6 +199,7 @@ export type DeclarativeLightOptions = {
   color?: string;
   radius?: number;
   intensity?: number;
+  softness?: number;
   enabled?: boolean;
   id?: string;
 };
@@ -635,11 +636,13 @@ export const parseLight = (lightDef: DeclarativeLight): LightSource => {
     return createLight(x, y, undefined, alignmentOrOptions);
   }
 
-  const { x, y, alignment, color, radius, intensity, enabled, id } = lightDef;
+  const { x, y, alignment, color, radius, intensity, softness, enabled, id } =
+    lightDef;
   return createLight(x, y, alignment, {
     ...(color !== undefined ? { color } : {}),
     ...(radius !== undefined ? { radius } : {}),
     ...(intensity !== undefined ? { intensity } : {}),
+    ...(softness !== undefined ? { softness } : {}),
     ...(enabled !== undefined ? { enabled } : {}),
     ...(id !== undefined ? { id } : {}),
   });

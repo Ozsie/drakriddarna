@@ -118,6 +118,7 @@ export const createRandomItem = (x: number, y: number): ItemLocation => ({
 export const DEFAULT_LIGHT_COLOR = '#FFB85C';
 export const DEFAULT_LIGHT_RADIUS = 4;
 export const DEFAULT_LIGHT_INTENSITY = 0.35;
+export const DEFAULT_LIGHT_SOFTNESS = 0.25;
 
 export const createLight = (
   x: number,
@@ -127,6 +128,7 @@ export const createLight = (
     color?: string;
     radius?: number;
     intensity?: number;
+    softness?: number;
     enabled?: boolean;
     id?: string;
   },
@@ -137,6 +139,7 @@ export const createLight = (
   color: options?.color ?? DEFAULT_LIGHT_COLOR,
   radius: options?.radius ?? DEFAULT_LIGHT_RADIUS,
   intensity: options?.intensity ?? DEFAULT_LIGHT_INTENSITY,
+  softness: options?.softness ?? DEFAULT_LIGHT_SOFTNESS,
   enabled: options?.enabled ?? true,
 });
 

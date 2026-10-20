@@ -169,6 +169,7 @@ describe('dungeonParser', () => {
         color: '#FFB85C',
         radius: 4,
         intensity: 0.35,
+        softness: 0.25,
         enabled: true,
       });
     });
@@ -181,12 +182,19 @@ describe('dungeonParser', () => {
         1,
         2,
         CellAlignment.BOTTOM_RIGHT,
-        { color: '#87CEEB', radius: 2, intensity: 0.8, enabled: false },
+        {
+          color: '#87CEEB',
+          radius: 2,
+          intensity: 0.8,
+          softness: 0.6,
+          enabled: false,
+        },
       ]);
       expect(light.alignment).toBe(CellAlignment.BOTTOM_RIGHT);
       expect(light.color).toBe('#87CEEB');
       expect(light.radius).toBe(2);
       expect(light.intensity).toBe(0.8);
+      expect(light.softness).toBe(0.6);
       expect(light.enabled).toBe(false);
     });
 
@@ -252,6 +260,7 @@ describe('dungeonParser', () => {
           color: '#FFB85C',
           radius: 4,
           intensity: 0.35,
+          softness: 0.25,
           enabled: true,
         },
         {
@@ -261,6 +270,7 @@ describe('dungeonParser', () => {
           color: '#87CEEB',
           radius: 4,
           intensity: 0.35,
+          softness: 0.25,
           enabled: true,
         },
       ]);

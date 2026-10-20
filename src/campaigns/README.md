@@ -706,15 +706,17 @@ registerInteractableEffect(
 Dungeon layouts can include **light sources** (`LightSource`) that render a
 colored glow on the dungeon floor. A light is placed on a grid cell and can be
 aligned within that cell (`CellAlignment.CENTER`, `TOP_LEFT`, `TOP_RIGHT`,
-`BOTTOM_LEFT`, `BOTTOM_RIGHT`). Every property has a default value, so only a
+`BOTTOM_LEFT`, `BOTTOM_RIGHT`) or mounted in the ceiling above the cell
+(`CellAlignment.CEILING`). Every property has a default value, so only a
 grid position is required.
 
 Rendering is shadow-cast: walls, collapsed corridors, closed doors, pillars
 and living actors (heroes and monsters) block the light, and the glow never
-spills into undiscovered (fog of war) cells. A blocking cell is itself lit —
-a wall behind a light source is illuminated and an actor's own cell is never
-in shadow — with the darkness starting behind it. Lights render on the
-dynamic canvas layer, below the actors, so shadows update as actors move.
+spills into undiscovered (fog of war) cells. A blocking cell is lit partway
+in — a wall's face and an actor's cell stay visible (actors do not fill
+their cells, so light also passes between diagonally adjacent actors) —
+with the darkness starting behind it. Lights render on the dynamic canvas
+layer, below the actors, so shadows update as actors move.
 
 ### Placing lights in a dungeon
 
@@ -743,7 +745,7 @@ export const myDungeonLayout = defineLayout({
       3,
       2,
       CellAlignment.BOTTOM_LEFT,
-      { color: '#87CEEB', radius: 3, intensity: 0.6 },
+      { color: '#87CEEB', radius: 3, intensity: 0.6, softness: 0.7 },
     ],
 
     // Tuple with options only: [x, y, options]
@@ -760,10 +762,11 @@ export const myDungeonLayout = defineLayout({
 | Property | Type | Default | Description |
 | :-- | :-- | :-- | :-- |
 | `position` / `x, y` | `Position` or numbers | — | Grid cell the light is placed on (required). |
-| `alignment` | `CellAlignment` | `CellAlignment.CENTER` | Where in the cell the light sits: `CENTER`, `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT` or `BOTTOM_RIGHT`. Corner alignments sit slightly inside the cell so the glow does not bleed into the wall corner. |
+| `alignment` | `CellAlignment` | `CellAlignment.CENTER` | Where in the cell the light sits: `CENTER`, `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`, or `CEILING` for a fixture in the ceiling above the cell. Corner alignments sit slightly inside the cell so the glow does not bleed into the wall corner. A `CEILING` light renders the same light pool but shines down on actors: they are fully illuminated, do not block the light and cast no shadows in it (walls, pillars, doors and fog still block it). |
 | `color` | `string` | `'#FFB85C'` | CSS hex color of the light glow (`'#RGB'` or `'#RRGGBB'`). |
 | `radius` | `number` | `4` | Reach of the light in grid cells, measured from the light source. |
 | `intensity` | `number` | `0.35` | Brightness at the source (`0`–`1`), fading to `0` at the radius. |
+| `softness` | `number` | `0.25` | Softness of the light's shadow edges (`0`–`1`): `0` = hard edges, `1` = up to half a cell of blur. Applies to both the glow and the darkness hole in dim dungeons. |
 | `enabled` | `boolean` | `true` | Set to `false` to place a currently dark light (e.g. a brazier that could be lit later). |
 | `id` | `string` | `light_<x>_<y>` | Unique identifier for referencing the light. |
 

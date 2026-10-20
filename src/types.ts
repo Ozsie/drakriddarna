@@ -294,12 +294,16 @@ export enum ConditionType {
 }
 
 // Where inside its grid cell a light source sits. `CENTER` is the default.
+// `CEILING` simulates a fixture in the ceiling above the cell: it renders
+// the same light pool but shines down on the actors, so they neither block
+// its light nor cast shadows in it.
 export enum CellAlignment {
   TOP_LEFT = 'top-left',
   TOP_RIGHT = 'top-right',
   BOTTOM_LEFT = 'bottom-left',
   BOTTOM_RIGHT = 'bottom-right',
   CENTER = 'center',
+  CEILING = 'ceiling',
 }
 
 export type LightSource = {
@@ -312,6 +316,9 @@ export type LightSource = {
   radius?: number;
   // 0..1 brightness at the light source, fading to 0 at the radius.
   intensity?: number;
+  // 0..1 softness of the light's shadow edges: 0 = hard edges, 1 = up to
+  // half a cell of blur. Softens both the glow and the darkness hole.
+  softness?: number;
   enabled?: boolean;
 };
 

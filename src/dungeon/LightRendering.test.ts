@@ -4,6 +4,7 @@ import {
   ambientLightLevel,
   computeLightPolygon,
   lightBlockInCell,
+  lightBlurPx,
   lightCenter,
   renderAmbientDarkness,
   renderLights,
@@ -20,6 +21,7 @@ const createLight = (overrides: Partial<LightSource> = {}): LightSource => ({
   color: '#FFB85C',
   radius: 4,
   intensity: 0.35,
+  softness: 0,
   enabled: true,
   ...overrides,
 });
@@ -123,6 +125,17 @@ describe('lightCenter', () => {
     });
   });
 
+  it('centers a ceiling light on its cell like a center light', () => {
+    const light = createLight({
+      position: { x: 1, y: 2 },
+      alignment: CellAlignment.CEILING,
+    });
+    expect(lightCenter(light, CELL_SIZE)).toEqual({
+      x: 1.5 * CELL_SIZE,
+      y: 2.5 * CELL_SIZE,
+    });
+  });
+
   it('insets corner alignments into the cell', () => {
     const cell = { x: 1, y: 2 };
     const inset = CELL_SIZE * 0.25;
@@ -165,27 +178,23 @@ describe('lightCenter', () => {
 describe('lightBlockInCell', () => {
   it('marks walls and pillars as opaque so they get lit themselves', () => {
     const state = createState({ pillars: [{ x: 2, y: 3 }] });
-    expect(lightBlockInCell(state, { x: 0, y: 2 }, { x: 1, y: 2 }, false)).toBe(
+    const light = createLight({ position: { x: 1, y: 2 } });
+    expect(lightBlockInCell(state, { x: 0, y: 2 }, light, false)).toBe(
       'opaque',
     );
-    expect(lightBlockInCell(state, { x: 2, y: 3 }, { x: 1, y: 2 }, false)).toBe(
+    expect(lightBlockInCell(state, { x: 2, y: 3 }, light, false)).toBe(
       'opaque',
     );
     // Out-of-grid cells are fog: nothing to light beyond the dungeon.
-    expect(
-      lightBlockInCell(state, { x: -1, y: 2 }, { x: 1, y: 2 }, false),
-    ).toBe('fog');
+    expect(lightBlockInCell(state, { x: -1, y: 2 }, light, false)).toBe('fog');
   });
 
   it('marks undiscovered cells as fog outside debug mode only', () => {
     const grid = ['#######', '#AAAAA#', '#ABBBB#', '#ABBBB#', '#######'];
     const state = createState({ grid, discoveredRooms: ['A'] });
-    expect(lightBlockInCell(state, { x: 2, y: 2 }, { x: 1, y: 2 }, false)).toBe(
-      'fog',
-    );
-    expect(lightBlockInCell(state, { x: 2, y: 2 }, { x: 1, y: 2 }, true)).toBe(
-      'none',
-    );
+    const light = createLight({ position: { x: 1, y: 2 } });
+    expect(lightBlockInCell(state, { x: 2, y: 2 }, light, false)).toBe('fog');
+    expect(lightBlockInCell(state, { x: 2, y: 2 }, light, true)).toBe('none');
   });
 
   it('marks alive actors as opaque but not dead ones, and not the light own cell', () => {
@@ -193,17 +202,37 @@ describe('lightBlockInCell', () => {
       monsters: [createMonsterAt(3, 2)],
       heroes: [createHeroAt(2, 2, 0)],
     });
-    expect(lightBlockInCell(state, { x: 3, y: 2 }, { x: 1, y: 2 }, false)).toBe(
+    const light = createLight({ position: { x: 1, y: 2 } });
+    expect(lightBlockInCell(state, { x: 3, y: 2 }, light, false)).toBe(
       'opaque',
     );
-    expect(lightBlockInCell(state, { x: 2, y: 2 }, { x: 1, y: 2 }, false)).toBe(
-      'none',
-    );
+    expect(lightBlockInCell(state, { x: 2, y: 2 }, light, false)).toBe('none');
     // An actor standing on the light's own cell does not block it.
     const stateOnLight = createState({ monsters: [createMonsterAt(1, 2)] });
     expect(
-      lightBlockInCell(stateOnLight, { x: 1, y: 2 }, { x: 1, y: 2 }, false),
+      lightBlockInCell(
+        stateOnLight,
+        { x: 1, y: 2 },
+        createLight({ position: { x: 1, y: 2 } }),
+        false,
+      ),
     ).toBe('none');
+  });
+
+  it('treats actors as transparent for ceiling lights', () => {
+    const state = createState({ monsters: [createMonsterAt(3, 2)] });
+    const ceilingLight = createLight({
+      position: { x: 1, y: 2 },
+      alignment: CellAlignment.CEILING,
+    });
+    // Actors neither block nor shadow a ceiling light...
+    expect(lightBlockInCell(state, { x: 3, y: 2 }, ceilingLight, false)).toBe(
+      'none',
+    );
+    // ...but walls and pillars still do.
+    expect(lightBlockInCell(state, { x: 0, y: 2 }, ceilingLight, false)).toBe(
+      'opaque',
+    );
   });
 });
 
@@ -224,23 +253,24 @@ describe('computeLightPolygon', () => {
     });
   });
 
-  it('illuminates walls through to their far edge', () => {
+  it('illuminates walls only partway into the wall cell', () => {
     const state = createState();
     const light = createLight({ position: { x: 3, y: 2 }, radius: 10 });
     const points = computeLightPolygon(light, state, CELL_SIZE, false);
-    // Ray to the right: wall column x=6 is lit, light ends at its far edge.
-    expect(rayEndpoint(points, 0).x).toBeCloseTo(7 * CELL_SIZE, 0);
-    // Ray to the left: wall column x=0 is lit, light ends at the grid edge.
-    expect(rayEndpoint(points, Math.PI).x).toBeCloseTo(0 * CELL_SIZE, 0);
-    // Straight up: wall row y=0 is lit, light ends at the grid edge.
-    expect(rayEndpoint(points, -Math.PI / 2).y).toBeCloseTo(0 * CELL_SIZE, 0);
+    // Ray to the right: wall column x=6 is lit halfway into the cell, so
+    // light never looks like it passes through the whole wall.
+    expect(rayEndpoint(points, 0).x).toBeCloseTo(6.5 * CELL_SIZE, 0);
+    // Ray to the left: halfway into wall column x=0.
+    expect(rayEndpoint(points, Math.PI).x).toBeCloseTo(0.5 * CELL_SIZE, 0);
+    // Straight up: halfway into wall row y=0.
+    expect(rayEndpoint(points, -Math.PI / 2).y).toBeCloseTo(0.5 * CELL_SIZE, 0);
   });
 
-  it('illuminates pillars but no further', () => {
+  it('illuminates pillars only partway into the cell', () => {
     const state = createState({ pillars: [{ x: 4, y: 2 }] });
     const light = createLight({ position: { x: 2, y: 2 }, radius: 10 });
     const points = computeLightPolygon(light, state, CELL_SIZE, false);
-    expect(rayEndpoint(points, 0).x).toBeCloseTo(5 * CELL_SIZE, 0);
+    expect(rayEndpoint(points, 0).x).toBeCloseTo(4.5 * CELL_SIZE, 0);
   });
 
   it('stops at closed doors but passes open ones', () => {
@@ -290,16 +320,44 @@ describe('computeLightPolygon', () => {
       CELL_SIZE,
       false,
     );
-    // Light passes the open door and ends at the far wall's far edge x=7.
-    expect(rayEndpoint(openPoints, 0).x).toBeCloseTo(7 * CELL_SIZE, 0);
+    // Light passes the open door and reaches halfway into the far wall.
+    expect(rayEndpoint(openPoints, 0).x).toBeCloseTo(6.5 * CELL_SIZE, 0);
   });
 
-  it('illuminates the actor cell and casts a shadow behind it', () => {
+  it('illuminates the actor sprite and casts a shadow behind it', () => {
     const state = createState({ monsters: [createMonsterAt(4, 2)] });
     const light = createLight({ position: { x: 2, y: 2 }, radius: 10 });
     const points = computeLightPolygon(light, state, CELL_SIZE, false);
-    // The monster's own cell (4,2) is lit; the shadow starts behind it.
-    expect(rayEndpoint(points, 0).x).toBeCloseTo(5 * CELL_SIZE, 0);
+    // The monster's cell is lit partway in — enough for the sprite, which
+    // sits near the middle of the cell — and the shadow starts behind it.
+    expect(rayEndpoint(points, 0).x).toBeCloseTo(4.5 * CELL_SIZE, 0);
+  });
+
+  it('lets ceiling light pass through actors without shadows', () => {
+    const state = createState({ monsters: [createMonsterAt(4, 2)] });
+    const light = createLight({
+      position: { x: 2, y: 2 },
+      radius: 10,
+      alignment: CellAlignment.CEILING,
+    });
+    const points = computeLightPolygon(light, state, CELL_SIZE, false);
+    // The monster is lit from above and casts no shadow: the ray runs
+    // through its cell and on to the wall.
+    expect(rayEndpoint(points, 0).x).toBeCloseTo(6.5 * CELL_SIZE, 0);
+  });
+
+  it('passes light between two diagonally adjacent actors', () => {
+    const state = createState({
+      monsters: [createMonsterAt(3, 1), createMonsterAt(4, 2)],
+    });
+    const light = createLight({ position: { x: 2, y: 2 }, radius: 10 });
+    const points = computeLightPolygon(light, state, CELL_SIZE, false);
+    // The ray through the shared corner of the two actors travels via the
+    // empty flanking cells and keeps going: actors do not fill their cells.
+    const throughGap = rayEndpoint(points, Math.atan2(-1, 3));
+    expect(throughGap.x).toBeGreaterThan(5 * CELL_SIZE);
+    // It only ends at the far wall column, halfway into the wall.
+    expect(throughGap.x).toBeCloseTo(6.5 * CELL_SIZE, 0);
   });
 
   it('stops at undiscovered cells outside debug mode', () => {
@@ -310,12 +368,12 @@ describe('computeLightPolygon', () => {
     // Ray to the right hits undiscovered room B at (2,2): stops at edge x=2.
     expect(rayEndpoint(points, 0).x).toBeCloseTo(2 * CELL_SIZE, 0);
     // Ray straight down stays inside discovered room A; the wall row y=4
-    // is lit through to the grid edge.
-    expect(rayEndpoint(points, Math.PI / 2).y).toBeCloseTo(5 * CELL_SIZE, 0);
+    // is lit partway into the wall cell.
+    expect(rayEndpoint(points, Math.PI / 2).y).toBeCloseTo(4.5 * CELL_SIZE, 0);
 
     // In debug mode the fog is ignored, but the far wall still ends the ray.
     const debugPoints = computeLightPolygon(light, state, CELL_SIZE, true);
-    expect(rayEndpoint(debugPoints, 0).x).toBeCloseTo(7 * CELL_SIZE, 0);
+    expect(rayEndpoint(debugPoints, 0).x).toBeCloseTo(6.5 * CELL_SIZE, 0);
   });
 });
 
@@ -401,6 +459,47 @@ describe('renderLights', () => {
     const ctx = createMockCtx();
     renderLights(ctx, CELL_SIZE, state, false);
     expect(ctx.createRadialGradient).not.toHaveBeenCalled();
+  });
+
+  it('softens a light edges with a blur filter when softness is set', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [createLight({ softness: 0.5 })];
+    const ctx = createMockCtx();
+    const filters: (string | undefined)[] = [];
+    Object.defineProperty(ctx, 'filter', {
+      get: () => filters[filters.length - 1],
+      set: (value: string) => filters.push(value),
+    });
+    renderLights(ctx, CELL_SIZE, state, false);
+    // softness 0.5 => half a cell of blur: 0.5 * 48 / 2 = 12px.
+    expect(filters).toContain('blur(12px)');
+    // The filter is reset after drawing.
+    expect(filters[filters.length - 1]).toBe('none');
+  });
+
+  it('keeps hard edges when softness is 0', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [createLight({ softness: 0 })];
+    const ctx = createMockCtx();
+    const filters: (string | undefined)[] = [];
+    Object.defineProperty(ctx, 'filter', {
+      get: () => filters[filters.length - 1],
+      set: (value: string) => filters.push(value),
+    });
+    renderLights(ctx, CELL_SIZE, state, false);
+    expect(filters).toEqual(['none']);
+  });
+
+  it('maps softness to a blur radius with clamping and a default', () => {
+    expect(lightBlurPx(createLight({ softness: 0 }), CELL_SIZE)).toBe(0);
+    expect(lightBlurPx(createLight({ softness: 0.5 }), CELL_SIZE)).toBe(12);
+    // 1 (and anything above) = half a cell of blur.
+    expect(lightBlurPx(createLight({ softness: 1 }), CELL_SIZE)).toBe(24);
+    expect(lightBlurPx(createLight({ softness: 2 }), CELL_SIZE)).toBe(24);
+    // Default softness is 0.25.
+    expect(lightBlurPx(createLight({ softness: undefined }), CELL_SIZE)).toBe(
+      6,
+    );
   });
 });
 

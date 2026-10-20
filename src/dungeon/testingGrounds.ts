@@ -1,3 +1,4 @@
+import type { Dungeon } from '../types';
 import {
   CellAlignment,
   Colour,
@@ -6,7 +7,6 @@ import {
   SecretType,
   Side,
 } from '../types';
-import type { Dungeon } from '../types';
 import { defineDungeon } from './DungeonLogic';
 import { weapons } from '../items/weapons';
 import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
@@ -76,18 +76,20 @@ export const testingGrounds: Dungeon = defineDungeon({
     ],
     lights: [
       // Default torch light near the starting positions.
-      [2, 8],
-      // Cool light next to the pillar at (7, 9) to demo shadow casting.
+      [2, 8, CellAlignment.CEILING],
+      // Cool light next to the pillar at (7, 9) to demo shadow casting, with
+      // extra soft edges.
       [
         7,
         8,
-        CellAlignment.CENTER,
-        { color: '#87CEEB', radius: 3, intensity: 0.5 },
+        CellAlignment.CEILING,
+        { color: '#87CEEB', radius: 3, intensity: 0.5, softness: 0.8 },
       ],
       // Corridor D.
       [10, 7],
-      // Room I.
-      [6, 13],
+      // Room I: ceiling fixture, illuminating everything below it without
+      // actor shadows.
+      [6, 13, CellAlignment.CEILING],
     ],
     pits: [
       [6, 3],
