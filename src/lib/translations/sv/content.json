@@ -14,6 +14,8 @@
         "shuffleDeck": "Blanda Kortleken",
         "selectNextEvent": "Välj Nästa Händelse",
         "outputGameState": "Skriv ut spelläge",
+        "revealMap": "Avslöja Kartan",
+        "nextDungeon": "Till nästa grotta",
         "gameMaster": "Spelledare:",
         "rights": "Rättigheter & Licenser"
       }

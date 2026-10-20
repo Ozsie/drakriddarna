@@ -1,4 +1,5 @@
 import type {
+  Dungeon,
   GameState,
   Hero,
   BetweenDungeonsState,
@@ -310,30 +311,46 @@ export const completeBetweenDungeonsAndStartNext = (state: GameState): void => {
   state.betweenDungeons = undefined;
 
   if (nextDungeon) {
-    state.dungeon = nextDungeon;
-    state.actionLog = [
-      {
-        key: 'logs.youHaveReached',
-        properties: { name: i18n(state.dungeon.name) },
-        turn: 0,
-      },
-    ];
-    const campaignEvents =
-      state.campaignId && isKnownCampaign(state.campaignId)
-        ? getCampaign(state.campaignId).eventDeck
-        : undefined;
-    state.eventDeck = getEventsForDungeon(state.dungeon, campaignEvents);
-    state.currentEvent = undefined;
-    state.drawEvents = true;
-    state.roundActionsDelta = 0;
-    state.turnCount = 0;
-    resetLiveHeroes(state);
-    resetOnNextDungeon(state);
-    state.currentActor = liveHeroes(state)[0] ?? (state.heroes[0] as Hero);
-
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('autosave', JSON.stringify(state));
-    }
+    startDungeon(state, nextDungeon);
   }
   doReRender(state);
+};
+
+/**
+ * Debug helper: jump straight to the next dungeon of the current campaign,
+ * skipping the between-dungeons progression (XP rewards, trading).
+ */
+export const goToNextDungeon = (state: GameState): boolean => {
+  const nextDungeon = state.dungeon.nextDungeon;
+  if (!nextDungeon) return false;
+  startDungeon(state, nextDungeon);
+  doReRender(state);
+  return true;
+};
+
+const startDungeon = (state: GameState, nextDungeon: Dungeon): void => {
+  state.dungeon = nextDungeon;
+  state.actionLog = [
+    {
+      key: 'logs.youHaveReached',
+      properties: { name: i18n(state.dungeon.name) },
+      turn: 0,
+    },
+  ];
+  const campaignEvents =
+    state.campaignId && isKnownCampaign(state.campaignId)
+      ? getCampaign(state.campaignId).eventDeck
+      : undefined;
+  state.eventDeck = getEventsForDungeon(state.dungeon, campaignEvents);
+  state.currentEvent = undefined;
+  state.drawEvents = true;
+  state.roundActionsDelta = 0;
+  state.turnCount = 0;
+  resetLiveHeroes(state);
+  resetOnNextDungeon(state);
+  state.currentActor = liveHeroes(state)[0] ?? (state.heroes[0] as Hero);
+
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('autosave', JSON.stringify(state));
+  }
 };

@@ -239,6 +239,8 @@ describe('MenuLogic', () => {
         'shuffle_deck',
         'select_next_event',
         'output_game_state',
+        'reveal_map',
+        'next_dungeon',
       ]);
     });
 
@@ -262,6 +264,34 @@ describe('MenuLogic', () => {
       expect(consoleSpy).toHaveBeenCalledWith(mockState);
       expect(closeMenu).toHaveBeenCalled();
       consoleSpy.mockRestore();
+    });
+
+    it('reveals all rooms and closes menu on reveal_map click', () => {
+      const closeMenu = vi.fn();
+      mockState.dungeon.layout.grid = ['AAA', '#B#', ' C '];
+      const items = getDebugMenuItems(mockState, { closeMenu });
+      const revealMapItem = items.find((i) => i.id === 'reveal_map');
+
+      revealMapItem?.onClick(mockState);
+
+      expect(mockState.dungeon.discoveredRooms).toEqual(
+        expect.arrayContaining(['A', 'B', 'C']),
+      );
+      expect(closeMenu).toHaveBeenCalled();
+    });
+
+    it('moves to the next dungeon and closes menu on next_dungeon click', () => {
+      const closeMenu = vi.fn();
+      const nextDungeon = { ...mockState.dungeon, name: 'Next Dungeon' };
+      mockState.dungeon.nextDungeon = nextDungeon;
+      const items = getDebugMenuItems(mockState, { closeMenu });
+      const nextDungeonItem = items.find((i) => i.id === 'next_dungeon');
+
+      nextDungeonItem?.onClick(mockState);
+
+      expect(mockState.dungeon.name).toBe('Next Dungeon');
+      expect(mockState.dungeon.discoveredRooms).toEqual(['A']);
+      expect(closeMenu).toHaveBeenCalled();
     });
   });
 
@@ -414,6 +444,8 @@ describe('MenuLogic', () => {
         'shuffle_deck',
         'select_next_event',
         'output_game_state',
+        'reveal_map',
+        'next_dungeon',
       ]);
     });
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameState, Item } from '../types';
 import { ItemType } from '../types';
-import { roomEffects } from './RoomEffectsLogic';
+import { roomEffects, revealFullMap } from './RoomEffectsLogic';
 
 const item = (
   id: string,
@@ -93,5 +93,43 @@ describe('revealRemainingItemsInRoom', () => {
           i.position.x === 0 && i.position.y === 0 && i.item?.id === 'sword',
       ),
     ).toBe(false);
+  });
+});
+
+describe('revealFullMap', () => {
+  const makeMapState = (): GameState =>
+    ({
+      dungeon: {
+        discoveredRooms: ['A'],
+        onRoomDiscovered: { B: 'stopEvents' },
+        layout: {
+          grid: ['AAA#BB', ' C #B?', ' C   #'],
+          doors: [],
+          monsters: [],
+          secrets: [],
+          items: [],
+          notes: [],
+        },
+      },
+      drawEvents: true,
+    }) as unknown as GameState;
+
+  it('discovers every room and corridor, ignoring walls, empty and collapsed cells', () => {
+    const state = makeMapState();
+    revealFullMap(state);
+    expect(state.dungeon.discoveredRooms).toEqual(['A', 'B', 'C']);
+  });
+
+  it('fires room discovery effects for newly discovered rooms only', () => {
+    const state = makeMapState();
+    revealFullMap(state);
+    expect(state.drawEvents).toBe(false);
+
+    const alreadyDiscovered: GameState = {
+      ...makeMapState(),
+      dungeon: { ...makeMapState().dungeon, discoveredRooms: ['A', 'B', 'C'] },
+    } as unknown as GameState;
+    revealFullMap(alreadyDiscovered);
+    expect(alreadyDiscovered.dungeon.discoveredRooms).toEqual(['A', 'B', 'C']);
   });
 });

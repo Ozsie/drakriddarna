@@ -29,6 +29,8 @@ import {
   shuffleEventDeck,
 } from '../events/EventsLogic';
 import { resetLiveHeroes } from '../hero/HeroLogic';
+import { revealFullMap } from '../dungeon/RoomEffectsLogic';
+import { goToNextDungeon } from '../dungeon/BetweenDungeonsLogic';
 import { campaigns, DEFAULT_CAMPAIGN_ID } from '../campaigns';
 
 export interface CanvasMenuItem {
@@ -222,6 +224,24 @@ export const getDebugMenuItems = (
     onClick: (state) => {
       // eslint-disable-next-line no-console
       console.log(state);
+      callbacks?.closeMenu?.();
+    },
+  },
+  {
+    id: 'reveal_map',
+    debugOnly: false,
+    label: i18n('content.menu.mainMenu.buttons.revealMap'),
+    onClick: (state) => {
+      onRevealMap(state);
+      callbacks?.closeMenu?.();
+    },
+  },
+  {
+    id: 'next_dungeon',
+    debugOnly: false,
+    label: i18n('content.menu.mainMenu.buttons.nextDungeon'),
+    onClick: (state) => {
+      onNextDungeon(state);
       callbacks?.closeMenu?.();
     },
   },
@@ -566,6 +586,24 @@ export const onShuffleDeck = (activeState?: GameState) => {
     gameStateStore.set(activeState);
   } else {
     dispatch(shuffleEventDeck);
+  }
+};
+
+export const onRevealMap = (activeState?: GameState) => {
+  if (activeState) {
+    revealFullMap(activeState);
+    gameStateStore.set(activeState);
+  } else {
+    dispatch((currentState) => revealFullMap(currentState));
+  }
+};
+
+export const onNextDungeon = (activeState?: GameState) => {
+  if (activeState) {
+    goToNextDungeon(activeState);
+    gameStateStore.set(activeState);
+  } else {
+    dispatch((currentState) => goToNextDungeon(currentState));
   }
 };
 

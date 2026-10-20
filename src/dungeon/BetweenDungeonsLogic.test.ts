@@ -8,6 +8,7 @@ import {
   selectTradeItem,
   tradeItem,
   completeBetweenDungeonsAndStartNext,
+  goToNextDungeon,
 } from './BetweenDungeonsLogic';
 import { Level, Colour, ItemType, type Hero, type Item } from '../types';
 import { init } from '../game';
@@ -336,6 +337,39 @@ describe('BetweenDungeonsLogic', () => {
       expect(state.dungeon.name).toBe('Next Dungeon');
       expect(state.turnCount).toBe(0);
       expect(state.currentActor).toBeDefined();
+    });
+  });
+
+  describe('goToNextDungeon', () => {
+    it('jumps directly to the next dungeon without between-dungeons progression', () => {
+      const state = init();
+      state.dungeon.nextDungeon = {
+        ...state.dungeon,
+        name: 'Next Dungeon',
+        startingPositions: [{ x: 2, y: 3 }],
+      };
+
+      const result = goToNextDungeon(state);
+
+      expect(result).toBe(true);
+      expect(state.betweenDungeons).toBeUndefined();
+      expect(state.dungeon.name).toBe('Next Dungeon');
+      expect(state.turnCount).toBe(0);
+      expect(state.currentActor).toBeDefined();
+      const totalXp = state.heroes.reduce(
+        (sum, hero) => sum + hero.experience,
+        0,
+      );
+      expect(totalXp).toBe(0);
+    });
+
+    it('returns false and keeps the current dungeon when there is no next dungeon', () => {
+      const state = init();
+      state.dungeon.nextDungeon = undefined;
+      const dungeonName = state.dungeon.name;
+
+      expect(goToNextDungeon(state)).toBe(false);
+      expect(state.dungeon.name).toBe(dungeonName);
     });
   });
 });

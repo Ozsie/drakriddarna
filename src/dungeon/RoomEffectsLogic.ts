@@ -1,5 +1,13 @@
 import { type GameState, type Item, ItemType } from '../types';
-import { findRoomCells, isSamePosition } from '../core';
+import {
+  COLLAPSED,
+  EMPTY,
+  WALL,
+  doReRender,
+  findRoomCells,
+  isSamePosition,
+  toArray,
+} from '../core';
 import {
   removeFoundItemFromDeck,
   removeFoundMagicItemFromDeck,
@@ -66,4 +74,27 @@ export const executeRoomDiscoveredEffect = (
   if (effectName) {
     roomEffects[effectName]?.(state, room);
   }
+};
+
+/**
+ * Debug helper: mark every room and corridor of the current dungeon as
+ * discovered, firing the regular onRoomDiscovered effects so the state
+ * stays consistent with a normal discovery.
+ */
+export const revealFullMap = (state: GameState): void => {
+  const rooms = new Set<string>();
+  state.dungeon.layout.grid.forEach((row) => {
+    toArray(row).forEach((cell) => {
+      if (cell !== EMPTY && cell !== WALL && cell !== COLLAPSED) {
+        rooms.add(cell);
+      }
+    });
+  });
+  rooms.forEach((room) => {
+    if (!state.dungeon.discoveredRooms.includes(room)) {
+      state.dungeon.discoveredRooms.push(room);
+      executeRoomDiscoveredEffect(state, room);
+    }
+  });
+  doReRender(state);
 };
