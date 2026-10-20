@@ -1,4 +1,11 @@
-import { Colour, ConditionType, MonsterType, SecretType, Side } from '../types';
+import {
+  CellAlignment,
+  Colour,
+  ConditionType,
+  MonsterType,
+  SecretType,
+  Side,
+} from '../types';
 import type { Dungeon } from '../types';
 import { defineDungeon } from './DungeonLogic';
 import { weapons } from '../items/weapons';
@@ -43,6 +50,8 @@ export const testingGrounds: Dungeon = defineDungeon({
     [1, 10],
   ],
   discoveredRooms: ['A', 'D', 'I'],
+  // Dim dungeon to demo light sources illuminating their surroundings.
+  ambientLight: 0.2,
   layout: {
     grid: [
       '###########',
@@ -64,6 +73,21 @@ export const testingGrounds: Dungeon = defineDungeon({
     pillars: [
       [8, 3],
       [7, 9],
+    ],
+    lights: [
+      // Default torch light near the starting positions.
+      [2, 8],
+      // Cool light next to the pillar at (7, 9) to demo shadow casting.
+      [
+        7,
+        8,
+        CellAlignment.CENTER,
+        { color: '#87CEEB', radius: 3, intensity: 0.5 },
+      ],
+      // Corridor D.
+      [10, 7],
+      // Room I.
+      [6, 13],
     ],
     pits: [
       [6, 3],

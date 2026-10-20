@@ -1,4 +1,5 @@
 import type {
+  CellAlignment,
   Corner,
   Door,
   Dungeon,
@@ -6,6 +7,7 @@ import type {
   Item,
   ItemLocation,
   Layout,
+  LightSource,
   Monster,
   Note,
   Position,
@@ -17,6 +19,7 @@ import {
   createDoor,
   createEquipment,
   createHiddenDoor,
+  createLight,
   createLockedDoor,
   createMonster,
   createMonsterWithInventory,
@@ -192,6 +195,36 @@ export type DeclarativeInteractable =
   | DeclarativeInteractableObject
   | DeclarativeInteractableTuple;
 
+export type DeclarativeLightOptions = {
+  color?: string;
+  radius?: number;
+  intensity?: number;
+  enabled?: boolean;
+  id?: string;
+};
+
+export type DeclarativeLightObject = DeclarativeLightOptions & {
+  x: number;
+  y: number;
+  alignment?: CellAlignment;
+};
+
+export type DeclarativeLightTuple =
+  | [x: number, y: number]
+  | [x: number, y: number, alignment: CellAlignment]
+  | [x: number, y: number, options: DeclarativeLightOptions]
+  | [
+      x: number,
+      y: number,
+      alignment: CellAlignment,
+      options: DeclarativeLightOptions,
+    ];
+
+export type DeclarativeLight =
+  | LightSource
+  | DeclarativeLightObject
+  | DeclarativeLightTuple;
+
 export type DeclarativeLayout = {
   grid: string[];
   doors?: DeclarativeDoor[];
@@ -200,6 +233,7 @@ export type DeclarativeLayout = {
   notes?: DeclarativeNote[];
   items?: DeclarativeItem[];
   interactables?: DeclarativeInteractable[];
+  lights?: DeclarativeLight[];
   corridors?: string[];
   pillars?: DeclarativePosition[];
   pits?: DeclarativePosition[];
@@ -222,6 +256,7 @@ export type DeclarativeDungeon = {
   onRoomDiscovered?: Record<string, string>;
   music?: string;
   tileset?: string;
+  ambientLight?: number;
 };
 
 export interface DefineDungeonOptions {
@@ -587,6 +622,29 @@ export const parseInteractable = (
   };
 };
 
+export const parseLight = (lightDef: DeclarativeLight): LightSource => {
+  if ('position' in lightDef) {
+    return lightDef;
+  }
+
+  if (Array.isArray(lightDef)) {
+    const [x, y, alignmentOrOptions, options] = lightDef;
+    if (typeof alignmentOrOptions === 'string') {
+      return createLight(x, y, alignmentOrOptions, options);
+    }
+    return createLight(x, y, undefined, alignmentOrOptions);
+  }
+
+  const { x, y, alignment, color, radius, intensity, enabled, id } = lightDef;
+  return createLight(x, y, alignment, {
+    ...(color !== undefined ? { color } : {}),
+    ...(radius !== undefined ? { radius } : {}),
+    ...(intensity !== undefined ? { intensity } : {}),
+    ...(enabled !== undefined ? { enabled } : {}),
+    ...(id !== undefined ? { id } : {}),
+  });
+};
+
 export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
   grid: layoutDef.grid,
   doors: (layoutDef.doors ?? []).map(parseDoor),
@@ -595,6 +653,7 @@ export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
   notes: (layoutDef.notes ?? []).map(parseNote),
   items: (layoutDef.items ?? []).map(parseItem),
   interactables: (layoutDef.interactables ?? []).map(parseInteractable),
+  lights: (layoutDef.lights ?? []).map(parseLight),
   corridors: layoutDef.corridors ?? [],
   pillars: (layoutDef.pillars ?? []).map(parsePosition),
   pits: (layoutDef.pits ?? []).map(parsePosition),
@@ -625,6 +684,7 @@ export const defineDungeon = (
       : {}),
     music: dungeonDef.music,
     tileset: dungeonDef.tileset,
+    ambientLight: dungeonDef.ambientLight ?? 1,
   };
 
   if (options.validate) {

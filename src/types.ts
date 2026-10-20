@@ -268,6 +268,9 @@ export type Dungeon = {
   onRoomDiscovered?: Record<string, string>;
   music?: string;
   tileset?: string;
+  // Base light level of the whole dungeon: 1 = fully lit (default), 0 =
+  // pitch black. Light sources illuminate their surroundings.
+  ambientLight?: number;
 };
 
 export type WinCondition = {
@@ -290,6 +293,28 @@ export enum ConditionType {
   SECRET_FOUND,
 }
 
+// Where inside its grid cell a light source sits. `CENTER` is the default.
+export enum CellAlignment {
+  TOP_LEFT = 'top-left',
+  TOP_RIGHT = 'top-right',
+  BOTTOM_LEFT = 'bottom-left',
+  BOTTOM_RIGHT = 'bottom-right',
+  CENTER = 'center',
+}
+
+export type LightSource = {
+  id?: string;
+  position: Position;
+  alignment?: CellAlignment;
+  // CSS color of the light glow.
+  color?: string;
+  // Reach of the light in grid cells (from its position).
+  radius?: number;
+  // 0..1 brightness at the light source, fading to 0 at the radius.
+  intensity?: number;
+  enabled?: boolean;
+};
+
 export type Layout = {
   grid: string[];
   doors: Door[];
@@ -302,6 +327,7 @@ export type Layout = {
   pits?: Position[];
   corners: Corner[];
   interactables?: InteractableCell[];
+  lights?: LightSource[];
 };
 
 export type InteractableCell = {

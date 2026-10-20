@@ -4,6 +4,7 @@ import {
   defineLayout,
   parseDoor,
   parseItem,
+  parseLight,
   parseMonster,
   parseNote,
   parsePosition,
@@ -11,6 +12,7 @@ import {
   parseTileMap,
 } from './dungeonParser';
 import {
+  CellAlignment,
   Colour,
   ConditionType,
   Level,
@@ -158,6 +160,71 @@ describe('dungeonParser', () => {
     });
   });
 
+  describe('parseLight', () => {
+    it('parses tuple [x, y] with all defaults', () => {
+      expect(parseLight([3, 4])).toEqual({
+        id: 'light_3_4',
+        position: { x: 3, y: 4 },
+        alignment: CellAlignment.CENTER,
+        color: '#FFB85C',
+        radius: 4,
+        intensity: 0.35,
+        enabled: true,
+      });
+    });
+
+    it('parses tuple [x, y, alignment] and [x, y, alignment, options]', () => {
+      expect(parseLight([1, 2, CellAlignment.TOP_LEFT]).alignment).toBe(
+        CellAlignment.TOP_LEFT,
+      );
+      const light = parseLight([
+        1,
+        2,
+        CellAlignment.BOTTOM_RIGHT,
+        { color: '#87CEEB', radius: 2, intensity: 0.8, enabled: false },
+      ]);
+      expect(light.alignment).toBe(CellAlignment.BOTTOM_RIGHT);
+      expect(light.color).toBe('#87CEEB');
+      expect(light.radius).toBe(2);
+      expect(light.intensity).toBe(0.8);
+      expect(light.enabled).toBe(false);
+    });
+
+    it('parses tuple [x, y, options]', () => {
+      const light = parseLight([5, 6, { radius: 6, id: 'brazier' }]);
+      expect(light.alignment).toBe(CellAlignment.CENTER);
+      expect(light.radius).toBe(6);
+      expect(light.id).toBe('brazier');
+    });
+
+    it('parses object format', () => {
+      const light = parseLight({
+        x: 2,
+        y: 3,
+        alignment: CellAlignment.TOP_RIGHT,
+        color: '#FF4F4F',
+        radius: 3,
+      });
+      expect(light.position).toEqual({ x: 2, y: 3 });
+      expect(light.alignment).toBe(CellAlignment.TOP_RIGHT);
+      expect(light.color).toBe('#FF4F4F');
+      expect(light.radius).toBe(3);
+      expect(light.intensity).toBe(0.35);
+    });
+
+    it('passes through an already parsed LightSource', () => {
+      const light = {
+        position: { x: 7, y: 8 },
+        alignment: CellAlignment.CENTER,
+        color: '#FFFFFF',
+        radius: 1,
+        intensity: 0.5,
+        enabled: true,
+      };
+      expect(parseLight(light)).toBe(light);
+    });
+  });
+
   describe('defineLayout and defineDungeon', () => {
     it('fills default properties when defining layout and dungeon', () => {
       const layout = defineLayout({
@@ -168,6 +235,35 @@ describe('dungeonParser', () => {
       expect(layout.secrets).toEqual([]);
       expect(layout.notes).toEqual([]);
       expect(layout.items).toEqual([]);
+      expect(layout.lights).toEqual([]);
+
+      const layoutWithLights = defineLayout({
+        grid: ['####', '#AA#', '####'],
+        lights: [
+          [1, 1],
+          [2, 1, CellAlignment.TOP_RIGHT, { color: '#87CEEB' }],
+        ],
+      });
+      expect(layoutWithLights.lights).toEqual([
+        {
+          id: 'light_1_1',
+          position: { x: 1, y: 1 },
+          alignment: CellAlignment.CENTER,
+          color: '#FFB85C',
+          radius: 4,
+          intensity: 0.35,
+          enabled: true,
+        },
+        {
+          id: 'light_2_1',
+          position: { x: 2, y: 1 },
+          alignment: CellAlignment.TOP_RIGHT,
+          color: '#87CEEB',
+          radius: 4,
+          intensity: 0.35,
+          enabled: true,
+        },
+      ]);
 
       const dungeon = defineDungeon({
         name: 'test.dungeon',
@@ -183,6 +279,7 @@ describe('dungeonParser', () => {
       expect(dungeon.beaten).toBe(false);
       expect(dungeon.killCount).toBe(0);
       expect(dungeon.discoveredRooms).toEqual(['A']);
+      expect(dungeon.ambientLight).toBe(1);
       expect(dungeon.layout.doors).toEqual([]);
       expect(dungeon.layout.monsters).toEqual([]);
       expect(dungeon.layout.secrets).toEqual([]);
@@ -194,6 +291,20 @@ describe('dungeonParser', () => {
       expect(dungeon.layout.corners).toEqual(
         autoDetectCorners(dungeon.layout.grid),
       );
+    });
+
+    it('passes the ambient light level through to the dungeon', () => {
+      const dungeon = defineDungeon({
+        name: 'dark.dungeon',
+        intro: 'test-dungeon',
+        ambientLight: 0.2,
+        winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
+        startingPositions: [[1, 1]],
+        layout: {
+          grid: ['###', '#A#', '###'],
+        },
+      });
+      expect(dungeon.ambientLight).toBe(0.2);
     });
   });
 

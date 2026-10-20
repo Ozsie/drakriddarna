@@ -701,6 +701,106 @@ registerInteractableEffect(
 | `args` | `Record<string, unknown>` (optional) | Custom arguments passed to the effect handler. |
 | `icon` | `string` (optional) | Optional icon indicator identifier for rendering. |
 
+## Adding light sources (optional)
+
+Dungeon layouts can include **light sources** (`LightSource`) that render a
+colored glow on the dungeon floor. A light is placed on a grid cell and can be
+aligned within that cell (`CellAlignment.CENTER`, `TOP_LEFT`, `TOP_RIGHT`,
+`BOTTOM_LEFT`, `BOTTOM_RIGHT`). Every property has a default value, so only a
+grid position is required.
+
+Rendering is shadow-cast: walls, collapsed corridors, closed doors, pillars
+and living actors (heroes and monsters) block the light, and the glow never
+spills into undiscovered (fog of war) cells. A blocking cell is itself lit —
+a wall behind a light source is illuminated and an actor's own cell is never
+in shadow — with the darkness starting behind it. Lights render on the
+dynamic canvas layer, below the actors, so shadows update as actors move.
+
+### Placing lights in a dungeon
+
+Lights can be defined in dungeon layouts using `defineLayout` (object or tuple
+shorthand) or constructed with `createLight`:
+
+```ts
+import { defineLayout } from '../../../dungeon/dungeonParser';
+import { CellAlignment } from '../../../types';
+
+export const myDungeonLayout = defineLayout({
+  grid: [
+    'AAAA',
+    'AAAA',
+    'AAAA',
+  ],
+  lights: [
+    // Tuple shorthand: [x, y] — all defaults (center, warm torch glow)
+    [1, 1],
+
+    // Tuple with alignment: [x, y, alignment]
+    [2, 1, CellAlignment.TOP_RIGHT],
+
+    // Tuple with alignment and options
+    [
+      3,
+      2,
+      CellAlignment.BOTTOM_LEFT,
+      { color: '#87CEEB', radius: 3, intensity: 0.6 },
+    ],
+
+    // Tuple with options only: [x, y, options]
+    [0, 2, { color: '#FF4F4F', radius: 2, enabled: false }],
+
+    // Object format
+    { x: 2, y: 2, alignment: CellAlignment.CENTER, intensity: 0.8 },
+  ],
+});
+```
+
+### Light properties reference
+
+| Property | Type | Default | Description |
+| :-- | :-- | :-- | :-- |
+| `position` / `x, y` | `Position` or numbers | — | Grid cell the light is placed on (required). |
+| `alignment` | `CellAlignment` | `CellAlignment.CENTER` | Where in the cell the light sits: `CENTER`, `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT` or `BOTTOM_RIGHT`. Corner alignments sit slightly inside the cell so the glow does not bleed into the wall corner. |
+| `color` | `string` | `'#FFB85C'` | CSS hex color of the light glow (`'#RGB'` or `'#RRGGBB'`). |
+| `radius` | `number` | `4` | Reach of the light in grid cells, measured from the light source. |
+| `intensity` | `number` | `0.35` | Brightness at the source (`0`–`1`), fading to `0` at the radius. |
+| `enabled` | `boolean` | `true` | Set to `false` to place a currently dark light (e.g. a brazier that could be lit later). |
+| `id` | `string` | `light_<x>_<y>` | Unique identifier for referencing the light. |
+
+Lights are validated like other layout entities: they must be inside the grid
+and placed on a floor cell, not on walls or empty cells, and ids must be unique.
+
+### Ambient light level
+
+Dungeons have a base light level, `ambientLight`, from `1` (fully lit, the
+default — how dungeons render today) down to `0` (pitch black). Set it on the
+dungeon to make light sources actually illuminate their surroundings:
+
+```ts
+export const myDungeon = defineDungeon({
+  name: 'campaign.myCampaign.darkCave.name',
+  intro: 'campaign.myCampaign.darkCave.intro',
+  ambientLight: 0.2,
+  winConditions: [/* ... */],
+  startingPositions: [[1, 1]],
+  layout: {
+    grid: [/* ... */],
+    lights: [
+      [2, 1],
+      [4, 3, CellAlignment.TOP_RIGHT, { radius: 3, intensity: 0.8 }],
+    ],
+  },
+});
+```
+
+At `ambientLight` below `1`, the whole dungeon view is veiled in darkness
+(actors included) and each visible light source punches a hole in it using
+its own shadow-cast polygon and falloff — walls, closed doors, pillars and
+actors still block the light (while being lit themselves), and undiscovered
+cells stay dark. At `1` the darkness veil and hole punching are skipped
+entirely, so fully lit dungeons render exactly as before. Values are clamped
+to `0`–`1`.
+
 ## Adding new log messages (optional)
 
 The action log (`addLog(state, key, params)`) reads its message templates from

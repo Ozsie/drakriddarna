@@ -5,6 +5,7 @@ import type {
   InteractableCell,
   ItemLocation,
   Layout,
+  LightSource,
   Monster,
   Note,
   Position,
@@ -237,6 +238,23 @@ export const validateLayout = (
         });
       }
       seenInteractableIds.add(interactable.id);
+    }
+  });
+
+  // 9. Lights
+  const seenLightIds = new Set<string>();
+  (layout.lights || []).forEach((light: LightSource) => {
+    checkPositionInBounds(light.position, `Light '${light.id ?? 'unnamed'}'`);
+    if (light.id) {
+      if (seenLightIds.has(light.id)) {
+        errors.push({
+          type: 'duplicate_id',
+          message: `Duplicate light id '${light.id}'.`,
+          position: light.position,
+          entity: light.id,
+        });
+      }
+      seenLightIds.add(light.id);
     }
   });
 

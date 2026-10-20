@@ -4,11 +4,19 @@ import type {
   InteractableCell,
   Item,
   ItemLocation,
+  LightSource,
   Monster,
   Secret,
   WinCondition,
 } from '../types';
-import { Colour, Level, MonsterType, SecretType, Side } from '../types';
+import {
+  CellAlignment,
+  Colour,
+  Level,
+  MonsterType,
+  SecretType,
+  Side,
+} from '../types';
 import { monsterWeapons } from '../items/weapons';
 import { monsterArmour } from '../items/armours';
 import { monsterShields } from '../items/shields';
@@ -104,6 +112,32 @@ export const createEquipment = (
 
 export const createRandomItem = (x: number, y: number): ItemLocation => ({
   position: { x, y },
+});
+
+// Default light source values, shared by `createLight` and rendering.
+export const DEFAULT_LIGHT_COLOR = '#FFB85C';
+export const DEFAULT_LIGHT_RADIUS = 4;
+export const DEFAULT_LIGHT_INTENSITY = 0.35;
+
+export const createLight = (
+  x: number,
+  y: number,
+  alignment: CellAlignment = CellAlignment.CENTER,
+  options?: {
+    color?: string;
+    radius?: number;
+    intensity?: number;
+    enabled?: boolean;
+    id?: string;
+  },
+): LightSource => ({
+  id: options?.id ?? `light_${x}_${y}`,
+  position: { x, y },
+  alignment,
+  color: options?.color ?? DEFAULT_LIGHT_COLOR,
+  radius: options?.radius ?? DEFAULT_LIGHT_RADIUS,
+  intensity: options?.intensity ?? DEFAULT_LIGHT_INTENSITY,
+  enabled: options?.enabled ?? true,
 });
 
 export const createSecret = (

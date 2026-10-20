@@ -5,8 +5,14 @@ import {
   validateLayout,
 } from './dungeonValidator';
 import { Colour, ConditionType, MonsterType, SecretType, Side } from '../types';
+import { CellAlignment } from '../types';
 import { defineDungeon } from './dungeonParser';
-import { createDoor, createMonster, createSecret } from './DungeonLogic';
+import {
+  createDoor,
+  createLight,
+  createMonster,
+  createSecret,
+} from './DungeonLogic';
 
 describe('dungeonValidator', () => {
   it('passes validation for valid layouts', () => {
@@ -174,6 +180,44 @@ describe('dungeonValidator', () => {
 
     expect(() => assertValidDungeon(invalidDungeon)).toThrow(
       /Dungeon 'broken.dungeon' layout validation failed/,
+    );
+  });
+
+  it('accepts valid lights and detects misplaced or duplicate ones', () => {
+    const valid = validateLayout({
+      grid: ['####', '#AA#', '####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corners: [],
+      lights: [createLight(1, 1)],
+    });
+    expect(valid.valid).toBe(true);
+
+    const invalid = validateLayout({
+      grid: ['####', '#AA#', '####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corners: [],
+      lights: [
+        createLight(9, 9),
+        createLight(0, 1),
+        createLight(1, 1, CellAlignment.CENTER, { id: 'light_dup' }),
+        createLight(2, 1, CellAlignment.CENTER, { id: 'light_dup' }),
+      ],
+    });
+    expect(invalid.valid).toBe(false);
+    expect(invalid.errors.filter((e) => e.type === 'boundary').length).toBe(1);
+    expect(invalid.errors.filter((e) => e.type === 'overlap').length).toBe(1);
+    expect(invalid.errors.filter((e) => e.type === 'duplicate_id').length).toBe(
+      1,
     );
   });
 });

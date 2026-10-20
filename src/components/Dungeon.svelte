@@ -7,6 +7,7 @@
     Hero,
     InteractableCell,
     ItemLocation,
+    LightSource,
     Monster,
     Secret,
   } from '../types';
@@ -33,6 +34,7 @@
     renderPortal,
     renderSecrets,
   } from '../dungeon/DungeonRendering';
+  import { renderLights, renderAmbientDarkness } from '../dungeon/LightRendering';
   import { renderItems } from '../items/ItemRendering';
   import {
     renderRadialMenu,
@@ -146,6 +148,7 @@
 
   let staticCanvas: HTMLCanvasElement | null = null;
   let actorCanvas: HTMLCanvasElement | null = null;
+  let darknessCanvas: HTMLCanvasElement | null = null;
   let overlayCanvas: HTMLCanvasElement | null = null;
   let uiCanvas: HTMLCanvasElement | null = null;
 
@@ -241,7 +244,15 @@
       .map((m: Monster) => `${m.name},${m.position.x},${m.position.y},${m.health}`)
       .join(';');
     const curActor = `${st?.currentActor?.name},${st?.currentActor?.position?.x},${st?.currentActor?.position?.y}`;
-    return `${heroes}|${monsters}|${curActor}|${size}|${dbg}`;
+    // Light shadows depend on fog of war and on the light sources themselves.
+    const rooms = (st?.dungeon?.discoveredRooms ?? []).join(',');
+    const lights = (st?.dungeon?.layout?.lights ?? [])
+      .map(
+        (l: LightSource) =>
+          `${l.position.x},${l.position.y},${l.alignment},${l.enabled}`,
+      )
+      .join(';');
+    return `${heroes}|${monsters}|${curActor}|${rooms}|${lights}|${size}|${dbg}`;
   };
 
   const getOverlaySignature = (st: GameState, dbg: boolean, size: number) => {
@@ -266,7 +277,13 @@
     const centerOffsetY = startPosition
       ? (startPosition.y + 0.5) * cellSize
       : 0;
-    for (const canvas of [staticCanvas, actorCanvas, overlayCanvas, uiCanvas]) {
+    for (const canvas of [
+      staticCanvas,
+      actorCanvas,
+      darknessCanvas,
+      overlayCanvas,
+      uiCanvas,
+    ]) {
       if (canvas) {
         const ctx = canvas.getContext('2d');
         if (ctx) {
@@ -340,6 +357,8 @@
     ctx.clearRect(0, 0, actorCanvas.width, actorCanvas.height);
     ctx.restore();
 
+    renderLights(ctx, cellSize, activeState, activeDebugMode ?? false);
+
     const hasActiveMonsters = renderMonsters(
       ctx,
       actors,
@@ -356,6 +375,16 @@
       activeDebugMode ?? false,
       currentTime,
     );
+
+    if (darknessCanvas) {
+      renderAmbientDarkness(
+        ctx,
+        darknessCanvas,
+        cellSize,
+        activeState,
+        activeDebugMode ?? false,
+      );
+    }
 
     if (dynamicAnimationId) {
       cancelAnimationFrame(dynamicAnimationId);
@@ -628,6 +657,7 @@
       const ratio = (browser && window.devicePixelRatio) || 1;
       initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
       initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(darknessCanvas, containerWidth, containerHeight, ratio);
       initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
       initCanvas(uiCanvas, containerWidth, containerHeight, ratio);
       renderCanvas(true);
@@ -722,6 +752,9 @@
     isMounted = true;
     ground = new Image();
     actors = new Image();
+    // Offscreen canvas for the ambient darkness veil: same size and world
+    // transform as the actor canvas, never attached to the DOM.
+    darknessCanvas = document.createElement('canvas');
 
     if (browser) {
       window.addEventListener('mousemove', onWindowMouseMove);
@@ -735,6 +768,7 @@
     if (containerWidth && containerHeight) {
       initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
       initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(darknessCanvas, containerWidth, containerHeight, ratio);
       initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
       initCanvas(uiCanvas, containerWidth, containerHeight, ratio);
     }
@@ -808,6 +842,7 @@
     const ratio = (browser && window.devicePixelRatio) || 1;
     initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
     initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
+    initCanvas(darknessCanvas, containerWidth, containerHeight, ratio);
     initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
     initCanvas(uiCanvas, containerWidth, containerHeight, ratio);
     renderCanvas(true);
