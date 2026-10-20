@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_GAME_MASTER_ID, gameMasters, getGameMaster, isKnownGameMaster, } from './index';
+import {
+  DEFAULT_GAME_MASTER_ID,
+  gameMasters,
+  getGameMaster,
+  isKnownGameMaster,
+} from './index';
 import storyTeller from './storyTeller/gameMaster';
 import tactician from './tactician/gameMaster';
 import brutalOverlord from './brutalOverlord/gameMaster';
 import { shields } from '../items/shields';
 import { weapons } from '../items/weapons';
-import { DifficultLevels, getDifficulty, getEarliestMonsterEventRound, getEventMinSpawnDistance, } from '../core';
+import {
+  DifficultLevels,
+  getDifficulty,
+  getEarliestMonsterEventRound,
+  getEventMinSpawnDistance,
+} from '../core';
 
 describe('Game Master System', () => {
   it('auto-discovers and registers the three default Game Masters', () => {
