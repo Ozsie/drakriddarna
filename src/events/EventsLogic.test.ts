@@ -19,7 +19,7 @@ import {
 import { createMonster } from '../dungeon/DungeonLogic';
 import { getPartyAverageLevel } from '../hero/HeroLogic';
 import {
-  DifficultLevels,
+  getGameMaster,
   distanceInGrid,
   getEventMinSpawnDistance,
   getEarliestMonsterEventRound,
@@ -181,10 +181,10 @@ describe('Orc Drums event and resetEventEffects', () => {
 
   it('fountainOfYouth respects max health adjusted by difficulty modifier', () => {
     const state = init();
-    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+    state.difficulty = getGameMaster('easy');
     const hero = state.heroes[0];
     hero.maxHealth = 10;
-    hero.health = 8; // Effective max is 9 (10 - 1)
+    hero.health = 10; // Effective max is 11 (10 + 1)
 
     const event: TurnEvent = {
       id: 'fountain_of_youth',
@@ -200,7 +200,7 @@ describe('Orc Drums event and resetEventEffects', () => {
 
     eventEffects.fountainOfYouth(state, event);
 
-    expect(hero.health).toBeLessThanOrEqual(9);
+    expect(hero.health).toBeLessThanOrEqual(11);
     expect(event.used).toBe(true);
   });
 });
@@ -231,11 +231,11 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
   };
 
   it('difficulty configuration exposes correct defaults and helper functions work', () => {
-    const easyDiff = DifficultLevels.find((d) => d.id === 'easy');
-    const normalDiff = DifficultLevels.find((d) => d.id === 'normal');
-    const hardDiff = DifficultLevels.find((d) => d.id === 'hard');
+    const easyDiff = getGameMaster('easy');
+    const normalDiff = getGameMaster('normal');
+    const hardDiff = getGameMaster('hard');
 
-    expect(easyDiff?.events?.minMonsterSpawnDistance).toBe(4);
+    expect(easyDiff?.events?.minMonsterSpawnDistance).toBe(3);
     expect(easyDiff?.events?.earliestMonsterRound).toBe(4);
     expect(easyDiff?.events?.skipHungryTrollBelowHalfHealth).toBe(true);
 
@@ -243,13 +243,13 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     expect(normalDiff?.events?.earliestMonsterRound).toBe(3);
     expect(normalDiff?.events?.skipHungryTrollBelowHalfHealth).toBe(true);
 
-    expect(hardDiff?.events?.minMonsterSpawnDistance).toBe(1);
+    expect(hardDiff?.events?.minMonsterSpawnDistance).toBe(2);
     expect(hardDiff?.events?.earliestMonsterRound).toBe(2);
     expect(hardDiff?.events?.skipHungryTrollBelowHalfHealth).toBe(false);
 
-    expect(getEventMinSpawnDistance('easy')).toBe(4);
+    expect(getEventMinSpawnDistance('easy')).toBe(3);
     expect(getEventMinSpawnDistance('normal')).toBe(3);
-    expect(getEventMinSpawnDistance('hard')).toBe(1);
+    expect(getEventMinSpawnDistance('hard')).toBe(2);
 
     expect(getEarliestMonsterEventRound('easy')).toBe(4);
     expect(getEarliestMonsterEventRound('normal')).toBe(3);
@@ -276,24 +276,24 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     state.heroes[0].health = 4;
     expect(isPartyBelowHalfHealth(state)).toBe(true);
 
-    // With hard difficulty (-1 max health per hero => 4 * 9 = 36 max health)
-    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
-    // Total health 18 / 36 = 50% (not below 50%)
-    state.heroes[0].health = 3;
+    // With easy difficulty (+1 max health per hero => 4 * 11 = 44 max health)
+    state.difficulty = getGameMaster('easy');
+    // Total health 22 / 44 = 50% (not below 50%)
+    state.heroes[0].health = 5;
     state.heroes[1].health = 5;
-    state.heroes[2].health = 5;
-    state.heroes[3].health = 5;
+    state.heroes[2].health = 6;
+    state.heroes[3].health = 6;
     expect(isPartyBelowHalfHealth(state)).toBe(false);
 
-    // Total health 17 / 36 < 50%
-    state.heroes[0].health = 2;
+    // Total health 21 / 44 < 50%
+    state.heroes[0].health = 4;
     expect(isPartyBelowHalfHealth(state)).toBe(true);
   });
 
   describe('Early round skipping', () => {
     it('skips hungry_troll and lost_orc if drawn before round 3 on normal difficulty', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'normal');
+      state.difficulty = getGameMaster('normal');
       state.dungeon.layout.grid = ['AAAAA', 'AAAAA', 'AAAAA', 'AAAAA', 'AAAAA'];
       state.dungeon.discoveredRooms = ['A'];
       state.dungeon.layout.monsters = [];
@@ -340,7 +340,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('skips in rounds < 4 on easy difficulty and spawns in round 4+', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'easy');
+      state.difficulty = getGameMaster('easy');
       state.dungeon.layout.grid = [
         'AAAAAA',
         'AAAAAA',
@@ -366,7 +366,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('spawns earlier on hard difficulty (round 2+)', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.difficulty = getGameMaster('hard');
       state.dungeon.layout.grid = ['AAAAA', 'AAAAA', 'AAAAA', 'AAAAA', 'AAAAA'];
       state.dungeon.discoveredRooms = ['A'];
       state.dungeon.layout.monsters = [];
@@ -389,7 +389,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     it('skips hungry_troll on easy and normal when party health is below 50%', () => {
       ['easy', 'normal'].forEach((diffId) => {
         const state = init();
-        state.difficulty = DifficultLevels.find((d) => d.id === diffId);
+        state.difficulty = getGameMaster(diffId);
         state.turnCount = 5; // Well past round threshold
         state.dungeon.layout.grid = [
           'AAAAAA',
@@ -416,7 +416,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     it('does not skip hungry_troll on easy and normal when party health is >= 50%', () => {
       ['easy', 'normal'].forEach((diffId) => {
         const state = init();
-        state.difficulty = DifficultLevels.find((d) => d.id === diffId);
+        state.difficulty = getGameMaster(diffId);
         state.turnCount = 5;
         state.dungeon.layout.grid = [
           'AAAAAA',
@@ -429,7 +429,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
         state.dungeon.layout.monsters = [];
         state.heroes.forEach((h) => {
           h.maxHealth = 10;
-          h.health = 5; // 20 / 40 = 50%
+          h.health = 6; // easy: 24 / 44 = 54.5%, normal: 24 / 40 = 60%
         });
 
         const event = { ...trollEvent, used: false };
@@ -443,7 +443,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('does NOT skip hungry_troll on hard even when party health is below 50%', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === hardDiffId());
+      state.difficulty = getGameMaster(hardDiffId());
       state.turnCount = 5;
       state.dungeon.layout.grid = [
         'AAAAAA',
@@ -473,7 +473,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('does NOT skip lost_orc when party health is below 50% on easy or normal', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'normal');
+      state.difficulty = getGameMaster('normal');
       state.turnCount = 5;
       state.dungeon.layout.grid = [
         'AAAAAA',
@@ -501,7 +501,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
   describe('Minimum spawn distance away from heroes', () => {
     it('spawns monster at least the minimum distance away from all live heroes based on difficulty', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'easy'); // minDistance = 3
+      state.difficulty = getGameMaster('easy'); // minDistance = 4
       state.turnCount = 5;
       state.dungeon.layout.grid = [
         'AAAAAA',
@@ -532,7 +532,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('prefers spawn positions out of line of sight of heroes when available', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'hard'); // minDistance = 1
+      state.difficulty = getGameMaster('hard'); // minDistance = 1
       state.turnCount = 5;
       // Grid with room A (0,0)-(2,0) and room B (0,2)-(2,2), separated by a wall at y=1 except a corner
       state.dungeon.layout.grid = ['AAA', '###', 'BBB'];
@@ -556,7 +556,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('does not spawn monster if all room cells are closer than the required distance', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'easy'); // minDistance = 3
+      state.difficulty = getGameMaster('easy'); // minDistance = 4
       state.turnCount = 5;
       // 2x2 grid, all cells have distance <= 2 from (0,0)
       state.dungeon.layout.grid = ['AA', 'AA'];
@@ -611,7 +611,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('does not spawn a troll when 4 trolls are already visible and Hungry Troll is drawn', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.difficulty = getGameMaster('hard');
       state.turnCount = 5;
       state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
       state.dungeon.discoveredRooms = ['A'];
@@ -634,7 +634,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('spawns a troll when 4 trolls are in layout but 1 is dead and party level is HERO', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.difficulty = getGameMaster('hard');
       state.turnCount = 5;
       state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
       state.dungeon.discoveredRooms = ['A'];
@@ -710,7 +710,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('when average level is APPRENTICE, skips hungry_troll if 1 or more trolls are visible', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.difficulty = getGameMaster('hard');
       state.turnCount = 5;
       state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
       state.dungeon.discoveredRooms = ['A'];
@@ -743,7 +743,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('when average level is KNIGHT, spawns with 0 or 1 visible troll, but skips if 2 or more visible trolls', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.difficulty = getGameMaster('hard');
       state.turnCount = 5;
       state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
       state.dungeon.discoveredRooms = ['A'];
@@ -774,7 +774,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('when average level is HERO or higher, uses normal limit (allows up to 4 trolls)', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.difficulty = getGameMaster('hard');
       state.turnCount = 5;
       state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
       state.dungeon.discoveredRooms = ['A'];
@@ -808,7 +808,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('does not count invisible (undiscovered room) or dead trolls towards visibility limits', () => {
       const state = init();
-      state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+      state.difficulty = getGameMaster('hard');
       state.turnCount = 5;
       state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'BBBBBB', 'BBBBBB'];
       state.dungeon.discoveredRooms = ['A']; // Room B is undiscovered

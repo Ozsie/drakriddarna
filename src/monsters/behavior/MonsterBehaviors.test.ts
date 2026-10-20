@@ -10,7 +10,7 @@ import {
   MonsterType,
   type Weapon,
 } from '../../types';
-import { DifficultLevels } from '../../core';
+import { getGameMaster } from '../../core';
 import { createMonster } from '../../dungeon/DungeonLogic';
 import { createPassableGrid } from '../pathfinding';
 import {
@@ -137,17 +137,17 @@ describe('Monster Behavioral Modifiers & Formulas', () => {
     }
 
     // Easy difficulty (25%) with custom difficulty object or string
-    const easyDiff = DifficultLevels.find((d) => d.id === 'easy');
-    expect(easyDiff?.monsterBehavior?.bowForgottenChance).toBe(0.25);
+    const easyDiff = getGameMaster('easy');
+    expect(easyDiff?.monsterBehavior?.bowForgottenChance).toBe(0.2);
 
-    const normalDiff = DifficultLevels.find((d) => d.id === 'normal');
+    const normalDiff = getGameMaster('normal');
     expect(normalDiff?.monsterBehavior?.bowForgottenChance).toBe(0.15);
 
-    const hardDiff = DifficultLevels.find((d) => d.id === 'hard');
+    const hardDiff = getGameMaster('hard');
     expect(hardDiff?.monsterBehavior?.bowForgottenChance).toBe(0);
 
     const randomSpy = vi.spyOn(Math, 'random');
-    randomSpy.mockReturnValue(0.2); // 0.2 < 0.25 (easy) but >= 0.15 (normal)
+    randomSpy.mockReturnValue(0.15); // 0.2 < 0.25 (easy) but >= 0.15 (normal)
     expect(rollBowForgotten('easy')).toBe(true);
     expect(rollBowForgotten(easyDiff)).toBe(true);
     expect(rollBowForgotten('normal')).toBe(false);
@@ -280,7 +280,7 @@ describe('Orc Behaviors Evaluation', () => {
 
   it('Orc Charge accounts for difficulty health modifier when checking <= 50%', () => {
     const state = createTestState();
-    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+    state.difficulty = getGameMaster('hard');
     const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
     monster.temperament = 'bold';
     // Base maxHealth is 10, with modifier -1 effective max is 9.
@@ -305,7 +305,8 @@ describe('Orc Behaviors Evaluation', () => {
     const evaluated = evaluateBehaviors(ORC_BEHAVIORS, ctx);
     const charge = evaluated.find((b) => b.name === 'Charge');
     expect(charge?.eligible).toBe(true);
-    // Base weight should be 8 (not 11) because 5 > 9 / 2 (4.5)
+    // Health 5 is > 50% of effective max 9 (4.5), so the weak-hero bold
+    // bonus does not apply: base weight stays 8.
     expect(charge?.baseWeight).toBe(8);
 
     // If hero health is 4 (<= 9 / 2 = 4.5), base weight becomes 11

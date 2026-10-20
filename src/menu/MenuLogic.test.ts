@@ -3,6 +3,7 @@ import {
   getMainMenuItems,
   getDebugMenuItems,
   getCampaignMenuItems,
+  getGameMasterMenuItems,
   getSavedGameMenuItems,
   getEventMenuItems,
   getRightsMenuItems,
@@ -11,6 +12,8 @@ import {
   getDifficultyMenuLabel,
   getDebugMenuLabel,
   getMusicMenuLabel,
+  setSelectedCampaign,
+  getSelectedCampaign,
 } from './MenuLogic';
 import { DifficultLevels } from '../core';
 import { Colour, ItemType, Level, type GameState, type Hero } from '../types';
@@ -270,11 +273,57 @@ describe('MenuLogic', () => {
       expect(backItem).toBeDefined();
     });
 
+    it('navigates to gameMaster view and sets selected campaign on campaign selection', () => {
+      const setView = vi.fn();
+      const items = getCampaignMenuItems(mockState, { setView });
+      const campaignItem = items.find((i) => i.id !== 'campaign_back');
+      campaignItem?.onClick(mockState);
+      expect(setView).toHaveBeenCalledWith('gameMaster');
+      expect(getSelectedCampaign()).toBe(
+        campaignItem?.id.replace('campaign_', ''),
+      );
+    });
+
     it('navigates back to main on back button click', () => {
       const setView = vi.fn();
       const items = getCampaignMenuItems(mockState, { setView });
       const backItem = items.find((i) => i.id === 'campaign_back');
       backItem?.onClick(mockState);
+      expect(setView).toHaveBeenCalledWith('main');
+    });
+  });
+
+  describe('getGameMasterMenuItems', () => {
+    it('returns game masters and a back button', () => {
+      const items = getGameMasterMenuItems(mockState);
+      expect(items.length).toBeGreaterThan(1);
+      const backItem = items.find((i) => i.id === 'gameMaster_back');
+      expect(backItem).toBeDefined();
+    });
+
+    it('navigates back to campaign on back button click', () => {
+      const setView = vi.fn();
+      const items = getGameMasterMenuItems(mockState, { setView });
+      const backItem = items.find((i) => i.id === 'gameMaster_back');
+      backItem?.onClick(mockState);
+      expect(setView).toHaveBeenCalledWith('campaign');
+    });
+
+    it('starts new game, closes menu, and resets view to main on game master selection', () => {
+      const setView = vi.fn();
+      const closeMenu = vi.fn();
+      const setState = vi.fn();
+      setSelectedCampaign('iceDragonTreasure');
+      const items = getGameMasterMenuItems(mockState, {
+        setView,
+        closeMenu,
+        setState,
+      });
+      const gmItem = items.find((i) => i.id === 'gameMaster_tactician');
+      expect(gmItem).toBeDefined();
+      gmItem?.onClick(mockState);
+      expect(setState).toHaveBeenCalled();
+      expect(closeMenu).toHaveBeenCalled();
       expect(setView).toHaveBeenCalledWith('main');
     });
   });
@@ -368,6 +417,19 @@ describe('MenuLogic', () => {
       ]);
     });
 
+    it('returns campaign menu items for campaign view', () => {
+      const items = getMenuItemsForView('campaign', mockState);
+      const ids = items.map((i) => i.id);
+      expect(ids).toContain('campaign_back');
+    });
+
+    it('returns game master menu items for gameMaster view', () => {
+      const items = getMenuItemsForView('gameMaster', mockState);
+      const ids = items.map((i) => i.id);
+      expect(ids).toContain('gameMaster_tactician');
+      expect(ids).toContain('gameMaster_back');
+    });
+
     it('returns rights menu items for rights view', () => {
       const items = getMenuItemsForView('rights', mockState);
       const ids = items.map((i) => i.id);
@@ -382,6 +444,7 @@ describe('MenuLogic', () => {
       expect(getMenuHeader('main')).toBeTruthy();
       expect(getMenuHeader('debug')).toBeTruthy();
       expect(getMenuHeader('campaign')).toBeTruthy();
+      expect(getMenuHeader('gameMaster')).toBeTruthy();
       expect(getMenuHeader('load')).toBeTruthy();
       expect(getMenuHeader('event')).toBeTruthy();
       expect(getMenuHeader('rights')).toBeTruthy();

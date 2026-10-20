@@ -1,16 +1,32 @@
 # Drakriddarna
 
+A web-based adaptation of the [Drakriddarna (Dragonfire)](https://boardgamegeek.com/image/4326455/dragonfire) tactical turn-based dungeon-crawler board game. Lead a party of heroes through peril-filled dungeons, battle monsters, discover hidden rooms and treasures, and defeat the Dark Lords to conquer campaigns.
+
+The full player guide, rules, and playability adaptations can be found in [RULES.md](./RULES.md).
+
 [Board Game Geek](https://boardgamegeek.com/image/4326455/dragonfire)
 
 [Rules inconsistencies](https://boardgamegeek.com/thread/2896557/rules-omissions-ambiguities-and-oddities)
+
+## Tech Stack
+
+- [SvelteKit](https://kit.svelte.dev/) / [Svelte](https://svelte.dev/) with static adapter
+- [TypeScript](https://www.typescriptlang.org/)
+- Canvas-based game UI (fully custom rendering, no game engine)
+- [sveltekit-i18n](https://github.com/jhubbard/sveltekit-i18n) for translations (English/Swedish)
+- [Vite](https://vitejs.dev/), [Vitest](https://vitest.dev/), [ESLint](https://eslint.org/) & [Prettier](https://prettier.io/) for tooling
 
 ## Creating Campaigns
 
 See [Campaign Readme](src/campaigns/README.md)
 
+## Creating Game Masters
+
+See [Game Master Readme](src/gameMasters/README.md)
+
 ## Rules and playability adaptions
 
-See [Rules Readme](./RULES.md)
+See the [Rules & Player Guide](./RULES.md).
 
 ## Todo
 - [ ] e1m4 hidden stare requirement not working
@@ -24,11 +40,11 @@ See [Rules Readme](./RULES.md)
   - [ ] Sprites for actors
   - [ ] Tileset for dungeons
   - [ ] Sprites for items etc
-- [X] Between dungeons screen (level up, trade, more?)
-- [X] Trade Items?
 - [ ] Alvkonungens Borg -  [Official Dungeon and Heroes](https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg)
   - [ ] Edge based walls
 - [ ] Level editor
+- [X] Between dungeons screen (level up, trade, more?)
+- [X] Trade Items?
 - [X] Reset caved in corridor
 - [X] Doors blocking monsters
 - [X] Diary on mobile
@@ -82,7 +98,7 @@ See [Rules Readme](./RULES.md)
 - [X] Clearing dungeon
 - [X] Trap Doors
 - [X] Moving through other heroes
-- [X] Levelling up
+- [X] Leveling up
 - [X] e1m0 - Troll Cave
 - [X] Hidden doors
 - [X] Trapped doors
@@ -169,6 +185,34 @@ npm run dev
 # or start the server and open the app in a new browser tab
 npm run dev -- --open
 ```
+
+Other useful commands:
+
+```bash
+npm run test            # run unit tests (Vitest)
+npm run check           # type-check with svelte-check
+npm run lint            # lint TypeScript files with ESLint
+npm run prettier        # check formatting
+npm run benchmark       # run playability benchmarks (see below)
+```
+
+## Benchmarks
+
+The benchmark suite in `src/benchmark/` simulates fully headless games to measure playability and balance. A bot (`src/benchmark/bot.ts`) plays the hero side with a fixed aggressive playstyle (heals at HP <= 3, attacks enemies in range, searches adjacent secrets/doors; priority: combat > doors > secrets > exploration), while monster turns run with all delays disabled for speed.
+
+Run it with:
+
+```bash
+npm run benchmark
+```
+
+What it does:
+
+- Plays each benchmarked dungeon (`e1m0` and `e1m1` from Ice Dragon Treasure, `e2m1` from Earth Hour) against all three Game Masters (`storyTeller`, `tactician`, `brutalOverlord`), 500 seeded runs per Game Master for deterministic, comparable results.
+- Prints an ASCII report per dungeon to the console with win/loss rates, average turns, hero casualties (± standard deviation), monsters killed, remaining/near-death party HP, wasted searches, and monster spawns — useful for verifying that difficulty tiers feel distinct and that Game Master AI pacing works as intended.
+- Also includes a metrics verification test that validates the simulation result tracking itself.
+
+A single simulation run can end in one of three statuses: `WON`, `LOST` or `TIMEOUT` (max turns exceeded).
 
 ## Building
 

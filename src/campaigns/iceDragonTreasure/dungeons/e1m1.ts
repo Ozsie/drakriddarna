@@ -21,7 +21,7 @@ export const e1m1: Dungeon = defineDungeon({
     },
     {
       type: ConditionType.OPEN_DOOR,
-      targetCell: { x: 15, y: 2 },
+      targetCell: { x: 16, y: 2 },
       fulfilled: false,
     },
   ],

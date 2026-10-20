@@ -12,6 +12,14 @@ const campaignSvModules = import.meta.glob<{
   default: Record<string, unknown>;
 }>('../../campaigns/*/translations/sv.json');
 
+// Game masters also have self-contained translations discovered dynamically
+const gameMasterEnModules = import.meta.glob<{
+  default: Record<string, unknown>;
+}>('../../gameMasters/*/translations/en.json');
+const gameMasterSvModules = import.meta.glob<{
+  default: Record<string, unknown>;
+}>('../../gameMasters/*/translations/sv.json');
+
 // Campaigns may additionally define their own log message translations, so that
 // campaign-specific items/events can add their own entries to the "logs" namespace
 // without touching the shared logs.json files.
@@ -22,15 +30,45 @@ const campaignLogsSvModules = import.meta.glob<{
   default: Record<string, unknown>;
 }>('../../campaigns/*/translations/logs.sv.json');
 
+export const isObject = (item: unknown): item is Record<string, unknown> =>
+  typeof item === 'object' && item !== null && !Array.isArray(item);
+
+export const deepMerge = (
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
+): Record<string, unknown> => {
+  const result: Record<string, unknown> = { ...target };
+  for (const [key, value] of Object.entries(source)) {
+    if (isObject(value) && isObject(result[key])) {
+      result[key] = deepMerge(result[key] as Record<string, unknown>, value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+};
+
 const loadCampaignTranslations = async (
   modules: Record<string, () => Promise<{ default: Record<string, unknown> }>>,
 ): Promise<Record<string, unknown>> => {
-  const merged: Record<string, unknown> = {};
+  let merged: Record<string, unknown> = {};
   for (const loader of Object.values(modules)) {
     const mod = await loader();
-    Object.assign(merged, mod.default);
+    merged = deepMerge(merged, mod.default);
   }
   return merged;
+};
+
+const loadContentWithGameMasters = async (
+  baseLoader: () => Promise<Record<string, unknown>>,
+  gmModules: Record<
+    string,
+    () => Promise<{ default: Record<string, unknown> }>
+  >,
+): Promise<Record<string, unknown>> => {
+  const base = await baseLoader();
+  const gmTranslations = await loadCampaignTranslations(gmModules);
+  return deepMerge(base, gmTranslations);
 };
 
 const loadLogsWithCampaigns = async (
@@ -42,23 +80,7 @@ const loadLogsWithCampaigns = async (
 ): Promise<Record<string, unknown>> => {
   const base = await baseLoader();
   const campaignLogs = await loadCampaignTranslations(campaignModules);
-  const merged: Record<string, unknown> = { ...base };
-  for (const [key, value] of Object.entries(campaignLogs)) {
-    if (
-      typeof value === 'object' &&
-      value !== null &&
-      typeof merged[key] === 'object' &&
-      merged[key] !== null
-    ) {
-      merged[key] = {
-        ...(merged[key] as Record<string, unknown>),
-        ...(value as Record<string, unknown>),
-      };
-    } else {
-      merged[key] = value;
-    }
-  }
-  return merged;
+  return deepMerge(base, campaignLogs);
 };
 
 export const config: Config = {
@@ -70,7 +92,11 @@ export const config: Config = {
     {
       locale: 'en',
       key: 'content',
-      loader: async () => (await import('./en/content.json')).default,
+      loader: async () =>
+        loadContentWithGameMasters(
+          async () => (await import('./en/content.json')).default,
+          gameMasterEnModules,
+        ),
     },
     {
       locale: 'en',
@@ -99,7 +125,11 @@ export const config: Config = {
     {
       locale: 'sv',
       key: 'content',
-      loader: async () => (await import('./sv/content.json')).default,
+      loader: async () =>
+        loadContentWithGameMasters(
+          async () => (await import('./sv/content.json')).default,
+          gameMasterSvModules,
+        ),
     },
     {
       locale: 'sv',

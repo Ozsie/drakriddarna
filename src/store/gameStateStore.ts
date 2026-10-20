@@ -134,8 +134,11 @@ export const isTurnInProgress = writable<boolean>(false);
 let isExecutingTurn = false;
 
 // Encapsulated Action Dispatchers
-export const initGame = (campaignId?: string): GameState => {
-  const state = init(campaignId);
+export const initGame = (
+  campaignId?: string,
+  gameMasterId?: string,
+): GameState => {
+  const state = init(campaignId, gameMasterId);
   syncStore(state, true);
   return state;
 };
@@ -290,8 +293,12 @@ export const setGameLocale = (loc: string): void => {
 export const setDifficulty = (difficulty: Difficulty): void => {
   const state = get(gameStateStore);
   state.difficulty = difficulty;
+  state.gameMaster = difficulty;
+  state.gameMasterId = difficulty.id;
   syncStore(state);
 };
+
+export const setGameMaster = setDifficulty;
 
 export const winLevel = (): void => {
   const state = get(gameStateStore);

@@ -63,6 +63,19 @@ export const drawNextEvent = (state: GameState): TurnEvent => {
     return drawNextEvent(state);
   }
 
+  const difficulty = getDifficulty(state);
+  if (difficulty?.events?.onEventDrawn) {
+    const customResult = difficulty.events.onEventDrawn(unUsedEvents[0], state);
+    if (customResult !== null && customResult !== undefined) {
+      return customResult;
+    }
+    // If hook returned null, mark current event as skipped/used or skip to next event if available
+    if (customResult === null) {
+      unUsedEvents[0].used = true;
+      return drawNextEvent(state);
+    }
+  }
+
   const wasPlayedPreviousRound =
     state.previousEvent?.id === 'fountain_of_youth' ||
     (!state.previousEvent && state.currentEvent?.id === 'fountain_of_youth');

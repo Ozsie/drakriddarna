@@ -1,96 +1,33 @@
-import type { Difficulty, GameState } from '../types';
-import { shields } from '../items/shields';
-import { weapons } from '../items/weapons';
+import type { GameMaster, GameState } from '../types';
+import {
+  gameMasters,
+  getGameMaster,
+  DEFAULT_GAME_MASTER_ID,
+  GAME_MASTER_ALIASES,
+} from '../gameMasters';
 
-export const DEFAULT_DIFFICULTY_ID = 'normal';
+export {
+  gameMasters,
+  getGameMaster,
+  DEFAULT_GAME_MASTER_ID,
+  GAME_MASTER_ALIASES,
+};
 
-export const DifficultLevels: Difficulty[] = [
-  {
-    id: 'easy',
-    nameTranslationKey: 'content.difficulty.easy.name',
-    descriptionTranslationKey: 'content.difficulty.easy.description',
-    modifiers: {
-      attack: 1,
-      defense: 0,
-      movement: 1,
-      search: 2,
-      health: 0,
-    },
-    monsterBehavior: {
-      bowForgottenChance: 0.25,
-    },
-    events: {
-      minMonsterSpawnDistance: 4,
-      earliestMonsterRound: 4,
-      skipHungryTrollBelowHalfHealth: true,
-    },
-    startingEquipment: {
-      shield: shields[1],
-      weapon: weapons[0],
-      inventory: [],
-    },
-  },
-  {
-    id: 'normal',
-    nameTranslationKey: 'content.difficulty.normal.name',
-    descriptionTranslationKey: 'content.difficulty.normal.description',
-    modifiers: {
-      attack: 0,
-      defense: 0,
-      movement: 0,
-      search: 0,
-      health: 0,
-    },
-    monsterBehavior: {
-      bowForgottenChance: 0.15,
-    },
-    events: {
-      minMonsterSpawnDistance: 3,
-      earliestMonsterRound: 3,
-      skipHungryTrollBelowHalfHealth: true,
-    },
-    startingEquipment: {
-      weapon: weapons[0],
-      inventory: [],
-    },
-  },
-  {
-    id: 'hard',
-    nameTranslationKey: 'content.difficulty.hard.name',
-    descriptionTranslationKey: 'content.difficulty.hard.description',
-    modifiers: {
-      attack: 0,
-      defense: 0,
-      movement: -1,
-      search: 0,
-      health: -1,
-    },
-    monsterBehavior: {
-      bowForgottenChance: 0,
-    },
-    events: {
-      minMonsterSpawnDistance: 1,
-      earliestMonsterRound: 2,
-      skipHungryTrollBelowHalfHealth: false,
-    },
-    startingEquipment: {
-      weapon: weapons[0],
-      inventory: [],
-    },
-  },
-];
+export const DEFAULT_DIFFICULTY_ID = DEFAULT_GAME_MASTER_ID;
 
-export const getDifficulty = (state: GameState | undefined): Difficulty =>
+export const DifficultLevels: GameMaster[] = Object.values(gameMasters);
+
+export const getDifficulty = (state: GameState | undefined): GameMaster =>
   state?.difficulty ??
-  DifficultLevels.find((level) => level.id === DEFAULT_DIFFICULTY_ID) ??
-  DifficultLevels[1];
+  state?.gameMaster ??
+  getGameMaster(state?.gameMasterId ?? DEFAULT_DIFFICULTY_ID);
 
 export const getEventMinSpawnDistance = (
-  difficultyOrState?: Difficulty | GameState | string,
+  difficultyOrState?: GameMaster | GameState | string,
 ): number => {
-  let difficulty: Difficulty | undefined;
+  let difficulty: GameMaster | undefined;
   if (typeof difficultyOrState === 'string') {
-    difficulty = DifficultLevels.find((d) => d.id === difficultyOrState);
+    difficulty = getGameMaster(difficultyOrState);
   } else if (difficultyOrState && 'modifiers' in difficultyOrState) {
     difficulty = difficultyOrState;
   } else if (difficultyOrState && 'heroes' in difficultyOrState) {
@@ -101,16 +38,20 @@ export const getEventMinSpawnDistance = (
   return (
     difficulty?.events?.minMonsterSpawnDistance ??
     difficulty?.events?.minSpawnDistance ??
-    (difficulty?.id === 'easy' ? 3 : difficulty?.id === 'hard' ? 1 : 2)
+    (difficulty?.id === 'storyTeller' || difficulty?.id === 'easy'
+      ? 4
+      : difficulty?.id === 'brutalOverlord' || difficulty?.id === 'hard'
+      ? 1
+      : 3)
   );
 };
 
 export const getEarliestMonsterEventRound = (
-  difficultyOrState?: Difficulty | GameState | string,
+  difficultyOrState?: GameMaster | GameState | string,
 ): number => {
-  let difficulty: Difficulty | undefined;
+  let difficulty: GameMaster | undefined;
   if (typeof difficultyOrState === 'string') {
-    difficulty = DifficultLevels.find((d) => d.id === difficultyOrState);
+    difficulty = getGameMaster(difficultyOrState);
   } else if (difficultyOrState && 'modifiers' in difficultyOrState) {
     difficulty = difficultyOrState;
   } else if (difficultyOrState && 'heroes' in difficultyOrState) {
@@ -121,7 +62,11 @@ export const getEarliestMonsterEventRound = (
   return (
     difficulty?.events?.earliestMonsterRound ??
     difficulty?.events?.earliestRound ??
-    (difficulty?.id === 'easy' ? 4 : difficulty?.id === 'hard' ? 2 : 3)
+    (difficulty?.id === 'storyTeller' || difficulty?.id === 'easy'
+      ? 4
+      : difficulty?.id === 'brutalOverlord' || difficulty?.id === 'hard'
+      ? 2
+      : 3)
   );
 };
 

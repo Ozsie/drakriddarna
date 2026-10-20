@@ -14,7 +14,7 @@
         "shuffleDeck": "Blanda Kortleken",
         "selectNextEvent": "Välj Nästa Händelse",
         "outputGameState": "Skriv ut spelläge",
-        "difficulty": "Svårighetsgrad:",
+        "gameMaster": "Spelledare:",
         "rights": "Rättigheter & Licenser"
       }
     },
@@ -31,6 +31,9 @@
     },
     "selectCampaign": {
       "header": "Välj Kampanj"
+    },
+    "selectGameMaster": {
+      "header": "Välj Spelledare"
     },
     "rights": {
       "header": "Rättigheter & Licenser",
@@ -99,20 +102,6 @@
     "interact": "Interagera",
     "useItem": "Använd föremål",
     "next": "Nästa"
-  },
-  "difficulty": {
-    "easy": {
-      "name": "Lätt",
-      "description": "Lätt: +1 skada, +0 försvar, +1 förflyttning, +2 leta"
-    },
-    "normal": {
-      "name": "Normal",
-      "description": "Normal: +0 skada, +0 försvar, +0 förflyttning, +0 leta"
-    },
-    "hard": {
-      "name": "Svår",
-      "description": "Svår: -1 skada, +0 försvar, -1 förflyttning, +0 leta"
-    }
   },
   "indicators": {
     "plusAction": "+{{actions}} handling",

@@ -24,7 +24,7 @@ import {
   resetLiveHeroes,
   replaceDeadHeroes,
 } from './HeroLogic';
-import { DifficultLevels } from '../core';
+import { getGameMaster } from '../core';
 import { weapons } from '../items/weapons';
 import { shields } from '../items/shields';
 import { armour } from '../items/armours';
@@ -389,7 +389,7 @@ describe('newHero and applyStartingEquipment', () => {
   });
 
   it('creates hero with starting equipment configured for easy difficulty', () => {
-    const easyDiff = DifficultLevels.find((d) => d.id === 'easy');
+    const easyDiff = getGameMaster('easy');
     expect(easyDiff).toBeDefined();
 
     const hero = newHero('Thor', Colour.Yellow, easyDiff);
@@ -484,13 +484,13 @@ describe('newHero and applyStartingEquipment', () => {
   });
 
   it('creates hero with health adjusted by difficulty modifier', () => {
-    const hardDiff = DifficultLevels.find((d) => d.id === 'hard');
-    expect(hardDiff).toBeDefined();
+    const easyDiff = getGameMaster('easy');
+    expect(easyDiff).toBeDefined();
 
-    const hero = newHero('Thor', Colour.Yellow, hardDiff);
+    const hero = newHero('Thor', Colour.Yellow, easyDiff);
 
     expect(hero.maxHealth).toBe(7);
-    expect(hero.health).toBe(6);
+    expect(hero.health).toBe(8);
   });
 });
 
@@ -499,11 +499,11 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
     const hero = createTestHero({ maxHealth: 7, health: 1 });
     const monster = createTestMonster();
     const state = createTestState(hero, monster);
-    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+    state.difficulty = getGameMaster('easy');
 
     resetLiveHeroes(state);
 
-    expect(hero.health).toBe(6);
+    expect(hero.health).toBe(8);
   });
 
   it('resetLiveHeroes re-enables disabled items with pickup and re-applies their stat bonus', () => {
@@ -542,10 +542,10 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
     const hero = createTestHero({ maxHealth: 7, health: 0 });
     const monster = createTestMonster();
     const state = createTestState(hero, monster);
-    state.difficulty = DifficultLevels.find((d) => d.id === 'hard');
+    state.difficulty = getGameMaster('easy');
 
     replaceDeadHeroes(state);
 
-    expect(hero.health).toBe(6);
+    expect(hero.health).toBe(8);
   });
 });

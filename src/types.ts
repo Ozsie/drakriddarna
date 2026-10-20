@@ -17,6 +17,9 @@ export interface GameSettings {
 
 export type GameState = {
   campaignId?: string;
+  gameMasterId?: string;
+  gameMaster?: GameMaster;
+  gameMasterState?: Record<string, unknown>;
   heroes: Actor[];
   dungeon: Dungeon;
   difficulty?: Difficulty;
@@ -673,7 +676,17 @@ export function assertNever(x: never, message = 'Unexpected object'): never {
 }
 
 export type MonsterBehaviorDifficulty = {
-  bowForgottenChance: number;
+  bowForgottenChance?: number;
+  getDirectorState?: (context: {
+    hasDeadHero: boolean;
+    partyHpPercentage: number;
+    aliveMonsterCount: number;
+  }) => import('./monsters/behavior/types').DirectorState;
+  calculateBehaviorWeight?: (
+    behavior: import('./monsters/behavior/types').MonsterBehavior,
+    context: import('./monsters/behavior/types').BehaviorContext,
+    baseWeight: number,
+  ) => number;
 };
 
 export type EventDifficulty = {
@@ -682,6 +695,8 @@ export type EventDifficulty = {
   earliestMonsterRound?: number;
   earliestRound?: number;
   skipHungryTrollBelowHalfHealth?: boolean;
+  modifyEventDeck?: (deck: TurnEvent[], state: GameState) => TurnEvent[];
+  onEventDrawn?: (event: TurnEvent, state: GameState) => TurnEvent | null;
 };
 
 export type StartingEquipment = {
@@ -691,18 +706,57 @@ export type StartingEquipment = {
   inventory?: Item[];
 };
 
-export type Difficulty = {
-  id: string;
-  nameTranslationKey: string;
-  descriptionTranslationKey?: string;
-  modifiers: {
-    attack: number;
-    defense: number;
-    movement: number;
-    search: number;
-    health: number;
-  };
-  monsterBehavior?: MonsterBehaviorDifficulty;
-  events?: EventDifficulty;
-  startingEquipment?: StartingEquipment;
+export type GameMasterModifiers = {
+  attack: number;
+  defense: number;
+  movement: number;
+  search: number;
+  health: number;
 };
+
+export type GameMasterRules = {
+  // Search Mechanics
+  modifySearchRoll?: (baseRoll: number, hero: Hero, state: GameState) => number;
+  onSearchFailed?: (hero: Hero, state: GameState) => void;
+
+  // Combat Resolution
+  modifyHeroDamageDealt?: (
+    damage: number,
+    attacker: Hero,
+    defender: Monster,
+    state: GameState,
+  ) => number;
+  modifyMonsterDamageDealt?: (
+    damage: number,
+    attacker: Monster,
+    defender: Hero,
+    state: GameState,
+  ) => number;
+  onHeroDowned?: (hero: Hero, state: GameState) => void;
+};
+
+export type GameMasterLifecycleHooks = {
+  onGameInit?: (state: GameState) => void;
+  onRoundStart?: (round: number, state: GameState) => void;
+  onHeroTurnStart?: (hero: Hero, state: GameState) => void;
+  onHeroPhaseEnd?: (state: GameState) => void;
+  onMonsterPhaseEnd?: (state: GameState) => void;
+  onPartyDefeat?: (state: GameState) => void;
+  onDungeonComplete?: (state: GameState) => void;
+};
+
+export type GameMaster<TState = Record<string, unknown>> =
+  GameMasterLifecycleHooks &
+    GameMasterRules & {
+      id: string;
+      nameTranslationKey: string;
+      descriptionTranslationKey?: string;
+      initialState?: () => TState;
+      modifiers: GameMasterModifiers;
+      monsterBehavior?: MonsterBehaviorDifficulty;
+      events?: EventDifficulty;
+      startingEquipment?: StartingEquipment;
+      rules?: GameMasterRules;
+    };
+
+export type Difficulty = GameMaster;
