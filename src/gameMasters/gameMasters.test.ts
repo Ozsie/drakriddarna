@@ -1,21 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import {
-  gameMasters,
-  getGameMaster,
-  isKnownGameMaster,
-  DEFAULT_GAME_MASTER_ID,
-} from './index';
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_GAME_MASTER_ID, gameMasters, getGameMaster, isKnownGameMaster, } from './index';
 import storyTeller from './storyTeller/gameMaster';
 import tactician from './tactician/gameMaster';
 import brutalOverlord from './brutalOverlord/gameMaster';
 import { shields } from '../items/shields';
 import { weapons } from '../items/weapons';
-import {
-  DifficultLevels,
-  getDifficulty,
-  getEventMinSpawnDistance,
-  getEarliestMonsterEventRound,
-} from '../core';
+import { DifficultLevels, getDifficulty, getEarliestMonsterEventRound, getEventMinSpawnDistance, } from '../core';
 
 describe('Game Master System', () => {
   it('auto-discovers and registers the three default Game Masters', () => {
@@ -110,7 +100,7 @@ describe('Game Master System', () => {
         defense: 0,
         movement: 0,
         search: 0,
-        health: 0,
+        health: -1,
       });
       expect(brutalOverlord.monsterBehavior?.bowForgottenChance).toBe(0);
       expect(brutalOverlord.events?.minMonsterSpawnDistance).toBe(2);
@@ -273,7 +263,7 @@ describe('Game Master System', () => {
   describe('Game Master Lifecycle Hooks & State Persistence', () => {
     it('initializes gameMasterState via initialState and invokes onGameInit and onHeroTurnStart in init()', async () => {
       const { init } = await import('../game');
-      const customGM: import('../types').GameMaster = {
+      gameMasters['customLifecycleGM'] = {
         id: 'customLifecycleGM',
         nameTranslationKey: 'custom',
         initialState: () => ({ threatLevel: 5, logs: [] }),
@@ -287,8 +277,6 @@ describe('Game Master System', () => {
           );
         },
       };
-
-      gameMasters['customLifecycleGM'] = customGM;
 
       const state = init('iceDragonTreasure', 'customLifecycleGM');
       expect(state.gameMasterState).toBeDefined();
@@ -305,8 +293,7 @@ describe('Game Master System', () => {
       const roundStarts: number[] = [];
       let heroPhaseEnded = false;
       let monsterPhaseEnded = false;
-
-      const customGM: import('../types').GameMaster = {
+      gameMasters['turnFlowGM'] = {
         id: 'turnFlowGM',
         nameTranslationKey: 'turnFlow',
         modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
@@ -320,8 +307,6 @@ describe('Game Master System', () => {
           monsterPhaseEnded = true;
         },
       };
-
-      gameMasters['turnFlowGM'] = customGM;
       const state = init('iceDragonTreasure', 'turnFlowGM');
 
       // End turns for each live hero once to cycle round
@@ -338,8 +323,7 @@ describe('Game Master System', () => {
     it('invokes onPartyDefeat when all heroes die or level resets', async () => {
       const { init, resetLevel } = await import('../game');
       let defeatCalled = false;
-
-      const customGM: import('../types').GameMaster = {
+      gameMasters['defeatGM'] = {
         id: 'defeatGM',
         nameTranslationKey: 'defeat',
         modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
@@ -347,8 +331,6 @@ describe('Game Master System', () => {
           defeatCalled = true;
         },
       };
-
-      gameMasters['defeatGM'] = customGM;
       const state = init('iceDragonTreasure', 'defeatGM');
       resetLevel(state);
 
@@ -358,8 +340,7 @@ describe('Game Master System', () => {
     it('invokes onDungeonComplete when dungeon win conditions are beaten', async () => {
       const { init, next } = await import('../game');
       let dungeonCompleteCalled = false;
-
-      const customGM: import('../types').GameMaster = {
+      gameMasters['completeGM'] = {
         id: 'completeGM',
         nameTranslationKey: 'complete',
         modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
@@ -367,8 +348,6 @@ describe('Game Master System', () => {
           dungeonCompleteCalled = true;
         },
       };
-
-      gameMasters['completeGM'] = customGM;
       const state = init('iceDragonTreasure', 'completeGM');
       state.dungeon.layout.monsters.forEach((m) => (m.health = 0));
 

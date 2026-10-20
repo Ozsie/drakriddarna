@@ -15,7 +15,7 @@ export const brutalOverlord: GameMaster = {
     defense: 0,
     movement: 0,
     search: 0,
-    health: 0,
+    health: -1,
   },
   monsterBehavior: {
     bowForgottenChance: 0,
