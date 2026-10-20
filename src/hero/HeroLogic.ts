@@ -44,6 +44,8 @@ import {
 import {
   checkForItemRevealedSecret,
   checkForTrapDoor,
+  removeFoundItemFromDeck,
+  removeFoundMagicItemFromDeck,
   searchForSecret,
 } from '../secrets/SecretsLogic';
 import {
@@ -773,6 +775,19 @@ const killMonster = (state: GameState, monster: Monster, hero: Hero) => {
   );
   state.dungeon.killCount++;
   hero.experience += monster.experience;
+  monster.inventory.forEach((item) => {
+    if (!item) return;
+    addLog(state, 'logs.heroAction.found', {
+      hero: i18n(hero.name),
+      item: i18n(item.name),
+    });
+    if (item.type === ItemType.MAGIC) {
+      removeFoundMagicItemFromDeck(state, item);
+    } else {
+      removeFoundItemFromDeck(state, item);
+    }
+    pickupItem(state, item, hero);
+  });
 };
 
 const findMonsterAt = (state: GameState, target: Position) =>

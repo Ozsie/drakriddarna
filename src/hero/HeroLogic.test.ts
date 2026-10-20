@@ -27,6 +27,7 @@ import {
 } from './HeroLogic';
 import { findDoorsAtHero } from './RadialMenuLogic';
 import { getGameMaster } from '../core';
+import { resetRng, setRng } from '../core';
 import { weapons } from '../items/weapons';
 import { shields } from '../items/shields';
 import { armour } from '../items/armours';
@@ -157,6 +158,31 @@ describe('attack', () => {
     attack(hero, state, monster.position);
 
     expect(monster.health).toBe(monster.maxHealth);
+  });
+
+  it('gives the items a killed monster was carrying to the killing hero', () => {
+    setRng(() => 1);
+    try {
+      const necklace: Item = {
+        id: 'necklace_of_light',
+        name: 'Necklace of Light',
+        type: ItemType.MAGIC,
+        amountInDeck: 1,
+        value: 0,
+      };
+      const hero = createTestHero({ weapon: weapons[0] });
+      const monster = createTestMonster({ health: 1, inventory: [necklace] });
+      const state = createTestState(hero, monster);
+      state.magicItemDeck.push(necklace);
+
+      attack(hero, state, monster.position);
+
+      expect(state.dungeon.layout.monsters).not.toContain(monster);
+      expect(hero.inventory).toContain(necklace);
+      expect(state.magicItemDeck).toEqual([]);
+    } finally {
+      resetRng();
+    }
   });
 
   it('allows attacking when the hero still has actions and movement left', () => {
