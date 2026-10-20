@@ -25,6 +25,7 @@ import {
 import {
   findCell,
   findNeighbouringHeroes,
+  isDoorEdge,
   isDiscovered,
   isNeighbouring,
   isSamePosition,
@@ -160,16 +161,14 @@ export const act = (direction: MoveDirection | string, state: GameState) => {
       newPosition.x,
       newPosition.y,
     );
-    const door = state.dungeon.layout.doors.find(
-      (d) => d.x === hero.position.x && d.y === hero.position.y && !d.open,
-    );
-    const side = openSide(
+    const door = isDoorEdge(
+      state.dungeon.layout,
       hero.position.x,
       hero.position.y,
       newPosition.x,
       newPosition.y,
     );
-    const hasClosedDoor = door && door.side === side;
+    const hasClosedDoor = door && !door.open;
 
     if (!discovered || hasClosedDoor) {
       const moved = moveOverDoor(state, hero, newPosition.x, newPosition.y);
@@ -211,7 +210,15 @@ export const pickLock = (state: GameState, door?: Door) => {
   door =
     door ??
     state.dungeon.layout.doors.find(
-      (d) => d.x === hero.position.x && d.y === hero.position.y,
+      (d) =>
+        (d.x === hero.position.x && d.y === hero.position.y) ||
+        isDoorEdge(
+          state.dungeon.layout,
+          hero.position.x,
+          hero.position.y,
+          d.x,
+          d.y,
+        ),
     );
   if (door && door.locked) {
     const result = roll(hero.level, 1);
@@ -375,24 +382,33 @@ export const openDoorAtHero = (
   if (door.trapped) {
     takeDamage(state, doorAsActor(door), hero, false);
   }
-  switch (door.side) {
-    case Side.RIGHT:
-      openDoor(hero, state, target.x + 1, target.y);
-      break;
-    case Side.LEFT:
-      openDoor(hero, state, target.x - 1, target.y);
-      break;
-    case Side.DOWN:
-      openDoor(hero, state, target.x, target.y + 1);
-      break;
-    case Side.UP:
-      openDoor(hero, state, target.x, target.y - 1);
-      break;
-  }
+  // The door can be opened from either side of its edge; discover the room
+  // on the far side of the door relative to the hero.
+  const [offsetX, offsetY] = sideOffset(door.side);
+  const onDoorCell = hero.position.x === door.x && hero.position.y === door.y;
+  openDoor(
+    hero,
+    state,
+    onDoorCell ? door.x + offsetX : door.x,
+    onDoorCell ? door.y + offsetY : door.y,
+  );
   consumeActions(hero);
   if (hero.actions <= 0) {
     hero.actions = 0;
     hero.movement = 0;
+  }
+};
+
+const sideOffset = (side: Side): [number, number] => {
+  switch (side) {
+    case Side.RIGHT:
+      return [1, 0];
+    case Side.LEFT:
+      return [-1, 0];
+    case Side.DOWN:
+      return [0, 1];
+    default:
+      return [0, -1];
   }
 };
 
@@ -725,8 +741,12 @@ const moveOverDoor = (
   newX: number,
   newY: number,
 ) => {
-  const door = state.dungeon.layout.doors.find(
-    (door) => door.x === hero.position.x && door.y === hero.position.y,
+  const door = isDoorEdge(
+    state.dungeon.layout,
+    hero.position.x,
+    hero.position.y,
+    newX,
+    newY,
   );
   const canBreakLock = hero.inventory.some(
     (item) => item && item.properties?.[BREAK_LOCK],
@@ -735,35 +755,16 @@ const moveOverDoor = (
   if (door && canOpenDoor(hero, canBreakLock, door)) {
     if (door.locked && canBreakLock)
       addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
-    const side = openSide(hero.position.x, hero.position.y, newX, newY);
-    if (door.side === side) {
-      door.open = true;
-      if (door.trapped) {
-        takeDamage(state, doorAsActor(door), hero, false);
-      }
-      return true;
+    door.open = true;
+    if (door.trapped) {
+      takeDamage(state, doorAsActor(door), hero, false);
     }
+    return true;
   }
   if (door && door.locked) {
     addLog(state, 'logs.heroAction.locked');
   }
   return false;
-};
-
-const openSide = (
-  fromX: number,
-  fromY: number,
-  toX: number,
-  toY: number,
-): Side | undefined => {
-  if (fromX === toX) {
-    if (fromY > toY) return Side.UP;
-    if (fromY < toY) return Side.DOWN;
-  }
-  if (fromY === toY) {
-    if (fromX > toX) return Side.LEFT;
-    if (fromX < toX) return Side.RIGHT;
-  }
 };
 
 const killMonster = (state: GameState, monster: Monster, hero: Hero) => {

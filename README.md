@@ -29,9 +29,6 @@ See [Game Master Readme](src/gameMasters/README.md)
 See the [Rules & Player Guide](./RULES.md).
 
 ## Todo
-- [ ] e1m5
-  - [X] multiple copies of items in treasure room
-  - [ ] hidden door in treasure room can't be opened
 - [ ] Sound Effects
 - [ ] Multiple saves
 - [ ] Responsive layout
@@ -42,6 +39,9 @@ See the [Rules & Player Guide](./RULES.md).
 - [ ] Alvkonungens Borg -  [Official Dungeon and Heroes](https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg)
   - [ ] Edge based walls
 - [ ] Level editor
+- [X] e1m5
+  - [X] multiple copies of items in treasure room
+  - [X] hidden door in treasure room can't be opened__
 - [X] e1m4 hidden stare requirement not working
 - [X] Between dungeons screen (level up, trade, more?)
 - [X] Trade Items?

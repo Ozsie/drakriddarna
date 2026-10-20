@@ -23,7 +23,9 @@ import {
   applyStartingEquipment,
   resetLiveHeroes,
   replaceDeadHeroes,
+  openDoorAtHero,
 } from './HeroLogic';
+import { findDoorsAtHero } from './RadialMenuLogic';
 import { getGameMaster } from '../core';
 import { weapons } from '../items/weapons';
 import { shields } from '../items/shields';
@@ -547,5 +549,89 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
     replaceDeadHeroes(state);
 
     expect(hero.health).toBe(8);
+  });
+});
+
+describe('opening doors from both sides of the door edge', () => {
+  const createDoor = (overrides?: Partial<Door>): Door => ({
+    id: 'door_test',
+    side: Side.DOWN,
+    x: 1,
+    y: 1,
+    locked: false,
+    trapped: false,
+    open: false,
+    hidden: false,
+    reinforced: false,
+    trapAttacks: 0,
+    ...overrides,
+  });
+
+  const createStateWithDoor = (hero: Hero, door: Door): GameState => {
+    const state = createTestState(hero, createTestMonster());
+    state.dungeon.layout.doors.push(door);
+    return state;
+  };
+
+  it('opens a closed door when moving into it from the door cell', () => {
+    const hero = createTestHero({ position: { x: 1, y: 1 } });
+    const door = createDoor();
+    const state = createStateWithDoor(hero, door);
+
+    act('D', state);
+
+    expect(door.open).toBe(true);
+  });
+
+  it('opens a closed door when moving into it from the opposite side', () => {
+    const hero = createTestHero({ position: { x: 1, y: 2 } });
+    const door = createDoor();
+    const state = createStateWithDoor(hero, door);
+
+    act('U', state);
+
+    expect(door.open).toBe(true);
+    expect(hero.position).toEqual({ x: 1, y: 2 });
+  });
+
+  it('does not let a hero walk through a closed locked door from the opposite side', () => {
+    const hero = createTestHero({ position: { x: 1, y: 2 } });
+    const door = createDoor({ locked: true });
+    const state = createStateWithDoor(hero, door);
+
+    act('U', state);
+
+    expect(door.open).toBe(false);
+    expect(hero.position).toEqual({ x: 1, y: 2 });
+  });
+
+  it('does not let a hero walk through a hidden door from the opposite side', () => {
+    const hero = createTestHero({ position: { x: 1, y: 2 } });
+    const door = createDoor({ hidden: true });
+    const state = createStateWithDoor(hero, door);
+
+    act('U', state);
+
+    expect(door.open).toBe(false);
+    expect(hero.position).toEqual({ x: 1, y: 2 });
+  });
+
+  it('opens a door in place via openDoorAtHero from the opposite side', () => {
+    const hero = createTestHero({ position: { x: 1, y: 2 } });
+    const door = createDoor();
+    const state = createStateWithDoor(hero, door);
+
+    openDoorAtHero(state, hero, hero.position, door);
+
+    expect(door.open).toBe(true);
+    expect(hero.position).toEqual({ x: 1, y: 2 });
+  });
+
+  it('finds the door from the opposite side for radial menu actions', () => {
+    const hero = createTestHero({ position: { x: 1, y: 2 } });
+    const door = createDoor();
+    const state = createStateWithDoor(hero, door);
+
+    expect(findDoorsAtHero(state, hero)).toEqual([door]);
   });
 });

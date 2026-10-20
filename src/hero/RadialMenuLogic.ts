@@ -6,7 +6,7 @@ import type {
   ItemLocation,
   InteractableCell,
 } from '../types';
-import { isSamePosition, canAct, distanceInGrid } from '../core';
+import { isDoorEdge, isSamePosition, canAct, distanceInGrid } from '../core';
 import { canOpenDoor, liveHeroes } from './HeroLogic';
 import {
   ACTIVE,
@@ -41,12 +41,28 @@ export const findDoorAtHero = (
   hero: Hero,
 ): Door | undefined =>
   state.dungeon.layout.doors.find(
-    (door) => door.x === hero.position.x && door.y === hero.position.y,
+    (door) =>
+      (door.x === hero.position.x && door.y === hero.position.y) ||
+      isDoorEdge(
+        state.dungeon.layout,
+        hero.position.x,
+        hero.position.y,
+        door.x,
+        door.y,
+      ),
   );
 
 export const findDoorsAtHero = (state: GameState, hero: Hero): Door[] =>
   state.dungeon.layout.doors.filter(
-    (door) => door.x === hero.position.x && door.y === hero.position.y,
+    (door) =>
+      (door.x === hero.position.x && door.y === hero.position.y) ||
+      isDoorEdge(
+        state.dungeon.layout,
+        hero.position.x,
+        hero.position.y,
+        door.x,
+        door.y,
+      ),
   );
 
 export const findItemAtHero = (

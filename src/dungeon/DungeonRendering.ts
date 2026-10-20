@@ -616,6 +616,41 @@ const renderClosedDoor = (
   }
 };
 
+const drawDoorEdgeStrip = (
+  ctx: CanvasRenderingContext2D,
+  door: Door,
+  cellSize: number,
+) => {
+  switch (door.side) {
+    case Side.RIGHT: {
+      ctx.fillRect(
+        door.x * cellSize + (cellSize - 2),
+        door.y * cellSize,
+        4,
+        cellSize,
+      );
+      break;
+    }
+    case Side.LEFT: {
+      ctx.fillRect(door.x * cellSize - 2, door.y * cellSize, 4, cellSize);
+      break;
+    }
+    case Side.UP: {
+      ctx.fillRect(door.x * cellSize, door.y * cellSize - 2, cellSize, 4);
+      break;
+    }
+    case Side.DOWN: {
+      ctx.fillRect(
+        door.x * cellSize,
+        door.y * cellSize + (cellSize - 2),
+        cellSize,
+        4,
+      );
+      break;
+    }
+  }
+};
+
 const renderDoor = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
@@ -625,80 +660,83 @@ const renderDoor = (
   debugMode: boolean,
 ) => {
   const cell = state.dungeon.layout.grid[door.y][door.x];
-  if (door && !door.open) {
+  const farOffsetX =
+    door.side === Side.RIGHT ? 1 : door.side === Side.LEFT ? -1 : 0;
+  const farOffsetY =
+    door.side === Side.DOWN ? 1 : door.side === Side.UP ? -1 : 0;
+  const farCell = findCell(
+    state.dungeon.layout.grid,
+    door.x + farOffsetX,
+    door.y + farOffsetY,
+  );
+  const nearDiscovered = !isEmpty(cell, state);
+  const farDiscovered = farCell !== '' && !isEmpty(farCell, state);
+
+  // The wall tiles are painted on the far side of the door edge. Only do so
+  // while that side is undiscovered — otherwise they would cover floor the
+  // player can already see and stand on. Once the far side is discovered the
+  // door itself is drawn on the shared edge instead, so it renders correctly
+  // from both sides.
+  if (door && !door.open && !farDiscovered) {
     if (door.hidden) {
       renderClosedHiddenDoor(door, ctx, ground, cellSize, state);
     } else {
       renderClosedDoor(door, ctx, ground, cellSize, state);
     }
   }
-  if (door && !door.hidden && !door.open && !isEmpty(cell, state)) {
+  if (door && !door.hidden && !door.open && (nearDiscovered || farDiscovered)) {
     ctx.fillStyle = 'brown';
-    switch (door.side) {
-      case Side.RIGHT: {
-        ctx.fillRect(
-          door.x * cellSize + (cellSize - 2),
-          door.y * cellSize,
-          4,
-          cellSize,
-        );
-        if (door.locked && debugMode) {
-          ctx.fillStyle = 'grey';
+    if (door.side === Side.UP && !farDiscovered) {
+      drawTile(ctx, ground, 13, 1, cellSize, door.x, door.y - 1, state);
+    }
+    drawDoorEdgeStrip(ctx, door, cellSize);
+    if (door.locked && debugMode) {
+      ctx.fillStyle = 'grey';
+      switch (door.side) {
+        case Side.RIGHT: {
           ctx.fillRect(
             door.x * cellSize + (cellSize - 4),
             door.y * cellSize + (cellSize / 2 - 4),
             8,
             8,
           );
+          break;
         }
-        break;
-      }
-      case Side.LEFT: {
-        ctx.fillRect(door.x * cellSize - 2, door.y * cellSize, 4, cellSize);
-        if (door.locked && debugMode) {
-          ctx.fillStyle = 'grey';
+        case Side.LEFT: {
           ctx.fillRect(
             door.x * cellSize - 4,
             door.y * cellSize + (cellSize / 2 - 4),
             8,
             8,
           );
+          break;
         }
-        break;
-      }
-      case Side.UP: {
-        drawTile(ctx, ground, 13, 1, cellSize, door.x, door.y - 1, state);
-        ctx.fillRect(door.x * cellSize, door.y * cellSize - 2, cellSize, 4);
-        if (door.locked && debugMode) {
-          ctx.fillStyle = 'grey';
+        case Side.UP: {
           ctx.fillRect(
             door.x * cellSize + (cellSize / 2 - 4),
             door.y * cellSize - 4,
             8,
             8,
           );
+          break;
         }
-        break;
-      }
-      case Side.DOWN: {
-        ctx.fillRect(
-          door.x * cellSize,
-          door.y * cellSize + (cellSize - 2),
-          cellSize,
-          4,
-        );
-        if (door.locked && debugMode) {
-          ctx.fillStyle = 'grey';
+        case Side.DOWN: {
           ctx.fillRect(
             door.x * cellSize + (cellSize / 2 - 4),
             door.y * cellSize + (cellSize - 4),
             8,
             8,
           );
+          break;
         }
-        break;
       }
     }
+  }
+  if (door && door.hidden && !door.open && nearDiscovered && farDiscovered) {
+    // A hidden door between two discovered rooms would otherwise be
+    // invisible while still blocking movement; mark the sealed edge.
+    ctx.fillStyle = 'darkgrey';
+    drawDoorEdgeStrip(ctx, door, cellSize);
   }
   if (debugMode && !isEmpty(cell, state)) {
     ctx.fillStyle = 'black';
