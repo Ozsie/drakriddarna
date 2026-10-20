@@ -189,9 +189,14 @@ const findTrap = (state: GameState, pos: Position) =>
     .filter((door) => door.trapped)
     .find((door) => door.x === pos.x && door.y === pos.y);
 
-const findSecret = (state: GameState, pos: Position) =>
+const findSecret = (state: GameState, pos: Position, hero: Hero) =>
   state.dungeon.layout.secrets
     .filter((secret) => !secret.found)
+    .filter(
+      (secret) =>
+        !secret.revealedBy ||
+        hero.inventory.some((item) => item && item.id === secret.revealedBy),
+    )
     .find(
       (secret) =>
         isNeighbouring(secret.position, pos.x, pos.y) &&
@@ -235,7 +240,7 @@ const lookForTrap = (state: GameState, hero: Hero, result: number) => {
 };
 
 const lookForSecret = (state: GameState, hero: Hero, result: number) => {
-  const secret = findSecret(state, hero.position);
+  const secret = findSecret(state, hero.position, hero);
   if (secret) {
     addLog(state, 'logs.heroAction.foundSecret', {
       hero: i18n(hero.name),
