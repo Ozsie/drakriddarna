@@ -1,4 +1,4 @@
-import { type GameState, ItemType } from '../types';
+import { type GameState, type Item, ItemType } from '../types';
 import { findRoomCells, isSamePosition } from '../core';
 import {
   removeFoundItemFromDeck,
@@ -19,17 +19,39 @@ export const roomEffects: Record<
           isSamePosition(i.position, pos),
         ),
     );
+    if (floorPositions.length === 0) return;
+
+    // Copies of an item already lying in the dungeon (e.g. placed directly
+    // in the dungeon layout) have no deck entry reserved for them, so the
+    // reveal must not place more copies than amountInDeck allows on top of
+    // those.
+    const itemKey = (item: Item) =>
+      item.id ?? `${item.type}_${item.name}`;
+    const copiesInDungeon = new Map<string, number>();
+    state.dungeon.layout.items.forEach((itemLocation) => {
+      if (!itemLocation.item) return;
+      const key = itemKey(itemLocation.item);
+      copiesInDungeon.set(key, (copiesInDungeon.get(key) ?? 0) + 1);
+    });
 
     const remaining = [...state.itemDeck, ...state.magicItemDeck];
 
-    remaining.forEach((item, index) => {
-      const position = floorPositions[index % floorPositions.length];
-      state.dungeon.layout.items.push({ item, position });
+    let placed = 0;
+    remaining.forEach((item) => {
       if (item.type === ItemType.MAGIC) {
         removeFoundMagicItemFromDeck(state, item);
       } else {
         removeFoundItemFromDeck(state, item);
       }
+
+      const key = itemKey(item);
+      const copies = copiesInDungeon.get(key) ?? 0;
+      if (copies >= item.amountInDeck) return;
+      copiesInDungeon.set(key, copies + 1);
+
+      const position = floorPositions[placed % floorPositions.length];
+      placed++;
+      state.dungeon.layout.items.push({ item, position });
     });
   },
   stopEvents: (state: GameState) => {
