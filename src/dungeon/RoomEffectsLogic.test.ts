@@ -88,7 +88,10 @@ describe('revealRemainingItemsInRoom', () => {
     );
     roomEffects.revealRemainingItemsInRoom(state, 'K');
     expect(
-      state.dungeon.layout.items.some((i) => i.position.x === 0 && i.position.y === 0 && i.item?.id === 'sword'),
+      state.dungeon.layout.items.some(
+        (i) =>
+          i.position.x === 0 && i.position.y === 0 && i.item?.id === 'sword',
+      ),
     ).toBe(false);
   });
 });

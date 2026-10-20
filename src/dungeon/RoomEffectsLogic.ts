@@ -25,8 +25,7 @@ export const roomEffects: Record<
     // in the dungeon layout) have no deck entry reserved for them, so the
     // reveal must not place more copies than amountInDeck allows on top of
     // those.
-    const itemKey = (item: Item) =>
-      item.id ?? `${item.type}_${item.name}`;
+    const itemKey = (item: Item) => item.id ?? `${item.type}_${item.name}`;
     const copiesInDungeon = new Map<string, number>();
     state.dungeon.layout.items.forEach((itemLocation) => {
       if (!itemLocation.item) return;
