@@ -3,12 +3,18 @@ import {
   getActorVisualPosition,
   hasLineOfSight,
   isActorAnimating,
+  isActorDeathAnimating,
+  isActorSpriteAnimationActive,
   isDiscovered,
   isWalkable,
 } from '../core';
 import { isBlockedByHero, isBlockedByMonster, liveHeroes } from './HeroLogic';
 import { drawCachedTile } from '../dungeon/TileTextureCache';
-import { renderActorFlash } from '../combat/CombatEffects';
+import { renderActorFlash } from '../combat';
+import {
+  getReadyActorSpriteImage,
+  renderActorSprite,
+} from '../core/ActorSpriteRendering';
 
 export const renderHeroes = (
   ctx: CanvasRenderingContext2D,
@@ -18,7 +24,17 @@ export const renderHeroes = (
   debugMode: boolean,
   currentTime: number = Date.now(),
 ): boolean => {
-  const heroes = liveHeroes(state);
+  const heroes: Hero[] = [
+    ...liveHeroes(state),
+    // Dead heroes stay visible only while their death animation plays
+    // (sprite-less heroes vanish immediately, as before).
+    ...state.heroes.filter(
+      (hero): hero is Hero =>
+        hero.health <= 0 &&
+        Boolean(hero.sprite) &&
+        isActorDeathAnimating(hero, currentTime),
+    ),
+  ];
   let hasActiveAnimation = false;
   heroes.forEach((hero) => {
     const isAnim = renderHero(
@@ -49,18 +65,23 @@ const renderHero = (
   const visualPos = getActorVisualPosition(hero, currentTime);
   const x = visualPos.x;
   const y = visualPos.y;
-  drawCachedTile(
-    ctx,
-    actors,
-    0,
-    2 * 32,
-    32,
-    32,
-    x * cellSize,
-    y * cellSize,
-    32,
-    32,
-  );
+  const spriteImage = getReadyActorSpriteImage(hero);
+  if (spriteImage) {
+    renderActorSprite(ctx, hero, spriteImage, x, y, cellSize, currentTime);
+  } else {
+    drawCachedTile(
+      ctx,
+      actors,
+      0,
+      2 * 32,
+      32,
+      32,
+      x * cellSize,
+      y * cellSize,
+      32,
+      32,
+    );
+  }
   renderActorFlash(ctx, hero, x, y, cellSize, currentTime);
   renderActionOnActor(ctx, hero, x, y, cellSize);
   renderActorBar(ctx, hero, x, y, cellSize);
@@ -71,7 +92,10 @@ const renderHero = (
     ctx.font = '8px Arial';
     ctx.fillText(debugText, x * cellSize + 3, y * cellSize + 10);
   }
-  return isActorAnimating(hero, currentTime);
+  return (
+    isActorAnimating(hero, currentTime) ||
+    isActorSpriteAnimationActive(hero, currentTime)
+  );
 };
 
 const renderActionOnActor = (

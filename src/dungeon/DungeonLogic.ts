@@ -272,6 +272,7 @@ export const createMonster = (
   let armour = monsterArmour[2];
   let rangedWeapon = undefined;
   let shield = undefined;
+  let sprite = undefined;
   let walkSound: string | undefined = undefined;
   let hurtSound: string | undefined = undefined;
   let deathSound: string | undefined = undefined;
@@ -288,6 +289,7 @@ export const createMonster = (
     armour = template.armour ?? armour;
     rangedWeapon = template.rangedWeapon ?? rangedWeapon;
     shield = template.shield ?? shield;
+    sprite = template.sprite ?? sprite;
     walkSound = template.walkSound ?? template.walk;
     hurtSound = template.hurtSound ?? template.hurt;
     deathSound = template.deathSound ?? template.death;
@@ -325,5 +327,6 @@ export const createMonster = (
     ...(walkSound ? { walkSound, walk: walkSound } : {}),
     ...(hurtSound ? { hurtSound, hurt: hurtSound } : {}),
     ...(deathSound ? { deathSound, death: deathSound } : {}),
+    ...(sprite ? { sprite } : {}),
   };
 };

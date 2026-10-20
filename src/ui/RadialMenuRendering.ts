@@ -1,6 +1,8 @@
 import { RadialAction, type RadialMenuEntry } from '../hero/RadialMenuLogic';
 import type { RadialMenuState } from '../store/radialMenuStore';
+import type { ItemSprite } from '../types';
 import { i18n } from '../core';
+import { drawItemSprite } from '../items/ItemSpriteRendering';
 
 export const RADIAL_MENU_ICONS: Record<RadialAction, string> = {
   [RadialAction.SEARCH]: '🔍',
@@ -30,6 +32,7 @@ export interface RadialButtonPosition {
   radius: number;
   label: string;
   icon: string;
+  sprite?: ItemSprite;
 }
 
 export const getRadialButtonPositions = (
@@ -50,6 +53,7 @@ export const getRadialButtonPositions = (
 
     let label: string;
     let icon: string;
+    let sprite: ItemSprite | undefined;
 
     if (entry.interactable) {
       const labelKey =
@@ -70,6 +74,7 @@ export const getRadialButtonPositions = (
         (entry.item.properties?.ICON as string) ??
         RADIAL_MENU_ICONS[entry.action] ??
         '✨';
+      sprite = entry.item.sprite;
     } else {
       const labelKey = RADIAL_MENU_LABELS[entry.action];
       const baseLabel = i18n(labelKey);
@@ -85,6 +90,7 @@ export const getRadialButtonPositions = (
       radius: buttonRadius,
       label,
       icon,
+      sprite,
     };
   });
 };
@@ -166,12 +172,23 @@ export const renderRadialMenu = (
     ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.9)';
     ctx.stroke();
 
-    // Draw button icon
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `${Math.round(btn.radius)}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(btn.icon, btn.x, btn.y);
+    // Draw button icon: item sprite if available, emoji icon otherwise
+    const spriteDrawn = btn.sprite
+      ? drawItemSprite(
+          ctx,
+          btn.sprite,
+          btn.x - Math.round(btn.radius * 0.75),
+          btn.y - Math.round(btn.radius * 0.75),
+          Math.round(btn.radius * 1.5),
+        )
+      : false;
+    if (!spriteDrawn) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `${Math.round(btn.radius)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(btn.icon, btn.x, btn.y);
+    }
   }
 
   // Draw tooltip for hovered button if present

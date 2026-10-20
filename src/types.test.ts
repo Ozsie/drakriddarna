@@ -29,6 +29,7 @@ import {
   removeFoundMagicItemFromDeck,
 } from './secrets/SecretsLogic';
 import { init } from './game';
+import { registerMonsterTemplate } from './monsters/MonsterRegistry';
 import { dispatchAction, gameStateStore } from './store/gameStateStore';
 import { get } from 'svelte/store';
 
@@ -51,6 +52,28 @@ describe('Type Safety & Domain Modeling', () => {
       expect(orc.nameTranslationKey).toBe(orc.name);
       expect(orc.health).toBe(2);
       expect(orc.level).toBe(Level.APPRENTICE);
+    });
+
+    it('createMonster copies a sprite registered on the monster template', () => {
+      registerMonsterTemplate('Sprite Test Monster', {
+        sprite: { image: 'monster.png', frameWidth: 64, frameHeight: 64 },
+      });
+      const monster = createMonster(
+        'Sprite Test Monster' as MonsterType,
+        Colour.Green,
+        1,
+        1,
+      );
+      expect(monster.sprite).toEqual({
+        image: 'monster.png',
+        frameWidth: 64,
+        frameHeight: 64,
+      });
+    });
+
+    it('createMonster leaves the sprite undefined without a template sprite', () => {
+      const orc = createMonster(MonsterType.ORC, Colour.Green, 2, 3);
+      expect(orc.sprite).toBeUndefined();
     });
   });
 

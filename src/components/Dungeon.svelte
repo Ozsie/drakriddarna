@@ -6,6 +6,7 @@
     GameState,
     Hero,
     InteractableCell,
+    ItemLocation,
     Monster,
     Secret,
   } from '../types';
@@ -219,7 +220,12 @@
         (i: InteractableCell) =>
           `${i.position.x},${i.position.y},${i.secret},${i.interacted}`,
       )
-      .join(';')}|${d.layout?.items?.length ?? 0}|${
+      .join(';')}|${(d.layout?.items ?? [])
+      .map(
+        (it: ItemLocation) =>
+          `${it.position.x},${it.position.y},${it.item?.id ?? it.item?.name ?? 'random'}`,
+      )
+      .join(';')}|${d.layout?.pits?.length ?? 0}|${
       d.layout?.pits?.length ?? 0
     }|${d.portal?.x},${d.portal?.y}|${size}|${dbg}`;
   };

@@ -191,6 +191,82 @@ const campaignMyNewCampaign: Campaign = {
 };
 ```
 
+## Actor sprites (optional)
+
+By default every actor is drawn with the built-in static sprite from
+`src/lib/Dungeon_Character_3.png`. Any `Actor` (hero or monster) can instead
+define an animated `sprite` (see `ActorSprite` in `src/types.ts`):
+
+```ts
+import heroSprite from './heroSprite.png';
+
+const sprite: ActorSprite = {
+  image: heroSprite, // URL of the sprite sheet
+  frameWidth: 48, // frame size is configurable per sprite
+  frameHeight: 48,
+  frameDurationMs: 150, // optional, default 150
+  // Optional explicit frame counts; when omitted, the count is derived
+  // from the image width divided by frameWidth.
+  animations: { idle: 4, walk: 6, attack: 4, hurt: 2, death: 5 },
+};
+```
+
+The sprite sheet has one **row per animation**, in this fixed order
+(`ACTOR_SPRITE_ANIMATION_ORDER` in `src/core/ActorAnimation.ts`):
+
+1. `idle` — loops while the actor is standing
+2. `walk` — loops while the actor is moving
+3. `attack` — plays once when the actor attacks
+4. `hurt` — plays while the actor flashes after taking a hit
+5. `death` — plays once when the actor dies
+
+Frames are laid out horizontally within each row. When the sheet is not yet
+loaded, or an actor has no `sprite`, the built-in static sprite is used as
+fallback.
+
+- **Heroes**: set `sprite` directly on the hero `Actor` in your
+  `campaign.ts` (e.g. `{ ...newHero('Fearik', Colour.Yellow), sprite }`).
+- **Monsters**: register the sprite once per monster type on the stat
+  template, so every placed monster of that type inherits it:
+
+```ts
+import { registerMonsterTemplate } from '../../monsters/MonsterRegistry';
+
+registerMonsterTemplate('Ice Golem', {
+  health: 4,
+  // ...
+  sprite,
+});
+```
+
+## Item sprites (optional)
+
+Items normally show an emoji `icon` in the radial menu and the generic item
+tile from the tileset on the dungeon floor. An item can instead define a
+`sprite` (see `ItemSprite` in `src/types.ts`) to pick a single sprite from a
+sprite sheet:
+
+```ts
+import itemSprites from './itemSprites.png';
+
+const sword: Weapon = {
+  // ...
+  sprite: {
+    image: itemSprites, // URL of the sprite sheet
+    size: 32, // frame size in pixels (square frames)
+    index: 5, // zero-based frame index, laid out row-major
+  },
+};
+```
+
+Frames are square (`size` x `size`) and laid out row-major; the number of
+columns is derived from the sheet width divided by `size`, so single-row
+strips and rectangular grids both work. The index is clamped to the last
+available frame. The sprite is rendered in the hero inventory popover, in
+the radial-menu buttons and on the dungeon floor; while the sheet is
+loading — or when no `sprite` is set — the emoji icon and tileset tile are
+used as fallback.
+
 ## Adding new items (optional)
 
 Items already support a string-keyed effect/reset/pickup/drop pattern

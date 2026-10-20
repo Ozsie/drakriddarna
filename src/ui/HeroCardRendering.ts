@@ -2,6 +2,7 @@ import type { GameState, Hero, Item } from '../types';
 import { liveHeroes } from '../hero/HeroLogic';
 import { i18n } from '../core';
 import { ACTIVE, DESCRIPTION, USED } from '../items/ItemLogic';
+import { drawItemSprite } from '../items/ItemSpriteRendering';
 
 export interface CardBounds {
   x: number;
@@ -594,6 +595,40 @@ export const renderHeroCards = (
       items.forEach((itemLayout) => {
         const itemB = itemLayout.bounds;
 
+        // Item sprite / icon column: sprite sheet when defined, emoji icon
+        // while it loads (or when only an icon is set)
+        const hasIconColumn = Boolean(
+          itemLayout.item.sprite || itemLayout.item.icon,
+        );
+        const iconSize = 28;
+        const textLeft = hasIconColumn
+          ? itemB.x + 2 + iconSize + 6
+          : itemB.x + 2;
+        if (hasIconColumn) {
+          const iconX = itemB.x + 2;
+          const iconY = itemB.y + Math.floor((itemB.height - iconSize) / 2);
+          const drawn = itemLayout.item.sprite
+            ? drawItemSprite(
+                ctx,
+                itemLayout.item.sprite,
+                iconX,
+                iconY,
+                iconSize,
+              )
+            : false;
+          if (!drawn && itemLayout.item.icon) {
+            ctx.fillStyle = '#271711';
+            ctx.font = '20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(
+              itemLayout.item.icon,
+              iconX + iconSize / 2,
+              iconY + iconSize / 2,
+            );
+          }
+        }
+
         // Item bottom divider
         ctx.beginPath();
         ctx.moveTo(itemB.x, itemB.y + itemB.height);
@@ -609,8 +644,8 @@ export const renderHeroCards = (
         ctx.textBaseline = 'top';
 
         const maxTextW = itemLayout.useButtonBounds
-          ? itemLayout.useButtonBounds.x - itemB.x - 8
-          : itemB.width - 4;
+          ? itemLayout.useButtonBounds.x - textLeft - 8
+          : itemB.x + itemB.width - 4 - textLeft;
 
         const displayName = truncateText(
           ctx,
@@ -618,7 +653,7 @@ export const renderHeroCards = (
           maxTextW,
           INV_ITEM_FONT,
         );
-        ctx.fillText(displayName, itemB.x + 2, itemB.y + 2);
+        ctx.fillText(displayName, textLeft, itemB.y + 2);
 
         // Item Description
         if (itemLayout.descriptionText) {
@@ -630,7 +665,7 @@ export const renderHeroCards = (
             maxTextW,
             INV_DESC_FONT,
           );
-          ctx.fillText(displayDesc, itemB.x + 2, itemB.y + 16);
+          ctx.fillText(displayDesc, textLeft, itemB.y + 16);
         }
 
         // Use Button if active

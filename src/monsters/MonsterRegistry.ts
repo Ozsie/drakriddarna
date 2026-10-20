@@ -1,4 +1,11 @@
-import type { Armour, GameState, Monster, Shield, Weapon } from '../types';
+import type {
+  ActorSprite,
+  Armour,
+  GameState,
+  Monster,
+  Shield,
+  Weapon,
+} from '../types';
 import type { Level } from '../types';
 
 // Extensible registry that allows any module (core or a campaign's own
@@ -22,6 +29,7 @@ export type MonsterStatOverrides = Partial<{
   walk: string;
   hurt: string;
   death: string;
+  sprite: ActorSprite;
 }>;
 
 const monsterTemplates: Record<string, MonsterStatOverrides> = {};

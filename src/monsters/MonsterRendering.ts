@@ -2,12 +2,19 @@ import type { Actor, GameState, Monster, Position } from '../types';
 import { MonsterType } from '../types';
 import {
   getActorVisualPosition,
+  getDyingActors,
   isActorAnimating,
+  isActorDeathAnimating,
+  isActorSpriteAnimationActive,
   isRoomDiscovered,
   stepAlongLine,
 } from '../core';
 import { drawCachedTile } from '../dungeon/TileTextureCache';
-import { renderActorFlash } from '../combat/CombatEffects';
+import { renderActorFlash } from '../combat';
+import {
+  getReadyActorSpriteImage,
+  renderActorSprite,
+} from '../core/ActorSpriteRendering';
 
 export const renderMonsters = (
   ctx: CanvasRenderingContext2D,
@@ -30,6 +37,22 @@ export const renderMonsters = (
     );
     if (isAnim) hasActiveAnimation = true;
   });
+  // Killed monsters are removed from the layout immediately, so keep drawing
+  // them from the dying list until their death animation finishes.
+  getDyingActors(currentTime)
+    .filter((actor) => !state.heroes.includes(actor))
+    .forEach((actor) => {
+      const isAnim = renderMonster(
+        ctx,
+        actors,
+        state,
+        actor as Monster,
+        cellSize,
+        debugMode,
+        currentTime,
+      );
+      if (isAnim) hasActiveAnimation = true;
+    });
   return hasActiveAnimation;
 };
 
@@ -44,21 +67,34 @@ const renderMonster = (
 ): boolean => {
   const cell =
     state.dungeon.layout.grid[monster.position.y][monster.position.x];
-  if (monster && monster.health > 0 && isRoomDiscovered(state.dungeon, cell)) {
+  // Only monsters with a death animation linger after death; sprite-less
+  // monsters vanish immediately, as before.
+  const isDying =
+    Boolean(monster.sprite) && isActorDeathAnimating(monster, currentTime);
+  if (
+    monster &&
+    (monster.health > 0 || isDying) &&
+    isRoomDiscovered(state.dungeon, cell)
+  ) {
     const visualPos = getActorVisualPosition(monster, currentTime);
     const x = visualPos.x;
     const y = visualPos.y;
-    switch (monster.type) {
-      case MonsterType.ORC:
-      case MonsterType.ORCH:
-        renderOrch(ctx, actors, cellSize, x, y);
-        break;
-      case MonsterType.TROLL:
-        renderTroll(ctx, actors, cellSize, x, y);
-        break;
-      default:
-        renderDefaultMonster(ctx, actors, cellSize, x, y);
-        break;
+    const spriteImage = getReadyActorSpriteImage(monster);
+    if (spriteImage) {
+      renderActorSprite(ctx, monster, spriteImage, x, y, cellSize, currentTime);
+    } else {
+      switch (monster.type) {
+        case MonsterType.ORC:
+        case MonsterType.ORCH:
+          renderOrch(ctx, actors, cellSize, x, y);
+          break;
+        case MonsterType.TROLL:
+          renderTroll(ctx, actors, cellSize, x, y);
+          break;
+        default:
+          renderDefaultMonster(ctx, actors, cellSize, x, y);
+          break;
+      }
     }
     renderActorFlash(ctx, monster, x, y, cellSize, currentTime);
     renderActorBar(ctx, monster, cellSize, x, y);
@@ -73,7 +109,10 @@ const renderMonster = (
       x,
       y,
     );
-    return isActorAnimating(monster, currentTime);
+    return (
+      isActorAnimating(monster, currentTime) ||
+      isActorSpriteAnimationActive(monster, currentTime)
+    );
   }
   return false;
 };

@@ -12,7 +12,7 @@ import { Colour, ItemType, Level } from '../types';
 import { roll } from './dice';
 import { addLog, i18n } from './logger';
 import { getDifficulty } from './DifficultLevels';
-import { flashActor } from './ActorAnimation';
+import { flashActor, playActorAttack, playActorDeath } from './ActorAnimation';
 import { createBloodSplatter, createProjectile } from '../combat';
 import { soundEffectManager } from '../audio';
 
@@ -137,6 +137,7 @@ export const takeDamage = (
     weapon = source.rangedWeapon;
   }
   soundEffectManager.playWeaponAttack(weapon);
+  playActorAttack(source);
   const isHeroSource = state.heroes.includes(source);
   const isHeroTarget = state.heroes.includes(target);
   if (isHeroSource && !isHeroTarget) {
@@ -294,6 +295,7 @@ export const takeDamage = (
     });
     target.health = 0;
     target.level = Level.APPRENTICE;
+    playActorDeath(target);
     if (isHeroTarget) {
       const onHeroDowned = gm.rules?.onHeroDowned ?? gm.onHeroDowned;
       onHeroDowned?.(target as Hero, state);

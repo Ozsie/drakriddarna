@@ -139,6 +139,32 @@ export type LogEvent = {
   turn: number;
 };
 
+// The five supported actor sprite animations, in sprite-sheet row order.
+export type ActorAnimationName = 'idle' | 'walk' | 'attack' | 'hurt' | 'death';
+
+// A single sprite picked from a sprite sheet by zero-based index. Frames are
+// square (`size` x `size`) and laid out row-major; the number of columns is
+// derived from the image width divided by `size`, so single-row strips and
+// rectangular grids both work.
+export type ItemSprite = {
+  image: string;
+  size: number;
+  index: number;
+};
+
+export type ActorSprite = {
+  // URL of the sprite sheet: one row per animation, in the order defined by
+  // ACTOR_SPRITE_ANIMATION_ORDER in src/core/ActorAnimation.ts
+  // (idle, walk, attack, hurt, death), frames laid out horizontally.
+  image: string;
+  frameWidth: number;
+  frameHeight: number;
+  frameDurationMs?: number;
+  // Optional explicit frame counts per animation; when omitted, the count is
+  // derived from the image width divided by frameWidth.
+  animations?: Partial<Record<ActorAnimationName, number>>;
+};
+
 export type Campaign = {
   id: string;
   name: string;
@@ -179,6 +205,7 @@ export type Actor = {
   walkSound?: string;
   hurtSound?: string;
   deathSound?: string;
+  sprite?: ActorSprite;
 };
 
 export type Hero = Actor & {
@@ -439,6 +466,7 @@ export type Item = {
   type: ItemType;
   value: number;
   icon?: string;
+  sprite?: ItemSprite;
   properties?: ItemProperties;
   effect?: ItemEffectKey;
   reset?: ItemResetKey;
