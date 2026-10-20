@@ -54,7 +54,7 @@ Drakriddarna ships with three built-in Game Masters representing classic difficu
    - 15% forgotten bow chance, spawn distance 3 tiles, round 3 threshold.
    - Balanced AI Director: switches to `EASE` when party HP < 45% or any hero is dead; `PUSH` when party HP > 80% with <= 1 monster remaining.
 3. **Brutal Overlord** (`brutalOverlord` / *Hard*):
-   - Hero stat penalties (-1 Max HP, -1 Movement).
+   - Hero stat penalty (-1 Max HP).
    - 0% forgotten bow chance (flawless archer discipline), aggressive spawn buffer (1 tile, starting round 2).
    - Relentless AI Director: rarely eases off (only when hero dead AND party HP < 25%), pushes aggressively (`PUSH` when party HP > 65% or <= 2 monsters).
    - Aggressive monster behaviors receive a +25% weight bonus (`baseWeight * 1.25`).

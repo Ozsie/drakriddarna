@@ -12,7 +12,13 @@ import {
   isNeighbouring,
   canSearchThrough,
 } from '../core';
-import { act, attack, pickLock, search } from '../hero/HeroLogic';
+import {
+  act,
+  attack,
+  pickLock,
+  search,
+  openDoorAtHero,
+} from '../hero/HeroLogic';
 import { useItem } from '../items/ItemLogic';
 
 const DIRECTIONS: { dir: MoveDirection; dx: number; dy: number }[] = [
@@ -241,9 +247,17 @@ export const playHeroTurn = (state: GameState): boolean => {
         continue;
       } else {
         const targetCell = getDoorTargetCell(doorAtHero);
-        const dir = getDirection(hero.position, targetCell);
-        if (dir) {
-          act(dir, state);
+        if (isWalkable(state.dungeon.layout, targetCell.x, targetCell.y)) {
+          const dir = getDirection(hero.position, targetCell);
+          if (dir) {
+            act(dir, state);
+            actionTaken = true;
+            continue;
+          }
+        } else {
+          // Door with no walkable cell beyond (e.g. a dungeon exit door at
+          // the map edge) — open it in place instead of stepping through.
+          openDoorAtHero(state, hero, hero.position, doorAtHero);
           actionTaken = true;
           continue;
         }

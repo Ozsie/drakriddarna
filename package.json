@@ -10,6 +10,7 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test": "vitest",
 		"benchmark": "BENCHMARK=true vitest run src/benchmark/benchmark.test.ts",
+		"balanceAnalysis": "BENCHMARK=true vitest run src/benchmark/balanceAnalysis.test.ts",
 		"lint": "eslint  -c .eslintrc.cjs --ext .ts .",
 		"lint:fix": "eslint -c .eslintrc.cjs --fix --ext .ts .",
 		"prettier": "prettier --plugin-search-dir . --check . ",

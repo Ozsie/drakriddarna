@@ -204,5 +204,71 @@ describe('e2m1 Game Master & Playability Benchmark', () => {
     expect(storyTellerSummary.winRate).toBeGreaterThanOrEqual(0);
     expect(tacticianSummary.winRate).toBeGreaterThanOrEqual(0);
     expect(brutalOverlordSummary.winRate).toBeGreaterThanOrEqual(0);
+
+    expect(report).toContain('Bot Playstyle:');
+    expect(report).toContain('Avg Casualties (±SD)');
+    expect(report).toContain('Win Rem HP');
+    expect(report).toContain('Min Party HP');
+    expect(report).toContain('Near Death');
+    expect(report).toContain('Wasted Search');
+    expect(report).toContain('Spawns');
+    expect(report).toContain('Spawns by Game Master (Round & Monster):');
+  });
+});
+
+describe('Benchmark Metrics Verification', () => {
+  beforeAll(async () => {
+    try {
+      await loadTranslations('en');
+    } catch {
+      // fallback
+    }
+  });
+
+  it('tracks all required benchmark metrics accurately in single game and summary', async () => {
+    const singleResult = await runSingleGame({
+      dungeon: e1m0,
+      gameMasterId: 'storyTeller',
+      seed: 1234,
+      maxTurns: 50,
+    });
+
+    expect(typeof singleResult.lowestPartyHp).toBe('number');
+    expect(singleResult.lowestPartyHp).toBeGreaterThanOrEqual(0);
+    expect(typeof singleResult.nearDeathCount).toBe('number');
+    expect(singleResult.nearDeathCount).toBeGreaterThanOrEqual(0);
+    expect(typeof singleResult.wastedSearches).toBe('number');
+    expect(singleResult.wastedSearches).toBeGreaterThanOrEqual(0);
+    expect(Array.isArray(singleResult.spawns)).toBe(true);
+
+    const summary = await runGameMasterBenchmark({
+      dungeon: e1m0,
+      gameMasterId: 'storyTeller',
+      runs: 5,
+      startSeed: 200,
+      maxTurns: 50,
+    });
+
+    expect(typeof summary.stdDevHeroCasualties).toBe('number');
+    expect(summary.stdDevHeroCasualties).toBeGreaterThanOrEqual(0);
+    expect(typeof summary.avgWinRemainingHealth).toBe('number');
+    expect(summary.avgWinRemainingHealth).toBeGreaterThanOrEqual(0);
+    expect(typeof summary.lowestPartyHp).toBe('number');
+    expect(summary.lowestPartyHp).toBeGreaterThanOrEqual(0);
+    expect(typeof summary.totalNearDeathCount).toBe('number');
+    expect(typeof summary.avgNearDeathCount).toBe('number');
+    expect(typeof summary.totalWastedSearches).toBe('number');
+    expect(typeof summary.avgWastedSearches).toBe('number');
+    expect(typeof summary.totalSpawns).toBe('number');
+    expect(Array.isArray(summary.spawns)).toBe(true);
+
+    const formatted = formatBenchmarkReport([summary], 'Test Benchmark');
+    expect(formatted).toContain('Bot Playstyle:');
+    expect(formatted).toContain('Avg Casualties (±SD)');
+    expect(formatted).toContain('Win Rem HP');
+    expect(formatted).toContain('Min Party HP');
+    expect(formatted).toContain('Near Death');
+    expect(formatted).toContain('Wasted Search');
+    expect(formatted).toContain('Spawns by Game Master (Round & Monster):');
   });
 });

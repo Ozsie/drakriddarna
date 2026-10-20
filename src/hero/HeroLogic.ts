@@ -353,6 +353,49 @@ export const openDoor = (
   soundEffectManager.playDoorOpen();
 };
 
+/**
+ * Opens a door the hero is standing on without requiring the hero to step
+ * through it — used for doors at the map edge (e.g. dungeon exit doors)
+ * where the cell beyond is not walkable.
+ */
+export const openDoorAtHero = (
+  state: GameState,
+  hero: Hero,
+  target: Position,
+  door: Door,
+) => {
+  if (door.open) return;
+  const canBreakLock = hero.inventory.some(
+    (item) => item && item.properties?.[BREAK_LOCK],
+  );
+  if (!canOpenDoor(hero, canBreakLock, door)) return;
+  if (door.locked && canBreakLock)
+    addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
+  door.open = true;
+  if (door.trapped) {
+    takeDamage(state, doorAsActor(door), hero, false);
+  }
+  switch (door.side) {
+    case Side.RIGHT:
+      openDoor(hero, state, target.x + 1, target.y);
+      break;
+    case Side.LEFT:
+      openDoor(hero, state, target.x - 1, target.y);
+      break;
+    case Side.DOWN:
+      openDoor(hero, state, target.x, target.y + 1);
+      break;
+    case Side.UP:
+      openDoor(hero, state, target.x, target.y - 1);
+      break;
+  }
+  consumeActions(hero);
+  if (hero.actions <= 0) {
+    hero.actions = 0;
+    hero.movement = 0;
+  }
+};
+
 export const attack = (hero: Hero, state: GameState, target: Position) => {
   doReRender(state);
   const movementModifier = getDifficulty(state).modifiers.movement;

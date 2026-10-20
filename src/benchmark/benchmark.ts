@@ -3,7 +3,9 @@ import { createSeededRng, resetRng, setRng } from '../core';
 import { init, next } from '../game';
 import { getGameMaster, DEFAULT_GAME_MASTER_ID } from '../gameMasters';
 import type { MonsterTurnOptions } from '../monsters/MonsterLogic';
-import { liveHeroes, resetLiveHeroes } from '../hero/HeroLogic';
+import { liveHeroes, resetLiveHeroes, levelUp } from '../hero/HeroLogic';
+import { getCampaign } from '../campaigns';
+import { getEventsForDungeon } from '../events/EventsLogic';
 import { playHeroTurn } from './bot';
 
 export const HEADLESS_MONSTER_OPTIONS: MonsterTurnOptions = {
@@ -13,6 +15,11 @@ export const HEADLESS_MONSTER_OPTIONS: MonsterTurnOptions = {
   waitForMovement: false,
 };
 
+export interface MonsterSpawnRecord {
+  round: number;
+  monster: string;
+}
+
 export interface GameSimulationResult {
   runId: number;
   status: 'WON' | 'LOST' | 'TIMEOUT';
@@ -21,6 +28,10 @@ export interface GameSimulationResult {
   survivingHeroes: number;
   heroCasualties: number;
   remainingHeroHealth: number;
+  lowestPartyHp: number;
+  nearDeathCount: number;
+  wastedSearches: number;
+  spawns: MonsterSpawnRecord[];
 }
 
 export interface GameMasterBenchmarkSummary {
@@ -35,8 +46,17 @@ export interface GameMasterBenchmarkSummary {
   timeoutRate: number;
   avgTurns: number;
   avgHeroCasualties: number;
+  stdDevHeroCasualties: number;
   avgMonstersKilled: number;
   avgRemainingHealth: number;
+  avgWinRemainingHealth: number;
+  lowestPartyHp: number;
+  totalNearDeathCount: number;
+  avgNearDeathCount: number;
+  totalWastedSearches: number;
+  avgWastedSearches: number;
+  totalSpawns: number;
+  spawns: MonsterSpawnRecord[];
   results: GameSimulationResult[];
 }
 
@@ -49,6 +69,7 @@ export interface RunDungeonOptions {
   difficultyId?: string;
   seed?: number;
   maxTurns?: number;
+  levelUpHeroes?: boolean;
 }
 
 /**
@@ -64,6 +85,7 @@ export const runSingleGame = async (
     dungeon,
     seed,
     maxTurns = 150,
+    levelUpHeroes = false,
   } = options;
 
   const gmId = gameMasterId ?? difficultyId ?? DEFAULT_GAME_MASTER_ID;
@@ -86,6 +108,31 @@ export const runSingleGame = async (
       state.dungeon = structuredClone(dungeon);
       resetLiveHeroes(state);
       state.currentActor = state.heroes[0] as Hero | undefined;
+
+      // Rebuild the event deck for the overridden dungeon, matching what
+      // init() does for the first dungeon and what BetweenDungeonsLogic does
+      // on dungeon transitions — otherwise benchmarks run with the event
+      // pool of the campaign's first dungeon.
+      const campaign = getCampaign(campaignId);
+      let dungeonEvents = getEventsForDungeon(
+        state.dungeon,
+        campaign?.eventDeck ?? [],
+      );
+      if (gameMaster?.events?.modifyEventDeck) {
+        dungeonEvents = gameMaster.events.modifyEventDeck(dungeonEvents, state);
+      }
+      state.eventDeck = dungeonEvents;
+    }
+
+    // Model campaign progression: level the party up as if it had already
+    // cleared earlier campaign dungeons before the benchmarked one.
+    if (levelUpHeroes) {
+      state.heroes.forEach((hero) => {
+        (hero as Hero).experience += 5;
+      });
+      levelUp(state);
+      resetLiveHeroes(state);
+      state.currentActor = state.heroes[0] as Hero | undefined;
     }
 
     let turn = 0;
@@ -93,7 +140,50 @@ export const runSingleGame = async (
     let totalMonstersKilled = 0;
     const initialDungeonName = state.dungeon.name;
 
+    const getPartyHealth = () =>
+      state.heroes.reduce((sum, h) => sum + Math.max(0, h.health), 0);
+
+    let lowestPartyHp = getPartyHealth();
+    let nearDeathCount = 0;
+    const prevHeroNearDeath = new Map<string, boolean>();
+    for (const h of state.heroes) {
+      const isNear = h.health > 0 && h.health < 3;
+      prevHeroNearDeath.set(h.id!, isNear);
+      if (isNear) nearDeathCount++;
+    }
+
+    const spawns: MonsterSpawnRecord[] = [];
+    const knownMonsters = new Set(state.dungeon.layout.monsters);
+
+    const checkHeroHealthAndSpawns = (roundNumber: number) => {
+      const currentPartyHp = getPartyHealth();
+      if (currentPartyHp < lowestPartyHp) {
+        lowestPartyHp = currentPartyHp;
+      }
+
+      for (const h of state.heroes) {
+        const wasNear = prevHeroNearDeath.get(h.id!) ?? false;
+        const isNear = h.health > 0 && h.health < 3;
+        if (isNear && !wasNear) {
+          nearDeathCount++;
+        }
+        prevHeroNearDeath.set(h.id!, isNear);
+      }
+
+      for (const m of state.dungeon.layout.monsters) {
+        if (!knownMonsters.has(m)) {
+          knownMonsters.add(m);
+          spawns.push({
+            round: roundNumber,
+            monster: m.name ?? m.type,
+          });
+        }
+      }
+    };
+
     while (turn < maxTurns) {
+      checkHeroHealthAndSpawns(turn + 1);
+
       totalMonstersKilled = Math.max(
         totalMonstersKilled,
         state.dungeon.killCount,
@@ -121,7 +211,10 @@ export const runSingleGame = async (
         if (!state.currentActor) break;
 
         playHeroTurn(state);
+        checkHeroHealthAndSpawns(turn + 1);
+
         await next(state, HEADLESS_MONSTER_OPTIONS);
+        checkHeroHealthAndSpawns(turn + 1);
 
         totalMonstersKilled = Math.max(
           totalMonstersKilled,
@@ -147,6 +240,8 @@ export const runSingleGame = async (
       if (status !== 'TIMEOUT') break;
     }
 
+    checkHeroHealthAndSpawns(turn);
+
     const surviving = liveHeroes(state);
     const survivingCount = surviving.length;
     const casualties = state.heroes.length - survivingCount;
@@ -154,6 +249,9 @@ export const runSingleGame = async (
       (sum, h) => sum + Math.max(0, h.health),
       0,
     );
+    const wastedSearches = state.actionLog.filter(
+      (log) => log.key === 'logs.heroAction.searchFoundNothing',
+    ).length;
 
     return {
       runId: seed ?? 0,
@@ -163,6 +261,10 @@ export const runSingleGame = async (
       survivingHeroes: survivingCount,
       heroCasualties: casualties,
       remainingHeroHealth: totalHp,
+      lowestPartyHp,
+      nearDeathCount,
+      wastedSearches,
+      spawns,
     };
   } finally {
     resetRng();
@@ -180,6 +282,7 @@ export const runGameMasterBenchmark = async (options: {
   runs: number;
   startSeed?: number;
   maxTurns?: number;
+  levelUpHeroes?: boolean;
 }): Promise<GameMasterBenchmarkSummary> => {
   const {
     gameMasterId,
@@ -189,6 +292,7 @@ export const runGameMasterBenchmark = async (options: {
     dungeon,
     campaignId,
     maxTurns,
+    levelUpHeroes,
   } = options;
 
   const gmId = gameMasterId ?? difficultyId ?? DEFAULT_GAME_MASTER_ID;
@@ -203,6 +307,7 @@ export const runGameMasterBenchmark = async (options: {
       gameMasterId: gm.id,
       seed,
       maxTurns,
+      levelUpHeroes,
     });
     results.push({ ...res, runId: i + 1 });
   }
@@ -216,6 +321,39 @@ export const runGameMasterBenchmark = async (options: {
   const sumKills = results.reduce((acc, r) => acc + r.monstersKilled, 0);
   const sumHealth = results.reduce((acc, r) => acc + r.remainingHeroHealth, 0);
 
+  const avgCasualties = +(sumCasualties / runs).toFixed(2);
+  const varianceCasualties =
+    results.reduce(
+      (acc, r) => acc + Math.pow(r.heroCasualties - avgCasualties, 2),
+      0,
+    ) / runs;
+  const stdDevHeroCasualties = +Math.sqrt(varianceCasualties).toFixed(2);
+
+  const winResults = results.filter((r) => r.status === 'WON');
+  const sumWinHealth = winResults.reduce(
+    (acc, r) => acc + r.remainingHeroHealth,
+    0,
+  );
+  const avgWinRemainingHealth =
+    winResults.length > 0 ? +(sumWinHealth / winResults.length).toFixed(1) : 0;
+
+  const lowestPartyHp = Math.min(...results.map((r) => r.lowestPartyHp));
+
+  const totalNearDeathCount = results.reduce(
+    (acc, r) => acc + r.nearDeathCount,
+    0,
+  );
+  const avgNearDeathCount = +(totalNearDeathCount / runs).toFixed(1);
+
+  const totalWastedSearches = results.reduce(
+    (acc, r) => acc + r.wastedSearches,
+    0,
+  );
+  const avgWastedSearches = +(totalWastedSearches / runs).toFixed(1);
+
+  const allSpawns = results.flatMap((r) => r.spawns);
+  const totalSpawns = allSpawns.length;
+
   return {
     gameMaster: gm.id,
     difficulty: gm.id,
@@ -227,9 +365,18 @@ export const runGameMasterBenchmark = async (options: {
     lossRate: Math.round((losses / runs) * 100),
     timeoutRate: Math.round((timeouts / runs) * 100),
     avgTurns: +(sumTurns / runs).toFixed(1),
-    avgHeroCasualties: +(sumCasualties / runs).toFixed(2),
+    avgHeroCasualties: avgCasualties,
+    stdDevHeroCasualties,
     avgMonstersKilled: +(sumKills / runs).toFixed(1),
     avgRemainingHealth: +(sumHealth / runs).toFixed(1),
+    avgWinRemainingHealth,
+    lowestPartyHp,
+    totalNearDeathCount,
+    avgNearDeathCount,
+    totalWastedSearches,
+    avgWastedSearches,
+    totalSpawns,
+    spawns: allSpawns,
     results,
   };
 };
@@ -245,17 +392,23 @@ export const formatBenchmarkReport = (
 ): string => {
   const lines: string[] = [];
   lines.push(
-    '==================================================================================',
+    '======================================================================================================================================================',
   );
   lines.push(`  ${title}`);
   lines.push(
-    '==================================================================================',
+    '======================================================================================================================================================',
   );
   lines.push(
-    'Game Master    | Runs | Win Rate | Loss Rate | Avg Turns | Avg Casualties | Avg Kills | Avg Rem HP',
+    'Bot Playstyle: Aggressive (heals at HP <= 3, attacks enemies in range, searches adjacent secrets/doors, prioritizes combat > doors > secrets > exploration)',
   );
   lines.push(
-    '---------------+------+----------+-----------+-----------+----------------+-----------+-----------',
+    '------------------------------------------------------------------------------------------------------------------------------------------------------',
+  );
+  lines.push(
+    'Game Master    | Runs | Win Rate | Loss Rate | Avg Turns | Avg Casualties (±SD) | Avg Kills | Avg Rem HP | Win Rem HP | Min Party HP | Near Death | Wasted Search | Spawns',
+  );
+  lines.push(
+    '---------------+------+----------+-----------+-----------+----------------------+-----------+------------+------------+--------------+------------+---------------+-------',
   );
 
   for (const s of summaries) {
@@ -264,15 +417,58 @@ export const formatBenchmarkReport = (
     const winR = `${s.winRate}%`.padStart(8);
     const lossR = `${s.lossRate}%`.padStart(9);
     const turns = String(s.avgTurns).padStart(9);
-    const cas = String(s.avgHeroCasualties).padStart(14);
+    const cas = `${s.avgHeroCasualties} (±${s.stdDevHeroCasualties})`.padStart(
+      20,
+    );
     const kills = String(s.avgMonstersKilled).padStart(9);
-    const hp = String(s.avgRemainingHealth).padStart(10);
+    const remHp = String(s.avgRemainingHealth).padStart(10);
+    const winHp = String(s.avgWinRemainingHealth).padStart(10);
+    const minHp = String(s.lowestPartyHp).padStart(12);
+    const nearDeath = String(s.avgNearDeathCount).padStart(10);
+    const wasted = String(s.avgWastedSearches).padStart(13);
+    const spawns = String(s.totalSpawns).padStart(6);
+
     lines.push(
-      `${gm} | ${runs} | ${winR} | ${lossR} | ${turns} | ${cas} | ${kills} | ${hp}`,
+      `${gm} | ${runs} | ${winR} | ${lossR} | ${turns} | ${cas} | ${kills} | ${remHp} | ${winHp} | ${minHp} | ${nearDeath} | ${wasted} | ${spawns}`,
     );
   }
+
   lines.push(
-    '==================================================================================',
+    '------------------------------------------------------------------------------------------------------------------------------------------------------',
+  );
+  lines.push('Spawns by Game Master (Round & Monster):');
+  for (const s of summaries) {
+    const gm = (s.gameMaster ?? s.difficulty).padEnd(14);
+    if (!s.spawns || s.spawns.length === 0) {
+      lines.push(`  ${gm}: None`);
+    } else {
+      const spawnMap = new Map<number, Map<string, number>>();
+      for (const sp of s.spawns) {
+        if (!spawnMap.has(sp.round)) {
+          spawnMap.set(sp.round, new Map());
+        }
+        const roundMap = spawnMap.get(sp.round)!;
+        roundMap.set(sp.monster, (roundMap.get(sp.monster) ?? 0) + 1);
+      }
+
+      const sortedRounds = Array.from(spawnMap.keys()).sort((a, b) => a - b);
+      const spawnParts: string[] = [];
+      for (const round of sortedRounds) {
+        const roundMap = spawnMap.get(round)!;
+        for (const [monster, count] of roundMap.entries()) {
+          spawnParts.push(
+            count > 1
+              ? `Round ${round}: ${monster} (x${count})`
+              : `Round ${round}: ${monster}`,
+          );
+        }
+      }
+      lines.push(`  ${gm}: ${spawnParts.join(', ')}`);
+    }
+  }
+
+  lines.push(
+    '======================================================================================================================================================',
   );
   return lines.join('\n');
 };

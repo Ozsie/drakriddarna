@@ -305,7 +305,9 @@ describe('Orc Behaviors Evaluation', () => {
     const evaluated = evaluateBehaviors(ORC_BEHAVIORS, ctx);
     const charge = evaluated.find((b) => b.name === 'Charge');
     expect(charge?.eligible).toBe(true);
-    expect(charge?.baseWeight).toBe(11);
+    // Health 5 is > 50% of effective max 9 (4.5), so the weak-hero bold
+    // bonus does not apply: base weight stays 8.
+    expect(charge?.baseWeight).toBe(8);
 
     // If hero health is 4 (<= 9 / 2 = 4.5), base weight becomes 11
     hero.health = 4;

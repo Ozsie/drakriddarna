@@ -2,7 +2,6 @@ import {
   addLog,
   cellsAlongLine,
   doReRender,
-  doorAsActor,
   findCell,
   getDifficulty,
   hasLineOfSight,
@@ -11,7 +10,6 @@ import {
   isSamePosition,
   isWalkable,
   recordActorStep,
-  takeDamage,
 } from '../core';
 import type {
   ItemLocation,
@@ -22,7 +20,7 @@ import type {
   InteractableCell,
   Item,
 } from '../types';
-import { ItemType, Side } from '../types';
+import { ItemType } from '../types';
 import {
   checkForTrapDoor,
   randomItem,
@@ -42,7 +40,7 @@ import {
   isBlockedByHero,
   isBlockedByMonster,
   liveHeroes,
-  openDoor,
+  openDoorAtHero,
   pickLock,
   pickupItem,
   search,
@@ -95,45 +93,6 @@ const pickUpItemAtHero = (
     item: i18n(item.name),
   });
   pickupItem(state, item, hero);
-};
-
-const openDoorAtHero = (
-  state: GameState,
-  hero: Hero,
-  target: Position,
-  door?: Door,
-) => {
-  door = door ?? findDoorAtHero(state, hero);
-  if (!door || door.open) return;
-  const canBreakLock = hero.inventory.some(
-    (item) => item && item.properties?.[BREAK_LOCK],
-  );
-  if (!canOpenDoor(hero, canBreakLock, door)) return;
-  if (door.locked && canBreakLock)
-    addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
-  door.open = true;
-  if (door.trapped) {
-    takeDamage(state, doorAsActor(door), hero, false);
-  }
-  switch (door.side) {
-    case Side.RIGHT:
-      openDoor(hero, state, target.x + 1, target.y);
-      break;
-    case Side.LEFT:
-      openDoor(hero, state, target.x - 1, target.y);
-      break;
-    case Side.DOWN:
-      openDoor(hero, state, target.x, target.y + 1);
-      break;
-    case Side.UP:
-      openDoor(hero, state, target.x, target.y - 1);
-      break;
-  }
-  consumeActions(hero);
-  if (hero.actions <= 0) {
-    hero.actions = 0;
-    hero.movement = 0;
-  }
 };
 
 export const onTargetSelf = (state: GameState, target: Position) => {
@@ -204,9 +163,13 @@ export const executeRadialAction = (
       addLog(state, 'logs.heroAction.locked');
       pickLock(state, door);
       break;
-    case RadialAction.OPEN_DOOR:
-      openDoorAtHero(state, hero, hero.position, door);
+    case RadialAction.OPEN_DOOR: {
+      const targetDoor = door ?? findDoorAtHero(state, hero);
+      if (targetDoor) {
+        openDoorAtHero(state, hero, hero.position, targetDoor);
+      }
       break;
+    }
     case RadialAction.PICK_UP_ITEM: {
       const itemLocation = findItemAtHero(state, hero);
       if (itemLocation) {
