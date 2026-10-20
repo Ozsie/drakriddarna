@@ -1,0 +1,1 @@
+const t={tactician:{name:"Taktikern",description:"En rättvis och uppmärksam spelledare. Monstren strider listigt men inte grymt, förstärkningar dyker upp först när grottan hunnit vakna, och när det går dåligt för riddarna får de andas ut en stund. Det rekommenderade sättet att spela."}},e={gameMaster:t};export{e as default,t as gameMaster};
