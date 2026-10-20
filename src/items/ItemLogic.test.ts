@@ -183,16 +183,16 @@ describe('ItemLogic - Healing Herbs rework', () => {
   });
 
   it('caps healing herbs recovery to max health adjusted by difficulty modifier', () => {
-    state.difficulty = getGameMaster('hard');
+    state.difficulty = getGameMaster('easy'); // easy has health modifier +1
 
-    hero2.health = 8;
-    hero2.maxHealth = 10; // Effective max health is 9 (10 - 1)
+    hero2.health = 10;
+    hero2.maxHealth = 10; // Effective max health is 11 (10 + 1)
     state.currentActor = hero1;
     state.targetActor = hero2;
 
     useItem(state, herbs);
 
-    // Roll gave 3 hits, but max health is 9, so health becomes 9, not 10 or 11
-    expect(hero2.health).toBe(9);
+    // Roll gave 3 hits, but max health is 11, so health becomes 11, not 12 or 13
+    expect(hero2.health).toBe(11);
   });
 });

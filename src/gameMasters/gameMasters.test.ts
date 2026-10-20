@@ -42,14 +42,14 @@ describe('Game Master System', () => {
         'content.gameMaster.storyTeller.description',
       );
       expect(storyTeller.modifiers).toEqual({
-        attack: 1,
+        attack: 0,
         defense: 0,
-        movement: 1,
+        movement: 0,
         search: 2,
-        health: 0,
+        health: 1,
       });
-      expect(storyTeller.monsterBehavior?.bowForgottenChance).toBe(0.25);
-      expect(storyTeller.events?.minMonsterSpawnDistance).toBe(4);
+      expect(storyTeller.monsterBehavior?.bowForgottenChance).toBe(0.2);
+      expect(storyTeller.events?.minMonsterSpawnDistance).toBe(3);
       expect(storyTeller.events?.earliestMonsterRound).toBe(4);
       expect(storyTeller.events?.skipHungryTrollBelowHalfHealth).toBe(true);
       expect(storyTeller.startingEquipment?.shield).toEqual(shields[1]);
@@ -108,12 +108,12 @@ describe('Game Master System', () => {
       expect(brutalOverlord.modifiers).toEqual({
         attack: 0,
         defense: 0,
-        movement: -1,
+        movement: 0,
         search: 0,
-        health: -1,
+        health: 0,
       });
       expect(brutalOverlord.monsterBehavior?.bowForgottenChance).toBe(0);
-      expect(brutalOverlord.events?.minMonsterSpawnDistance).toBe(1);
+      expect(brutalOverlord.events?.minMonsterSpawnDistance).toBe(2);
       expect(brutalOverlord.events?.earliestMonsterRound).toBe(2);
       expect(brutalOverlord.events?.skipHungryTrollBelowHalfHealth).toBe(false);
       expect(brutalOverlord.startingEquipment?.shield).toBeUndefined();
@@ -163,12 +163,12 @@ describe('Game Master System', () => {
     });
 
     it('getEventMinSpawnDistance returns appropriate distances for all GM IDs', () => {
-      expect(getEventMinSpawnDistance('storyTeller')).toBe(4);
-      expect(getEventMinSpawnDistance('easy')).toBe(4);
+      expect(getEventMinSpawnDistance('storyTeller')).toBe(3);
+      expect(getEventMinSpawnDistance('easy')).toBe(3);
       expect(getEventMinSpawnDistance('tactician')).toBe(3);
       expect(getEventMinSpawnDistance('normal')).toBe(3);
-      expect(getEventMinSpawnDistance('brutalOverlord')).toBe(1);
-      expect(getEventMinSpawnDistance('hard')).toBe(1);
+      expect(getEventMinSpawnDistance('brutalOverlord')).toBe(2);
+      expect(getEventMinSpawnDistance('hard')).toBe(2);
     });
 
     it('getEarliestMonsterEventRound returns appropriate rounds for all GM IDs', () => {
@@ -182,13 +182,13 @@ describe('Game Master System', () => {
   });
 
   describe('Game Master Director State & Behavior Hooks', () => {
-    it('Storyteller Director eases when party HP is < 50% or hero is dead', () => {
+    it('Storyteller Director eases when party HP is < 45% or hero is dead', () => {
       const getDS = storyTeller.monsterBehavior?.getDirectorState;
       expect(getDS).toBeDefined();
       expect(
         getDS!({
           hasDeadHero: false,
-          partyHpPercentage: 0.48,
+          partyHpPercentage: 0.44,
           aliveMonsterCount: 2,
         }),
       ).toBe('EASE');
@@ -241,7 +241,7 @@ describe('Game Master System', () => {
       ).toBe('EASE');
     });
 
-    it('Brutal Overlord boosts aggressive behavior weight by 1.25x', () => {
+    it('Brutal Overlord boosts aggressive behavior weight by 1.1x', () => {
       const calcWeight =
         brutalOverlord.monsterBehavior?.calculateBehaviorWeight;
       expect(calcWeight).toBeDefined();
@@ -265,8 +265,214 @@ describe('Game Master System', () => {
       const weightAgg = calcWeight!(aggressiveBehavior, {} as never, 10);
       const weightDef = calcWeight!(defensiveBehavior, {} as never, 10);
 
-      expect(weightAgg).toBe(12.5);
+      expect(weightAgg).toBe(11);
       expect(weightDef).toBe(10);
+    });
+  });
+
+  describe('Game Master Lifecycle Hooks & State Persistence', () => {
+    it('initializes gameMasterState via initialState and invokes onGameInit and onHeroTurnStart in init()', async () => {
+      const { init } = await import('../game');
+      const customGM: import('../types').GameMaster = {
+        id: 'customLifecycleGM',
+        nameTranslationKey: 'custom',
+        initialState: () => ({ threatLevel: 5, logs: [] }),
+        modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
+        onGameInit: (state) => {
+          (state.gameMasterState as { threatLevel: number }).threatLevel += 1;
+        },
+        onHeroTurnStart: (hero, state) => {
+          (state.gameMasterState as { logs: string[] }).logs.push(
+            `turn-${hero.name}`,
+          );
+        },
+      };
+
+      gameMasters['customLifecycleGM'] = customGM;
+
+      const state = init('iceDragonTreasure', 'customLifecycleGM');
+      expect(state.gameMasterState).toBeDefined();
+      expect(
+        (state.gameMasterState as { threatLevel: number }).threatLevel,
+      ).toBe(6);
+      expect((state.gameMasterState as { logs: string[] }).logs).toContain(
+        `turn-${state.heroes[0].name}`,
+      );
+    });
+
+    it('invokes onRoundStart, onHeroPhaseEnd, and onMonsterPhaseEnd during next() loop', async () => {
+      const { init, next } = await import('../game');
+      const roundStarts: number[] = [];
+      let heroPhaseEnded = false;
+      let monsterPhaseEnded = false;
+
+      const customGM: import('../types').GameMaster = {
+        id: 'turnFlowGM',
+        nameTranslationKey: 'turnFlow',
+        modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
+        onRoundStart: (round) => {
+          roundStarts.push(round);
+        },
+        onHeroPhaseEnd: () => {
+          heroPhaseEnded = true;
+        },
+        onMonsterPhaseEnd: () => {
+          monsterPhaseEnded = true;
+        },
+      };
+
+      gameMasters['turnFlowGM'] = customGM;
+      const state = init('iceDragonTreasure', 'turnFlowGM');
+
+      // End turns for each live hero once to cycle round
+      const heroCount = state.heroes.length;
+      for (let i = 0; i < heroCount; i++) {
+        await next(state);
+      }
+
+      expect(heroPhaseEnded).toBe(true);
+      expect(monsterPhaseEnded).toBe(true);
+      expect(roundStarts.length).toBeGreaterThan(0);
+    });
+
+    it('invokes onPartyDefeat when all heroes die or level resets', async () => {
+      const { init, resetLevel } = await import('../game');
+      let defeatCalled = false;
+
+      const customGM: import('../types').GameMaster = {
+        id: 'defeatGM',
+        nameTranslationKey: 'defeat',
+        modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
+        onPartyDefeat: () => {
+          defeatCalled = true;
+        },
+      };
+
+      gameMasters['defeatGM'] = customGM;
+      const state = init('iceDragonTreasure', 'defeatGM');
+      resetLevel(state);
+
+      expect(defeatCalled).toBe(true);
+    });
+
+    it('invokes onDungeonComplete when dungeon win conditions are beaten', async () => {
+      const { init, next } = await import('../game');
+      let dungeonCompleteCalled = false;
+
+      const customGM: import('../types').GameMaster = {
+        id: 'completeGM',
+        nameTranslationKey: 'complete',
+        modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
+        onDungeonComplete: () => {
+          dungeonCompleteCalled = true;
+        },
+      };
+
+      gameMasters['completeGM'] = customGM;
+      const state = init('iceDragonTreasure', 'completeGM');
+      state.dungeon.layout.monsters.forEach((m) => (m.health = 0));
+
+      await next(state);
+      expect(dungeonCompleteCalled).toBe(true);
+    });
+  });
+
+  describe('Game Master Combat and Search Rules', () => {
+    it('applies modifySearchRoll and onSearchFailed hooks', async () => {
+      const { searchForSecret } = await import('../secrets/SecretsLogic');
+      let searchFailedHero: string | undefined;
+
+      const customGM: import('../types').GameMaster = {
+        id: 'searchRulesGM',
+        nameTranslationKey: 'searchRules',
+        modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
+        modifySearchRoll: (baseRoll) => baseRoll + 10,
+        onSearchFailed: (hero) => {
+          searchFailedHero = hero.name;
+        },
+      };
+
+      const hero = {
+        name: 'Tester',
+        level: 1,
+        inventory: [],
+        position: { x: 0, y: 0 },
+      } as unknown as import('../types').Hero;
+
+      const state = {
+        heroes: [hero],
+        currentActor: hero,
+        gameMaster: customGM,
+        difficulty: customGM,
+        dungeon: {
+          layout: {
+            grid: [],
+            secrets: [],
+            doors: [],
+            monsters: [],
+            interactables: [],
+          },
+        },
+        actionLog: [],
+      } as unknown as import('../types').GameState;
+
+      searchForSecret(state);
+      expect(searchFailedHero).toBe('Tester');
+    });
+
+    it('applies modifyHeroDamageDealt, modifyMonsterDamageDealt, and onHeroDowned', async () => {
+      const { takeDamage } = await import('../core/combat');
+      let downedHero: string | undefined;
+
+      const customGM: import('../types').GameMaster = {
+        id: 'combatRulesGM',
+        nameTranslationKey: 'combatRules',
+        modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
+        modifyHeroDamageDealt: (damage) => damage + 3,
+        modifyMonsterDamageDealt: (damage) => damage + 5,
+        onHeroDowned: (hero) => {
+          downedHero = hero.name;
+        },
+      };
+
+      const hero = {
+        name: 'HeroOne',
+        level: 1,
+        health: 2,
+        defense: 0,
+        position: { x: 1, y: 1 },
+        inventory: [],
+        weapon: { dice: 3, range: 1, ignoresArmour: true, ignoresShield: true },
+      } as unknown as import('../types').Hero;
+
+      const monster = {
+        name: 'Goblin',
+        level: 1,
+        health: 10,
+        defense: 0,
+        position: { x: 1, y: 2 },
+        inventory: [],
+        weapon: { dice: 2, range: 1, ignoresArmour: true, ignoresShield: true },
+      } as unknown as import('../types').Monster;
+
+      const state = {
+        heroes: [hero],
+        currentActor: hero,
+        gameMaster: customGM,
+        difficulty: customGM,
+        actionLog: [],
+        damageIndicators: [],
+        bloodSplatters: [],
+      } as unknown as import('../types').GameState;
+
+      // Monster attacks Hero (should apply modifyMonsterDamageDealt and trigger onHeroDowned)
+      takeDamage(state, monster, hero, false);
+      expect(hero.health).toBe(0);
+      expect(downedHero).toBe('HeroOne');
+
+      // Hero attacks Monster (modifyHeroDamageDealt should be active)
+      takeDamage(state, hero, monster, false);
+      expect(monster.health).toBeLessThan(10);
     });
   });
 });

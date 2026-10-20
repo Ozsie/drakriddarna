@@ -181,10 +181,10 @@ describe('Orc Drums event and resetEventEffects', () => {
 
   it('fountainOfYouth respects max health adjusted by difficulty modifier', () => {
     const state = init();
-    state.difficulty = getGameMaster('hard');
+    state.difficulty = getGameMaster('easy');
     const hero = state.heroes[0];
     hero.maxHealth = 10;
-    hero.health = 8; // Effective max is 9 (10 - 1)
+    hero.health = 10; // Effective max is 11 (10 + 1)
 
     const event: TurnEvent = {
       id: 'fountain_of_youth',
@@ -200,7 +200,7 @@ describe('Orc Drums event and resetEventEffects', () => {
 
     eventEffects.fountainOfYouth(state, event);
 
-    expect(hero.health).toBeLessThanOrEqual(9);
+    expect(hero.health).toBeLessThanOrEqual(11);
     expect(event.used).toBe(true);
   });
 });
@@ -243,13 +243,13 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     expect(normalDiff?.events?.earliestMonsterRound).toBe(3);
     expect(normalDiff?.events?.skipHungryTrollBelowHalfHealth).toBe(true);
 
-    expect(hardDiff?.events?.minMonsterSpawnDistance).toBe(1);
+    expect(hardDiff?.events?.minMonsterSpawnDistance).toBe(2);
     expect(hardDiff?.events?.earliestMonsterRound).toBe(2);
     expect(hardDiff?.events?.skipHungryTrollBelowHalfHealth).toBe(false);
 
-    expect(getEventMinSpawnDistance('easy')).toBe(4);
+    expect(getEventMinSpawnDistance('easy')).toBe(3);
     expect(getEventMinSpawnDistance('normal')).toBe(3);
-    expect(getEventMinSpawnDistance('hard')).toBe(1);
+    expect(getEventMinSpawnDistance('hard')).toBe(2);
 
     expect(getEarliestMonsterEventRound('easy')).toBe(4);
     expect(getEarliestMonsterEventRound('normal')).toBe(3);
@@ -276,17 +276,17 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     state.heroes[0].health = 4;
     expect(isPartyBelowHalfHealth(state)).toBe(true);
 
-    // With hard difficulty (-1 max health per hero => 4 * 9 = 36 max health)
-    state.difficulty = getGameMaster('hard');
-    // Total health 18 / 36 = 50% (not below 50%)
-    state.heroes[0].health = 3;
+    // With easy difficulty (+1 max health per hero => 4 * 11 = 44 max health)
+    state.difficulty = getGameMaster('easy');
+    // Total health 22 / 44 = 50% (not below 50%)
+    state.heroes[0].health = 5;
     state.heroes[1].health = 5;
-    state.heroes[2].health = 5;
-    state.heroes[3].health = 5;
+    state.heroes[2].health = 6;
+    state.heroes[3].health = 6;
     expect(isPartyBelowHalfHealth(state)).toBe(false);
 
-    // Total health 17 / 36 < 50%
-    state.heroes[0].health = 2;
+    // Total health 21 / 44 < 50%
+    state.heroes[0].health = 4;
     expect(isPartyBelowHalfHealth(state)).toBe(true);
   });
 
@@ -429,7 +429,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
         state.dungeon.layout.monsters = [];
         state.heroes.forEach((h) => {
           h.maxHealth = 10;
-          h.health = 5; // 20 / 40 = 50%
+          h.health = 6; // easy: 24 / 44 = 54.5%, normal: 24 / 40 = 60%
         });
 
         const event = { ...trollEvent, used: false };

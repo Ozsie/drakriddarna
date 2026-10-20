@@ -484,13 +484,13 @@ describe('newHero and applyStartingEquipment', () => {
   });
 
   it('creates hero with health adjusted by difficulty modifier', () => {
-    const hardDiff = getGameMaster('hard');
-    expect(hardDiff).toBeDefined();
+    const easyDiff = getGameMaster('easy');
+    expect(easyDiff).toBeDefined();
 
-    const hero = newHero('Thor', Colour.Yellow, hardDiff);
+    const hero = newHero('Thor', Colour.Yellow, easyDiff);
 
     expect(hero.maxHealth).toBe(7);
-    expect(hero.health).toBe(6);
+    expect(hero.health).toBe(8);
   });
 });
 
@@ -499,11 +499,11 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
     const hero = createTestHero({ maxHealth: 7, health: 1 });
     const monster = createTestMonster();
     const state = createTestState(hero, monster);
-    state.difficulty = getGameMaster('hard');
+    state.difficulty = getGameMaster('easy');
 
     resetLiveHeroes(state);
 
-    expect(hero.health).toBe(6);
+    expect(hero.health).toBe(8);
   });
 
   it('resetLiveHeroes re-enables disabled items with pickup and re-applies their stat bonus', () => {
@@ -542,10 +542,10 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
     const hero = createTestHero({ maxHealth: 7, health: 0 });
     const monster = createTestMonster();
     const state = createTestState(hero, monster);
-    state.difficulty = getGameMaster('hard');
+    state.difficulty = getGameMaster('easy');
 
     replaceDeadHeroes(state);
 
-    expect(hero.health).toBe(6);
+    expect(hero.health).toBe(8);
   });
 });
