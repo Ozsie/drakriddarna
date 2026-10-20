@@ -73,6 +73,8 @@
     renderFlameEffects,
   } from '../combat';
   import { clearTileTextureCache } from '../dungeon/TileTextureCache';
+  import { resolveTileset } from '../dungeon/TilesetLogic';
+  import { getCampaign } from '../campaigns';
   import { hasActiveActorAnimations } from '../core';
   import {
     gameStateStore,
@@ -99,6 +101,10 @@
       ? debugMode
       : Boolean(activeState?.settings?.['debug'] ?? $debugModeStore);
   $: dungeon = activeState?.dungeon;
+  $: campaign = activeState?.campaignId
+    ? getCampaign(activeState.campaignId)
+    : undefined;
+  $: tileset = resolveTileset(dungeon, campaign, groundSprites);
   $: startPosition = dungeon?.startingPositions?.[0];
   $: isMusicEnabled = activeState?.settings?.['music'] !== false;
   $: isSoundEnabled =
@@ -739,7 +745,8 @@
       renderOverlayLayer(true);
     };
 
-    ground.src = groundSprites;
+    ground.src = tileset;
+    lastTileset = tileset;
     actors.src = actorSprites;
 
     if (isReady(ground)) {
@@ -822,6 +829,13 @@
     panY = 0;
     updateAllCanvasTransforms();
     renderCanvas(true);
+  }
+
+  let lastTileset = '';
+  $: if (isMounted && ground && tileset && tileset !== lastTileset) {
+    lastTileset = tileset;
+    clearTileTextureCache();
+    ground.src = tileset;
   }
 
   const onMouseDown = (event: MouseEvent) => {

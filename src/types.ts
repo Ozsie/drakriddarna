@@ -148,6 +148,7 @@ export type Campaign = {
   itemDeck: Item[];
   magicItemDeck: Item[];
   eventDeck?: TurnEvent[];
+  tileset?: string;
 };
 
 export type Actor = {
@@ -239,6 +240,7 @@ export type Dungeon = {
   portal?: Position;
   onRoomDiscovered?: Record<string, string>;
   music?: string;
+  tileset?: string;
 };
 
 export type WinCondition = {

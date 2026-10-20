@@ -221,6 +221,7 @@ export type DeclarativeDungeon = {
   collapsedCorridor?: string;
   onRoomDiscovered?: Record<string, string>;
   music?: string;
+  tileset?: string;
 };
 
 export interface DefineDungeonOptions {
@@ -623,6 +624,7 @@ export const defineDungeon = (
       ? { onRoomDiscovered: dungeonDef.onRoomDiscovered }
       : {}),
     music: dungeonDef.music,
+    tileset: dungeonDef.tileset,
   };
 
   if (options.validate) {

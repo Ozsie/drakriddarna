@@ -69,6 +69,8 @@ src/campaigns/
      campaign — this is a convention, **not enforced by the type system**,
      so double-check you never accidentally import and link to another
      campaign's dungeon.
+   - `tileset?: string` — overrides the tileset image used to render this
+     dungeon (see [Tilesets](#tilesets-optional)).
 3. **Add heroes**: reuse the shared hero templates, or define
    campaign-specific ones if the campaign needs its own roster. The
    simplest way is `newHero(name, colour)` (exported from
@@ -164,6 +166,30 @@ are fully global and shared by every campaign — there is currently no
 campaign needs a different difficulty curve, that would require a small
 engine change first; it is not something you can configure from within your
 campaign folder today.
+
+## Tilesets (optional)
+
+The tileset is the sprite-sheet image used to render floors, walls, doors,
+pits and pillars. Both `Campaign` and `Dungeon` accept an optional
+`tileset: string` — a URL to a tileset image using the same 48x48 tile
+grid as the built-in one (see `src/lib/DungeonTiles.png`). Resolution order
+(`src/dungeon/TilesetLogic.ts`):
+
+1. `dungeon.tileset` — per-dungeon override
+2. `campaign.tileset` — campaign-wide default
+3. the built-in tileset (`src/lib/DungeonTiles.png`) — fallback
+
+Set it on the campaign's default export to skin the whole campaign, and on
+an individual dungeon to override it for that dungeon only:
+
+```ts
+import iceTiles from './iceTiles.png';
+
+const campaignMyNewCampaign: Campaign = {
+  // ...
+  tileset: iceTiles, // Vite turns the import into a runtime URL
+};
+```
 
 ## Adding new items (optional)
 
