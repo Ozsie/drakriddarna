@@ -279,7 +279,15 @@
     const eventLightsSig = `${(st?.eventLights ?? [])
       .map((l: LightSource) => `${l.id ?? ''}@${l.position.x},${l.position.y}`)
       .join(',')}|${st?.dungeon?.portal?.x ?? ''},${st?.dungeon?.portal?.y ?? ''}`;
-    return `${heroes}|${monsters}|${curActor}|${rooms}|${lights}|${itemLights}|${eventLightFlags}|${eventLightsSig}|${size}|${dbg}`;
+    // Interactable lights (braziers etc.) toggle on interaction.
+    const interactableLights = (st?.dungeon?.layout?.interactables ?? [])
+      .map((i) =>
+        i.light
+          ? `${i.id ?? ''}@${i.position.x},${i.position.y}:${i.light.enabled}`
+          : '',
+      )
+      .join(';');
+    return `${heroes}|${monsters}|${curActor}|${rooms}|${lights}|${itemLights}|${eventLightFlags}|${eventLightsSig}|${interactableLights}|${size}|${dbg}`;
   };
 
   const getOverlaySignature = (st: GameState, dbg: boolean, size: number) => {
@@ -364,12 +372,14 @@
   const renderDynamicLayer = (force = false) => {
     if (!activeState || !browser || !actors || !actorCanvas) return;
     if (!isReady(actors)) return;
+    const currentTime = Date.now();
     const hasActiveAnimations = hasActiveActorAnimations();
     // Light effects (pulse, flicker, sweep, blink) need a re-render every
     // frame while any visible light animates.
     const hasLightEffects = hasAnimatedLights(
       activeState,
       activeDebugMode ?? false,
+      currentTime,
     );
     const sig = getDynamicSignature(
       activeState,
@@ -388,7 +398,6 @@
     const ctx = actorCanvas.getContext('2d');
     if (!ctx) return;
 
-    const currentTime = Date.now();
     dynamicRenderCount++;
     totalReRenderCount++;
     ctx.save();

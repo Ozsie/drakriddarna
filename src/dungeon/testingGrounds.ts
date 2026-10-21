@@ -117,6 +117,29 @@ export const testingGrounds: Dungeon = defineDungeon({
       [6, 3],
       [6, 2],
     ],
+    // Unlit brazier: interact with it (repeatedly) to toggle its torch
+    // light.
+    interactables: [
+      [
+        4,
+        8,
+        'toggleLight',
+        {
+          oneTime: false,
+          name: 'Brazier',
+          light: {
+            alignment: CellAlignment.CENTER,
+            color: '#FFB85C',
+            radius: 2.5,
+            intensity: 0.45,
+            softness: 0.4,
+            effect: LightEffect.FLICKER,
+            rate: 1.5,
+            enabled: false,
+          },
+        },
+      ],
+    ],
     corridors: ['G', 'E', 'F'],
     doors: [
       [Side.UP, 3, 8, { trapped: 1, hidden: true }],

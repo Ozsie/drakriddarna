@@ -5,6 +5,7 @@ import type {
   Dungeon,
   InteractableCell,
   Item,
+  ItemLight,
   ItemLocation,
   Layout,
   LightEffect,
@@ -163,6 +164,7 @@ export type DeclarativeInteractableObject = {
   triggerOn?: 'interact' | 'step' | 'both';
   secret?: boolean;
   interactSound?: string;
+  light?: ItemLight;
 };
 
 export type DeclarativeInteractableTuple =
@@ -186,6 +188,7 @@ export type DeclarativeInteractableTuple =
             triggerOn?: 'interact' | 'step' | 'both';
             secret?: boolean;
             interactSound?: string;
+            light?: ItemLight;
             [key: string]: unknown;
           },
       id?: string,
@@ -516,6 +519,7 @@ export const parseInteractable = (
     let secret: boolean | undefined;
     let interactableId = id;
     let interactSound: string | undefined;
+    let light: ItemLight | undefined;
 
     if (argsOrOptions && typeof argsOrOptions === 'object') {
       const opts = argsOrOptions as Record<string, unknown>;
@@ -529,6 +533,7 @@ export const parseInteractable = (
         'id' in opts ||
         'args' in opts ||
         'secret' in opts ||
+        'light' in opts ||
         'interactSound' in opts
       ) {
         if (opts.id && typeof opts.id === 'string') interactableId = opts.id;
@@ -561,6 +566,9 @@ export const parseInteractable = (
         }
         if (typeof opts.interactSound === 'string')
           interactSound = opts.interactSound;
+        if (opts.light && typeof opts.light === 'object') {
+          light = opts.light as ItemLight;
+        }
       } else {
         args = opts;
       }
@@ -584,6 +592,7 @@ export const parseInteractable = (
       ...(icon ? { icon } : {}),
       triggerOn,
       interactSound,
+      ...(light ? { light } : {}),
     };
   }
 
@@ -603,6 +612,7 @@ export const parseInteractable = (
     triggerOn = 'interact',
     secret,
     interactSound,
+    light,
   } = interactableDef;
 
   return {
@@ -623,6 +633,7 @@ export const parseInteractable = (
     ...(icon ? { icon } : {}),
     triggerOn,
     interactSound,
+    ...(light ? { light } : {}),
   };
 };
 

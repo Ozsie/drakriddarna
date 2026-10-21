@@ -1,5 +1,6 @@
 import type { Actor, GameState, Item, LightSource, Position } from '../types';
 import { CellAlignment, LightEffect } from '../types';
+import { PROJECTILE_DURATION_MS } from '../combat/CombatEffects';
 import {
   COLLAPSED,
   WALL,
@@ -504,7 +505,14 @@ const EVENT_LIGHTS = {
 // weakness and the magic storm attach a light to the affected hero for the
 // duration of their state; and round-scoped event lights (sun stone, magic
 // node) live in `state.eventLights` until the round is reset.
-export const activeLights = (state: GameState): LightSource[] => {
+//
+// Interactables carry lights at their cell, and flying projectiles and
+// dark lord flames light their surroundings for as long as their animation
+// runs. `now` drives the position of the moving projectile lights.
+export const activeLights = (
+  state: GameState,
+  now: number = Date.now(),
+): LightSource[] => {
   // The dragon's breath snuffs out all lights while it is active.
   if (state.heroes.some((hero) => hero.health > 0 && hero.blinded)) {
     return [];
@@ -550,6 +558,56 @@ export const activeLights = (state: GameState): LightSource[] => {
 
   lights.push(...(state.eventLights ?? []));
 
+  // Interactable light sources (e.g. braziers) render at their cell while
+  // enabled; the built-in `toggleLight` effect flips them.
+  (state.dungeon.layout.interactables ?? []).forEach((interactable) => {
+    if (interactable.light && interactable.light.enabled !== false) {
+      lights.push({ ...interactable.light, position: interactable.position });
+    }
+  });
+
+  // Flying projectiles (dark lord fire bullets) carry an intense,
+  // short-range light that travels with them.
+  (state.projectiles ?? []).forEach((projectile) => {
+    const timestamp = projectile.timestamp ?? now;
+    const duration = projectile.durationMs ?? PROJECTILE_DURATION_MS;
+    const elapsed = now - timestamp;
+    if (elapsed < 0 || elapsed > duration) {
+      return;
+    }
+    const progress = Math.min(Math.max(elapsed / duration, 0), 1);
+    const x =
+      projectile.from.x + (projectile.to.x - projectile.from.x) * progress;
+    const y =
+      projectile.from.y + (projectile.to.y - projectile.from.y) * progress;
+    lights.push(
+      createLight(Math.round(x), Math.round(y), CellAlignment.CENTER, {
+        id: `projectile_light_${projectile.id}`,
+        color: projectile.color ?? '#ffdd44',
+        radius: 1.5,
+        intensity: 0.7,
+        softness: 0.2,
+        effect: LightEffect.FLICKER,
+        rate: 8,
+      }),
+    );
+  });
+
+  // Dark lord flames burn with an intense, short-range light.
+  (state.flameEffects ?? []).forEach((flame) => {
+    lights.push(
+      createLight(flame.position.x, flame.position.y, CellAlignment.CENTER, {
+        id: `flame_light_${flame.id}`,
+        color: '#FF9E2C',
+        radius: 2,
+        intensity: 0.8,
+        softness: 0.4,
+        effect: LightEffect.FLICKER,
+        rate: 6,
+      }),
+    );
+  });
+
   // Item light sources follow their living carrier while in an inventory;
   // items disabled by e.g. the magic storm go dark.
   const carriers: Actor[] = [
@@ -571,8 +629,9 @@ export const activeLights = (state: GameState): LightSource[] => {
 export const hasAnimatedLights = (
   state: GameState,
   debugMode: boolean,
+  now: number = Date.now(),
 ): boolean =>
-  activeLights(state).some(
+  activeLights(state, now).some(
     (light) =>
       light.effect !== undefined &&
       light.effect !== LightEffect.STATIC &&

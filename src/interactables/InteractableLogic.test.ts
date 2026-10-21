@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  CellAlignment,
   Colour,
   ConditionType,
   type Dungeon,
@@ -7,6 +8,7 @@ import {
   type Hero,
   ItemType,
   Level,
+  LightEffect,
   SecretType,
   Side,
   type Weapon,
@@ -755,5 +757,80 @@ describe('InteractableLogic', () => {
       expect(res.errors.some((e) => e.type === 'overlap')).toBe(true);
       expect(res.errors.some((e) => e.type === 'duplicate_id')).toBe(true);
     });
+  });
+});
+
+describe('toggleLight effect', () => {
+  it('toggles the interactable own light on and off', () => {
+    const hero = createTestHero(2, 2);
+    const state = createTestState(hero);
+    const interactable = {
+      position: { x: 2, y: 2 },
+      effect: 'toggleLight',
+      oneTime: false,
+      interacted: false,
+      light: {
+        alignment: CellAlignment.CENTER,
+        color: '#FFB85C',
+        radius: 2.5,
+        intensity: 0.45,
+        softness: 0.4,
+        effect: LightEffect.FLICKER,
+        rate: 1.5,
+        enabled: false,
+      },
+    };
+
+    // Starts unlit; interacting lights it, interacting again snuffs it.
+    expect(interactable.light.enabled).toBe(false);
+    expect(triggerInteractable(state, interactable as never, hero)).toBe(true);
+    expect(interactable.light.enabled).toBe(true);
+    expect(triggerInteractable(state, interactable as never, hero)).toBe(true);
+    expect(interactable.light.enabled).toBe(false);
+  });
+
+  it('toggles a placed dungeon light by args.lightId', () => {
+    const hero = createTestHero(2, 2);
+    const state = createTestState(hero);
+    state.dungeon.layout.lights = [
+      {
+        id: 'brazier_lever_target',
+        position: { x: 5, y: 5 },
+        alignment: CellAlignment.CENTER,
+        color: '#FFB85C',
+        radius: 2,
+        intensity: 0.4,
+        softness: 0.4,
+        effect: 'static',
+        rate: 1,
+        enabled: true,
+      },
+    ];
+    const lever = {
+      position: { x: 2, y: 2 },
+      effect: 'toggleLight',
+      oneTime: false,
+      interacted: false,
+      args: { lightId: 'brazier_lever_target' },
+    };
+
+    triggerInteractable(state, lever as never, hero);
+    expect(state.dungeon.layout.lights[0].enabled).toBe(false);
+    triggerInteractable(state, lever as never, hero);
+    expect(state.dungeon.layout.lights[0].enabled).toBe(true);
+  });
+
+  it('does nothing when there is no light to toggle', () => {
+    const hero = createTestHero(2, 2);
+    const state = createTestState(hero);
+    const handler = getInteractableEffect('toggleLight');
+    expect(handler).toBeDefined();
+    const interactable = {
+      position: { x: 2, y: 2 },
+      effect: 'toggleLight',
+      oneTime: false,
+      interacted: false,
+    };
+    expect(handler!(state, interactable as never, hero)).toBe(false);
   });
 });

@@ -202,6 +202,35 @@ export const interactableEffects: Record<string, InteractableEffectHandler> = {
 
 interactableEffects['NEXT_SCENARIO'] = interactableEffects.nextDungeon;
 
+// Toggles light sources: the interactable's own `light` (a brazier, a
+// torch), and/or a light placed in the dungeon layout identified by
+// `args.lightId` (a lever that lights a distant brazier). Use
+// `oneTime: false` so the light can be toggled back and forth.
+interactableEffects.toggleLight = (
+  state: GameState,
+  interactable: InteractableCell,
+): boolean => {
+  const args = interactable.args ?? {};
+  const lightId = args.lightId as string | undefined;
+  let toggled = false;
+
+  if (lightId) {
+    state.dungeon.layout.lights?.forEach((light) => {
+      if (light.id === lightId) {
+        light.enabled = !(light.enabled ?? true);
+        toggled = true;
+      }
+    });
+  }
+
+  if (interactable.light) {
+    interactable.light.enabled = !(interactable.light.enabled ?? true);
+    toggled = true;
+  }
+
+  return toggled;
+};
+
 export const registerInteractableEffect = (
   name: string,
   handler: InteractableEffectHandler,

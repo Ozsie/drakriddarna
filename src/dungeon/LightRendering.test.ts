@@ -1250,3 +1250,104 @@ describe('event-driven lights', () => {
     expect(hasAnimatedLights(state, false)).toBe(true);
   });
 });
+
+describe('interactable and combat lights', () => {
+  it('renders an enabled interactable light at its cell', () => {
+    const state = createState();
+    state.dungeon.layout.interactables = [
+      {
+        position: { x: 2, y: 2 },
+        effect: 'toggleLight',
+        oneTime: false,
+        interacted: false,
+        light: {
+          alignment: CellAlignment.CENTER,
+          color: '#FFB85C',
+          radius: 2.5,
+          intensity: 0.45,
+          softness: 0.4,
+          effect: 'flicker',
+          rate: 1.5,
+          enabled: true,
+        },
+      },
+    ];
+    const lit = activeLights(state).find(
+      (light) => light.color === '#FFB85C' && light.position.x === 2,
+    );
+    expect(lit).toBeDefined();
+    expect(lit!.position).toEqual({ x: 2, y: 2 });
+    expect(hasAnimatedLights(state, false)).toBe(true);
+
+    // Toggling it off removes it.
+    state.dungeon.layout.interactables[0].light!.enabled = false;
+    expect(activeLights(state).some((light) => light.color === '#FFB85C')).toBe(
+      false,
+    );
+    expect(hasAnimatedLights(state, false)).toBe(false);
+  });
+
+  it('carries an intense short-range light with a flying projectile', () => {
+    const state = createState();
+    state.projectiles = [
+      {
+        id: 'proj-1',
+        from: { x: 1, y: 2 },
+        to: { x: 4, y: 2 },
+        timestamp: 1000,
+        durationMs: 200,
+        color: '#ffdd44',
+      },
+    ];
+    // Halfway between from (1) and to (4): cell 2.5 rounds to 3 at t=1100.
+    const lights = activeLights(state, 1100);
+    const projectileLight = lights.find(
+      (l) => l.id?.startsWith('projectile_light'),
+    );
+    expect(projectileLight).toBeDefined();
+    expect(projectileLight!.position.x).toBe(3);
+    expect(projectileLight!.position.y).toBe(2);
+    expect(projectileLight!.radius).toBe(1.5);
+    expect(projectileLight!.intensity).toBeGreaterThan(0.6);
+    // Animated while the projectile flies, gone before and after.
+    expect(hasAnimatedLights(state, false, 950)).toBe(false);
+    expect(hasAnimatedLights(state, false, 1100)).toBe(true);
+    expect(hasAnimatedLights(state, false, 1400)).toBe(false);
+  });
+
+  it('burns an intense light at dark lord flames', () => {
+    const state = createState();
+    state.flameEffects = [
+      {
+        id: 'flame-1',
+        position: { x: 3, y: 2 },
+        particles: [],
+        timestamp: 1000,
+        durationMs: 600,
+      },
+    ];
+    const flameLight = activeLights(state, 1100).find(
+      (l) => l.id?.startsWith('flame_light'),
+    );
+    expect(flameLight).toBeDefined();
+    expect(flameLight!.position).toEqual({ x: 3, y: 2 });
+    expect(flameLight!.intensity).toBeGreaterThan(0.7);
+    expect(flameLight!.radius).toBeLessThanOrEqual(2);
+    expect(hasAnimatedLights(state, false, 1100)).toBe(true);
+  });
+
+  it('is snuffed by the dragon breath like every other light', () => {
+    const state = createState();
+    state.flameEffects = [
+      {
+        id: 'flame-1',
+        position: { x: 3, y: 2 },
+        particles: [],
+        timestamp: 1000,
+        durationMs: 600,
+      },
+    ];
+    state.heroes[0].blinded = true;
+    expect(activeLights(state, 1100)).toEqual([]);
+  });
+});

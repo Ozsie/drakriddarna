@@ -378,6 +378,10 @@ export type InteractableCell = {
   triggerOn?: 'interact' | 'step' | 'both';
   secret?: boolean;
   interactSound?: string;
+  // Light source attached to this interactable cell. It renders at the
+  // interactable's position while enabled; the built-in `toggleLight`
+  // effect flips it.
+  light?: ItemLight;
 };
 
 export type Corner = {

@@ -566,6 +566,10 @@ The engine includes built-in interactable effect handlers:
 - `'nextDungeon'`: Completes the current dungeon, rewards and levels up party members,
   resets scenario-bound items, and transitions to the chained `state.dungeon.nextDungeon`
   (or `args.nextDungeon`). Supports `triggerOn: 'step'`, `'interact'`, or `'both'`.
+- `'toggleLight'`: Toggles light sources — the interactable's own `light`
+  (a brazier or torch; see [Interactable lights](#interactable-lights) below)
+  and/or a light placed in the dungeon layout, identified by `args.lightId`.
+  Use `oneTime: false` so heroes can light and snuff it repeatedly.
 
 ### 2. Placing interactable cells in a dungeon
 
@@ -751,6 +755,47 @@ export const myMagicItem: Item = {
   },
 };
 ```
+
+### Interactable lights
+
+Interactable cells can carry a light source via `light` (an `ItemLight` — a
+`LightSource` without a position): it renders at the interactable's cell
+while enabled, and the built-in `toggleLight` effect flips it, so heroes can
+light and snuff braziers and torches:
+
+```ts
+interactables: [
+  [
+    4,
+    8,
+    'toggleLight',
+    {
+      oneTime: false,
+      name: 'Brazier',
+      light: {
+        alignment: CellAlignment.CENTER,
+        color: '#FFB85C',
+        radius: 2.5,
+        intensity: 0.45,
+        softness: 0.4,
+        effect: LightEffect.FLICKER,
+        rate: 1.5,
+        enabled: false,
+      },
+    },
+  ],
+],
+```
+
+Start the light with `enabled: false` for a brazier that must be lit by
+interacting (as above), or `enabled: true` for a torch that can be snuffed.
+
+### Combat lights
+
+Flying projectiles (dark lord fire bullets) and dark lord flames carry an
+intense, short-range flickering light for the duration of their animation —
+the bullet lights its path as it travels, and the flame burns bright around
+itself — without any per-dungeon configuration.
 
 ### Events and light sources
 
