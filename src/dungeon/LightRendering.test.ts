@@ -57,6 +57,25 @@ const createHeroAt = (x: number, y: number, health = 6): Hero => ({
   isInventoryOpen: false,
 });
 
+// An item carrying an aura light, shared by several test cases.
+const glowingItem = {
+  id: 'boots_of_speed',
+  name: 'items.magicItems.boots.name',
+  amountInDeck: 1,
+  type: ItemType.MAGIC,
+  value: 0,
+  light: {
+    alignment: CellAlignment.CENTER,
+    color: '#87CEEB',
+    radius: 1,
+    intensity: 0.35,
+    softness: 0.3,
+    effect: 'aura' as const,
+    rate: 0.4,
+    enabled: true,
+  },
+};
+
 const createMonsterAt = (x: number, y: number, health = 2): Monster => ({
   name: 'Orc (Green)',
   type: MonsterType.ORC,
@@ -1077,24 +1096,6 @@ describe('item light sources', () => {
       getContext: () => ctx,
     }) as unknown as HTMLCanvasElement;
 
-  const glowingItem = {
-    id: 'boots_of_speed',
-    name: 'items.magicItems.boots.name',
-    amountInDeck: 1,
-    type: ItemType.MAGIC,
-    value: 0,
-    light: {
-      alignment: CellAlignment.CENTER,
-      color: '#87CEEB',
-      radius: 1,
-      intensity: 0.35,
-      softness: 0.3,
-      effect: 'aura' as const,
-      rate: 0.4,
-      enabled: true,
-    },
-  };
-
   it('derives item lights from living actors inventories only', () => {
     const state = createState();
     state.dungeon.layout.lights = [createLight({ position: { x: 2, y: 2 } })];
@@ -1178,6 +1179,74 @@ describe('item light sources', () => {
     const state = createState();
     expect(hasAnimatedLights(state, false)).toBe(false);
     state.heroes[0].inventory = [glowingItem];
+    expect(hasAnimatedLights(state, false)).toBe(true);
+  });
+});
+
+describe('event-driven lights', () => {
+  it("snuffs out all lights while the dragon's breath blinds a living hero", () => {
+    const state = createState();
+    state.dungeon.layout.lights = [createLight({ position: { x: 1, y: 2 } })];
+    state.heroes[0].inventory = [glowingItem as unknown as Item];
+    expect(activeLights(state).length).toBe(2);
+    state.heroes[0].blinded = true;
+    expect(activeLights(state)).toEqual([]);
+    // A dead blinded hero does not keep the dungeon dark.
+    state.heroes[0].health = 0;
+    expect(activeLights(state).length).toBe(1);
+  });
+
+  it('keeps the hexagram light at the portal where the hexagram ended up', () => {
+    const state = createState();
+    state.dungeon.portal = { x: 3, y: 3 };
+    const portalLight = activeLights(state).find(
+      (light) => light.id === 'hexagram_light',
+    );
+    expect(portalLight).toBeDefined();
+    expect(portalLight!.position).toEqual({ x: 3, y: 3 });
+    expect(portalLight!.color).toBe('#9B59B6');
+    expect(portalLight!.effect).toBe('pulse');
+    // And no portal, no light.
+    state.dungeon.portal = undefined;
+    expect(
+      activeLights(state).some((light) => light.id === 'hexagram_light'),
+    ).toBe(false);
+  });
+
+  it('derives lights from elemental weapons, weakness and the magic storm', () => {
+    const state = createState();
+    state.heroes[0].weapon = { ...weapons[0], elemental: true };
+    state.heroes[0].weakened = true;
+    state.heroes[0].inventory = [
+      { ...(glowingItem as unknown as Item), disabled: true },
+    ];
+    const lights = activeLights(state);
+    const byId = new Map(lights.map((light) => [light.id, light]));
+    expect(byId.get('elemental_weapon_light')?.position).toEqual({
+      x: 1,
+      y: 3,
+    });
+    expect(byId.get('elemental_weapon_light')?.effect).toBe('sparkle');
+    expect(byId.get('symbol_of_weakness_light')?.color).toBe('#cc33ff');
+    expect(byId.get('magic_storm_light')?.effect).toBe('flicker');
+    // The disabled item's own light stays snuffed.
+    expect(lights.some((light) => light.color === '#87CEEB')).toBe(false);
+  });
+
+  it('renders the round-scoped event lights', () => {
+    const state = createState();
+    state.eventLights = [
+      createLight({
+        position: { x: 2, y: 2 },
+        id: 'sun_stone_light',
+        color: '#FFE9A0',
+        effect: 'blink',
+      }),
+    ];
+    const lights = activeLights(state);
+    const sunStone = lights.find((light) => light.id === 'sun_stone_light');
+    expect(sunStone).toBeDefined();
+    expect(sunStone!.position).toEqual({ x: 2, y: 2 });
     expect(hasAnimatedLights(state, false)).toBe(true);
   });
 });

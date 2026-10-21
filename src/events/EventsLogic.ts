@@ -8,9 +8,11 @@ import type {
 } from '../types';
 import {
   assertNever,
+  CellAlignment,
   Colour,
   ItemType,
   Level,
+  LightEffect,
   MonsterType,
   SecretType,
 } from '../types';
@@ -35,7 +37,7 @@ import {
 import { roll } from '../core';
 import { findCell, isRoomDiscovered, toArray } from '../core';
 import { takeDamage } from '../core';
-import { COLLAPSED, createMonster } from '../dungeon/DungeonLogic';
+import { COLLAPSED, createLight, createMonster } from '../dungeon/DungeonLogic';
 import { events } from './events';
 import { ACTIVE, onDrop, onPickup } from '../items/ItemLogic';
 import { findVisibleMonsters } from '../monsters/MonsterLogic';
@@ -124,6 +126,20 @@ export const eventEffects: Record<
       hero.position.x,
       hero.position.y,
     );
+    // Blinding golden flash, lingering until the round is reset.
+    state.eventLights = [
+      ...(state.eventLights ?? []),
+      createLight(hero.position.x, hero.position.y, CellAlignment.CENTER, {
+        id: 'sun_stone_light',
+        color: '#FFE9A0',
+        radius: 3,
+        intensity: 0.6,
+        softness: 0.4,
+        effect: LightEffect.BLINK,
+        rate: 1,
+        enabled: true,
+      }),
+    ];
     findVisibleMonsters(state)
       .filter((monster) => monster.type === MonsterType.TROLL)
       .filter(
@@ -205,6 +221,25 @@ export const eventEffects: Record<
   },
   fountainOfYouth: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
+    // The magic node bathes the whole party in a green glow, lingering
+    // until the round is reset.
+    if (event.type === 'MAGIC_NODE') {
+      state.eventLights = [
+        ...(state.eventLights ?? []),
+        ...liveHeroes(state).map((hero) =>
+          createLight(hero.position.x, hero.position.y, CellAlignment.CENTER, {
+            id: `magic_node_light_${hero.position.x}_${hero.position.y}`,
+            color: '#7CFC9A',
+            radius: 2,
+            intensity: 0.4,
+            softness: 0.4,
+            effect: LightEffect.PULSE,
+            rate: 0.6,
+            enabled: true,
+          }),
+        ),
+      ];
+    }
     const healthModifier = getDifficulty(state).modifiers.health;
     liveHeroes(state).forEach((hero) => {
       const maxHealth = getEffectiveMaxHealth(hero, healthModifier);
@@ -598,6 +633,7 @@ export const resetEventEffects = (state: GameState) => {
   restoreBlinded(state);
   restoreOrcDrums(state);
   state.roundActionsDelta = 0;
+  state.eventLights = [];
 };
 
 const restoreOrcDrums = (state: GameState) => {

@@ -266,7 +266,20 @@
             .join(','),
       )
       .join('|');
-    return `${heroes}|${monsters}|${curActor}|${rooms}|${lights}|${itemLights}|${size}|${dbg}`;
+    // Event-driven lights: hero flags, disabled items, round-scoped event
+    // lights and the hexagram portal.
+    const eventLightFlags = (st?.heroes ?? [])
+      .map(
+        (h: Actor) =>
+          `${h.blinded ? 1 : 0}${h.weakened ? 1 : 0}${
+            h.weapon?.elemental ? 1 : 0
+          }${(h.inventory ?? []).some((item) => item?.disabled) ? 1 : 0}`,
+      )
+      .join(';');
+    const eventLightsSig = `${(st?.eventLights ?? [])
+      .map((l: LightSource) => `${l.id ?? ''}@${l.position.x},${l.position.y}`)
+      .join(',')}|${st?.dungeon?.portal?.x ?? ''},${st?.dungeon?.portal?.y ?? ''}`;
+    return `${heroes}|${monsters}|${curActor}|${rooms}|${lights}|${itemLights}|${eventLightFlags}|${eventLightsSig}|${size}|${dbg}`;
   };
 
   const getOverlaySignature = (st: GameState, dbg: boolean, size: number) => {

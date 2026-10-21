@@ -9,6 +9,7 @@ import {
   isSamePosition,
 } from '../core';
 import {
+  createLight,
   DEFAULT_LIGHT_COLOR,
   DEFAULT_LIGHT_INTENSITY,
   DEFAULT_LIGHT_RADIUS,
@@ -444,19 +445,120 @@ export const lightSweepAngle = (
   return 2 * Math.PI * (((timeMs / 1000) * lightRate(light)) % 1);
 };
 
+// --- Event-driven lights -------------------------------------------------
+
+// Light definitions for event-driven effects. The dragon's breath needs no
+// light of its own: while it blinds the party it snuffs every other light.
+const EVENT_LIGHTS = {
+  // The hexagram: remains wherever the hexagram (the portal) ended up.
+  hexagram: {
+    id: 'hexagram_light',
+    color: '#9B59B6',
+    radius: 2.5,
+    intensity: 0.4,
+    softness: 0.5,
+    effect: LightEffect.PULSE,
+    rate: 0.5,
+    enabled: true,
+  },
+  elementalWeapon: {
+    id: 'elemental_weapon_light',
+    color: '#FCFF4F',
+    radius: 1,
+    intensity: 0.5,
+    softness: 0.2,
+    effect: LightEffect.SPARKLE,
+    rate: 1.5,
+    enabled: true,
+  },
+  symbolOfWeakness: {
+    id: 'symbol_of_weakness_light',
+    color: '#cc33ff',
+    radius: 1.5,
+    intensity: 0.3,
+    softness: 0.6,
+    effect: LightEffect.PULSE,
+    rate: 0.4,
+    enabled: true,
+  },
+  magicStorm: {
+    id: 'magic_storm_light',
+    color: '#9ACDFF',
+    radius: 2,
+    intensity: 0.45,
+    softness: 0.3,
+    effect: LightEffect.FLICKER,
+    rate: 3,
+    enabled: true,
+  },
+} as const;
+
 // All lights that are active in a state: the lights placed in the dungeon
 // layout, plus the light sources of items carried by living actors — those
 // follow their carrier's position while in the inventory. Items lying on
 // the floor do not emit light.
+//
+// Events add their own lights: while the dragon's breath blinds the party
+// every light is snuffed; the hexagram lights the portal it left behind,
+// for as long as the portal remains; elemental weapons, the symbol of
+// weakness and the magic storm attach a light to the affected hero for the
+// duration of their state; and round-scoped event lights (sun stone, magic
+// node) live in `state.eventLights` until the round is reset.
 export const activeLights = (state: GameState): LightSource[] => {
+  // The dragon's breath snuffs out all lights while it is active.
+  if (state.heroes.some((hero) => hero.health > 0 && hero.blinded)) {
+    return [];
+  }
   const lights: LightSource[] = [...(state.dungeon.layout.lights ?? [])];
+
+  // The hexagram light remains where the hexagram ended up (the portal).
+  const portal = state.dungeon.portal;
+  if (portal) {
+    lights.push(
+      createLight(portal.x, portal.y, CellAlignment.CENTER, {
+        ...EVENT_LIGHTS.hexagram,
+      }),
+    );
+  }
+
+  // Event lights derived from lingering event state on the heroes.
+  state.heroes
+    .filter((hero) => hero.health > 0)
+    .forEach((hero) => {
+      if (hero.weapon?.elemental) {
+        lights.push(
+          createLight(hero.position.x, hero.position.y, CellAlignment.CENTER, {
+            ...EVENT_LIGHTS.elementalWeapon,
+          }),
+        );
+      }
+      if (hero.weakened) {
+        lights.push(
+          createLight(hero.position.x, hero.position.y, CellAlignment.CENTER, {
+            ...EVENT_LIGHTS.symbolOfWeakness,
+          }),
+        );
+      }
+      if ((hero.inventory ?? []).some((item: Item) => item?.disabled)) {
+        lights.push(
+          createLight(hero.position.x, hero.position.y, CellAlignment.CENTER, {
+            ...EVENT_LIGHTS.magicStorm,
+          }),
+        );
+      }
+    });
+
+  lights.push(...(state.eventLights ?? []));
+
+  // Item light sources follow their living carrier while in an inventory;
+  // items disabled by e.g. the magic storm go dark.
   const carriers: Actor[] = [
     ...state.heroes,
     ...state.dungeon.layout.monsters,
   ].filter((actor) => actor.health > 0);
   carriers.forEach((actor) => {
     (actor.inventory ?? []).forEach((item: Item) => {
-      if (item?.light) {
+      if (item?.light && !item.disabled) {
         lights.push({ ...item.light, position: actor.position });
       }
     });

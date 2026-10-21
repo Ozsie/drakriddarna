@@ -39,6 +39,8 @@ export type GameState = {
   projectiles?: ProjectileAnimation[];
   flameEffects?: FlameEffect[];
   roundActionsDelta?: number;
+  // Transient light sources spawned by events, cleared at round reset.
+  eventLights?: LightSource[];
   drawEvents: boolean;
   roundTargetCounts?: Record<string, number>;
   betweenDungeons?: BetweenDungeonsState;

@@ -982,3 +982,46 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     });
   });
 });
+
+describe('Event light sources', () => {
+  it('sun stone adds a lingering golden flash light at the affected hero', () => {
+    const state = init();
+    const event = events.find((e) => e.id === 'sun_stone') as TurnEvent;
+    eventEffects.sunStone(state, event);
+    expect(state.eventLights?.length).toBe(1);
+    const light = state.eventLights![0];
+    expect(light.effect).toBe('blink');
+    expect(light.color).toBe('#FFE9A0');
+    // The flash sits on one of the heroes.
+    const positions = state.heroes.map(
+      (hero) => `${hero.position.x},${hero.position.y}`,
+    );
+    expect(positions).toContain(`${light.position.x},${light.position.y}`);
+  });
+
+  it('magic node bathes all heroes in green light, the fountain does not', () => {
+    const state = init();
+    const node = events.find((e) => e.id === 'magic_node') as TurnEvent;
+    eventEffects.fountainOfYouth(state, node);
+    expect(state.eventLights?.length).toBe(state.heroes.length);
+    state.eventLights!.forEach((light) => {
+      expect(light.color).toBe('#7CFC9A');
+      expect(light.effect).toBe('pulse');
+    });
+    const fountain = events.find(
+      (e) => e.id === 'fountain_of_youth',
+    ) as TurnEvent;
+    eventEffects.fountainOfYouth(state, fountain);
+    // The fountain variant adds no lights of its own.
+    expect(state.eventLights?.length).toBe(state.heroes.length);
+  });
+
+  it('resetEventEffects clears the round-scoped event lights', () => {
+    const state = init();
+    const event = events.find((e) => e.id === 'sun_stone') as TurnEvent;
+    eventEffects.sunStone(state, event);
+    expect(state.eventLights?.length).toBe(1);
+    resetEventEffects(state);
+    expect(state.eventLights).toEqual([]);
+  });
+});

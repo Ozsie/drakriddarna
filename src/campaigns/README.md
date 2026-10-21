@@ -730,8 +730,9 @@ Items can also carry a light source via `light` on the item definition — a
 `LightSource` without a position. The light is only active while the item
 sits in a living actor's inventory (hero or monster): it renders at the
 carrying actor's position and follows them as they move. Items lying on the
-floor emit nothing. The passive magic items (boots of speed, giant's glove,
-ring of precision, crown of wisdom) use breathing `aura` lights this way:
+floor emit nothing, and items disabled by e.g. the magic storm go dark.
+The passive magic items (boots of speed, giant's glove, ring of precision,
+crown of wisdom) use breathing `aura` lights this way:
 
 ```ts
 import { CellAlignment, LightEffect } from '../../types';
@@ -750,6 +751,32 @@ export const myMagicItem: Item = {
   },
 };
 ```
+
+### Events and light sources
+
+Events interact with the light system:
+
+- **The dragon's breath** snuffs out *all* lights (placed, item and event
+  lights alike) while it blinds the party. Lights return when the blindness
+  is restored at round reset.
+- **The hexagram** leaves a pulsing purple light wherever the hexagram (the
+  portal) ends up, and it remains there for as long as the portal does.
+- **The elemental weapon** wraps the affected hero in golden sparkles while
+  their weapon stays elemental.
+- **The symbol of weakness** dims the weakened heroes in purple while it
+  lasts.
+- **The magic storm** crackles blue around the hero whose magic item was
+  disabled (that item's own light goes dark while disabled).
+- **The sun stone** flashes a golden blinking light over the affected hero,
+  lingering until the round is reset.
+- **The magic node** bathes every hero in a soft green glow until the round
+  is reset.
+
+Round-scoped event lights live in `state.eventLights` and are cleared by
+`resetEventEffects`; the other event lights are derived from existing
+lingering event state (`blinded`, `weakened`, `weapon.elemental`, item
+`disabled` flags and the portal), so they appear and disappear exactly with
+their event's duration.
 
 ### Placing lights in a dungeon
 
