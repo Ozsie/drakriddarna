@@ -1,5 +1,5 @@
 import type { Item, Weapon } from '../types';
-import { ItemType } from '../types';
+import { CellAlignment, ItemType, LightEffect } from '../types';
 import {
   NEXT_DUNGEON,
   NEXT_TURN,
@@ -42,6 +42,16 @@ export const magicItems: Item[] = [
     },
     pickup: 'movementBonusOnPickup',
     drop: 'movementBonusOnDrop',
+    light: {
+      alignment: CellAlignment.CENTER,
+      color: '#87CEEB',
+      radius: 1,
+      intensity: 0.35,
+      softness: 0.3,
+      effect: LightEffect.AURA,
+      rate: 0.4,
+      enabled: true,
+    },
   },
   {
     id: 'giants_glove',
@@ -55,6 +65,16 @@ export const magicItems: Item[] = [
       BREAK_DOOR: true,
       ATTACK_BONUS: 1,
     },
+    light: {
+      alignment: CellAlignment.CENTER,
+      color: '#E67E22',
+      radius: 1,
+      intensity: 0.35,
+      softness: 0.3,
+      effect: LightEffect.AURA,
+      rate: 0.3,
+      enabled: true,
+    },
   },
   {
     id: 'ring_of_precision',
@@ -67,6 +87,16 @@ export const magicItems: Item[] = [
       DESCRIPTION: 'items.magicItems.ringOfPrecision.description',
       RE_ROLL_ATTACK: true,
     },
+    light: {
+      alignment: CellAlignment.CENTER,
+      color: '#FFD700',
+      radius: 1,
+      intensity: 0.3,
+      softness: 0.3,
+      effect: LightEffect.AURA,
+      rate: 0.5,
+      enabled: true,
+    },
   },
   {
     id: 'crown_of_wisdom',
@@ -78,6 +108,16 @@ export const magicItems: Item[] = [
     properties: {
       DESCRIPTION: 'items.magicItems.crownOfWisdom.description',
       SEARCH_BONUS: 1,
+    },
+    light: {
+      alignment: CellAlignment.CENTER,
+      color: '#9B59B6',
+      radius: 1,
+      intensity: 0.35,
+      softness: 0.3,
+      effect: LightEffect.AURA,
+      rate: 0.35,
+      enabled: true,
     },
   },
   {

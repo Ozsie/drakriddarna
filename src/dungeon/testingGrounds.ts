@@ -98,6 +98,20 @@ export const testingGrounds: Dungeon = defineDungeon({
       // Room I: steady ceiling fixture, illuminating everything below it
       // without actor shadows.
       [6, 13, CellAlignment.CEILING],
+      // Golden sparkles over the cell and its neighbours.
+      [
+        5,
+        8,
+        CellAlignment.TOP_LEFT,
+        { color: '#FFD700', effect: LightEffect.SPARKLE, rate: 0.8 },
+      ],
+      // Purple breathing aura ring around the cell center.
+      [
+        7,
+        10,
+        CellAlignment.CENTER,
+        { color: '#9B59B6', effect: LightEffect.AURA, rate: 0.5 },
+      ],
     ],
     pits: [
       [6, 3],

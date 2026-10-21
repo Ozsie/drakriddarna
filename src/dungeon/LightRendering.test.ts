@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { describe, expect, it, vi } from 'vitest';
 import {
+  activeLights,
   ambientLightLevel,
   computeLightPolygon,
+  computeSparkles,
   hasAnimatedLights,
   isLightRenderable,
   lightBlockInCell,
@@ -14,8 +16,15 @@ import {
   renderAmbientDarkness,
   renderLights,
 } from './LightRendering';
-import type { GameState, Hero, LightSource, Monster } from '../types';
-import { CellAlignment, Colour, Level, MonsterType, Side } from '../types';
+import type { GameState, Hero, Item, LightSource, Monster } from '../types';
+import {
+  CellAlignment,
+  Colour,
+  ItemType,
+  Level,
+  MonsterType,
+  Side,
+} from '../types';
 import { monsterWeapons, weapons } from '../items/weapons';
 
 const CELL_SIZE = 48;
@@ -856,5 +865,319 @@ describe('light culling and polygon cache', () => {
     const first = lightPolygonFor(light, state, CELL_SIZE, false, 0);
     const second = lightPolygonFor(light, state, CELL_SIZE, false, 500);
     expect(second).not.toBe(first);
+  });
+});
+
+describe('sparkle and aura effects', () => {
+  const createMockCtx = (gradient?: {
+    addColorStop: ReturnType<typeof vi.fn>;
+  }) =>
+    ({
+      createRadialGradient: vi
+        .fn()
+        .mockReturnValue(gradient ?? { addColorStop: vi.fn() }),
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      arc: vi.fn(),
+      stroke: vi.fn(),
+      drawImage: vi.fn(),
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+    }) as unknown as CanvasRenderingContext2D;
+
+  const createDarknessCanvas = (ctx: CanvasRenderingContext2D) =>
+    ({
+      width: 800,
+      height: 600,
+      getContext: () => ctx,
+    }) as unknown as HTMLCanvasElement;
+
+  it('limits sparkles to the light own cell', () => {
+    const light = createLight({
+      position: { x: 3, y: 2 },
+      effect: 'sparkle',
+      rate: 1,
+    });
+    // Some moment with visible sparkles.
+    let sparkles: ReturnType<typeof computeSparkles> = [];
+    for (let t = 0; t < 2000 && sparkles.length === 0; t += 100) {
+      sparkles = computeSparkles(light, CELL_SIZE, t);
+    }
+    expect(sparkles.length).toBeGreaterThan(0);
+    expect(sparkles.length).toBeLessThanOrEqual(5);
+    sparkles.forEach((sparkle) => {
+      // Strictly inside the light's own cell (3, 2).
+      expect(sparkle.x).toBeGreaterThan(3 * CELL_SIZE);
+      expect(sparkle.x).toBeLessThan(4 * CELL_SIZE);
+      expect(sparkle.y).toBeGreaterThan(2 * CELL_SIZE);
+      expect(sparkle.y).toBeLessThan(3 * CELL_SIZE);
+    });
+  });
+
+  it('twinkles sparkles deterministically', () => {
+    const light = createLight({ position: { x: 3, y: 2 }, effect: 'sparkle' });
+    const at250 = computeSparkles(light, CELL_SIZE, 250);
+    expect(computeSparkles(light, CELL_SIZE, 250)).toEqual(at250);
+    // Sparkles fade in and out over time.
+    const counts = new Set<number>();
+    for (let t = 0; t < 2000; t += 100) {
+      counts.add(computeSparkles(light, CELL_SIZE, t).length);
+    }
+    expect(counts.size).toBeGreaterThan(1);
+  });
+
+  it('draws sparkles as colored glints without a radial glow', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      createLight({ position: { x: 1, y: 2 }, effect: 'sparkle' }),
+    ];
+    const ctx = createMockCtx();
+    // Find a moment with visible sparkles, then render it.
+    const light = state.dungeon.layout.lights[0];
+    let time = 0;
+    for (; time < 2000; time += 100) {
+      if (computeSparkles(light, CELL_SIZE, time).length > 0) {
+        break;
+      }
+    }
+    renderLights(ctx, CELL_SIZE, state, false, time);
+    expect(ctx.stroke).toHaveBeenCalled();
+    expect(ctx.fill).toHaveBeenCalled();
+    // Sparkles are discrete glints, not a radial gradient glow.
+    expect(ctx.createRadialGradient).not.toHaveBeenCalled();
+  });
+
+  it('renders an aura as a ring with a soft center glow, cell-limited', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      createLight({ position: { x: 1, y: 2 }, effect: 'aura' }),
+    ];
+    const addColorStop = vi.fn();
+    const ctx = createMockCtx({ addColorStop });
+    renderLights(ctx, CELL_SIZE, state, false, 0);
+    expect(ctx.createRadialGradient).toHaveBeenCalledTimes(1);
+    const stops = addColorStop.mock.calls.map((call: [number, string]) => call);
+    const alphaOf = (call: [number, string]) =>
+      Number(call[1].match(/([\d.]+)\)$/)![1]);
+    const peak = Math.max(...stops.map(alphaOf));
+    expect(peak).toBeGreaterThan(0);
+    // Soft center halo at ~35% of the ring's peak brightness.
+    const center = alphaOf(stops[0]);
+    expect(center).toBeCloseTo(peak * 0.35, 4);
+    expect(alphaOf(stops.find((s) => s[0] === 0.3) as [number, string])).toBe(
+      center,
+    );
+    // The ring peaks between 0.4 and 0.8 of the radius and is brighter than
+    // the center glow.
+    const peakStop = stops.find((s) => alphaOf(s) === peak) as [number, string];
+    expect(peakStop[0]).toBeGreaterThan(0.4);
+    expect(peakStop[0]).toBeLessThan(0.8);
+    expect(peak).toBeGreaterThan(center);
+    // Fades to nothing at the cell edge.
+    expect(alphaOf(stops[stops.length - 1])).toBe(0);
+  });
+
+  it('breathes an aura gently between 0.8 and 1 with the rate', () => {
+    const aura = createLight({ effect: 'aura' });
+    expect(lightIntensityScale(aura, 0)).toBeCloseTo(0.8, 5);
+    expect(lightIntensityScale(aura, 500)).toBeCloseTo(1, 5);
+    expect(
+      lightIntensityScale(createLight({ effect: 'aura', rate: 2 }), 250),
+    ).toBeCloseTo(1, 5);
+  });
+
+  it('punches sparkle dots and the aura ring into the darkness', () => {
+    const sparkleState = createState();
+    sparkleState.dungeon.ambientLight = 0.2;
+    sparkleState.dungeon.layout.lights = [
+      createLight({ position: { x: 1, y: 2 }, effect: 'sparkle' }),
+    ];
+    const light = sparkleState.dungeon.layout.lights[0];
+    let time = 0;
+    for (; time < 2000; time += 100) {
+      if (computeSparkles(light, CELL_SIZE, time).length > 0) {
+        break;
+      }
+    }
+    const ctx = createMockCtx();
+    const darknessCtx = createMockCtx();
+    renderAmbientDarkness(
+      ctx,
+      createDarknessCanvas(darknessCtx),
+      CELL_SIZE,
+      sparkleState,
+      false,
+      time,
+    );
+    expect(darknessCtx.fill).toHaveBeenCalled();
+    expect(darknessCtx.createRadialGradient).not.toHaveBeenCalled();
+
+    const auraState = createState();
+    auraState.dungeon.ambientLight = 0.2;
+    auraState.dungeon.layout.lights = [
+      createLight({ position: { x: 1, y: 2 }, effect: 'aura' }),
+    ];
+    const ctx2 = createMockCtx();
+    const darknessCtx2 = createMockCtx();
+    renderAmbientDarkness(
+      ctx2,
+      createDarknessCanvas(darknessCtx2),
+      CELL_SIZE,
+      auraState,
+      false,
+      0,
+    );
+    expect(darknessCtx2.createRadialGradient).toHaveBeenCalled();
+    expect(darknessCtx2.fill).toHaveBeenCalled();
+  });
+
+  it('counts sparkle and aura lights as animated', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      createLight({ position: { x: 1, y: 2 }, effect: 'sparkle' }),
+      createLight({ position: { x: 3, y: 2 }, effect: 'aura' }),
+    ];
+    expect(hasAnimatedLights(state, false)).toBe(true);
+  });
+});
+
+describe('item light sources', () => {
+  const createMockCtx = (gradient?: {
+    addColorStop: ReturnType<typeof vi.fn>;
+  }) =>
+    ({
+      createRadialGradient: vi
+        .fn()
+        .mockReturnValue(gradient ?? { addColorStop: vi.fn() }),
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      arc: vi.fn(),
+      stroke: vi.fn(),
+      drawImage: vi.fn(),
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+    }) as unknown as CanvasRenderingContext2D;
+
+  const createDarknessCanvas = (ctx: CanvasRenderingContext2D) =>
+    ({
+      width: 800,
+      height: 600,
+      getContext: () => ctx,
+    }) as unknown as HTMLCanvasElement;
+
+  const glowingItem = {
+    id: 'boots_of_speed',
+    name: 'items.magicItems.boots.name',
+    amountInDeck: 1,
+    type: ItemType.MAGIC,
+    value: 0,
+    light: {
+      alignment: CellAlignment.CENTER,
+      color: '#87CEEB',
+      radius: 1,
+      intensity: 0.35,
+      softness: 0.3,
+      effect: 'aura' as const,
+      rate: 0.4,
+      enabled: true,
+    },
+  };
+
+  it('derives item lights from living actors inventories only', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [createLight({ position: { x: 2, y: 2 } })];
+    state.heroes[0].inventory = [glowingItem];
+    const lights = activeLights(state);
+    // The placed light plus the hero's item light at the hero's position.
+    expect(lights.length).toBe(2);
+    const itemLight = lights[1];
+    expect(itemLight.position).toEqual({ x: 1, y: 3 });
+    expect(itemLight.effect).toBe('aura');
+    expect(itemLight.color).toBe('#87CEEB');
+
+    // Dead actors do not carry their light.
+    state.heroes[0].health = 0;
+    expect(activeLights(state).length).toBe(1);
+
+    // Monster carriers count too.
+    state.heroes[0].health = 6;
+    const monster = createMonsterAt(4, 2);
+    monster.inventory = [glowingItem];
+    state.dungeon.layout.monsters = [monster];
+    expect(activeLights(state).length).toBe(3);
+    expect(activeLights(state)[2].position).toEqual({ x: 4, y: 2 });
+  });
+
+  it('ignores items on the floor and items without lights', () => {
+    const state = createState();
+    state.dungeon.layout.items = [
+      {
+        item: glowingItem as unknown as Item,
+        position: { x: 2, y: 1 },
+      },
+      {
+        item: {
+          id: 'herbs',
+          name: 'items.magicItems.healingHerbs.name',
+          amountInDeck: 1,
+          type: ItemType.MAGIC,
+          value: 0,
+        },
+        position: { x: 1, y: 1 },
+      },
+    ];
+    state.heroes[0].inventory = [state.dungeon.layout.items[1].item as Item];
+    expect(activeLights(state)).toEqual([]);
+  });
+
+  it('renders an item aura light at the carrying actor position', () => {
+    const state = createState();
+    state.heroes[0].inventory = [glowingItem];
+    const ctx = createMockCtx();
+    renderLights(ctx, CELL_SIZE, state, false, 0);
+    expect(ctx.createRadialGradient).toHaveBeenCalledTimes(1);
+    // Aura gradient centered on the hero's cell (1, 3).
+    const gradientCall = (ctx.createRadialGradient as ReturnType<typeof vi.fn>)
+      .mock.calls[0];
+    expect(gradientCall[0]).toBeCloseTo(1.5 * CELL_SIZE, 5);
+    expect(gradientCall[1]).toBeCloseTo(3.5 * CELL_SIZE, 5);
+  });
+
+  it('punches item light holes into the ambient darkness', () => {
+    const state = createState();
+    state.dungeon.ambientLight = 0.2;
+    state.heroes[0].inventory = [glowingItem];
+    const ctx = createMockCtx();
+    const darknessCtx = createMockCtx();
+    renderAmbientDarkness(
+      ctx,
+      createDarknessCanvas(darknessCtx),
+      CELL_SIZE,
+      state,
+      false,
+      0,
+    );
+    expect(darknessCtx.createRadialGradient).toHaveBeenCalledTimes(1);
+    expect(darknessCtx.fill).toHaveBeenCalled();
+    expect(ctx.drawImage).toHaveBeenCalled();
+  });
+
+  it('counts animated item lights for the render loop', () => {
+    const state = createState();
+    expect(hasAnimatedLights(state, false)).toBe(false);
+    state.heroes[0].inventory = [glowingItem];
+    expect(hasAnimatedLights(state, false)).toBe(true);
   });
 });

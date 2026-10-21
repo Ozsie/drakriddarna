@@ -307,15 +307,19 @@ export enum CellAlignment {
 }
 
 // Light animation effects: 'static' (no animation, the default), 'pulse'
-// (breathing glow), 'flicker' (torch-like jitter), 'sweep' (rotating beam)
-// and 'blink' (on/off). Intentionally open-ended: unknown effect strings
-// fall back to 'static' at render time.
+// (breathing glow), 'flicker' (torch-like jitter), 'sweep' (rotating beam),
+// 'blink' (on/off), 'sparkle' (colored twinkles inside the light's own
+// cell) and 'aura' (a glowing ring around a soft center glow, filling only
+// its own cell). Intentionally open-ended: unknown effect strings fall
+// back to 'static' at render time.
 export const LightEffect = {
   STATIC: 'static',
   PULSE: 'pulse',
   FLICKER: 'flicker',
   SWEEP: 'sweep',
   BLINK: 'blink',
+  SPARKLE: 'sparkle',
+  AURA: 'aura',
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type LightEffect =
@@ -511,6 +515,11 @@ export type ItemPickupKey = 'movementBonusOnPickup' | string;
 
 export type ItemDropKey = 'movementBonusOnDrop' | string;
 
+// A light source attached to an item. It has no position of its own: while
+// the item sits in a living actor's inventory, the light renders at the
+// carrying actor's position.
+export type ItemLight = Omit<LightSource, 'position'>;
+
 export type Item = {
   id?: string;
   name: string;
@@ -527,6 +536,7 @@ export type Item = {
   drop?: ItemDropKey;
   disabled?: boolean;
   useSound?: string;
+  light?: ItemLight;
 };
 
 export type Weapon = Item & {

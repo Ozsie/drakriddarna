@@ -1,4 +1,4 @@
-import type { GameState, LightSource, Position } from '../types';
+import type { Actor, GameState, Item, LightSource, Position } from '../types';
 import { CellAlignment, LightEffect } from '../types';
 import {
   COLLAPSED,
@@ -426,6 +426,9 @@ export const lightIntensityScale = (
     }
     case LightEffect.BLINK:
       return t % 1 < 0.5 ? 1 : 0.05;
+    case LightEffect.AURA:
+      // A gentle breathing, subtler than pulse.
+      return 0.8 + 0.2 * (0.5 - 0.5 * Math.cos(2 * Math.PI * t));
     default:
       return 1;
   }
@@ -441,26 +444,46 @@ export const lightSweepAngle = (
   return 2 * Math.PI * (((timeMs / 1000) * lightRate(light)) % 1);
 };
 
+// All lights that are active in a state: the lights placed in the dungeon
+// layout, plus the light sources of items carried by living actors — those
+// follow their carrier's position while in the inventory. Items lying on
+// the floor do not emit light.
+export const activeLights = (state: GameState): LightSource[] => {
+  const lights: LightSource[] = [...(state.dungeon.layout.lights ?? [])];
+  const carriers: Actor[] = [
+    ...state.heroes,
+    ...state.dungeon.layout.monsters,
+  ].filter((actor) => actor.health > 0);
+  carriers.forEach((actor) => {
+    (actor.inventory ?? []).forEach((item: Item) => {
+      if (item?.light) {
+        lights.push({ ...item.light, position: actor.position });
+      }
+    });
+  });
+  return lights;
+};
+
 // Whether any renderable light animates with an effect, and so needs
 // continuous re-rendering of the dynamic layer.
 export const hasAnimatedLights = (
   state: GameState,
   debugMode: boolean,
 ): boolean =>
-  (state.dungeon.layout.lights ?? []).some(
+  activeLights(state).some(
     (light) =>
       light.effect !== undefined &&
       light.effect !== LightEffect.STATIC &&
       isLightRenderable(state, light, debugMode),
   );
 
-// Draws a light polygon (a glow, or a hole punched into darkness) with soft
-// edges when the light asks for them. `ctx.filter` blurs the filled polygon,
-// feathering the hard shadow boundary; on browsers without canvas filter
-// support the assignment is ignored and edges stay hard.
-const fillLightPolygon = (
+// Fills a light shape (a polygon glow, an aura ring, a hole punched into
+// darkness) with soft edges when the light asks for them. `ctx.filter`
+// blurs the filled shape; on browsers without canvas filter support the
+// assignment is ignored and edges stay hard.
+const fillLightShape = (
   ctx: CanvasRenderingContext2D,
-  points: Position[],
+  trace: (ctx: CanvasRenderingContext2D) => void,
   fillStyle: CanvasGradient,
   light: LightSource,
   cellSize: number,
@@ -470,11 +493,196 @@ const fillLightPolygon = (
     ctx.filter = `blur(${blurPx}px)`;
   }
   ctx.save();
-  traceLightPolygonPath(ctx, points);
+  trace(ctx);
   ctx.fillStyle = fillStyle;
   ctx.fill();
   ctx.restore();
   ctx.filter = 'none';
+};
+
+const fillLightPolygon = (
+  ctx: CanvasRenderingContext2D,
+  points: Position[],
+  fillStyle: CanvasGradient,
+  light: LightSource,
+  cellSize: number,
+) =>
+  fillLightShape(
+    ctx,
+    (c) => traceLightPolygonPath(c, points),
+    fillStyle,
+    light,
+    cellSize,
+  );
+
+// --- Sparkle effect ------------------------------------------------------
+
+// Twinkles inside the light's own cell.
+const SPARKLES_PER_CELL = 5;
+// Sparkles keep this far from the cell edge, as a fraction of the cell.
+const SPARKLE_SPREAD = 0.08;
+// Low-discrepancy (golden-ratio) step sequences: spread successive twinkles
+// evenly across the cell, independent of hash quality.
+const SPARKLE_STEP_X = 0.7548776667;
+const SPARKLE_STEP_Y = 0.5698402909;
+const SPARKLE_STEP_ARM = 0.4142135624;
+
+const fract = (n: number): number => n - Math.floor(n);
+
+// One visible sparkle twinkle at a given time.
+export interface Sparkle {
+  // Center in world pixel coordinates.
+  x: number;
+  y: number;
+  // Half length of the glint's arms, in pixels.
+  arm: number;
+  // 0..1 brightness of this twinkle right now.
+  alpha: number;
+}
+
+// All currently visible sparkles for a light: colored twinkles inside the
+// light's own cell — nowhere else. Positions are fixed per light and spread
+// across the whole cell; only the twinkle brightness changes over time.
+export const computeSparkles = (
+  light: LightSource,
+  cellSize: number,
+  timeMs: number,
+): Sparkle[] => {
+  const t = (timeMs / 1000) * lightRate(light);
+  // Per-light offset so sparkle lights in different cells never line up.
+  const offset = hash01(
+    light.position.x * 73856093 + light.position.y * 19349663,
+  );
+  const sparkles: Sparkle[] = [];
+  for (let index = 0; index < SPARKLES_PER_CELL; index++) {
+    const fx = fract((index + 1 + offset) * SPARKLE_STEP_X);
+    const fy = fract((index + 1 + offset * 0.618) * SPARKLE_STEP_Y);
+    const phase = fract((index + 1 + offset) * 0.6180339887);
+    const twinkle = Math.sin(2 * Math.PI * (t + phase));
+    const alpha = Math.max(0, Math.min(1, (twinkle - 0.15) / 0.6));
+    if (alpha <= 0.02) {
+      continue;
+    }
+    const span = 1 - 2 * SPARKLE_SPREAD;
+    const x = (light.position.x + SPARKLE_SPREAD + span * fx) * cellSize;
+    const y = (light.position.y + SPARKLE_SPREAD + span * fy) * cellSize;
+    const arm =
+      cellSize * (0.05 + 0.05 * fract((index + 1 + offset) * SPARKLE_STEP_ARM));
+    sparkles.push({ x, y, arm, alpha });
+  }
+  return sparkles;
+};
+
+// Draws a sparkle light: small colored glints (a cross with a bright core)
+// twinkling inside the light's cell. No radial glow.
+const renderSparkles = (
+  ctx: CanvasRenderingContext2D,
+  light: LightSource,
+  cellSize: number,
+  timeMs: number,
+) => {
+  const color = light.color ?? DEFAULT_LIGHT_COLOR;
+  const intensity = light.intensity ?? DEFAULT_LIGHT_INTENSITY;
+  const sparkles = computeSparkles(light, cellSize, timeMs);
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(1, cellSize / 32);
+  ctx.fillStyle = '#FFFFFF';
+  sparkles.forEach((sparkle) => {
+    ctx.globalAlpha = Math.min(1, sparkle.alpha * intensity * 2.2);
+    ctx.beginPath();
+    ctx.moveTo(sparkle.x - sparkle.arm, sparkle.y);
+    ctx.lineTo(sparkle.x + sparkle.arm, sparkle.y);
+    ctx.moveTo(sparkle.x, sparkle.y - sparkle.arm);
+    ctx.lineTo(sparkle.x, sparkle.y + sparkle.arm);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(sparkle.x, sparkle.y, sparkle.arm * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+};
+
+// --- Aura effect ---------------------------------------------------------
+
+// How much of the ring's peak brightness the aura's center glows with.
+const AURA_CENTER_GLOW = 0.35;
+
+// Ring brightness of an aura at fraction `t` of its radius: a soft,
+// even glow across the center of the cell, rising steeply into a defined
+// bright ring peaking at ~70% of the radius and fading out at the cell
+// edge.
+const auraRingAlpha = (t: number, peak: number): number => {
+  if (t <= 0.35) {
+    // Soft center halo.
+    return peak * AURA_CENTER_GLOW;
+  }
+  if (t <= 0.7) {
+    // Steep rise from the center glow into the bright ring.
+    const k = (t - 0.35) / 0.35;
+    return (
+      peak * (AURA_CENTER_GLOW + (1 - AURA_CENTER_GLOW) * (k * k * (3 - 2 * k)))
+    );
+  }
+  // Falls to exactly zero at the cell edge.
+  return peak * Math.pow(Math.max(0, (1 - t) / 0.3), 2);
+};
+
+// The aura's donut-shaped gradient: an inscribed circle in the light's own
+// cell, with a soft center glow and a bright ring around it.
+const createAuraGradient = (
+  ctx: CanvasRenderingContext2D,
+  light: LightSource,
+  cellSize: number,
+  timeMs: number,
+) => {
+  const center = lightCenter(light, cellSize);
+  const radiusPx = cellSize / 2;
+  const color = light.color ?? DEFAULT_LIGHT_COLOR;
+  const intensity = light.intensity ?? DEFAULT_LIGHT_INTENSITY;
+  // Slightly brighter than a plain glow so the ring reads as a halo.
+  const peak = Math.min(
+    1,
+    intensity * 1.8 * lightIntensityScale(light, timeMs),
+  );
+  const gradient = ctx.createRadialGradient(
+    center.x,
+    center.y,
+    0,
+    center.x,
+    center.y,
+    radiusPx,
+  );
+  const stops = [0, 0.1, 0.2, 0.3, 0.35, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
+  stops.forEach((t) => {
+    gradient.addColorStop(t, rgbaFromColor(color, auraRingAlpha(t, peak)));
+  });
+  return gradient;
+};
+
+const traceAuraCircle =
+  (light: LightSource, cellSize: number) => (ctx: CanvasRenderingContext2D) => {
+    const center = lightCenter(light, cellSize);
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, cellSize / 2, 0, Math.PI * 2);
+  };
+
+// Draws an aura light: a breathing donut ring filling its own cell, with
+// the center of the cell left unaffected. No polygon glow, no spill into
+// neighbouring cells.
+const renderAura = (
+  ctx: CanvasRenderingContext2D,
+  light: LightSource,
+  cellSize: number,
+  timeMs: number,
+) => {
+  fillLightShape(
+    ctx,
+    traceAuraCircle(light, cellSize),
+    createAuraGradient(ctx, light, cellSize, timeMs),
+    light,
+    cellSize,
+  );
 };
 
 // Builds the light's radial gradient. One continuous falloff, bright at the
@@ -523,15 +731,23 @@ const renderLight = (
   if (!isLightRenderable(state, light, debugMode)) return;
 
   const center = lightCenter(light, cellSize);
-  const points = lightPolygonFor(light, state, cellSize, debugMode, timeMs);
-
-  fillLightPolygon(
-    ctx,
-    points,
-    createLightGradient(ctx, light, cellSize, timeMs),
-    light,
-    cellSize,
-  );
+  switch (light.effect) {
+    case LightEffect.SPARKLE:
+      renderSparkles(ctx, light, cellSize, timeMs);
+      break;
+    case LightEffect.AURA:
+      renderAura(ctx, light, cellSize, timeMs);
+      break;
+    default:
+      fillLightPolygon(
+        ctx,
+        lightPolygonFor(light, state, cellSize, debugMode, timeMs),
+        createLightGradient(ctx, light, cellSize, timeMs),
+        light,
+        cellSize,
+      );
+      break;
+  }
 
   if (debugMode) {
     ctx.save();
@@ -551,7 +767,7 @@ export const renderLights = (
   debugMode: boolean,
   timeMs = 0,
 ) => {
-  const lights = state.dungeon.layout.lights ?? [];
+  const lights = activeLights(state);
   if (lights.length === 0) return;
   lights.forEach((light) => {
     renderLight(ctx, cellSize, state, light, debugMode, timeMs);
@@ -591,8 +807,39 @@ export const renderAmbientDarkness = (
   // how much of the darkness is lifted around each source.
   darknessCtx.save();
   darknessCtx.globalCompositeOperation = 'destination-out';
-  (state.dungeon.layout.lights ?? []).forEach((light) => {
+  activeLights(state).forEach((light) => {
     if (!isLightRenderable(state, light, debugMode)) return;
+    if (light.effect === LightEffect.SPARKLE) {
+      // Each sparkle punches its own small hole, so the twinkles stay
+      // visible through the veil and the floor beneath them glows dimly.
+      const sparkles = computeSparkles(light, cellSize, timeMs);
+      sparkles.forEach((sparkle) => {
+        darknessCtx.save();
+        darknessCtx.globalAlpha = Math.min(1, sparkle.alpha * 0.85);
+        darknessCtx.beginPath();
+        darknessCtx.arc(
+          sparkle.x,
+          sparkle.y,
+          Math.max(2, sparkle.arm * 1.5),
+          0,
+          Math.PI * 2,
+        );
+        darknessCtx.fill();
+        darknessCtx.restore();
+      });
+      return;
+    }
+    if (light.effect === LightEffect.AURA) {
+      // Punch the aura: soft center glow and bright ring through the veil.
+      fillLightShape(
+        darknessCtx,
+        traceAuraCircle(light, cellSize),
+        createAuraGradient(darknessCtx, light, cellSize, timeMs),
+        light,
+        cellSize,
+      );
+      return;
+    }
     const points = lightPolygonFor(light, state, cellSize, debugMode, timeMs);
     fillLightPolygon(
       darknessCtx,

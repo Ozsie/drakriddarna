@@ -248,7 +248,8 @@
       .map((m: Monster) => `${m.name},${m.position.x},${m.position.y},${m.health}`)
       .join(';');
     const curActor = `${st?.currentActor?.name},${st?.currentActor?.position?.x},${st?.currentActor?.position?.y}`;
-    // Light shadows depend on fog of war and on the light sources themselves.
+    // Light shadows depend on fog of war and on the light sources themselves,
+    // including the light sources of items in actor inventories.
     const rooms = (st?.dungeon?.discoveredRooms ?? []).join(',');
     const lights = (st?.dungeon?.layout?.lights ?? [])
       .map(
@@ -256,7 +257,16 @@
           `${l.position.x},${l.position.y},${l.alignment},${l.enabled}`,
       )
       .join(';');
-    return `${heroes}|${monsters}|${curActor}|${rooms}|${lights}|${size}|${dbg}`;
+    const itemLights = [...(st?.heroes ?? []), ...(st?.dungeon?.layout?.monsters ?? [])]
+      .map(
+        (a: Actor) =>
+          (a.inventory ?? [])
+            .map((item) => (item?.light ? `${item.id ?? item.name}` : ''))
+            .filter(Boolean)
+            .join(','),
+      )
+      .join('|');
+    return `${heroes}|${monsters}|${curActor}|${rooms}|${lights}|${itemLights}|${size}|${dbg}`;
   };
 
   const getOverlaySignature = (st: GameState, dbg: boolean, size: number) => {
