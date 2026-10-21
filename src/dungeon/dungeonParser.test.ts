@@ -16,6 +16,7 @@ import {
   Colour,
   ConditionType,
   Level,
+  LightEffect,
   MonsterType,
   SecretType,
   Side,
@@ -170,6 +171,8 @@ describe('dungeonParser', () => {
         radius: 4,
         intensity: 0.35,
         softness: 0.25,
+        effect: 'static',
+        rate: 1,
         enabled: true,
       });
     });
@@ -187,6 +190,8 @@ describe('dungeonParser', () => {
           radius: 2,
           intensity: 0.8,
           softness: 0.6,
+          effect: LightEffect.FLICKER,
+          rate: 2,
           enabled: false,
         },
       ]);
@@ -195,6 +200,8 @@ describe('dungeonParser', () => {
       expect(light.radius).toBe(2);
       expect(light.intensity).toBe(0.8);
       expect(light.softness).toBe(0.6);
+      expect(light.effect).toBe('flicker');
+      expect(light.rate).toBe(2);
       expect(light.enabled).toBe(false);
     });
 
@@ -261,6 +268,8 @@ describe('dungeonParser', () => {
           radius: 4,
           intensity: 0.35,
           softness: 0.25,
+          effect: 'static',
+          rate: 1,
           enabled: true,
         },
         {
@@ -271,6 +280,8 @@ describe('dungeonParser', () => {
           radius: 4,
           intensity: 0.35,
           softness: 0.25,
+          effect: 'static',
+          rate: 1,
           enabled: true,
         },
       ]);

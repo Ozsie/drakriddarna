@@ -3,9 +3,14 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   ambientLightLevel,
   computeLightPolygon,
+  hasAnimatedLights,
+  isLightRenderable,
   lightBlockInCell,
   lightBlurPx,
   lightCenter,
+  lightIntensityScale,
+  lightPolygonFor,
+  lightSweepAngle,
   renderAmbientDarkness,
   renderLights,
 } from './LightRendering';
@@ -461,6 +466,18 @@ describe('renderLights', () => {
     expect(ctx.createRadialGradient).not.toHaveBeenCalled();
   });
 
+  it('scales the rendered gradient by the effect intensity', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [createLight({ effect: 'pulse' })];
+    const addColorStop = vi.fn();
+    const ctx = createMockCtx({ addColorStop });
+    renderLights(ctx, CELL_SIZE, state, false, 0);
+    // Peak alpha: intensity 0.35 * 1.5 * pulse scale 0.65 at t=0.
+    const firstStop = addColorStop.mock.calls[0] as [number, string];
+    const firstAlpha = Number(firstStop[1].match(/([\d.]+)\)$/)![1]);
+    expect(firstAlpha).toBeCloseTo(0.35 * 1.5 * 0.65, 5);
+  });
+
   it('softens a light edges with a blur filter when softness is set', () => {
     const state = createState();
     state.dungeon.layout.lights = [createLight({ softness: 0.5 })];
@@ -607,5 +624,237 @@ describe('renderAmbientDarkness', () => {
     expect(darknessCtx.createRadialGradient).not.toHaveBeenCalled();
     expect(darknessCtx.fill).not.toHaveBeenCalled();
     expect(ctx.drawImage).toHaveBeenCalled();
+  });
+});
+
+describe('light effects', () => {
+  it('keeps static and unknown effects at full intensity', () => {
+    expect(lightIntensityScale(createLight(), 12345)).toBe(1);
+    expect(lightIntensityScale(createLight({ effect: 'static' }), 12345)).toBe(
+      1,
+    );
+    expect(
+      lightIntensityScale(createLight({ effect: 'campaignCustom' }), 12345),
+    ).toBe(1);
+  });
+
+  it('pulses the intensity once per rate loop between dim and full', () => {
+    const pulse = createLight({ effect: 'pulse' });
+    // rate 1: dimmest at t=0, brightest at the half period.
+    expect(lightIntensityScale(pulse, 0)).toBeCloseTo(0.65, 5);
+    expect(lightIntensityScale(pulse, 500)).toBeCloseTo(1, 5);
+    expect(lightIntensityScale(pulse, 1000)).toBeCloseTo(0.65, 5);
+    // rate 2 loops twice as fast: peak already at t=250ms.
+    expect(
+      lightIntensityScale(createLight({ effect: 'pulse', rate: 2 }), 250),
+    ).toBeCloseTo(1, 5);
+  });
+
+  it('flickers within brightness bounds, deterministically', () => {
+    const flicker = createLight({ effect: 'flicker' });
+    const seen = new Set<number>();
+    for (let t = 0; t < 2000; t += 50) {
+      const scale = lightIntensityScale(flicker, t);
+      expect(scale).toBeGreaterThanOrEqual(0.7);
+      expect(scale).toBeLessThanOrEqual(1);
+      seen.add(scale);
+    }
+    // Varies over time and is stable for a given instant.
+    expect(seen.size).toBeGreaterThan(1);
+    expect(lightIntensityScale(flicker, 1000)).toBe(
+      lightIntensityScale(flicker, 1000),
+    );
+  });
+
+  it('blinks on and off each loop', () => {
+    const blink = createLight({ effect: 'blink' });
+    expect(lightIntensityScale(blink, 0)).toBe(1);
+    expect(lightIntensityScale(blink, 250)).toBe(1);
+    expect(lightIntensityScale(blink, 600)).toBeCloseTo(0.05, 5);
+    // rate 2: off already at t=300ms.
+    expect(
+      lightIntensityScale(createLight({ effect: 'blink', rate: 2 }), 300),
+    ).toBeCloseTo(0.05, 5);
+  });
+
+  it('rotates a sweep beam once per rate loop', () => {
+    const sweep = createLight({ effect: 'sweep' });
+    expect(lightSweepAngle(sweep, 0)).toBeCloseTo(0, 5);
+    expect(lightSweepAngle(sweep, 500)).toBeCloseTo(Math.PI, 5);
+    expect(lightSweepAngle(sweep, 1000)).toBeCloseTo(0, 5);
+    expect(lightSweepAngle(createLight(), 500)).toBeUndefined();
+  });
+
+  it('limits the sweep beam to a cone around the sweep direction', () => {
+    const state = createState();
+    const light = createLight({
+      position: { x: 2, y: 2 },
+      radius: 10,
+      effect: 'sweep',
+    });
+    // At t=0 the beam points right (+x).
+    const points = computeLightPolygon(light, state, CELL_SIZE, false, 0);
+    const center = lightCenter(light, CELL_SIZE);
+    // Ray inside the beam reaches the wall; ray behind collapses to center.
+    expect(rayEndpoint(points, 0).x).toBeCloseTo(6.5 * CELL_SIZE, 0);
+    expect(rayEndpoint(points, Math.PI)).toEqual(center);
+  });
+
+  it('only counts renderable, non-static lights as animated', () => {
+    const state = createState();
+    expect(hasAnimatedLights(state, false)).toBe(false);
+    state.dungeon.layout.lights = [createLight({ effect: 'static' })];
+    expect(hasAnimatedLights(state, false)).toBe(false);
+    state.dungeon.layout.lights = [createLight({ effect: 'pulse' })];
+    expect(hasAnimatedLights(state, false)).toBe(true);
+    // Disabled and undiscovered lights do not animate.
+    state.dungeon.layout.lights = [
+      createLight({ effect: 'pulse', enabled: false }),
+    ];
+    expect(hasAnimatedLights(state, false)).toBe(false);
+    const grid = ['#######', '#AAAAA#', '#ABBBB#', '#ABBBB#', '#######'];
+    const fogState = createState({ grid, discoveredRooms: ['A'] });
+    fogState.dungeon.layout.lights = [
+      createLight({ position: { x: 2, y: 2 }, effect: 'blink' }),
+    ];
+    expect(hasAnimatedLights(fogState, false)).toBe(false);
+    expect(hasAnimatedLights(fogState, true)).toBe(true);
+  });
+});
+
+describe('light culling and polygon cache', () => {
+  const lightInRoomA = createLight({ position: { x: 1, y: 2 } });
+  const grid = ['#######', '#AAAAA#', '#ABBBB#', '#ABBBB#', '#######'];
+
+  const createMockCtx = () =>
+    ({
+      createRadialGradient: vi.fn().mockReturnValue({ addColorStop: vi.fn() }),
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      arc: vi.fn(),
+      stroke: vi.fn(),
+      drawImage: vi.fn(),
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+    }) as unknown as CanvasRenderingContext2D;
+
+  const createDarknessCanvas = (ctx: CanvasRenderingContext2D) =>
+    ({
+      width: 800,
+      height: 600,
+      getContext: () => ctx,
+    }) as unknown as HTMLCanvasElement;
+
+  it('renders lights only in rooms occupied by living heroes', () => {
+    // Default hero stands in room A at (1, 3).
+    const state = createState({ grid, discoveredRooms: ['A'] });
+    const lightInRoomB = createLight({ position: { x: 2, y: 2 } });
+    expect(isLightRenderable(state, lightInRoomA, false)).toBe(true);
+    expect(isLightRenderable(state, lightInRoomB, false)).toBe(false);
+    // Debug mode renders everything.
+    expect(isLightRenderable(state, lightInRoomB, true)).toBe(true);
+  });
+
+  it('does not render lights when no living hero is in their room', () => {
+    const state = createState({
+      grid,
+      discoveredRooms: ['A'],
+      heroes: [createHeroAt(1, 3, 0)],
+    });
+    expect(isLightRenderable(state, lightInRoomA, false)).toBe(false);
+    // A living hero elsewhere keeps that room's lights on.
+    const elsewhere = createState({
+      grid,
+      discoveredRooms: ['A', 'B'],
+      heroes: [createHeroAt(4, 2)],
+    });
+    const lightInB = createLight({ position: { x: 4, y: 2 } });
+    expect(isLightRenderable(elsewhere, lightInB, false)).toBe(true);
+  });
+
+  it('culls lights from the darkness holes as well', () => {
+    const state = createState({ grid, discoveredRooms: ['A'] });
+    state.dungeon.ambientLight = 0.2;
+    state.dungeon.layout.lights = [lightInRoomA];
+    const ctx = createMockCtx();
+    const darknessCtx = createMockCtx();
+    renderAmbientDarkness(
+      ctx,
+      createDarknessCanvas(darknessCtx),
+      CELL_SIZE,
+      state,
+      false,
+      0,
+    );
+    expect(darknessCtx.createRadialGradient).toHaveBeenCalled();
+
+    const culled = createState({ grid, discoveredRooms: ['A'] });
+    culled.dungeon.ambientLight = 0.2;
+    culled.dungeon.layout.lights = [createLight({ position: { x: 4, y: 2 } })];
+    const ctx2 = createMockCtx();
+    const darknessCtx2 = createMockCtx();
+    renderAmbientDarkness(
+      ctx2,
+      createDarknessCanvas(darknessCtx2),
+      CELL_SIZE,
+      culled,
+      false,
+      0,
+    );
+    expect(darknessCtx2.createRadialGradient).not.toHaveBeenCalled();
+  });
+
+  it('reuses a light polygon while the occlusion state is unchanged', () => {
+    const state = createState();
+    const light = createLight({ position: { x: 3, y: 2 } });
+    const first = lightPolygonFor(light, state, CELL_SIZE, false, 0);
+    // Same state, later animation frame: identical (cached) polygon.
+    const second = lightPolygonFor(light, state, CELL_SIZE, false, 1000);
+    expect(second).toBe(first);
+  });
+
+  it('recomputes the polygon when actors move or doors open', () => {
+    const state = createState();
+    const light = createLight({ position: { x: 3, y: 2 } });
+    const first = lightPolygonFor(light, state, CELL_SIZE, false, 0);
+    state.heroes[0].position = { x: 3, y: 3 };
+    const moved = lightPolygonFor(light, state, CELL_SIZE, false, 0);
+    expect(moved).not.toBe(first);
+
+    const doorState = createState();
+    doorState.dungeon.layout.doors = [
+      {
+        x: 3,
+        y: 2,
+        side: Side.RIGHT,
+        locked: false,
+        trapped: false,
+        open: false,
+        hidden: false,
+        trapAttacks: 0,
+        reinforced: false,
+      },
+    ];
+    const beforeOpen = lightPolygonFor(light, doorState, CELL_SIZE, false, 0);
+    doorState.dungeon.layout.doors[0].open = true;
+    const afterOpen = lightPolygonFor(light, doorState, CELL_SIZE, false, 0);
+    expect(afterOpen).not.toBe(beforeOpen);
+  });
+
+  it('never caches sweep light polygons', () => {
+    const state = createState();
+    const light = createLight({
+      position: { x: 3, y: 2 },
+      effect: 'sweep',
+    });
+    const first = lightPolygonFor(light, state, CELL_SIZE, false, 0);
+    const second = lightPolygonFor(light, state, CELL_SIZE, false, 500);
+    expect(second).not.toBe(first);
   });
 });

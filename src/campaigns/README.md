@@ -718,6 +718,12 @@ their cells, so light also passes between diagonally adjacent actors) —
 with the darkness starting behind it. Lights render on the dynamic canvas
 layer, below the actors, so shadows update as actors move.
 
+For performance, lights are only rendered on discovered cells in rooms where
+a living hero currently stands (debug mode renders every enabled light), and
+light polygons are cached between frames while the occlusion state — actor
+positions, door states, fog of war — is unchanged. Sweep lights recompute
+their polygon every frame, since it rotates with time.
+
 ### Placing lights in a dungeon
 
 Lights can be defined in dungeon layouts using `defineLayout` (object or tuple
@@ -751,6 +757,9 @@ export const myDungeonLayout = defineLayout({
     // Tuple with options only: [x, y, options]
     [0, 2, { color: '#FF4F4F', radius: 2, enabled: false }],
 
+    // Flickering torch, two jitter loops per second.
+    [1, 3, { effect: 'flicker', rate: 2 }],
+
     // Object format
     { x: 2, y: 2, alignment: CellAlignment.CENTER, intensity: 0.8 },
   ],
@@ -767,6 +776,8 @@ export const myDungeonLayout = defineLayout({
 | `radius` | `number` | `4` | Reach of the light in grid cells, measured from the light source. |
 | `intensity` | `number` | `0.35` | Brightness at the source (`0`–`1`), fading to `0` at the radius. |
 | `softness` | `number` | `0.25` | Softness of the light's shadow edges (`0`–`1`): `0` = hard edges, `1` = up to half a cell of blur. Applies to both the glow and the darkness hole in dim dungeons. |
+| `effect` | `LightEffect` | `'static'` | Animation effect: `'static'` (no animation), `'pulse'` (breathing glow), `'flicker`' (torch-like jitter), `'sweep'` (rotating beam cone) or `'blink'` (on/off). Unknown effect strings fall back to `'static'`. |
+| `rate` | `number` | `1` | How many times per second the effect loops. E.g. `0.5` = one loop every two seconds. |
 | `enabled` | `boolean` | `true` | Set to `false` to place a currently dark light (e.g. a brazier that could be lit later). |
 | `id` | `string` | `light_<x>_<y>` | Unique identifier for referencing the light. |
 

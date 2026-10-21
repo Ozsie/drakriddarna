@@ -4,6 +4,7 @@ import type {
   InteractableCell,
   Item,
   ItemLocation,
+  LightEffect,
   LightSource,
   Monster,
   Secret,
@@ -13,6 +14,7 @@ import {
   CellAlignment,
   Colour,
   Level,
+  LightEffect as LightEffectValue,
   MonsterType,
   SecretType,
   Side,
@@ -129,6 +131,8 @@ export const createLight = (
     radius?: number;
     intensity?: number;
     softness?: number;
+    effect?: LightEffect;
+    rate?: number;
     enabled?: boolean;
     id?: string;
   },
@@ -140,6 +144,8 @@ export const createLight = (
   radius: options?.radius ?? DEFAULT_LIGHT_RADIUS,
   intensity: options?.intensity ?? DEFAULT_LIGHT_INTENSITY,
   softness: options?.softness ?? DEFAULT_LIGHT_SOFTNESS,
+  effect: options?.effect ?? LightEffectValue.STATIC,
+  rate: options?.rate ?? 1,
   enabled: options?.enabled ?? true,
 });
 

@@ -1,5 +1,11 @@
-import { Colour, ConditionType, MonsterType, Side } from '../../../types';
 import type { Dungeon } from '../../../types';
+import {
+  CellAlignment,
+  Colour,
+  ConditionType,
+  MonsterType,
+  Side,
+} from '../../../types';
 import { defineDungeon } from '../../../dungeon/DungeonLogic';
 import { e1m1 } from './e1m1';
 
@@ -20,6 +26,7 @@ export const e1m0: Dungeon = defineDungeon({
     [1, 10],
   ],
   discoveredRooms: ['A'],
+  ambientLight: 0.2,
   layout: {
     grid: [
       '     ######',
@@ -34,6 +41,14 @@ export const e1m0: Dungeon = defineDungeon({
       '#AAADDDBB# ',
       '#AAA###BB# ',
       '##### #### ',
+    ],
+    lights: [
+      [
+        2,
+        9,
+        CellAlignment.CEILING,
+        { color: '#c29042', radius: 3, intensity: 0.5, softness: 0.7 },
+      ],
     ],
     doors: [
       [Side.RIGHT, 3, 9],

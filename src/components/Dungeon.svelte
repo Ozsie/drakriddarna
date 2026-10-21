@@ -34,7 +34,11 @@
     renderPortal,
     renderSecrets,
   } from '../dungeon/DungeonRendering';
-  import { renderLights, renderAmbientDarkness } from '../dungeon/LightRendering';
+  import {
+    renderAmbientDarkness,
+    renderLights,
+    hasAnimatedLights,
+  } from '../dungeon/LightRendering';
   import { renderItems } from '../items/ItemRendering';
   import {
     renderRadialMenu,
@@ -338,12 +342,24 @@
     if (!activeState || !browser || !actors || !actorCanvas) return;
     if (!isReady(actors)) return;
     const hasActiveAnimations = hasActiveActorAnimations();
+    // Light effects (pulse, flicker, sweep, blink) need a re-render every
+    // frame while any visible light animates.
+    const hasLightEffects = hasAnimatedLights(
+      activeState,
+      activeDebugMode ?? false,
+    );
     const sig = getDynamicSignature(
       activeState,
       activeDebugMode ?? false,
       cellSize,
     );
-    if (!force && !hasActiveAnimations && sig === lastDynamicSignature) return;
+    if (
+      !force &&
+      !hasActiveAnimations &&
+      !hasLightEffects &&
+      sig === lastDynamicSignature
+    )
+      return;
     lastDynamicSignature = sig;
 
     const ctx = actorCanvas.getContext('2d');
@@ -357,7 +373,7 @@
     ctx.clearRect(0, 0, actorCanvas.width, actorCanvas.height);
     ctx.restore();
 
-    renderLights(ctx, cellSize, activeState, activeDebugMode ?? false);
+    renderLights(ctx, cellSize, activeState, activeDebugMode ?? false, currentTime);
 
     const hasActiveMonsters = renderMonsters(
       ctx,
@@ -383,6 +399,7 @@
         cellSize,
         activeState,
         activeDebugMode ?? false,
+        currentTime,
       );
     }
 
@@ -394,6 +411,7 @@
     if (
       hasActiveMonsters ||
       hasActiveHeroes ||
+      hasLightEffects ||
       hasActiveActorAnimations(currentTime)
     ) {
       dynamicAnimationId = requestAnimationFrame(() => {

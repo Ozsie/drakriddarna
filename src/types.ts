@@ -306,6 +306,22 @@ export enum CellAlignment {
   CEILING = 'ceiling',
 }
 
+// Light animation effects: 'static' (no animation, the default), 'pulse'
+// (breathing glow), 'flicker' (torch-like jitter), 'sweep' (rotating beam)
+// and 'blink' (on/off). Intentionally open-ended: unknown effect strings
+// fall back to 'static' at render time.
+export const LightEffect = {
+  STATIC: 'static',
+  PULSE: 'pulse',
+  FLICKER: 'flicker',
+  SWEEP: 'sweep',
+  BLINK: 'blink',
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type LightEffect =
+  | (typeof LightEffect)[keyof typeof LightEffect]
+  | string;
+
 export type LightSource = {
   id?: string;
   position: Position;
@@ -319,6 +335,10 @@ export type LightSource = {
   // 0..1 softness of the light's shadow edges: 0 = hard edges, 1 = up to
   // half a cell of blur. Softens both the glow and the darkness hole.
   softness?: number;
+  // Animation effect, see `LightEffect` (default: 'static').
+  effect?: LightEffect;
+  // How many times per second the effect loops (default 1).
+  rate?: number;
   enabled?: boolean;
 };
 

@@ -3,6 +3,7 @@ import {
   CellAlignment,
   Colour,
   ConditionType,
+  LightEffect,
   MonsterType,
   SecretType,
   Side,
@@ -75,20 +76,27 @@ export const testingGrounds: Dungeon = defineDungeon({
       [7, 9],
     ],
     lights: [
-      // Default torch light near the starting positions.
-      [2, 8, CellAlignment.CEILING],
-      // Cool light next to the pillar at (7, 9) to demo shadow casting, with
-      // extra soft edges.
+      // Flickering ceiling torch near the starting positions.
+      [2, 8, CellAlignment.CEILING, { effect: LightEffect.FLICKER, rate: 2 }],
+      // Cool pulsing light next to the pillar at (7, 9) to demo shadow
+      // casting, with soft edges.
       [
         7,
         8,
         CellAlignment.CEILING,
-        { color: '#87CEEB', radius: 3, intensity: 0.5, softness: 0.8 },
+        {
+          color: '#87CEEB',
+          radius: 3,
+          intensity: 0.5,
+          softness: 0.8,
+          effect: LightEffect.PULSE,
+          rate: 0.5,
+        },
       ],
-      // Corridor D.
-      [10, 7],
-      // Room I: ceiling fixture, illuminating everything below it without
-      // actor shadows.
+      // Corridor D: slowly sweeping beam.
+      [10, 7, CellAlignment.CENTER, { effect: LightEffect.SWEEP, rate: 0.25 }],
+      // Room I: steady ceiling fixture, illuminating everything below it
+      // without actor shadows.
       [6, 13, CellAlignment.CEILING],
     ],
     pits: [

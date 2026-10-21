@@ -7,6 +7,7 @@ import type {
   Item,
   ItemLocation,
   Layout,
+  LightEffect,
   LightSource,
   Monster,
   Note,
@@ -200,6 +201,8 @@ export type DeclarativeLightOptions = {
   radius?: number;
   intensity?: number;
   softness?: number;
+  effect?: LightEffect;
+  rate?: number;
   enabled?: boolean;
   id?: string;
 };
@@ -636,13 +639,26 @@ export const parseLight = (lightDef: DeclarativeLight): LightSource => {
     return createLight(x, y, undefined, alignmentOrOptions);
   }
 
-  const { x, y, alignment, color, radius, intensity, softness, enabled, id } =
-    lightDef;
+  const {
+    x,
+    y,
+    alignment,
+    color,
+    radius,
+    intensity,
+    softness,
+    effect,
+    rate,
+    enabled,
+    id,
+  } = lightDef;
   return createLight(x, y, alignment, {
     ...(color !== undefined ? { color } : {}),
     ...(radius !== undefined ? { radius } : {}),
     ...(intensity !== undefined ? { intensity } : {}),
     ...(softness !== undefined ? { softness } : {}),
+    ...(effect !== undefined ? { effect } : {}),
+    ...(rate !== undefined ? { rate } : {}),
     ...(enabled !== undefined ? { enabled } : {}),
     ...(id !== undefined ? { id } : {}),
   });
