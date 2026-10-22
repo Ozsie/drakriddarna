@@ -149,7 +149,15 @@ export const computeLightPolygon = (
   timeMs = 0,
 ): Position[] => {
   const center = lightCenter(light, cellSize);
-  const radiusPx = (light.radius ?? DEFAULT_LIGHT_RADIUS) * cellSize;
+  // Gas lights ignore their radius: the cloud expands until it leaves the
+  // room (grid room character) containing the light.
+  const isGas = light.effect === LightEffect.GAS;
+  const gasRoom = isGas
+    ? findCell(state.dungeon.layout.grid, light.position.x, light.position.y)
+    : undefined;
+  const radiusPx = isGas
+    ? Number.POSITIVE_INFINITY
+    : (light.radius ?? DEFAULT_LIGHT_RADIUS) * cellSize;
   const step = Math.max(1, cellSize / LIGHT_RAY_STEPS_PER_CELL);
   const points: Position[] = [];
   // For sweep lights: the beam only covers rays within its half angle of
@@ -184,6 +192,18 @@ export const computeLightPolygon = (
       };
       if (cell.x === prevCell.x && cell.y === prevCell.y) {
         continue;
+      }
+      if (
+        gasRoom !== undefined &&
+        findCell(state.dungeon.layout.grid, cell.x, cell.y) !== gasRoom
+      ) {
+        // Gas stays inside its room: stop at the room boundary, so the
+        // cloud never spills through open doors or into other rooms.
+        end = {
+          x: ((prevCell.x + cell.x) / 2 + 0.5) * cellSize,
+          y: ((prevCell.y + cell.y) / 2 + 0.5) * cellSize,
+        };
+        break;
       }
       const door = isDoorEdge(
         state.dungeon.layout,
@@ -431,6 +451,15 @@ export const lightIntensityScale = (
     case LightEffect.AURA:
       // A gentle breathing, subtler than pulse.
       return 0.8 + 0.2 * (0.5 - 0.5 * Math.cos(2 * Math.PI * t));
+    case LightEffect.GAS:
+      // Even, but gently fluctuating: two slow sines keep the cloud
+      // undulating without strong bright/dark swings.
+      return Math.min(
+        1,
+        0.85 +
+          0.1 * Math.sin(2 * Math.PI * t) +
+          0.05 * Math.sin(2 * Math.PI * t * 2.7 + 1.3),
+      );
     default:
       return 1;
   }
@@ -821,6 +850,57 @@ const createAuraGradient = (
   return gradient;
 };
 
+// The farthest polygon point from the light, so a room-filling gas
+// gradient covers the whole cloud.
+const polygonExtentPx = (center: Position, points: Position[]): number =>
+  points.reduce(
+    (max, point) =>
+      Math.max(max, Math.hypot(point.x - center.x, point.y - center.y)),
+    0,
+  );
+
+// --- Gas effect ----------------------------------------------------------
+
+// The gas effect's gradient: an even, cloud-like intensity across the lit
+// area — no bright center — fading only at the rim. Combined with the
+// undulating intensity from `lightIntensityScale` this reads as a slowly
+// swirling cloud. The light's polygon still applies, so walls contain the
+// gas; its extent defaults to the light's radius, or `gradientRadiusPx`
+// when the polygon is larger (gas fills its whole room).
+const createGasGradient = (
+  ctx: CanvasRenderingContext2D,
+  light: LightSource,
+  cellSize: number,
+  timeMs: number,
+  gradientRadiusPx?: number,
+) => {
+  const center = lightCenter(light, cellSize);
+  const color = light.color ?? DEFAULT_LIGHT_COLOR;
+  const intensity = light.intensity ?? DEFAULT_LIGHT_INTENSITY;
+  const radiusPx =
+    gradientRadiusPx ?? (light.radius ?? DEFAULT_LIGHT_RADIUS) * cellSize;
+  const gradient = ctx.createRadialGradient(
+    center.x,
+    center.y,
+    0,
+    center.x,
+    center.y,
+    radiusPx,
+  );
+  const alpha = Math.min(
+    1,
+    intensity * 1.4 * lightIntensityScale(light, timeMs),
+  );
+  const stops = [0, 0.15, 0.3, 0.45, 0.55, 0.7, 0.85, 1];
+  stops.forEach((t) => {
+    // Flat through the middle of the cloud, soft fall at the rim (falling
+    // to exactly zero at the edge).
+    const rim = t <= 0.55 ? 1 : Math.pow(Math.max(0, (1 - t) / 0.45), 1.5);
+    gradient.addColorStop(t, rgbaFromColor(color, alpha * rim));
+  });
+  return gradient;
+};
+
 const traceAuraCircle =
   (light: LightSource, cellSize: number) => (ctx: CanvasRenderingContext2D) => {
     const center = lightCenter(light, cellSize);
@@ -899,6 +979,23 @@ const renderLight = (
     case LightEffect.AURA:
       renderAura(ctx, light, cellSize, timeMs);
       break;
+    case LightEffect.GAS: {
+      const points = lightPolygonFor(light, state, cellSize, debugMode, timeMs);
+      fillLightPolygon(
+        ctx,
+        points,
+        createGasGradient(
+          ctx,
+          light,
+          cellSize,
+          timeMs,
+          polygonExtentPx(lightCenter(light, cellSize), points),
+        ),
+        light,
+        cellSize,
+      );
+      break;
+    }
     default:
       fillLightPolygon(
         ctx,
@@ -996,6 +1093,30 @@ export const renderAmbientDarkness = (
         darknessCtx,
         traceAuraCircle(light, cellSize),
         createAuraGradient(darknessCtx, light, cellSize, timeMs),
+        light,
+        cellSize,
+      );
+      return;
+    }
+    if (light.effect === LightEffect.GAS) {
+      // Punch the gas cloud, keeping its even, undulating cloud shape.
+      const gasPoints = lightPolygonFor(
+        light,
+        state,
+        cellSize,
+        debugMode,
+        timeMs,
+      );
+      fillLightPolygon(
+        darknessCtx,
+        gasPoints,
+        createGasGradient(
+          darknessCtx,
+          light,
+          cellSize,
+          timeMs,
+          polygonExtentPx(lightCenter(light, cellSize), gasPoints),
+        ),
         light,
         cellSize,
       );

@@ -278,6 +278,51 @@ export const eventEffects: Record<
         ),
       );
     }
+    // A greenish cloud of sleeping gas fills every room where a live hero
+    // stands (one cloud per room — gas fills its whole room), until the
+    // round is reset.
+    const liveParty = liveHeroes(state);
+    const gasRooms = new Set<string>();
+    liveParty.forEach((hero) => {
+      const room = findCell(
+        state.dungeon.layout.grid,
+        hero.position.x,
+        hero.position.y,
+      );
+      if (room) {
+        gasRooms.add(room);
+      }
+    });
+    state.eventLights = [
+      ...(state.eventLights ?? []),
+      ...[...gasRooms]
+        .map((room) =>
+          liveParty.find(
+            (hero) =>
+              findCell(
+                state.dungeon.layout.grid,
+                hero.position.x,
+                hero.position.y,
+              ) === room,
+          ),
+        )
+        .filter((hero): hero is NonNullable<typeof hero> => Boolean(hero))
+        .map((hero) =>
+          createLight(hero.position.x, hero.position.y, CellAlignment.CENTER, {
+            id: `sleeping_gas_light_${findCell(
+              state.dungeon.layout.grid,
+              hero.position.x,
+              hero.position.y,
+            )}`,
+            color: '#7CB96B',
+            intensity: 0.3,
+            softness: 0.8,
+            effect: LightEffect.GAS,
+            rate: 0.5,
+            enabled: true,
+          }),
+        ),
+    ];
     state.roundActionsDelta = (state.roundActionsDelta ?? 0) - 1;
     event.used = true;
   },

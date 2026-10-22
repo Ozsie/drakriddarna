@@ -1351,3 +1351,175 @@ describe('interactable and combat lights', () => {
     expect(activeLights(state, 1100)).toEqual([]);
   });
 });
+
+describe('gas effect', () => {
+  const createMockCtx = (gradient?: {
+    addColorStop: (offset: number, color: string) => void;
+  }) =>
+    ({
+      createRadialGradient: vi
+        .fn()
+        .mockReturnValue(gradient ?? { addColorStop: vi.fn() }),
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      arc: vi.fn(),
+      stroke: vi.fn(),
+      drawImage: vi.fn(),
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+    }) as unknown as CanvasRenderingContext2D;
+
+  const createDarknessCanvas = (ctx: CanvasRenderingContext2D) =>
+    ({
+      width: 800,
+      height: 600,
+      getContext: () => ctx,
+    }) as unknown as HTMLCanvasElement;
+
+  it('undulates gently between bounds', () => {
+    const gas = createLight({ effect: 'gas' });
+    const seen = new Set<number>();
+    for (let t = 0; t < 4000; t += 50) {
+      const scale = lightIntensityScale(gas, t);
+      expect(scale).toBeGreaterThanOrEqual(0.7);
+      expect(scale).toBeLessThanOrEqual(1);
+      seen.add(Math.round(scale * 1000));
+    }
+    expect(seen.size).toBeGreaterThan(1);
+    // Deterministic per instant.
+    expect(lightIntensityScale(gas, 1234)).toBe(lightIntensityScale(gas, 1234));
+  });
+
+  it('renders an even cloud: flat middle, fading rim', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      createLight({ position: { x: 3, y: 2 }, effect: 'gas', radius: 4 }),
+    ];
+    const addColorStop = vi.fn();
+    const ctx = createMockCtx({ addColorStop });
+    renderLights(ctx, CELL_SIZE, state, false, 1000);
+    const stops = addColorStop.mock.calls.map((call: [number, string]) => call);
+    const alphaOf = (call: [number, string]) =>
+      Number(call[1].match(/([\d.]+)\)$/)![1]);
+    // Even intensity: the center matches the middle of the cloud.
+    expect(alphaOf(stops[0])).toBeCloseTo(
+      alphaOf(stops.find((s) => s[0] === 0.45) as [number, string]),
+      5,
+    );
+    // ...and fades to nothing at the rim.
+    expect(alphaOf(stops[stops.length - 1])).toBe(0);
+    // The undulation changes the cloud over time.
+    const addColorStop2 = vi.fn();
+    const ctx2 = createMockCtx({ addColorStop: addColorStop2 });
+    renderLights(ctx2, CELL_SIZE, state, false, 1400);
+    const alphaAt = (fn: { mock: { calls: unknown[][] } }): number =>
+      Number(String(fn.mock.calls[0][1]).match(/([\d.]+)\)$/)![1]);
+    expect(alphaAt(addColorStop)).not.toBeCloseTo(alphaAt(addColorStop2), 5);
+  });
+
+  it('punches the gas cloud into the ambient darkness', () => {
+    const state = createState();
+    state.dungeon.ambientLight = 0.2;
+    state.dungeon.layout.lights = [
+      createLight({ position: { x: 3, y: 2 }, effect: 'gas' }),
+    ];
+    const ctx = createMockCtx();
+    const darknessCtx = createMockCtx();
+    renderAmbientDarkness(
+      ctx,
+      createDarknessCanvas(darknessCtx),
+      CELL_SIZE,
+      state,
+      false,
+      1000,
+    );
+    expect(darknessCtx.createRadialGradient).toHaveBeenCalledTimes(1);
+    expect(darknessCtx.fill).toHaveBeenCalled();
+    expect(ctx.drawImage).toHaveBeenCalled();
+  });
+});
+
+describe('gas fills its room', () => {
+  const createMockCtx = (gradient?: {
+    addColorStop: (offset: number, color: string) => void;
+  }) =>
+    ({
+      createRadialGradient: vi
+        .fn()
+        .mockReturnValue(gradient ?? { addColorStop: vi.fn() }),
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      arc: vi.fn(),
+      stroke: vi.fn(),
+      drawImage: vi.fn(),
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+    }) as unknown as CanvasRenderingContext2D;
+
+  it('ignores the radius and covers the whole room containing the light', () => {
+    const state = createState();
+    // Room A spans x=1..5, y=1..3; the light radius would only reach x=5.
+    const light = createLight({
+      position: { x: 1, y: 2 },
+      radius: 1,
+      effect: 'gas',
+    });
+    const points = computeLightPolygon(light, state, CELL_SIZE, false, 0);
+    // The rightward ray runs to the wall at the room's far edge (x=6).
+    expect(rayEndpoint(points, 0).x).toBeCloseTo(6 * CELL_SIZE, 0);
+    // Upward ray to the top wall edge (y=1).
+    expect(rayEndpoint(points, -Math.PI / 2).y).toBeCloseTo(1 * CELL_SIZE, 0);
+  });
+
+  it('stays inside its room even through an open door', () => {
+    const grid = ['#######', '#AAAAA#', '#ABBBB#', '#ABBBB#', '#######'];
+    const state = createState({ grid, discoveredRooms: ['A', 'B'] });
+    state.dungeon.layout.doors = [
+      {
+        x: 1,
+        y: 2,
+        side: Side.RIGHT,
+        locked: false,
+        trapped: false,
+        open: true,
+        hidden: false,
+        trapAttacks: 0,
+        reinforced: false,
+      },
+    ];
+    const light = createLight({
+      position: { x: 1, y: 2 },
+      effect: 'gas',
+    });
+    const points = computeLightPolygon(light, state, CELL_SIZE, false, 0);
+    // The open door would let light through; gas stops at the room
+    // boundary between (1,2) and (2,2).
+    expect(rayEndpoint(points, 0).x).toBeCloseTo(2 * CELL_SIZE, 0);
+  });
+
+  it('scales the cloud gradient to the room extent', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      createLight({ position: { x: 1, y: 2 }, radius: 1, effect: 'gas' }),
+    ];
+    const ctx = createMockCtx();
+    renderLights(ctx, CELL_SIZE, state, false, 1000);
+    // The gradient reaches beyond the light's own radius cap: it spans the
+    // room from the light at (1,2) to the far wall edge at x=6.
+    const gradientCall = (ctx.createRadialGradient as ReturnType<typeof vi.fn>)
+      .mock.calls[0];
+    expect(gradientCall[5]).toBeGreaterThan(4 * CELL_SIZE);
+  });
+});

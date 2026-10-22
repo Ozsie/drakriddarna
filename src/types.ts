@@ -311,8 +311,9 @@ export enum CellAlignment {
 // Light animation effects: 'static' (no animation, the default), 'pulse'
 // (breathing glow), 'flicker' (torch-like jitter), 'sweep' (rotating beam),
 // 'blink' (on/off), 'sparkle' (colored twinkles inside the light's own
-// cell) and 'aura' (a glowing ring around a soft center glow, filling only
-// its own cell). Intentionally open-ended: unknown effect strings fall
+// cell), 'aura' (a glowing ring around a soft center glow, filling only
+// its own cell) and 'gas' (an even, gently undulating cloud, e.g. the
+// sleeping gas). Intentionally open-ended: unknown effect strings fall
 // back to 'static' at render time.
 export const LightEffect = {
   STATIC: 'static',
@@ -322,6 +323,7 @@ export const LightEffect = {
   BLINK: 'blink',
   SPARKLE: 'sparkle',
   AURA: 'aura',
+  GAS: 'gas',
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type LightEffect =

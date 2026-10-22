@@ -19,11 +19,13 @@ import {
 import { createMonster } from '../dungeon/DungeonLogic';
 import { getPartyAverageLevel } from '../hero/HeroLogic';
 import {
+  findCell,
   getGameMaster,
   distanceInGrid,
   getEventMinSpawnDistance,
   getEarliestMonsterEventRound,
   isPartyBelowHalfHealth,
+  toArray,
 } from '../core';
 
 describe('EventsLogic debug helpers', () => {
@@ -1023,5 +1025,85 @@ describe('Event light sources', () => {
     expect(state.eventLights?.length).toBe(1);
     resetEventEffects(state);
     expect(state.eventLights).toEqual([]);
+  });
+});
+
+describe('sleeping gas light', () => {
+  const firstCellOfEachRoom = (
+    state: ReturnType<typeof init>,
+  ): Record<string, { x: number; y: number }> => {
+    const rooms: Record<string, { x: number; y: number }> = {};
+    state.dungeon.layout.grid.forEach((row, y) => {
+      toArray(row).forEach((cell, x) => {
+        if (cell !== '#' && cell !== ' ' && !rooms[cell]) {
+          rooms[cell] = { x, y };
+        }
+      });
+    });
+    return rooms;
+  };
+
+  it('fills the room of every live hero until round reset', () => {
+    const state = init();
+    const event = events.find((e) => e.id === 'sleeping_gas') as TurnEvent;
+    eventEffects.sleepingGasCloud(state, event);
+    // All heroes start in the same room: one cloud, covering it.
+    expect(state.eventLights?.length).toBe(1);
+    const light = state.eventLights![0];
+    expect(light.effect).toBe('gas');
+    expect(light.color).toBe('#7CB96B');
+    expect(light.id).toMatch(/^sleeping_gas_light_/);
+    resetEventEffects(state);
+    expect(state.eventLights).toEqual([]);
+  });
+
+  it('creates one cloud per distinct room holding a live hero', () => {
+    const state = init();
+    const rooms = firstCellOfEachRoom(state);
+    const roomKeys = Object.keys(rooms);
+    expect(roomKeys.length).toBeGreaterThanOrEqual(2);
+    // Split the party across two rooms: hero 0 alone, everyone else
+    // together.
+    state.heroes[0].position = rooms[roomKeys[0]];
+    state.heroes
+      .slice(1)
+      .forEach((hero) => (hero.position = rooms[roomKeys[1]]));
+
+    const event = events.find((e) => e.id === 'sleeping_gas') as TurnEvent;
+    eventEffects.sleepingGasCloud(state, event);
+    const lights = state.eventLights ?? [];
+    expect(lights.length).toBe(2);
+    expect(lights.map((light) => light.id).sort()).toEqual(
+      [
+        `sleeping_gas_light_${roomKeys[0]}`,
+        `sleeping_gas_light_${roomKeys[1]}`,
+      ].sort(),
+    );
+    resetEventEffects(state);
+    expect(state.eventLights).toEqual([]);
+  });
+
+  it('does not create a cloud for rooms where only dead heroes stand', () => {
+    const state = init();
+    const rooms = firstCellOfEachRoom(state);
+    const roomKeys = Object.keys(rooms);
+    const partyRoom = findCell(
+      state.dungeon.layout.grid,
+      state.heroes[1].position.x,
+      state.heroes[1].position.y,
+    );
+    const otherRoomKey = roomKeys.find((key) => key !== partyRoom)!;
+    // Move one hero alone into another room and kill them there.
+    state.heroes[0].position = rooms[otherRoomKey];
+    state.heroes[0].health = 0;
+
+    const event = events.find((e) => e.id === 'sleeping_gas') as TurnEvent;
+    eventEffects.sleepingGasCloud(state, event);
+    const lights = state.eventLights ?? [];
+    // Only the living party's room gets a cloud.
+    expect(lights.length).toBe(1);
+    expect(
+      lights.some((light) => light.id === `sleeping_gas_light_${otherRoomKey}`),
+    ).toBe(false);
   });
 });

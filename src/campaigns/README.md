@@ -816,6 +816,9 @@ Events interact with the light system:
   lingering until the round is reset.
 - **The magic node** bathes every hero in a soft green glow until the round
   is reset.
+- **The sleeping gas cloud** fills every room where a live hero stands with
+  a greenish, undulating gas cloud (the `'gas'` light effect) until the
+  round is reset.
 
 Round-scoped event lights live in `state.eventLights` and are cleared by
 `resetEventEffects`; the other event lights are derived from existing
@@ -875,7 +878,7 @@ export const myDungeonLayout = defineLayout({
 | `radius` | `number` | `4` | Reach of the light in grid cells, measured from the light source. |
 | `intensity` | `number` | `0.35` | Brightness at the source (`0`–`1`), fading to `0` at the radius. |
 | `softness` | `number` | `0.25` | Softness of the light's shadow edges (`0`–`1`): `0` = hard edges, `1` = up to half a cell of blur. Applies to both the glow and the darkness hole in dim dungeons. |
-| `effect` | `LightEffect` | `'static'` | Rendering/animation effect: `'static'` (no animation), `'pulse'` (breathing glow), `'flicker'` (torch-like jitter), `'sweep'` (rotating beam cone), `'blink'` (on/off), `'sparkle'` (colored twinkles spread across the light's own cell, instead of a glow) or `'aura'` (a bright ring around a soft center glow, filling only its own cell). Unknown effect strings fall back to `'static'`. |
+| `effect` | `LightEffect` | `'static'` | Rendering/animation effect: `'static'` (no animation), `'pulse'` (breathing glow), `'flicker'` (torch-like jitter), `'sweep'` (rotating beam cone), `'blink'` (on/off), `'sparkle'` (colored twinkles spread across the light's own cell, instead of a glow), `'aura'` (a bright ring around a soft center glow, filling only its own cell) or `'gas'` (an even, gently undulating cloud that ignores `radius` and fills the entire room containing the light, without spilling through open doors; used by the sleeping gas event). Unknown effect strings fall back to `'static'`. |
 | `rate` | `number` | `1` | How many times per second the effect loops. E.g. `0.5` = one loop every two seconds. |
 | `enabled` | `boolean` | `true` | Set to `false` to place a currently dark light (e.g. a brazier that could be lit later). |
 | `id` | `string` | `light_<x>_<y>` | Unique identifier for referencing the light. |
