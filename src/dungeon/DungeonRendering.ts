@@ -1,12 +1,13 @@
 import {
   CornerType,
+  type Corner,
   type Door,
   type GameState,
   type Secret,
   SecretType,
   Side,
 } from '../types';
-import { COLLAPSED, EMPTY, WALL } from '../core';
+import { COLLAPSED, EMPTY, SEALED_DOOR, WALL } from '../core';
 import {
   findCell,
   isDiscovered,
@@ -14,6 +15,7 @@ import {
   isSamePosition,
   toArray,
 } from '../core';
+import { autoDetectCorners } from './cornerDetection';
 import { drawCachedTile } from './TileTextureCache';
 
 export const background = '#1E1C19';
@@ -385,8 +387,11 @@ const renderFloor = (
 };
 
 const isHorizontalWall = (x: number, y: number, state: GameState): string => {
-  const grid = state.dungeon.layout.grid;
-  if (findCell(grid, x, y) !== WALL) {
+  // Classify against the sealed grid: a hidden cell sealed behind a closed
+  // door renders as a wall piece here, so it must classify as one
+  const grid = sealedGrid(state);
+  const cell = findCell(grid, x, y);
+  if (cell !== WALL && cell !== SEALED_DOOR) {
     return 'none';
   }
   if (x === 0 || x === grid[0].length - 1) {
@@ -417,8 +422,11 @@ const isHorizontalWall = (x: number, y: number, state: GameState): string => {
 };
 
 const isVerticalWall = (x: number, y: number, state: GameState): string => {
-  const grid = state.dungeon.layout.grid;
-  if (findCell(grid, x, y) !== WALL) {
+  // Classify against the sealed grid: a hidden cell sealed behind a closed
+  // door renders as a wall piece here, so it must classify as one
+  const grid = sealedGrid(state);
+  const cell = findCell(grid, x, y);
+  if (cell !== WALL && cell !== SEALED_DOOR) {
     return 'none';
   }
   if (y === 0 || y === grid.length - 1) {
@@ -449,8 +457,102 @@ const isVerticalWall = (x: number, y: number, state: GameState): string => {
   }
 };
 
+// A closed door whose far side is undiscovered is drawn as wall pieces
+// (renderClosedDoor / renderClosedHiddenDoor), sealing the passage until it
+// is opened. The corner classifier must see the same sealed geometry: the far
+// cell and the two cells flanking the doorway are replaced with the SEALED_DOOR
+// marker wherever they are not discovered yet. Sealed cells count as wall for
+// closed sides — a corridor end gets its corner caps exactly like a dead end,
+// and the corner cells beside a door set in a solid wall render their caps too
+// — but never as the stem of a junction, since a sealed doorway renders as a
+// door rather than rock. Invisible sealed cells (no discovered floor bordering
+// them) resolve to unknown during classification, so sealing never fabricates
+// junction shapes on the wall pieces themselves.
+export const sealedCornerGrid = (state: GameState): string[] => {
+  const grid = [...state.dungeon.layout.grid];
+  const sealable = (cell: string) =>
+    Boolean(cell) &&
+    cell !== WALL &&
+    cell !== COLLAPSED &&
+    !isRoomDiscovered(state.dungeon, cell);
+  state.dungeon.layout.doors.forEach((door) => {
+    if (door.open) return;
+    const farX =
+      door.side === Side.RIGHT
+        ? door.x + 1
+        : door.side === Side.LEFT
+        ? door.x - 1
+        : door.x;
+    const farY =
+      door.side === Side.DOWN
+        ? door.y + 1
+        : door.side === Side.UP
+        ? door.y - 1
+        : door.y;
+    const farCell = findCell(grid, farX, farY);
+    const farDiscovered = farCell !== '' && !isEmpty(farCell, state);
+    if (farDiscovered) return;
+    const flankX = door.side === Side.UP || door.side === Side.DOWN ? 1 : 0;
+    const flankY = door.side === Side.LEFT || door.side === Side.RIGHT ? 1 : 0;
+    [
+      [farX, farY],
+      [farX - flankX, farY - flankY],
+      [farX + flankX, farY + flankY],
+    ].forEach(([x, y]) => {
+      if (!sealable(findCell(grid, x, y))) return;
+      grid[y] = grid[y].slice(0, x) + SEALED_DOOR + grid[y].slice(x + 1);
+    });
+  });
+  return grid;
+};
+
+// Everything that can change the visible corner classification or the sealed
+// grid, hashed into a shared cache key.
+const visibleStateKey = (state: GameState): string => {
+  const doors = state.dungeon.layout.doors
+    .map((door) => (door.open ? '1' : '0'))
+    .join('');
+  return `${state.dungeon.name}|${state.dungeon.discoveredRooms.join(
+    ',',
+  )}|${doors}`;
+};
+
+// The sealed classification grid, from cache when the visible state has not
+// changed since it was last built.
+let sealedGridCache: { key: string; grid: string[] } | null = null;
+
+const sealedGrid = (state: GameState): string[] => {
+  const key = visibleStateKey(state);
+  if (!sealedGridCache || sealedGridCache.key !== key) {
+    sealedGridCache = { key, grid: sealedCornerGrid(state) };
+  }
+  return sealedGridCache.grid;
+};
+
+// Corners are classified against the visible dungeon: an undiscovered room
+// renders as solid rock, so corners on the fog-of-war boundary look different
+// from their full-layout classification, and closed doors seal their doorway
+// as wall. The visible corner set depends only on the grid, the discovered
+// rooms, and the door open states, so it is cached until one of them changes
+// instead of being re-detected on every render.
+let visibleCornersCache: { key: string; corners: Corner[] } | null = null;
+
+const visibleCorners = (state: GameState): Corner[] => {
+  const key = visibleStateKey(state);
+  if (!visibleCornersCache || visibleCornersCache.key !== key) {
+    visibleCornersCache = {
+      key,
+      corners: autoDetectCorners(
+        sealedGrid(state),
+        state.dungeon.discoveredRooms,
+      ),
+    };
+  }
+  return visibleCornersCache.corners;
+};
+
 const isCornerWall = (x: number, y: number, state: GameState): CornerType => {
-  const corner = state.dungeon.layout.corners.filter((corner) =>
+  const corner = visibleCorners(state).filter((corner) =>
     isSamePosition(corner.position, { x, y }),
   );
   if (corner.length === 1) {
@@ -554,6 +656,24 @@ const renderGridLines = (
   ctx.stroke();
 };
 
+// The sealed far side of a closed door renders as wall pieces. Where the
+// corner classifier already renders a corner piece on such a cell (e.g. the
+// cap of the wall run beside the door), the door paint must not overwrite
+// it with the plain wall piece.
+const drawDoorWallTile = (
+  ctx: CanvasRenderingContext2D,
+  ground: CanvasImageSource,
+  tileX: number,
+  tileY: number,
+  cellSize: number,
+  x: number,
+  y: number,
+  state: GameState,
+) => {
+  if (isCornerWall(x, y, state) !== CornerType.NOT_CORNER) return;
+  drawTile(ctx, ground, tileX, tileY, cellSize, x, y, state);
+};
+
 const renderClosedHiddenDoor = (
   door: Door,
   ctx: CanvasRenderingContext2D,
@@ -563,27 +683,99 @@ const renderClosedHiddenDoor = (
 ) => {
   switch (door.side) {
     case Side.RIGHT: {
-      drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y, state);
-      drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y - 1, state);
-      drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y + 1, state);
+      drawDoorWallTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y, state);
+      drawDoorWallTile(
+        ctx,
+        ground,
+        4,
+        5,
+        cellSize,
+        door.x + 1,
+        door.y - 1,
+        state,
+      );
+      drawDoorWallTile(
+        ctx,
+        ground,
+        4,
+        5,
+        cellSize,
+        door.x + 1,
+        door.y + 1,
+        state,
+      );
       break;
     }
     case Side.LEFT: {
-      drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y, state);
-      drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y - 1, state);
-      drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y + 1, state);
+      drawDoorWallTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y, state);
+      drawDoorWallTile(
+        ctx,
+        ground,
+        0,
+        5,
+        cellSize,
+        door.x - 1,
+        door.y - 1,
+        state,
+      );
+      drawDoorWallTile(
+        ctx,
+        ground,
+        0,
+        5,
+        cellSize,
+        door.x - 1,
+        door.y + 1,
+        state,
+      );
       break;
     }
     case Side.UP: {
-      drawTile(ctx, ground, 2, 4, cellSize, door.x, door.y - 1, state);
-      drawTile(ctx, ground, 2, 4, cellSize, door.x + 1, door.y - 1, state);
-      drawTile(ctx, ground, 2, 4, cellSize, door.x - 1, door.y - 1, state);
+      drawDoorWallTile(ctx, ground, 2, 4, cellSize, door.x, door.y - 1, state);
+      drawDoorWallTile(
+        ctx,
+        ground,
+        2,
+        4,
+        cellSize,
+        door.x + 1,
+        door.y - 1,
+        state,
+      );
+      drawDoorWallTile(
+        ctx,
+        ground,
+        2,
+        4,
+        cellSize,
+        door.x - 1,
+        door.y - 1,
+        state,
+      );
       break;
     }
     case Side.DOWN: {
-      drawTile(ctx, ground, 2, 6, cellSize, door.x, door.y + 1, state);
-      drawTile(ctx, ground, 2, 6, cellSize, door.x + 1, door.y + 1, state);
-      drawTile(ctx, ground, 2, 6, cellSize, door.x - 1, door.y + 1, state);
+      drawDoorWallTile(ctx, ground, 2, 6, cellSize, door.x, door.y + 1, state);
+      drawDoorWallTile(
+        ctx,
+        ground,
+        2,
+        6,
+        cellSize,
+        door.x + 1,
+        door.y + 1,
+        state,
+      );
+      drawDoorWallTile(
+        ctx,
+        ground,
+        2,
+        6,
+        cellSize,
+        door.x - 1,
+        door.y + 1,
+        state,
+      );
       break;
     }
   }
@@ -598,21 +790,108 @@ const renderClosedDoor = (
 ) => {
   switch (door.side) {
     case Side.RIGHT: {
-      drawTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y, state);
+      drawDoorWallTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y, state);
       break;
     }
     case Side.LEFT: {
-      drawTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y, state);
+      drawDoorWallTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y, state);
       break;
     }
     case Side.UP: {
-      drawTile(ctx, ground, 2, 4, cellSize, door.x, door.y - 1, state);
+      drawDoorWallTile(ctx, ground, 2, 4, cellSize, door.x, door.y - 1, state);
       break;
     }
     case Side.DOWN: {
-      drawTile(ctx, ground, 2, 6, cellSize, door.x, door.y + 1, state);
+      drawDoorWallTile(ctx, ground, 2, 6, cellSize, door.x, door.y + 1, state);
       break;
     }
+  }
+};
+
+// Door leaf palette: warm wood reads as an ordinary unlocked door, cold iron
+// as a locked one, and brass fittings carry the lock detail.
+const DOOR_WOOD = '#8a5a2b';
+const DOOR_WOOD_SEAM = '#6b4220';
+const DOOR_WOOD_EDGE = '#43290f';
+const DOOR_LOCKED = '#5a5a66';
+const DOOR_LOCKED_SEAM = '#43434e';
+const DOOR_LOCKED_EDGE = '#2b2b34';
+const DOOR_BRASS = '#d9a83f';
+const DOOR_HOLE = '#1f1608';
+
+const doorThickness = (cellSize: number): number =>
+  Math.max(5, Math.round(cellSize / 6));
+
+// The closed door leaf on the shared edge between the two door cells. The
+// leaf is thick enough to read clearly, is textured with seams and shaded
+// edges, and shows the lock state at a glance: iron with a brass keyhole
+// plate when locked, wood with a brass handle when unlocked.
+const drawClosedDoor = (
+  ctx: CanvasRenderingContext2D,
+  door: Door,
+  cellSize: number,
+) => {
+  const thickness = doorThickness(cellSize);
+  const half = Math.floor(thickness / 2);
+  const vertical = door.side === Side.RIGHT || door.side === Side.LEFT;
+  const edgeX = door.x * cellSize + (door.side === Side.RIGHT ? cellSize : 0);
+  const edgeY = door.y * cellSize + (door.side === Side.DOWN ? cellSize : 0);
+  const leafX = vertical ? edgeX - half : door.x * cellSize;
+  const leafY = vertical ? door.y * cellSize : edgeY - half;
+  const leafW = vertical ? thickness : cellSize;
+  const leafH = vertical ? cellSize : thickness;
+  const midX = door.x * cellSize + cellSize / 2;
+  const midY = door.y * cellSize + cellSize / 2;
+
+  // Leaf base and shaded long edges
+  ctx.fillStyle = door.locked ? DOOR_LOCKED : DOOR_WOOD;
+  ctx.fillRect(leafX, leafY, leafW, leafH);
+  ctx.fillStyle = door.locked ? DOOR_LOCKED_EDGE : DOOR_WOOD_EDGE;
+  if (vertical) {
+    ctx.fillRect(leafX, leafY, 1, cellSize);
+    ctx.fillRect(leafX + thickness - 1, leafY, 1, cellSize);
+  } else {
+    ctx.fillRect(leafX, leafY, cellSize, 1);
+    ctx.fillRect(leafX, leafY + thickness - 1, cellSize, 1);
+  }
+
+  // Seam texture at every quarter along the leaf
+  ctx.fillStyle = door.locked ? DOOR_LOCKED_SEAM : DOOR_WOOD_SEAM;
+  for (let i = 1; i <= 3; i++) {
+    const along = Math.round((i * cellSize) / 4);
+    if (vertical) {
+      ctx.fillRect(leafX, door.y * cellSize + along, thickness, 1);
+    } else {
+      ctx.fillRect(door.x * cellSize + along, leafY, 1, thickness);
+    }
+  }
+
+  // Brass fitting in the middle of the leaf
+  const fittingX = vertical ? edgeX : midX;
+  const fittingY = vertical ? midY : edgeY;
+  if (door.locked) {
+    // Keyhole plate with a dark hole: a round chamber above a slot
+    const plateLen = Math.max(10, Math.round(cellSize / 4));
+    ctx.fillStyle = DOOR_BRASS;
+    if (vertical) {
+      ctx.fillRect(edgeX - half, midY - plateLen / 2, thickness, plateLen);
+    } else {
+      ctx.fillRect(midX - plateLen / 2, edgeY - half, plateLen, thickness);
+    }
+    ctx.fillStyle = DOOR_HOLE;
+    if (vertical) {
+      ctx.fillRect(fittingX - 1, midY - 3, 2, 2);
+      ctx.fillRect(fittingX - 1, midY - 1, 2, 4);
+    } else {
+      ctx.fillRect(midX - 3, fittingY - 1, 2, 2);
+      ctx.fillRect(midX - 1, fittingY - 1, 4, 2);
+    }
+  } else {
+    // Ring handle: a brass plate with a dark centre
+    ctx.fillStyle = DOOR_BRASS;
+    ctx.fillRect(fittingX - 2, fittingY - 2, 4, 4);
+    ctx.fillStyle = DOOR_HOLE;
+    ctx.fillRect(fittingX - 1, fittingY - 1, 2, 2);
   }
 };
 
@@ -621,22 +900,34 @@ const drawDoorEdgeStrip = (
   door: Door,
   cellSize: number,
 ) => {
+  const thickness = doorThickness(cellSize);
+  const half = Math.floor(thickness / 2);
   switch (door.side) {
     case Side.RIGHT: {
       ctx.fillRect(
-        door.x * cellSize + (cellSize - 2),
+        door.x * cellSize + (cellSize - half),
         door.y * cellSize,
-        4,
+        thickness,
         cellSize,
       );
       break;
     }
     case Side.LEFT: {
-      ctx.fillRect(door.x * cellSize - 2, door.y * cellSize, 4, cellSize);
+      ctx.fillRect(
+        door.x * cellSize - half,
+        door.y * cellSize,
+        thickness,
+        cellSize,
+      );
       break;
     }
     case Side.UP: {
-      ctx.fillRect(door.x * cellSize, door.y * cellSize - 2, cellSize, 4);
+      ctx.fillRect(
+        door.x * cellSize,
+        door.y * cellSize - half,
+        cellSize,
+        thickness,
+      );
       break;
     }
     case Side.DOWN: {
@@ -685,11 +976,10 @@ const renderDoor = (
     }
   }
   if (door && !door.hidden && !door.open && (nearDiscovered || farDiscovered)) {
-    ctx.fillStyle = 'brown';
     if (door.side === Side.UP && !farDiscovered) {
       drawTile(ctx, ground, 13, 1, cellSize, door.x, door.y - 1, state);
     }
-    drawDoorEdgeStrip(ctx, door, cellSize);
+    drawClosedDoor(ctx, door, cellSize);
     if (door.locked && debugMode) {
       ctx.fillStyle = 'grey';
       switch (door.side) {

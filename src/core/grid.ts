@@ -10,6 +10,11 @@ import { Side } from '../types';
 
 export const EMPTY = ' ';
 export const COLLAPSED = '?';
+// Marker for the sealed far side of a closed door with an undiscovered far
+// side. It renders as wall, but unlike real rock it is a doorway — corner
+// classification treats it as wall for closed sides yet never as the
+// protruding stem of a junction.
+export const SEALED_DOOR = '+';
 export const WALL = '#';
 
 export const toArray = (row: string): string[] => {

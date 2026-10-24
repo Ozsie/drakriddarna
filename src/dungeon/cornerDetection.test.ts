@@ -65,9 +65,10 @@ describe('Corner Detection Algorithm', () => {
     expect(detectCornerType(grid, 6, 4)).toBe(CornerType.OUTER_TOP_RIGHT);
     expect(detectCornerType(grid, 8, 4)).toBe(CornerType.LEFT_END);
     expect(detectCornerType(grid, 10, 4)).toBe(CornerType.INNER_BOTTOM_RIGHT);
-    expect(detectCornerType(grid, 2, 5)).toBe(
-      CornerType.THREE_WAY_INTERSECTION_RIGHT,
-    );
+    // The cell (2,5) sits inside a thick wall mass beside corridor J; it
+    // renders as the corner cap of room F's floor at (3,6), not as a junction
+    // whose stem is embedded in the mass
+    expect(detectCornerType(grid, 2, 5)).toBe(CornerType.INNER_TOP_LEFT);
     expect(detectCornerType(grid, 6, 5)).toBe(CornerType.OUTER_BOTTOM_RIGHT);
     expect(detectCornerType(grid, 8, 6)).toBe(CornerType.LEFT_END);
     expect(detectCornerType(grid, 9, 6)).toBe(CornerType.OUTER_TOP_RIGHT);
@@ -116,5 +117,95 @@ describe('Corner Detection Algorithm', () => {
     expect(detectCornerType(grid, 4, 11)).toBe(CornerType.INNER_BOTTOM_RIGHT);
     expect(detectCornerType(grid, 6, 11)).toBe(CornerType.INNER_BOTTOM_LEFT);
     expect(detectCornerType(grid, 9, 11)).toBe(CornerType.INNER_BOTTOM_RIGHT);
+  });
+
+  it('classifies corners against the visible layout when discovered rooms are given', () => {
+    // Room A discovered; room B still hidden to the south-east
+    const grid = [
+      '#####',
+      '#A###',
+      '#A###',
+      '# ###',
+      '###B#',
+      '###B#',
+      '#####',
+    ];
+
+    // Full layout: concave corner where B's floor touches the wall from (2,3)
+    expect(detectCornerType(grid, 2, 3)).toBe(CornerType.INNER_TOP_LEFT);
+
+    // Only A discovered: B's floor is fog; the player instead sees the
+    // concave bottom-right corner of room A on the very same wall cell
+    expect(detectCornerType(grid, 2, 3, ['A'])).toBe(
+      CornerType.INNER_BOTTOM_RIGHT,
+    );
+
+    // B discovered too: the wall is the corner between both rooms
+    expect(detectCornerType(grid, 2, 3, ['A', 'B'])).toBe(
+      CornerType.INNER_TOP_LEFT,
+    );
+  });
+
+  it('does not draw outer corners from floor the player cannot see', () => {
+    // Room A discovered; room B starts east of the wall below it
+    const grid = ['#####', '#AAA#', '####B', '####B', '#####'];
+
+    // Full layout: convex corner where the floors of A and B meet
+    expect(detectCornerType(grid, 3, 2)).toBe(CornerType.OUTER_TOP_RIGHT);
+
+    // Only A discovered: B is fog, so the wall is an ordinary wall piece
+    expect(detectCornerType(grid, 3, 2, ['A'])).toBe(CornerType.NOT_CORNER);
+
+    // B discovered: the corner appears
+    expect(detectCornerType(grid, 3, 2, ['A', 'B'])).toBe(
+      CornerType.OUTER_TOP_RIGHT,
+    );
+  });
+
+  it('treats collapsed rubble as visible floor regardless of discovery', () => {
+    const grid = ['#####', '#???#', '#???#', '#####'];
+
+    // COLLAPSED cells are never part of discoveredRooms but always render as
+    // rubble once visible, so they count as floor for corner classification
+    expect(detectCornerType(grid, 0, 0, [])).toBe(CornerType.INNER_TOP_LEFT);
+    expect(detectCornerType(grid, 4, 3, [])).toBe(
+      CornerType.INNER_BOTTOM_RIGHT,
+    );
+  });
+
+  it('does not draw door-jamb corners while the corridor beyond is undiscovered', () => {
+    // Room A with a side door into corridor D (the e1m0 room A doorway shape)
+    const grid = ['######', '#AAA##', '#AAA##', '#AAAD#', '#AAA##', '######'];
+
+    // Corridor discovered: the doorway flanks are the jamb corners of the
+    // opening between room A and corridor D
+    expect(detectCornerType(grid, 4, 2, ['A', 'D'])).toBe(
+      CornerType.OUTER_BOTTOM_LEFT,
+    );
+    expect(detectCornerType(grid, 4, 4, ['A', 'D'])).toBe(
+      CornerType.OUTER_TOP_LEFT,
+    );
+
+    // Corridor undiscovered: the wall reads as a plain wall with a door,
+    // no corner shapes over the fog
+    expect(detectCornerType(grid, 4, 2, ['A'])).toBe(CornerType.NOT_CORNER);
+    expect(detectCornerType(grid, 4, 4, ['A'])).toBe(CornerType.NOT_CORNER);
+  });
+
+  it('passes discovered rooms through to autoDetectCorners', () => {
+    const grid = ['#####', '#AAA#', '####B', '####B', '#####'];
+
+    const visible = autoDetectCorners(grid, ['A']);
+    expect(
+      visible.find(
+        (corner) => corner.position.x === 3 && corner.position.y === 2,
+      ),
+    ).toBeUndefined();
+
+    const discovered = autoDetectCorners(grid, ['A', 'B']);
+    expect(discovered).toContainEqual({
+      position: { x: 3, y: 2 },
+      type: CornerType.OUTER_TOP_RIGHT,
+    });
   });
 });
