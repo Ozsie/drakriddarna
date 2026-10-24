@@ -47,7 +47,31 @@ export const e1m0: Dungeon = defineDungeon({
         2,
         9,
         CellAlignment.CEILING,
-        { color: '#c29042', radius: 3, intensity: 0.5, softness: 0.7 },
+        { color: '#c29042', radius: 3, intensity: 0.5, softness: 0.7, effect: 'flicker' },
+      ],
+      [
+        8,
+        10,
+        CellAlignment.BOTTOM_RIGHT,
+        { color: '#c29042', radius: 3, intensity: 0.5, softness: 0.7, effect: 'flicker' },
+      ],
+      [
+        8,
+        7,
+        CellAlignment.TOP_RIGHT,
+        { color: '#c29042', radius: 3, intensity: 0.5, softness: 0.7, effect: 'flicker' },
+      ],
+      [
+        9,
+        1,
+        CellAlignment.TOP_RIGHT,
+        { color: '#c29042', radius: 3, intensity: 0.5, softness: 0.7, effect: 'flicker' },
+      ],
+      [
+        9,
+        3,
+        CellAlignment.BOTTOM_RIGHT,
+        { color: '#c29042', radius: 3, intensity: 0.5, softness: 0.7, effect: 'flicker' },
       ],
     ],
     doors: [
