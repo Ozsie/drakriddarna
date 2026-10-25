@@ -12,15 +12,6 @@ import {
   replaceDeadHeroes,
   resetLiveHeroes,
 } from './hero/HeroLogic';
-export {
-  applyStartingEquipment,
-  getPartyAverageLevel,
-  levelUp,
-  liveHeroes,
-  replaceDeadHeroes,
-  resetLiveHeroes,
-  rewardLiveHeroes,
-} from './hero/HeroLogic';
 import { resetOnNext, resetOnNextDungeon } from './items/ItemLogic';
 import {
   drawNextEvent,
@@ -41,85 +32,8 @@ import { clearActorAnimations } from './core';
 import { setNextDungeonTransitionProvider } from './interactables/InteractableLogic';
 import { soundEffectManager } from './audio';
 
-// Re-export core modules for backwards compatibility and ease of access
-export {
-  i18n,
-  doReRender,
-  addLog,
-  saveReloadGuard,
-  debouncedSaveReloadGuard,
-} from './core/logger';
-export { roll, shuffle, setRng, resetRng, createSeededRng } from './core/dice';
-export {
-  COLLAPSED,
-  EMPTY,
-  WALL,
-  findCell,
-  findNeighbouringHeroes,
-  getDist,
-  hasLineOfSight,
-  isDiscovered,
-  isNeighbouring,
-  isRoomDiscovered,
-  isSamePosition,
-  isWalkable,
-  normaliseVector,
-  stepAlongLine,
-  toArray,
-} from './core/grid';
-export {
-  ATTACK_BONUS,
-  RE_ROLL_ATTACK,
-  canAct,
-  createDamageIndicator,
-  createIndicator,
-  doorAsActor,
-  getDamageString,
-  getEffectiveMaxMovement,
-  getEffectiveMaxHealth,
-  removeDamageIndicator,
-  takeDamage,
-} from './core/combat';
-export {
-  DifficultLevels,
-  DEFAULT_DIFFICULTY_ID,
-  getDifficulty,
-  gameMasters,
-  getGameMaster,
-  DEFAULT_GAME_MASTER_ID,
-  GAME_MASTER_ALIASES,
-} from './core/DifficultLevels';
-export {
-  recordActorStep,
-  getActorVisualPosition,
-  isActorAnimating,
-  hasActiveActorAnimations,
-  getActorRemainingAnimationDuration,
-  sleep,
-  snapActorPosition,
-  clearActorAnimations,
-  setActorMovementDuration,
-  getActorMovementDuration,
-  resetActorMovementDuration,
-  flashActor,
-  getActorFlashIntensity,
-  isActorFlashing,
-  DEFAULT_ACTOR_MOVEMENT_DURATION_MS,
-} from './core/ActorAnimation';
-export {
-  createBloodSplatter,
-  createProjectile,
-  renderBloodSplatters,
-  renderProjectiles,
-  renderActorFlash,
-  BLOOD_SPLATTER_DURATION_MS,
-  PROJECTILE_DURATION_MS,
-} from './combat/CombatEffects';
-export {
-  monsterActions,
-  DEFAULT_MONSTER_TURN_OPTIONS,
-  type MonsterTurnOptions,
-} from './monsters/MonsterLogic';
+// Re-exported because gameStateStore consumes it through the game module.
+export { removeDamageIndicator } from './core/combat';
 
 export const save = (state: GameState) => {
   doReRender(state);
@@ -169,18 +83,6 @@ export const loadState = (newState: GameState) => {
   addLog(newState, 'logs.gameLoaded');
   doReRender(newState);
   return newState;
-};
-
-export const load = (currentState: GameState): GameState => {
-  if (typeof localStorage !== 'undefined') {
-    const stateString = localStorage.getItem('state');
-    if (stateString) {
-      const state: GameState = JSON.parse(stateString) as GameState;
-      return loadState(state);
-    }
-  }
-  addLog(currentState, 'logs.loadFailed');
-  return currentState;
 };
 
 export const init = (
@@ -531,29 +433,11 @@ const scrollTo = (pos: Position, cellSize: number) => {
   }
 };
 
-import {
-  openBetweenDungeons,
-  completeBetweenDungeonsAndStartNext,
-} from './dungeon/BetweenDungeonsLogic';
+import { openBetweenDungeons } from './dungeon/BetweenDungeonsLogic';
 
 export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
     openBetweenDungeons(state);
-  }
-};
-
-export const advanceToNextDungeon = (state: GameState) => {
-  if (state.betweenDungeons) {
-    completeBetweenDungeonsAndStartNext(state);
-    if (state.dungeon?.startingPositions?.[0]) {
-      scrollTo(
-        {
-          x: state.dungeon.startingPositions[0].x,
-          y: state.dungeon.startingPositions[0].y,
-        },
-        state.settings['cellSize'] as number,
-      );
-    }
   }
 };
 

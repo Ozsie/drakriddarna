@@ -101,7 +101,7 @@ describe('Orc Drums event and resetEventEffects', () => {
       used: false,
     };
 
-    eventEffects.theOrcDrums(state, event);
+    eventEffects.theOrchDrums(state, event);
 
     expect(orc.actions).toBe(3);
     expect(troll.actions).toBe(2);
@@ -144,7 +144,7 @@ describe('Orc Drums event and resetEventEffects', () => {
       used: false,
     };
 
-    eventEffects.theOrcDrums(state, event);
+    eventEffects.theOrchDrums(state, event);
 
     expect(orc1.actions).toBe(2);
     expect(orc2.actions).toBe(2);
@@ -178,7 +178,7 @@ describe('Orc Drums event and resetEventEffects', () => {
       used: false,
     };
 
-    eventEffects.theOrcDrums(state, event);
+    eventEffects.theOrchDrums(state, event);
 
     expect(orc1.actions).toBe(3);
     expect(orc2.actions).toBe(3);
@@ -235,7 +235,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     number: 6,
     description: 'events.lostOrch.description',
     descriptionTranslationKey: 'events.lostOrch.description',
-    effect: 'theLostOrc',
+    effect: 'theLostOrch',
     used: false,
   };
 
@@ -316,7 +316,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       expect(state.dungeon.layout.monsters.length).toBe(0);
 
       const eventOrc1 = { ...orcEvent, used: false };
-      eventEffects.theLostOrc(state, eventOrc1);
+      eventEffects.theLostOrch(state, eventOrc1);
       expect(eventOrc1.used).toBe(true);
       expect(state.dungeon.layout.monsters.length).toBe(0);
 
@@ -328,7 +328,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       expect(state.dungeon.layout.monsters.length).toBe(0);
 
       const eventOrc2 = { ...orcEvent, used: false };
-      eventEffects.theLostOrc(state, eventOrc2);
+      eventEffects.theLostOrch(state, eventOrc2);
       expect(eventOrc2.used).toBe(true);
       expect(state.dungeon.layout.monsters.length).toBe(0);
 
@@ -341,7 +341,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       expect(state.dungeon.layout.monsters[0].type).toBe(MonsterType.TROLL);
 
       const eventOrc3 = { ...orcEvent, used: false };
-      eventEffects.theLostOrc(state, eventOrc3);
+      eventEffects.theLostOrch(state, eventOrc3);
       expect(eventOrc3.used).toBe(true);
       expect(state.dungeon.layout.monsters.length).toBe(2);
       expect(state.dungeon.layout.monsters[1].type).toBe(MonsterType.ORC);
@@ -499,7 +499,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       });
 
       const event = { ...orcEvent, used: false };
-      eventEffects.theLostOrc(state, event);
+      eventEffects.theLostOrch(state, event);
 
       expect(event.used).toBe(true);
       expect(state.dungeon.layout.monsters.length).toBe(1);
@@ -554,7 +554,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       });
 
       const event = { ...orcEvent, used: false };
-      eventEffects.theLostOrc(state, event);
+      eventEffects.theLostOrch(state, event);
 
       expect(state.dungeon.layout.monsters.length).toBe(1);
       const spawnedOrc = state.dungeon.layout.monsters[0];
@@ -610,7 +610,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       });
 
       const event = { ...orcEvent, used: false };
-      eventEffects.theLostOrc(state, event);
+      eventEffects.theLostOrch(state, event);
 
       expect(state.dungeon.layout.monsters.length).toBe(1);
       const spawnedOrc = state.dungeon.layout.monsters[0];

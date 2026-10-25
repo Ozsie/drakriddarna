@@ -37,7 +37,6 @@ export const getEventMinSpawnDistance = (
   }
   return (
     difficulty?.events?.minMonsterSpawnDistance ??
-    difficulty?.events?.minSpawnDistance ??
     (difficulty?.id === 'storyTeller' || difficulty?.id === 'easy'
       ? 4
       : difficulty?.id === 'brutalOverlord' || difficulty?.id === 'hard'
@@ -61,7 +60,6 @@ export const getEarliestMonsterEventRound = (
   }
   return (
     difficulty?.events?.earliestMonsterRound ??
-    difficulty?.events?.earliestRound ??
     (difficulty?.id === 'storyTeller' || difficulty?.id === 'easy'
       ? 4
       : difficulty?.id === 'brutalOverlord' || difficulty?.id === 'hard'

@@ -1,7 +1,6 @@
 import type {
   Actor,
   Dungeon,
-  GameEvent,
   GameState,
   Layout,
   Position,
@@ -9,7 +8,6 @@ import type {
   Weapon,
 } from '../types';
 import {
-  assertNever,
   CellAlignment,
   Colour,
   ItemType,
@@ -346,7 +344,7 @@ export const eventEffects: Record<
     state.roundActionsDelta = (state.roundActionsDelta ?? 0) - 1;
     event.used = true;
   },
-  theLostOrc: (state: GameState, event: TurnEvent) => {
+  theLostOrch: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     const earliestRound = getEarliestMonsterEventRound(state);
     const currentRound = (state.turnCount ?? 0) + 1;
@@ -356,9 +354,6 @@ export const eventEffects: Record<
     }
     spawnRandomMonster(state, MonsterType.ORC);
     event.used = true;
-  },
-  theLostOrch: (state: GameState, event: TurnEvent) => {
-    eventEffects.theLostOrc(state, event);
   },
   theDragonsBreath: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
@@ -436,9 +431,6 @@ export const eventEffects: Record<
       }
     }
     event.used = true;
-  },
-  foreSight: (state: GameState, event: TurnEvent) => {
-    eventEffects.foresight(state, event);
   },
   earthquake: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
@@ -547,7 +539,7 @@ export const eventEffects: Record<
     }
     event.used = true;
   },
-  theOrcDrums: (state: GameState, event: TurnEvent) => {
+  theOrchDrums: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     const visibleOrcs = findVisibleMonsters(state).filter(
       (monster) => monster.type === MonsterType.ORC,
@@ -573,9 +565,6 @@ export const eventEffects: Record<
       );
     });
     event.used = true;
-  },
-  theOrchDrums: (state: GameState, event: TurnEvent) => {
-    eventEffects.theOrcDrums(state, event);
   },
   theSymbolOfWeakness: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
@@ -622,61 +611,6 @@ export const registerEventEffect = (
   handler: (state: GameState, event: TurnEvent) => void,
 ): void => {
   eventEffects[key] = handler;
-};
-
-export const executeGameEvent = (state: GameState, event: GameEvent): void => {
-  switch (event.type) {
-    case 'SUN_STONE':
-      eventEffects.sunStone(state, event);
-      break;
-    case 'HUNGRY_TROLL':
-      eventEffects.theHungryTroll(state, event);
-      break;
-    case 'TIME_PORTAL':
-      eventEffects.timePortal(state, event);
-      break;
-    case 'FOUNTAIN_OF_YOUTH':
-      eventEffects.fountainOfYouth(state, event);
-      break;
-    case 'SLEEPING_GAS_CLOUD':
-      eventEffects.sleepingGasCloud(state, event);
-      break;
-    case 'LOST_ORC':
-      eventEffects.theLostOrc(state, event);
-      break;
-    case 'DRAGONS_BREATH':
-      eventEffects.theDragonsBreath(state, event);
-      break;
-    case 'LANDSLIDE':
-      eventEffects.landslide(state, event);
-      break;
-    case 'MAGIC_NODE':
-      eventEffects.fountainOfYouth(state, event);
-      break;
-    case 'FORESIGHT':
-      eventEffects.foresight(state, event);
-      break;
-    case 'EARTHQUAKE':
-      eventEffects.earthquake(state, event);
-      break;
-    case 'MAGIC_STORM':
-      eventEffects.theMagicStorm(state, event);
-      break;
-    case 'ELEMENTAL_WEAPON':
-      eventEffects.theElementalWeapon(state, event);
-      break;
-    case 'ORC_DRUMS':
-      eventEffects.theOrcDrums(state, event);
-      break;
-    case 'SYMBOL_OF_WEAKNESS':
-      eventEffects.theSymbolOfWeakness(state, event);
-      break;
-    case 'HEXAGRAM':
-      eventEffects.theHexagram(state, event);
-      break;
-    default:
-      assertNever(event);
-  }
 };
 
 const restoreDisabledItems = (state: GameState) => {

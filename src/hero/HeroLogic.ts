@@ -73,7 +73,6 @@ export const newHero = (
   const startingEquipment = difficulty?.startingEquipment;
   const initialWeapon = startingEquipment?.weapon ?? weapons[0];
 
-  initialWeapon.amountInDeck--;
   return {
     id: name.toLowerCase().replace(/ /g, '_'),
     name: name,
