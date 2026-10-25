@@ -16,12 +16,12 @@ A dungeon layout is a rectangular ASCII grid (`List<String>`, all rows the
 same length — pad shorter rows with spaces on load, keep them rectangular on
 resize):
 
-| Char | Meaning |
-|---|---|
-| `#` | Wall |
-| ` ` (space) | Void — outside the dungeon; nothing may be placed here |
-| `?` | Collapsed corridor cell (see `collapsedCorridor`) |
-| `A`–`Z` | A cell belonging to the room or corridor identified by that letter |
+| Char        | Meaning                                                            |
+| ----------- | ------------------------------------------------------------------ |
+| `#`         | Wall                                                               |
+| ` ` (space) | Void — outside the dungeon; nothing may be placed here             |
+| `?`         | Collapsed corridor cell (see `collapsedCorridor`)                  |
+| `A`–`Z`     | A cell belonging to the room or corridor identified by that letter |
 
 Room vs corridor is **positional, not typographic**: any letter listed in
 `corridors` is a corridor; every other letter is a room. Rooms are discovered
@@ -44,16 +44,16 @@ Consequences for the editor:
 
 Mirrors `Campaign` (data subset):
 
-| Field | Type | Notes |
-|---|---|---|
-| `id` | String | folder name, must be a valid directory name (`[a-zA-Z][a-zA-Z0-9]*`) |
-| `translationNamespace` | String | key prefix for translations; default = `id` (iceDragonTreasure uses `iceDragon`, hence the explicit field) |
-| `nameKey` | String | generated as `campaign.<ns>.name` |
-| `dungeonIds` | List<String> | ordered chain; dungeon order defines progression (each dungeon links to the next) |
-| `heroes` | List<HeroDoc> | see below |
-| `itemDeck` / `magicItemDeck` | List<DeckEntry> | references into the catalog, each with a count |
-| `tileset` | String? | campaign-wide tileset path |
-| `events` | List<Int>? | campaign-level event deck: **data-only v1** — restricts which global event numbers may be drawn (per dungeon in `DungeonDoc.events`) |
+| Field                        | Type            | Notes                                                                                                                                |
+| ---------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                         | String          | folder name, must be a valid directory name (`[a-zA-Z][a-zA-Z0-9]*`)                                                                 |
+| `translationNamespace`       | String          | key prefix for translations; default = `id` (iceDragonTreasure uses `iceDragon`, hence the explicit field)                           |
+| `nameKey`                    | String          | generated as `campaign.<ns>.name`                                                                                                    |
+| `dungeonIds`                 | List<String>    | ordered chain; dungeon order defines progression (each dungeon links to the next)                                                    |
+| `heroes`                     | List<HeroDoc>   | see below                                                                                                                            |
+| `itemDeck` / `magicItemDeck` | List<DeckEntry> | references into the catalog, each with a count                                                                                       |
+| `tileset`                    | String?         | campaign-wide tileset path                                                                                                           |
+| `events`                     | List<Int>?      | campaign-level event deck: **data-only v1** — restricts which global event numbers may be drawn (per dungeon in `DungeonDoc.events`) |
 
 ### HeroDoc
 
@@ -65,68 +65,68 @@ custom `Actor` heroes (stats, starting equipment, sprite) are out of scope.
 
 Mirrors `DeclarativeDungeon`:
 
-| Field | Type | Notes |
-|---|---|---|
-| `id` | String | file stem for `dungeons/<id>.ts`, e.g. `e1m0` |
-| `nameKey` / `introKey` | String | `campaign.<ns>.<id>.name` / `.intro` |
-| `grid` | List<String> | see above |
-| `corridors` | List<Char> | letters that are corridors |
-| `discoveredRooms` | List<Char> | rooms visible at start; default `['A']` |
-| `startingPositions` | List<Position> | up to 4, order matters (hero order) |
-| `doors` | List<DoorDoc> | |
-| `monsters` | List<MonsterDoc> | |
-| `secrets` | List<SecretDoc> | |
-| `notes` | List<NoteDoc> | |
-| `items` | List<ItemPlacement> | floor items; `item` optional (random loot) |
-| `interactables` | List<InteractableDoc> | |
-| `lights` | List<LightDoc> | |
-| `pillars` / `pits` | List<Position> | |
-| `winConditions` | List<WinConditionDoc> | |
-| `events` | List<Int>? | allowed global event numbers in this dungeon |
-| `ambientLight` | Double? | 0..1, default 1 |
-| `tileset` | String? | per-dungeon tileset override |
-| `music` | String? | path under `static/` |
-| `collapsedCorridor` | Char? | corridor letter that resets to collapsed |
-| `portal` | Position? | |
-| `onRoomDiscovered` | Map<Char, String>? | room letter -> translation key of a log message |
+| Field                  | Type                  | Notes                                           |
+| ---------------------- | --------------------- | ----------------------------------------------- |
+| `id`                   | String                | file stem for `dungeons/<id>.ts`, e.g. `e1m0`   |
+| `nameKey` / `introKey` | String                | `campaign.<ns>.<id>.name` / `.intro`            |
+| `grid`                 | List<String>          | see above                                       |
+| `corridors`            | List<Char>            | letters that are corridors                      |
+| `discoveredRooms`      | List<Char>            | rooms visible at start; default `['A']`         |
+| `startingPositions`    | List<Position>        | up to 4, order matters (hero order)             |
+| `doors`                | List<DoorDoc>         |                                                 |
+| `monsters`             | List<MonsterDoc>      |                                                 |
+| `secrets`              | List<SecretDoc>       |                                                 |
+| `notes`                | List<NoteDoc>         |                                                 |
+| `items`                | List<ItemPlacement>   | floor items; `item` optional (random loot)      |
+| `interactables`        | List<InteractableDoc> |                                                 |
+| `lights`               | List<LightDoc>        |                                                 |
+| `pillars` / `pits`     | List<Position>        |                                                 |
+| `winConditions`        | List<WinConditionDoc> |                                                 |
+| `events`               | List<Int>?            | allowed global event numbers in this dungeon    |
+| `ambientLight`         | Double?               | 0..1, default 1                                 |
+| `tileset`              | String?               | per-dungeon tileset override                    |
+| `music`                | String?               | path under `static/`                            |
+| `collapsedCorridor`    | Char?                 | corridor letter that resets to collapsed        |
+| `portal`               | Position?             |                                                 |
+| `onRoomDiscovered`     | Map<Char, String>?    | room letter -> translation key of a log message |
 
 ### DoorDoc
 
-| Field | Type |
-|---|---|
-| `position` | Position |
-| `side` | `Side` enum (`UP`, `DOWN`, `LEFT`, `RIGHT` — edge of the cell the door sits on) |
-| `locked`, `trapped`, `hidden`, `open`, `reinforced` | Boolean (default false) |
-| `trapAttacks` | Int (only when `trapped`) |
-| `id` | String? |
+| Field                                               | Type                                                                            |
+| --------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `position`                                          | Position                                                                        |
+| `side`                                              | `Side` enum (`UP`, `DOWN`, `LEFT`, `RIGHT` — edge of the cell the door sits on) |
+| `locked`, `trapped`, `hidden`, `open`, `reinforced` | Boolean (default false)                                                         |
+| `trapAttacks`                                       | Int (only when `trapped`)                                                       |
+| `id`                                                | String?                                                                         |
 
 ### MonsterDoc
 
-| Field | Type |
-|---|---|
-| `type` | catalog monster type id (e.g. `ORC`) |
-| `colour` | `Colour` enum (`Red`, `Yellow`, `Green`, `Blue` — verify exact members in `src/types.ts`) |
-| `position` | Position |
-| `inventory` | List<catalog item refs> (usually a single magic item) |
-| `id` | String? |
+| Field       | Type                                                                                      |
+| ----------- | ----------------------------------------------------------------------------------------- |
+| `type`      | catalog monster type id (e.g. `ORC`)                                                      |
+| `colour`    | `Colour` enum (`Red`, `Yellow`, `Green`, `Blue` — verify exact members in `src/types.ts`) |
+| `position`  | Position                                                                                  |
+| `inventory` | List<catalog item refs> (usually a single magic item)                                     |
+| `id`        | String?                                                                                   |
 
 ### SecretDoc
 
-| Field | Type |
-|---|---|
-| `type` | `SecretType` enum: `EQUIPMENT`, `MAGIC_ITEM`, `TRAP_DOOR`, `NOTE` |
-| `position` | Position |
-| `nameKey` | String? (required for non-note secrets; `campaign.<ns>.secrets.<id>.name`) |
-| `item` | catalog item ref? |
-| `revealedBy` | String? |
+| Field        | Type                                                                       |
+| ------------ | -------------------------------------------------------------------------- |
+| `type`       | `SecretType` enum: `EQUIPMENT`, `MAGIC_ITEM`, `TRAP_DOOR`, `NOTE`          |
+| `position`   | Position                                                                   |
+| `nameKey`    | String? (required for non-note secrets; `campaign.<ns>.secrets.<id>.name`) |
+| `item`       | catalog item ref?                                                          |
+| `revealedBy` | String?                                                                    |
 
 ### NoteDoc
 
-| Field | Type |
-|---|---|
-| `position` | Position |
-| `messageKey` | String | `campaign.<ns>.<dungeonId>.notes.<id>` |
-| `id` | String |
+| Field        | Type     |
+| ------------ | -------- | -------------------------------------- |
+| `position`   | Position |
+| `messageKey` | String   | `campaign.<ns>.<dungeonId>.notes.<id>` |
+| `id`         | String   |
 
 ### ItemPlacement / InteractableDoc / LightDoc
 
@@ -142,21 +142,21 @@ Mirrors `DeclarativeDungeon`:
 
 ### WinConditionDoc
 
-| Field | Type |
-|---|---|
-| `type` | `ConditionType`: `KILL_ALL`, `KILL_ALL_OF_TYPE`, `REACH_CELL`, `OPEN_DOOR`, `KILL_AT_LEAST`, `SECRET_FOUND` |
-| `targetCell` | Position? (required for `REACH_CELL`) |
-| `targetMonsterType` | catalog ref? (`KILL_ALL_OF_TYPE`) |
-| `targetSecretId` | String? (`SECRET_FOUND`) |
-| `killMinCount` | Int? (`KILL_AT_LEAST`) |
-| `additionalDescriptionKey` | String? |
+| Field                      | Type                                                                                                        |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `type`                     | `ConditionType`: `KILL_ALL`, `KILL_ALL_OF_TYPE`, `REACH_CELL`, `OPEN_DOOR`, `KILL_AT_LEAST`, `SECRET_FOUND` |
+| `targetCell`               | Position? (required for `REACH_CELL`)                                                                       |
+| `targetMonsterType`        | catalog ref? (`KILL_ALL_OF_TYPE`)                                                                           |
+| `targetSecretId`           | String? (`SECRET_FOUND`)                                                                                    |
+| `killMinCount`             | Int? (`KILL_AT_LEAST`)                                                                                      |
+| `additionalDescriptionKey` | String?                                                                                                     |
 
 ### TranslationsDoc
 
-| Field | Type |
-|---|---|
-| `languages` | List<String> | v1 ships `en` and `sv` (game convention) |
-| `entries` | Map<String, Map<String, String>> | key -> language -> text |
+| Field       | Type                             |
+| ----------- | -------------------------------- | ---------------------------------------- |
+| `languages` | List<String>                     | v1 ships `en` and `sv` (game convention) |
+| `entries`   | Map<String, Map<String, String>> | key -> language -> text                  |
 
 Keys are auto-derived from campaign content (name, intros, notes, secrets,
 interactables, `onRoomDiscovered` messages) and the author edits the texts.

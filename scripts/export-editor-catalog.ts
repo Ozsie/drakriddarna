@@ -47,7 +47,12 @@ type CatalogItem = {
 };
 
 const toItem = (
-  item: { id?: string; name: string; nameTranslationKey?: string; amountInDeck: number },
+  item: {
+    id?: string;
+    name: string;
+    nameTranslationKey?: string;
+    amountInDeck: number;
+  },
   kind: CatalogItem['kind'],
   module: string,
   exportName: string,
@@ -68,11 +73,17 @@ const toItem = (
 };
 
 const itemExport = (
-  items: Array<{ id?: string; name: string; nameTranslationKey?: string; amountInDeck: number }>,
+  items: Array<{
+    id?: string;
+    name: string;
+    nameTranslationKey?: string;
+    amountInDeck: number;
+  }>,
   kind: CatalogItem['kind'],
   module: string,
   exportName: string,
-): CatalogItem[] => items.map((item, index) => toItem(item, kind, module, exportName, index));
+): CatalogItem[] =>
+  items.map((item, index) => toItem(item, kind, module, exportName, index));
 
 // MonsterType values are the runtime identifiers; keys may alias the same
 // value for backwards compatibility (ORC and ORCH are both 'Orc'). Emit one
@@ -86,11 +97,14 @@ const monsterTypes = Object.keys(MonsterType)
     return true;
   })
   .map((member) => {
-    const template = getMonsterTemplate(MonsterType[member as keyof typeof MonsterType]);
+    const template = getMonsterTemplate(
+      MonsterType[member as keyof typeof MonsterType],
+    );
     const stats: Record<string, number> = {};
     if (template?.health !== undefined) stats.health = template.health;
     if (template?.defense !== undefined) stats.defense = template.defense;
-    if (template?.experience !== undefined) stats.experience = template.experience;
+    if (template?.experience !== undefined)
+      stats.experience = template.experience;
     return {
       id: member,
       import: { module: 'types', export: 'MonsterType', member },
@@ -104,7 +118,9 @@ const enumMembers = (enumObject: Record<string, string | number>): string[] =>
 
 const generatedFrom = (() => {
   try {
-    return `game repo commit ${execSync('git rev-parse --short HEAD').toString().trim()}`;
+    return `game repo commit ${execSync('git rev-parse --short HEAD')
+      .toString()
+      .trim()}`;
   } catch {
     return 'game repo (commit unknown)';
   }

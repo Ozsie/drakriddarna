@@ -29,7 +29,7 @@ Form-based, grouped:
   convention: every shared weapon/armour/shield at its `amountInDeck` count,
   all magic items included. Show deck size totals. Deck entry count means
   "include this item `count` times"; the generated code uses the game's
-  `amountInDeck` loop (04), so the editor only emits *excluded* items
+  `amountInDeck` loop (04), so the editor only emits _excluded_ items
   differently — implement as a custom filter list, documented in code.
 - **Dungeon chain**: ordered list (drag to reorder) of dungeon ids with
   add/duplicate/delete; clicking an entry opens that dungeon in the

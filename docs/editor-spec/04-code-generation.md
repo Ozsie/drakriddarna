@@ -38,6 +38,7 @@ Style rules for generated code (mirror the existing campaign files):
 
   Doors with any non-default flag use the options object; plain doors are the
   3-element tuple. Use object form for lights when options are set.
+
 - Enum references as members: `Side.RIGHT`, `Colour.Green`,
   `MonsterType.ORC`, `ConditionType.KILL_ALL`, `SecretType.NOTE`,
   `CellAlignment.CEILING`.
@@ -105,7 +106,14 @@ document in the UI that the asset must exist in `static/` or be importable).
 ```ts
 // GENERATED FILE - DO NOT EDIT. Source: campaign.editor.json (Drakriddarna Campaign Editor).
 import type { Dungeon } from '../../../types';
-import { ConditionType, MonsterType, SecretType, Side, Colour, CellAlignment } from '../../../types';
+import {
+  ConditionType,
+  MonsterType,
+  SecretType,
+  Side,
+  Colour,
+  CellAlignment,
+} from '../../../types';
 import { defineDungeon } from '../../../dungeon/DungeonLogic';
 import { magicItems } from '../../../items/magicItems';
 import { e1m1 } from './e1m1';
@@ -133,7 +141,14 @@ export const e1m0: Dungeon = defineDungeon({
     secrets: [[SecretType.MAGIC_ITEM, 16, 6, magicItems[0]]],
     notes: [[4, 2, 'campaign.iceDragon.e1m0.notes.hint1']],
     items: [[11, 3, magicItems[4]]],
-    lights: [[2, 9, CellAlignment.CEILING, { color: '#c29042', radius: 3, intensity: 0.5, softness: 0.7 }]],
+    lights: [
+      [
+        2,
+        9,
+        CellAlignment.CEILING,
+        { color: '#c29042', radius: 3, intensity: 0.5, softness: 0.7 },
+      ],
+    ],
     corridors: ['D', 'E'],
   },
   events: [1, 2, 3, 4, 5, 6],
