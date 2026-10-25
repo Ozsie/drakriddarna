@@ -15,7 +15,8 @@
 		"lint:fix": "eslint -c .eslintrc.cjs --fix --ext .ts .",
 		"prettier": "prettier --plugin-search-dir . --check . ",
 		"prettier:format": "prettier --plugin-search-dir . --write .",
-		"deploy": "npm run build && npx gh-pages -d build -t true"
+		"deploy": "npm run build && npx gh-pages -d build -t true",
+		"exportCatalog": "node scripts/export-editor-catalog.ts"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^2.0.0",

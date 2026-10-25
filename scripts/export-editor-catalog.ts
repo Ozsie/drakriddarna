@@ -74,18 +74,29 @@ const itemExport = (
   exportName: string,
 ): CatalogItem[] => items.map((item, index) => toItem(item, kind, module, exportName, index));
 
-const monsterTypes = Object.keys(MonsterType).map((member) => {
-  const template = getMonsterTemplate(MonsterType[member as keyof typeof MonsterType]);
-  const stats: Record<string, number> = {};
-  if (template?.health !== undefined) stats.health = template.health;
-  if (template?.defense !== undefined) stats.defense = template.defense;
-  if (template?.experience !== undefined) stats.experience = template.experience;
-  return {
-    id: member,
-    import: { module: 'types', export: 'MonsterType', member },
-    ...(Object.keys(stats).length > 0 ? { stats } : {}),
-  };
-});
+// MonsterType values are the runtime identifiers; keys may alias the same
+// value for backwards compatibility (ORC and ORCH are both 'Orc'). Emit one
+// catalog entry per value, keeping the first key.
+const seenMonsterTypeValues = new Set<string>();
+const monsterTypes = Object.keys(MonsterType)
+  .filter((member) => {
+    const value = MonsterType[member as keyof typeof MonsterType];
+    if (seenMonsterTypeValues.has(value)) return false;
+    seenMonsterTypeValues.add(value);
+    return true;
+  })
+  .map((member) => {
+    const template = getMonsterTemplate(MonsterType[member as keyof typeof MonsterType]);
+    const stats: Record<string, number> = {};
+    if (template?.health !== undefined) stats.health = template.health;
+    if (template?.defense !== undefined) stats.defense = template.defense;
+    if (template?.experience !== undefined) stats.experience = template.experience;
+    return {
+      id: member,
+      import: { module: 'types', export: 'MonsterType', member },
+      ...(Object.keys(stats).length > 0 ? { stats } : {}),
+    };
+  });
 
 // Numeric enums carry reverse mappings; keep only the member names.
 const enumMembers = (enumObject: Record<string, string | number>): string[] =>
