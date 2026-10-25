@@ -16,6 +16,8 @@ The full player guide, rules, and playability adaptations can be found in [RULES
 - [sveltekit-i18n](https://github.com/jhubbard/sveltekit-i18n) for translations (English/Swedish)
 - [Vite](https://vitejs.dev/), [Vitest](https://vitest.dev/), [ESLint](https://eslint.org/) & [Prettier](https://prettier.io/) for tooling
 
+See [technical write up](./TECHNICAL.md) for details.
+
 ## Creating Campaigns
 
 See [Campaign Readme](src/campaigns/README.md)
