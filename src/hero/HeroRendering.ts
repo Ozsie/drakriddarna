@@ -243,7 +243,7 @@ const renderWalkableArea = (
           if (!blockedByHeroes && !blockedByMonster && walkable && los) {
             // An outline rather than a tint: it marks the cell without
             // covering the floor and lighting beneath it.
-            ctx.strokeStyle = 'rgb(20 250 150 / 0.75)';
+            ctx.strokeStyle = 'rgb(10 115 69 / 0.65)';
             ctx.lineWidth = 1;
             ctx.strokeRect(pX * cellSize, pY * cellSize, cellSize, cellSize);
           }
