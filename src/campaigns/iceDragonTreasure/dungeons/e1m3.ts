@@ -50,6 +50,11 @@ export const e1m3: Dungeon = defineDungeon({
       '         ######     ',
     ],
     corridors: ['B', 'D', 'F', 'J', 'L'],
+    corridorCells: [
+      [14, 9],
+      [14, 10],
+      [14, 11],
+    ],
     pits: [
       [16, 6],
       [17, 6],
