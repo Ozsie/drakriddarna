@@ -29,7 +29,6 @@ See [Game Master Readme](src/gameMasters/README.md)
 See the [Rules & Player Guide](./RULES.md).
 
 ## Todo
-- [ ] Sound Effects
 - [ ] Multiple saves
 - [ ] Responsive layout
 - [ ] Graphics
@@ -39,6 +38,7 @@ See the [Rules & Player Guide](./RULES.md).
 - [ ] Alvkonungens Borg -  [Official Dungeon and Heroes](https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg)
   - [X] Edge based walls
 - [ ] Level editor
+- [X] Sound Effects
 - [X] e1m5
   - [X] multiple copies of items in treasure room
   - [X] hidden door in treasure room can't be opened__

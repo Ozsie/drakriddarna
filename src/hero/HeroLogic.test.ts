@@ -632,6 +632,47 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
 
     expect(hero.health).toBe(8);
   });
+
+  it('resetLiveHeroes triggers a note on the hero starting position without movement', () => {
+    const hero = createTestHero({ position: { x: 2, y: 2 } });
+    const monster = createTestMonster();
+    const state = createTestState(hero, monster);
+    state.turnCount = 2;
+    state.dungeon.layout.notes = [
+      {
+        message: 'test.note',
+        position: { x: 1, y: 1 },
+        found: false,
+      },
+    ];
+
+    resetLiveHeroes(state);
+
+    expect(state.dungeon.layout.notes[0].found).toBe(true);
+    expect(state.dungeon.layout.notes[0].foundOn).toBe(2);
+    expect(state.actionLog).toContainEqual(
+      expect.objectContaining({ key: 'logs.heroAction.reads' }),
+    );
+  });
+
+  it('resetLiveHeroes does not re-trigger an already found note', () => {
+    const hero = createTestHero();
+    const monster = createTestMonster();
+    const state = createTestState(hero, monster);
+    state.dungeon.layout.notes = [
+      {
+        message: 'test.note',
+        position: { x: 1, y: 1 },
+        found: true,
+        foundOn: 3,
+      },
+    ];
+
+    resetLiveHeroes(state);
+
+    expect(state.dungeon.layout.notes[0].foundOn).toBe(3);
+    expect(state.actionLog).toEqual([]);
+  });
 });
 
 describe('opening doors from both sides of the door edge', () => {

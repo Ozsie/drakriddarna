@@ -156,6 +156,16 @@ export const eventEffects: Record<
         addLog(state, 'logs.events.sunStone', { monster: i18n(monster.name) });
         const remainingHealth = monster.health;
         monster.health = 0;
+        // The petrified troll drops what it carried where it stood, so the
+        // item can still be picked up instead of being lost with its bearer.
+        monster.inventory.forEach((item) => {
+          if (!item) return;
+          state.dungeon.layout.items.push({
+            item,
+            position: { x: monster.position.x, y: monster.position.y },
+          });
+        });
+        monster.inventory = [];
         if (!state.damageIndicators) {
           state.damageIndicators = [];
         }

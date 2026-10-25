@@ -71,7 +71,11 @@ describe('gameStateStore and state management', () => {
     expect(debug).toBe(false);
 
     const indicators = get(damageIndicatorsStore);
-    expect(indicators).toEqual([]);
+    // Notes on hero starting positions create static indicators at init,
+    // but no damage indicators should exist.
+    expect(indicators.every((indicator) => indicator.effect === 'static')).toBe(
+      true,
+    );
   });
 
   it('damageIndicatorsStore reflects damage indicators and removeDamageIndicatorAction removes them', () => {

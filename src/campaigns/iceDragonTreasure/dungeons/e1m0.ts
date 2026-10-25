@@ -66,6 +66,10 @@ export const e1m0: Dungeon = defineDungeon({
       [MonsterType.TROLL, Colour.Green, 6, 1],
     ],
     corridors: ['D', 'E'],
+    notes: [
+      [2, 9, 'campaign.iceDragon.e1m0.notes.tutorial1'],
+      [3, 9, 'campaign.iceDragon.e1m0.notes.tutorial2'],
+    ],
   },
   events: [1, 2, 3, 4, 5, 6],
 });

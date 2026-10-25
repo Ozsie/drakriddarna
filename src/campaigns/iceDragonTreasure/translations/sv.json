@@ -6,7 +6,11 @@
     "trapDoor": "Fälla",
     "e1m0": {
       "name": "Trollgrottan",
-      "intro": "Ett otäckt troll sprider skräck i bygden. Drakriddarna har hittat monstrets håla och nu står de utanför den. En grov dörr av klumpigt tillyxade plankor leder in i berget. Tydliga spår avslöjar att de är på rätt väg..."
+      "intro": "Ett otäckt troll sprider skräck i bygden. Drakriddarna har hittat monstrets håla och nu står de utanför den. En grov dörr av klumpigt tillyxade plankor leder in i berget. Tydliga spår avslöjar att de är på rätt väg...",
+      "notes": {
+        "tutorial1": "Tryck på en ruta för att gå. Tryck på den nuvarande hjälten för att öppna dess handlingsmeny.",
+        "tutorial2": "Tryck på ett monster för att anfalla det."
+      }
     },
     "e1m1": {
       "name": "Maktens tre portar",

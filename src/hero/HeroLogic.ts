@@ -303,6 +303,7 @@ export const resetLiveHeroes = (state: GameState) => {
       state.dungeon.startingPositions[0];
     if (startPos) {
       hero.position = { x: startPos.x, y: startPos.y };
+      checkForNote(state, hero as Hero);
     }
     hero.movement = getEffectiveMaxMovement(hero, movementModifier);
     hero.actions = 2;

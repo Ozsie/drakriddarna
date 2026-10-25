@@ -16,7 +16,10 @@ import {
   type Item,
   type TurnEvent,
 } from '../types';
-import { createMonster } from '../dungeon/DungeonLogic';
+import {
+  createMonster,
+  createMonsterWithInventory,
+} from '../dungeon/DungeonLogic';
 import { getPartyAverageLevel } from '../hero/HeroLogic';
 import {
   findCell,
@@ -125,6 +128,7 @@ describe('Orc Drums event and resetEventEffects', () => {
     state.dungeon.layout.monsters = [orc1, orc2, orc3, orc4];
     state.dungeon.layout.grid = ['AAAA', 'AAAA', 'AAAA', 'AAAA'];
     state.dungeon.discoveredRooms = ['A'];
+    const indicatorsBefore = state.damageIndicators?.length ?? 0;
 
     const event = {
       id: 'orc_drums',
@@ -145,7 +149,7 @@ describe('Orc Drums event and resetEventEffects', () => {
     expect(orc3.actions).toBe(2);
     expect(orc4.actions).toBe(2);
     expect(event.used).toBe(true);
-    expect(state.damageIndicators).toBeUndefined();
+    expect(state.damageIndicators?.length ?? 0).toBe(indicatorsBefore);
   });
 
   it('still boosts visible orcs if there are 4 orcs in layout but 1 is dead or undiscovered', () => {
@@ -158,6 +162,7 @@ describe('Orc Drums event and resetEventEffects', () => {
     state.dungeon.layout.monsters = [orc1, orc2, orc3, deadOrc];
     state.dungeon.layout.grid = ['AAAA', 'AAAA', 'AAAA', 'AAAA'];
     state.dungeon.discoveredRooms = ['A'];
+    const indicatorsBefore = state.damageIndicators?.length ?? 0;
 
     const event = {
       id: 'orc_drums',
@@ -178,7 +183,7 @@ describe('Orc Drums event and resetEventEffects', () => {
     expect(orc3.actions).toBe(3);
     expect(deadOrc.actions).toBe(2);
     expect(event.used).toBe(true);
-    expect(state.damageIndicators?.length).toBe(3);
+    expect((state.damageIndicators?.length ?? 0) - indicatorsBefore).toBe(3);
   });
 
   it('fountainOfYouth respects max health adjusted by difficulty modifier', () => {
@@ -986,6 +991,40 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 });
 
 describe('Event light sources', () => {
+  it('sun stone drops a troll carried item on the floor where the troll stood', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    const state = init();
+    const event = events.find((e) => e.id === 'sun_stone') as TurnEvent;
+    const hero = state.heroes[0];
+    const item: Item = {
+      id: 'trolls_amulet',
+      name: 'Amulet',
+      type: ItemType.MAGIC,
+      value: 0,
+      amountInDeck: 1,
+    };
+    const troll = createMonsterWithInventory(
+      MonsterType.TROLL,
+      Colour.Green,
+      hero.position.x,
+      hero.position.y,
+      [item],
+    );
+    state.dungeon.layout.monsters = [troll];
+
+    eventEffects.sunStone(state, event);
+
+    expect(troll.health).toBe(0);
+    expect(troll.inventory).toEqual([]);
+    const droppedLocation = state.dungeon.layout.items.find(
+      (itemLocation) => itemLocation.item === item,
+    );
+    expect(droppedLocation).toBeDefined();
+    expect(droppedLocation?.position).toEqual(troll.position);
+
+    vi.restoreAllMocks();
+  });
+
   it('sun stone adds a lingering golden flash light at the affected hero', () => {
     const state = init();
     const event = events.find((e) => e.id === 'sun_stone') as TurnEvent;
