@@ -208,7 +208,7 @@ describe('grid module', () => {
     );
   });
 
-  it('hasLineOfSight disallows walking/seeing diagonally through a wall corner', () => {
+  it('hasLineOfSight disallows walking diagonally through a wall corner but allows combat line of sight to the adjacent figure', () => {
     const grid = ['####', '#A##', '##I#', '####'];
     const state = {
       dungeon: {
@@ -222,11 +222,33 @@ describe('grid module', () => {
       heroes: [],
     } as unknown as GameState;
 
+    // Movement cannot cut through the wall corner...
     expect(
       hasLineOfSight({ x: 1, y: 1 }, { x: 2, y: 2 }, 48, state, true),
     ).toBe(false);
+    // ...but diagonally adjacent figures across a wall corner are
+    // adjacent per the game rules and may attack each other.
     expect(
       hasLineOfSight({ x: 1, y: 1 }, { x: 2, y: 2 }, 48, state, false),
+    ).toBe(true);
+  });
+
+  it('hasLineOfSight still blocks non-adjacent diagonals through a wall corner pinch', () => {
+    const grid = ['#####', '#A#B#', '#.#B#', '#..B#', '#####'];
+    const state = {
+      dungeon: {
+        layout: {
+          grid,
+          monsters: [],
+          pits: [],
+          pillars: [],
+        },
+      },
+      heroes: [],
+    } as unknown as GameState;
+
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 3 }, 48, state, false),
     ).toBe(false);
   });
 

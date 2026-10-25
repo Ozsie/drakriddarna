@@ -10,6 +10,7 @@ import {
   type Monster,
   MonsterType,
   SecretType,
+  Side,
   type Weapon,
 } from '../types';
 import {
@@ -655,5 +656,91 @@ describe('picking up items with an exhausted deck', () => {
         (l) => l.key === 'logs.heroAction.searchFoundNothing',
       ),
     ).toBe(true);
+  });
+});
+
+describe('combat line of sight across wall corners', () => {
+  const cornerState = (dx: 1 | -1, dy: 1 | -1): GameState => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    hero.position = { x: 2, y: 2 };
+    const wall1 = { x: 2 + dx, y: 2 };
+    const wall2 = { x: 2, y: 2 + dy };
+    state.dungeon.layout.grid = [];
+    for (let y = 0; y < 5; y++) {
+      let row = '';
+      for (let x = 0; x < 5; x++) {
+        row +=
+          (x === wall1.x && y === wall1.y) || (x === wall2.x && y === wall2.y)
+            ? '#'
+            : 'A';
+      }
+      state.dungeon.layout.grid.push(row);
+    }
+    const monster = createTestMonster({
+      position: { x: 2 + dx, y: 2 + dy },
+    });
+    state.dungeon.layout.monsters = [monster];
+    return state;
+  };
+
+  const diagonals: Array<[1 | -1, 1 | -1]> = [
+    [1, 1],
+    [1, -1],
+    [-1, 1],
+    [-1, -1],
+  ];
+
+  it.each(diagonals)(
+    'shows the sword cursor for a monster diagonally adjacent across a corner (dx=%s, dy=%s)',
+    (dx, dy) => {
+      const state = cornerState(dx, dy);
+      const hero = state.currentActor as Hero;
+      expect(
+        getCursorType(state, {
+          x: hero.position.x + dx,
+          y: hero.position.y + dy,
+        }),
+      ).toBe('sword');
+    },
+  );
+
+  it.each(diagonals)(
+    'attacks a monster diagonally adjacent across a corner (dx=%s, dy=%s)',
+    (dx, dy) => {
+      const state = cornerState(dx, dy);
+      const hero = state.currentActor as Hero;
+      const monster = state.dungeon.layout.monsters[0];
+
+      setRng(() => 5 / 6);
+      try {
+        onTargetCell(state, {
+          x: hero.position.x + dx,
+          y: hero.position.y + dy,
+        });
+      } finally {
+        resetRng();
+      }
+
+      expect(monster.health).toBe(1);
+      expect(hero.actions).toBe(1);
+      expect(
+        state.actionLog.some(
+          (l) => l.key === 'logs.heroAction.monsterOutOfRange',
+        ),
+      ).toBe(false);
+    },
+  );
+
+  it('still blocks an orthogonally adjacent monster across an edge wall', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    hero.position = { x: 2, y: 2 };
+    state.dungeon.layout.walls = [{ x: 2, y: 2, side: Side.RIGHT }];
+    state.dungeon.layout.monsters = [
+      createTestMonster({ position: { x: 3, y: 2 } }),
+    ];
+
+    expect(getCursorType(state, { x: 3, y: 2 })).toBe('default');
   });
 });

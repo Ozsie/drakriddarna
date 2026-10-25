@@ -464,6 +464,18 @@ export const hasLineOfSight = (
     }
     return true;
   }
+  // Adjacent figures always have combat line of sight to each other unless
+  // an edge wall separates them. In particular a diagonally adjacent
+  // figure across a wall corner is reachable: their squares touch at the
+  // corner point and the game treats them as adjacent (the same
+  // isNeighbouring + edge-wall rule as melee engagement), so the pixel
+  // walk must not lose them to the corner-point rounding artifact.
+  if (
+    isNeighbouring(startPosition, targetPosition.x, targetPosition.y) &&
+    !crossesWallEdge(state.dungeon.layout, startPosition, targetPosition)
+  ) {
+    return true;
+  }
   const startPixelPos = {
     x: startPosition.x * resolution - Math.floor(resolution / 2),
     y: startPosition.y * resolution - Math.floor(resolution / 2),
