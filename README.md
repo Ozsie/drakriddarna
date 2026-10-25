@@ -29,6 +29,58 @@ See [Game Master Readme](src/gameMasters/README.md)
 See the [Rules & Player Guide](./RULES.md).
 
 ## Todo
+
+### Bugs
+- [ ] XP model contradicts RULES.md: `killMonster` awards monster XP (orc 1, troll 2, dark lord 4+) to the killer only, while RULES.md says every surviving hero earns +1 per kill — decide which model is intended and align
+- [ ] Halberd (range-2) attacks ignore line of sight — require `hasLineOfSight` in the attack branch of `onTargetCell` and the sword cursor in `getCursorType`
+- [ ] Click movement (`onTargetCell`) bypasses the zone-of-control halt (path loop continues after movement is zeroed) and can pass through other heroes (heroes don't block the walking LOS check) — break on 0 movement and validate per-step occupancy
+- [ ] Click movement skips `checkForItemRevealedSecret`, unlike stepwise `move()` — e.g. e1m4's necklace stair won't reveal on click moves
+- [ ] Foresight event pops the wrong secret (`secrets.pop()` ignores its own filter) — pick from the filtered `notDiscoveredSecret` list and skip secrets without items
+- [ ] Ring of Precision re-roll is a no-op (`takeDamage` recomputes the same result) and has no once-per-round limit (RULES.md) — re-roll the attack dice when damage is 0 and cap usage
+- [ ] Two landslides in one deck cycle lose the first corridor (`collapsedCorridor` holds one letter, `restoreCorridor` replaceAll can mislabel cells) — track each collapse separately
+- [ ] `randomItem`/`randomMagicItem` return undefined when the deck is empty and crash on `.amountInDeck` — guard the callers
+- [ ] Revived heroes keep their old level at 0 XP — reset `hero.level` to Apprentice in `replaceDeadHeroes`
+
+### Worth investigating
+- [ ] Necklace of Light: usable once per round and makes the wearer fully untargetable (esp. e1m6) — consider once per scenario and/or a weaker effect
+- [ ] Potion of Speed never resets (`USED` without `RESET_ON`) — add `RESET_ON: [NEXT_SCENARIO]` if once-per-scenario is intended
+- [ ] Items lost when a monster is killed by non-hero damage (earthquake, chaos sword): the monster is never removed from the layout, grants no XP and doesn't count toward `KILL_AT_LEAST`, and its inventory is lost — route all deaths through one `killMonster`-style path (like the sun-stone event does)
+- [ ] `checkForNextToMonster` ignores room discovery — heroes are halted (and log-spoiled) by monsters standing in undiscovered areas
+- [ ] Diagonal movement cost differs between click-path (`distanceInGrid`, `floor(√2·diagonals + straights)`) and keyboard steps (1 per step) for paths with 3+ diagonal cells — unify
+- [ ] Missable win-condition items (giant's glove for e1m6, necklace for e1m4) plus no looting of fallen heroes can softlock scenarios — consider looting dead heroes, passing items to adjacent heroes, or fallback hints
+- [ ] Earthquake damage is reduced by armour and shields — decide whether the boulder should ignore them
+- [ ] Door traps (1-2 dice) are weak compared to the suggested 3 dice — reconsider `trapAttacks` values
+
+### Refactorisation
+
+#### Dead code
+- [ ] `executeGameEvent` and the ~90-line `GameEvent` union in `types.ts` are unused outside tests — remove or actually wire up
+- [ ] `EventDifficulty.minSpawnDistance` / `earliestRound` fallback fields are never set by any game master — drop them
+- [ ] `game.ts` barrel re-exports ~70 symbols but only three files import from `../game` — trim to what is used
+- [ ] Effect-key aliases (`theLostOrc`/`theLostOrch`, `theOrcDrums`/`theOrchDrums`, `foresight`/`foreSight`) — normalize each pair to one key
+- [ ] `newHero` mutates the shared `weapons[0]` template (`amountInDeck--`) at module level — remove or clone first
+
+#### Duplicated code
+- [ ] Action-cost block (`actions > 1 && movement < max ? -2 : -1`) repeated in attack/search/interact/pickLock/herbs/chaos sword — extract one helper (and reconcile with `consumeActions`)
+- [ ] `distanceInGrid` defined in both `core/grid.ts` and `ClickInputLogic.ts`, and `MonsterLogic` imports the hero-side copy — keep only the core one
+- [ ] Side-to-offset switch triplicated (`isDoorEdge`/`isWallEdge`, pathfinding, `HeroLogic.sideOffset`) — single `sideOffset()` in core
+- [ ] `moveOverDoor` and `openDoorAtHero` duplicate the open/break-lock/trap sequence — merge
+- [ ] `onTargetCell` re-implements the per-step `move()` logic (notes, interactables, traps) and has drifted (no item-secret reveal, no ZoC break) — extract a shared step handler
+- [ ] `killMonster` and chaos-sword `killTarget` duplicate monster removal/XP, and `killTarget` skips the inventory drop — share one function
+- [ ] `resetOnNext` and `resetOnNextDungeon` are identical except the trigger predicate — merge into one
+- [ ] Hazard actors (`doorAsActor`, `secretAsActor`, earthquake actor) share most of their boilerplate — one factory
+- [ ] `restore*` family in `EventsLogic` repeats the "if any → log → restore" pattern — make it table-driven
+- [ ] Sun stone and earthquake repeat the same "monsters in this room" filter — extract
+- [ ] `GameState` carries `gameMasterId`, `gameMaster` and `difficulty` for the same object, with normalization logic in `loadState` — collapse to one field
+
+#### Optimization
+- [ ] `executeSlotAction` rebuilds `createPassableGrid` in its fallbacks although the monster turn already built one — pass it through
+- [ ] `findVisibleHeroes` is recomputed per slot, each time running resolution-48 `hasLineOfSight` per hero — compute once per monster turn (or cache LOS results)
+- [ ] `takeDamage` scans the inventory and logs "usedEffect" for every matching bonus item on every attack — log only when the effect actually applies
+- [ ] Route remaining `Math.random()` gameplay paths (event deck shuffle, random item, spawn and temperament picks, fountain draw) through the seeded rng; also pick a random spawn cell instead of `pool[0]`
+- [ ] `Dungeon.svelte` is 2100+ lines against the thin-layer architecture note — split logic into colocated `.ts` modules
+
+## Features
 - [ ] Multiple saves
 - [ ] Responsive layout
 - [ ] Graphics
