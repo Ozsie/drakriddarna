@@ -16,7 +16,10 @@ import {
   type Item,
   type TurnEvent,
 } from '../types';
-import { createMonster } from '../dungeon/DungeonLogic';
+import {
+  createMonster,
+  createMonsterWithInventory,
+} from '../dungeon/DungeonLogic';
 import { getPartyAverageLevel } from '../hero/HeroLogic';
 import {
   findCell,
@@ -986,6 +989,40 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 });
 
 describe('Event light sources', () => {
+  it('sun stone drops a troll carried item on the floor where the troll stood', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    const state = init();
+    const event = events.find((e) => e.id === 'sun_stone') as TurnEvent;
+    const hero = state.heroes[0];
+    const item: Item = {
+      id: 'trolls_amulet',
+      name: 'Amulet',
+      type: ItemType.MAGIC,
+      value: 0,
+      amountInDeck: 1,
+    };
+    const troll = createMonsterWithInventory(
+      MonsterType.TROLL,
+      Colour.Green,
+      hero.position.x,
+      hero.position.y,
+      [item],
+    );
+    state.dungeon.layout.monsters = [troll];
+
+    eventEffects.sunStone(state, event);
+
+    expect(troll.health).toBe(0);
+    expect(troll.inventory).toEqual([]);
+    const droppedLocation = state.dungeon.layout.items.find(
+      (itemLocation) => itemLocation.item === item,
+    );
+    expect(droppedLocation).toBeDefined();
+    expect(droppedLocation?.position).toEqual(troll.position);
+
+    vi.restoreAllMocks();
+  });
+
   it('sun stone adds a lingering golden flash light at the affected hero', () => {
     const state = init();
     const event = events.find((e) => e.id === 'sun_stone') as TurnEvent;
