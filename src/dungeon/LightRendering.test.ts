@@ -10,12 +10,18 @@ import {
   lightBlockInCell,
   lightBlurPx,
   lightCenter,
+  lightInViewport,
   lightIntensityScale,
   lightPolygonFor,
+  lightSwayOffset,
   lightSweepAngle,
   renderAmbientDarkness,
+  renderAnimatedLights,
   renderLights,
+  renderStaticLights,
+  staticLightCacheKey,
 } from './LightRendering';
+import type { LightViewport } from './LightRendering';
 import type { GameState, Hero, Item, LightSource, Monster } from '../types';
 import {
   CellAlignment,
@@ -595,20 +601,20 @@ describe('renderAmbientDarkness', () => {
     renderAmbientDarkness(
       ctx,
       createDarknessCanvas(darknessCtx),
-      CELL_SIZE,
+      createDarknessCanvas(createMockCtx()),
       state,
-      false,
     );
     expect(darknessCtx.fillRect).not.toHaveBeenCalled();
     expect(ctx.drawImage).not.toHaveBeenCalled();
   });
 
-  it('veils the view and punches holes for visible lights', () => {
+  it('veils the view and punches the light mask out of the darkness', () => {
     const state = createState();
     state.dungeon.ambientLight = 0.2;
     state.dungeon.layout.lights = [createLight()];
     const ctx = createMockCtx();
     const darknessCtx = createMockCtx();
+    const lightCanvas = createDarknessCanvas(createMockCtx());
     const fillStyles: string[] = [];
     Object.defineProperty(darknessCtx, 'fillStyle', {
       get: () => fillStyles[fillStyles.length - 1],
@@ -617,21 +623,24 @@ describe('renderAmbientDarkness', () => {
     renderAmbientDarkness(
       ctx,
       createDarknessCanvas(darknessCtx),
-      CELL_SIZE,
+      lightCanvas,
       state,
-      false,
     );
-    // Darkness veil at (1 - ambientLight), then the light's gradient.
+    // Darkness veil at (1 - ambientLight).
     expect(fillStyles[0]).toBe('rgba(0, 0, 0, 0.8)');
     expect(darknessCtx.fillRect).toHaveBeenCalled();
-    // Hole punched for the light, then composite operation restored.
+    // The hole comes from the mask's pixels, never from re-drawing light
+    // shapes here: that is what keeps glow and hole in lockstep.
+    expect(darknessCtx.createRadialGradient).not.toHaveBeenCalled();
+    expect(darknessCtx.fill).not.toHaveBeenCalled();
+    expect(darknessCtx.drawImage).toHaveBeenCalledWith(lightCanvas, 0, 0);
+    // Composite operation restored after the punch.
     expect(darknessCtx.globalCompositeOperation).toBe('source-over');
-    expect(darknessCtx.fill).toHaveBeenCalled();
     // Darkness composited over the scene.
     expect(ctx.drawImage).toHaveBeenCalled();
   });
 
-  it('does not punch holes for disabled or undiscovered lights', () => {
+  it('keeps culled lights out of the darkness via the shared mask', () => {
     const grid = ['#######', '#AAAAA#', '#ABBBB#', '#ABBBB#', '#######'];
     const state = createState({ grid, discoveredRooms: ['A'] });
     state.dungeon.ambientLight = 0.2;
@@ -639,19 +648,198 @@ describe('renderAmbientDarkness', () => {
       createLight({ position: { x: 2, y: 2 } }),
       createLight({ position: { x: 1, y: 2 }, enabled: false }),
     ];
+    // The mask is built exactly as the renderer builds it.
+    const maskCtx = createMockCtx();
+    renderLights(maskCtx, CELL_SIZE, state, false);
+    expect(maskCtx.createRadialGradient).not.toHaveBeenCalled();
+    // The veil is punched with that mask alone, so a culled light (never
+    // in the mask) can never open a hole in the darkness.
     const ctx = createMockCtx();
     const darknessCtx = createMockCtx();
+    const lightCanvas = createDarknessCanvas(maskCtx);
     renderAmbientDarkness(
       ctx,
       createDarknessCanvas(darknessCtx),
-      CELL_SIZE,
+      lightCanvas,
       state,
-      false,
     );
     expect(darknessCtx.fillRect).toHaveBeenCalled();
+    expect(darknessCtx.drawImage).toHaveBeenCalledWith(lightCanvas, 0, 0);
     expect(darknessCtx.createRadialGradient).not.toHaveBeenCalled();
     expect(darknessCtx.fill).not.toHaveBeenCalled();
     expect(ctx.drawImage).toHaveBeenCalled();
+  });
+});
+
+describe('viewport culling', () => {
+  const view = (
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): LightViewport => ({ x, y, width, height });
+
+  const createMockCtx = () =>
+    ({
+      createRadialGradient: vi.fn().mockReturnValue({ addColorStop: vi.fn() }),
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      arc: vi.fn(),
+      stroke: vi.fn(),
+      drawImage: vi.fn(),
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+    }) as unknown as CanvasRenderingContext2D;
+
+  it('passes every light without a viewport', () => {
+    expect(lightInViewport(createLight())).toBe(true);
+  });
+
+  it('keeps lights whose glow reaches the viewport', () => {
+    // Center (1.5, 2.5), radius 4: reaches 4.5 cells.
+    const light = createLight({ position: { x: 1, y: 2 } });
+    // Overlapping the light's cell.
+    expect(lightInViewport(light, view(3, 1, 4, 4))).toBe(true);
+    // The nearest viewport edge is 5.5 cells away.
+    expect(lightInViewport(light, view(7, 0, 4, 4))).toBe(false);
+  });
+
+  it('bounds the glow by the radius plus half a cell of margin', () => {
+    const small = createLight({ position: { x: 1, y: 2 }, radius: 1 });
+    // Nearest edge 1.9 cells out, beyond the 1.5-cell reach.
+    expect(lightInViewport(small, view(3.4, 0, 4, 4))).toBe(false);
+    // Nearest edge 1.0 cells out.
+    expect(lightInViewport(small, view(2.5, 0, 4, 4))).toBe(true);
+  });
+
+  it('always keeps gas lights: their cloud has no cheap bound', () => {
+    const gas = createLight({ position: { x: 1, y: 2 }, effect: 'gas' });
+    expect(lightInViewport(gas, view(50, 50, 4, 4))).toBe(true);
+  });
+
+  it('culls lights outside the viewport when rendering', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      createLight({ position: { x: 1, y: 2 }, radius: 1 }),
+      createLight({ position: { x: 1, y: 4 }, radius: 1 }),
+    ];
+    // Debug mode so the light at y=4 (outside the grid) renders too.
+    const ctx = createMockCtx();
+    renderLights(ctx, CELL_SIZE, state, true, 0, view(0, 0, 3, 2.9));
+    expect(ctx.createRadialGradient).toHaveBeenCalledTimes(1);
+    // Without a viewport, both render.
+    const ctx2 = createMockCtx();
+    renderLights(ctx2, CELL_SIZE, state, true, 0);
+    expect(ctx2.createRadialGradient).toHaveBeenCalledTimes(2);
+  });
+
+  it('only counts in-viewport lights as animated', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      createLight({ position: { x: 1, y: 2 }, effect: 'pulse', radius: 1 }),
+    ];
+    expect(hasAnimatedLights(state, false, 0, view(0, 0, 3, 2.9))).toBe(true);
+    expect(hasAnimatedLights(state, false, 0, view(10, 10, 3, 3))).toBe(false);
+    expect(hasAnimatedLights(state, false, 0)).toBe(true);
+  });
+});
+
+describe('static and animated light layers', () => {
+  const view = (
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): LightViewport => ({ x, y, width, height });
+
+  const createMockCtx = () =>
+    ({
+      createRadialGradient: vi.fn().mockReturnValue({ addColorStop: vi.fn() }),
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      arc: vi.fn(),
+      stroke: vi.fn(),
+      drawImage: vi.fn(),
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+    }) as unknown as CanvasRenderingContext2D;
+
+  it('renders static lights in the static layer only', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [createLight({ position: { x: 1, y: 2 } })];
+    const staticCtx = createMockCtx();
+    renderStaticLights(staticCtx, CELL_SIZE, state, false);
+    expect(staticCtx.createRadialGradient).toHaveBeenCalledTimes(1);
+    const animatedCtx = createMockCtx();
+    renderAnimatedLights(animatedCtx, CELL_SIZE, state, false, 0);
+    expect(animatedCtx.createRadialGradient).not.toHaveBeenCalled();
+  });
+
+  it('renders animated lights in the animated layer only', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      createLight({ position: { x: 1, y: 2 }, effect: 'flicker' }),
+    ];
+    const staticCtx = createMockCtx();
+    renderStaticLights(staticCtx, CELL_SIZE, state, false);
+    expect(staticCtx.createRadialGradient).not.toHaveBeenCalled();
+    const animatedCtx = createMockCtx();
+    renderAnimatedLights(animatedCtx, CELL_SIZE, state, false, 0);
+    expect(animatedCtx.createRadialGradient).toHaveBeenCalledTimes(1);
+  });
+
+  it('changes the static cache key when the lights themselves change', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [createLight({ position: { x: 1, y: 2 } })];
+    const before = staticLightCacheKey(state, CELL_SIZE, false);
+    // Stable while nothing changes.
+    expect(staticLightCacheKey(state, CELL_SIZE, false)).toBe(before);
+    // Toggling the light off invalidates the cached layer.
+    state.dungeon.layout.lights[0].enabled = false;
+    const after = staticLightCacheKey(state, CELL_SIZE, false);
+    expect(after).not.toBe(before);
+    expect(staticLightCacheKey(state, CELL_SIZE, false)).toBe(after);
+  });
+
+  it('changes the static cache key with occlusion and the viewport', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [createLight({ position: { x: 3, y: 2 } })];
+    const before = staticLightCacheKey(
+      state,
+      CELL_SIZE,
+      false,
+      view(0, 0, 10, 10),
+    );
+    // An actor moves: new shadows, new key.
+    state.heroes[0].position = { x: 2, y: 3 };
+    const moved = staticLightCacheKey(
+      state,
+      CELL_SIZE,
+      false,
+      view(0, 0, 10, 10),
+    );
+    expect(moved).not.toBe(before);
+    // The viewport pans: the culled set can change.
+    const panned = staticLightCacheKey(
+      state,
+      CELL_SIZE,
+      false,
+      view(5, 0, 10, 10),
+    );
+    expect(panned).not.toBe(before);
+    expect(panned).not.toBe(moved);
   });
 });
 
@@ -728,6 +916,45 @@ describe('light effects', () => {
     expect(rayEndpoint(points, Math.PI)).toEqual(center);
   });
 
+  it('sways a light center along a pendulum arc', () => {
+    const sway = createLight({ effect: 'sway' });
+    // Lights that do not sway stay at rest.
+    expect(lightSwayOffset(createLight(), CELL_SIZE, 250)).toEqual({
+      x: 0,
+      y: 0,
+    });
+    // At rest at the start and middle of each loop.
+    expect(lightSwayOffset(sway, CELL_SIZE, 0)).toEqual({ x: 0, y: 0 });
+    expect(lightSwayOffset(sway, CELL_SIZE, 500).x).toBeCloseTo(0, 10);
+    expect(lightSwayOffset(sway, CELL_SIZE, 500).y).toBeCloseTo(0, 10);
+    // Quarter loop: full swing to the right, lifted slightly upward.
+    const right = lightSwayOffset(sway, CELL_SIZE, 250);
+    expect(right.x).toBeCloseTo(0.3 * CELL_SIZE, 5);
+    expect(right.y).toBeCloseTo(-0.0803847577 * CELL_SIZE, 5);
+    // Three-quarter loop: full swing to the left, same lift.
+    const left = lightSwayOffset(sway, CELL_SIZE, 750);
+    expect(left.x).toBeCloseTo(-0.3 * CELL_SIZE, 5);
+    expect(left.y).toBeCloseTo(right.y, 5);
+    // The swing never carries the center out of its own cell.
+    expect(Math.abs(right.x)).toBeLessThan(CELL_SIZE / 2);
+    // The swaying center follows through lightCenter.
+    const rest = lightCenter(sway, CELL_SIZE, 0);
+    const swayed = lightCenter(sway, CELL_SIZE, 250);
+    expect(swayed.x).toBeCloseTo(rest.x + right.x, 5);
+    expect(swayed.y).toBeCloseTo(rest.y + right.y, 5);
+  });
+
+  it('moves a swaying light polygon with its swing', () => {
+    const state = createState();
+    const light = createLight({
+      position: { x: 3, y: 2 },
+      effect: 'sway',
+    });
+    const atRest = computeLightPolygon(light, state, CELL_SIZE, false, 0);
+    const swungRight = computeLightPolygon(light, state, CELL_SIZE, false, 250);
+    expect(swungRight).not.toEqual(atRest);
+  });
+
   it('only counts renderable, non-static lights as animated', () => {
     const state = createState();
     expect(hasAnimatedLights(state, false)).toBe(false);
@@ -779,63 +1006,57 @@ describe('light culling and polygon cache', () => {
       getContext: () => ctx,
     }) as unknown as HTMLCanvasElement;
 
-  it('renders lights only in rooms occupied by living heroes', () => {
-    // Default hero stands in room A at (1, 3).
+  it('renders lights on discovered cells regardless of hero presence', () => {
     const state = createState({ grid, discoveredRooms: ['A'] });
     const lightInRoomB = createLight({ position: { x: 2, y: 2 } });
     expect(isLightRenderable(state, lightInRoomA, false)).toBe(true);
+    // Undiscovered room B: culled.
     expect(isLightRenderable(state, lightInRoomB, false)).toBe(false);
     // Debug mode renders everything.
     expect(isLightRenderable(state, lightInRoomB, true)).toBe(true);
   });
 
-  it('does not render lights when no living hero is in their room', () => {
+  it('keeps rendering discovered lights with no living hero around', () => {
+    // All heroes dead: discovery alone decides.
     const state = createState({
       grid,
-      discoveredRooms: ['A'],
+      discoveredRooms: ['A', 'B'],
       heroes: [createHeroAt(1, 3, 0)],
     });
-    expect(isLightRenderable(state, lightInRoomA, false)).toBe(false);
-    // A living hero elsewhere keeps that room's lights on.
-    const elsewhere = createState({
-      grid,
-      discoveredRooms: ['A', 'B'],
-      heroes: [createHeroAt(4, 2)],
-    });
+    expect(isLightRenderable(state, lightInRoomA, false)).toBe(true);
     const lightInB = createLight({ position: { x: 4, y: 2 } });
-    expect(isLightRenderable(elsewhere, lightInB, false)).toBe(true);
+    expect(isLightRenderable(state, lightInB, false)).toBe(true);
   });
 
-  it('culls lights from the darkness holes as well', () => {
+  it('culls lights from the darkness holes via the shared mask', () => {
     const state = createState({ grid, discoveredRooms: ['A'] });
     state.dungeon.ambientLight = 0.2;
     state.dungeon.layout.lights = [lightInRoomA];
-    const ctx = createMockCtx();
-    const darknessCtx = createMockCtx();
-    renderAmbientDarkness(
-      ctx,
-      createDarknessCanvas(darknessCtx),
-      CELL_SIZE,
-      state,
-      false,
-      0,
-    );
-    expect(darknessCtx.createRadialGradient).toHaveBeenCalled();
+    const maskCtx = createMockCtx();
+    renderLights(maskCtx, CELL_SIZE, state, false, 0);
+    expect(maskCtx.createRadialGradient).toHaveBeenCalled();
 
+    // A light on an undiscovered cell never enters the mask...
     const culled = createState({ grid, discoveredRooms: ['A'] });
     culled.dungeon.ambientLight = 0.2;
     culled.dungeon.layout.lights = [createLight({ position: { x: 4, y: 2 } })];
+    const maskCtx2 = createMockCtx();
+    renderLights(maskCtx2, CELL_SIZE, culled, false, 0);
+    expect(maskCtx2.createRadialGradient).not.toHaveBeenCalled();
+    // ...and the veil is punched with the mask pixels alone, so it can
+    // never open a hole either.
     const ctx2 = createMockCtx();
     const darknessCtx2 = createMockCtx();
+    const lightCanvas2 = createDarknessCanvas(maskCtx2);
     renderAmbientDarkness(
       ctx2,
       createDarknessCanvas(darknessCtx2),
-      CELL_SIZE,
+      lightCanvas2,
       culled,
-      false,
-      0,
     );
+    expect(darknessCtx2.drawImage).toHaveBeenCalledWith(lightCanvas2, 0, 0);
     expect(darknessCtx2.createRadialGradient).not.toHaveBeenCalled();
+    expect(darknessCtx2.fill).not.toHaveBeenCalled();
   });
 
   it('reuses a light polygon while the occlusion state is unchanged', () => {
@@ -884,6 +1105,18 @@ describe('light culling and polygon cache', () => {
     const first = lightPolygonFor(light, state, CELL_SIZE, false, 0);
     const second = lightPolygonFor(light, state, CELL_SIZE, false, 500);
     expect(second).not.toBe(first);
+  });
+
+  it('never caches sway light polygons', () => {
+    const state = createState();
+    const light = createLight({
+      position: { x: 3, y: 2 },
+      effect: 'sway',
+    });
+    const first = lightPolygonFor(light, state, CELL_SIZE, false, 0);
+    const second = lightPolygonFor(light, state, CELL_SIZE, false, 250);
+    expect(second).not.toBe(first);
+    expect(second).not.toEqual(first);
   });
 });
 
@@ -1011,7 +1244,7 @@ describe('sparkle and aura effects', () => {
     ).toBeCloseTo(1, 5);
   });
 
-  it('punches sparkle dots and the aura ring into the darkness', () => {
+  it('renders sparkle discs and the aura ring into the light mask', () => {
     const sparkleState = createState();
     sparkleState.dungeon.ambientLight = 0.2;
     sparkleState.dungeon.layout.lights = [
@@ -1024,36 +1257,41 @@ describe('sparkle and aura effects', () => {
         break;
       }
     }
-    const ctx = createMockCtx();
-    const darknessCtx = createMockCtx();
-    renderAmbientDarkness(
-      ctx,
-      createDarknessCanvas(darknessCtx),
-      CELL_SIZE,
-      sparkleState,
-      false,
-      time,
-    );
-    expect(darknessCtx.fill).toHaveBeenCalled();
-    expect(darknessCtx.createRadialGradient).not.toHaveBeenCalled();
+    // The sparkle mask: twinkles with their soft discs, no radial glow.
+    const sparkleCtx = createMockCtx();
+    renderLights(sparkleCtx, CELL_SIZE, sparkleState, false, time);
+    expect(sparkleCtx.stroke).toHaveBeenCalled();
+    expect(sparkleCtx.fill).toHaveBeenCalled();
+    expect(sparkleCtx.createRadialGradient).not.toHaveBeenCalled();
 
     const auraState = createState();
     auraState.dungeon.ambientLight = 0.2;
     auraState.dungeon.layout.lights = [
       createLight({ position: { x: 1, y: 2 }, effect: 'aura' }),
     ];
-    const ctx2 = createMockCtx();
-    const darknessCtx2 = createMockCtx();
-    renderAmbientDarkness(
-      ctx2,
-      createDarknessCanvas(darknessCtx2),
-      CELL_SIZE,
-      auraState,
-      false,
-      0,
-    );
-    expect(darknessCtx2.createRadialGradient).toHaveBeenCalled();
-    expect(darknessCtx2.fill).toHaveBeenCalled();
+    // The aura mask: one ring gradient filling its own cell.
+    const auraCtx = createMockCtx();
+    renderLights(auraCtx, CELL_SIZE, auraState, false, 0);
+    expect(auraCtx.createRadialGradient).toHaveBeenCalledTimes(1);
+    expect(auraCtx.fill).toHaveBeenCalled();
+
+    // Both masks punch straight through the darkness veil as-is.
+    [
+      { maskCtx: sparkleCtx, maskState: sparkleState },
+      { maskCtx: auraCtx, maskState: auraState },
+    ].forEach(({ maskCtx, maskState }) => {
+      const ctx = createMockCtx();
+      const darknessCtx = createMockCtx();
+      const lightCanvas = createDarknessCanvas(maskCtx);
+      renderAmbientDarkness(
+        ctx,
+        createDarknessCanvas(darknessCtx),
+        lightCanvas,
+        maskState,
+      );
+      expect(darknessCtx.drawImage).toHaveBeenCalledWith(lightCanvas, 0, 0);
+      expect(ctx.drawImage).toHaveBeenCalled();
+    });
   });
 
   it('counts sparkle and aura lights as animated', () => {
@@ -1156,22 +1394,24 @@ describe('item light sources', () => {
     expect(gradientCall[1]).toBeCloseTo(3.5 * CELL_SIZE, 5);
   });
 
-  it('punches item light holes into the ambient darkness', () => {
+  it('punches the item light mask into the ambient darkness', () => {
     const state = createState();
     state.dungeon.ambientLight = 0.2;
     state.heroes[0].inventory = [glowingItem];
+    // The mask: the item's aura gradient at the carrier's position.
+    const maskCtx = createMockCtx();
+    renderLights(maskCtx, CELL_SIZE, state, false, 0);
+    expect(maskCtx.createRadialGradient).toHaveBeenCalledTimes(1);
     const ctx = createMockCtx();
     const darknessCtx = createMockCtx();
+    const lightCanvas = createDarknessCanvas(maskCtx);
     renderAmbientDarkness(
       ctx,
       createDarknessCanvas(darknessCtx),
-      CELL_SIZE,
+      lightCanvas,
       state,
-      false,
-      0,
     );
-    expect(darknessCtx.createRadialGradient).toHaveBeenCalledTimes(1);
-    expect(darknessCtx.fill).toHaveBeenCalled();
+    expect(darknessCtx.drawImage).toHaveBeenCalledWith(lightCanvas, 0, 0);
     expect(ctx.drawImage).toHaveBeenCalled();
   });
 
@@ -1423,24 +1663,26 @@ describe('gas effect', () => {
     expect(alphaAt(addColorStop)).not.toBeCloseTo(alphaAt(addColorStop2), 5);
   });
 
-  it('punches the gas cloud into the ambient darkness', () => {
+  it('punches the gas cloud mask into the ambient darkness', () => {
     const state = createState();
     state.dungeon.ambientLight = 0.2;
     state.dungeon.layout.lights = [
       createLight({ position: { x: 3, y: 2 }, effect: 'gas' }),
     ];
+    // The mask: the even cloud gradient over the light's room polygon.
+    const maskCtx = createMockCtx();
+    renderLights(maskCtx, CELL_SIZE, state, false, 1000);
+    expect(maskCtx.createRadialGradient).toHaveBeenCalledTimes(1);
     const ctx = createMockCtx();
     const darknessCtx = createMockCtx();
+    const lightCanvas = createDarknessCanvas(maskCtx);
     renderAmbientDarkness(
       ctx,
       createDarknessCanvas(darknessCtx),
-      CELL_SIZE,
+      lightCanvas,
       state,
-      false,
-      1000,
     );
-    expect(darknessCtx.createRadialGradient).toHaveBeenCalledTimes(1);
-    expect(darknessCtx.fill).toHaveBeenCalled();
+    expect(darknessCtx.drawImage).toHaveBeenCalledWith(lightCanvas, 0, 0);
     expect(ctx.drawImage).toHaveBeenCalled();
   });
 });

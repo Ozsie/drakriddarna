@@ -131,6 +131,23 @@ export const findRoomCells = (grid: string[], room: string): Position[] => {
   return cells;
 };
 
+// Whether a grid cell belongs to a corridor: either its room letter is
+// listed in `layout.corridors` (the whole letter is one corridor) or it is
+// one of the `layout.corridorCells` — cells of a room letter that are
+// corridors without a door separating them from the room.
+export const isCorridorCell = (
+  layout: Layout,
+  x: number,
+  y: number,
+): boolean => {
+  const cell = findCell(layout.grid, x, y);
+  if (!cell) return false;
+  if (layout.corridors.includes(cell)) return true;
+  return Boolean(
+    layout.corridorCells?.some((pos) => isSamePosition(pos, { x, y })),
+  );
+};
+
 export const isDiscovered = (
   dungeon: Dungeon,
   x: number,

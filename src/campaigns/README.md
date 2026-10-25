@@ -57,7 +57,11 @@ src/campaigns/
      `notes`, `items` (placed via `ItemLocation`), `interactables` (placed
      via `defineLayout` or `parseTileMap`, see
      [Adding interactable cells](#adding-interactable-cells-optional)),
-     `corridors`, `corners`.
+     `corridors`, `corridorCells` (cells of a room letter that are corridors
+     without a door separating them from the room, e.g. a corridor stub
+     opening straight into a room — they keep the room's letter for
+     discovery but count as corridors for corridor-specific functionality
+     like the landslide event), `corners`.
    - `startingPositions` — where heroes are placed when entering.
    - `winConditions: WinCondition[]` — one or more `ConditionType`s (e.g.
      `KILL_ALL`, `REACH_CELL`, `SECRET_FOUND`) that must be `fulfilled` to

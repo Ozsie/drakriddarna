@@ -310,16 +310,17 @@ export enum CellAlignment {
 
 // Light animation effects: 'static' (no animation, the default), 'pulse'
 // (breathing glow), 'flicker' (torch-like jitter), 'sweep' (rotating beam),
-// 'blink' (on/off), 'sparkle' (colored twinkles inside the light's own
-// cell), 'aura' (a glowing ring around a soft center glow, filling only
-// its own cell) and 'gas' (an even, gently undulating cloud, e.g. the
-// sleeping gas). Intentionally open-ended: unknown effect strings fall
-// back to 'static' at render time.
+// 'sway' (pendulum swing, e.g. a chandelier), 'blink' (on/off), 'sparkle'
+// (colored twinkles inside the light's own cell), 'aura' (a glowing ring
+// around a soft center glow, filling only its own cell) and 'gas' (an
+// even, gently undulating cloud, e.g. the sleeping gas). Intentionally
+// open-ended: unknown effect strings fall back to 'static' at render time.
 export const LightEffect = {
   STATIC: 'static',
   PULSE: 'pulse',
   FLICKER: 'flicker',
   SWEEP: 'sweep',
+  SWAY: 'sway',
   BLINK: 'blink',
   SPARKLE: 'sparkle',
   AURA: 'aura',
@@ -358,6 +359,12 @@ export type Layout = {
   notes: Note[];
   items: ItemLocation[];
   corridors: string[];
+  // Cells inside a room letter that are corridors without a door between
+  // them and the room (e.g. a corridor stub opening straight into a room).
+  // They keep the room's letter so they are discovered together with the
+  // room, but corridor-specific functionality treats them as corridor
+  // cells (see `isCorridorCell` in src/core/grid.ts).
+  corridorCells?: Position[];
   pillars?: Position[];
   pits?: Position[];
   corners: Corner[];

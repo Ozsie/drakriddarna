@@ -38,26 +38,63 @@ const OPAQUE_CELL_PENETRATION = 0.5;
 export const isCeilingLight = (light: LightSource): boolean =>
   (light.alignment ?? CellAlignment.CENTER) === CellAlignment.CEILING;
 
-export const lightCenter = (light: LightSource, cellSize: number): Position => {
+// A swaying light (e.g. a chandelier) swings on a pendulum: its glow
+// center arcs left and right over its cell, rising slightly toward the
+// ends of the swing. The horizontal reach stays well under half a cell,
+// so the swinging center never leaves the light's own cell.
+const SWAY_ARM_CELLS = 0.6;
+const SWAY_MAX_ANGLE = Math.PI / 6;
+
+// The pendulum offset of a swaying light's center, in world pixels: zero
+// for lights that do not sway.
+export const lightSwayOffset = (
+  light: LightSource,
+  cellSize: number,
+  timeMs: number,
+): Position => {
+  if (light.effect !== LightEffect.SWAY) {
+    return { x: 0, y: 0 };
+  }
+  const t = (timeMs / 1000) * lightRate(light);
+  const angle = SWAY_MAX_ANGLE * Math.sin(2 * Math.PI * t);
+  return {
+    x: cellSize * SWAY_ARM_CELLS * Math.sin(angle),
+    y: cellSize * SWAY_ARM_CELLS * (Math.cos(angle) - 1),
+  };
+};
+
+export const lightCenter = (
+  light: LightSource,
+  cellSize: number,
+  timeMs = 0,
+): Position => {
   const x = light.position.x * cellSize;
   const y = light.position.y * cellSize;
   const inset = cellSize * CORNER_ALIGNMENT_INSET;
+  let center: Position;
   switch (light.alignment ?? CellAlignment.CENTER) {
     case CellAlignment.TOP_LEFT:
-      return { x: x + inset, y: y + inset };
+      center = { x: x + inset, y: y + inset };
+      break;
     case CellAlignment.TOP_RIGHT:
-      return { x: x + cellSize - inset, y: y + inset };
+      center = { x: x + cellSize - inset, y: y + inset };
+      break;
     case CellAlignment.BOTTOM_LEFT:
-      return { x: x + inset, y: y + cellSize - inset };
+      center = { x: x + inset, y: y + cellSize - inset };
+      break;
     case CellAlignment.BOTTOM_RIGHT:
-      return { x: x + cellSize - inset, y: y + cellSize - inset };
+      center = { x: x + cellSize - inset, y: y + cellSize - inset };
+      break;
     // A ceiling fixture lights the whole cell from above; its light pool
     // is centered on the cell, like CENTER.
     case CellAlignment.CEILING:
     case CellAlignment.CENTER:
     default:
-      return { x: x + cellSize / 2, y: y + cellSize / 2 };
+      center = { x: x + cellSize / 2, y: y + cellSize / 2 };
+      break;
   }
+  const sway = lightSwayOffset(light, cellSize, timeMs);
+  return { x: center.x + sway.x, y: center.y + sway.y };
 };
 
 // How light interacts with a cell:
@@ -148,7 +185,7 @@ export const computeLightPolygon = (
   debugMode = false,
   timeMs = 0,
 ): Position[] => {
-  const center = lightCenter(light, cellSize);
+  const center = lightCenter(light, cellSize, timeMs);
   // Gas lights ignore their radius: the cloud expands until it leaves the
   // room (grid room character) containing the light.
   const isGas = light.effect === LightEffect.GAS;
@@ -292,29 +329,9 @@ export const ambientLightLevel = (state: GameState): number => {
   return Math.min(1, Math.max(0, ambient));
 };
 
-// Rooms (grid characters) currently occupied by living heroes.
-export const heroRooms = (state: GameState): Set<string> => {
-  const rooms = new Set<string>();
-  state.heroes
-    .filter((hero) => hero.health > 0)
-    .forEach((hero) => {
-      const cell = findCell(
-        state.dungeon.layout.grid,
-        hero.position.x,
-        hero.position.y,
-      );
-      if (cell) {
-        rooms.add(cell);
-      }
-    });
-  return rooms;
-};
-
 // Whether a light is rendered at all. Outside debug mode a light must be
-// on a discovered cell in a room occupied by a living hero — lights in
-// rooms the party has left are culled, which also keeps animation loops
-// from running for lights nobody is looking at. Debug mode shows every
-// enabled light.
+// on a discovered cell; every other light is culled. Debug mode shows
+// every enabled light.
 export const isLightRenderable = (
   state: GameState,
   light: LightSource,
@@ -322,12 +339,52 @@ export const isLightRenderable = (
 ): boolean => {
   if (light.enabled === false) return false;
   if (debugMode) return true;
-  if (!isDiscovered(state.dungeon, light.position.x, light.position.y)) {
-    return false;
-  }
-  return heroRooms(state).has(
-    findCell(state.dungeon.layout.grid, light.position.x, light.position.y),
+  return isDiscovered(state.dungeon, light.position.x, light.position.y);
+};
+
+// The visible part of the world, in grid cells: the rectangle starting
+// at (x, y) spanning width x height cells. Optional everywhere it is
+// used; without it every renderable light is drawn.
+export type LightViewport = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+// How far beyond its radius a light can still be seen, in cells: the
+// softness blur reaches up to half a cell past the pool edge. This also
+// covers a swaying light's swing, which stays well under half a cell.
+const VIEWPORT_CULL_MARGIN_CELLS = 0.5;
+
+// Whether a light's glow can reach the viewport; lights further away are
+// culled entirely — not drawn, not animated. The glow is bounded by a
+// circle of the light's radius around its cell: every alignment keeps
+// the glow center inside the light's own cell, and a swaying light's
+// swing is covered by the margin. Gas lights have no cheap bound (they
+// fill their whole room) and always pass.
+export const lightInViewport = (
+  light: LightSource,
+  viewport?: LightViewport,
+): boolean => {
+  if (!viewport) return true;
+  if (light.effect === LightEffect.GAS) return true;
+  const centerX = light.position.x + 0.5;
+  const centerY = light.position.y + 0.5;
+  const extent =
+    Math.max(light.radius ?? DEFAULT_LIGHT_RADIUS, 1) +
+    VIEWPORT_CULL_MARGIN_CELLS;
+  const nearestX = Math.min(
+    Math.max(centerX, viewport.x),
+    viewport.x + viewport.width,
   );
+  const nearestY = Math.min(
+    Math.max(centerY, viewport.y),
+    viewport.y + viewport.height,
+  );
+  const dx = centerX - nearestX;
+  const dy = centerY - nearestY;
+  return dx * dx + dy * dy <= extent * extent;
 };
 
 // Cache for light visibility polygons. A polygon depends only on the
@@ -335,7 +392,8 @@ export const isLightRenderable = (
 // states, fog of war, cell size — none of which change between animation
 // frames, so animated lights reuse their polygon instead of re-marching
 // rays every frame. Sweep lights are excluded: their polygon rotates
-// with time.
+// with time. Sway lights are excluded too: their swinging center moves
+// the whole polygon with time.
 let lightPolygonCache: {
   key: string;
   polygons: Map<LightSource, Position[]>;
@@ -373,7 +431,7 @@ export const lightPolygonFor = (
   debugMode: boolean,
   timeMs: number,
 ): Position[] => {
-  if (light.effect === LightEffect.SWEEP) {
+  if (light.effect === LightEffect.SWEEP || light.effect === LightEffect.SWAY) {
     return computeLightPolygon(light, state, cellSize, debugMode, timeMs);
   }
   const key = lightStateKey(state, cellSize, debugMode);
@@ -653,18 +711,27 @@ export const activeLights = (
   return lights;
 };
 
-// Whether any renderable light animates with an effect, and so needs
-// continuous re-rendering of the dynamic layer.
+// Whether a light animates and so needs per-frame rendering: any effect
+// other than 'static' (or absent). Unknown effect strings count as
+// animated, matching how they render (statically) but keeping the
+// re-render loop running, as before.
+export const isAnimatedLight = (light: LightSource): boolean =>
+  light.effect !== undefined && light.effect !== LightEffect.STATIC;
+
+// Whether any renderable light whose glow reaches the viewport animates
+// with an effect, and so needs continuous re-rendering of the dynamic
+// layer.
 export const hasAnimatedLights = (
   state: GameState,
   debugMode: boolean,
   now: number = Date.now(),
+  viewport?: LightViewport,
 ): boolean =>
   activeLights(state, now).some(
     (light) =>
-      light.effect !== undefined &&
-      light.effect !== LightEffect.STATIC &&
-      isLightRenderable(state, light, debugMode),
+      isAnimatedLight(light) &&
+      isLightRenderable(state, light, debugMode) &&
+      lightInViewport(light, viewport),
   );
 
 // Fills a light shape (a polygon glow, an aura ring, a hole punched into
@@ -764,7 +831,9 @@ export const computeSparkles = (
 };
 
 // Draws a sparkle light: small colored glints (a cross with a bright core)
-// twinkling inside the light's cell. No radial glow.
+// twinkling inside the light's cell, each with a soft disc behind it. No
+// radial glow. The glints and discs go into the light mask, so they also
+// shape the hole the sparkles punch into the ambient darkness.
 const renderSparkles = (
   ctx: CanvasRenderingContext2D,
   light: LightSource,
@@ -779,6 +848,17 @@ const renderSparkles = (
   ctx.lineWidth = Math.max(1, cellSize / 32);
   ctx.fillStyle = '#FFFFFF';
   sparkles.forEach((sparkle) => {
+    // The disc keeps a small hole in the darkness around the twinkle.
+    ctx.globalAlpha = Math.min(1, sparkle.alpha * 0.85);
+    ctx.beginPath();
+    ctx.arc(
+      sparkle.x,
+      sparkle.y,
+      Math.max(2, sparkle.arm * 1.5),
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
     ctx.globalAlpha = Math.min(1, sparkle.alpha * intensity * 2.2);
     ctx.beginPath();
     ctx.moveTo(sparkle.x - sparkle.arm, sparkle.y);
@@ -826,7 +906,7 @@ const createAuraGradient = (
   cellSize: number,
   timeMs: number,
 ) => {
-  const center = lightCenter(light, cellSize);
+  const center = lightCenter(light, cellSize, timeMs);
   const radiusPx = cellSize / 2;
   const color = light.color ?? DEFAULT_LIGHT_COLOR;
   const intensity = light.intensity ?? DEFAULT_LIGHT_INTENSITY;
@@ -874,7 +954,7 @@ const createGasGradient = (
   timeMs: number,
   gradientRadiusPx?: number,
 ) => {
-  const center = lightCenter(light, cellSize);
+  const center = lightCenter(light, cellSize, timeMs);
   const color = light.color ?? DEFAULT_LIGHT_COLOR;
   const intensity = light.intensity ?? DEFAULT_LIGHT_INTENSITY;
   const radiusPx =
@@ -902,8 +982,9 @@ const createGasGradient = (
 };
 
 const traceAuraCircle =
-  (light: LightSource, cellSize: number) => (ctx: CanvasRenderingContext2D) => {
-    const center = lightCenter(light, cellSize);
+  (light: LightSource, cellSize: number, timeMs: number) =>
+  (ctx: CanvasRenderingContext2D) => {
+    const center = lightCenter(light, cellSize, timeMs);
     ctx.beginPath();
     ctx.arc(center.x, center.y, cellSize / 2, 0, Math.PI * 2);
   };
@@ -919,7 +1000,7 @@ const renderAura = (
 ) => {
   fillLightShape(
     ctx,
-    traceAuraCircle(light, cellSize),
+    traceAuraCircle(light, cellSize, timeMs),
     createAuraGradient(ctx, light, cellSize, timeMs),
     light,
     cellSize,
@@ -937,7 +1018,7 @@ const createLightGradient = (
   cellSize: number,
   timeMs: number,
 ) => {
-  const center = lightCenter(light, cellSize);
+  const center = lightCenter(light, cellSize, timeMs);
   const color = light.color ?? DEFAULT_LIGHT_COLOR;
   const intensity = light.intensity ?? DEFAULT_LIGHT_INTENSITY;
   const radiusPx = (light.radius ?? DEFAULT_LIGHT_RADIUS) * cellSize;
@@ -971,7 +1052,7 @@ const renderLight = (
 ) => {
   if (!isLightRenderable(state, light, debugMode)) return;
 
-  const center = lightCenter(light, cellSize);
+  const center = lightCenter(light, cellSize, timeMs);
   switch (light.effect) {
     case LightEffect.SPARKLE:
       renderSparkles(ctx, light, cellSize, timeMs);
@@ -989,7 +1070,7 @@ const renderLight = (
           light,
           cellSize,
           timeMs,
-          polygonExtentPx(lightCenter(light, cellSize), points),
+          polygonExtentPx(lightCenter(light, cellSize, timeMs), points),
         ),
         light,
         cellSize,
@@ -1018,35 +1099,141 @@ const renderLight = (
   }
 };
 
+// Whether a light never changes between frames ('static' or no effect):
+// it can be drawn into a caller-cached layer instead of every frame.
+const isStaticLight = (light: LightSource): boolean => !isAnimatedLight(light);
+
+// Cache key for the static light layer, covering everything that can
+// change the pixels static lights draw: the occlusion state (actors,
+// doors, fog of war, cell size) plus the static lights themselves (a
+// toggled brazier, a picked-up light item, round-scoped event lights,
+// blindness) and the viewport (culling). While the key is unchanged the
+// layer can be reused as-is.
+export const staticLightCacheKey = (
+  state: GameState,
+  cellSize: number,
+  debugMode: boolean,
+  viewport?: LightViewport,
+): string => {
+  const lights = activeLights(state)
+    .filter(isStaticLight)
+    .map((light) =>
+      isLightRenderable(state, light, debugMode) &&
+      lightInViewport(light, viewport)
+        ? [
+            light.position.x,
+            light.position.y,
+            light.alignment ?? '',
+            light.color ?? '',
+            light.radius ?? '',
+            light.intensity ?? '',
+            light.softness ?? '',
+          ].join(',')
+        : 'x',
+    )
+    .join('|');
+  const view = viewport
+    ? `${viewport.x},${viewport.y},${viewport.width},${viewport.height}`
+    : 'all';
+  return `${lightStateKey(state, cellSize, debugMode)}|${lights}|${view}`;
+};
+
+// Draws the given lights, culling per renderability and viewport.
+const renderLightList = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  lights: LightSource[],
+  debugMode: boolean,
+  timeMs: number,
+  viewport?: LightViewport,
+) => {
+  lights.forEach((light) => {
+    if (!isLightRenderable(state, light, debugMode)) return;
+    if (!lightInViewport(light, viewport)) return;
+    renderLight(ctx, cellSize, state, light, debugMode, timeMs);
+  });
+};
+
+// Draws the static (never-animating) lights into `ctx`. The caller draws
+// this into a cached layer and only redraws when `staticLightCacheKey`
+// changes.
+export const renderStaticLights = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+  viewport?: LightViewport,
+) => {
+  renderLightList(
+    ctx,
+    cellSize,
+    state,
+    activeLights(state).filter(isStaticLight),
+    debugMode,
+    0,
+    viewport,
+  );
+};
+
+// Draws the animating lights into `ctx` at `timeMs`, on top of the
+// caller's cached static layer.
+export const renderAnimatedLights = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+  timeMs: number,
+  viewport?: LightViewport,
+) => {
+  renderLightList(
+    ctx,
+    cellSize,
+    state,
+    activeLights(state).filter((light) => !isStaticLight(light)),
+    debugMode,
+    timeMs,
+    viewport,
+  );
+};
+
+// Renders every renderable light into `ctx`. The caller draws the result
+// as the light mask: composited onto the scene as the visible glow, and
+// reused by `renderAmbientDarkness` to punch the matching hole into the
+// darkness veil — one set of pixels for both, so glow and hole can never
+// drift apart. Equivalent to `renderStaticLights` followed by
+// `renderAnimatedLights`.
 export const renderLights = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
   state: GameState,
   debugMode: boolean,
   timeMs = 0,
+  viewport?: LightViewport,
 ) => {
   const lights = activeLights(state);
   if (lights.length === 0) return;
-  lights.forEach((light) => {
-    renderLight(ctx, cellSize, state, light, debugMode, timeMs);
-  });
+  renderLightList(ctx, cellSize, state, lights, debugMode, timeMs, viewport);
 };
 
 // Draws the dungeon's ambient darkness over the scene: the whole view is
-// veiled in black with alpha (1 - ambientLight), with the light polygons
-// punched out so lit areas stay visible. The darkness is prepared on an
-// offscreen canvas (owned by the caller, same size and world transform as
-// the target canvas) because `destination-out` would otherwise erase the
-// actors already drawn below. Composited on top of actors, so actors
-// standing in the dark are dimmed as well.
+// veiled in black with alpha (1 - ambientLight), with the light mask
+// punched out so lit areas stay visible. `lightMaskCanvas` holds the exact
+// pixels `renderLights` just drew (same pixel size and world transform as
+// the veil canvas): re-using those pixels instead of re-drawing every
+// light shape keeps the visible glow and the darkness hole in perfect
+// lockstep. Re-drawing them here could drift — canvas blur filter support
+// and behavior vary by browser — which showed up as a black rim around
+// light pools. `destination-out` removes darkness where the mask is
+// opaque, so the mask's alpha controls how much of the veil is lifted.
+// Composited on top of actors, so actors standing in the dark are dimmed
+// as well.
 export const renderAmbientDarkness = (
   ctx: CanvasRenderingContext2D,
   darknessCanvas: HTMLCanvasElement,
-  cellSize: number,
+  lightMaskCanvas: HTMLCanvasElement,
   state: GameState,
-  debugMode: boolean,
-  timeMs = 0,
-) => {
+): void => {
   const ambient = ambientLightLevel(state);
   if (ambient >= 1) return;
   const darknessCtx = darknessCanvas.getContext('2d');
@@ -1060,77 +1247,12 @@ export const renderAmbientDarkness = (
   darknessCtx.fillRect(0, 0, darknessCanvas.width, darknessCanvas.height);
   darknessCtx.restore();
 
-  // Punch the lit areas out of the darkness. `destination-out` removes
-  // darkness where the gradient is opaque, so the light's falloff controls
-  // how much of the darkness is lifted around each source.
+  // Punch the light mask out of the darkness, in device space: the mask
+  // is the same pixel size as the veil, so its alpha maps 1:1.
   darknessCtx.save();
+  darknessCtx.setTransform(1, 0, 0, 1, 0, 0);
   darknessCtx.globalCompositeOperation = 'destination-out';
-  activeLights(state).forEach((light) => {
-    if (!isLightRenderable(state, light, debugMode)) return;
-    if (light.effect === LightEffect.SPARKLE) {
-      // Each sparkle punches its own small hole, so the twinkles stay
-      // visible through the veil and the floor beneath them glows dimly.
-      const sparkles = computeSparkles(light, cellSize, timeMs);
-      sparkles.forEach((sparkle) => {
-        darknessCtx.save();
-        darknessCtx.globalAlpha = Math.min(1, sparkle.alpha * 0.85);
-        darknessCtx.beginPath();
-        darknessCtx.arc(
-          sparkle.x,
-          sparkle.y,
-          Math.max(2, sparkle.arm * 1.5),
-          0,
-          Math.PI * 2,
-        );
-        darknessCtx.fill();
-        darknessCtx.restore();
-      });
-      return;
-    }
-    if (light.effect === LightEffect.AURA) {
-      // Punch the aura: soft center glow and bright ring through the veil.
-      fillLightShape(
-        darknessCtx,
-        traceAuraCircle(light, cellSize),
-        createAuraGradient(darknessCtx, light, cellSize, timeMs),
-        light,
-        cellSize,
-      );
-      return;
-    }
-    if (light.effect === LightEffect.GAS) {
-      // Punch the gas cloud, keeping its even, undulating cloud shape.
-      const gasPoints = lightPolygonFor(
-        light,
-        state,
-        cellSize,
-        debugMode,
-        timeMs,
-      );
-      fillLightPolygon(
-        darknessCtx,
-        gasPoints,
-        createGasGradient(
-          darknessCtx,
-          light,
-          cellSize,
-          timeMs,
-          polygonExtentPx(lightCenter(light, cellSize), gasPoints),
-        ),
-        light,
-        cellSize,
-      );
-      return;
-    }
-    const points = lightPolygonFor(light, state, cellSize, debugMode, timeMs);
-    fillLightPolygon(
-      darknessCtx,
-      points,
-      createLightGradient(darknessCtx, light, cellSize, timeMs),
-      light,
-      cellSize,
-    );
-  });
+  darknessCtx.drawImage(lightMaskCanvas, 0, 0);
   darknessCtx.globalCompositeOperation = 'source-over';
   darknessCtx.restore();
 

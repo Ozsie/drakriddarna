@@ -44,13 +44,37 @@ export const renderHeroes = (
       cellSize,
       debugMode,
       currentTime,
-      state.difficulty,
     );
     if (isAnim) hasActiveAnimation = true;
   });
-  renderWalkableArea(ctx, state, cellSize);
-  renderCurrentActor(ctx, state, cellSize, currentTime);
   return hasActiveAnimation;
+};
+
+// Draws the hero turn UI — the walkable area outline, action and step
+// markers, the hero colour bar, health bars and the current actor
+// reticule. Called by the renderer after the light mask and the ambient
+// darkness veil, so these stay fully visible even on unlit cells.
+export const renderHeroOverlays = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  currentTime: number = Date.now(),
+) => {
+  renderWalkableArea(ctx, state, cellSize);
+  liveHeroes(state).forEach((hero) => {
+    const visualPos = getActorVisualPosition(hero, currentTime);
+    renderActionOnActor(ctx, hero, visualPos.x, visualPos.y, cellSize);
+    renderActorBar(ctx, hero, visualPos.x, visualPos.y, cellSize);
+    renderHealthBar(
+      ctx,
+      hero,
+      visualPos.x,
+      visualPos.y,
+      cellSize,
+      state.difficulty,
+    );
+  });
+  renderCurrentActor(ctx, state, cellSize, currentTime);
 };
 
 const renderHero = (
@@ -60,7 +84,6 @@ const renderHero = (
   cellSize: number,
   debugMode: boolean,
   currentTime: number = Date.now(),
-  difficulty?: Difficulty,
 ): boolean => {
   const visualPos = getActorVisualPosition(hero, currentTime);
   const x = visualPos.x;
@@ -83,9 +106,6 @@ const renderHero = (
     );
   }
   renderActorFlash(ctx, hero, x, y, cellSize, currentTime);
-  renderActionOnActor(ctx, hero, x, y, cellSize);
-  renderActorBar(ctx, hero, x, y, cellSize);
-  renderHealthBar(ctx, hero, x, y, cellSize, difficulty);
   if (debugMode) {
     const debugText = `(${hero.position.x},${hero.position.y})`;
     ctx.fillStyle = 'black';
@@ -221,9 +241,11 @@ const renderWalkableArea = (
             true,
           );
           if (!blockedByHeroes && !blockedByMonster && walkable && los) {
-            ctx.fillStyle = 'rgba(50, 50, 255, 0.08)';
-            ctx.fillRect(pX * cellSize, pY * cellSize, cellSize, cellSize);
-            ctx.stroke();
+            // An outline rather than a tint: it marks the cell without
+            // covering the floor and lighting beneath it.
+            ctx.strokeStyle = 'rgb(20 250 150 / 0.75)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(pX * cellSize, pY * cellSize, cellSize, cellSize);
           }
         }
       }

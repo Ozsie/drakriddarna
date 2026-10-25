@@ -1107,3 +1107,81 @@ describe('sleeping gas light', () => {
     ).toBe(false);
   });
 });
+
+describe('landslide event', () => {
+  const landslideEvent = () => {
+    const event = events.find((e) => e.id === 'landslide') as TurnEvent;
+    return { ...event, used: false };
+  };
+
+  const clearActors = (state: ReturnType<typeof init>) => {
+    state.dungeon.layout.monsters = [];
+    state.heroes.forEach((hero) => (hero.position = { x: 0, y: 0 }));
+  };
+
+  it('collapses a discovered corridor letter entirely', () => {
+    const state = init();
+    clearActors(state);
+    state.dungeon.layout.grid = ['#####', '#AAB#', '#####'];
+    state.dungeon.layout.corridors = ['B'];
+    state.dungeon.layout.corridorCells = [];
+    state.dungeon.discoveredRooms = ['A', 'B'];
+
+    eventEffects.landslide(state, landslideEvent());
+
+    expect(state.dungeon.layout.grid).toEqual(['#####', '#AA?#', '#####']);
+    expect(state.dungeon.collapsedCorridor).toBe('B');
+  });
+
+  it('collapses only the declared corridor cells of a room', () => {
+    const state = init();
+    clearActors(state);
+    state.dungeon.layout.grid = ['#####', '#AAA#', '#####'];
+    state.dungeon.layout.corridors = [];
+    state.dungeon.layout.corridorCells = [
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ];
+    state.dungeon.discoveredRooms = ['A'];
+
+    eventEffects.landslide(state, landslideEvent());
+
+    expect(state.dungeon.layout.grid).toEqual(['#####', '#??A#', '#####']);
+    expect(state.dungeon.collapsedCorridor).toBe('A');
+  });
+
+  it('restores collapsed corridor cells on resetEventEffects', () => {
+    const state = init();
+    clearActors(state);
+    state.dungeon.layout.grid = ['#####', '#AAA#', '#####'];
+    state.dungeon.layout.corridors = [];
+    state.dungeon.layout.corridorCells = [{ x: 2, y: 1 }];
+    state.dungeon.discoveredRooms = ['A'];
+
+    eventEffects.landslide(state, landslideEvent());
+    expect(state.dungeon.layout.grid).toEqual(['#####', '#A?A#', '#####']);
+
+    state.eventDeck.forEach((event) => (event.used = true));
+    resetEventEffects(state);
+
+    expect(state.dungeon.layout.grid).toEqual(['#####', '#AAA#', '#####']);
+    expect(state.dungeon.collapsedCorridor).toBeUndefined();
+  });
+
+  it('leaves the dungeon untouched when the only corridor cells are blocked by a hero', () => {
+    const state = init();
+    clearActors(state);
+    state.dungeon.layout.grid = ['#####', '#AAA#', '#####'];
+    state.dungeon.layout.corridors = [];
+    state.dungeon.layout.corridorCells = [{ x: 2, y: 1 }];
+    state.dungeon.discoveredRooms = ['A'];
+    state.heroes[0].position = { x: 2, y: 1 };
+
+    const event = landslideEvent();
+    eventEffects.landslide(state, event);
+
+    expect(event.used).toBe(true);
+    expect(state.dungeon.layout.grid).toEqual(['#####', '#AAA#', '#####']);
+    expect(state.dungeon.collapsedCorridor).toBeUndefined();
+  });
+});

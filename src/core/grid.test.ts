@@ -5,6 +5,7 @@ import {
   getDist,
   hasLineOfSight,
   isDoorEdge,
+  isCorridorCell,
   isNeighbouring,
   isSamePosition,
   isWalkable,
@@ -36,6 +37,26 @@ describe('grid module', () => {
   it('isSamePosition correctly compares positions', () => {
     expect(isSamePosition({ x: 2, y: 3 }, { x: 2, y: 3 })).toBe(true);
     expect(isSamePosition({ x: 2, y: 3 }, { x: 3, y: 2 })).toBe(false);
+  });
+
+  it('isCorridorCell matches corridor letters and declared corridor cells', () => {
+    const layout: Layout = {
+      grid: ['#####', '#AAB#', '#####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: ['B'],
+      corridorCells: [{ x: 1, y: 1 }],
+      corners: [],
+    };
+
+    expect(isCorridorCell(layout, 3, 1)).toBe(true);
+    expect(isCorridorCell(layout, 1, 1)).toBe(true);
+    expect(isCorridorCell(layout, 2, 1)).toBe(false);
+    expect(isCorridorCell(layout, 0, 0)).toBe(false);
+    expect(isCorridorCell(layout, 9, 9)).toBe(false);
   });
 
   it('isNeighbouring checks 8 adjacent tiles and self', () => {

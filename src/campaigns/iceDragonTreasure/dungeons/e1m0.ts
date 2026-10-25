@@ -8,6 +8,7 @@ import {
 } from '../../../types';
 import { defineDungeon } from '../../../dungeon/DungeonLogic';
 import { e1m1 } from './e1m1';
+import { brazier, chandelier } from '../../../dungeon/LightSources';
 
 export const e1m0: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m0.name',
@@ -47,61 +48,43 @@ export const e1m0: Dungeon = defineDungeon({
         2,
         9,
         CellAlignment.CEILING,
-        {
-          color: '#c29042',
-          radius: 3,
-          intensity: 0.5,
-          softness: 0.7,
-          effect: 'flicker',
-        },
+        chandelier,
       ],
       [
         8,
         10,
         CellAlignment.BOTTOM_RIGHT,
-        {
-          color: '#c29042',
-          radius: 3,
-          intensity: 0.5,
-          softness: 0.7,
-          effect: 'flicker',
-        },
+        brazier,
       ],
       [
         8,
         7,
         CellAlignment.TOP_RIGHT,
-        {
-          color: '#c29042',
-          radius: 3,
-          intensity: 0.5,
-          softness: 0.7,
-          effect: 'flicker',
-        },
+        brazier,
       ],
       [
         9,
         1,
         CellAlignment.TOP_RIGHT,
-        {
-          color: '#c29042',
-          radius: 3,
-          intensity: 0.5,
-          softness: 0.7,
-          effect: 'flicker',
-        },
+        brazier,
       ],
       [
         9,
         3,
         CellAlignment.BOTTOM_RIGHT,
-        {
-          color: '#c29042',
-          radius: 3,
-          intensity: 0.5,
-          softness: 0.7,
-          effect: 'flicker',
-        },
+        brazier,
+      ],
+      [
+        6,
+        1,
+        CellAlignment.TOP_LEFT,
+        brazier,
+      ],
+      [
+        6,
+        3,
+        CellAlignment.BOTTOM_LEFT,
+        brazier,
       ],
     ],
     doors: [

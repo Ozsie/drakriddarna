@@ -157,6 +157,91 @@ describe('dungeonValidator', () => {
     expect(roomErrors.length).toBe(2);
   });
 
+  it('accepts corridor cells inside a room and rejects misplaced, duplicate or redundant ones', () => {
+    const valid = validateLayout({
+      grid: ['#####', '#AMM#', '#####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corridorCells: [
+        { x: 1, y: 1 },
+        { x: 2, y: 1 },
+      ],
+      corners: [],
+    });
+    expect(valid.valid).toBe(true);
+    expect(valid.errors).toEqual([]);
+
+    const invalid = validateLayout({
+      grid: ['#####', '#AMM#', '#####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corridorCells: [
+        { x: 9, y: 9 },
+        { x: 1, y: 1 },
+        { x: 1, y: 1 },
+      ],
+      corners: [],
+    });
+
+    expect(invalid.valid).toBe(false);
+    expect(
+      invalid.errors.some(
+        (e) => e.type === 'boundary' && e.message.includes('(9, 9)'),
+      ),
+    ).toBe(true);
+    expect(invalid.errors.some((e) => e.type === 'duplicate_id')).toBe(true);
+
+    const redundant = validateLayout({
+      grid: ['#####', '#AMM#', '#####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: ['M'],
+      corridorCells: [{ x: 2, y: 1 }],
+      corners: [],
+    });
+
+    expect(redundant.valid).toBe(false);
+    expect(
+      redundant.errors.some(
+        (e) => e.type === 'room' && e.message.includes("inside corridor 'M'"),
+      ),
+    ).toBe(true);
+  });
+
+  it('rejects corridor cells on walls and empty cells', () => {
+    const result = validateLayout({
+      grid: ['## #', '#A# ', '## #'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corridorCells: [
+        { x: 1, y: 0 },
+        { x: 2, y: 1 },
+      ],
+      corners: [],
+    });
+
+    expect(result.valid).toBe(false);
+    const overlapErrors = result.errors.filter(
+      (e) => e.type === 'overlap' && e.entity === 'Corridor cell',
+    );
+    expect(overlapErrors.length).toBe(2);
+  });
+
   it('assertValidDungeon throws formatted descriptive error on invalid dungeon', () => {
     const invalidDungeon = {
       name: 'broken.dungeon',

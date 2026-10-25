@@ -3,6 +3,8 @@ import type {
   Dungeon,
   GameEvent,
   GameState,
+  Layout,
+  Position,
   TurnEvent,
   Weapon,
 } from '../types';
@@ -35,7 +37,7 @@ import {
   isPartyBelowHalfHealth,
 } from '../core';
 import { roll } from '../core';
-import { findCell, isRoomDiscovered, toArray } from '../core';
+import { findCell, isRoomDiscovered, toArray, EMPTY, WALL } from '../core';
 import { takeDamage } from '../core';
 import { COLLAPSED, createLight, createMonster } from '../dungeon/DungeonLogic';
 import { events } from './events';
@@ -358,16 +360,22 @@ export const eventEffects: Record<
   },
   landslide: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
-    const discoveredCorridors = state.dungeon.layout.corridors
-      .filter((corridor) => !isRoomBlocked(state, corridor))
-      .filter((corridor) => isRoomDiscovered(state.dungeon, corridor));
-    const maxCorridorIndex = discoveredCorridors.length;
-    const randomCorridorIndex = Math.floor(Math.random() * maxCorridorIndex);
-    const randomCorridor = discoveredCorridors[randomCorridorIndex];
-    state.dungeon.collapsedCorridor = randomCorridor;
-    state.dungeon.layout.grid = state.dungeon.layout.grid.map((row) =>
-      row.replaceAll(randomCorridor, COLLAPSED),
-    );
+    const candidates = getLandslideCandidates(state);
+    if (candidates.length > 0) {
+      const randomIndex = Math.floor(Math.random() * candidates.length);
+      const candidate = candidates[randomIndex];
+      state.dungeon.collapsedCorridor = candidate.letter;
+      if (candidate.cells) {
+        const cells = candidate.cells;
+        state.dungeon.layout.grid = state.dungeon.layout.grid.map((row, y) =>
+          collapseCellsInRow(row, cells, y),
+        );
+      } else {
+        state.dungeon.layout.grid = state.dungeon.layout.grid.map((row) =>
+          row.replaceAll(candidate.letter, COLLAPSED),
+        );
+      }
+    }
     event.used = true;
   },
   foresight: (state: GameState, event: TurnEvent) => {
@@ -825,4 +833,66 @@ const isRoomBlocked = (state: GameState, roomKey: string) => {
     });
   });
   return isBlocked.some((blocked) => blocked);
+};
+
+// A corridor the landslide can collapse: either a whole corridor letter
+// (`cells` undefined) or the declared corridor cells of a room letter
+// (`cells` set), see `Layout.corridorCells`.
+interface LandslideCandidate {
+  letter: string;
+  cells?: Position[];
+}
+
+const getLandslideCandidates = (state: GameState): LandslideCandidate[] => {
+  const layout = state.dungeon.layout;
+  const fullCorridors: LandslideCandidate[] = layout.corridors
+    .filter((corridor) => !isRoomBlocked(state, corridor))
+    .filter((corridor) => isRoomDiscovered(state.dungeon, corridor))
+    .map((corridor) => ({ letter: corridor }));
+  const partialCorridors: LandslideCandidate[] = getPartialCorridors(layout)
+    .filter(({ letter }) => isRoomDiscovered(state.dungeon, letter))
+    .filter(
+      ({ cells }) =>
+        !cells.some(
+          (cell) =>
+            isBlockedByHero(state, cell.x, cell.y) ||
+            isBlockedByMonster(state, cell.x, cell.y),
+        ),
+    );
+  return [...fullCorridors, ...partialCorridors];
+};
+
+// Groups the layout's corridor cells by the room letter they sit in: each
+// room letter with corridor cells forms one partial corridor.
+const getPartialCorridors = (
+  layout: Layout,
+): Array<{ letter: string; cells: Position[] }> => {
+  const byLetter = new Map<string, Position[]>();
+  (layout.corridorCells ?? []).forEach((position) => {
+    const letter = findCell(layout.grid, position.x, position.y);
+    if (!letter || letter === WALL || letter === EMPTY) return;
+    const cells = byLetter.get(letter) ?? [];
+    cells.push(position);
+    byLetter.set(letter, cells);
+  });
+  return [...byLetter.entries()].map(([letter, cells]) => ({
+    letter,
+    cells,
+  }));
+};
+
+const collapseCellsInRow = (
+  row: string,
+  cells: Position[],
+  y: number,
+): string => {
+  const xs = new Set(
+    cells.filter((cell) => cell.y === y).map((cell) => cell.x),
+  );
+  if (xs.size === 0) return row;
+  let newRow = '';
+  for (let x = 0; x < row.length; x++) {
+    newRow += xs.has(x) ? COLLAPSED : row[x];
+  }
+  return newRow;
 };

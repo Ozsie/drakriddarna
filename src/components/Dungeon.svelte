@@ -23,7 +23,7 @@
   } from '../hero/ClickInputLogic';
   import type { CursorType } from '../hero/ClickInputLogic';
   import { browser } from '$app/environment';
-  import { renderHeroes } from '../hero/HeroRendering';
+  import { renderHeroes, renderHeroOverlays } from '../hero/HeroRendering';
   import { renderMonsters } from '../monsters/MonsterRendering';
   import {
     background,
@@ -36,9 +36,13 @@
   } from '../dungeon/DungeonRendering';
   import {
     renderAmbientDarkness,
+    renderAnimatedLights,
     renderLights,
+    renderStaticLights,
+    staticLightCacheKey,
     hasAnimatedLights,
   } from '../dungeon/LightRendering';
+  import type { LightViewport } from '../dungeon/LightRendering';
   import { renderItems } from '../items/ItemRendering';
   import {
     renderRadialMenu,
@@ -152,9 +156,15 @@
 
   let staticCanvas: HTMLCanvasElement | null = null;
   let actorCanvas: HTMLCanvasElement | null = null;
+  let lightCanvas: HTMLCanvasElement | null = null;
+  let staticLightCanvas: HTMLCanvasElement | null = null;
   let darknessCanvas: HTMLCanvasElement | null = null;
   let overlayCanvas: HTMLCanvasElement | null = null;
   let uiCanvas: HTMLCanvasElement | null = null;
+
+  // Cache key of the static light layer drawn into `staticLightCanvas`;
+  // while unchanged the layer is reused across frames.
+  let lastStaticLightKey = '';
 
   let lastStaticSignature = '';
   let lastDynamicSignature = '';
@@ -315,6 +325,8 @@
     for (const canvas of [
       staticCanvas,
       actorCanvas,
+      lightCanvas,
+      staticLightCanvas,
       darknessCanvas,
       overlayCanvas,
       uiCanvas,
@@ -373,13 +385,29 @@
     if (!activeState || !browser || !actors || !actorCanvas) return;
     if (!isReady(actors)) return;
     const currentTime = Date.now();
+    const debugMode = activeDebugMode ?? false;
+    // The visible part of the world, in cells: lights whose glow cannot
+    // reach it are culled from rendering and animation alike.
+    const centerOffsetX = startPosition
+      ? (startPosition.x + 0.5) * cellSize
+      : 0;
+    const centerOffsetY = startPosition
+      ? (startPosition.y + 0.5) * cellSize
+      : 0;
+    const lightViewport: LightViewport = {
+      x: (centerOffsetX - panX - containerWidth / 2) / cellSize,
+      y: (centerOffsetY - panY - containerHeight / 2) / cellSize,
+      width: containerWidth / cellSize,
+      height: containerHeight / cellSize,
+    };
     const hasActiveAnimations = hasActiveActorAnimations();
-    // Light effects (pulse, flicker, sweep, blink) need a re-render every
-    // frame while any visible light animates.
+    // Light effects (pulse, flicker, sweep, blink, sway) need a re-render
+    // every frame while any light animates within the viewport.
     const hasLightEffects = hasAnimatedLights(
       activeState,
-      activeDebugMode ?? false,
+      debugMode,
       currentTime,
+      lightViewport,
     );
     const sig = getDynamicSignature(
       activeState,
@@ -405,7 +433,79 @@
     ctx.clearRect(0, 0, actorCanvas.width, actorCanvas.height);
     ctx.restore();
 
-    renderLights(ctx, cellSize, activeState, activeDebugMode ?? false, currentTime);
+    // Lights render into their own offscreen mask, which is composited
+    // onto the scene here and then reused to punch the ambient darkness
+    // veil: one set of pixels drives both, so the visible glow and the
+    // darkness hole can never drift apart. Static lights live in a
+    // cached layer redrawn only when their cache key changes (occlusion
+    // state, lights themselves, or the view); per frame only the
+    // animating lights are drawn.
+    const lightCtx = lightCanvas?.getContext('2d') ?? null;
+    if (lightCtx && lightCanvas) {
+      lightCtx.save();
+      lightCtx.setTransform(1, 0, 0, 1, 0, 0);
+      lightCtx.clearRect(0, 0, lightCanvas.width, lightCanvas.height);
+      lightCtx.restore();
+      if (staticLightCanvas) {
+        const staticKey = staticLightCacheKey(
+          activeState,
+          cellSize,
+          debugMode,
+          lightViewport,
+        );
+        if (staticKey !== lastStaticLightKey) {
+          lastStaticLightKey = staticKey;
+          const staticCtx = staticLightCanvas.getContext('2d');
+          if (staticCtx) {
+            staticCtx.save();
+            staticCtx.setTransform(1, 0, 0, 1, 0, 0);
+            staticCtx.clearRect(
+              0,
+              0,
+              staticLightCanvas.width,
+              staticLightCanvas.height,
+            );
+            staticCtx.restore();
+            renderStaticLights(
+              staticCtx,
+              cellSize,
+              activeState,
+              debugMode,
+              lightViewport,
+            );
+          }
+        }
+        // Copy the cached static layer in device space; the light ctx is
+        // back on the world transform for drawing the animated lights.
+        lightCtx.save();
+        lightCtx.setTransform(1, 0, 0, 1, 0, 0);
+        lightCtx.drawImage(staticLightCanvas, 0, 0);
+        lightCtx.restore();
+        renderAnimatedLights(
+          lightCtx,
+          cellSize,
+          activeState,
+          debugMode,
+          currentTime,
+          lightViewport,
+        );
+      } else {
+        renderLights(
+          lightCtx,
+          cellSize,
+          activeState,
+          debugMode,
+          currentTime,
+          lightViewport,
+        );
+      }
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(lightCanvas, 0, 0);
+      ctx.restore();
+    } else {
+      renderLights(ctx, cellSize, activeState, debugMode, currentTime, lightViewport);
+    }
 
     const hasActiveMonsters = renderMonsters(
       ctx,
@@ -424,16 +524,14 @@
       currentTime,
     );
 
-    if (darknessCanvas) {
-      renderAmbientDarkness(
-        ctx,
-        darknessCanvas,
-        cellSize,
-        activeState,
-        activeDebugMode ?? false,
-        currentTime,
-      );
+    if (darknessCanvas && lightCanvas) {
+      renderAmbientDarkness(ctx, darknessCanvas, lightCanvas, activeState);
     }
+
+    // The hero turn UI (walkable outline, reticule, colour bar, health
+    // bar, action and step markers) is drawn above the lights and the
+    // darkness veil, so it stays fully visible even on unlit cells.
+    renderHeroOverlays(ctx, cellSize, activeState, currentTime);
 
     if (dynamicAnimationId) {
       cancelAnimationFrame(dynamicAnimationId);
@@ -707,6 +805,8 @@
       const ratio = (browser && window.devicePixelRatio) || 1;
       initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
       initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(lightCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(staticLightCanvas, containerWidth, containerHeight, ratio);
       initCanvas(darknessCanvas, containerWidth, containerHeight, ratio);
       initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
       initCanvas(uiCanvas, containerWidth, containerHeight, ratio);
@@ -802,6 +902,15 @@
     isMounted = true;
     ground = new Image();
     actors = new Image();
+    // Offscreen canvas for the light mask: same size and world transform
+    // as the actor canvas, never attached to the DOM. Holds the lights
+    // for one frame, composited onto the scene and reused to punch the
+    // darkness veil.
+    lightCanvas = document.createElement('canvas');
+    // Offscreen canvas for the cached static light layer: the static
+    // lights are redrawn into it only when their cache key changes, and
+    // copied into the light mask every frame.
+    staticLightCanvas = document.createElement('canvas');
     // Offscreen canvas for the ambient darkness veil: same size and world
     // transform as the actor canvas, never attached to the DOM.
     darknessCanvas = document.createElement('canvas');
@@ -818,6 +927,8 @@
     if (containerWidth && containerHeight) {
       initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
       initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(lightCanvas, containerWidth, containerHeight, ratio);
+      initCanvas(staticLightCanvas, containerWidth, containerHeight, ratio);
       initCanvas(darknessCanvas, containerWidth, containerHeight, ratio);
       initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
       initCanvas(uiCanvas, containerWidth, containerHeight, ratio);
@@ -892,6 +1003,8 @@
     const ratio = (browser && window.devicePixelRatio) || 1;
     initCanvas(staticCanvas, containerWidth, containerHeight, ratio);
     initCanvas(actorCanvas, containerWidth, containerHeight, ratio);
+    initCanvas(lightCanvas, containerWidth, containerHeight, ratio);
+    initCanvas(staticLightCanvas, containerWidth, containerHeight, ratio);
     initCanvas(darknessCanvas, containerWidth, containerHeight, ratio);
     initCanvas(overlayCanvas, containerWidth, containerHeight, ratio);
     initCanvas(uiCanvas, containerWidth, containerHeight, ratio);

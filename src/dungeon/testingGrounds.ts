@@ -78,6 +78,20 @@ export const testingGrounds: Dungeon = defineDungeon({
     lights: [
       // Flickering ceiling torch near the starting positions.
       [2, 8, CellAlignment.CEILING, { effect: LightEffect.FLICKER, rate: 2 }],
+      // Room C: chandelier swinging gently from left to right.
+      [
+        4,
+        2,
+        CellAlignment.CEILING,
+        {
+          color: '#FFD9A0',
+          radius: 2.5,
+          intensity: 0.5,
+          softness: 0.7,
+          effect: LightEffect.SWAY,
+          rate: 0.4,
+        },
+      ],
       // Cool pulsing light next to the pillar at (7, 9) to demo shadow
       // casting, with soft edges.
       [

@@ -307,11 +307,23 @@ describe('dungeonParser', () => {
       expect(dungeon.layout.notes).toEqual([]);
       expect(dungeon.layout.items).toEqual([]);
       expect(dungeon.layout.corridors).toEqual([]);
+      expect(dungeon.layout.corridorCells).toEqual([]);
       expect(dungeon.layout.pits).toEqual([]);
       expect(dungeon.layout.pillars).toEqual([]);
       expect(dungeon.layout.corners).toEqual(
         autoDetectCorners(dungeon.layout.grid),
       );
+    });
+
+    it('parses corridor cells declared as tuples or position objects', () => {
+      const layout = defineLayout({
+        grid: ['#####', '#AMM#', '#####'],
+        corridorCells: [[1, 1], { x: 2, y: 1 }],
+      });
+      expect(layout.corridorCells).toEqual([
+        { x: 1, y: 1 },
+        { x: 2, y: 1 },
+      ]);
     });
 
     it('passes the ambient light level through to the dungeon', () => {

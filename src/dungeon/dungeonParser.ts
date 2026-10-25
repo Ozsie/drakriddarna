@@ -242,6 +242,7 @@ export type DeclarativeLayout = {
   interactables?: DeclarativeInteractable[];
   lights?: DeclarativeLight[];
   corridors?: string[];
+  corridorCells?: DeclarativePosition[];
   pillars?: DeclarativePosition[];
   pits?: DeclarativePosition[];
   corners?: Corner[];
@@ -685,6 +686,7 @@ export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
   interactables: (layoutDef.interactables ?? []).map(parseInteractable),
   lights: (layoutDef.lights ?? []).map(parseLight),
   corridors: layoutDef.corridors ?? [],
+  corridorCells: (layoutDef.corridorCells ?? []).map(parsePosition),
   pillars: (layoutDef.pillars ?? []).map(parsePosition),
   pits: (layoutDef.pits ?? []).map(parsePosition),
   corners: autoDetectCorners(layoutDef.grid),

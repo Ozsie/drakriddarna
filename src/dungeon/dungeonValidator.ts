@@ -296,6 +296,49 @@ export const validateLayout = (
     }
   });
 
+  // Corridor cells inside a room letter
+  const seenCorridorCells = new Set<string>();
+  (layout.corridorCells || []).forEach((corridorCell) => {
+    const inBounds = checkPositionInBounds(
+      corridorCell,
+      'Corridor cell',
+      false,
+    );
+    if (!inBounds) return;
+
+    const cell = findCell(layout.grid, corridorCell.x, corridorCell.y);
+    if (cell === WALL || cell === EMPTY) {
+      errors.push({
+        type: 'overlap',
+        message: `Corridor cell at (${corridorCell.x}, ${corridorCell.y}) is not on a room cell ('${cell}').`,
+        position: corridorCell,
+        entity: 'Corridor cell',
+      });
+      return;
+    }
+
+    if ((layout.corridors || []).includes(cell)) {
+      errors.push({
+        type: 'room',
+        message: `Corridor cell at (${corridorCell.x}, ${corridorCell.y}) is inside corridor '${cell}', which is already fully declared as a corridor.`,
+        position: corridorCell,
+        entity: 'Corridor cell',
+      });
+      return;
+    }
+
+    const key = `${corridorCell.x},${corridorCell.y}`;
+    if (seenCorridorCells.has(key)) {
+      errors.push({
+        type: 'duplicate_id',
+        message: `Duplicate corridor cell at (${corridorCell.x}, ${corridorCell.y}).`,
+        position: corridorCell,
+        entity: 'Corridor cell',
+      });
+    }
+    seenCorridorCells.add(key);
+  });
+
   if (context?.discoveredRooms) {
     context.discoveredRooms.forEach((room) => {
       if (!gridCells.has(room)) {
