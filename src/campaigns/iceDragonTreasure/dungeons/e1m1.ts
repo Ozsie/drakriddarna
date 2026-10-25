@@ -1,4 +1,4 @@
-import type { Dungeon } from '../../../types';
+import { CellAlignment, type Dungeon } from '../../../types';
 import {
   Colour,
   ConditionType,
@@ -9,6 +9,7 @@ import {
 import { defineDungeon } from '../../../dungeon/DungeonLogic';
 import { magicItems } from '../../../items/magicItems';
 import { e1m2 } from './e1m2';
+import { brazier, chandelier, torch } from '../../../dungeon/LightSources';
 
 export const e1m1: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m1.name',
@@ -32,6 +33,7 @@ export const e1m1: Dungeon = defineDungeon({
     [1, 6],
   ],
   discoveredRooms: ['A'],
+  ambientLight: 0.2,
   layout: {
     grid: [
       '            ######',
@@ -49,6 +51,56 @@ export const e1m1: Dungeon = defineDungeon({
       '             #####',
     ],
     corridors: ['B', 'D', 'F', 'H'],
+    lights: [
+      [
+        9,
+        4,
+        CellAlignment.TOP_RIGHT,
+        {
+          color: '#dc572d',
+          radius: 2,
+          intensity: 0.45,
+          softness: 0.5,
+          effect: 'flicker',
+          rate: 2,
+        },
+      ],
+      [
+        10,
+        7,
+        CellAlignment.TOP_RIGHT,
+        {
+          color: '#a0ccff',
+          radius: 2,
+          intensity: 0.45,
+          softness: 0.5,
+          effect: 'flicker',
+          rate: 2,
+        },
+      ],
+      [
+        10,
+        9,
+        CellAlignment.BOTTOM_LEFT,
+        {
+          color: '#005fc7',
+          radius: 2,
+          intensity: 0.45,
+          softness: 0.5,
+          effect: 'flicker',
+          rate: 2,
+        },
+      ],
+      [11, 3, CellAlignment.TOP_RIGHT, torch],
+      [16, 1, CellAlignment.CENTER, brazier],
+      [16, 3, CellAlignment.CENTER, brazier],
+      [2, 5, CellAlignment.CEILING, chandelier],
+      [12, 6, CellAlignment.TOP_RIGHT, torch],
+      [16, 6, CellAlignment.BOTTOM_RIGHT, torch],
+      [15, 10, CellAlignment.CEILING, chandelier],
+      [7, 4, CellAlignment.TOP_LEFT, brazier],
+      [7, 9, CellAlignment.TOP_LEFT, brazier],
+    ],
     doors: [
       [Side.RIGHT, 3, 5],
       [Side.RIGHT, 6, 5],
