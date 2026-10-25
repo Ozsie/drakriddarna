@@ -6,7 +6,11 @@
     "trapDoor": "Trap Door",
     "e1m0": {
       "name": "Troll Cave",
-      "intro": "A hideous troll is spreading terror in the area. The Dragon Knights have found the monster's lair and are now standing outside it. A crude door made of roughly hewn planks leads into the mountain. Clear tracks reveal that they are on the right path..."
+      "intro": "A hideous troll is spreading terror in the area. The Dragon Knights have found the monster's lair and are now standing outside it. A crude door made of roughly hewn planks leads into the mountain. Clear tracks reveal that they are on the right path...",
+      "notes": {
+        "tutorial1": "Press in a cell to move. Press on the current hero to open its action menu.",
+        "tutorial2": "Press on a monster to attack it."
+      }
     },
     "e1m1": {
       "name": "The Three Gates of Power",

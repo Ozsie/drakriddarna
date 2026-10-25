@@ -128,6 +128,7 @@ describe('Orc Drums event and resetEventEffects', () => {
     state.dungeon.layout.monsters = [orc1, orc2, orc3, orc4];
     state.dungeon.layout.grid = ['AAAA', 'AAAA', 'AAAA', 'AAAA'];
     state.dungeon.discoveredRooms = ['A'];
+    const indicatorsBefore = state.damageIndicators?.length ?? 0;
 
     const event = {
       id: 'orc_drums',
@@ -148,7 +149,7 @@ describe('Orc Drums event and resetEventEffects', () => {
     expect(orc3.actions).toBe(2);
     expect(orc4.actions).toBe(2);
     expect(event.used).toBe(true);
-    expect(state.damageIndicators).toBeUndefined();
+    expect(state.damageIndicators?.length ?? 0).toBe(indicatorsBefore);
   });
 
   it('still boosts visible orcs if there are 4 orcs in layout but 1 is dead or undiscovered', () => {
@@ -161,6 +162,7 @@ describe('Orc Drums event and resetEventEffects', () => {
     state.dungeon.layout.monsters = [orc1, orc2, orc3, deadOrc];
     state.dungeon.layout.grid = ['AAAA', 'AAAA', 'AAAA', 'AAAA'];
     state.dungeon.discoveredRooms = ['A'];
+    const indicatorsBefore = state.damageIndicators?.length ?? 0;
 
     const event = {
       id: 'orc_drums',
@@ -181,7 +183,7 @@ describe('Orc Drums event and resetEventEffects', () => {
     expect(orc3.actions).toBe(3);
     expect(deadOrc.actions).toBe(2);
     expect(event.used).toBe(true);
-    expect(state.damageIndicators?.length).toBe(3);
+    expect((state.damageIndicators?.length ?? 0) - indicatorsBefore).toBe(3);
   });
 
   it('fountainOfYouth respects max health adjusted by difficulty modifier', () => {
