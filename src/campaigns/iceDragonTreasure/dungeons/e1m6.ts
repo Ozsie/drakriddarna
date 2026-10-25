@@ -1,5 +1,6 @@
 import type { Dungeon } from '../../../types';
 import {
+  CellAlignment,
   Colour,
   ConditionType,
   MonsterType,
@@ -7,6 +8,12 @@ import {
   Side,
 } from '../../../types';
 import { defineDungeon } from '../../../dungeon/DungeonLogic';
+import {
+  brazier,
+  chandelier,
+  iceBrazier,
+  torch,
+} from '../../../dungeon/LightSources';
 
 export const e1m6: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m6.name',
@@ -24,6 +31,7 @@ export const e1m6: Dungeon = defineDungeon({
     [12, 3],
   ],
   discoveredRooms: ['A'],
+  ambientLight: 0.2,
   layout: {
     grid: [
       '######## #####',
@@ -43,6 +51,32 @@ export const e1m6: Dungeon = defineDungeon({
       '#####         ',
     ],
     corridors: ['C', 'D'],
+    lights: [
+      [11, 2, CellAlignment.CEILING, chandelier],
+      [1, 1, CellAlignment.TOP_LEFT, brazier],
+      [6, 3, CellAlignment.BOTTOM_RIGHT, brazier],
+      [2, 5, CellAlignment.TOP_LEFT, torch],
+      [1, 7, CellAlignment.TOP_LEFT, brazier],
+      [2, 10, CellAlignment.CEILING, chandelier],
+      [3, 13, CellAlignment.BOTTOM_RIGHT, brazier],
+      [5, 6, CellAlignment.TOP_LEFT, iceBrazier],
+      [10, 6, CellAlignment.TOP_RIGHT, iceBrazier],
+      [
+        6,
+        9,
+        CellAlignment.CENTER,
+        {
+          color: '#a0ccff',
+          radius: 3,
+          intensity: 0.4,
+          softness: 0.6,
+          effect: 'pulse',
+          rate: 0.5,
+        },
+      ],
+      [4, 13, CellAlignment.BOTTOM_LEFT, iceBrazier],
+      [10, 13, CellAlignment.BOTTOM_RIGHT, iceBrazier],
+    ],
     pits: [],
     pillars: [],
     doors: [

@@ -1,5 +1,6 @@
 import type { Dungeon } from '../../../types';
 import {
+  CellAlignment,
   Colour,
   ConditionType,
   MonsterType,
@@ -9,6 +10,12 @@ import {
 import { defineDungeon } from '../../../dungeon/DungeonLogic';
 import { magicItems } from '../../../items/magicItems';
 import { e1m4 } from './e1m4';
+import {
+  brazier,
+  chandelier,
+  ember,
+  torch,
+} from '../../../dungeon/LightSources';
 
 export const e1m3: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m3.name',
@@ -32,6 +39,7 @@ export const e1m3: Dungeon = defineDungeon({
     [1, 6],
   ],
   discoveredRooms: ['A'],
+  ambientLight: 0.2,
   layout: {
     grid: [
       '       ########     ',
@@ -54,6 +62,26 @@ export const e1m3: Dungeon = defineDungeon({
       [14, 9],
       [14, 10],
       [14, 11],
+    ],
+    lights: [
+      [2, 5, CellAlignment.CEILING, chandelier],
+      [5, 5, CellAlignment.TOP_LEFT, torch],
+      [6, 2, CellAlignment.TOP_LEFT, brazier],
+      [7, 2, CellAlignment.TOP_RIGHT, ember],
+      [9, 1, CellAlignment.TOP_LEFT, torch],
+      [13, 1, CellAlignment.TOP_RIGHT, brazier],
+      [11, 3, CellAlignment.BOTTOM_LEFT, brazier],
+      [13, 6, CellAlignment.TOP_RIGHT, torch],
+      [7, 8, CellAlignment.TOP_LEFT, brazier],
+      [8, 10, CellAlignment.CENTER, torch],
+      [5, 9, CellAlignment.TOP_LEFT, torch],
+      [11, 11, CellAlignment.TOP_LEFT, torch],
+      [14, 10, CellAlignment.TOP_RIGHT, ember],
+      [15, 9, CellAlignment.BOTTOM_RIGHT, brazier],
+      [16, 4, CellAlignment.CEILING, chandelier],
+      [17, 4, CellAlignment.TOP_RIGHT, brazier],
+      [18, 5, CellAlignment.BOTTOM_RIGHT, brazier],
+      [18, 9, CellAlignment.BOTTOM_RIGHT, torch],
     ],
     pits: [
       [16, 6],
