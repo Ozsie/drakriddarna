@@ -282,7 +282,10 @@ describe('MenuLogic', () => {
 
     it('moves to the next dungeon and closes menu on next_dungeon click', () => {
       const closeMenu = vi.fn();
-      mockState.dungeon.nextDungeon = { ...mockState.dungeon, name: 'Next Dungeon' };
+      mockState.dungeon.nextDungeon = {
+        ...mockState.dungeon,
+        name: 'Next Dungeon',
+      };
       const items = getDebugMenuItems(mockState, { closeMenu });
       const nextDungeonItem = items.find((i) => i.id === 'next_dungeon');
 

@@ -744,3 +744,51 @@ describe('combat line of sight across wall corners', () => {
     expect(getCursorType(state, { x: 3, y: 2 })).toBe('default');
   });
 });
+
+describe('zone of control leniency when passing other heroes', () => {
+  it('does not stop on top of another hero adjacent to a monster', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    const other = createTestHero('Helbran', 2, 1);
+    state.heroes.push(other);
+    state.dungeon.layout.monsters = [
+      createTestMonster({ position: { x: 2, y: 2 } }),
+    ];
+
+    onTargetCell(state, { x: 4, y: 1 });
+
+    // (2,1) is occupied and adjacent to the monster, so the move does not
+    // end there: the hero stops one tile past the other hero, still inside
+    // the monster's zone of control, never stacked on it.
+    expect(hero.position).toEqual({ x: 3, y: 1 });
+    expect(hero.position).not.toEqual(other.position);
+  });
+
+  it('walks on to the clicked destination when the monster is left behind', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    const other = createTestHero('Helbran', 2, 1);
+    state.heroes.push(other);
+    state.dungeon.layout.monsters = [
+      createTestMonster({ position: { x: 1, y: 2 } }),
+    ];
+
+    onTargetCell(state, { x: 4, y: 1 });
+
+    // Only the occupied tile is adjacent to the monster; the hero passes
+    // both it and the other hero and reaches the destination.
+    expect(hero.position).toEqual({ x: 4, y: 1 });
+  });
+
+  it('still stops normally when no other hero stands in the path', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    state.dungeon.layout.monsters = [
+      createTestMonster({ position: { x: 4, y: 2 } }),
+    ];
+
+    onTargetCell(state, { x: 4, y: 1 });
+
+    expect(hero.position).toEqual({ x: 3, y: 1 });
+  });
+});

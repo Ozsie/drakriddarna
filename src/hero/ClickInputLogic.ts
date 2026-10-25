@@ -246,14 +246,26 @@ export const onTargetCell = (state: GameState, target: Position) => {
       const path = cellsAlongLine(hero.position, target);
       hero.movement -= distance;
       for (const cell of path) {
+        const occupiedByOtherHero = liveHeroes(state).some(
+          (h) =>
+            h !== hero && h.position.x === cell.x && h.position.y === cell.y,
+        );
+        const movementBeforeStep = hero.movement;
         // The zone of control ends the move on the tile where the hero
-        // becomes adjacent to a monster — remaining path cells are dropped.
+        // becomes adjacent to a monster — remaining path cells are
+        // dropped, but never on top of another hero: stopping there is
+        // illegal, so the hero walks on past the monster instead and the
+        // zone of control applies again at the next tile.
         const halted = arriveOnCell(state, hero, cell);
         if (checkForTrapDoor(state)) {
           return;
         }
         if (halted) {
-          break;
+          if (occupiedByOtherHero) {
+            hero.movement = movementBeforeStep;
+          } else {
+            break;
+          }
         }
       }
       consumeActions(hero, getDifficulty(state).modifiers.movement);

@@ -148,6 +148,7 @@ A hero receives **2 Actions** at the start of their turn:
 
 - **8-Directional Movement**: Heroes and monsters can move horizontally, vertically, and diagonally across walkable tiles.
 - **Zone of Control / Monster Engagement**: Moving into any tile adjacent to an enemy monster immediately halts the hero's movement (remaining movement is reduced to `0`).
+- **Passing Through Heroes**: Heroes may move through tiles occupied by other heroes, but may never stop on one. If the zone of control would halt a hero on another hero's tile, the hero instead walks on past the monster and stops at the next free tile.
 - **Obstacles**: Heroes cannot move through solid walls, closed doors, collapsed rubble, pits, or tiles occupied by live monsters.
 
 ---
