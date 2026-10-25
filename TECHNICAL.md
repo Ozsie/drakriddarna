@@ -10,32 +10,33 @@ For the game's rules and how to play, see [README.md](./README.md) and
 
 ## What the project is
 
-Drakriddarna ("The Dragon Riders") is a browser adaptation of the
+Drakriddarna is a browser game that contains a complete tabletop rules engine,
+an opponent AI, and a custom 2D renderer — all in plain TypeScript, with no
+game engine — deployed as a fully static web page with no server.
+
+Specifically, it is an adaptation of the
 [Drakriddarna / Dragonfire](https://boardgamegeek.com/image/4326455/dragonfire)
 tactical board game: a turn-based dungeon crawler where a party of heroes
 explores a grid dungeon, fights monsters, discovers secrets and treasure, and
 works through a chain of scenarios ("dungeons") forming a campaign.
 
-The interesting engineering part: it is a complete tabletop rules engine, an
-opponent AI, and a custom 2D renderer — all in plain TypeScript, with no game
-engine, deployed as a fully static web page.
-
 ## Tech stack at a glance
 
-| Layer         | Technology                           | Notes                                                   |
-| ------------- | ------------------------------------ | ------------------------------------------------------- |
-| App framework | SvelteKit 1.x (static adapter)       | Renders to static files; no server at runtime           |
-| Language      | TypeScript (strict mode)             | No `any`, no console, enforced by ESLint                |
-| Rendering     | Custom Canvas 2D code                | No game engine (no Phaser/Three.js), no DOM-based tiles |
-| State         | Svelte stores + `localStorage`       | Single serializable `GameState`                         |
-| i18n          | sveltekit-i18n (English/Swedish)     | Translation files auto-discovered at build time         |
-| Content       | TypeScript-as-data                   | Dungeons, campaigns and AI opponents are code modules   |
-| Testing       | Vitest, colocated tests              | 54 test files, plus headless game benchmarks           |
-| Tooling       | Vite, ESLint, Prettier, svelte-check |                                                         |
-| CI/CD         | GitHub Actions → GitHub Pages        | Deploy on push to `main`                                |
+| Layer         | Technology                                   | Notes                                                   |
+| ------------- | -------------------------------------------- | ------------------------------------------------------- |
+| App framework | SvelteKit 1.30 + Svelte 4.2 (static adapter) | Renders to static files; no server at runtime           |
+| Language      | TypeScript (strict mode)                     | No `any`, no console, enforced by ESLint                |
+| Rendering     | Custom Canvas 2D code                        | No game engine (no Phaser/Three.js), no DOM-based tiles |
+| State         | Svelte stores + `localStorage`               | Single serializable `GameState`                         |
+| i18n          | sveltekit-i18n (English/Swedish)             | Translation files auto-discovered at build time         |
+| Content       | TypeScript-as-data                           | Dungeons, campaigns and AI opponents are code modules   |
+| Testing       | Vitest, colocated tests                      | 54 test files, plus headless game benchmarks            |
+| Tooling       | Vite, ESLint, Prettier, svelte-check         |                                                         |
+| CI/CD         | GitHub Actions → GitHub Pages                | Deploy on push to `main`                                |
 
 The only runtime dependency is `sveltekit-i18n`. Everything else is dev
-tooling.
+tooling. (Framework versions above are the locked versions, not the ranges in
+`package.json`.)
 
 ## Architecture: logic engine behind a thin UI
 
@@ -43,9 +44,9 @@ The single most important architectural rule in this codebase: **game logic is
 engine-agnostic TypeScript; the UI is a thin layer on top.**
 
 ```
-├── src/core/          shared primitives: dice, grid geometry, combat math, logging, actor animations
+├── src/core/          shared primitives: dice, grid geometry, combat math, logging
 ├── src/game.ts        central game-logic hub (init, turn flow, save/load)
-├── src/dungeon/       dungeon parsing/validation, rendering, lighting, tile texture cache
+├── src/dungeon/       dungeon parsing/validation, rendering, lighting
 ├── src/hero/          hero turn logic and input handling
 ├── src/monsters/      monster AI: pathfinding, behavior registry, tactics
 ├── src/items/         item definitions and inventory logic
@@ -55,33 +56,25 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/store/         Svelte stores wrapping the game state
 ├── src/ui/            pure functions that draw UI panels onto canvases
 ├── src/components/    Dungeon.svelte — the one big canvas component
-├── src/audio/         sound effect and music managers
-├── src/combat/        combat effects: damage indicators, blood splatters, projectiles, flames
-├── src/input/         input management: touch pan, click handling
-├── src/interactables/ interactable objects (braziers, altars, etc.)
-├── src/notes/         in-game note taking
-├── src/secrets/       secret discovery logic
-└── src/menu/          menu system
+└── src/audio/         sound effect and music managers
 ```
 
 The logic modules import nothing from Svelte's rendering side. That separation
 is what makes two unusual things possible:
 
 1. **Headless simulation.** The whole game can run with no DOM at all — the
-   balance benchmark (see below) plays hundreds of full games per minute.
-2. **Colocated unit tests.** Most logic modules have a `*.test.ts` next to it,
-   testing rules (dice odds, line of sight, monster targeting, pathfinding,
-   combat resolution) directly, the way you would test any other business logic.
-   UI rendering modules are similarly tested with stubbed canvas contexts.
+   balance benchmark (see below) plays ~900 complete games in about half a
+   minute.
+2. **Colocated unit tests.** Most logic modules have a `*.test.ts` next to
+   them, testing rules (dice odds, line of sight, monster targeting)
+   directly, the way you would test any other business logic.
 
-The UI layer is deliberately thin. Only three `.svelte` components exist:
-`Dungeon.svelte` (the main game view in `src/components/`), `+layout.svelte`
-and `+page.svelte` (SvelteKit route components). `Dungeon.svelte` owns the
-layered canvases and wires input to store calls. All actual drawing lives in
-plain `.ts` modules (`DungeonRendering.ts`, `MonsterRendering.ts`,
-`TopBarRendering.ts`, etc.) that take a canvas 2D context and the game state
-as arguments. The same functions are unit-tested by giving them a stubbed
-context.
+The UI layer is deliberately thin. Only three `.svelte` components exist; the
+game view (`Dungeon.svelte`) owns the canvases and wires input to store calls,
+while all actual drawing lives in plain `.ts` modules (`DungeonRendering.ts`,
+`MonsterRendering.ts`, `TopBarRendering.ts`, …) that take a canvas 2D context
+and the game state as arguments. The same functions are unit-tested by giving
+them a stubbed context.
 
 ## The domain model
 
@@ -127,8 +120,7 @@ deep-merged into i18n namespaces.
 
 Dungeons themselves are authored in a declarative DSL built on plain
 TypeScript helpers. A layout is an ASCII string matrix (one character per
-cell) plus declarative lists of doors, monsters, items, secrets, lights,
-interactables, and pits:
+cell) plus declarative lists of doors, monsters, items, secrets and lights:
 
 ```ts
 export const e1m1: Dungeon = defineDungeon({
@@ -151,22 +143,19 @@ sit on walls, win conditions reference real cells), and auto-detects wall
 corners so they render correctly without being authored by hand.
 
 There is no runtime loading of external data files: content is compiled into
-the bundle. A separate project, the **Drakriddarna Campaign Editor**
-(specified in [docs/editor-spec/](./docs/editor-spec/)), is being built as a
-Kotlin Multiplatform desktop app that will _generate these TypeScript modules_
-from a visual editor — the game repo requires no changes to consume them. A
-catalog of the game's shared types is exported for that purpose by
-`scripts/export-editor-catalog.ts`.
+the bundle. Because authoring TypeScript modules by hand is a programmer-only
+activity, a separate visual Campaign Editor (a Kotlin Multiplatform desktop
+app specified in [docs/editor-spec/](./docs/editor-spec/)) is planned to
+_generate_ these modules; the game repo requires no changes to consume them.
 
 ## Determinism: a seeded RNG everywhere it matters
 
 Gameplay-affecting randomness never calls `Math.random()` directly. All dice
 rolls and shuffles go through a swappable RNG in `src/core/dice.ts`
 (`setRng` / `createSeededRng`, a small stateful generator in the mulberry32
-family). The dice mechanics themselves are board-game specific: a "roll" is
-N six-sided dice, filtered by the actor's level (an Apprentice only counts
-5s and 6s; a Master counts 3s and above) — i.e. skill changes the _hit
-threshold_, not the dice count.
+family). The dice mechanic itself is board-game specific, but the engineering
+point is simple: an actor's skill sets the _threshold_ a die must beat, not
+the number of dice — so difficulty tuning is a parameter, not a code path.
 
 Two payoffs of that discipline:
 
@@ -184,11 +173,11 @@ The monster AI (`src/monsters/`) is worth reading even outside a games
 context, because it is a compact example of a **weighted strategy-selection
 system**:
 
-- **Pathfinding** — A* over the passable grid, 8 directions, Chebyshev
-  heuristic, with the goal condition relaxed to "reach a cell *adjacent to\*
-  the target hero" rather than the hero's own (occupied) cell
+- **Pathfinding** — A\* over the passable grid, 8 directions, Chebyshev
+  heuristic, with the goal condition relaxed to "reach a cell adjacent to the
+  target hero" rather than the hero's own (occupied) cell
   (`src/monsters/pathfinding.ts`).
-- **Line of sight** — ray stepping along the grid at sub-cell resolution
+- **Line of sight** — ray stepping along the grid
   (`stepAlongLine` / `hasLineOfSight` in `src/core/grid.ts`); ranged attacks
   and sight are blocked by walls, closed doors and (for attacks) figures.
 - **Target scoring** — each monster scores every visible hero
@@ -197,11 +186,10 @@ system**:
   pressure), and a small random jitter so playthroughs differ.
 - **Behavior registry** — monsters pick from named behaviors (aggressive
   charge, defensive hold, ranged kite, …) via eligibility checks and weights
-  (`src/monsters/behavior/registry.ts`, definitions in
-  `src/monsters/behavior/definitions/` for orcs, trolls, and the four Dark
-  Lords with their distinct fire-spray attacks). Each behavior yields a
-  pair of "slots" — **every monster acts twice per turn** —
-  e.g. `['move', 'melee']` or `['shoot', 'move_away']`.
+  (`behavior/registry.ts`, definitions in `behavior/definitions/` for orcs,
+  trolls, and the four Dark Lords with their distinct fire-spray attacks).
+  The board game gives each monster two actions per turn, so every behavior
+  is a pair of slots, e.g. `['move', 'melee']` or `['shoot', 'move_away']`.
 
 On top of that sits the **Game Master** system — the game's name for what
 other products call a difficulty director, in the spirit of Left 4 Dead's AI
@@ -215,40 +203,31 @@ difficulty multiplier.
 
 ## Rendering: hand-rolled 2D, layered and on-demand
 
-There is no traditional 60fps render loop. Rendering is **event-driven and
-on-demand**: the canvas repaints when the game state changes, and only uses
-`requestAnimationFrame` when animations (actor movement, projectiles, damage
-indicators, flame effects, blood splatters, or dynamic lights) are active. A
-completely idle dungeon with no animations costs zero CPU.
+There is no render loop in the classic sense. Rendering is **event-driven and
+on-demand**: the canvas repaints when the game state changes or an animation
+is active, not every frame. Idle dungeons cost zero CPU.
 
 The scene is composed from several stacked `<canvas>` elements
-(ground/tiles, actors, effects, UI overlays) plus offscreen canvases that are never in
+(ground/tiles, actors, UI overlays) plus offscreen canvases that are never in
 the DOM:
 
 - **Tile texture cache** (`TileTextureCache.ts`) — pre-rasterizes tile
-  variants (sub-rectangles from sprite sheets) once instead of re-drawing sprites
-  every paint.
+  variants once instead of re-drawing sprites every paint.
 - **Light mask canvas** — the lighting system (below) composites into an
   offscreen canvas, which is then masked over the scene.
 - **Static light layer cache** — lights that never move (fixed torches,
   braziers) are rendered once and cached; only dynamic lights (swaying
   chandeliers, carried items) recompute per animation frame.
-- **Multiple render layers** — static geometry, dynamic actors, effect overlays
-  (damage indicators, projectiles, flames, blood), and UI are all separate
-  canvases, allowing each to redraw independently when its dependencies change.
 
 The lighting (`src/dungeon/LightRendering.ts`) is the most graphics-heavy
 code in the repo: a 2D visibility technique where each light source casts a
 fan of rays (120 per source, stepped at 1/6-cell resolution) that stop at
 opaque cells, producing a visibility polygon; a radial gradient fills the
 polygon, with tunable radius, softness, intensity and colour per source.
-Lights have effects (`SWAY` — a pendulum-arced moving glow for chandeliers,
-`FLICKER` — subtle random brightness variation for torches),
+Lights have effects (`SWAY` — a pendulum-arced moving glow for chandeliers),
 alignment (a ceiling light illuminates figures without them casting
-shadows), and each dungeon sets an ambient darkness level. Preset light
-configurations (`LightSources.ts`) include `brazier`, `chandelier`, `torch`,
-`ember`, and `iceBrazier` for consistent theming. Conceptually this is the
-same ray-casting idea used in 2D shadow algorithms generally.
+shadows), and each dungeon sets an ambient darkness level. Conceptually this
+is the same ray-casting idea used in 2D shadow algorithms generally.
 
 Animations (actor movement, projectiles, damage indicators) are managed as
 small state machines in `core/ActorAnimation.ts`, driven by
@@ -259,11 +238,8 @@ small state machines in `core/ActorAnimation.ts`, driven by
 The entire game lives in one `GameState` object, held in a Svelte `writable`
 store (`src/store/gameStateStore.ts`) that also owns input handling glue and
 persistence. Saving is `JSON.stringify(state)` to `localStorage`, plus a
-separate "reload guard" (`autosave`) key that restores an in-progress game
-across page reloads. The state includes heroes, dungeon, monsters, items,
-secrets, event deck state, and transient visual effects (damage indicators,
-blood splatters, projectiles, flame effects) that are serialized and
-cleared on reload.
+separate "reload guard" key that restores an in-progress game across page
+reloads.
 
 Save migration is treated as a real concern: `loadState()` rewrites older
 save shapes (e.g. it collapses the legacy `difficulty`/`gameMasterId` fields
@@ -285,21 +261,44 @@ log-message keys to the shared namespace.
 Three layers of verification:
 
 1. **Colocated unit tests** (Vitest). 54 `*.test.ts` files next to the code
-   they cover — dice distributions, grid math, LOS edge cases, combat
-   resolution, pathfinding, target scoring, store behavior, dungeon parsing
-   and validation, rendering modules against stubbed canvas contexts, and
-   all UI rendering modules.
+   they cover — dice distributions, LOS edge cases, combat resolution, target
+   scoring, store behavior, and even rendering modules against stubbed canvas
+   contexts.
 2. **Headless game benchmark** (`src/benchmark/`). A bot
    (`benchmark/bot.ts`) plays the hero side with a fixed aggressive policy
    while monster turns run with animation delays disabled. The suite plays
-   each benchmarked dungeon against all three Game Masters, 500 seeded runs
-   each, and prints win/loss rates, turn counts, casualties, monsters killed
-   and party HP — a statistically meaningful answer to "is this scenario
-   beatable, and do the difficulty tiers actually feel different". This is
-   simulation testing applied to game _design_, not just code.
+   each benchmarked dungeon against all three Game Masters with 100 seeded
+   runs each — 900 complete games — which completes in about 30 seconds on a
+   dev laptop (~1,800 games per minute). This is simulation testing applied
+   to game _design_, not just code: it answers "is this scenario beatable,
+   and do the difficulty tiers actually feel different" with numbers instead
+   of vibes. Two caveats keep those numbers honest:
+
+   - The run count is a parameter (`runGameMasterBenchmark({ runs })`); at
+     100 runs per cell, a win rate carries roughly ±10 percentage points of
+     sampling noise, so treat the table as evidence that the tiers are
+     distinct rather than precise absolutes.
+   - The bot plays a fixed aggressive policy that no human plays exactly, so
+     read the win rates as relative difficulty between tiers, not predicted
+     human win rates.
+
+   Win rates measured with `npm run benchmark` at the time of writing
+   (re-run it for current numbers):
+
+   | Dungeon                          | StoryTeller (easy) | Tactician (normal) | BrutalOverlord (hard) |
+   | -------------------------------- | ------------------ | ------------------ | --------------------- |
+   | e1m0 — Troll Cave                | 87%                | 66%                | 34%                   |
+   | e1m1 — The Three Gates of Power  | 98%                | 83%                | 72%                   |
+   | e2m1 — The Five Mounds of Terror | 95%                | 89%                | 72%                   |
+
+   The same reports include average turn counts, hero casualties (with
+   standard deviation), monsters killed, remaining party HP and monster spawn
+   counts per Game Master — enough to confirm that the tiers are distinct
+   (casualties on e1m0 rise from 0.5 on easy to 2.6 on hard) and to catch a
+   tuning change that silently shifts difficulty.
+
 3. **Balance analysis** (`npm run balanceAnalysis`) plus a tuning test that
-   pins the BrutalOverlord's numbers, ensuring AI changes that silently shift
-   difficulty fail CI.
+   pins the BrutalOverlord's numbers.
 
 ## Build, CI and deployment
 
@@ -312,20 +311,42 @@ Three layers of verification:
   build, and publish to GitHub Pages via `gh-pages`. Deploy to Pages is the
   only side-effecting pipeline step.
 
-## Local development
+## Tradeoffs and known limits
 
-```bash
-npm install
-npm run dev              # dev server
-npm run check            # type-check (svelte-check)
-npm test                 # vitest (benchmarks excluded)
-npm run benchmark        # headless playability benchmarks
-npm run lint             # eslint
-npm run prettier:format  # formatting
-```
+The sections above read like a feature tour, so for balance, here is what the
+current design costs:
 
-See [AGENTS.md](./AGENTS.md) for the authoritative command list and repo
-conventions.
+- **Canvas-only UI and accessibility.** Everything the player sees — the
+  dungeon, the hero and monster cards, the event log, even menus — is drawn
+  pixels. There is no DOM for screen readers to walk, and beyond the keyboard
+  shortcuts for movement there is no keyboard-driven navigation of the
+  interface. This is the biggest structural tradeoff in the project: proper
+  accessibility would require a parallel DOM representation of the game state
+  (at minimum for logs, cards and menus), which the current rendering
+  architecture does not provide. No accessibility work has been done yet.
+- **One big `GameState`.** A single serializable object makes save/load and
+  headless replay trivial, but it has real costs: exactly one save slot,
+  no schema versioning (migration is shape-sniffing in `loadState()`), and any
+  structural change ripples through every module that takes the state.
+  Multiple saves and versioned saves are both on the wishlist.
+- **TypeScript-as-data cuts both ways.** Authoring dungeons in TypeScript gets
+  you type-checking, refactoring and validation for free — the usual
+  config-as-code argument — but it makes content authoring a
+  programmer-only activity. That is precisely why the Campaign Editor exists:
+  it is a concession that the content pipeline needs a GUI, implemented as a
+  code generator rather than a runtime content format.
+- **`Dungeon.svelte` is 2,100+ lines.** The "thin UI" rule is honored by the
+  rendering modules but the component that wires input, canvases and stores
+  has grown into the repo's acknowledged hot spot; splitting it is tracked in
+  the README refactor list.
+- **Determinism gaps.** A few peripheral random paths are still unseeded (see
+  [Determinism](#determinism-a-seeded-rng-everywhere-it-matters)); until
+  they are routed through the seeded RNG, only the benchmark's games are
+  exactly reproducible, not every real playthrough.
+- **Aging framework line.** The project is on SvelteKit 1.x and Svelte 4.
+  That is well off the current major versions; an upgrade (Svelte 5 runes in
+  particular would change how the store wiring works) is unprioritized work
+  with real migration cost.
 
 ## Worth stealing
 
