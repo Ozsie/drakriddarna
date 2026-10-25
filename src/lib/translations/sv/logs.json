@@ -55,6 +55,7 @@
     "locked": "Dörren är låst.",
     "reinforced": "Dörren är förstärkt och kan bara öppnas med Jättehandsken.",
     "monsterOutOfRange": "Monstret är utom räckhåll.",
+    "blockedNearMonster": "{{hero}} kan inte göra det medan hen står bredvid ett monster.",
     "walkedByMonster": "{{hero}} gick förbi ett monster och blev stoppad.",
     "searchBonus": "{{hero}} använde effekten av {{item}} när hen sökte.",
     "searchFoundNothing": "{{hero}} letade men hittade ingenting.",

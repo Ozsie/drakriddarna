@@ -190,7 +190,7 @@ describe('InteractableLogic', () => {
     it('equips newly created ally with difficulty-based starting equipment', () => {
       const hero = createTestHero(1, 1);
       const state = createTestState(hero);
-      state.difficulty = getGameMaster('easy');
+      state.gameMaster = getGameMaster('easy');
 
       const interactable = {
         position: { x: 2, y: 2 },

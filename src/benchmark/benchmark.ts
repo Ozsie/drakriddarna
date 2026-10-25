@@ -36,7 +36,6 @@ export interface GameSimulationResult {
 
 export interface GameMasterBenchmarkSummary {
   gameMaster: string;
-  difficulty: string;
   totalRuns: number;
   wins: number;
   losses: number;
@@ -66,7 +65,6 @@ export interface RunDungeonOptions {
   dungeon?: Dungeon;
   campaignId?: string;
   gameMasterId?: string;
-  difficultyId?: string;
   seed?: number;
   maxTurns?: number;
   levelUpHeroes?: boolean;
@@ -81,14 +79,13 @@ export const runSingleGame = async (
   const {
     campaignId = 'iceDragonTreasure',
     gameMasterId,
-    difficultyId,
     dungeon,
     seed,
     maxTurns = 150,
     levelUpHeroes = false,
   } = options;
 
-  const gmId = gameMasterId ?? difficultyId ?? DEFAULT_GAME_MASTER_ID;
+  const gmId = gameMasterId ?? DEFAULT_GAME_MASTER_ID;
 
   if (seed !== undefined) {
     setRng(createSeededRng(seed));
@@ -100,8 +97,6 @@ export const runSingleGame = async (
     const state = init(campaignId, gmId);
     const gameMaster = getGameMaster(gmId);
     state.gameMaster = gameMaster;
-    state.difficulty = gameMaster;
-    state.gameMasterId = gameMaster.id;
 
     // Override specific dungeon if requested
     if (dungeon) {
@@ -278,7 +273,6 @@ export const runGameMasterBenchmark = async (options: {
   dungeon?: Dungeon;
   campaignId?: string;
   gameMasterId?: string;
-  difficultyId?: string;
   runs: number;
   startSeed?: number;
   maxTurns?: number;
@@ -286,7 +280,6 @@ export const runGameMasterBenchmark = async (options: {
 }): Promise<GameMasterBenchmarkSummary> => {
   const {
     gameMasterId,
-    difficultyId,
     runs,
     startSeed = 1000,
     dungeon,
@@ -295,7 +288,7 @@ export const runGameMasterBenchmark = async (options: {
     levelUpHeroes,
   } = options;
 
-  const gmId = gameMasterId ?? difficultyId ?? DEFAULT_GAME_MASTER_ID;
+  const gmId = gameMasterId ?? DEFAULT_GAME_MASTER_ID;
   const gm = getGameMaster(gmId);
   const results: GameSimulationResult[] = [];
 
@@ -356,7 +349,6 @@ export const runGameMasterBenchmark = async (options: {
 
   return {
     gameMaster: gm.id,
-    difficulty: gm.id,
     totalRuns: runs,
     wins,
     losses,
@@ -412,7 +404,7 @@ export const formatBenchmarkReport = (
   );
 
   for (const s of summaries) {
-    const gm = (s.gameMaster ?? s.difficulty).padEnd(14);
+    const gm = s.gameMaster.padEnd(14);
     const runs = String(s.totalRuns).padStart(4);
     const winR = `${s.winRate}%`.padStart(8);
     const lossR = `${s.lossRate}%`.padStart(9);
@@ -438,7 +430,7 @@ export const formatBenchmarkReport = (
   );
   lines.push('Spawns by Game Master (Round & Monster):');
   for (const s of summaries) {
-    const gm = (s.gameMaster ?? s.difficulty).padEnd(14);
+    const gm = s.gameMaster.padEnd(14);
     if (!s.spawns || s.spawns.length === 0) {
       lines.push(`  ${gm}: None`);
     } else {

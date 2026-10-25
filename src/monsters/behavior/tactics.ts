@@ -10,7 +10,7 @@ import {
   WALL,
 } from '../../core';
 import { liveHeroes } from '../../hero/HeroLogic';
-import { distanceInGrid } from '../../hero/ClickInputLogic';
+import { distanceInGrid } from '../../core';
 import {
   createPassableGrid,
   findBestPathToHeroes,

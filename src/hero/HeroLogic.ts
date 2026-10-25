@@ -13,7 +13,7 @@ import type {
   InteractableCell,
   Difficulty,
 } from '../types';
-import { Colour, ItemType, Level, Side } from '../types';
+import { Colour, ItemType, Level } from '../types';
 import { weapons } from '../items/weapons';
 import {
   addLog,
@@ -31,6 +31,7 @@ import {
   isSamePosition,
   isWalkable,
   crossesWallEdge,
+  sideOffset,
 } from '../core';
 import { roll } from '../core';
 import {
@@ -40,6 +41,7 @@ import {
   getDifficulty,
   getEffectiveMaxMovement,
   getEffectiveMaxHealth,
+  spendStandardAction,
   takeDamage,
 } from '../core';
 import {
@@ -73,7 +75,6 @@ export const newHero = (
   const startingEquipment = difficulty?.startingEquipment;
   const initialWeapon = startingEquipment?.weapon ?? weapons[0];
 
-  initialWeapon.amountInDeck--;
   return {
     id: name.toLowerCase().replace(/ /g, '_'),
     name: name,
@@ -215,6 +216,14 @@ export const pickLock = (state: GameState, door?: Door) => {
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
   }
+  // Picking a lock is performed like a LETA action and may never be done
+  // while a monster stands next to the hero (official rules).
+  if (isAdjacentToMonster(state, hero)) {
+    addLog(state, 'logs.heroAction.blockedNearMonster', {
+      hero: i18n(hero.name),
+    });
+    return;
+  }
   door =
     door ??
     state.dungeon.layout.doors.find(
@@ -240,19 +249,7 @@ export const pickLock = (state: GameState, door?: Door) => {
       });
       soundEffectManager.playSound('sfx/locked.mp3');
     }
-    if (
-      hero.actions > 1 &&
-      hero.movement < getEffectiveMaxMovement(hero, movementModifier)
-    ) {
-      hero.actions = Math.max(0, hero.actions - 2);
-    } else {
-      hero.actions = Math.max(0, hero.actions - 1);
-    }
-    if (hero.actions === 0) {
-      hero.movement = 0;
-    } else {
-      hero.movement = getEffectiveMaxMovement(hero, movementModifier);
-    }
+    spendStandardAction(hero, movementModifier, true);
   }
 };
 
@@ -381,16 +378,7 @@ export const openDoorAtHero = (
   door: Door,
 ) => {
   if (door.open) return;
-  const canBreakLock = hero.inventory.some(
-    (item) => item && item.properties?.[BREAK_LOCK],
-  );
-  if (!canOpenDoor(hero, canBreakLock, door)) return;
-  if (door.locked && canBreakLock)
-    addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
-  door.open = true;
-  if (door.trapped) {
-    takeDamage(state, doorAsActor(door), hero, false);
-  }
+  if (!openDoorAndResolveTrap(state, hero, door)) return;
   // The door can be opened from either side of its edge; discover the room
   // on the far side of the door relative to the hero.
   const [offsetX, offsetY] = sideOffset(door.side);
@@ -405,19 +393,6 @@ export const openDoorAtHero = (
   if (hero.actions <= 0) {
     hero.actions = 0;
     hero.movement = 0;
-  }
-};
-
-const sideOffset = (side: Side): [number, number] => {
-  switch (side) {
-    case Side.RIGHT:
-      return [1, 0];
-    case Side.LEFT:
-      return [-1, 0];
-    case Side.DOWN:
-      return [0, 1];
-    default:
-      return [0, -1];
   }
 };
 
@@ -457,23 +432,13 @@ export const attack = (hero: Hero, state: GameState, target: Position) => {
       hero.movement = 0;
       return;
     }
-    if (
-      hero.actions > 1 &&
-      hero.movement < getEffectiveMaxMovement(hero, movementModifier)
-    ) {
-      hero.actions = Math.max(0, hero.actions - 2);
-    } else {
-      hero.actions = Math.max(0, hero.actions - 1);
-    }
-    if (hero.actions === 0) {
-      hero.movement = 0;
-    }
+    spendStandardAction(hero, movementModifier);
   }
 };
 
 export const search = (state: GameState) => {
   doReRender(state);
-  const hero: Actor | undefined = state.currentActor;
+  const hero: Hero | undefined = state.currentActor;
   if (!hero) return;
   if (hero.blinded) {
     addLog(state, 'logs.heroAction.blinded', { hero: i18n(hero.name) });
@@ -484,18 +449,16 @@ export const search = (state: GameState) => {
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
   }
+  // Searching is a LETA action and may never be performed while a monster
+  // stands next to the hero (official rules).
+  if (isAdjacentToMonster(state, hero)) {
+    addLog(state, 'logs.heroAction.blockedNearMonster', {
+      hero: i18n(hero.name),
+    });
+    return;
+  }
   searchForSecret(state);
-  if (
-    hero.actions > 1 &&
-    hero.movement < getEffectiveMaxMovement(hero, movementModifier)
-  ) {
-    hero.actions = Math.max(0, hero.actions - 2);
-  } else {
-    hero.actions = Math.max(0, hero.actions - 1);
-  }
-  if (hero.actions === 0) {
-    hero.movement = 0;
-  }
+  spendStandardAction(hero, movementModifier);
 };
 
 export const interact = (state: GameState, interactable?: InteractableCell) => {
@@ -511,17 +474,7 @@ export const interact = (state: GameState, interactable?: InteractableCell) => {
   if (!target) return false;
   const success = triggerInteractable(state, target, hero as Hero);
   if (success) {
-    if (
-      hero.actions > 1 &&
-      hero.movement < getEffectiveMaxMovement(hero, movementModifier)
-    ) {
-      hero.actions = Math.max(0, hero.actions - 2);
-    } else {
-      hero.actions = Math.max(0, hero.actions - 1);
-    }
-    if (hero.actions === 0) {
-      hero.movement = 0;
-    }
+    spendStandardAction(hero, movementModifier);
     return true;
   }
   return false;
@@ -604,6 +557,9 @@ export const replaceDeadHeroes = (state: GameState) => {
   const healthModifier = getDifficulty(state).modifiers.health;
   deadHeroes(state).forEach((hero) => {
     hero.experience = 0;
+    // Dead heroes start over as Apprentices with their points lost
+    // (official rules), so the dice threshold must follow the reset XP.
+    hero.level = Level.APPRENTICE;
     hero.health = getEffectiveMaxHealth(hero, healthModifier);
     hero.movement = getEffectiveMaxMovement(hero, movementModifier);
     hero.actions = 2;
@@ -658,19 +614,24 @@ export const checkForNote = (state: GameState, hero: Hero) => {
   }
 };
 
+/** Whether a live monster stands adjacent to the hero without a wall between. */
+export const isAdjacentToMonster = (state: GameState, hero: Hero): boolean =>
+  state.dungeon.layout.monsters.some(
+    (monster) =>
+      monster.health > 0 &&
+      isNeighbouring(hero.position, monster.position.x, monster.position.y) &&
+      !crossesWallEdge(state.dungeon.layout, hero.position, monster.position),
+  );
+
 export const checkForNextToMonster = (
   state: GameState,
   hero: Hero,
 ): boolean => {
-  const nextToMonster = state.dungeon.layout.monsters.some(
-    (monster) =>
-      isNeighbouring(hero.position, monster.position.x, monster.position.y) &&
-      !crossesWallEdge(state.dungeon.layout, hero.position, monster.position),
-  );
-  if (nextToMonster) {
+  if (isAdjacentToMonster(state, hero)) {
     addLog(state, 'logs.heroAction.walkedByMonster', { hero: i18n(hero.name) });
+    return true;
   }
-  return nextToMonster;
+  return false;
 };
 
 export const dropItem = (state: GameState, item: Item, actor: Actor) => {
@@ -725,6 +686,31 @@ export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
   soundEffectManager.playPickUpItem();
 };
 
+/**
+ * Everything that happens when a hero arrives on a cell: the step
+ * animation, reading notes, revealing item-triggered secrets, stepping onto
+ * interactables and the zone-of-control check. Returns true when a live
+ * monster is adjacent, in which case the hero's movement is zeroed and
+ * callers should stop multi-step movement there.
+ */
+export const arriveOnCell = (
+  state: GameState,
+  hero: Hero,
+  pos: Position,
+): boolean => {
+  recordActorStep(hero, pos);
+  hero.position.x = pos.x;
+  hero.position.y = pos.y;
+  checkForNote(state, hero);
+  checkForItemRevealedSecret(state, hero);
+  checkForInteractable(state, hero, 'step');
+  const halted = checkForNextToMonster(state, hero);
+  if (halted) {
+    hero.movement = 0;
+  }
+  return halted;
+};
+
 const move = (
   hero: Hero,
   state: GameState,
@@ -732,18 +718,28 @@ const move = (
   newY: number,
   cost: number,
 ) => {
-  recordActorStep(hero, { x: newX, y: newY });
-  hero.position.x = newX;
-  hero.position.y = newY;
-  checkForNote(state, hero);
-  checkForItemRevealedSecret(state, hero);
-  checkForInteractable(state, hero, 'step');
-  const nextToMonster = checkForNextToMonster(state, hero);
-  if (nextToMonster) {
-    hero.movement = 0;
-  } else {
+  if (!arriveOnCell(state, hero, { x: newX, y: newY })) {
     hero.movement -= cost;
   }
+};
+
+/**
+ * Opens a door and resolves its lock and trap: a BREAK_LOCK item smashes
+ * the lock, and a trapped door attacks the opener. Returns true when the
+ * door actually opened.
+ */
+const openDoorAndResolveTrap = (state: GameState, hero: Hero, door: Door) => {
+  const canBreakLock = hero.inventory.some(
+    (item) => item && item.properties?.[BREAK_LOCK],
+  );
+  if (!canOpenDoor(hero, canBreakLock, door)) return false;
+  if (door.locked && canBreakLock)
+    addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
+  door.open = true;
+  if (door.trapped) {
+    takeDamage(state, doorAsActor(door), hero, false);
+  }
+  return true;
 };
 
 const moveOverDoor = (
@@ -759,17 +755,8 @@ const moveOverDoor = (
     newX,
     newY,
   );
-  const canBreakLock = hero.inventory.some(
-    (item) => item && item.properties?.[BREAK_LOCK],
-  );
 
-  if (door && canOpenDoor(hero, canBreakLock, door)) {
-    if (door.locked && canBreakLock)
-      addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
-    door.open = true;
-    if (door.trapped) {
-      takeDamage(state, doorAsActor(door), hero, false);
-    }
+  if (door && openDoorAndResolveTrap(state, hero, door)) {
     return true;
   }
   if (door && door.locked) {
@@ -778,7 +765,13 @@ const moveOverDoor = (
   return false;
 };
 
-const killMonster = (state: GameState, monster: Monster, hero: Hero) => {
+/**
+ * Removes a slain monster from the board, awards its experience to the
+ * killer and transfers its carried items to them (removing them from the
+ * item decks). All monster deaths by hero hands go through here so
+ * kill-count, XP and inventory handling stay identical.
+ */
+export const killMonster = (state: GameState, monster: Monster, hero: Hero) => {
   state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter(
     (m) => m != monster,
   );

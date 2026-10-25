@@ -7,7 +7,6 @@ import {
   Level,
   assertNever,
   type GameAction,
-  type GameEvent,
   type GameSettings,
   type ItemProperties,
   type Item,
@@ -17,7 +16,6 @@ import { weapons, monsterWeapons } from './items/weapons';
 import { armour, monsterArmour } from './items/armours';
 import { shields, monsterShields } from './items/shields';
 import { events } from './events/events';
-import { executeGameEvent } from './events/EventsLogic';
 import {
   createMonster,
   createSecret,
@@ -219,23 +217,6 @@ describe('Type Safety & Domain Modeling', () => {
         expect(event.nameTranslationKey).toBe(event.name);
         expect(event.descriptionTranslationKey).toBe(event.description);
       });
-    });
-
-    it('executeGameEvent processes GameEvent discriminated union exhaustively', () => {
-      const state = init();
-      const timePortalEvent: GameEvent = {
-        type: 'TIME_PORTAL',
-        number: 3,
-        name: 'Time Portal',
-        description: 'Grants actions',
-        effect: 'timePortal',
-        used: false,
-      };
-
-      const initialHeroActions = state.heroes[0].actions;
-      executeGameEvent(state, timePortalEvent);
-      expect(state.heroes[0].actions).toBe(initialHeroActions + 1);
-      expect(timePortalEvent.used).toBe(true);
     });
 
     it('assertNever throws error on unhandled discriminated union branch', () => {

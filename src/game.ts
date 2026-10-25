@@ -1,4 +1,4 @@
-import type { GameState, Hero, Position } from './types';
+import type { Dungeon, GameState, GameMaster, Hero, Position } from './types';
 import { ConditionType } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
 import { getCampaign, isKnownCampaign, DEFAULT_CAMPAIGN_ID } from './campaigns';
@@ -12,15 +12,6 @@ import {
   replaceDeadHeroes,
   resetLiveHeroes,
 } from './hero/HeroLogic';
-export {
-  applyStartingEquipment,
-  getPartyAverageLevel,
-  levelUp,
-  liveHeroes,
-  replaceDeadHeroes,
-  resetLiveHeroes,
-  rewardLiveHeroes,
-} from './hero/HeroLogic';
 import { resetOnNext, resetOnNextDungeon } from './items/ItemLogic';
 import {
   drawNextEvent,
@@ -29,7 +20,7 @@ import {
   resetEventEffects,
 } from './events/EventsLogic';
 import { browser } from '$app/environment';
-import { addLog, doReRender, i18n } from './core';
+import { addLog, COLLAPSED, doReRender, i18n, toArray } from './core';
 import { shuffle } from './core';
 import {
   getEffectiveMaxMovement,
@@ -41,85 +32,8 @@ import { clearActorAnimations } from './core';
 import { setNextDungeonTransitionProvider } from './interactables/InteractableLogic';
 import { soundEffectManager } from './audio';
 
-// Re-export core modules for backwards compatibility and ease of access
-export {
-  i18n,
-  doReRender,
-  addLog,
-  saveReloadGuard,
-  debouncedSaveReloadGuard,
-} from './core/logger';
-export { roll, shuffle, setRng, resetRng, createSeededRng } from './core/dice';
-export {
-  COLLAPSED,
-  EMPTY,
-  WALL,
-  findCell,
-  findNeighbouringHeroes,
-  getDist,
-  hasLineOfSight,
-  isDiscovered,
-  isNeighbouring,
-  isRoomDiscovered,
-  isSamePosition,
-  isWalkable,
-  normaliseVector,
-  stepAlongLine,
-  toArray,
-} from './core/grid';
-export {
-  ATTACK_BONUS,
-  RE_ROLL_ATTACK,
-  canAct,
-  createDamageIndicator,
-  createIndicator,
-  doorAsActor,
-  getDamageString,
-  getEffectiveMaxMovement,
-  getEffectiveMaxHealth,
-  removeDamageIndicator,
-  takeDamage,
-} from './core/combat';
-export {
-  DifficultLevels,
-  DEFAULT_DIFFICULTY_ID,
-  getDifficulty,
-  gameMasters,
-  getGameMaster,
-  DEFAULT_GAME_MASTER_ID,
-  GAME_MASTER_ALIASES,
-} from './core/DifficultLevels';
-export {
-  recordActorStep,
-  getActorVisualPosition,
-  isActorAnimating,
-  hasActiveActorAnimations,
-  getActorRemainingAnimationDuration,
-  sleep,
-  snapActorPosition,
-  clearActorAnimations,
-  setActorMovementDuration,
-  getActorMovementDuration,
-  resetActorMovementDuration,
-  flashActor,
-  getActorFlashIntensity,
-  isActorFlashing,
-  DEFAULT_ACTOR_MOVEMENT_DURATION_MS,
-} from './core/ActorAnimation';
-export {
-  createBloodSplatter,
-  createProjectile,
-  renderBloodSplatters,
-  renderProjectiles,
-  renderActorFlash,
-  BLOOD_SPLATTER_DURATION_MS,
-  PROJECTILE_DURATION_MS,
-} from './combat/CombatEffects';
-export {
-  monsterActions,
-  DEFAULT_MONSTER_TURN_OPTIONS,
-  type MonsterTurnOptions,
-} from './monsters/MonsterLogic';
+// Re-exported because gameStateStore consumes it through the game module.
+export { removeDamageIndicator } from './core/combat';
 
 export const save = (state: GameState) => {
   doReRender(state);
@@ -134,23 +48,49 @@ export const loadState = (newState: GameState) => {
   newState.currentActor = newState.heroes.find(
     (hero) => hero.name === newState.currentActor?.name,
   ) as Hero | undefined;
-  if (!newState.gameMaster && !newState.difficulty && !newState.gameMasterId) {
-    const defaultGM = getGameMaster(DEFAULT_GAME_MASTER_ID);
-    newState.gameMaster = defaultGM;
-    newState.difficulty = defaultGM;
-    newState.gameMasterId = defaultGM.id;
-  } else if (!newState.gameMaster && newState.difficulty) {
-    const resolvedGM = getGameMaster(newState.difficulty.id);
-    newState.gameMaster = newState.difficulty.modifiers
-      ? newState.difficulty
-      : resolvedGM;
-    newState.gameMasterId = newState.gameMaster.id;
-  } else if (!newState.gameMaster && newState.gameMasterId) {
-    newState.gameMaster = getGameMaster(newState.gameMasterId);
-    newState.difficulty = newState.gameMaster;
-  } else if (newState.gameMaster) {
-    newState.difficulty = newState.gameMaster;
-    newState.gameMasterId = newState.gameMaster.id;
+  // Migrate saves written before the game master was collapsed into the
+  // single `gameMaster` field: they carry `difficulty` and/or
+  // `gameMasterId` instead.
+  const legacy = newState as GameState & {
+    difficulty?: GameMaster;
+    gameMasterId?: string;
+  };
+  if (!newState.gameMaster) {
+    newState.gameMaster =
+      (legacy.difficulty
+        ? legacy.difficulty.modifiers
+          ? legacy.difficulty
+          : getGameMaster(legacy.difficulty.id)
+        : undefined) ??
+      (legacy.gameMasterId ? getGameMaster(legacy.gameMasterId) : undefined) ??
+      getGameMaster(DEFAULT_GAME_MASTER_ID);
+  }
+  delete legacy.difficulty;
+  delete legacy.gameMasterId;
+  // Migrate saves written before landslides tracked each collapse with
+  // its exact cells: the dungeon carries a single `collapsedCorridor`
+  // letter while the collapsed cells sit in the grid as COLLAPSED. Only
+  // the active dungeon is migrated — an untouched nextDungeon keeps its
+  // legacy shape.
+  const legacyDungeon = newState.dungeon as Dungeon & {
+    collapsedCorridor?: string;
+  };
+  if (legacyDungeon.collapsedCorridor) {
+    const collapsedCells: Position[] = [];
+    legacyDungeon.layout.grid.forEach((row, y) => {
+      toArray(row).forEach((cell, x) => {
+        if (cell === COLLAPSED) {
+          collapsedCells.push({ x, y });
+        }
+      });
+    });
+    if (collapsedCells.length > 0) {
+      legacyDungeon.collapsedCorridors = [
+        ...(legacyDungeon.collapsedCorridors ?? []),
+        { letter: legacyDungeon.collapsedCorridor, cells: collapsedCells },
+      ];
+    }
+    delete legacyDungeon.collapsedCorridor;
   }
   // Older saves may not have a campaignId at all, and any save could in
   // theory reference a campaign that no longer exists (e.g. removed
@@ -171,18 +111,6 @@ export const loadState = (newState: GameState) => {
   return newState;
 };
 
-export const load = (currentState: GameState): GameState => {
-  if (typeof localStorage !== 'undefined') {
-    const stateString = localStorage.getItem('state');
-    if (stateString) {
-      const state: GameState = JSON.parse(stateString) as GameState;
-      return loadState(state);
-    }
-  }
-  addLog(currentState, 'logs.loadFailed');
-  return currentState;
-};
-
 export const init = (
   campaignId: string = DEFAULT_CAMPAIGN_ID,
   gameMasterId: string = DEFAULT_GAME_MASTER_ID,
@@ -198,11 +126,9 @@ export const init = (
     // Temp partial state for modifier hook if needed
     const partialState = {
       campaignId: campaign.id,
-      gameMasterId: selectedGameMaster.id,
       gameMaster: selectedGameMaster,
       heroes: campaign.heroes,
       dungeon: campaign.dungeons[0],
-      difficulty: selectedGameMaster,
     } as GameState;
     dungeonEvents = selectedGameMaster.events.modifyEventDeck(
       dungeonEvents,
@@ -212,11 +138,9 @@ export const init = (
 
   const state: GameState = {
     campaignId: campaign.id,
-    gameMasterId: selectedGameMaster.id,
     gameMaster: selectedGameMaster,
     heroes: campaign.heroes,
     dungeon: campaign.dungeons[0],
-    difficulty: selectedGameMaster,
     currentActor: campaign.heroes[0] as Hero | undefined,
     actionLog: [
       {
@@ -531,29 +455,11 @@ const scrollTo = (pos: Position, cellSize: number) => {
   }
 };
 
-import {
-  openBetweenDungeons,
-  completeBetweenDungeonsAndStartNext,
-} from './dungeon/BetweenDungeonsLogic';
+import { openBetweenDungeons } from './dungeon/BetweenDungeonsLogic';
 
 export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
     openBetweenDungeons(state);
-  }
-};
-
-export const advanceToNextDungeon = (state: GameState) => {
-  if (state.betweenDungeons) {
-    completeBetweenDungeonsAndStartNext(state);
-    if (state.dungeon?.startingPositions?.[0]) {
-      scrollTo(
-        {
-          x: state.dungeon.startingPositions[0].x,
-          y: state.dungeon.startingPositions[0].y,
-        },
-        state.settings['cellSize'] as number,
-      );
-    }
   }
 };
 

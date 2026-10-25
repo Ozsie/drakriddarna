@@ -6,6 +6,7 @@ import type {
   Hero,
   IndicatorEffect,
   Monster,
+  Position,
   Weapon,
 } from '../types';
 import { Colour, ItemType, Level } from '../types';
@@ -87,34 +88,95 @@ export const canAct = (hero: Actor, movementModifier = 0): boolean => {
   return hero.actions > 0;
 };
 
-export const doorAsActor = (door: Door): Actor => ({
-  health: 0,
-  position: { x: door.x, y: door.y },
-  defense: 0,
-  experience: 0,
+/**
+ * Standard action cost for an activity (attack, search, pick lock,
+ * interact, item use): with full movement left it costs one action, but
+ * performed after partial movement it costs all remaining actions for the
+ * turn (approximated by spending two). When no actions are left, movement
+ * is zeroed; `refillMovement` also refreshes movement while actions
+ * remain, for activities that leave the actor free to keep moving
+ * afterwards (e.g. lock picking). This models the cost of standard
+ * actions, whereas `consumeActions` models exhausting movement and
+ * replenishing it by spending an action.
+ */
+export const spendStandardAction = (
+  actor: Actor,
+  movementModifier = 0,
+  refillMovement = false,
+): void => {
+  const maxMovement = getEffectiveMaxMovement(actor, movementModifier);
+  if (actor.actions > 1 && actor.movement < maxMovement) {
+    actor.actions = Math.max(0, actor.actions - 2);
+  } else {
+    actor.actions = Math.max(0, actor.actions - 1);
+  }
+  settleMovementAfterAction(actor, movementModifier, refillMovement);
+};
+
+/**
+ * Zeroes movement once an actor is out of actions; optionally refreshes
+ * movement to max while actions remain.
+ */
+export const settleMovementAfterAction = (
+  actor: Actor,
+  movementModifier = 0,
+  refillMovement = false,
+): void => {
+  if (actor.actions === 0) {
+    actor.movement = 0;
+  } else if (refillMovement) {
+    actor.movement = getEffectiveMaxMovement(actor, movementModifier);
+  }
+};
+
+/**
+ * An abstract attacker for environmental hazards (door traps, pit falls,
+ * earthquakes): a defenceless, actionless actor whose weapon describes the
+ * hazard's attack dice and which defenses it bypasses.
+ */
+export const createHazardActor = (
+  id: string | undefined,
+  name: string,
+  position: Position,
+  weapon: Weapon,
+): Actor => ({
+  ...(id ? { id } : {}),
+  name,
+  nameTranslationKey: name,
   actions: 0,
-  movement: 0,
-  maxMovement: 0,
-  colour: Colour.Red,
+  health: 0,
   maxHealth: 0,
-  name: 'Door',
+  maxMovement: 0,
+  position: { x: position.x, y: position.y },
+  weapon,
   level: Level.APPRENTICE,
-  incapacitated: false,
-  weapon: {
-    name: 'Trap',
-    amountInDeck: 0,
-    dice: door.trapAttacks,
-    useHearHeroes: true,
-    twoHanded: false,
-    range: 1,
-    type: ItemType.WEAPON,
-    value: 0,
-    ignoresShield: true,
-    ignoresArmour: false,
-    attackSound: 'sfx/arrow.mp3',
-  },
+  movement: 0,
+  experience: 0,
+  colour: Colour.Red,
   inventory: [],
+  defense: 0,
+  incapacitated: false,
 });
+
+export const doorAsActor = (door: Door): Actor =>
+  createHazardActor(
+    undefined,
+    'Door',
+    { x: door.x, y: door.y },
+    {
+      name: 'Trap',
+      amountInDeck: 0,
+      dice: door.trapAttacks,
+      useHearHeroes: true,
+      twoHanded: false,
+      range: 1,
+      type: ItemType.WEAPON,
+      value: 0,
+      ignoresShield: true,
+      ignoresArmour: false,
+      attackSound: 'sfx/arrow.mp3',
+    },
+  );
 
 export const getDamageString = (
   damage: number,
@@ -166,25 +228,19 @@ export const takeDamage = (
       weapon: i18n(weapon.name),
     });
   }
-  const canReRoll = source.inventory
-    .filter((item) => item && item?.properties?.[RE_ROLL_ATTACK])
-    .some((item) => {
-      addLog(state, 'logs.takeDamage.usedEffect', {
-        actor: i18n(source.name),
-        item: i18n(item.name),
-      });
-      return item.properties?.[RE_ROLL_ATTACK];
-    });
+  const rerollItem = source.inventory.find(
+    (item) =>
+      item &&
+      !item.disabled &&
+      !item.properties?.USED &&
+      item.properties?.[RE_ROLL_ATTACK],
+  );
   const attackBonus = source.inventory
     .filter((item) => item && item?.properties?.[ATTACK_BONUS])
-    .map((item) => {
-      addLog(state, 'logs.takeDamage.usedEffect', {
-        actor: i18n(source.name),
-        item: i18n(item.name),
-      });
-      return item.properties?.[ATTACK_BONUS] as number;
-    })
-    .reduce((partial, bonus) => partial + bonus, 0);
+    .reduce(
+      (partial, item) => partial + (item.properties?.[ATTACK_BONUS] as number),
+      0,
+    );
   const blindedSubtraction = source.blinded ? 1 : 0;
   const weakenedSubtraction = source.weakened ? 1 : 0;
   const elementalAddition = source.weapon.elemental ? 1 : 0;
@@ -196,13 +252,17 @@ export const takeDamage = (
     : 0;
   const buff = attackBonus + elementalAddition + attackDifficultyModifier;
   const deBuff = blindedSubtraction + weakenedSubtraction;
-  const hits = roll(source.level, weapon.dice + buff - deBuff);
+  let hits = roll(source.level, weapon.dice + buff - deBuff);
   let damage = Math.max(
     hits - (defense + defenseDifficultyModifier + shield),
     0,
   );
-  if (damage === 0 && canReRoll) {
+  // Ring of Precision: one re-roll of the attack dice per combat round when
+  // the attack would otherwise deal no damage.
+  if (damage === 0 && rerollItem) {
     addLog(state, 'logs.takeDamage.reRoll', { actor: i18n(source.name) });
+    if (rerollItem.properties) rerollItem.properties.USED = true;
+    hits = roll(source.level, weapon.dice + buff - deBuff);
     damage = Math.max(hits - (defense + defenseDifficultyModifier + shield), 0);
   }
   const gm = getDifficulty(state);

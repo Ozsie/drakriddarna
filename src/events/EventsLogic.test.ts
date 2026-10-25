@@ -13,7 +13,9 @@ import {
   ItemType,
   Level,
   MonsterType,
+  SecretType,
   type Item,
+  type Secret,
   type TurnEvent,
 } from '../types';
 import {
@@ -99,7 +101,7 @@ describe('Orc Drums event and resetEventEffects', () => {
       used: false,
     };
 
-    eventEffects.theOrcDrums(state, event);
+    eventEffects.theOrchDrums(state, event);
 
     expect(orc.actions).toBe(3);
     expect(troll.actions).toBe(2);
@@ -142,7 +144,7 @@ describe('Orc Drums event and resetEventEffects', () => {
       used: false,
     };
 
-    eventEffects.theOrcDrums(state, event);
+    eventEffects.theOrchDrums(state, event);
 
     expect(orc1.actions).toBe(2);
     expect(orc2.actions).toBe(2);
@@ -176,7 +178,7 @@ describe('Orc Drums event and resetEventEffects', () => {
       used: false,
     };
 
-    eventEffects.theOrcDrums(state, event);
+    eventEffects.theOrchDrums(state, event);
 
     expect(orc1.actions).toBe(3);
     expect(orc2.actions).toBe(3);
@@ -188,7 +190,7 @@ describe('Orc Drums event and resetEventEffects', () => {
 
   it('fountainOfYouth respects max health adjusted by difficulty modifier', () => {
     const state = init();
-    state.difficulty = getGameMaster('easy');
+    state.gameMaster = getGameMaster('easy');
     const hero = state.heroes[0];
     hero.maxHealth = 10;
     hero.health = 10; // Effective max is 11 (10 + 1)
@@ -233,7 +235,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     number: 6,
     description: 'events.lostOrch.description',
     descriptionTranslationKey: 'events.lostOrch.description',
-    effect: 'theLostOrc',
+    effect: 'theLostOrch',
     used: false,
   };
 
@@ -284,7 +286,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     expect(isPartyBelowHalfHealth(state)).toBe(true);
 
     // With easy difficulty (+1 max health per hero => 4 * 11 = 44 max health)
-    state.difficulty = getGameMaster('easy');
+    state.gameMaster = getGameMaster('easy');
     // Total health 22 / 44 = 50% (not below 50%)
     state.heroes[0].health = 5;
     state.heroes[1].health = 5;
@@ -300,7 +302,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
   describe('Early round skipping', () => {
     it('skips hungry_troll and lost_orc if drawn before round 3 on normal difficulty', () => {
       const state = init();
-      state.difficulty = getGameMaster('normal');
+      state.gameMaster = getGameMaster('normal');
       state.dungeon.layout.grid = ['AAAAA', 'AAAAA', 'AAAAA', 'AAAAA', 'AAAAA'];
       state.dungeon.discoveredRooms = ['A'];
       state.dungeon.layout.monsters = [];
@@ -314,7 +316,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       expect(state.dungeon.layout.monsters.length).toBe(0);
 
       const eventOrc1 = { ...orcEvent, used: false };
-      eventEffects.theLostOrc(state, eventOrc1);
+      eventEffects.theLostOrch(state, eventOrc1);
       expect(eventOrc1.used).toBe(true);
       expect(state.dungeon.layout.monsters.length).toBe(0);
 
@@ -326,7 +328,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       expect(state.dungeon.layout.monsters.length).toBe(0);
 
       const eventOrc2 = { ...orcEvent, used: false };
-      eventEffects.theLostOrc(state, eventOrc2);
+      eventEffects.theLostOrch(state, eventOrc2);
       expect(eventOrc2.used).toBe(true);
       expect(state.dungeon.layout.monsters.length).toBe(0);
 
@@ -339,7 +341,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       expect(state.dungeon.layout.monsters[0].type).toBe(MonsterType.TROLL);
 
       const eventOrc3 = { ...orcEvent, used: false };
-      eventEffects.theLostOrc(state, eventOrc3);
+      eventEffects.theLostOrch(state, eventOrc3);
       expect(eventOrc3.used).toBe(true);
       expect(state.dungeon.layout.monsters.length).toBe(2);
       expect(state.dungeon.layout.monsters[1].type).toBe(MonsterType.ORC);
@@ -347,7 +349,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('skips in rounds < 4 on easy difficulty and spawns in round 4+', () => {
       const state = init();
-      state.difficulty = getGameMaster('easy');
+      state.gameMaster = getGameMaster('easy');
       state.dungeon.layout.grid = [
         'AAAAAA',
         'AAAAAA',
@@ -373,7 +375,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('spawns earlier on hard difficulty (round 2+)', () => {
       const state = init();
-      state.difficulty = getGameMaster('hard');
+      state.gameMaster = getGameMaster('hard');
       state.dungeon.layout.grid = ['AAAAA', 'AAAAA', 'AAAAA', 'AAAAA', 'AAAAA'];
       state.dungeon.discoveredRooms = ['A'];
       state.dungeon.layout.monsters = [];
@@ -396,7 +398,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     it('skips hungry_troll on easy and normal when party health is below 50%', () => {
       ['easy', 'normal'].forEach((diffId) => {
         const state = init();
-        state.difficulty = getGameMaster(diffId);
+        state.gameMaster = getGameMaster(diffId);
         state.turnCount = 5; // Well past round threshold
         state.dungeon.layout.grid = [
           'AAAAAA',
@@ -423,7 +425,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
     it('does not skip hungry_troll on easy and normal when party health is >= 50%', () => {
       ['easy', 'normal'].forEach((diffId) => {
         const state = init();
-        state.difficulty = getGameMaster(diffId);
+        state.gameMaster = getGameMaster(diffId);
         state.turnCount = 5;
         state.dungeon.layout.grid = [
           'AAAAAA',
@@ -450,7 +452,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('does NOT skip hungry_troll on hard even when party health is below 50%', () => {
       const state = init();
-      state.difficulty = getGameMaster(hardDiffId());
+      state.gameMaster = getGameMaster(hardDiffId());
       state.turnCount = 5;
       state.dungeon.layout.grid = [
         'AAAAAA',
@@ -480,7 +482,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('does NOT skip lost_orc when party health is below 50% on easy or normal', () => {
       const state = init();
-      state.difficulty = getGameMaster('normal');
+      state.gameMaster = getGameMaster('normal');
       state.turnCount = 5;
       state.dungeon.layout.grid = [
         'AAAAAA',
@@ -497,7 +499,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       });
 
       const event = { ...orcEvent, used: false };
-      eventEffects.theLostOrc(state, event);
+      eventEffects.theLostOrch(state, event);
 
       expect(event.used).toBe(true);
       expect(state.dungeon.layout.monsters.length).toBe(1);
@@ -508,7 +510,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
   describe('Minimum spawn distance away from heroes', () => {
     it('spawns monster at least the minimum distance away from all live heroes based on difficulty', () => {
       const state = init();
-      state.difficulty = getGameMaster('easy'); // minDistance = 4
+      state.gameMaster = getGameMaster('easy'); // minDistance = 4
       state.turnCount = 5;
       state.dungeon.layout.grid = [
         'AAAAAA',
@@ -539,7 +541,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('prefers spawn positions out of line of sight of heroes when available', () => {
       const state = init();
-      state.difficulty = getGameMaster('hard'); // minDistance = 1
+      state.gameMaster = getGameMaster('hard'); // minDistance = 1
       state.turnCount = 5;
       // Grid with room A (0,0)-(2,0) and room B (0,2)-(2,2), separated by a wall at y=1 except a corner
       state.dungeon.layout.grid = ['AAA', '###', 'BBB'];
@@ -552,7 +554,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       });
 
       const event = { ...orcEvent, used: false };
-      eventEffects.theLostOrc(state, event);
+      eventEffects.theLostOrch(state, event);
 
       expect(state.dungeon.layout.monsters.length).toBe(1);
       const spawnedOrc = state.dungeon.layout.monsters[0];
@@ -563,7 +565,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('does not spawn monster if all room cells are closer than the required distance', () => {
       const state = init();
-      state.difficulty = getGameMaster('easy'); // minDistance = 4
+      state.gameMaster = getGameMaster('easy'); // minDistance = 4
       state.turnCount = 5;
       // 2x2 grid, all cells have distance <= 2 from (0,0)
       state.dungeon.layout.grid = ['AA', 'AA'];
@@ -583,7 +585,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('respects custom difficulty minDistance setting', () => {
       const state = init();
-      state.difficulty = {
+      state.gameMaster = {
         id: 'custom',
         nameTranslationKey: 'custom',
         modifiers: { attack: 0, defense: 0, movement: 0, search: 0, health: 0 },
@@ -608,7 +610,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       });
 
       const event = { ...orcEvent, used: false };
-      eventEffects.theLostOrc(state, event);
+      eventEffects.theLostOrch(state, event);
 
       expect(state.dungeon.layout.monsters.length).toBe(1);
       const spawnedOrc = state.dungeon.layout.monsters[0];
@@ -618,7 +620,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('does not spawn a troll when 4 trolls are already visible and Hungry Troll is drawn', () => {
       const state = init();
-      state.difficulty = getGameMaster('hard');
+      state.gameMaster = getGameMaster('hard');
       state.turnCount = 5;
       state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
       state.dungeon.discoveredRooms = ['A'];
@@ -641,7 +643,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('spawns a troll when 4 trolls are in layout but 1 is dead and party level is HERO', () => {
       const state = init();
-      state.difficulty = getGameMaster('hard');
+      state.gameMaster = getGameMaster('hard');
       state.turnCount = 5;
       state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
       state.dungeon.discoveredRooms = ['A'];
@@ -717,7 +719,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('when average level is APPRENTICE, skips hungry_troll if 1 or more trolls are visible', () => {
       const state = init();
-      state.difficulty = getGameMaster('hard');
+      state.gameMaster = getGameMaster('hard');
       state.turnCount = 5;
       state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
       state.dungeon.discoveredRooms = ['A'];
@@ -750,7 +752,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('when average level is KNIGHT, spawns with 0 or 1 visible troll, but skips if 2 or more visible trolls', () => {
       const state = init();
-      state.difficulty = getGameMaster('hard');
+      state.gameMaster = getGameMaster('hard');
       state.turnCount = 5;
       state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
       state.dungeon.discoveredRooms = ['A'];
@@ -781,7 +783,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('when average level is HERO or higher, uses normal limit (allows up to 4 trolls)', () => {
       const state = init();
-      state.difficulty = getGameMaster('hard');
+      state.gameMaster = getGameMaster('hard');
       state.turnCount = 5;
       state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'AAAAAA', 'AAAAAA'];
       state.dungeon.discoveredRooms = ['A'];
@@ -815,7 +817,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
     it('does not count invisible (undiscovered room) or dead trolls towards visibility limits', () => {
       const state = init();
-      state.difficulty = getGameMaster('hard');
+      state.gameMaster = getGameMaster('hard');
       state.turnCount = 5;
       state.dungeon.layout.grid = ['AAAAAA', 'AAAAAA', 'BBBBBB', 'BBBBBB'];
       state.dungeon.discoveredRooms = ['A']; // Room B is undiscovered
@@ -1169,7 +1171,9 @@ describe('landslide event', () => {
     eventEffects.landslide(state, landslideEvent());
 
     expect(state.dungeon.layout.grid).toEqual(['#####', '#AA?#', '#####']);
-    expect(state.dungeon.collapsedCorridor).toBe('B');
+    expect(state.dungeon.collapsedCorridors).toEqual([
+      { letter: 'B', cells: [{ x: 3, y: 1 }] },
+    ]);
   });
 
   it('collapses only the declared corridor cells of a room', () => {
@@ -1186,7 +1190,15 @@ describe('landslide event', () => {
     eventEffects.landslide(state, landslideEvent());
 
     expect(state.dungeon.layout.grid).toEqual(['#####', '#??A#', '#####']);
-    expect(state.dungeon.collapsedCorridor).toBe('A');
+    expect(state.dungeon.collapsedCorridors).toEqual([
+      {
+        letter: 'A',
+        cells: [
+          { x: 1, y: 1 },
+          { x: 2, y: 1 },
+        ],
+      },
+    ]);
   });
 
   it('restores collapsed corridor cells on resetEventEffects', () => {
@@ -1204,7 +1216,32 @@ describe('landslide event', () => {
     resetEventEffects(state);
 
     expect(state.dungeon.layout.grid).toEqual(['#####', '#AAA#', '#####']);
-    expect(state.dungeon.collapsedCorridor).toBeUndefined();
+    expect(state.dungeon.collapsedCorridors).toEqual([]);
+  });
+
+  it('keeps and restores both corridors after two landslides in one cycle', () => {
+    const state = init();
+    clearActors(state);
+    state.dungeon.layout.grid = ['#####', '#ACB#', '#####'];
+    state.dungeon.layout.corridors = ['B', 'C'];
+    state.dungeon.layout.corridorCells = [];
+    state.dungeon.discoveredRooms = ['A', 'B'];
+
+    // First landslide can only reach corridor B (C is undiscovered)
+    eventEffects.landslide(state, landslideEvent());
+    expect(state.dungeon.layout.grid).toEqual(['#####', '#AC?#', '#####']);
+
+    // Second landslide reaches corridor C
+    state.dungeon.discoveredRooms = ['A', 'B', 'C'];
+    eventEffects.landslide(state, landslideEvent());
+    expect(state.dungeon.layout.grid).toEqual(['#####', '#A??#', '#####']);
+    expect(state.dungeon.collapsedCorridors).toHaveLength(2);
+
+    state.eventDeck.forEach((event) => (event.used = true));
+    resetEventEffects(state);
+
+    expect(state.dungeon.layout.grid).toEqual(['#####', '#ACB#', '#####']);
+    expect(state.dungeon.collapsedCorridors).toEqual([]);
   });
 
   it('leaves the dungeon untouched when the only corridor cells are blocked by a hero', () => {
@@ -1221,6 +1258,119 @@ describe('landslide event', () => {
 
     expect(event.used).toBe(true);
     expect(state.dungeon.layout.grid).toEqual(['#####', '#AAA#', '#####']);
-    expect(state.dungeon.collapsedCorridor).toBeUndefined();
+    expect(state.dungeon.collapsedCorridors).toBeUndefined();
+  });
+});
+
+describe('foresight event', () => {
+  const foresightEvent = () => {
+    const event = events.find((e) => e.id === 'foresight') as TurnEvent;
+    return { ...event, used: false };
+  };
+
+  const clearActors = (state: ReturnType<typeof init>) => {
+    state.dungeon.layout.monsters = [];
+    state.heroes.forEach((hero) => (hero.position = { x: 0, y: 0 }));
+  };
+
+  const sword: Item = {
+    id: 'sword',
+    name: 'Sword',
+    type: ItemType.WEAPON,
+    amountInDeck: 1,
+    value: 0,
+  };
+
+  const setUpTwoRooms = (state: ReturnType<typeof init>, secrets: Secret[]) => {
+    state.dungeon.layout.grid = ['#####', '#AAA#', '#####', '#BBB#', '#####'];
+    state.dungeon.discoveredRooms = ['A'];
+    state.dungeon.layout.secrets = secrets;
+  };
+
+  it('reveals a still-hidden item secret in an undiscovered room', () => {
+    const state = init();
+    clearActors(state);
+    setUpTwoRooms(state, [
+      {
+        id: 'equip1',
+        type: SecretType.EQUIPMENT,
+        name: 'Equipment',
+        found: false,
+        position: { x: 2, y: 3 },
+        item: sword,
+      },
+    ]);
+
+    eventEffects.foresight(state, foresightEvent());
+
+    expect(state.dungeon.layout.secrets).toHaveLength(0);
+    expect(state.dungeon.layout.items).toHaveLength(1);
+    expect(state.dungeon.layout.items[0].item).toBe(sword);
+    expect(state.dungeon.layout.items[0].position).toEqual({ x: 2, y: 3 });
+  });
+
+  it('reveals exactly one secret when several qualify and keeps the rest', () => {
+    const state = init();
+    clearActors(state);
+    setUpTwoRooms(state, [
+      {
+        id: 'equip1',
+        type: SecretType.EQUIPMENT,
+        name: 'Equipment',
+        found: false,
+        position: { x: 1, y: 3 },
+        item: { ...sword, id: 'flail' },
+      },
+      {
+        id: 'magic1',
+        type: SecretType.MAGIC_ITEM,
+        name: 'Magic Item',
+        found: false,
+        position: { x: 3, y: 3 },
+        item: { ...sword, id: 'potion' },
+      },
+    ]);
+
+    eventEffects.foresight(state, foresightEvent());
+
+    expect(state.dungeon.layout.secrets).toHaveLength(1);
+    expect(state.dungeon.layout.items).toHaveLength(1);
+    const revealedId = state.dungeon.layout.items[0].item?.id;
+    expect(['flail', 'potion']).toContain(revealedId);
+  });
+
+  it('does nothing when no undiscovered item secret qualifies', () => {
+    const state = init();
+    clearActors(state);
+    setUpTwoRooms(state, [
+      {
+        id: 'equip1',
+        type: SecretType.EQUIPMENT,
+        name: 'Equipment',
+        found: false,
+        position: { x: 2, y: 1 },
+        item: sword,
+      },
+      {
+        id: 'trap1',
+        type: SecretType.TRAP_DOOR,
+        name: 'Trap Door',
+        found: false,
+        position: { x: 2, y: 3 },
+      },
+      {
+        id: 'stair',
+        type: SecretType.NOTE,
+        name: 'Secret Stair',
+        found: false,
+        position: { x: 1, y: 3 },
+        revealedBy: 'necklace_of_light',
+      },
+    ]);
+
+    eventEffects.foresight(state, foresightEvent());
+
+    expect(state.dungeon.layout.secrets).toHaveLength(3);
+    expect(state.dungeon.layout.items).toHaveLength(0);
   });
 });

@@ -86,7 +86,10 @@ export const magicItems: Item[] = [
     properties: {
       DESCRIPTION: 'items.magicItems.ringOfPrecision.description',
       RE_ROLL_ATTACK: true,
+      USED: false,
+      RESET_ON: [NEXT_TURN],
     },
+    reset: 'ringOfPrecisionOnReset',
     light: {
       alignment: CellAlignment.CENTER,
       color: '#FFD700',

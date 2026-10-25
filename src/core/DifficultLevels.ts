@@ -18,9 +18,7 @@ export const DEFAULT_DIFFICULTY_ID = DEFAULT_GAME_MASTER_ID;
 export const DifficultLevels: GameMaster[] = Object.values(gameMasters);
 
 export const getDifficulty = (state: GameState | undefined): GameMaster =>
-  state?.difficulty ??
-  state?.gameMaster ??
-  getGameMaster(state?.gameMasterId ?? DEFAULT_DIFFICULTY_ID);
+  state?.gameMaster ?? getGameMaster(DEFAULT_DIFFICULTY_ID);
 
 export const getEventMinSpawnDistance = (
   difficultyOrState?: GameMaster | GameState | string,
@@ -37,7 +35,6 @@ export const getEventMinSpawnDistance = (
   }
   return (
     difficulty?.events?.minMonsterSpawnDistance ??
-    difficulty?.events?.minSpawnDistance ??
     (difficulty?.id === 'storyTeller' || difficulty?.id === 'easy'
       ? 4
       : difficulty?.id === 'brutalOverlord' || difficulty?.id === 'hard'
@@ -61,7 +58,6 @@ export const getEarliestMonsterEventRound = (
   }
   return (
     difficulty?.events?.earliestMonsterRound ??
-    difficulty?.events?.earliestRound ??
     (difficulty?.id === 'storyTeller' || difficulty?.id === 'easy'
       ? 4
       : difficulty?.id === 'brutalOverlord' || difficulty?.id === 'hard'

@@ -10,6 +10,7 @@ import {
   Level,
   type Weapon,
   MonsterType,
+  SecretType,
   type Difficulty,
   type Item,
 } from '../types';
@@ -25,6 +26,7 @@ import {
   replaceDeadHeroes,
   openDoorAtHero,
   checkForNextToMonster,
+  search,
 } from './HeroLogic';
 import { findDoorsAtHero } from './RadialMenuLogic';
 import { getGameMaster } from '../core';
@@ -287,7 +289,7 @@ describe('pickLock', () => {
         value: 3,
       },
     });
-    const monster = createTestMonster();
+    const monster = createTestMonster({ position: { x: 5, y: 5 } });
     const state = createTestState(hero, monster);
     const door: Door = {
       x: 1,
@@ -583,7 +585,7 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
     const hero = createTestHero({ maxHealth: 7, health: 1 });
     const monster = createTestMonster();
     const state = createTestState(hero, monster);
-    state.difficulty = getGameMaster('easy');
+    state.gameMaster = getGameMaster('easy');
 
     resetLiveHeroes(state);
 
@@ -626,7 +628,7 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
     const hero = createTestHero({ maxHealth: 7, health: 0 });
     const monster = createTestMonster();
     const state = createTestState(hero, monster);
-    state.difficulty = getGameMaster('easy');
+    state.gameMaster = getGameMaster('easy');
 
     replaceDeadHeroes(state);
 
@@ -756,5 +758,105 @@ describe('opening doors from both sides of the door edge', () => {
     const state = createStateWithDoor(hero, door);
 
     expect(findDoorsAtHero(state, hero)).toEqual([door]);
+  });
+});
+
+describe('LETA actions gated near monsters', () => {
+  it('does not allow searching while standing next to a monster', () => {
+    const hero = createTestHero({ position: { x: 1, y: 1 } });
+    const monster = createTestMonster({ position: { x: 2, y: 1 } });
+    const state = createTestState(hero, monster);
+
+    search(state);
+
+    expect(hero.actions).toBe(2);
+    expect(
+      state.actionLog.some(
+        (l) => l.key === 'logs.heroAction.blockedNearMonster',
+      ),
+    ).toBe(true);
+  });
+
+  it('does not allow picking a lock while standing next to a monster', () => {
+    const hero = createTestHero({ position: { x: 1, y: 1 } });
+    const monster = createTestMonster({ position: { x: 2, y: 1 } });
+    const state = createTestState(hero, monster);
+    const door: Door = {
+      x: 1,
+      y: 1,
+      side: Side.RIGHT,
+      open: false,
+      locked: true,
+      trapped: false,
+      hidden: false,
+      reinforced: false,
+      trapAttacks: 0,
+    };
+    state.dungeon.layout.doors = [door];
+
+    pickLock(state, door);
+
+    expect(hero.actions).toBe(2);
+    expect(door.locked).toBe(true);
+  });
+
+  it('still allows searching when no monster is adjacent', () => {
+    const hero = createTestHero({ position: { x: 1, y: 1 } });
+    const monster = createTestMonster({ position: { x: 5, y: 5 } });
+    const state = createTestState(hero, monster);
+
+    search(state);
+
+    expect(hero.actions).toBe(1);
+    expect(
+      state.actionLog.some(
+        (l) => l.key === 'logs.heroAction.blockedNearMonster',
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('replaceDeadHeroes level reset', () => {
+  it('resets a revived hero to Apprentice level with 0 XP', () => {
+    const hero = createTestHero({
+      level: Level.KNIGHT,
+      experience: 6,
+      health: 0,
+    });
+    const monster = createTestMonster({ position: { x: 5, y: 5 } });
+    const state = createTestState(hero, monster);
+
+    replaceDeadHeroes(state);
+
+    expect(hero.experience).toBe(0);
+    expect(hero.level).toBe(Level.APPRENTICE);
+    expect(hero.health).toBe(10);
+  });
+});
+
+describe('searching with exhausted item decks', () => {
+  it('does not crash when an equipment secret is found with an empty deck', () => {
+    const hero = createTestHero({ position: { x: 1, y: 1 } });
+    const monster = createTestMonster({ position: { x: 5, y: 5 } });
+    const state = createTestState(hero, monster);
+    state.itemDeck = [];
+    state.dungeon.layout.secrets = [
+      {
+        type: SecretType.EQUIPMENT,
+        name: 'Equipment',
+        found: false,
+        position: { x: 2, y: 1 },
+      },
+    ];
+
+    setRng(() => 5 / 6);
+    try {
+      expect(() => search(state)).not.toThrow();
+    } finally {
+      resetRng();
+    }
+
+    expect(state.dungeon.layout.secrets[0].found).toBe(true);
+    expect(hero.inventory).toHaveLength(0);
   });
 });

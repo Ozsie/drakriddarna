@@ -18,7 +18,7 @@ export const TROLL_BEHAVIORS: MonsterBehavior[] = [
     getBaseWeight: (ctx) => {
       const charge = findChargePath(ctx);
       if (charge) {
-        const healthModifier = ctx.state.difficulty?.modifiers.health ?? 0;
+        const healthModifier = ctx.state.gameMaster?.modifiers.health ?? 0;
         const maxHealth = charge.hero.maxHealth + healthModifier;
         if (charge.hero.health <= maxHealth / 2) {
           return 11;

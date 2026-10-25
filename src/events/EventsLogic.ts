@@ -1,15 +1,13 @@
 import type {
-  Actor,
   Dungeon,
-  GameEvent,
   GameState,
+  Hero,
   Layout,
   Position,
   TurnEvent,
   Weapon,
 } from '../types';
 import {
-  assertNever,
   CellAlignment,
   Colour,
   ItemType,
@@ -35,10 +33,18 @@ import {
   hasLineOfSight,
   i18n,
   isPartyBelowHalfHealth,
+  shuffle,
 } from '../core';
 import { roll } from '../core';
-import { findCell, isRoomDiscovered, toArray, EMPTY, WALL } from '../core';
-import { takeDamage } from '../core';
+import {
+  findCell,
+  findRoomCells,
+  isRoomDiscovered,
+  toArray,
+  EMPTY,
+  WALL,
+} from '../core';
+import { createHazardActor, takeDamage } from '../core';
 import { COLLAPSED, createLight, createMonster } from '../dungeon/DungeonLogic';
 import { events } from './events';
 import { ACTIVE, onDrop, onPickup } from '../items/ItemLogic';
@@ -114,6 +120,21 @@ export const selectNextEvent = (
   state.eventDeck.unshift(selectedEvent);
 };
 
+// The grid letter (room/corridor) a position currently sits in.
+const cellFor = (state: GameState, position: Position): string =>
+  findCell(state.dungeon.layout.grid, position.x, position.y) ?? '';
+
+// All visible monsters of the given type standing in the given room or
+// corridor letter.
+const findVisibleMonstersInCell = (
+  state: GameState,
+  monsterType: MonsterType,
+  cell: string,
+) =>
+  findVisibleMonsters(state)
+    .filter((monster) => monster.type === monsterType)
+    .filter((monster) => cellFor(state, monster.position) === cell);
+
 export const eventEffects: Record<
   string,
   (state: GameState, event: TurnEvent) => void
@@ -142,17 +163,8 @@ export const eventEffects: Record<
         enabled: true,
       }),
     ];
-    findVisibleMonsters(state)
-      .filter((monster) => monster.type === MonsterType.TROLL)
-      .filter(
-        (monster) =>
-          findCell(
-            state.dungeon.layout.grid,
-            monster.position.x,
-            monster.position.y,
-          ) === heroCell,
-      )
-      .forEach((monster) => {
+    findVisibleMonstersInCell(state, MonsterType.TROLL, heroCell).forEach(
+      (monster) => {
         addLog(state, 'logs.events.sunStone', { monster: i18n(monster.name) });
         const remainingHealth = monster.health;
         monster.health = 0;
@@ -174,7 +186,8 @@ export const eventEffects: Record<
             effect: 'crit',
           }),
         );
-      });
+      },
+    );
     event.used = true;
   },
   theHungryTroll: (state: GameState, event: TurnEvent) => {
@@ -338,7 +351,7 @@ export const eventEffects: Record<
     state.roundActionsDelta = (state.roundActionsDelta ?? 0) - 1;
     event.used = true;
   },
-  theLostOrc: (state: GameState, event: TurnEvent) => {
+  theLostOrch: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     const earliestRound = getEarliestMonsterEventRound(state);
     const currentRound = (state.turnCount ?? 0) + 1;
@@ -348,9 +361,6 @@ export const eventEffects: Record<
     }
     spawnRandomMonster(state, MonsterType.ORC);
     event.used = true;
-  },
-  theLostOrch: (state: GameState, event: TurnEvent) => {
-    eventEffects.theLostOrc(state, event);
   },
   theDragonsBreath: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
@@ -374,17 +384,18 @@ export const eventEffects: Record<
     if (candidates.length > 0) {
       const randomIndex = Math.floor(Math.random() * candidates.length);
       const candidate = candidates[randomIndex];
-      state.dungeon.collapsedCorridor = candidate.letter;
-      if (candidate.cells) {
-        const cells = candidate.cells;
-        state.dungeon.layout.grid = state.dungeon.layout.grid.map((row, y) =>
-          collapseCellsInRow(row, cells, y),
-        );
-      } else {
-        state.dungeon.layout.grid = state.dungeon.layout.grid.map((row) =>
-          row.replaceAll(candidate.letter, COLLAPSED),
-        );
+      state.dungeon.layout.grid = state.dungeon.layout.grid.map((row, y) =>
+        collapseCellsInRow(row, candidate.cells, y),
+      );
+      // Each collapse is tracked with its exact cells, so a second
+      // landslide elsewhere cannot lose or mislabel the first one.
+      if (!state.dungeon.collapsedCorridors) {
+        state.dungeon.collapsedCorridors = [];
       }
+      state.dungeon.collapsedCorridors.push({
+        letter: candidate.letter,
+        cells: candidate.cells,
+      });
     }
     event.used = true;
   },
@@ -408,11 +419,17 @@ export const eventEffects: Record<
         return !isRoomDiscovered(state.dungeon, secretRoom);
       });
     if (notDiscoveredSecret.length > 0) {
-      const secret = state.dungeon.layout.secrets.pop();
-      if (secret && secret.item) {
+      // Reveal one of the still-hidden item secrets: the foresight only
+      // ever targets the secrets it sensed, never an arbitrary one.
+      const secret = shuffle([...notDiscoveredSecret])[0];
+      state.dungeon.layout.secrets.splice(
+        state.dungeon.layout.secrets.indexOf(secret),
+        1,
+      );
+      if (secret.item) {
         addLog(state, 'logs.events.foreSight', {
-          x: `${secret.position.x + 2}`,
-          y: `${secret.position.y - 1}`,
+          x: `${secret.position.x}`,
+          y: `${secret.position.y}`,
         });
         state.dungeon.layout.items.push({
           item: secret.item,
@@ -421,9 +438,6 @@ export const eventEffects: Record<
       }
     }
     event.used = true;
-  },
-  foreSight: (state: GameState, event: TurnEvent) => {
-    eventEffects.foresight(state, event);
   },
   earthquake: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
@@ -442,43 +456,17 @@ export const eventEffects: Record<
       ignoresShield: false,
       ignoresArmour: false,
     };
-    const earthQuakeActor: Actor = {
-      id: 'earthquake',
-      name: 'Earthquake',
-      nameTranslationKey: 'Earthquake',
-      actions: 0,
-      health: 0,
-      maxMovement: 0,
-      position: { x: 0, y: 0 },
-      weapon: earthquakeWeapon,
-      level: Level.APPRENTICE,
-      maxHealth: 0,
-      movement: 0,
-      experience: 0,
-      colour: Colour.Red,
-      inventory: [],
-      defense: 0,
-    };
-    findVisibleMonsters(state)
-      .filter((monster) => monster.type === MonsterType.TROLL)
-      .filter(
-        (monster) =>
-          findCell(
-            state.dungeon.layout.grid,
-            monster.position.x,
-            monster.position.y,
-          ) === room,
-      )
-      .forEach((monster) => takeDamage(state, earthQuakeActor, monster, false));
+    const earthQuakeActor = createHazardActor(
+      'earthquake',
+      'Earthquake',
+      { x: 0, y: 0 },
+      earthquakeWeapon,
+    );
+    findVisibleMonstersInCell(state, MonsterType.TROLL, room).forEach(
+      (monster) => takeDamage(state, earthQuakeActor, monster, false),
+    );
     liveHeroes(state)
-      .filter(
-        (hero) =>
-          findCell(
-            state.dungeon.layout.grid,
-            hero.position.x,
-            hero.position.y,
-          ) === room,
-      )
+      .filter((hero) => cellFor(state, hero.position) === room)
       .forEach((hero) => takeDamage(state, earthQuakeActor, hero, false));
     event.used = true;
   },
@@ -532,7 +520,7 @@ export const eventEffects: Record<
     }
     event.used = true;
   },
-  theOrcDrums: (state: GameState, event: TurnEvent) => {
+  theOrchDrums: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     const visibleOrcs = findVisibleMonsters(state).filter(
       (monster) => monster.type === MonsterType.ORC,
@@ -558,9 +546,6 @@ export const eventEffects: Record<
       );
     });
     event.used = true;
-  },
-  theOrchDrums: (state: GameState, event: TurnEvent) => {
-    eventEffects.theOrcDrums(state, event);
   },
   theSymbolOfWeakness: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
@@ -609,61 +594,6 @@ export const registerEventEffect = (
   eventEffects[key] = handler;
 };
 
-export const executeGameEvent = (state: GameState, event: GameEvent): void => {
-  switch (event.type) {
-    case 'SUN_STONE':
-      eventEffects.sunStone(state, event);
-      break;
-    case 'HUNGRY_TROLL':
-      eventEffects.theHungryTroll(state, event);
-      break;
-    case 'TIME_PORTAL':
-      eventEffects.timePortal(state, event);
-      break;
-    case 'FOUNTAIN_OF_YOUTH':
-      eventEffects.fountainOfYouth(state, event);
-      break;
-    case 'SLEEPING_GAS_CLOUD':
-      eventEffects.sleepingGasCloud(state, event);
-      break;
-    case 'LOST_ORC':
-      eventEffects.theLostOrc(state, event);
-      break;
-    case 'DRAGONS_BREATH':
-      eventEffects.theDragonsBreath(state, event);
-      break;
-    case 'LANDSLIDE':
-      eventEffects.landslide(state, event);
-      break;
-    case 'MAGIC_NODE':
-      eventEffects.fountainOfYouth(state, event);
-      break;
-    case 'FORESIGHT':
-      eventEffects.foresight(state, event);
-      break;
-    case 'EARTHQUAKE':
-      eventEffects.earthquake(state, event);
-      break;
-    case 'MAGIC_STORM':
-      eventEffects.theMagicStorm(state, event);
-      break;
-    case 'ELEMENTAL_WEAPON':
-      eventEffects.theElementalWeapon(state, event);
-      break;
-    case 'ORC_DRUMS':
-      eventEffects.theOrcDrums(state, event);
-      break;
-    case 'SYMBOL_OF_WEAKNESS':
-      eventEffects.theSymbolOfWeakness(state, event);
-      break;
-    case 'HEXAGRAM':
-      eventEffects.theHexagram(state, event);
-      break;
-    default:
-      assertNever(event);
-  }
-};
-
 const restoreDisabledItems = (state: GameState) => {
   if (
     liveHeroes(state).some((hero) =>
@@ -709,34 +639,53 @@ const restoreOrcDrums = (state: GameState) => {
 };
 
 const restoreCorridor = (state: GameState) => {
-  const collapsed = state.dungeon.collapsedCorridor;
-  if (collapsed) {
+  const collapsed = state.dungeon.collapsedCorridors;
+  if (collapsed && collapsed.length > 0) {
     addLog(state, 'logs.events.landslideRestored');
-    state.dungeon.layout.grid = state.dungeon.layout.grid.map((row) =>
-      row.replaceAll(COLLAPSED, collapsed),
-    );
-    state.dungeon.collapsedCorridor = undefined;
+    collapsed.forEach((group) => {
+      state.dungeon.layout.grid = state.dungeon.layout.grid.map((row, y) =>
+        restoreCellsInRow(row, group.cells, y, group.letter),
+      );
+    });
+    state.dungeon.collapsedCorridors = [];
   }
 };
 
-const restoreBlinded = (state: GameState) => {
-  if (liveHeroes(state).some((hero) => hero.blinded)) {
-    addLog(state, 'logs.events.blindedRestored');
-    liveHeroes(state).forEach((hero) => (hero.blinded = false));
-  }
-};
+const restoreBlinded = (state: GameState) =>
+  restoreHeroState(
+    state,
+    (hero) => Boolean(hero.blinded),
+    (hero) => (hero.blinded = false),
+    'logs.events.blindedRestored',
+  );
 
-const restoreElementalWeapon = (state: GameState) => {
-  if (liveHeroes(state).some((hero) => hero.weapon.elemental)) {
-    addLog(state, 'logs.events.elementalWeaponRestored');
-    liveHeroes(state).forEach((hero) => (hero.weapon.elemental = false));
-  }
-};
+const restoreWeakened = (state: GameState) =>
+  restoreHeroState(
+    state,
+    (hero) => Boolean(hero.weakened),
+    (hero) => (hero.weakened = false),
+    'logs.events.weakenedRestored',
+  );
 
-const restoreWeakened = (state: GameState) => {
-  if (liveHeroes(state).some((hero) => hero.weakened)) {
-    addLog(state, 'logs.events.weakenedRestored');
-    liveHeroes(state).forEach((hero) => (hero.weakened = false));
+const restoreElementalWeapon = (state: GameState) =>
+  restoreHeroState(
+    state,
+    (hero) => Boolean(hero.weapon.elemental),
+    (hero) => (hero.weapon.elemental = false),
+    'logs.events.elementalWeaponRestored',
+  );
+
+// Shared "if any live hero is affected → log → clear on all live heroes"
+// shape used by the round-end event-effect restores.
+const restoreHeroState = (
+  state: GameState,
+  isAffected: (hero: Hero) => boolean,
+  clear: (hero: Hero) => void,
+  logKey: string,
+) => {
+  if (liveHeroes(state).some(isAffected)) {
+    addLog(state, logKey);
+    liveHeroes(state).forEach(clear);
   }
 };
 
@@ -845,21 +794,30 @@ const isRoomBlocked = (state: GameState, roomKey: string) => {
   return isBlocked.some((blocked) => blocked);
 };
 
-// A corridor the landslide can collapse: either a whole corridor letter
-// (`cells` undefined) or the declared corridor cells of a room letter
-// (`cells` set), see `Layout.corridorCells`.
+// A corridor the landslide can collapse: the exact cells that would cave
+// in — either every cell of a corridor letter, or the declared corridor
+// cells of a room letter (see `Layout.corridorCells`).
 interface LandslideCandidate {
   letter: string;
-  cells?: Position[];
+  cells: Position[];
 }
 
 const getLandslideCandidates = (state: GameState): LandslideCandidate[] => {
   const layout = state.dungeon.layout;
+  const isCollapsed = (letter: string) =>
+    (state.dungeon.collapsedCorridors ?? []).some(
+      (group) => group.letter === letter,
+    );
   const fullCorridors: LandslideCandidate[] = layout.corridors
+    .filter((corridor) => !isCollapsed(corridor))
     .filter((corridor) => !isRoomBlocked(state, corridor))
     .filter((corridor) => isRoomDiscovered(state.dungeon, corridor))
-    .map((corridor) => ({ letter: corridor }));
+    .map((corridor) => ({
+      letter: corridor,
+      cells: findRoomCells(layout.grid, corridor),
+    }));
   const partialCorridors: LandslideCandidate[] = getPartialCorridors(layout)
+    .filter(({ letter }) => !isCollapsed(letter))
     .filter(({ letter }) => isRoomDiscovered(state.dungeon, letter))
     .filter(
       ({ cells }) =>
@@ -903,6 +861,25 @@ const collapseCellsInRow = (
   let newRow = '';
   for (let x = 0; x < row.length; x++) {
     newRow += xs.has(x) ? COLLAPSED : row[x];
+  }
+  return newRow;
+};
+
+// Restores only the cells this collapse group actually owns (and only if
+// they are still collapsed), so overlapping state can never be mislabeled.
+const restoreCellsInRow = (
+  row: string,
+  cells: Position[],
+  y: number,
+  letter: string,
+): string => {
+  const xs = new Set(
+    cells.filter((cell) => cell.y === y).map((cell) => cell.x),
+  );
+  if (xs.size === 0) return row;
+  let newRow = '';
+  for (let x = 0; x < row.length; x++) {
+    newRow += xs.has(x) && row[x] === COLLAPSED ? letter : row[x];
   }
   return newRow;
 };

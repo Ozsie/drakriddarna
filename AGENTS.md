@@ -32,6 +32,13 @@ Run `npm run check`, `npm test`, and `npm run lint` before considering work done
 - All user-facing strings go through sveltekit-i18n with both English and Swedish: shared files in `src/lib/translations/{en,sv}/`, campaign/game-master translations in `src/<area>/<name>/translations/{en,sv}.json` (auto-discovered via `import.meta.glob`). Do not hardcode user-visible text.
 - Game logic must be deterministic and testable: gameplay-affecting randomness goes through the seedable rng in `src/core/dice.ts`, never `Math.random()` directly (visual-only effects and id generation are the exception).
 
+## Technical write-up
+
+- [TECHNICAL.md](./TECHNICAL.md) is the technical overview of the project for developers outside the gaming industry (architecture, techniques, technologies, testing, deployment).
+- Keep it accurate when you change anything it describes: the architecture/layering, core modules (`src/core/`, `src/game.ts`), state and persistence model, monster AI and Game Masters, rendering/lighting approach, i18n, auto-discovery (`import.meta.glob`), benchmarks, tooling, or the build/CI/deploy pipeline.
+- The write-up describes components and techniques, not line numbers or exact counts — update it in the same change as the code; do not let it drift.
+- New features at the level of the existing sections (e.g. a new rendering technique, a changed save format, a new benchmark capability) get a matching paragraph or section update.
+
 ## Code style
 
 - Prettier with single quotes, 2-space indent, trailing commas (`npm run prettier:format`).

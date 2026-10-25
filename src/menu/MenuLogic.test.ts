@@ -1,22 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  getMainMenuItems,
-  getDebugMenuItems,
   getCampaignMenuItems,
-  getGameMasterMenuItems,
-  getSavedGameMenuItems,
-  getEventMenuItems,
-  getRightsMenuItems,
-  getMenuItemsForView,
-  getMenuHeader,
-  getDifficultyMenuLabel,
+  getDebugMenuItems,
   getDebugMenuLabel,
+  getDifficultyMenuLabel,
+  getEventMenuItems,
+  getGameMasterMenuItems,
+  getMainMenuItems,
+  getMenuHeader,
+  getMenuItemsForView,
   getMusicMenuLabel,
-  setSelectedCampaign,
+  getRightsMenuItems,
+  getSavedGameMenuItems,
   getSelectedCampaign,
+  setSelectedCampaign,
 } from './MenuLogic';
 import { DifficultLevels } from '../core';
-import { Colour, ItemType, Level, type GameState, type Hero } from '../types';
+import { Colour, type GameState, type Hero, ItemType, Level } from '../types';
 
 const createMockHero = (name = 'Hero1'): Hero => ({
   name,
@@ -222,11 +222,11 @@ describe('MenuLogic', () => {
     });
 
     it('cycles difficulty on difficulty item click', () => {
-      mockState.difficulty = DifficultLevels[0];
+      mockState.gameMaster = DifficultLevels[0];
       const items = getMainMenuItems(mockState);
       const difficultyItem = items.find((i) => i.id === 'difficulty');
       difficultyItem?.onClick(mockState);
-      expect(mockState.difficulty).toEqual(DifficultLevels[1]);
+      expect(mockState.gameMaster).toEqual(DifficultLevels[1]);
     });
   });
 
@@ -282,8 +282,10 @@ describe('MenuLogic', () => {
 
     it('moves to the next dungeon and closes menu on next_dungeon click', () => {
       const closeMenu = vi.fn();
-      const nextDungeon = { ...mockState.dungeon, name: 'Next Dungeon' };
-      mockState.dungeon.nextDungeon = nextDungeon;
+      mockState.dungeon.nextDungeon = {
+        ...mockState.dungeon,
+        name: 'Next Dungeon',
+      };
       const items = getDebugMenuItems(mockState, { closeMenu });
       const nextDungeonItem = items.find((i) => i.id === 'next_dungeon');
 
@@ -483,7 +485,7 @@ describe('MenuLogic', () => {
     });
 
     it('returns formatted difficulty label', () => {
-      mockState.difficulty = DifficultLevels[0];
+      mockState.gameMaster = DifficultLevels[0];
       const label = getDifficultyMenuLabel(mockState);
       expect(label).toBeTruthy();
     });

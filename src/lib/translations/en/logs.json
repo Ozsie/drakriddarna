@@ -55,6 +55,7 @@
     "locked": "Door is locked.",
     "reinforced": "The door is reinforced and can only be opened with the Giant's Glove.",
     "monsterOutOfRange": "Monster is out of range.",
+    "blockedNearMonster": "{{hero}} cannot do that while standing next to a monster.",
     "walkedByMonster": "{{hero}} walked by a monster and lost the momentum.",
     "searchBonus": "{{hero}} used the effect of {{item}} when searching.",
     "searchFoundNothing": "{{hero}} searched but found nothing.",

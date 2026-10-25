@@ -129,7 +129,9 @@ The required face value for a die to count as a **Success** depends directly on 
 
 #### Gaining Experience
 
-- Whenever an enemy monster is slain, **every surviving hero in the party earns +1 Experience (XP)**.
+- Whenever a hero slays an enemy monster, **the killing hero earns the monster's Experience (XP)**: Orcs 1 XP, Trolls 2 XP, Dark Lords 4 XP.
+- Every hero who survives a scenario earns an additional **+1 XP** when it is completed.
+- If a hero dies, their accumulated XP is lost and they return as an Apprentice in the next scenario; found equipment is kept by their successor.
 - If all heroes fall in battle, the scenario restarts with revived heroes starting at 0 XP (Apprentice level).
 
 ### Action Economy
@@ -146,6 +148,7 @@ A hero receives **2 Actions** at the start of their turn:
 
 - **8-Directional Movement**: Heroes and monsters can move horizontally, vertically, and diagonally across walkable tiles.
 - **Zone of Control / Monster Engagement**: Moving into any tile adjacent to an enemy monster immediately halts the hero's movement (remaining movement is reduced to `0`).
+- **Passing Through Heroes**: Heroes may move through tiles occupied by other heroes, but may never stop on one. If the zone of control would halt a hero on another hero's tile, the hero instead walks on past the monster and stops at the next free tile.
 - **Obstacles**: Heroes cannot move through solid walls, closed doors, collapsed rubble, pits, or tiles occupied by live monsters.
 
 ---

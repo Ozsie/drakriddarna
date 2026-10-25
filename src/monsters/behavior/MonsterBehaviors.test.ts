@@ -280,7 +280,7 @@ describe('Orc Behaviors Evaluation', () => {
 
   it('Orc Charge accounts for difficulty health modifier when checking <= 50%', () => {
     const state = createTestState();
-    state.difficulty = getGameMaster('hard');
+    state.gameMaster = getGameMaster('hard');
     const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
     monster.temperament = 'bold';
     // Base maxHealth is 10, with modifier -1 effective max is 9.

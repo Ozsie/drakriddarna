@@ -5,6 +5,7 @@ import {
   NEXT_DUNGEON,
   onReset,
   resetOnNextDungeon,
+  resolveChaosSwordAttack,
   USED,
   USED_HEROES,
   USED_ON,
@@ -72,14 +73,7 @@ const createGameState = (heroes: Hero[]): GameState =>
     actionLog: [],
     eventDeck: [],
     events: [],
-    difficulty: {
-      key: 'normal',
-      modifiers: {
-        attack: 0,
-        defense: 0,
-        movement: 0,
-      },
-    },
+    gameMaster: getGameMaster('normal'),
   }) as unknown as GameState;
 
 describe('ItemLogic - Healing Herbs rework', () => {
@@ -183,7 +177,7 @@ describe('ItemLogic - Healing Herbs rework', () => {
   });
 
   it('caps healing herbs recovery to max health adjusted by difficulty modifier', () => {
-    state.difficulty = getGameMaster('easy'); // easy has health modifier +1
+    state.gameMaster = getGameMaster('easy'); // easy has health modifier +1
 
     hero2.health = 10;
     hero2.maxHealth = 10; // Effective max health is 11 (10 + 1)
@@ -194,5 +188,63 @@ describe('ItemLogic - Healing Herbs rework', () => {
 
     // Roll gave 3 hits, but max health is 11, so health becomes 11, not 12 or 13
     expect(hero2.health).toBe(11);
+  });
+});
+
+describe('chaos sword kills', () => {
+  it("transfers the slain monster's inventory to the killer", () => {
+    const hero = createHero('Fearik', 1, 1);
+    const state = createGameState([hero]);
+    const carriedItem: Item = {
+      id: 'giants_glove',
+      name: "Giant's Glove",
+      type: ItemType.MAGIC,
+      amountInDeck: 1,
+      value: 0,
+    };
+    const monster = {
+      name: 'Troll',
+      type: 'Troll',
+      health: 3,
+      maxHealth: 3,
+      defense: 1,
+      actions: 1,
+      movement: 3,
+      maxMovement: 3,
+      colour: Colour.Red,
+      position: { x: 2, y: 1 },
+      experience: 2,
+      level: Level.KNIGHT,
+      inventory: [carriedItem],
+      weapon: {
+        name: 'Club',
+        dice: 1,
+        amountInDeck: 1,
+        range: 1,
+        twoHanded: false,
+        useHearHeroes: true,
+        type: ItemType.WEAPON,
+        value: 0,
+        ignoresShield: false,
+        ignoresArmour: false,
+      },
+    };
+    state.dungeon.layout.monsters = [monster];
+    state.dungeon.killCount = 0;
+    state.itemDeck = [];
+    state.magicItemDeck = [];
+
+    // Force the instant-kill branch: 0 hits on the chaos sword kills outright
+    setRng(() => 1 / 6);
+    try {
+      resolveChaosSwordAttack(state, hero, monster as never);
+    } finally {
+      resetRng();
+    }
+
+    expect(state.dungeon.layout.monsters).toHaveLength(0);
+    expect(state.dungeon.killCount).toBe(1);
+    expect(hero.experience).toBe(2);
+    expect(hero.inventory).toContain(carriedItem);
   });
 });

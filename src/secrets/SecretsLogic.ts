@@ -1,5 +1,5 @@
 import type { Actor, GameState, Hero, Item, Position, Secret } from '../types';
-import { Colour, ItemType, Level, SecretType } from '../types';
+import { ItemType, SecretType } from '../types';
 import { addLog, i18n } from '../core';
 import { getDifficulty } from '../core';
 import {
@@ -10,7 +10,7 @@ import {
   isSamePosition,
 } from '../core';
 import { roll } from '../core';
-import { takeDamage } from '../core';
+import { createHazardActor, takeDamage } from '../core';
 import { pickupItem } from '../hero/HeroLogic';
 import { onPickup, SEARCH_BONUS } from '../items/ItemLogic';
 import { soundEffectManager } from '../audio';
@@ -140,38 +140,27 @@ export const removeFoundMagicItemFromDeck = (state: GameState, item: Item) => {
   }
 };
 
-const secretAsActor = (secret: Secret): Actor => ({
-  id: secret.id ?? 'trap_door_actor',
-  health: 0,
-  position: secret.position,
-  defense: 0,
-  experience: 0,
-  actions: 0,
-  movement: 0,
-  maxMovement: 0,
-  colour: Colour.Red,
-  maxHealth: 0,
-  name: 'Trap Door',
-  nameTranslationKey: 'Trap Door',
-  level: Level.APPRENTICE,
-  incapacitated: false,
-  weapon: {
-    id: 'falling_trap',
-    name: 'Falling',
-    nameTranslationKey: 'Falling',
-    amountInDeck: 0,
-    dice: 3,
-    useHearHeroes: true,
-    twoHanded: false,
-    range: 1,
-    type: ItemType.WEAPON,
-    value: 0,
-    ignoresShield: true,
-    ignoresArmour: true,
-    attackSound: 'sfx/trap_fall.mp3',
-  },
-  inventory: [],
-});
+const secretAsActor = (secret: Secret): Actor =>
+  createHazardActor(
+    secret.id ?? 'trap_door_actor',
+    'Trap Door',
+    secret.position,
+    {
+      id: 'falling_trap',
+      name: 'Falling',
+      nameTranslationKey: 'Falling',
+      amountInDeck: 0,
+      dice: 3,
+      useHearHeroes: true,
+      twoHanded: false,
+      range: 1,
+      type: ItemType.WEAPON,
+      value: 0,
+      ignoresShield: true,
+      ignoresArmour: true,
+      attackSound: 'sfx/trap_fall.mp3',
+    },
+  );
 
 const findHiddenDoor = (state: GameState, pos: Position) =>
   state.dungeon.layout.doors
@@ -251,7 +240,7 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
     switch (secret.type) {
       case SecretType.EQUIPMENT: {
         const item = secret.item ?? randomItem(state);
-        if (item.amountInDeck > 0) {
+        if (item && item.amountInDeck > 0) {
           removeFoundItemFromDeck(state, item);
           addLog(state, 'logs.heroAction.equipped', {
             hero: i18n(hero.name),
@@ -263,7 +252,7 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
       }
       case SecretType.MAGIC_ITEM: {
         const item = secret.item ?? randomMagicItem(state);
-        if (item.amountInDeck > 0) {
+        if (item && item.amountInDeck > 0) {
           removeFoundMagicItemFromDeck(state, item);
           addLog(state, 'logs.heroAction.found', {
             hero: i18n(hero.name),
@@ -283,14 +272,16 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
   return false;
 };
 
-export const randomItem = (state: GameState): Item => {
+export const randomItem = (state: GameState): Item | undefined => {
   const itemCount = state.itemDeck.length;
+  if (itemCount === 0) return undefined;
   const index = Math.floor(Math.random() * itemCount);
   return state.itemDeck[index];
 };
 
-const randomMagicItem = (state: GameState): Item => {
+const randomMagicItem = (state: GameState): Item | undefined => {
   const itemCount = state.magicItemDeck.length;
+  if (itemCount === 0) return undefined;
   const index = Math.floor(Math.random() * itemCount);
   return state.magicItemDeck[index];
 };
