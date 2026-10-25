@@ -5,8 +5,8 @@ import { Side } from '../types';
 
 type Rect = { style: string; x: number; y: number; w: number; h: number };
 
-const stateWithDoor = (locked: boolean): GameState => {
-  const state = {
+const stateWithDoor = (locked: boolean): GameState =>
+  ({
     dungeon: {
       name: 'Door Test',
       intro: 'test',
@@ -47,9 +47,7 @@ const stateWithDoor = (locked: boolean): GameState => {
     eventDeck: [],
     reRender: false,
     drawEvents: true,
-  } as unknown as GameState;
-  return state;
-};
+  }) as unknown as GameState;
 
 const renderDoorRects = (state: GameState): Rect[] => {
   const rects: Rect[] = [];
