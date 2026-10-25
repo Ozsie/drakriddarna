@@ -36,6 +36,7 @@
     renderWalls,
   } from '../dungeon/DungeonRendering';
   import {
+    activeLights,
     renderAmbientDarkness,
     renderAnimatedLights,
     renderLights,
@@ -404,12 +405,16 @@
     };
     const hasActiveAnimations = hasActiveActorAnimations();
     // Light effects (pulse, flicker, sweep, blink, sway) need a re-render
-    // every frame while any light animates within the viewport.
+    // every frame while any light animates within the viewport. The
+    // active light list is computed once per frame and shared by every
+    // lighting call below.
+    const frameLights = activeLights(activeState, currentTime);
     const hasLightEffects = hasAnimatedLights(
       activeState,
       debugMode,
       currentTime,
       lightViewport,
+      frameLights,
     );
     const sig = getDynamicSignature(
       activeState,
@@ -454,6 +459,7 @@
           cellSize,
           debugMode,
           lightViewport,
+          frameLights,
         );
         if (staticKey !== lastStaticLightKey) {
           lastStaticLightKey = staticKey;
@@ -474,6 +480,7 @@
               activeState,
               debugMode,
               lightViewport,
+              frameLights,
             );
           }
         }
@@ -490,6 +497,7 @@
           debugMode,
           currentTime,
           lightViewport,
+          frameLights,
         );
       } else {
         renderLights(
@@ -499,6 +507,7 @@
           debugMode,
           currentTime,
           lightViewport,
+          frameLights,
         );
       }
       ctx.save();
@@ -506,7 +515,15 @@
       ctx.drawImage(lightCanvas, 0, 0);
       ctx.restore();
     } else {
-      renderLights(ctx, cellSize, activeState, debugMode, currentTime, lightViewport);
+      renderLights(
+        ctx,
+        cellSize,
+        activeState,
+        debugMode,
+        currentTime,
+        lightViewport,
+        frameLights,
+      );
     }
 
     const hasActiveMonsters = renderMonsters(

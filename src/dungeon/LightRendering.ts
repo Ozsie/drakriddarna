@@ -20,7 +20,11 @@ import {
 
 // Number of rays cast around a light source to build its visibility polygon.
 const LIGHT_RAY_COUNT = 120;
-// Sub-cell resolution of each ray, in steps per cell.
+// Blocker detection resolution, in sample points per cell: a ray only
+// interacts with a cell it is still inside at one of these evenly spaced
+// points along its length, so a cell the ray merely clips — a corner sliver
+// between two sample points — never blocks. This is what lets light pass
+// between diagonally adjacent blockers through their shared corner.
 const LIGHT_RAY_STEPS_PER_CELL = 6;
 // Corner-aligned lights sit this fraction into their cell, so the glow stays
 // inside the cell it was placed on instead of bleeding into the wall corner.
@@ -148,6 +152,147 @@ export const lightBlockInCell = (
   return monster || hero ? 'opaque' : 'none';
 };
 
+// --- Occlusion map --------------------------------------------------------
+
+// Per-cell light blocking, precomputed once per occlusion state (a move, a
+// door, a discovery) so the rays do not re-scan the pillar, monster and hero
+// lists for every cell they cross. The map holds the raw cell facts only;
+// the light-specific rules — a ceiling light ignoring actors, the light's
+// own cell never blocking — are applied at lookup time.
+type OcclusionMap = {
+  data: Uint8Array;
+  width: number;
+  height: number;
+};
+
+const OCCLUSION_NONE = 0;
+// Wall, collapsed wall or pillar: blocks light, but is itself illuminated.
+const OCCLUSION_OPAQUE = 1;
+// Off the grid or in an undiscovered room: blocks light at its near edge.
+const OCCLUSION_FOG = 2;
+// A living monster or hero standing on an otherwise open cell.
+const OCCLUSION_ACTOR = 3;
+
+// Builds the occlusion map for a state, with the same precedence as
+// `lightBlockInCell`: walls and pillars block even when undiscovered (they
+// must stay visible), fog wins over actors, and actors only block on open,
+// discovered cells. The map covers the grid rectangle only; lookups outside
+// it read as fog, like `findCell` returning ''.
+const buildOcclusionMap = (
+  state: GameState,
+  debugMode: boolean,
+): OcclusionMap => {
+  const grid = state.dungeon.layout.grid;
+  const width = grid.reduce((max, row) => Math.max(max, row.length), 0);
+  const height = grid.length;
+  const data = new Uint8Array(width * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const cell = findCell(grid, x, y);
+      if (cell === WALL || cell === COLLAPSED) {
+        data[y * width + x] = OCCLUSION_OPAQUE;
+      }
+    }
+  }
+  state.dungeon.layout.pillars?.forEach((pillar) => {
+    if (
+      pillar.x >= 0 &&
+      pillar.x < width &&
+      pillar.y >= 0 &&
+      pillar.y < height
+    ) {
+      data[pillar.y * width + pillar.x] = OCCLUSION_OPAQUE;
+    }
+  });
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = y * width + x;
+      if (data[index] !== OCCLUSION_NONE) {
+        continue;
+      }
+      const cell = findCell(grid, x, y);
+      if (cell === '' || (!debugMode && !isDiscovered(state.dungeon, x, y))) {
+        data[index] = OCCLUSION_FOG;
+      }
+    }
+  }
+  // Actors only block where the cell itself is open, matching the check
+  // order of `lightBlockInCell`.
+  const actors: Actor[] = [
+    ...state.heroes,
+    ...state.dungeon.layout.monsters,
+  ].filter((actor) => actor.health > 0);
+  actors.forEach((actor) => {
+    const { x, y } = actor.position;
+    if (x >= 0 && x < width && y >= 0 && y < height) {
+      const index = y * width + x;
+      if (data[index] === OCCLUSION_NONE) {
+        data[index] = OCCLUSION_ACTOR;
+      }
+    }
+  });
+  return { data, width, height };
+};
+
+// Occlusion maps cached per state object. Game state mutates in place (a
+// move rewrites a hero's position on the same object), so the cache is keyed
+// by the state's identity and invalidated by its occlusion key changing —
+// while two different states that happen to hash to the same key (two
+// dungeons with the same name and actor layout) never share a map.
+const occlusionMapCaches = new WeakMap<
+  GameState,
+  { key: string; map: OcclusionMap }
+>();
+
+const occlusionMapFor = (
+  state: GameState,
+  cellSize: number,
+  debugMode: boolean,
+  occlusionKey?: string,
+): OcclusionMap => {
+  const key = occlusionKey ?? lightStateKey(state, cellSize, debugMode);
+  let cache = occlusionMapCaches.get(state);
+  if (!cache || cache.key !== key) {
+    cache = { key, map: buildOcclusionMap(state, debugMode) };
+    occlusionMapCaches.set(state, cache);
+  }
+  return cache.map;
+};
+
+// How a ray reads the occlusion map, applying the light-specific rules the
+// raw map cannot encode. Mirrors `lightBlockInCell` for every cell on the
+// grid; cells outside it read as fog.
+const lightBlockFromMap = (
+  map: OcclusionMap,
+  cell: Position,
+  light: LightSource,
+): LightCellBlock => {
+  const { x, y } = cell;
+  const value =
+    x < 0 || y < 0 || x >= map.width || y >= map.height
+      ? OCCLUSION_FOG
+      : map.data[y * map.width + x];
+  if (value === OCCLUSION_OPAQUE) {
+    return 'opaque';
+  }
+  if (value === OCCLUSION_FOG) {
+    return 'fog';
+  }
+  if (value === OCCLUSION_ACTOR) {
+    // The light's own cell never blocks — otherwise an actor standing on
+    // the light would black it out — and a ceiling light shines over
+    // actors.
+    if (isSamePosition(cell, light.position)) {
+      return 'none';
+    }
+    if (isCeilingLight(light)) {
+      return 'none';
+    }
+    return 'opaque';
+  }
+  return 'none';
+};
+
 // Where a ray from `center` crosses the far edge of the given cell along
 // the ray direction (capped at the light's radius). For the ray's previous
 // cell this is also its entry point into the next cell.
@@ -172,19 +317,21 @@ const rayExitThroughCell = (
 };
 
 // Casts `LIGHT_RAY_COUNT` rays from the light source and returns the polygon
-// (in world pixel coordinates) of the lit area. Each ray marches outward and
-// stops at the first blocker: a closed door (stopped at the door edge), a fog
-// cell (stopped at its near edge) or an opaque cell — which is lit partway
-// in, so the shadow starts behind it — or the light's radius. Rays pass
-// freely between diagonally adjacent opaque cells, through their shared
-// corner. For sweep lights only the rays within the rotating beam cone
-// contribute; the rest collapse onto the light source.
+// (in world pixel coordinates) of the lit area. Each ray walks the grid cell
+// by cell, from one boundary crossing to the next, and stops at the first
+// blocker: a closed door (stopped at the door edge), a fog cell (stopped at
+// its near edge) or an opaque cell — which is lit partway in, so the shadow
+// starts behind it — or the light's radius. Rays pass freely between
+// diagonally adjacent opaque cells, through their shared corner. For sweep
+// lights only the rays within the rotating beam cone contribute; the rest
+// collapse onto the light source.
 export const computeLightPolygon = (
   light: LightSource,
   state: GameState,
   cellSize: number,
   debugMode = false,
   timeMs = 0,
+  occlusionKey?: string,
 ): Position[] => {
   const center = lightCenter(light, cellSize, timeMs);
   // Gas lights ignore their radius: the cloud expands until it leaves the
@@ -196,8 +343,80 @@ export const computeLightPolygon = (
   const radiusPx = isGas
     ? Number.POSITIVE_INFINITY
     : (light.radius ?? DEFAULT_LIGHT_RADIUS) * cellSize;
-  const step = Math.max(1, cellSize / LIGHT_RAY_STEPS_PER_CELL);
+  const map = occlusionMapFor(state, cellSize, debugMode, occlusionKey);
   const points: Position[] = [];
+  // The midpoint of the shared edge between two adjacent cells, in world
+  // pixels — where a ray stops when a door, wall or fog blocks the step.
+  const sharedEdgeMidpoint = (from: Position, to: Position): Position => ({
+    x: ((from.x + to.x) / 2 + 0.5) * cellSize,
+    y: ((from.y + to.y) / 2 + 0.5) * cellSize,
+  });
+  // Where a ray entering `cell` from `from` stops, or null when the ray
+  // passes through and the walk should continue.
+  const rayStopInCell = (
+    from: Position,
+    cell: Position,
+    dirX: number,
+    dirY: number,
+  ): Position | null => {
+    if (
+      gasRoom !== undefined &&
+      findCell(state.dungeon.layout.grid, cell.x, cell.y) !== gasRoom
+    ) {
+      // Gas stays inside its room: stop at the room boundary, so the
+      // cloud never spills through open doors or into other rooms.
+      return sharedEdgeMidpoint(from, cell);
+    }
+    const door = isDoorEdge(
+      state.dungeon.layout,
+      from.x,
+      from.y,
+      cell.x,
+      cell.y,
+    );
+    if (door && !door.open) {
+      // Stop at the shared edge the door occupies.
+      return sharedEdgeMidpoint(from, cell);
+    }
+    if (crossesWallEdge(state.dungeon.layout, from, cell)) {
+      // Stop at the shared edge the wall occupies, so its face stays lit
+      // while the shadow starts behind it. Diagonal transitions use the
+      // pinch-point rule, so a corner closed by two walls stops the ray
+      // as well.
+      return sharedEdgeMidpoint(from, cell);
+    }
+    const block = lightBlockFromMap(map, cell, light);
+    if (block === 'opaque') {
+      // Illuminate the blocking cell partway from its entry edge: enough
+      // to light the wall face or actor sprite, so light never appears to
+      // pass through the whole cell. The shadow starts right behind it.
+      const entry = rayExitThroughCell(
+        center,
+        dirX,
+        dirY,
+        from,
+        cellSize,
+        radiusPx,
+      );
+      const exit = rayExitThroughCell(
+        center,
+        dirX,
+        dirY,
+        cell,
+        cellSize,
+        radiusPx,
+      );
+      return {
+        x: entry.x + (exit.x - entry.x) * OPAQUE_CELL_PENETRATION,
+        y: entry.y + (exit.y - entry.y) * OPAQUE_CELL_PENETRATION,
+      };
+    }
+    if (block === 'fog') {
+      // Undiscovered or outside the grid: light stops at the near edge.
+      return sharedEdgeMidpoint(from, cell);
+    }
+    return null;
+  };
   // For sweep lights: the beam only covers rays within its half angle of
   // the sweep direction; the rest collapse onto the light source.
   const sweep = lightSweepAngle(light, timeMs);
@@ -221,90 +440,84 @@ export const computeLightPolygon = (
       y: center.y + dirY * radiusPx,
     };
     let prevCell = light.position;
-    for (let distance = step; distance <= radiusPx; distance += step) {
-      const px = center.x + dirX * distance;
-      const py = center.y + dirY * distance;
-      const cell = {
-        x: Math.floor(px / cellSize),
-        y: Math.floor(py / cellSize),
-      };
-      if (cell.x === prevCell.x && cell.y === prevCell.y) {
-        continue;
-      }
-      if (
-        gasRoom !== undefined &&
-        findCell(state.dungeon.layout.grid, cell.x, cell.y) !== gasRoom
-      ) {
-        // Gas stays inside its room: stop at the room boundary, so the
-        // cloud never spills through open doors or into other rooms.
-        end = {
-          x: ((prevCell.x + cell.x) / 2 + 0.5) * cellSize,
-          y: ((prevCell.y + cell.y) / 2 + 0.5) * cellSize,
-        };
-        break;
-      }
-      const door = isDoorEdge(
-        state.dungeon.layout,
-        prevCell.x,
-        prevCell.y,
-        cell.x,
-        cell.y,
-      );
-      if (door && !door.open) {
-        // Stop at the shared edge the door occupies.
-        end = {
-          x: ((prevCell.x + cell.x) / 2 + 0.5) * cellSize,
-          y: ((prevCell.y + cell.y) / 2 + 0.5) * cellSize,
-        };
-        break;
-      }
-      if (crossesWallEdge(state.dungeon.layout, prevCell, cell)) {
-        // Stop at the shared edge the wall occupies, so its face stays lit
-        // while the shadow starts behind it. Diagonal transitions use the
-        // pinch-point rule, so a corner closed by two walls stops the ray
-        // as well.
-        end = {
-          x: ((prevCell.x + cell.x) / 2 + 0.5) * cellSize,
-          y: ((prevCell.y + cell.y) / 2 + 0.5) * cellSize,
-        };
-        break;
-      }
-      const block = lightBlockInCell(state, cell, light, debugMode);
-      if (block === 'opaque') {
-        // Illuminate the blocking cell partway from its entry edge: enough
-        // to light the wall face or actor sprite, so light never appears to
-        // pass through the whole cell. The shadow starts right behind it.
-        const entry = rayExitThroughCell(
-          center,
-          dirX,
-          dirY,
+    // Exact grid traversal: each step jumps to the next grid line the ray
+    // crosses (a DDA walk), visiting every cell along the ray. A cell only
+    // blocks when the ray is still inside it at one of the evenly spaced
+    // sample points — cells the ray merely clips are skipped, which lets
+    // light pass between diagonally adjacent blockers. Skipped cells also
+    // leave `prevCell` untouched, so the next checked cell is entered from
+    // the last checked one, diagonally when the walk stepped around a
+    // corner — matching the pinch-point rule for diagonal transitions.
+    const sampleStep = cellSize / LIGHT_RAY_STEPS_PER_CELL;
+    let cellX = Math.floor(center.x / cellSize);
+    let cellY = Math.floor(center.y / cellSize);
+    const stepX = dirX > 0 ? 1 : dirX < 0 ? -1 : 0;
+    const stepY = dirY > 0 ? 1 : dirY < 0 ? -1 : 0;
+    let tMaxX =
+      stepX === 0
+        ? Number.POSITIVE_INFINITY
+        : ((stepX > 0 ? cellX + 1 : cellX) * cellSize - center.x) / dirX;
+    let tMaxY =
+      stepY === 0
+        ? Number.POSITIVE_INFINITY
+        : ((stepY > 0 ? cellY + 1 : cellY) * cellSize - center.y) / dirY;
+    const tDeltaX =
+      stepX === 0 ? Number.POSITIVE_INFINITY : cellSize / Math.abs(dirX);
+    const tDeltaY =
+      stepY === 0 ? Number.POSITIVE_INFINITY : cellSize / Math.abs(dirY);
+
+    // A swaying, corner-aligned light can start with its center in a cell
+    // other than its nominal one; that first cell is entered from the
+    // light's own cell, like every other step of the walk.
+    if (cellX !== prevCell.x || cellY !== prevCell.y) {
+      const tOut = Math.min(tMaxX, tMaxY);
+      if (sampleStep < tOut && sampleStep <= radiusPx) {
+        const stop = rayStopInCell(
           prevCell,
-          cellSize,
-          radiusPx,
-        );
-        const exit = rayExitThroughCell(
-          center,
+          { x: cellX, y: cellY },
           dirX,
           dirY,
-          cell,
-          cellSize,
-          radiusPx,
         );
-        end = {
-          x: entry.x + (exit.x - entry.x) * OPAQUE_CELL_PENETRATION,
-          y: entry.y + (exit.y - entry.y) * OPAQUE_CELL_PENETRATION,
-        };
+        if (stop) {
+          end = stop;
+          points.push(end);
+          continue;
+        }
+        prevCell = { x: cellX, y: cellY };
+      }
+    }
+
+    for (;;) {
+      const tNext = Math.min(tMaxX, tMaxY);
+      if (tNext >= radiusPx) {
         break;
       }
-      if (block === 'fog') {
-        // Undiscovered or outside the grid: light stops at the near edge.
-        end = {
-          x: ((prevCell.x + cell.x) / 2 + 0.5) * cellSize,
-          y: ((prevCell.y + cell.y) / 2 + 0.5) * cellSize,
-        };
-        break;
+      // A ray crossing an exact grid corner steps diagonally into the cell
+      // beyond it; the pinch-point rule then decides whether the diagonal
+      // step is blocked.
+      const advanceX = tMaxX === tNext;
+      const advanceY = tMaxY === tNext;
+      if (advanceX) {
+        cellX += stepX;
+        tMaxX += tDeltaX;
       }
-      prevCell = cell;
+      if (advanceY) {
+        cellY += stepY;
+        tMaxY += tDeltaY;
+      }
+      // The first sample point inside this cell, if any: the ray only
+      // interacts with cells it is still inside at a sample point.
+      const tOut = Math.min(tMaxX, tMaxY);
+      const tSample = Math.max(1, Math.ceil(tNext / sampleStep)) * sampleStep;
+      if (tSample < tOut && tSample <= radiusPx) {
+        const cell = { x: cellX, y: cellY };
+        const stop = rayStopInCell(prevCell, cell, dirX, dirY);
+        if (stop) {
+          end = stop;
+          break;
+        }
+        prevCell = cell;
+      }
     }
     points.push(end);
   }
@@ -435,24 +648,41 @@ const lightStateKey = (
 };
 
 // The light's visibility polygon, from cache when the occlusion state has
-// not changed since it was last computed.
+// not changed since it was last computed. `occlusionKey` is the caller's
+// precomputed `lightStateKey` for the current pass; without it the key is
+// rebuilt here.
 export const lightPolygonFor = (
   light: LightSource,
   state: GameState,
   cellSize: number,
   debugMode: boolean,
   timeMs: number,
+  occlusionKey?: string,
 ): Position[] => {
   if (light.effect === LightEffect.SWEEP || light.effect === LightEffect.SWAY) {
-    return computeLightPolygon(light, state, cellSize, debugMode, timeMs);
+    return computeLightPolygon(
+      light,
+      state,
+      cellSize,
+      debugMode,
+      timeMs,
+      occlusionKey,
+    );
   }
-  const key = lightStateKey(state, cellSize, debugMode);
+  const key = occlusionKey ?? lightStateKey(state, cellSize, debugMode);
   if (!lightPolygonCache || lightPolygonCache.key !== key) {
     lightPolygonCache = { key, polygons: new Map() };
   }
   let points = lightPolygonCache.polygons.get(light);
   if (!points) {
-    points = computeLightPolygon(light, state, cellSize, debugMode, timeMs);
+    points = computeLightPolygon(
+      light,
+      state,
+      cellSize,
+      debugMode,
+      timeMs,
+      key,
+    );
     lightPolygonCache.polygons.set(light, points);
   }
   return points;
@@ -738,8 +968,9 @@ export const hasAnimatedLights = (
   debugMode: boolean,
   now: number = Date.now(),
   viewport?: LightViewport,
+  frameLights?: LightSource[],
 ): boolean =>
-  activeLights(state, now).some(
+  (frameLights ?? activeLights(state, now)).some(
     (light) =>
       isAnimatedLight(light) &&
       isLightRenderable(state, light, debugMode) &&
@@ -1061,6 +1292,7 @@ const renderLight = (
   light: LightSource,
   debugMode: boolean,
   timeMs: number,
+  occlusionKey?: string,
 ) => {
   if (!isLightRenderable(state, light, debugMode)) return;
 
@@ -1073,7 +1305,14 @@ const renderLight = (
       renderAura(ctx, light, cellSize, timeMs);
       break;
     case LightEffect.GAS: {
-      const points = lightPolygonFor(light, state, cellSize, debugMode, timeMs);
+      const points = lightPolygonFor(
+        light,
+        state,
+        cellSize,
+        debugMode,
+        timeMs,
+        occlusionKey,
+      );
       fillLightPolygon(
         ctx,
         points,
@@ -1092,7 +1331,14 @@ const renderLight = (
     default:
       fillLightPolygon(
         ctx,
-        lightPolygonFor(light, state, cellSize, debugMode, timeMs),
+        lightPolygonFor(
+          light,
+          state,
+          cellSize,
+          debugMode,
+          timeMs,
+          occlusionKey,
+        ),
         createLightGradient(ctx, light, cellSize, timeMs),
         light,
         cellSize,
@@ -1126,8 +1372,9 @@ export const staticLightCacheKey = (
   cellSize: number,
   debugMode: boolean,
   viewport?: LightViewport,
+  frameLights?: LightSource[],
 ): string => {
-  const lights = activeLights(state)
+  const lights = (frameLights ?? activeLights(state))
     .filter(isStaticLight)
     .map((light) =>
       isLightRenderable(state, light, debugMode) &&
@@ -1150,7 +1397,9 @@ export const staticLightCacheKey = (
   return `${lightStateKey(state, cellSize, debugMode)}|${lights}|${view}`;
 };
 
-// Draws the given lights, culling per renderability and viewport.
+// Draws the given lights, culling per renderability and viewport. The
+// occlusion key is built once for the whole pass and shared by every light's
+// polygon lookup, instead of being rebuilt per light.
 const renderLightList = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
@@ -1160,10 +1409,12 @@ const renderLightList = (
   timeMs: number,
   viewport?: LightViewport,
 ) => {
+  let occlusionKey: string | undefined;
   lights.forEach((light) => {
     if (!isLightRenderable(state, light, debugMode)) return;
     if (!lightInViewport(light, viewport)) return;
-    renderLight(ctx, cellSize, state, light, debugMode, timeMs);
+    occlusionKey ??= lightStateKey(state, cellSize, debugMode);
+    renderLight(ctx, cellSize, state, light, debugMode, timeMs, occlusionKey);
   });
 };
 
@@ -1176,12 +1427,13 @@ export const renderStaticLights = (
   state: GameState,
   debugMode: boolean,
   viewport?: LightViewport,
+  frameLights?: LightSource[],
 ) => {
   renderLightList(
     ctx,
     cellSize,
     state,
-    activeLights(state).filter(isStaticLight),
+    (frameLights ?? activeLights(state)).filter(isStaticLight),
     debugMode,
     0,
     viewport,
@@ -1197,12 +1449,15 @@ export const renderAnimatedLights = (
   debugMode: boolean,
   timeMs: number,
   viewport?: LightViewport,
+  frameLights?: LightSource[],
 ) => {
   renderLightList(
     ctx,
     cellSize,
     state,
-    activeLights(state).filter((light) => !isStaticLight(light)),
+    (frameLights ?? activeLights(state)).filter(
+      (light) => !isStaticLight(light),
+    ),
     debugMode,
     timeMs,
     viewport,
@@ -1222,8 +1477,9 @@ export const renderLights = (
   debugMode: boolean,
   timeMs = 0,
   viewport?: LightViewport,
+  frameLights?: LightSource[],
 ) => {
-  const lights = activeLights(state);
+  const lights = frameLights ?? activeLights(state);
   if (lights.length === 0) return;
   renderLightList(ctx, cellSize, state, lights, debugMode, timeMs, viewport);
 };

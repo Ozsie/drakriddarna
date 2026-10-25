@@ -221,13 +221,20 @@ the DOM:
 
 The lighting (`src/dungeon/LightRendering.ts`) is the most graphics-heavy
 code in the repo: a 2D visibility technique where each light source casts a
-fan of rays (120 per source, stepped at 1/6-cell resolution) that stop at
-opaque cells, producing a visibility polygon; a radial gradient fills the
-polygon, with tunable radius, softness, intensity and colour per source.
-Lights have effects (`SWAY` — a pendulum-arced moving glow for chandeliers),
-alignment (a ceiling light illuminates figures without them casting
-shadows), and each dungeon sets an ambient darkness level. Conceptually this
-is the same ray-casting idea used in 2D shadow algorithms generally.
+fan of rays (120 per source) that walk the grid cell by cell — jumping from
+one boundary crossing to the next, gated by a 1/6-cell sampling resolution
+so a cell the ray merely clips never blocks — and stop at opaque cells,
+producing a visibility polygon; a radial gradient fills the polygon, with
+tunable radius, softness, intensity and colour per source. Per-cell blocking
+(walls, pillars, actors, fog of war) is precomputed into an occlusion map
+shared by every ray of every light and rebuilt only when the occlusion
+state changes; the render loop likewise computes the active light list and
+the occlusion cache key once per frame and shares them across its lighting
+calls. Lights have effects (`SWAY` — a pendulum-arced moving glow for
+chandeliers), alignment (a ceiling light illuminates figures without them
+casting shadows), and each dungeon sets an ambient darkness level.
+Conceptually this is the same ray-casting idea used in 2D shadow algorithms
+generally.
 
 Animations (actor movement, projectiles, damage indicators) are managed as
 small state machines in `core/ActorAnimation.ts`, driven by

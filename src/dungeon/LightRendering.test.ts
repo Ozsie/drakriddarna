@@ -443,6 +443,40 @@ describe('computeLightPolygon', () => {
     const debugPoints = computeLightPolygon(light, state, CELL_SIZE, true);
     expect(rayEndpoint(debugPoints, 0).x).toBeCloseTo(6.5 * CELL_SIZE, 0);
   });
+
+  it('recomputes the polygon when an actor moves in place', () => {
+    const state = createState({ monsters: [createMonsterAt(4, 2)] });
+    const light = createLight({ position: { x: 2, y: 2 }, radius: 10 });
+    // The monster's sprite is lit, the ray ends halfway into its cell.
+    const before = computeLightPolygon(light, state, CELL_SIZE, false);
+    expect(rayEndpoint(before, 0).x).toBeCloseTo(4.5 * CELL_SIZE, 0);
+    // In-place mutation (how the game moves actors): the shadow follows.
+    state.dungeon.layout.monsters[0].position = { x: 5, y: 2 };
+    const after = computeLightPolygon(light, state, CELL_SIZE, false);
+    expect(rayEndpoint(after, 0).x).toBeCloseTo(5.5 * CELL_SIZE, 0);
+  });
+
+  it('does not share occlusion between states with equal cache keys', () => {
+    // Pillars are not part of the occlusion key: both states hash alike,
+    // so the occlusion map must keep them apart by state identity.
+    const withPillar = createState({ pillars: [{ x: 4, y: 2 }] });
+    const openRoom = createState();
+    const blocked = computeLightPolygon(
+      createLight({ position: { x: 2, y: 2 }, radius: 10 }),
+      withPillar,
+      CELL_SIZE,
+      false,
+    );
+    const open = computeLightPolygon(
+      createLight({ position: { x: 2, y: 2 }, radius: 10 }),
+      openRoom,
+      CELL_SIZE,
+      false,
+    );
+    // The pillar blocks its cell; the open room runs to the far wall.
+    expect(rayEndpoint(blocked, 0).x).toBeCloseTo(4.5 * CELL_SIZE, 0);
+    expect(rayEndpoint(open, 0).x).toBeCloseTo(6.5 * CELL_SIZE, 0);
+  });
 });
 
 describe('renderLights', () => {
@@ -869,6 +903,48 @@ describe('static and animated light layers', () => {
     );
     expect(panned).not.toBe(before);
     expect(panned).not.toBe(moved);
+  });
+
+  it('accepts a precomputed light list without changing what renders', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      createLight({ position: { x: 1, y: 2 }, effect: 'flicker' }),
+      createLight({ position: { x: 2, y: 2 } }),
+    ];
+    // The per-frame light list, computed once by the render loop and
+    // shared by every lighting call of the frame.
+    const frameLights = activeLights(state);
+    // The static layer holds the still light, the animated layer the
+    // flickering one — the same split as without the precomputed list.
+    const staticCtx = createMockCtx();
+    renderStaticLights(
+      staticCtx,
+      CELL_SIZE,
+      state,
+      false,
+      undefined,
+      frameLights,
+    );
+    expect(staticCtx.createRadialGradient).toHaveBeenCalledTimes(1);
+    const animatedCtx = createMockCtx();
+    renderAnimatedLights(
+      animatedCtx,
+      CELL_SIZE,
+      state,
+      false,
+      0,
+      undefined,
+      frameLights,
+    );
+    expect(animatedCtx.createRadialGradient).toHaveBeenCalledTimes(1);
+    // The layer cache key is identical with and without the list.
+    expect(
+      staticLightCacheKey(state, CELL_SIZE, false, undefined, frameLights),
+    ).toBe(staticLightCacheKey(state, CELL_SIZE, false));
+    // Animated-light detection sees the same lights.
+    expect(hasAnimatedLights(state, false, 0, undefined, frameLights)).toBe(
+      hasAnimatedLights(state, false, 0),
+    );
   });
 });
 
