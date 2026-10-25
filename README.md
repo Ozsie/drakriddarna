@@ -30,6 +30,14 @@ See [Game Master Readme](src/gameMasters/README.md)
 
 See the [Rules & Player Guide](./RULES.md).
 
+## AI Policy
+
+This project uses AI tools during development: 
+- To produce, test and review code
+- To create translations of in game texts
+
+No AI is used to produce art, music, source in game texts, campaigns, dungeons, or other game content.
+
 ## Todo
 
 ### Worth investigating
