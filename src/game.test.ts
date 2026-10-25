@@ -3,7 +3,7 @@ import { init, endAction, loadState, next, hasWon } from './game';
 import { completeBetweenDungeonsAndStartNext } from './dungeon/BetweenDungeonsLogic';
 import { liveHeroes } from './hero/HeroLogic';
 import { eventEffects } from './events/EventsLogic';
-import type { Hero } from './types';
+import type { Dungeon, GameMaster, Hero, GameState } from './types';
 
 describe('game orchestrator', () => {
   it('init initializes campaign and hero state properly', () => {
@@ -282,5 +282,123 @@ describe('game orchestrator', () => {
       expect(state.heroes[0].position).toEqual({ x: 5, y: 5 });
       expect(state.turnCount).toBe(0);
     });
+  });
+});
+
+type LegacyGameMasterState = GameState & {
+  difficulty?: GameMaster;
+  gameMasterId?: string;
+};
+
+describe('loadState legacy save migration', () => {
+  it('resolves the game master from a legacy difficulty field and removes both legacy fields', () => {
+    const state = init('iceDragonTreasure', 'easy');
+    const legacy = state as LegacyGameMasterState;
+    legacy.difficulty = state.gameMaster as GameMaster;
+    legacy.gameMasterId = state.gameMaster?.id;
+    legacy.gameMaster = undefined;
+
+    loadState(state);
+
+    expect(state.gameMaster?.id).toBe('storyTeller');
+    expect('difficulty' in state).toBe(false);
+    expect('gameMasterId' in state).toBe(false);
+  });
+
+  it('resolves the game master from a legacy gameMasterId when difficulty is absent', () => {
+    const state = init('iceDragonTreasure', 'hard');
+    const legacy = state as LegacyGameMasterState;
+    legacy.gameMasterId = 'brutalOverlord';
+    legacy.gameMaster = undefined;
+
+    loadState(state);
+
+    expect(state.gameMaster?.id).toBe('brutalOverlord');
+    expect('difficulty' in state).toBe(false);
+    expect('gameMasterId' in state).toBe(false);
+  });
+
+  it('resolves a legacy difficulty without modifiers by its id', () => {
+    const state = init();
+    const legacy = state as LegacyGameMasterState;
+    legacy.difficulty = { id: 'easy' } as unknown as GameMaster;
+    legacy.gameMaster = undefined;
+
+    loadState(state);
+
+    expect(state.gameMaster?.id).toBe('storyTeller');
+    expect('difficulty' in state).toBe(false);
+  });
+
+  it('falls back to the default game master when no legacy field resolves', () => {
+    const state = init();
+    const legacy = state as LegacyGameMasterState;
+    legacy.gameMaster = undefined;
+
+    loadState(state);
+
+    expect(state.gameMaster?.id).toBe('tactician');
+  });
+});
+
+describe('loadState legacy collapsed corridor migration', () => {
+  type LegacyCollapsedDungeon = Dungeon & {
+    collapsedCorridor?: string;
+  };
+
+  it('migrates a legacy collapsedCorridor into a collapsedCorridors group', () => {
+    const state = init();
+    const dungeon = state.dungeon as LegacyCollapsedDungeon;
+    dungeon.layout.grid = ['#####', '#AA?#', '#####'];
+    dungeon.collapsedCorridor = 'B';
+
+    loadState(state);
+
+    expect(dungeon.collapsedCorridors).toEqual([
+      { letter: 'B', cells: [{ x: 3, y: 1 }] },
+    ]);
+    expect('collapsedCorridor' in dungeon).toBe(false);
+  });
+
+  it('preserves existing collapsedCorridors groups when migrating', () => {
+    const state = init();
+    const dungeon = state.dungeon as LegacyCollapsedDungeon;
+    const existingGroup = { letter: 'C', cells: [{ x: 9, y: 9 }] };
+    dungeon.collapsedCorridors = [existingGroup];
+    dungeon.layout.grid = ['#####', '#AA?#', '#####'];
+    dungeon.collapsedCorridor = 'B';
+
+    loadState(state);
+
+    expect(dungeon.collapsedCorridors).toEqual([
+      existingGroup,
+      { letter: 'B', cells: [{ x: 3, y: 1 }] },
+    ]);
+  });
+
+  it('drops a legacy collapsedCorridor that has no collapsed cells left', () => {
+    const state = init();
+    const dungeon = state.dungeon as LegacyCollapsedDungeon;
+    dungeon.collapsedCorridor = 'B';
+
+    loadState(state);
+
+    expect(dungeon.collapsedCorridors).toBeUndefined();
+    expect('collapsedCorridor' in dungeon).toBe(false);
+  });
+
+  it('does not migrate the next dungeon', () => {
+    const state = init();
+    const nextDungeon = structuredClone(
+      state.dungeon,
+    ) as LegacyCollapsedDungeon;
+    nextDungeon.layout.grid = ['#####', '#AA?#', '#####'];
+    nextDungeon.collapsedCorridor = 'B';
+    state.dungeon.nextDungeon = nextDungeon;
+
+    loadState(state);
+
+    expect(nextDungeon.collapsedCorridor).toBe('B');
+    expect(nextDungeon.collapsedCorridors).toBeUndefined();
   });
 });
