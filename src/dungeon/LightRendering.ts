@@ -1,14 +1,14 @@
 import type { Actor, GameState, Item, LightSource, Position } from '../types';
 import { CellAlignment, LightEffect } from '../types';
-import { PROJECTILE_DURATION_MS } from '../combat/CombatEffects';
+import { PROJECTILE_DURATION_MS } from '../combat';
 import {
   COLLAPSED,
   WALL,
+  crossesWallEdge,
   findCell,
   isDiscovered,
   isDoorEdge,
   isSamePosition,
-  isWallEdge,
 } from '../core';
 import {
   createLight,
@@ -258,11 +258,11 @@ export const computeLightPolygon = (
         };
         break;
       }
-      if (
-        isWallEdge(state.dungeon.layout, prevCell.x, prevCell.y, cell.x, cell.y)
-      ) {
+      if (crossesWallEdge(state.dungeon.layout, prevCell, cell)) {
         // Stop at the shared edge the wall occupies, so its face stays lit
-        // while the shadow starts behind it.
+        // while the shadow starts behind it. Diagonal transitions use the
+        // pinch-point rule, so a corner closed by two walls stops the ray
+        // as well.
         end = {
           x: ((prevCell.x + cell.x) / 2 + 0.5) * cellSize,
           y: ((prevCell.y + cell.y) / 2 + 0.5) * cellSize,

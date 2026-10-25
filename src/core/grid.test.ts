@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   canSearchThrough,
   findCell,
+  findNeighbouringHeroes,
   getDist,
   hasLineOfSight,
   isDoorEdge,
@@ -17,7 +18,7 @@ import {
   EMPTY,
   WALL,
 } from './grid';
-import type { Door, GameState, Layout } from '../types';
+import type { Actor, Door, GameState, Layout } from '../types';
 import { Side } from '../types';
 
 describe('grid module', () => {
@@ -321,5 +322,25 @@ describe('grid module', () => {
     expect(
       hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 1 }, 48, state, false),
     ).toBe(true);
+  });
+
+  it('findNeighbouringHeroes ignores heroes across an edge wall', () => {
+    const layout = makeLayoutWithWalls([{ x: 2, y: 1, side: Side.RIGHT }]);
+    const state = {
+      dungeon: { layout },
+      heroes: [
+        { name: 'Fearik', health: 5, position: { x: 1, y: 1 } },
+        { name: 'Mirred', health: 5, position: { x: 3, y: 1 } },
+      ],
+    } as unknown as GameState;
+    const actor = {
+      name: 'Orc',
+      position: { x: 2, y: 1 },
+    } as unknown as Actor;
+
+    const neighbours = findNeighbouringHeroes(state, actor);
+    // (1, 1) is reachable, (3, 1) sits across the wall edge
+    expect(neighbours).toHaveLength(1);
+    expect(neighbours[0].position).toEqual({ x: 1, y: 1 });
   });
 });

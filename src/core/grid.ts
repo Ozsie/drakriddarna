@@ -483,12 +483,17 @@ export const hasLineOfSight = (
   );
 };
 
+// Gameplay adjacency: a hero counts as neighbouring only when no edge wall
+// stands between them — adjacency drives attack targeting and the
+// movement-stopping "walked by a monster" check, which a wall must gate.
 export const findNeighbouringHeroes = (
   state: GameState,
   actor: Actor,
 ): Hero[] =>
   state.heroes
     .filter((hero) => hero.health > 0)
-    .filter((hero: Actor) =>
-      isNeighbouring(actor.position, hero.position.x, hero.position.y),
+    .filter(
+      (hero: Actor) =>
+        isNeighbouring(actor.position, hero.position.x, hero.position.y) &&
+        !crossesWallEdge(state.dungeon.layout, actor.position, hero.position),
     ) as Hero[];

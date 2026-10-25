@@ -9,7 +9,7 @@ export interface PassableGrid {
   width: number;
   height: number;
   isWalkableTile: (x: number, y: number) => boolean;
-  isDoorBlocked: (
+  isEdgeBlocked: (
     fromX: number,
     fromY: number,
     toX: number,
@@ -86,7 +86,7 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
     }
   });
 
-  const isDoorBlocked = (
+  const isEdgeBlocked = (
     fromX: number,
     fromY: number,
     toX: number,
@@ -108,7 +108,7 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
 
     // Orthogonal step
     if (dx === 0 || dy === 0) {
-      return !isDoorBlocked(fromX, fromY, toX, toY);
+      return !isEdgeBlocked(fromX, fromY, toX, toY);
     }
 
     // Diagonal step
@@ -116,15 +116,15 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
     const i1Y = fromY;
     const path1Clear =
       isWalkableTile(i1X, i1Y) &&
-      !isDoorBlocked(fromX, fromY, i1X, i1Y) &&
-      !isDoorBlocked(i1X, i1Y, toX, toY);
+      !isEdgeBlocked(fromX, fromY, i1X, i1Y) &&
+      !isEdgeBlocked(i1X, i1Y, toX, toY);
 
     const i2X = fromX;
     const i2Y = fromY + dy;
     const path2Clear =
       isWalkableTile(i2X, i2Y) &&
-      !isDoorBlocked(fromX, fromY, i2X, i2Y) &&
-      !isDoorBlocked(i2X, i2Y, toX, toY);
+      !isEdgeBlocked(fromX, fromY, i2X, i2Y) &&
+      !isEdgeBlocked(i2X, i2Y, toX, toY);
 
     return path1Clear || path2Clear;
   };
@@ -133,7 +133,7 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
     width,
     height,
     isWalkableTile,
-    isDoorBlocked,
+    isEdgeBlocked,
     isPassableStep,
   };
 };

@@ -109,7 +109,7 @@ describe('edge wall rendering', () => {
     );
     expect(strip).toBeDefined();
     expect(strip?.x).toBe(48);
-    expect(strip?.y).toBe(1 * 48 + 48 - 4);
+    expect(strip?.y).toBe(48 + 48 - 4);
   });
 
   it('hides the wall while both sides are undiscovered', () => {
@@ -130,8 +130,11 @@ describe('edge wall rendering', () => {
     expect(rects.some((r) => r.style === DEFAULT_WALL_COLOUR)).toBe(true);
   });
 
-  it('leaves a gap for an open door on the same edge', () => {
-    const rects = renderWallRects(
+  it('still draws the wall when a door shares its edge (validation disabled)', () => {
+    // The validator rejects a door on the same edge as a wall; if one is
+    // present anyway, the wall paints so the render stays consistent with
+    // the movement rules — the door leaf draws on top of it afterwards.
+    const makeStateWithDoor = (open: boolean, hidden = false) =>
       stateWithWalls(
         [{ x: 2, y: 1, side: Side.RIGHT }],
         [
@@ -139,64 +142,24 @@ describe('edge wall rendering', () => {
             x: 2,
             y: 1,
             side: Side.RIGHT,
-            open: true,
+            open,
             locked: false,
-            hidden: false,
+            hidden,
             trapped: false,
             trapAttacks: 0,
             reinforced: false,
           },
         ],
-      ),
-    );
+      );
 
-    expect(rects.some((r) => r.style === DEFAULT_WALL_COLOUR)).toBe(false);
-  });
-
-  it('leaves the edge to a visible closed door leaf', () => {
-    const rects = renderWallRects(
-      stateWithWalls(
-        [{ x: 2, y: 1, side: Side.RIGHT }],
-        [
-          {
-            x: 2,
-            y: 1,
-            side: Side.RIGHT,
-            open: false,
-            locked: false,
-            hidden: false,
-            trapped: false,
-            trapAttacks: 0,
-            reinforced: false,
-          },
-        ],
-      ),
-    );
-
-    expect(rects.some((r) => r.style === DEFAULT_WALL_COLOUR)).toBe(false);
-  });
-
-  it('covers a hidden closed door so it reads as solid wall', () => {
-    const rects = renderWallRects(
-      stateWithWalls(
-        [{ x: 2, y: 1, side: Side.RIGHT }],
-        [
-          {
-            x: 2,
-            y: 1,
-            side: Side.RIGHT,
-            open: false,
-            locked: false,
-            hidden: true,
-            trapped: false,
-            trapAttacks: 0,
-            reinforced: false,
-          },
-        ],
-      ),
-    );
-
-    expect(rects.some((r) => r.style === DEFAULT_WALL_COLOUR)).toBe(true);
+    for (const state of [
+      makeStateWithDoor(true),
+      makeStateWithDoor(false),
+      makeStateWithDoor(false, true),
+    ]) {
+      const rects = renderWallRects(state);
+      expect(rects.some((r) => r.style === DEFAULT_WALL_COLOUR)).toBe(true);
+    }
   });
 
   it('uses the wall colour override from the wall and from the layout', () => {

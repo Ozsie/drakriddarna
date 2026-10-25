@@ -376,6 +376,22 @@ describe('computeLightPolygon', () => {
     expect(rayEndpoint(points, 0).x).toBeCloseTo(4 * CELL_SIZE, 0);
   });
 
+  it('stops diagonal rays through a corner pinched by two edge walls', () => {
+    const state = createState({
+      walls: [
+        { x: 2, y: 2, side: Side.RIGHT },
+        { x: 2, y: 1, side: Side.RIGHT },
+      ],
+    });
+    const light = createLight({ position: { x: 2, y: 2 }, radius: 10 });
+    const points = computeLightPolygon(light, state, CELL_SIZE, false);
+    // The up-right diagonal from (2, 2) passes the corner of (3, 2) and
+    // (2, 1); both routes around it are walled, so the ray stops there.
+    const end = rayEndpoint(points, -Math.PI / 4);
+    expect(end.x).toBeCloseTo(3 * CELL_SIZE, 0);
+    expect(end.y).toBeCloseTo(2 * CELL_SIZE, 0);
+  });
+
   it('illuminates the actor sprite and casts a shadow behind it', () => {
     const state = createState({ monsters: [createMonsterAt(4, 2)] });
     const light = createLight({ position: { x: 2, y: 2 }, radius: 10 });
@@ -1735,7 +1751,7 @@ describe('gas fills its room', () => {
     // The rightward ray runs to the wall at the room's far edge (x=6).
     expect(rayEndpoint(points, 0).x).toBeCloseTo(6 * CELL_SIZE, 0);
     // Upward ray to the top wall edge (y=1).
-    expect(rayEndpoint(points, -Math.PI / 2).y).toBeCloseTo(1 * CELL_SIZE, 0);
+    expect(rayEndpoint(points, -Math.PI / 2).y).toBeCloseTo(CELL_SIZE, 0);
   });
 
   it('stays inside its room even through an open door', () => {

@@ -12,7 +12,6 @@ import { COLLAPSED, EMPTY, SEALED_DOOR, WALL } from '../core';
 import {
   findCell,
   isDiscovered,
-  isDoorEdge,
   isRoomDiscovered,
   isSamePosition,
   toArray,
@@ -61,10 +60,11 @@ export const edgeWallRect = (
   };
 };
 
-// A wall between two cells renders once at least one side is discovered. A
-// door on the same edge replaces the wall while it is open or visible as a
-// leaf; a hidden closed door stays covered by the wall so it keeps reading
-// as solid rock until revealed.
+// A wall between two cells renders once at least one side is discovered.
+// The validator rejects a wall sharing its edge with a door, so the wall
+// never needs to yield to the door: it always paints, keeping the render
+// consistent with movement, search and pathfinding even if validation was
+// disabled.
 const drawEdgeWall = (
   ctx: CanvasRenderingContext2D,
   wall: WallEdge,
@@ -82,12 +82,6 @@ const drawEdgeWall = (
     wall.y + farY,
   );
   if (!nearDiscovered && !farDiscovered && !debugMode) return;
-
-  const door = isDoorEdge(layout, wall.x, wall.y, wall.x + farX, wall.y + farY);
-  if (door) {
-    if (door.open) return;
-    if (!door.hidden && (nearDiscovered || farDiscovered)) return;
-  }
 
   const rect = edgeWallRect(wall, cellSize);
   ctx.fillStyle = wall.colour ?? layout.wallColour ?? DEFAULT_WALL_COLOUR;

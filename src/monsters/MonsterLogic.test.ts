@@ -12,7 +12,7 @@ import {
   type Weapon,
 } from '../types';
 import { createDoor, createMonster } from '../dungeon/DungeonLogic';
-import { resetRng, setRng } from '../core/dice';
+import { resetRng, setRng } from '../core';
 import {
   hasTwoAttackActions,
   isAttackSlot,
@@ -277,7 +277,7 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
 
     const grid = createPassableGrid(state);
     // (2, 2) to (3, 2) is blocked by door
-    expect(grid.isDoorBlocked(2, 2, 3, 2)).toBe(true);
+    expect(grid.isEdgeBlocked(2, 2, 3, 2)).toBe(true);
     expect(grid.isPassableStep(2, 2, 3, 2)).toBe(false);
   });
 
@@ -290,8 +290,8 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
 
     const grid = createPassableGrid(state);
     // The walled edge is impassable in both directions
-    expect(grid.isDoorBlocked(2, 2, 3, 2)).toBe(true);
-    expect(grid.isDoorBlocked(3, 2, 2, 2)).toBe(true);
+    expect(grid.isEdgeBlocked(2, 2, 3, 2)).toBe(true);
+    expect(grid.isEdgeBlocked(3, 2, 2, 2)).toBe(true);
     expect(grid.isPassableStep(2, 2, 3, 2)).toBe(false);
     expect(grid.isPassableStep(3, 2, 2, 2)).toBe(false);
     // An edge without a wall stays passable

@@ -121,9 +121,9 @@ search and light like a closed door.
 | `colour`   | String? (per-wall fill colour override; `wallColour` is the layout-wide default) |
 
 Rendering: flat strip on the cell boundary, same thickness and positioning
-as a closed door leaf. A door on the same edge replaces the wall while open
-or visible; a hidden closed door stays covered by the wall. The wall renders
-once at least one adjacent cell is discovered.
+as a closed door leaf. The wall renders once at least one adjacent cell is
+discovered. A wall is never combined with a door on the same edge (see 07),
+so the door never needs to replace it.
 
 ### MonsterDoc
 
@@ -147,11 +147,11 @@ once at least one adjacent cell is discovered.
 
 ### NoteDoc
 
-| Field        | Type     |
+| Field        | Type     | Notes                                  |
 | ------------ | -------- | -------------------------------------- |
-| `position`   | Position |
+| `position`   | Position |                                        |
 | `messageKey` | String   | `campaign.<ns>.<dungeonId>.notes.<id>` |
-| `id`         | String   |
+| `id`         | String   |                                        |
 
 ### ItemPlacement / InteractableDoc / LightDoc
 
@@ -178,7 +178,7 @@ once at least one adjacent cell is discovered.
 
 ### TranslationsDoc
 
-| Field       | Type                             |
+| Field       | Type                             | Notes                                    |
 | ----------- | -------------------------------- | ---------------------------------------- |
 | `languages` | List<String>                     | v1 ships `en` and `sv` (game convention) |
 | `entries`   | Map<String, Map<String, String>> | key -> language -> text                  |

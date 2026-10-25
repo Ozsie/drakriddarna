@@ -661,8 +661,10 @@ export const checkForNextToMonster = (
   state: GameState,
   hero: Hero,
 ): boolean => {
-  const nextToMonster = state.dungeon.layout.monsters.some((monster) =>
-    isNeighbouring(hero.position, monster.position.x, monster.position.y),
+  const nextToMonster = state.dungeon.layout.monsters.some(
+    (monster) =>
+      isNeighbouring(hero.position, monster.position.x, monster.position.y) &&
+      !crossesWallEdge(state.dungeon.layout, hero.position, monster.position),
   );
   if (nextToMonster) {
     addLog(state, 'logs.heroAction.walkedByMonster', { hero: i18n(hero.name) });
