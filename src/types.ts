@@ -17,12 +17,13 @@ export interface GameSettings {
 
 export type GameState = {
   campaignId?: string;
-  gameMasterId?: string;
+  // The selected game master (difficulty). The single source of truth:
+  // legacy saves carrying `difficulty`/`gameMasterId` are migrated onto
+  // this field in `loadState`.
   gameMaster?: GameMaster;
   gameMasterState?: Record<string, unknown>;
   heroes: Actor[];
   dungeon: Dungeon;
-  difficulty?: Difficulty;
   currentActor?: Hero;
   actionLog: LogEvent[];
   itemDeck: Item[];

@@ -1,6 +1,11 @@
 import type { GameState, Hero, Monster, Position } from '../types';
-import { Side } from '../types';
-import { getDist, isDiscovered, isNeighbouring, isWalkable } from '../core';
+import {
+  getDist,
+  isDiscovered,
+  isNeighbouring,
+  isWalkable,
+  sideOffset,
+} from '../core';
 import { liveHeroes } from '../hero/HeroLogic';
 import { scoreHero, type ScoredHero } from './behavior';
 import { logMonsterTargetSelection } from './behavior';
@@ -52,38 +57,14 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
 
   layout.doors?.forEach((door) => {
     if (!door.open) {
-      switch (door.side) {
-        case Side.RIGHT:
-          addEdge(door.x, door.y, door.x + 1, door.y);
-          break;
-        case Side.LEFT:
-          addEdge(door.x, door.y, door.x - 1, door.y);
-          break;
-        case Side.UP:
-          addEdge(door.x, door.y, door.x, door.y - 1);
-          break;
-        case Side.DOWN:
-          addEdge(door.x, door.y, door.x, door.y + 1);
-          break;
-      }
+      const [dx, dy] = sideOffset(door.side);
+      addEdge(door.x, door.y, door.x + dx, door.y + dy);
     }
   });
 
   layout.walls?.forEach((wall) => {
-    switch (wall.side) {
-      case Side.RIGHT:
-        addEdge(wall.x, wall.y, wall.x + 1, wall.y);
-        break;
-      case Side.LEFT:
-        addEdge(wall.x, wall.y, wall.x - 1, wall.y);
-        break;
-      case Side.UP:
-        addEdge(wall.x, wall.y, wall.x, wall.y - 1);
-        break;
-      case Side.DOWN:
-        addEdge(wall.x, wall.y, wall.x, wall.y + 1);
-        break;
-    }
+    const [dx, dy] = sideOffset(wall.side);
+    addEdge(wall.x, wall.y, wall.x + dx, wall.y + dy);
   });
 
   const isEdgeBlocked = (

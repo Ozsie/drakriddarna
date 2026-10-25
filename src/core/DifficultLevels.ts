@@ -18,9 +18,7 @@ export const DEFAULT_DIFFICULTY_ID = DEFAULT_GAME_MASTER_ID;
 export const DifficultLevels: GameMaster[] = Object.values(gameMasters);
 
 export const getDifficulty = (state: GameState | undefined): GameMaster =>
-  state?.difficulty ??
-  state?.gameMaster ??
-  getGameMaster(state?.gameMasterId ?? DEFAULT_DIFFICULTY_ID);
+  state?.gameMaster ?? getGameMaster(DEFAULT_DIFFICULTY_ID);
 
 export const getEventMinSpawnDistance = (
   difficultyOrState?: GameMaster | GameState | string,

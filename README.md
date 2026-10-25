@@ -33,7 +33,7 @@ See the [Rules & Player Guide](./RULES.md).
 ### Worth investigating
 - [ ] Necklace of Light: usable once per round and makes the wearer fully untargetable (esp. e1m6) — consider once per scenario and/or a weaker effect
 - [ ] Potion of Speed never resets (`USED` without `RESET_ON`) — add `RESET_ON: [NEXT_SCENARIO]` if once-per-scenario is intended
-- [ ] Items lost when a monster is killed by non-hero damage (earthquake, chaos sword): the monster is never removed from the layout, grants no XP and doesn't count toward `KILL_AT_LEAST`, and its inventory is lost — route all deaths through one `killMonster`-style path (like the sun-stone event does); dead monsters at least no longer trigger the zone of control after the `isAdjacentToMonster` health fix
+- [ ] Items lost when a monster is killed by non-hero damage (earthquake): the monster is never removed from the layout, grants no XP and doesn't count toward `KILL_AT_LEAST`, and its inventory is lost — route all deaths through one `killMonster`-style path (like the sun-stone event does); chaos-sword kills now transfer inventory via the shared `killMonster`, dead monsters no longer trigger the zone of control, and the earthquake case is what remains
 - [ ] `checkForNextToMonster` ignores room discovery — heroes are halted (and log-spoiled) by monsters standing in undiscovered areas
 - [ ] Diagonal movement cost differs between click-path (`distanceInGrid`, `floor(√2·diagonals + straights)`) and keyboard steps (1 per step) for paths with 3+ diagonal cells — unify
 - [ ] Dark lord fire spray deviations: officially an adjacent rider forces the sword (impl can spray), the green lord hits one rider plus adjacent figures (impl hits the whole room), and monster targets aren't LOS-filtered
@@ -47,19 +47,6 @@ See the [Rules & Player Guide](./RULES.md).
 - [X] Orc bow LOS: officially the shot line is blocked by any figure — already correct: the combat LOS path (`stepAlongLine` with `walking=false`) blocks heroes and monsters; only the walking variant ignores heroes
 
 ### Refactorisation
-
-#### Duplicated code
-- [ ] Action-cost block (`actions > 1 && movement < max ? -2 : -1`) repeated in attack/search/interact/pickLock/herbs/chaos sword — extract one helper (and reconcile with `consumeActions`)
-- [ ] `distanceInGrid` defined in both `core/grid.ts` and `ClickInputLogic.ts`, and `MonsterLogic` imports the hero-side copy — keep only the core one
-- [ ] Side-to-offset switch triplicated (`isDoorEdge`/`isWallEdge`, pathfinding, `HeroLogic.sideOffset`) — single `sideOffset()` in core
-- [ ] `moveOverDoor` and `openDoorAtHero` duplicate the open/break-lock/trap sequence — merge
-- [ ] `killMonster` and chaos-sword `killTarget` duplicate monster removal/XP, and `killTarget` skips the inventory drop — share one function
-- [ ] `resetOnNext` and `resetOnNextDungeon` are identical except the trigger predicate — merge into one
-- [ ] Hazard actors (`doorAsActor`, `secretAsActor`, earthquake actor) share most of their boilerplate — one factory
-- [ ] `restore*` family in `EventsLogic` repeats the "if any → log → restore" pattern — make it table-driven
-- [ ] Sun stone and earthquake repeat the same "monsters in this room" filter — extract
-- [ ] `GameState` carries `gameMasterId`, `gameMaster` and `difficulty` for the same object, with normalization logic in `loadState` — collapse to one field
-- [X] `onTargetCell` re-implements the per-step `move()` logic (notes, interactables, traps) and had drifted (no item-secret reveal, no ZoC break) — extracted a shared `arriveOnCell` step handler
 
 #### Optimization
 - [ ] `executeSlotAction` rebuilds `createPassableGrid` in its fallbacks although the monster turn already built one — pass it through
@@ -166,6 +153,19 @@ See the [Rules & Player Guide](./RULES.md).
 - [X] `game.ts` barrel re-exported ~70 symbols with only three production importers — trimmed to the functions actually imported (`init`, `loadState`, `save`, `next`, `endAction`, `resetLevel`, `hasWon`, `removeDamageIndicator`); also removed the dead `load` and `advanceToNextDungeon` functions found during the trim
 - [X] Effect-key aliases (`theLostOrc`, `theOrcDrums`, `foreSight`) — removed; the live card keys `theLostOrch`, `theOrchDrums`, `foresight` now hold the implementations
 - [X] `newHero` mutated the shared `weapons[0]` template (`amountInDeck--`) at module level — removed (decks are built from templates before heroes are created, and the sword template has no deck copies)
+
+### Duplicated code
+- [X] Action-cost block (`actions > 1 && movement < max ? -2 : -1`) repeated in attack/search/interact/pickLock/herbs/chaos sword — extracted `spendStandardAction` + `settleMovementAfterAction` in core (documented against `consumeActions`)
+- [X] `distanceInGrid` defined in both `core/grid.ts` and `ClickInputLogic.ts`, and `MonsterLogic` imported the hero-side copy — only the core one remains; monster modules import from core
+- [X] Side-to-offset switch triplicated (`isDoorEdge`/`isWallEdge`, pathfinding ×2, `HeroLogic`) — single `sideOffset()` in core
+- [X] `moveOverDoor` and `openDoorAtHero` duplicate the open/break-lock/trap sequence — merged into `openDoorAndResolveTrap`
+- [X] `killMonster` and chaos-sword `killTarget` duplicate monster removal/XP, and `killTarget` skipped the inventory drop — chaos-sword kills now go through `killMonster` (inventory transferred to the killer)
+- [X] `resetOnNext` and `resetOnNextDungeon` are identical except the trigger predicate — merged into `resetItemsOnTrigger`
+- [X] Hazard actors (`doorAsActor`, `secretAsActor`, earthquake actor) share most of their boilerplate — one `createHazardActor` factory in core
+- [X] `restore*` family in `EventsLogic` repeats the "if any → log → restore" pattern — blinded/weakened/elemental weapon share `restoreHeroState`; the structurally different ones (corridor, disabled items, orc drums) stay separate
+- [X] Sun stone and earthquake repeat the same "monsters in this room" filter — extracted `findVisibleMonstersInCell`/`cellFor`
+- [X] `GameState` carried `gameMasterId`, `gameMaster` and `difficulty` for the same object — collapsed to a single `gameMaster` field; `loadState` migrates legacy saves
+- [X] `onTargetCell` re-implements the per-step `move()` logic (notes, interactables, traps) and had drifted (no item-secret reveal, no ZoC break) — extracted a shared `arriveOnCell` step handler
 
 ### Sound Effects
 

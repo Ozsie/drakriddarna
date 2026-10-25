@@ -1,7 +1,7 @@
 import type {
-  Actor,
   Dungeon,
   GameState,
+  Hero,
   Layout,
   Position,
   TurnEvent,
@@ -44,7 +44,7 @@ import {
   EMPTY,
   WALL,
 } from '../core';
-import { takeDamage } from '../core';
+import { createHazardActor, takeDamage } from '../core';
 import { COLLAPSED, createLight, createMonster } from '../dungeon/DungeonLogic';
 import { events } from './events';
 import { ACTIVE, onDrop, onPickup } from '../items/ItemLogic';
@@ -120,6 +120,21 @@ export const selectNextEvent = (
   state.eventDeck.unshift(selectedEvent);
 };
 
+// The grid letter (room/corridor) a position currently sits in.
+const cellFor = (state: GameState, position: Position): string =>
+  findCell(state.dungeon.layout.grid, position.x, position.y) ?? '';
+
+// All visible monsters of the given type standing in the given room or
+// corridor letter.
+const findVisibleMonstersInCell = (
+  state: GameState,
+  monsterType: MonsterType,
+  cell: string,
+) =>
+  findVisibleMonsters(state)
+    .filter((monster) => monster.type === monsterType)
+    .filter((monster) => cellFor(state, monster.position) === cell);
+
 export const eventEffects: Record<
   string,
   (state: GameState, event: TurnEvent) => void
@@ -148,17 +163,8 @@ export const eventEffects: Record<
         enabled: true,
       }),
     ];
-    findVisibleMonsters(state)
-      .filter((monster) => monster.type === MonsterType.TROLL)
-      .filter(
-        (monster) =>
-          findCell(
-            state.dungeon.layout.grid,
-            monster.position.x,
-            monster.position.y,
-          ) === heroCell,
-      )
-      .forEach((monster) => {
+    findVisibleMonstersInCell(state, MonsterType.TROLL, heroCell).forEach(
+      (monster) => {
         addLog(state, 'logs.events.sunStone', { monster: i18n(monster.name) });
         const remainingHealth = monster.health;
         monster.health = 0;
@@ -180,7 +186,8 @@ export const eventEffects: Record<
             effect: 'crit',
           }),
         );
-      });
+      },
+    );
     event.used = true;
   },
   theHungryTroll: (state: GameState, event: TurnEvent) => {
@@ -449,43 +456,17 @@ export const eventEffects: Record<
       ignoresShield: false,
       ignoresArmour: false,
     };
-    const earthQuakeActor: Actor = {
-      id: 'earthquake',
-      name: 'Earthquake',
-      nameTranslationKey: 'Earthquake',
-      actions: 0,
-      health: 0,
-      maxMovement: 0,
-      position: { x: 0, y: 0 },
-      weapon: earthquakeWeapon,
-      level: Level.APPRENTICE,
-      maxHealth: 0,
-      movement: 0,
-      experience: 0,
-      colour: Colour.Red,
-      inventory: [],
-      defense: 0,
-    };
-    findVisibleMonsters(state)
-      .filter((monster) => monster.type === MonsterType.TROLL)
-      .filter(
-        (monster) =>
-          findCell(
-            state.dungeon.layout.grid,
-            monster.position.x,
-            monster.position.y,
-          ) === room,
-      )
-      .forEach((monster) => takeDamage(state, earthQuakeActor, monster, false));
+    const earthQuakeActor = createHazardActor(
+      'earthquake',
+      'Earthquake',
+      { x: 0, y: 0 },
+      earthquakeWeapon,
+    );
+    findVisibleMonstersInCell(state, MonsterType.TROLL, room).forEach(
+      (monster) => takeDamage(state, earthQuakeActor, monster, false),
+    );
     liveHeroes(state)
-      .filter(
-        (hero) =>
-          findCell(
-            state.dungeon.layout.grid,
-            hero.position.x,
-            hero.position.y,
-          ) === room,
-      )
+      .filter((hero) => cellFor(state, hero.position) === room)
       .forEach((hero) => takeDamage(state, earthQuakeActor, hero, false));
     event.used = true;
   },
@@ -670,24 +651,41 @@ const restoreCorridor = (state: GameState) => {
   }
 };
 
-const restoreBlinded = (state: GameState) => {
-  if (liveHeroes(state).some((hero) => hero.blinded)) {
-    addLog(state, 'logs.events.blindedRestored');
-    liveHeroes(state).forEach((hero) => (hero.blinded = false));
-  }
-};
+const restoreBlinded = (state: GameState) =>
+  restoreHeroState(
+    state,
+    (hero) => Boolean(hero.blinded),
+    (hero) => (hero.blinded = false),
+    'logs.events.blindedRestored',
+  );
 
-const restoreElementalWeapon = (state: GameState) => {
-  if (liveHeroes(state).some((hero) => hero.weapon.elemental)) {
-    addLog(state, 'logs.events.elementalWeaponRestored');
-    liveHeroes(state).forEach((hero) => (hero.weapon.elemental = false));
-  }
-};
+const restoreWeakened = (state: GameState) =>
+  restoreHeroState(
+    state,
+    (hero) => Boolean(hero.weakened),
+    (hero) => (hero.weakened = false),
+    'logs.events.weakenedRestored',
+  );
 
-const restoreWeakened = (state: GameState) => {
-  if (liveHeroes(state).some((hero) => hero.weakened)) {
-    addLog(state, 'logs.events.weakenedRestored');
-    liveHeroes(state).forEach((hero) => (hero.weakened = false));
+const restoreElementalWeapon = (state: GameState) =>
+  restoreHeroState(
+    state,
+    (hero) => Boolean(hero.weapon.elemental),
+    (hero) => (hero.weapon.elemental = false),
+    'logs.events.elementalWeaponRestored',
+  );
+
+// Shared "if any live hero is affected → log → clear on all live heroes"
+// shape used by the round-end event-effect restores.
+const restoreHeroState = (
+  state: GameState,
+  isAffected: (hero: Hero) => boolean,
+  clear: (hero: Hero) => void,
+  logKey: string,
+) => {
+  if (liveHeroes(state).some(isAffected)) {
+    addLog(state, logKey);
+    liveHeroes(state).forEach(clear);
   }
 };
 

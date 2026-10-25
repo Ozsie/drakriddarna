@@ -647,9 +647,7 @@ export const onClickDifficulty = (activeState: GameState) => {
   const nextIndex = (index + 1) % DifficultLevels.length;
   const nextDifficulty = DifficultLevels[nextIndex];
   if (activeState) {
-    activeState.difficulty = nextDifficulty;
     activeState.gameMaster = nextDifficulty;
-    activeState.gameMasterId = nextDifficulty.id;
     addLog(activeState, nextDifficulty.descriptionTranslationKey ?? '');
     gameStateStore.set(activeState);
   } else {

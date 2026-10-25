@@ -6,6 +6,7 @@ import type {
   Hero,
   IndicatorEffect,
   Monster,
+  Position,
   Weapon,
 } from '../types';
 import { Colour, ItemType, Level } from '../types';
@@ -87,34 +88,95 @@ export const canAct = (hero: Actor, movementModifier = 0): boolean => {
   return hero.actions > 0;
 };
 
-export const doorAsActor = (door: Door): Actor => ({
-  health: 0,
-  position: { x: door.x, y: door.y },
-  defense: 0,
-  experience: 0,
+/**
+ * Standard action cost for an activity (attack, search, pick lock,
+ * interact, item use): with full movement left it costs one action, but
+ * performed after partial movement it costs all remaining actions for the
+ * turn (approximated by spending two). When no actions are left, movement
+ * is zeroed; `refillMovement` also refreshes movement while actions
+ * remain, for activities that leave the actor free to keep moving
+ * afterwards (e.g. lock picking). This models the cost of standard
+ * actions, whereas `consumeActions` models exhausting movement and
+ * replenishing it by spending an action.
+ */
+export const spendStandardAction = (
+  actor: Actor,
+  movementModifier = 0,
+  refillMovement = false,
+): void => {
+  const maxMovement = getEffectiveMaxMovement(actor, movementModifier);
+  if (actor.actions > 1 && actor.movement < maxMovement) {
+    actor.actions = Math.max(0, actor.actions - 2);
+  } else {
+    actor.actions = Math.max(0, actor.actions - 1);
+  }
+  settleMovementAfterAction(actor, movementModifier, refillMovement);
+};
+
+/**
+ * Zeroes movement once an actor is out of actions; optionally refreshes
+ * movement to max while actions remain.
+ */
+export const settleMovementAfterAction = (
+  actor: Actor,
+  movementModifier = 0,
+  refillMovement = false,
+): void => {
+  if (actor.actions === 0) {
+    actor.movement = 0;
+  } else if (refillMovement) {
+    actor.movement = getEffectiveMaxMovement(actor, movementModifier);
+  }
+};
+
+/**
+ * An abstract attacker for environmental hazards (door traps, pit falls,
+ * earthquakes): a defenceless, actionless actor whose weapon describes the
+ * hazard's attack dice and which defenses it bypasses.
+ */
+export const createHazardActor = (
+  id: string | undefined,
+  name: string,
+  position: Position,
+  weapon: Weapon,
+): Actor => ({
+  ...(id ? { id } : {}),
+  name,
+  nameTranslationKey: name,
   actions: 0,
-  movement: 0,
-  maxMovement: 0,
-  colour: Colour.Red,
+  health: 0,
   maxHealth: 0,
-  name: 'Door',
+  maxMovement: 0,
+  position: { x: position.x, y: position.y },
+  weapon,
   level: Level.APPRENTICE,
-  incapacitated: false,
-  weapon: {
-    name: 'Trap',
-    amountInDeck: 0,
-    dice: door.trapAttacks,
-    useHearHeroes: true,
-    twoHanded: false,
-    range: 1,
-    type: ItemType.WEAPON,
-    value: 0,
-    ignoresShield: true,
-    ignoresArmour: false,
-    attackSound: 'sfx/arrow.mp3',
-  },
+  movement: 0,
+  experience: 0,
+  colour: Colour.Red,
   inventory: [],
+  defense: 0,
+  incapacitated: false,
 });
+
+export const doorAsActor = (door: Door): Actor =>
+  createHazardActor(
+    undefined,
+    'Door',
+    { x: door.x, y: door.y },
+    {
+      name: 'Trap',
+      amountInDeck: 0,
+      dice: door.trapAttacks,
+      useHearHeroes: true,
+      twoHanded: false,
+      range: 1,
+      type: ItemType.WEAPON,
+      value: 0,
+      ignoresShield: true,
+      ignoresArmour: false,
+      attackSound: 'sfx/arrow.mp3',
+    },
+  );
 
 export const getDamageString = (
   damage: number,

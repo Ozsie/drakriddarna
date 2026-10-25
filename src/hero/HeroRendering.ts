@@ -71,7 +71,7 @@ export const renderHeroOverlays = (
       visualPos.x,
       visualPos.y,
       cellSize,
-      state.difficulty,
+      state.gameMaster,
     );
   });
   renderCurrentActor(ctx, state, cellSize, currentTime);

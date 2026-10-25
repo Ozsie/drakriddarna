@@ -152,9 +152,9 @@ describe('Game Master System', () => {
       expect(DifficultLevels).toContain(brutalOverlord);
     });
 
-    it('getDifficulty resolves gameMaster or difficulty from state or default', () => {
+    it('getDifficulty resolves the game master from state or defaults', () => {
       expect(getDifficulty(undefined)).toBe(tactician);
-      expect(getDifficulty({ difficulty: storyTeller } as never)).toBe(
+      expect(getDifficulty({ gameMaster: storyTeller } as never)).toBe(
         storyTeller,
       );
       expect(getDifficulty({ gameMaster: brutalOverlord } as never)).toBe(
@@ -392,7 +392,6 @@ describe('Game Master System', () => {
         heroes: [hero],
         currentActor: hero,
         gameMaster: customGM,
-        difficulty: customGM,
         dungeon: {
           layout: {
             grid: [],
@@ -448,7 +447,6 @@ describe('Game Master System', () => {
         heroes: [hero],
         currentActor: hero,
         gameMaster: customGM,
-        difficulty: customGM,
         actionLog: [],
         damageIndicators: [],
         bloodSplatters: [],

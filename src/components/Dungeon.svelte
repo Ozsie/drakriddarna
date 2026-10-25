@@ -694,7 +694,7 @@
       debugMode !== undefined
         ? debugMode
         : Boolean(activeState?.settings?.['debug'] ?? activeDebugMode);
-    const menuSig = `${isCanvasMenuOpen}:${currentMenuView}:${hoveredMenuItemId}:${currentDebug}:${$locale}:${activeState?.settings?.['locale']}:${activeState?.difficulty?.id}:${activeState?.dungeon?.beaten}:${activeState?.settings?.['music']}`;
+    const menuSig = `${isCanvasMenuOpen}:${currentMenuView}:${hoveredMenuItemId}:${currentDebug}:${$locale}:${activeState?.settings?.['locale']}:${activeState?.gameMaster?.id}:${activeState?.dungeon?.beaten}:${activeState?.settings?.['music']}`;
     const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${hoveredRadialIndex},${cellSize},${containerWidth},${containerHeight},${activeState?.turnCount},${logSig},${isMenuHovered},${isDebugHovered},${isLogHovered},${isLogOpen},${heroesSig},${monstersSig},${roomsSig},${hoverSig},${targetSig},${winSig},${diarySig},${eventSig},${introSig},${menuSig}`;
     if (!force && sig === lastUiSignature) return;
     lastUiSignature = sig;

@@ -1,4 +1,4 @@
-import type { GameState, Hero, Position } from './types';
+import type { GameState, GameMaster, Hero, Position } from './types';
 import { ConditionType } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
 import { getCampaign, isKnownCampaign, DEFAULT_CAMPAIGN_ID } from './campaigns';
@@ -48,24 +48,25 @@ export const loadState = (newState: GameState) => {
   newState.currentActor = newState.heroes.find(
     (hero) => hero.name === newState.currentActor?.name,
   ) as Hero | undefined;
-  if (!newState.gameMaster && !newState.difficulty && !newState.gameMasterId) {
-    const defaultGM = getGameMaster(DEFAULT_GAME_MASTER_ID);
-    newState.gameMaster = defaultGM;
-    newState.difficulty = defaultGM;
-    newState.gameMasterId = defaultGM.id;
-  } else if (!newState.gameMaster && newState.difficulty) {
-    const resolvedGM = getGameMaster(newState.difficulty.id);
-    newState.gameMaster = newState.difficulty.modifiers
-      ? newState.difficulty
-      : resolvedGM;
-    newState.gameMasterId = newState.gameMaster.id;
-  } else if (!newState.gameMaster && newState.gameMasterId) {
-    newState.gameMaster = getGameMaster(newState.gameMasterId);
-    newState.difficulty = newState.gameMaster;
-  } else if (newState.gameMaster) {
-    newState.difficulty = newState.gameMaster;
-    newState.gameMasterId = newState.gameMaster.id;
+  // Migrate saves written before the game master was collapsed into the
+  // single `gameMaster` field: they carry `difficulty` and/or
+  // `gameMasterId` instead.
+  const legacy = newState as GameState & {
+    difficulty?: GameMaster;
+    gameMasterId?: string;
+  };
+  if (!newState.gameMaster) {
+    newState.gameMaster =
+      (legacy.difficulty
+        ? legacy.difficulty.modifiers
+          ? legacy.difficulty
+          : getGameMaster(legacy.difficulty.id)
+        : undefined) ??
+      (legacy.gameMasterId ? getGameMaster(legacy.gameMasterId) : undefined) ??
+      getGameMaster(DEFAULT_GAME_MASTER_ID);
   }
+  delete legacy.difficulty;
+  delete legacy.gameMasterId;
   // Older saves may not have a campaignId at all, and any save could in
   // theory reference a campaign that no longer exists (e.g. removed
   // during development). Fall back to the default campaign rather than
@@ -100,11 +101,9 @@ export const init = (
     // Temp partial state for modifier hook if needed
     const partialState = {
       campaignId: campaign.id,
-      gameMasterId: selectedGameMaster.id,
       gameMaster: selectedGameMaster,
       heroes: campaign.heroes,
       dungeon: campaign.dungeons[0],
-      difficulty: selectedGameMaster,
     } as GameState;
     dungeonEvents = selectedGameMaster.events.modifyEventDeck(
       dungeonEvents,
@@ -114,11 +113,9 @@ export const init = (
 
   const state: GameState = {
     campaignId: campaign.id,
-    gameMasterId: selectedGameMaster.id,
     gameMaster: selectedGameMaster,
     heroes: campaign.heroes,
     dungeon: campaign.dungeons[0],
-    difficulty: selectedGameMaster,
     currentActor: campaign.heroes[0] as Hero | undefined,
     actionLog: [
       {

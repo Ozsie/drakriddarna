@@ -13,7 +13,7 @@ import type {
   InteractableCell,
   Difficulty,
 } from '../types';
-import { Colour, ItemType, Level, Side } from '../types';
+import { Colour, ItemType, Level } from '../types';
 import { weapons } from '../items/weapons';
 import {
   addLog,
@@ -31,6 +31,7 @@ import {
   isSamePosition,
   isWalkable,
   crossesWallEdge,
+  sideOffset,
 } from '../core';
 import { roll } from '../core';
 import {
@@ -40,6 +41,7 @@ import {
   getDifficulty,
   getEffectiveMaxMovement,
   getEffectiveMaxHealth,
+  spendStandardAction,
   takeDamage,
 } from '../core';
 import {
@@ -247,19 +249,7 @@ export const pickLock = (state: GameState, door?: Door) => {
       });
       soundEffectManager.playSound('sfx/locked.mp3');
     }
-    if (
-      hero.actions > 1 &&
-      hero.movement < getEffectiveMaxMovement(hero, movementModifier)
-    ) {
-      hero.actions = Math.max(0, hero.actions - 2);
-    } else {
-      hero.actions = Math.max(0, hero.actions - 1);
-    }
-    if (hero.actions === 0) {
-      hero.movement = 0;
-    } else {
-      hero.movement = getEffectiveMaxMovement(hero, movementModifier);
-    }
+    spendStandardAction(hero, movementModifier, true);
   }
 };
 
@@ -388,16 +378,7 @@ export const openDoorAtHero = (
   door: Door,
 ) => {
   if (door.open) return;
-  const canBreakLock = hero.inventory.some(
-    (item) => item && item.properties?.[BREAK_LOCK],
-  );
-  if (!canOpenDoor(hero, canBreakLock, door)) return;
-  if (door.locked && canBreakLock)
-    addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
-  door.open = true;
-  if (door.trapped) {
-    takeDamage(state, doorAsActor(door), hero, false);
-  }
+  if (!openDoorAndResolveTrap(state, hero, door)) return;
   // The door can be opened from either side of its edge; discover the room
   // on the far side of the door relative to the hero.
   const [offsetX, offsetY] = sideOffset(door.side);
@@ -412,19 +393,6 @@ export const openDoorAtHero = (
   if (hero.actions <= 0) {
     hero.actions = 0;
     hero.movement = 0;
-  }
-};
-
-const sideOffset = (side: Side): [number, number] => {
-  switch (side) {
-    case Side.RIGHT:
-      return [1, 0];
-    case Side.LEFT:
-      return [-1, 0];
-    case Side.DOWN:
-      return [0, 1];
-    default:
-      return [0, -1];
   }
 };
 
@@ -464,17 +432,7 @@ export const attack = (hero: Hero, state: GameState, target: Position) => {
       hero.movement = 0;
       return;
     }
-    if (
-      hero.actions > 1 &&
-      hero.movement < getEffectiveMaxMovement(hero, movementModifier)
-    ) {
-      hero.actions = Math.max(0, hero.actions - 2);
-    } else {
-      hero.actions = Math.max(0, hero.actions - 1);
-    }
-    if (hero.actions === 0) {
-      hero.movement = 0;
-    }
+    spendStandardAction(hero, movementModifier);
   }
 };
 
@@ -500,17 +458,7 @@ export const search = (state: GameState) => {
     return;
   }
   searchForSecret(state);
-  if (
-    hero.actions > 1 &&
-    hero.movement < getEffectiveMaxMovement(hero, movementModifier)
-  ) {
-    hero.actions = Math.max(0, hero.actions - 2);
-  } else {
-    hero.actions = Math.max(0, hero.actions - 1);
-  }
-  if (hero.actions === 0) {
-    hero.movement = 0;
-  }
+  spendStandardAction(hero, movementModifier);
 };
 
 export const interact = (state: GameState, interactable?: InteractableCell) => {
@@ -526,17 +474,7 @@ export const interact = (state: GameState, interactable?: InteractableCell) => {
   if (!target) return false;
   const success = triggerInteractable(state, target, hero as Hero);
   if (success) {
-    if (
-      hero.actions > 1 &&
-      hero.movement < getEffectiveMaxMovement(hero, movementModifier)
-    ) {
-      hero.actions = Math.max(0, hero.actions - 2);
-    } else {
-      hero.actions = Math.max(0, hero.actions - 1);
-    }
-    if (hero.actions === 0) {
-      hero.movement = 0;
-    }
+    spendStandardAction(hero, movementModifier);
     return true;
   }
   return false;
@@ -785,6 +723,25 @@ const move = (
   }
 };
 
+/**
+ * Opens a door and resolves its lock and trap: a BREAK_LOCK item smashes
+ * the lock, and a trapped door attacks the opener. Returns true when the
+ * door actually opened.
+ */
+const openDoorAndResolveTrap = (state: GameState, hero: Hero, door: Door) => {
+  const canBreakLock = hero.inventory.some(
+    (item) => item && item.properties?.[BREAK_LOCK],
+  );
+  if (!canOpenDoor(hero, canBreakLock, door)) return false;
+  if (door.locked && canBreakLock)
+    addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
+  door.open = true;
+  if (door.trapped) {
+    takeDamage(state, doorAsActor(door), hero, false);
+  }
+  return true;
+};
+
 const moveOverDoor = (
   state: GameState,
   hero: Hero,
@@ -798,17 +755,8 @@ const moveOverDoor = (
     newX,
     newY,
   );
-  const canBreakLock = hero.inventory.some(
-    (item) => item && item.properties?.[BREAK_LOCK],
-  );
 
-  if (door && canOpenDoor(hero, canBreakLock, door)) {
-    if (door.locked && canBreakLock)
-      addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
-    door.open = true;
-    if (door.trapped) {
-      takeDamage(state, doorAsActor(door), hero, false);
-    }
+  if (door && openDoorAndResolveTrap(state, hero, door)) {
     return true;
   }
   if (door && door.locked) {
@@ -817,7 +765,13 @@ const moveOverDoor = (
   return false;
 };
 
-const killMonster = (state: GameState, monster: Monster, hero: Hero) => {
+/**
+ * Removes a slain monster from the board, awards its experience to the
+ * killer and transfers its carried items to them (removing them from the
+ * item decks). All monster deaths by hero hands go through here so
+ * kill-count, XP and inventory handling stay identical.
+ */
+export const killMonster = (state: GameState, monster: Monster, hero: Hero) => {
   state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter(
     (m) => m != monster,
   );

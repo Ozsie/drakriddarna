@@ -1,6 +1,7 @@
 import {
   addLog,
   cellsAlongLine,
+  distanceInGrid,
   doReRender,
   findCell,
   getDifficulty,
@@ -54,23 +55,6 @@ import {
 } from './RadialMenuLogic';
 import { radialMenuStore } from '../store/radialMenuStore';
 import { get } from 'svelte/store';
-
-export const distanceInGrid = (a: Position, b: Position) => {
-  const dx = Math.abs(b.x - a.x);
-  const dy = Math.abs(b.y - a.y);
-
-  const min = Math.min(dx, dy);
-  const max = Math.max(dx, dy);
-
-  const diagonalSteps = min;
-  const straightSteps = max - min;
-  let factor = Math.sqrt(2);
-  if (straightSteps === 0) {
-    factor = 1;
-  }
-
-  return Math.floor(factor * diagonalSteps + straightSteps);
-};
 
 const pickUpItemAtHero = (
   state: GameState,

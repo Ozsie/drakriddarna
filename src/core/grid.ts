@@ -47,6 +47,21 @@ export const isNeighbouring = (
   (position.x === x && position.y === y + 1) ||
   (position.x === x - 1 && position.y === y + 1);
 
+// Grid offset of the cell a door/wall side points at, e.g. side RIGHT on
+// (x, y) targets (x + 1, y).
+export const sideOffset = (side: Side): [number, number] => {
+  switch (side) {
+    case Side.RIGHT:
+      return [1, 0];
+    case Side.LEFT:
+      return [-1, 0];
+    case Side.DOWN:
+      return [0, 1];
+    default:
+      return [0, -1];
+  }
+};
+
 export const isDoorEdge = (
   layout: Layout,
   fromX: number,
@@ -55,14 +70,7 @@ export const isDoorEdge = (
   toY: number,
 ) =>
   layout.doors?.find((door) => {
-    const [dx, dy] =
-      door.side === Side.RIGHT
-        ? [1, 0]
-        : door.side === Side.LEFT
-        ? [-1, 0]
-        : door.side === Side.DOWN
-        ? [0, 1]
-        : [0, -1];
+    const [dx, dy] = sideOffset(door.side);
     return (
       (door.x === fromX &&
         door.y === fromY &&
@@ -83,14 +91,7 @@ export const isWallEdge = (
   toY: number,
 ): WallEdge | undefined =>
   layout.walls?.find((wall) => {
-    const [dx, dy] =
-      wall.side === Side.RIGHT
-        ? [1, 0]
-        : wall.side === Side.LEFT
-        ? [-1, 0]
-        : wall.side === Side.DOWN
-        ? [0, 1]
-        : [0, -1];
+    const [dx, dy] = sideOffset(wall.side);
     return (
       (wall.x === fromX &&
         wall.y === fromY &&

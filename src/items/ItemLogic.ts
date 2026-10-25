@@ -1,4 +1,4 @@
-import type { Actor, GameState, Item } from '../types';
+import type { Actor, GameState, Hero, Item } from '../types';
 import { Level } from '../types';
 import {
   addLog,
@@ -15,9 +15,11 @@ import {
   ATTACK_BONUS,
   RE_ROLL_ATTACK,
   getDifficulty,
-  getEffectiveMaxMovement,
   getEffectiveMaxHealth,
+  settleMovementAfterAction,
+  spendStandardAction,
 } from '../core';
+import { killMonster } from '../hero/HeroLogic';
 
 export const USED = 'USED';
 export const USED_ON = 'USED_ON';
@@ -146,11 +148,7 @@ export const resolveChaosSwordAttack = (
     soundEffectManager.playActorDeath(target);
     const monster = state.dungeon.layout.monsters.find((m) => m === target);
     if (monster) {
-      state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter(
-        (m) => m !== monster,
-      );
-      state.dungeon.killCount++;
-      user.experience += monster.experience;
+      killMonster(state, monster, user as Hero);
     }
   };
 
@@ -298,12 +296,11 @@ export const onUse: {
         addedHealth: `${addedHealth}`,
       });
       user.actions = Math.max(0, user.actions - 1);
-      const movementModifier = getDifficulty(state).modifiers.movement;
-      if (user.actions === 0) {
-        user.movement = 0;
-      } else {
-        user.movement = getEffectiveMaxMovement(user, movementModifier);
-      }
+      settleMovementAfterAction(
+        user,
+        getDifficulty(state).modifiers.movement,
+        true,
+      );
     }
   },
   chaosSwordOnUse: (
@@ -331,17 +328,7 @@ export const onUse: {
       user.movement = 0;
       return;
     }
-    if (
-      user.actions > 1 &&
-      user.movement < getEffectiveMaxMovement(user, movementModifier)
-    ) {
-      user.actions = Math.max(0, user.actions - 2);
-    } else {
-      user.actions = Math.max(0, user.actions - 1);
-    }
-    if (user.actions === 0) {
-      user.movement = 0;
-    }
+    spendStandardAction(user, movementModifier);
   },
   potionOfSpeedOnUse: (state: GameState, self: Item, user: Actor) => {
     if (self.disabled) {
@@ -448,10 +435,18 @@ export const useItem = (state: GameState, item: Item) => {
   }
 };
 
-export const resetOnNextDungeon = (state: GameState) => {
+const resetsOnTrigger = (item: Item, trigger: string) => {
+  if (item && item.properties) {
+    const resetOn: string[] = (item.properties[RESET_ON] as string[]) ?? [];
+    return resetOn.includes(trigger);
+  }
+  return false;
+};
+
+const resetItemsOnTrigger = (state: GameState, trigger: string) => {
   state.heroes.forEach((hero) => {
     hero.inventory
-      .filter((item) => resetsOnNextDungeon(item))
+      .filter((item) => resetsOnTrigger(item, trigger))
       .forEach((item) => {
         if (item && item.reset) {
           const reset = onReset[item.reset];
@@ -461,31 +456,8 @@ export const resetOnNextDungeon = (state: GameState) => {
   });
 };
 
-export const resetOnNext = (state: GameState) => {
-  state.heroes.forEach((hero) => {
-    hero.inventory
-      .filter((item) => resetsOnNext(item))
-      .forEach((item) => {
-        if (item && item.reset) {
-          const reset = onReset[item.reset];
-          if (reset) reset(state, item);
-        }
-      });
-  });
-};
+export const resetOnNextDungeon = (state: GameState) =>
+  resetItemsOnTrigger(state, NEXT_DUNGEON);
 
-const resetsOnNext = (item: Item) => {
-  if (item && item.properties) {
-    const resetOn: string[] = (item.properties[RESET_ON] as string[]) ?? [];
-    return resetOn.some((resetOn: string) => resetOn === NEXT_TURN);
-  }
-  return false;
-};
-
-const resetsOnNextDungeon = (item: Item) => {
-  if (item && item.properties) {
-    const resetOn: string[] = (item.properties[RESET_ON] as string[]) ?? [];
-    return resetOn.some((resetOn: string) => resetOn === NEXT_DUNGEON);
-  }
-  return false;
-};
+export const resetOnNext = (state: GameState) =>
+  resetItemsOnTrigger(state, NEXT_TURN);

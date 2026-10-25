@@ -1,5 +1,5 @@
 import type { Actor, GameState, Hero, Item, Position, Secret } from '../types';
-import { Colour, ItemType, Level, SecretType } from '../types';
+import { ItemType, SecretType } from '../types';
 import { addLog, i18n } from '../core';
 import { getDifficulty } from '../core';
 import {
@@ -10,7 +10,7 @@ import {
   isSamePosition,
 } from '../core';
 import { roll } from '../core';
-import { takeDamage } from '../core';
+import { createHazardActor, takeDamage } from '../core';
 import { pickupItem } from '../hero/HeroLogic';
 import { onPickup, SEARCH_BONUS } from '../items/ItemLogic';
 import { soundEffectManager } from '../audio';
@@ -140,38 +140,27 @@ export const removeFoundMagicItemFromDeck = (state: GameState, item: Item) => {
   }
 };
 
-const secretAsActor = (secret: Secret): Actor => ({
-  id: secret.id ?? 'trap_door_actor',
-  health: 0,
-  position: secret.position,
-  defense: 0,
-  experience: 0,
-  actions: 0,
-  movement: 0,
-  maxMovement: 0,
-  colour: Colour.Red,
-  maxHealth: 0,
-  name: 'Trap Door',
-  nameTranslationKey: 'Trap Door',
-  level: Level.APPRENTICE,
-  incapacitated: false,
-  weapon: {
-    id: 'falling_trap',
-    name: 'Falling',
-    nameTranslationKey: 'Falling',
-    amountInDeck: 0,
-    dice: 3,
-    useHearHeroes: true,
-    twoHanded: false,
-    range: 1,
-    type: ItemType.WEAPON,
-    value: 0,
-    ignoresShield: true,
-    ignoresArmour: true,
-    attackSound: 'sfx/trap_fall.mp3',
-  },
-  inventory: [],
-});
+const secretAsActor = (secret: Secret): Actor =>
+  createHazardActor(
+    secret.id ?? 'trap_door_actor',
+    'Trap Door',
+    secret.position,
+    {
+      id: 'falling_trap',
+      name: 'Falling',
+      nameTranslationKey: 'Falling',
+      amountInDeck: 0,
+      dice: 3,
+      useHearHeroes: true,
+      twoHanded: false,
+      range: 1,
+      type: ItemType.WEAPON,
+      value: 0,
+      ignoresShield: true,
+      ignoresArmour: true,
+      attackSound: 'sfx/trap_fall.mp3',
+    },
+  );
 
 const findHiddenDoor = (state: GameState, pos: Position) =>
   state.dungeon.layout.doors

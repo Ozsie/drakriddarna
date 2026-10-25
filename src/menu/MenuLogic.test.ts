@@ -222,11 +222,11 @@ describe('MenuLogic', () => {
     });
 
     it('cycles difficulty on difficulty item click', () => {
-      mockState.difficulty = DifficultLevels[0];
+      mockState.gameMaster = DifficultLevels[0];
       const items = getMainMenuItems(mockState);
       const difficultyItem = items.find((i) => i.id === 'difficulty');
       difficultyItem?.onClick(mockState);
-      expect(mockState.difficulty).toEqual(DifficultLevels[1]);
+      expect(mockState.gameMaster).toEqual(DifficultLevels[1]);
     });
   });
 
@@ -483,7 +483,7 @@ describe('MenuLogic', () => {
     });
 
     it('returns formatted difficulty label', () => {
-      mockState.difficulty = DifficultLevels[0];
+      mockState.gameMaster = DifficultLevels[0];
       const label = getDifficultyMenuLabel(mockState);
       expect(label).toBeTruthy();
     });

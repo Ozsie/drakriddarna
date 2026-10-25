@@ -14,13 +14,13 @@ describe('game orchestrator', () => {
     expect(state.actionLog.length).toBeGreaterThan(0);
     expect(state.reRender).toBe(true);
     expect(state.gameMaster?.id).toBe('tactician');
-    expect(state.difficulty?.id).toBe('tactician');
+    expect(state.gameMaster?.id).toBe('tactician');
   });
 
   it('init with easy difficulty equips heroes with starting shields', () => {
     const state = init('iceDragonTreasure', 'easy');
     expect(state.gameMaster?.id).toBe('storyTeller');
-    expect(state.difficulty?.id).toBe('storyTeller');
+    expect(state.gameMaster?.id).toBe('storyTeller');
     expect(state.heroes.length).toBeGreaterThan(0);
     state.heroes.forEach((hero) => {
       expect(hero.shield).toBeDefined();
@@ -30,7 +30,7 @@ describe('game orchestrator', () => {
   it('init with hard difficulty initializes with hard difficulty and without extra starting shields', () => {
     const state = init('iceDragonTreasure', 'hard');
     expect(state.gameMaster?.id).toBe('brutalOverlord');
-    expect(state.difficulty?.id).toBe('brutalOverlord');
+    expect(state.gameMaster?.id).toBe('brutalOverlord');
     expect(state.heroes.length).toBeGreaterThan(0);
     state.heroes.forEach((hero) => {
       expect(hero.shield).toBeUndefined();

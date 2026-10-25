@@ -292,9 +292,7 @@ export const setGameLocale = (loc: string): void => {
 
 export const setDifficulty = (difficulty: Difficulty): void => {
   const state = get(gameStateStore);
-  state.difficulty = difficulty;
   state.gameMaster = difficulty;
-  state.gameMasterId = difficulty.id;
   syncStore(state);
 };
 

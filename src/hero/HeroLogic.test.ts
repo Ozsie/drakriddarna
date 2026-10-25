@@ -585,7 +585,7 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
     const hero = createTestHero({ maxHealth: 7, health: 1 });
     const monster = createTestMonster();
     const state = createTestState(hero, monster);
-    state.difficulty = getGameMaster('easy');
+    state.gameMaster = getGameMaster('easy');
 
     resetLiveHeroes(state);
 
@@ -628,7 +628,7 @@ describe('resetLiveHeroes and replaceDeadHeroes with difficulty health modifier'
     const hero = createTestHero({ maxHealth: 7, health: 0 });
     const monster = createTestMonster();
     const state = createTestState(hero, monster);
-    state.difficulty = getGameMaster('easy');
+    state.gameMaster = getGameMaster('easy');
 
     replaceDeadHeroes(state);
 
