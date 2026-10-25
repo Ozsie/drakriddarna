@@ -33,6 +33,7 @@
     renderPillars,
     renderPortal,
     renderSecrets,
+    renderWalls,
   } from '../dungeon/DungeonRendering';
   import {
     renderAmbientDarkness,
@@ -376,6 +377,7 @@
     renderSecrets(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderItems(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderInteractables(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
+    renderWalls(ctx, cellSize, activeState, activeDebugMode ?? false);
     renderDoors(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderPillars(ctx, ground, cellSize, activeState, activeDebugMode ?? false);
     renderPortal(ctx, cellSize, activeState, activeDebugMode ?? false);

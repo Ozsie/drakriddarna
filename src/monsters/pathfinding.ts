@@ -42,10 +42,12 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
     return walkableGrid[y]?.[x] ?? false;
   };
 
-  const closedDoorEdges = new Set<string>();
+  // Edges a monster cannot cross: closed doors and edge walls alike. Both
+  // block the shared edge between two cells in exactly the same way.
+  const blockedEdges = new Set<string>();
   const addEdge = (x1: number, y1: number, x2: number, y2: number) => {
-    closedDoorEdges.add(`${x1},${y1}->${x2},${y2}`);
-    closedDoorEdges.add(`${x2},${y2}->${x1},${y1}`);
+    blockedEdges.add(`${x1},${y1}->${x2},${y2}`);
+    blockedEdges.add(`${x2},${y2}->${x1},${y1}`);
   };
 
   layout.doors?.forEach((door) => {
@@ -67,12 +69,29 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
     }
   });
 
+  layout.walls?.forEach((wall) => {
+    switch (wall.side) {
+      case Side.RIGHT:
+        addEdge(wall.x, wall.y, wall.x + 1, wall.y);
+        break;
+      case Side.LEFT:
+        addEdge(wall.x, wall.y, wall.x - 1, wall.y);
+        break;
+      case Side.UP:
+        addEdge(wall.x, wall.y, wall.x, wall.y - 1);
+        break;
+      case Side.DOWN:
+        addEdge(wall.x, wall.y, wall.x, wall.y + 1);
+        break;
+    }
+  });
+
   const isDoorBlocked = (
     fromX: number,
     fromY: number,
     toX: number,
     toY: number,
-  ): boolean => closedDoorEdges.has(`${fromX},${fromY}->${toX},${toY}`);
+  ): boolean => blockedEdges.has(`${fromX},${fromY}->${toX},${toY}`);
 
   const isPassableStep = (
     fromX: number,

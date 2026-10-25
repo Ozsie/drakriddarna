@@ -23,6 +23,12 @@ resize):
 | `?` | Collapsed corridor cell (see `collapsedCorridor`) |
 | `A`–`Z` | A cell belonging to the room or corridor identified by that letter |
 
+`#` walls occupy a full grid cell. For rooms that are not separated by a
+whole cell of rock, the layout also carries **edge walls** (`walls`) — thin
+walls that sit on the boundary between two adjacent floor cells, defined as
+a cell plus a side, exactly like doors. They block movement, line of sight,
+search and light like a closed door does.
+
 Room vs corridor is **positional, not typographic**: any letter listed in
 `corridors` is a corridor; every other letter is a room. Rooms are discovered
 as units when a hero enters any of their cells; corridors are explored cell
@@ -81,6 +87,8 @@ Mirrors `DeclarativeDungeon`:
 | `interactables` | List<InteractableDoc> | |
 | `lights` | List<LightDoc> | |
 | `pillars` / `pits` | List<Position> | |
+| `walls` | List<WallDoc> | edge walls between adjacent floor cells |
+| `wallColour` | String? | fill colour of edge walls (default grey); per-wall colours win |
 | `winConditions` | List<WinConditionDoc> | |
 | `events` | List<Int>? | allowed global event numbers in this dungeon |
 | `ambientLight` | Double? | 0..1, default 1 |
@@ -99,6 +107,23 @@ Mirrors `DeclarativeDungeon`:
 | `locked`, `trapped`, `hidden`, `open`, `reinforced` | Boolean (default false) |
 | `trapAttacks` | Int (only when `trapped`) |
 | `id` | String? |
+
+### WallDoc
+
+An edge wall on the boundary between two adjacent floor cells — for rooms
+that are not separated by a full `#` cell. Blocks movement, line of sight,
+search and light like a closed door.
+
+| Field | Type |
+|---|---|
+| `position` | Position |
+| `side` | `Side` enum (`UP`, `DOWN`, `LEFT`, `RIGHT` — edge of the cell the wall sits on) |
+| `colour` | String? (per-wall fill colour override; `wallColour` is the layout-wide default) |
+
+Rendering: flat strip on the cell boundary, same thickness and positioning
+as a closed door leaf. A door on the same edge replaces the wall while open
+or visible; a hidden closed door stays covered by the wall. The wall renders
+once at least one adjacent cell is discovered.
 
 ### MonsterDoc
 

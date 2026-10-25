@@ -30,6 +30,7 @@ import {
   isNeighbouring,
   isSamePosition,
   isWalkable,
+  crossesWallEdge,
 } from '../core';
 import { roll } from '../core';
 import {
@@ -152,12 +153,17 @@ export const act = (direction: MoveDirection | string, state: GameState) => {
     newPosition.x,
     newPosition.y,
   );
+  const blockedByWallEdge = crossesWallEdge(
+    state.dungeon.layout,
+    hero.position,
+    newPosition,
+  );
   const blockedByMonster = isBlockedByMonster(
     state,
     newPosition.x,
     newPosition.y,
   );
-  if (!blockedByHero && !blockedByWall) {
+  if (!blockedByHero && !blockedByWall && !blockedByWallEdge) {
     const discovered = isDiscovered(
       state.dungeon,
       newPosition.x,

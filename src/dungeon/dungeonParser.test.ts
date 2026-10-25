@@ -8,6 +8,7 @@ import {
   parseMonster,
   parseNote,
   parsePosition,
+  parseWall,
   parseSecret,
   parseTileMap,
 } from './dungeonParser';
@@ -83,6 +84,31 @@ describe('dungeonParser', () => {
         trapped: true,
         trapAttacks: 1,
       });
+    });
+  });
+
+  describe('parseWall', () => {
+    it('parses tuple format', () => {
+      expect(parseWall([Side.RIGHT, 2, 3])).toEqual({
+        side: Side.RIGHT,
+        x: 2,
+        y: 3,
+      });
+    });
+
+    it('parses tuple format with colour option', () => {
+      expect(parseWall([Side.DOWN, 4, 5, { colour: '#123456' }])).toEqual({
+        side: Side.DOWN,
+        x: 4,
+        y: 5,
+        colour: '#123456',
+      });
+    });
+
+    it('parses object format', () => {
+      expect(
+        parseWall({ side: Side.LEFT, x: 1, y: 2, colour: '#654321' }),
+      ).toEqual({ side: Side.LEFT, x: 1, y: 2, colour: '#654321' });
     });
   });
 
@@ -251,6 +277,7 @@ describe('dungeonParser', () => {
       expect(layout.notes).toEqual([]);
       expect(layout.items).toEqual([]);
       expect(layout.lights).toEqual([]);
+      expect(layout.walls).toEqual([]);
 
       const layoutWithLights = defineLayout({
         grid: ['####', '#AA#', '####'],
@@ -324,6 +351,24 @@ describe('dungeonParser', () => {
         { x: 1, y: 1 },
         { x: 2, y: 1 },
       ]);
+    });
+
+    it('parses walls declared as tuples or objects and the layout wall colour', () => {
+      const layout = defineLayout({
+        grid: ['#####', '#AAB#', '#AAB#', '#####'],
+        walls: [
+          [Side.RIGHT, 2, 1],
+          [Side.RIGHT, 2, 2, { colour: '#123456' }],
+          { side: Side.DOWN, x: 1, y: 1 },
+        ],
+        wallColour: '#654321',
+      });
+      expect(layout.walls).toEqual([
+        { side: Side.RIGHT, x: 2, y: 1 },
+        { side: Side.RIGHT, x: 2, y: 2, colour: '#123456' },
+        { side: Side.DOWN, x: 1, y: 1 },
+      ]);
+      expect(layout.wallColour).toBe('#654321');
     });
 
     it('passes the ambient light level through to the dungeon', () => {

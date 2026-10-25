@@ -358,6 +358,43 @@ describe('act against monster', () => {
   });
 });
 
+describe('act against edge walls', () => {
+  it('blocks stepping across an edge wall and logs an illegal move', () => {
+    const hero = createTestHero({
+      position: { x: 2, y: 2 },
+      actions: 2,
+      movement: 3,
+      maxMovement: 3,
+    });
+    const monster = createTestMonster({ position: { x: 1, y: 5 } });
+    const state = createTestState(hero, monster);
+    state.dungeon.layout.walls = [{ x: 2, y: 2, side: Side.RIGHT }];
+    state.currentActor = hero;
+
+    act('R', state);
+    expect(hero.position).toEqual({ x: 2, y: 2 });
+    expect(
+      state.actionLog.some((l) => l.key === 'logs.heroAction.illegalMove'),
+    ).toBe(true);
+  });
+
+  it('allows stepping along a cell that merely borders an edge wall', () => {
+    const hero = createTestHero({
+      position: { x: 2, y: 2 },
+      actions: 2,
+      movement: 3,
+      maxMovement: 3,
+    });
+    const monster = createTestMonster({ position: { x: 1, y: 5 } });
+    const state = createTestState(hero, monster);
+    state.dungeon.layout.walls = [{ x: 2, y: 2, side: Side.RIGHT }];
+    state.currentActor = hero;
+
+    act('D', state);
+    expect(hero.position).toEqual({ x: 2, y: 3 });
+  });
+});
+
 describe('canOpenDoor', () => {
   const createTestDoor = (overrides?: Partial<Door>): Door => ({
     locked: false,

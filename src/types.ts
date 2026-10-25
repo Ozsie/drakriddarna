@@ -370,6 +370,19 @@ export type Layout = {
   corners: Corner[];
   interactables?: InteractableCell[];
   lights?: LightSource[];
+  // Walls that sit on the edge between two floor cells instead of occupying
+  // a full grid cell — for rooms that are not separated by a whole cell of
+  // rock. A wall on (x, y, Side.RIGHT) blocks between (x, y) and (x+1, y).
+  walls?: WallEdge[];
+  // Fill colour of edge walls (default: grey). Per-edge overrides win.
+  wallColour?: string;
+};
+
+export type WallEdge = {
+  x: number;
+  y: number;
+  side: Side;
+  colour?: string;
 };
 
 export type InteractableCell = {

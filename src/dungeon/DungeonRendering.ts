@@ -6,11 +6,13 @@ import {
   type Secret,
   SecretType,
   Side,
+  type WallEdge,
 } from '../types';
 import { COLLAPSED, EMPTY, SEALED_DOOR, WALL } from '../core';
 import {
   findCell,
   isDiscovered,
+  isDoorEdge,
   isRoomDiscovered,
   isSamePosition,
   toArray,
@@ -29,6 +31,85 @@ export const renderDoors = (
 ) => {
   state.dungeon.layout.doors.forEach((door) => {
     renderDoor(ctx, ground, cellSize, state, door, debugMode);
+  });
+};
+
+// Default fill of an edge wall when neither the wall nor the layout
+// specifies a colour.
+export const DEFAULT_WALL_COLOUR = '#6e6a63';
+const WALL_EDGE_COLOUR = '#4a4741';
+
+// The flat strip an edge wall paints on the shared boundary between its two
+// cells — same positioning and thickness as a closed door leaf. The geometry
+// is kept separate from the painting so a tileset piece can replace the flat
+// colour without touching the visibility rules.
+export const edgeWallRect = (
+  wall: WallEdge,
+  cellSize: number,
+): { x: number; y: number; w: number; h: number; vertical: boolean } => {
+  const thickness = doorThickness(cellSize);
+  const half = Math.floor(thickness / 2);
+  const vertical = wall.side === Side.RIGHT || wall.side === Side.LEFT;
+  const edgeX = wall.x * cellSize + (wall.side === Side.RIGHT ? cellSize : 0);
+  const edgeY = wall.y * cellSize + (wall.side === Side.DOWN ? cellSize : 0);
+  return {
+    x: vertical ? edgeX - half : wall.x * cellSize,
+    y: vertical ? wall.y * cellSize : edgeY - half,
+    w: vertical ? thickness : cellSize,
+    h: vertical ? cellSize : thickness,
+    vertical,
+  };
+};
+
+// A wall between two cells renders once at least one side is discovered. A
+// door on the same edge replaces the wall while it is open or visible as a
+// leaf; a hidden closed door stays covered by the wall so it keeps reading
+// as solid rock until revealed.
+const drawEdgeWall = (
+  ctx: CanvasRenderingContext2D,
+  wall: WallEdge,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+) => {
+  const layout = state.dungeon.layout;
+  const farX = wall.side === Side.RIGHT ? 1 : wall.side === Side.LEFT ? -1 : 0;
+  const farY = wall.side === Side.DOWN ? 1 : wall.side === Side.UP ? -1 : 0;
+  const nearDiscovered = isDiscovered(state.dungeon, wall.x, wall.y);
+  const farDiscovered = isDiscovered(
+    state.dungeon,
+    wall.x + farX,
+    wall.y + farY,
+  );
+  if (!nearDiscovered && !farDiscovered && !debugMode) return;
+
+  const door = isDoorEdge(layout, wall.x, wall.y, wall.x + farX, wall.y + farY);
+  if (door) {
+    if (door.open) return;
+    if (!door.hidden && (nearDiscovered || farDiscovered)) return;
+  }
+
+  const rect = edgeWallRect(wall, cellSize);
+  ctx.fillStyle = wall.colour ?? layout.wallColour ?? DEFAULT_WALL_COLOUR;
+  ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+  ctx.fillStyle = WALL_EDGE_COLOUR;
+  if (rect.vertical) {
+    ctx.fillRect(rect.x, rect.y, 1, rect.h);
+    ctx.fillRect(rect.x + rect.w - 1, rect.y, 1, rect.h);
+  } else {
+    ctx.fillRect(rect.x, rect.y, rect.w, 1);
+    ctx.fillRect(rect.x, rect.y + rect.h - 1, rect.w, 1);
+  }
+};
+
+export const renderWalls = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+) => {
+  state.dungeon.layout.walls?.forEach((wall) => {
+    drawEdgeWall(ctx, wall, cellSize, state, debugMode);
   });
 };
 

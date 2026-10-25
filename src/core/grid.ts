@@ -5,6 +5,7 @@ import type {
   Hero,
   Layout,
   Position,
+  WallEdge,
 } from '../types';
 import { Side } from '../types';
 
@@ -74,6 +75,69 @@ export const isDoorEdge = (
     );
   });
 
+export const isWallEdge = (
+  layout: Layout,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+): WallEdge | undefined =>
+  layout.walls?.find((wall) => {
+    const [dx, dy] =
+      wall.side === Side.RIGHT
+        ? [1, 0]
+        : wall.side === Side.LEFT
+        ? [-1, 0]
+        : wall.side === Side.DOWN
+        ? [0, 1]
+        : [0, -1];
+    return (
+      (wall.x === fromX &&
+        wall.y === fromY &&
+        wall.x + dx === toX &&
+        wall.y + dy === toY) ||
+      (wall.x === toX &&
+        wall.y === toY &&
+        wall.x + dx === fromX &&
+        wall.y + dy === fromY)
+    );
+  });
+
+// Whether a step between two adjacent cells crosses an edge wall. Orthogonal
+// steps cross one edge. Diagonal steps pass the pinch point of four cells
+// and are blocked only when both routes around the pinch cross a wall.
+export const crossesWallEdge = (
+  layout: Layout,
+  from: Position,
+  to: Position,
+): boolean => {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (dx === 0 && dy === 0) return false;
+  if (Math.abs(dx) > 1 || Math.abs(dy) > 1) return false;
+  if (dx !== 0 && dy !== 0) {
+    const via1: Position = { x: from.x + dx, y: from.y };
+    const via2: Position = { x: from.x, y: from.y + dy };
+    const route1 =
+      crossesWallEdge(layout, from, via1) || crossesWallEdge(layout, via1, to);
+    const route2 =
+      crossesWallEdge(layout, from, via2) || crossesWallEdge(layout, via2, to);
+    return route1 && route2;
+  }
+  return Boolean(isWallEdge(layout, from.x, from.y, to.x, to.y));
+};
+
+// Any closed door or edge wall standing between two adjacent cells blocks
+// searching beyond it.
+export const isEdgeBlocked = (
+  layout: Layout,
+  from: Position,
+  to: Position,
+): boolean => {
+  const door = isDoorEdge(layout, from.x, from.y, to.x, to.y);
+  return Boolean((door && !door.open) || crossesWallEdge(layout, from, to));
+};
+
 export const canSearchThrough = (
   layout: Layout,
   from: Position,
@@ -93,9 +157,9 @@ export const canSearchThrough = (
     }
   }
 
-  // Any closed door standing on this edge blocks searching beyond it
-  const door = isDoorEdge(layout, from.x, from.y, to.x, to.y);
-  return !(door && !door.open);
+  // Any closed door or edge wall standing on this route blocks searching
+  // beyond it
+  return !isEdgeBlocked(layout, from, to);
 };
 
 export const getDist = (a: Position, b: Position): number =>
@@ -245,17 +309,24 @@ export const stepAlongLine = (
   const cornerDx = nextCellPosition.x - lastCell.x;
   const cornerDy = nextCellPosition.y - lastCell.y;
   if (cornerDx !== 0 && cornerDy !== 0) {
-    const flank1Blocked = isBlockingCell(state, {
-      x: lastCell.x + cornerDx,
-      y: lastCell.y,
-    });
-    const flank2Blocked = isBlockingCell(state, {
-      x: lastCell.x,
-      y: lastCell.y + cornerDy,
-    });
-    if (flank1Blocked && flank2Blocked) {
+    const flank1: Position = { x: lastCell.x + cornerDx, y: lastCell.y };
+    const flank2: Position = { x: lastCell.x, y: lastCell.y + cornerDy };
+    const flank1Blocked = isBlockingCell(state, flank1);
+    const flank2Blocked = isBlockingCell(state, flank2);
+    const flank1Walled =
+      crossesWallEdge(state.dungeon.layout, lastCell, flank1) ||
+      crossesWallEdge(state.dungeon.layout, flank1, nextCellPosition);
+    const flank2Walled =
+      crossesWallEdge(state.dungeon.layout, lastCell, flank2) ||
+      crossesWallEdge(state.dungeon.layout, flank2, nextCellPosition);
+    if ((flank1Blocked || flank1Walled) && (flank2Blocked || flank2Walled)) {
       return false;
     }
+  } else if (
+    crossesWallEdge(state.dungeon.layout, lastCell, nextCellPosition)
+  ) {
+    // Orthogonal step across an edge wall
+    return false;
   }
 
   if (nextCellPosition.x === target.x && nextCellPosition.y === target.y) {
@@ -361,17 +432,26 @@ export const hasLineOfSight = (
       const dy = cell.y - prev.y;
       if (dx !== 0 && dy !== 0) {
         // Diagonal step: block cutting through a corner formed by two walls
-        const flank1Blocked = isBlockingCell(state, {
-          x: prev.x + dx,
-          y: prev.y,
-        });
-        const flank2Blocked = isBlockingCell(state, {
-          x: prev.x,
-          y: prev.y + dy,
-        });
-        if (flank1Blocked && flank2Blocked) {
+        // or two edge walls at the pinch point
+        const flank1: Position = { x: prev.x + dx, y: prev.y };
+        const flank2: Position = { x: prev.x, y: prev.y + dy };
+        const flank1Blocked = isBlockingCell(state, flank1);
+        const flank2Blocked = isBlockingCell(state, flank2);
+        const flank1Walled =
+          crossesWallEdge(state.dungeon.layout, prev, flank1) ||
+          crossesWallEdge(state.dungeon.layout, flank1, cell);
+        const flank2Walled =
+          crossesWallEdge(state.dungeon.layout, prev, flank2) ||
+          crossesWallEdge(state.dungeon.layout, flank2, cell);
+        if (
+          (flank1Blocked || flank1Walled) &&
+          (flank2Blocked || flank2Walled)
+        ) {
           return false;
         }
+      } else if (crossesWallEdge(state.dungeon.layout, prev, cell)) {
+        // Orthogonal step across an edge wall
+        return false;
       }
       if (
         !isSamePosition(cell, targetPosition) &&

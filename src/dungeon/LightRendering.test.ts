@@ -103,6 +103,7 @@ const createState = (
   overrides: {
     grid?: string[];
     doors?: GameState['dungeon']['layout']['doors'];
+    walls?: GameState['dungeon']['layout']['walls'];
     pillars?: { x: number; y: number }[];
     monsters?: Monster[];
     heroes?: Hero[];
@@ -122,6 +123,7 @@ const createState = (
         '#######',
       ],
       doors: overrides.doors ?? [],
+      walls: overrides.walls ?? [],
       monsters: overrides.monsters ?? [],
       secrets: [],
       notes: [],
@@ -361,6 +363,17 @@ describe('computeLightPolygon', () => {
     );
     // Light passes the open door and reaches halfway into the far wall.
     expect(rayEndpoint(openPoints, 0).x).toBeCloseTo(6.5 * CELL_SIZE, 0);
+  });
+
+  it('stops at edge walls', () => {
+    const state = createState({
+      walls: [{ x: 3, y: 2, side: Side.RIGHT }],
+    });
+    const light = createLight({ position: { x: 2, y: 2 }, radius: 10 });
+    const points = computeLightPolygon(light, state, CELL_SIZE, false);
+    // Wall edge between (3, 2) and (4, 2): light stops at x=4, the far
+    // wall column x=6 stays dark behind the edge wall.
+    expect(rayEndpoint(points, 0).x).toBeCloseTo(4 * CELL_SIZE, 0);
   });
 
   it('illuminates the actor sprite and casts a shadow behind it', () => {

@@ -61,7 +61,12 @@ src/campaigns/
      without a door separating them from the room, e.g. a corridor stub
      opening straight into a room — they keep the room's letter for
      discovery but count as corridors for corridor-specific functionality
-     like the landslide event), `corners`.
+     like the landslide event), `walls` (edge-based walls: thin walls on the
+     boundary between two adjacent floor cells, for rooms not separated by
+     a full `#` cell — declare as `[Side.RIGHT, 2, 1]` tuples or
+     `{ x, y, side }` objects; they block like closed doors and render as a
+     flat grey strip, optionally coloured per wall or via `wallColour`),
+     `corners`.
    - `startingPositions` — where heroes are placed when entering.
    - `winConditions: WinCondition[]` — one or more `ConditionType`s (e.g.
      `KILL_ALL`, `REACH_CELL`, `SECRET_FOUND`) that must be `fulfilled` to

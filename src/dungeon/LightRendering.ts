@@ -8,6 +8,7 @@ import {
   isDiscovered,
   isDoorEdge,
   isSamePosition,
+  isWallEdge,
 } from '../core';
 import {
   createLight,
@@ -251,6 +252,17 @@ export const computeLightPolygon = (
       );
       if (door && !door.open) {
         // Stop at the shared edge the door occupies.
+        end = {
+          x: ((prevCell.x + cell.x) / 2 + 0.5) * cellSize,
+          y: ((prevCell.y + cell.y) / 2 + 0.5) * cellSize,
+        };
+        break;
+      }
+      if (
+        isWallEdge(state.dungeon.layout, prevCell.x, prevCell.y, cell.x, cell.y)
+      ) {
+        // Stop at the shared edge the wall occupies, so its face stays lit
+        // while the shadow starts behind it.
         end = {
           x: ((prevCell.x + cell.x) / 2 + 0.5) * cellSize,
           y: ((prevCell.y + cell.y) / 2 + 0.5) * cellSize,

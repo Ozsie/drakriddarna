@@ -19,12 +19,16 @@ Style rules for generated code (mirror the existing campaign files):
   `e1m0.ts`).
 - LF line endings, final newline at EOF.
 - Use the **tuple shorthand** for doors, monsters, secrets, notes, items,
-  positions and starting positions — matching the existing style:
+  positions, walls and starting positions — matching the existing style:
 
   ```ts
   doors: [
     [Side.RIGHT, 3, 9],
     [Side.UP, 7, 7, { hidden: true }],
+  ],
+  walls: [
+    [Side.RIGHT, 2, 1],
+    [Side.DOWN, 5, 3, { colour: '#5d5a52' }],
   ],
   monsters: [
     [MonsterType.ORC, Colour.Green, 6, 9],
@@ -36,8 +40,9 @@ Style rules for generated code (mirror the existing campaign files):
   items: [[11, 3, magicItems[4]]],   // [x, y] alone = random loot
   ```
 
-  Doors with any non-default flag use the options object; plain doors are the
-  3-element tuple. Use object form for lights when options are set.
+  Doors and walls with any non-default flag use the options object; plain
+  ones are the 3-element tuple. Use object form for lights when options are
+  set.
 - Enum references as members: `Side.RIGHT`, `Colour.Green`,
   `MonsterType.ORC`, `ConditionType.KILL_ALL`, `SecretType.NOTE`,
   `CellAlignment.CEILING`.

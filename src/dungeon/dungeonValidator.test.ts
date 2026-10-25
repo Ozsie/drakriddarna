@@ -305,4 +305,58 @@ describe('dungeonValidator', () => {
       1,
     );
   });
+
+  it('accepts valid edge walls and detects out-of-bounds, door conflicts and duplicates', () => {
+    const valid = validateLayout({
+      grid: ['#####', '#AAB#', '#AAB#', '#####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corners: [],
+      walls: [
+        { x: 2, y: 1, side: Side.RIGHT },
+        { x: 1, y: 1, side: Side.DOWN },
+      ],
+    });
+    expect(valid.valid).toBe(true);
+    expect(valid.errors).toEqual([]);
+
+    const invalid = validateLayout({
+      grid: ['#####', '#AAB#', '#AAB#', '#####'],
+      doors: [createDoor(Side.DOWN, 1, 1)],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corners: [],
+      walls: [
+        { x: 9, y: 9, side: Side.RIGHT },
+        { x: 4, y: 1, side: Side.RIGHT },
+        { x: 2, y: 1, side: Side.RIGHT },
+        { x: 3, y: 1, side: Side.LEFT },
+        { x: 1, y: 1, side: Side.DOWN },
+      ],
+    });
+    expect(invalid.valid).toBe(false);
+    // (9, 9) outside bounds; (4, 1) RIGHT extends past the grid edge
+    expect(
+      invalid.errors.filter(
+        (e) => e.type === 'wall' && e.message.includes('outside grid bounds'),
+      ).length,
+    ).toBe(2);
+    // (1, 1) DOWN sits on the same edge as the door
+    expect(
+      invalid.errors.filter(
+        (e) => e.type === 'wall' && e.message.includes('same edge as a door'),
+      ).length,
+    ).toBe(1);
+    // (2, 1) RIGHT and (3, 1) LEFT are the same edge
+    expect(invalid.errors.filter((e) => e.type === 'duplicate_id').length).toBe(
+      1,
+    );
+  });
 });
