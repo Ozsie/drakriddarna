@@ -40,18 +40,19 @@ organized as:
 
 Single active tool at a time, keyboard shortcuts in parentheses:
 
-| Tool                                                       | Shortcut          | Behaviour                                                                                                    |
-| ---------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------ |
-| Select (V)                                                 | V                 | pick cell/entity; drag entities between cells                                                                |
-| Wall (W)                                                   | W                 | drag-paint `#`                                                                                               |
-| Void (X)                                                   | X                 | drag-paint ` ` (fails validation if it deletes content beneath — see below)                                  |
-| Room (R)                                                   | R                 | drag-paint the current room letter (letter chosen in a small chooser: next free letter default, A–Z)         |
-| Corridor (C)                                               | C                 | drag-paint current corridor letter; letter auto-added to `corridors` list                                    |
-| Door (D)                                                   | D                 | click a cell, then pick the edge (side) in a 4-way chooser; alt: click near the edge within the cell         |
-| Monster (M)                                                | M                 | click to place current monster type + colour (pickers in tool options)                                       |
-| Start pos (1–4)                                            | S                 | click to set starting position slot                                                                          |
-| Item / Secret / Note / Interactable / Light / Pit / Pillar | I / T / N / E / L | click to place; details in Inspector                                                                         |
-| Erase (E)                                                  | Del               | click removes entities at the cell; with wall/void brushes, painting over entities first offers confirmation |
+| Tool                                                       | Shortcut          | Behaviour                                                                                                                                                                       |
+| ---------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Select (V)                                                 | V                 | pick cell/entity; drag entities between cells                                                                                                                                   |
+| Wall (W)                                                   | W                 | drag-paint `#`                                                                                                                                                                  |
+| Void (X)                                                   | X                 | drag-paint ` ` (fails validation if it deletes content beneath — see below)                                                                                                     |
+| Room (R)                                                   | R                 | drag-paint the current room letter (letter chosen in a small chooser: next free letter default, A–Z)                                                                            |
+| Corridor (C)                                               | C                 | drag-paint current corridor letter; letter auto-added to `corridors` list                                                                                                       |
+| Door (D)                                                   | D                 | click a cell, then pick the edge (side) in a 4-way chooser; alt: click near the edge within the cell                                                                            |
+| Edge wall (Shift+W)                                        | Shift+W           | like the Door tool: click a cell, pick the edge; toggles a thin wall on the shared boundary (for rooms not separated by a full cell); drag along a row/column paints a wall run |
+| Monster (M)                                                | M                 | click to place current monster type + colour (pickers in tool options)                                                                                                          |
+| Start pos (1–4)                                            | S                 | click to set starting position slot                                                                                                                                             |
+| Item / Secret / Note / Interactable / Light / Pit / Pillar | I / T / N / E / L | click to place; details in Inspector                                                                                                                                            |
+| Erase (E)                                                  | Del               | click removes entities at the cell; with wall/void brushes, painting over entities first offers confirmation                                                                    |
 
 Tool options bar under the palette shows per-tool settings (monster type +
 colour, item ref, light defaults, etc.). Brushes never write into void
@@ -64,6 +65,10 @@ unless the Void tool is active.
   by moving/removing entities.
 - Doors live on cell edges; two doors may share a cell on different sides.
   Selecting a door selects the door (not the cell); delete key removes it.
+- Edge walls live on cell edges like doors. An edge holds a door **or** a
+  wall: placing a door on a walled edge removes the wall, and vice versa.
+  The Inspector shows the wall's optional colour override; the layout-wide
+  `wallColour` sets the default.
 - Dragging an entity moves it; invalid targets (wall/void/out of bounds)
   are rejected visually (drop ignored, entity stays).
 - Resize: buttons + arrow affordances on the canvas edges grow/shrink the

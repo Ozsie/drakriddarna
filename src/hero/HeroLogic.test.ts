@@ -24,6 +24,7 @@ import {
   resetLiveHeroes,
   replaceDeadHeroes,
   openDoorAtHero,
+  checkForNextToMonster,
 } from './HeroLogic';
 import { findDoorsAtHero } from './RadialMenuLogic';
 import { getGameMaster } from '../core';
@@ -355,6 +356,61 @@ describe('act against monster', () => {
     // Hero consumed remaining 2 actions on attack after moving; actions & movement must be 0
     expect(hero.actions).toBe(0);
     expect(hero.movement).toBe(0);
+  });
+});
+
+describe('act against edge walls', () => {
+  it('blocks stepping across an edge wall and logs an illegal move', () => {
+    const hero = createTestHero({
+      position: { x: 2, y: 2 },
+      actions: 2,
+      movement: 3,
+      maxMovement: 3,
+    });
+    const monster = createTestMonster({ position: { x: 1, y: 5 } });
+    const state = createTestState(hero, monster);
+    state.dungeon.layout.walls = [{ x: 2, y: 2, side: Side.RIGHT }];
+    state.currentActor = hero;
+
+    act('R', state);
+    expect(hero.position).toEqual({ x: 2, y: 2 });
+    expect(
+      state.actionLog.some((l) => l.key === 'logs.heroAction.illegalMove'),
+    ).toBe(true);
+  });
+
+  it('allows stepping along a cell that merely borders an edge wall', () => {
+    const hero = createTestHero({
+      position: { x: 2, y: 2 },
+      actions: 2,
+      movement: 3,
+      maxMovement: 3,
+    });
+    const monster = createTestMonster({ position: { x: 1, y: 5 } });
+    const state = createTestState(hero, monster);
+    state.dungeon.layout.walls = [{ x: 2, y: 2, side: Side.RIGHT }];
+    state.currentActor = hero;
+
+    act('D', state);
+    expect(hero.position).toEqual({ x: 2, y: 3 });
+  });
+});
+
+describe('checkForNextToMonster across edge walls', () => {
+  it('does not stop movement for a monster across an edge wall', () => {
+    const hero = createTestHero({ position: { x: 2, y: 2 } });
+    const monster = createTestMonster({ position: { x: 3, y: 2 } });
+    const state = createTestState(hero, monster);
+    state.dungeon.layout.walls = [{ x: 2, y: 2, side: Side.RIGHT }];
+
+    expect(checkForNextToMonster(state, hero)).toBe(false);
+    expect(
+      state.actionLog.some((l) => l.key === 'logs.heroAction.walkedByMonster'),
+    ).toBe(false);
+
+    // Without the wall the monster is next to the hero again
+    state.dungeon.layout.walls = [];
+    expect(checkForNextToMonster(state, hero)).toBe(true);
   });
 });
 

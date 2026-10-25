@@ -14,6 +14,7 @@ import type {
   Note,
   Position,
   Secret,
+  WallEdge,
   WinCondition,
 } from '../types';
 import { Colour, MonsterType, SecretType, Side } from '../types';
@@ -68,6 +69,30 @@ export type DeclarativeDoor =
   | Door
   | DeclarativeDoorObject
   | DeclarativeDoorTuple;
+
+export type DeclarativeWallTuple = [
+  side: Side,
+  x: number,
+  y: number,
+  options?: {
+    colour?: string;
+  },
+];
+
+export type DeclarativeWall = WallEdge | DeclarativeWallTuple;
+
+export const parseWall = (wallDef: DeclarativeWall): WallEdge => {
+  if (Array.isArray(wallDef)) {
+    const [side, x, y, options] = wallDef;
+    return {
+      side,
+      x,
+      y,
+      ...(options?.colour !== undefined ? { colour: options.colour } : {}),
+    };
+  }
+  return { ...wallDef };
+};
 
 export type DeclarativeMonsterObject = {
   type: MonsterType;
@@ -245,6 +270,8 @@ export type DeclarativeLayout = {
   corridorCells?: DeclarativePosition[];
   pillars?: DeclarativePosition[];
   pits?: DeclarativePosition[];
+  walls?: DeclarativeWall[];
+  wallColour?: string;
   corners?: Corner[];
 };
 
@@ -689,6 +716,8 @@ export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
   corridorCells: (layoutDef.corridorCells ?? []).map(parsePosition),
   pillars: (layoutDef.pillars ?? []).map(parsePosition),
   pits: (layoutDef.pits ?? []).map(parsePosition),
+  walls: (layoutDef.walls ?? []).map(parseWall),
+  ...(layoutDef.wallColour ? { wallColour: layoutDef.wallColour } : {}),
   corners: autoDetectCorners(layoutDef.grid),
 });
 

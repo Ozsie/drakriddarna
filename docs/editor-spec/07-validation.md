@@ -21,6 +21,10 @@ the game would reject:
 | Entity placed on a wall `#` or void ` ` cell                                                                    | Blocking | `overlap`         |
 | Door out of bounds; door on a void cell                                                                         | Blocking | `door`/`boundary` |
 | Door side not in `Up/Down/Left/Right`                                                                           | Blocking | `door`            |
+| Edge wall anchor out of bounds, or the wall extends past the grid edge                                          | Blocking | `wall`            |
+| Edge wall side not in `Up/Down/Left/Right`                                                                      | Blocking | `wall`            |
+| Edge wall on the same cell edge as a door                                                                       | Blocking | `wall`            |
+| Duplicate edge wall (mirrored definitions collapse to one edge)                                                 | Blocking | `duplicate_id`    |
 | Duplicate ids among monsters/doors/secrets/interactables/lights                                                 | Blocking | `duplicate_id`    |
 | `REACH_CELL` target inside grid (and not wall/void); other win-condition `targetCell` in bounds                 | Blocking | `condition`       |
 | Corridor letter not present in the grid                                                                         | Blocking | `room`            |

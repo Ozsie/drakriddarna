@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   canSearchThrough,
   findCell,
+  findNeighbouringHeroes,
   getDist,
   hasLineOfSight,
   isDoorEdge,
@@ -9,13 +10,15 @@ import {
   isNeighbouring,
   isSamePosition,
   isWalkable,
+  isWallEdge,
+  crossesWallEdge,
   normaliseVector,
   toArray,
   COLLAPSED,
   EMPTY,
   WALL,
 } from './grid';
-import type { Door, GameState, Layout } from '../types';
+import type { Actor, Door, GameState, Layout } from '../types';
 import { Side } from '../types';
 
 describe('grid module', () => {
@@ -225,5 +228,119 @@ describe('grid module', () => {
     expect(
       hasLineOfSight({ x: 1, y: 1 }, { x: 2, y: 2 }, 48, state, false),
     ).toBe(false);
+  });
+
+  const makeLayoutWithWalls = (walls: Layout['walls']): Layout => ({
+    grid: ['#####', '#AAB#', '#AAB#', '#####'],
+    corridors: [],
+    doors: [],
+    items: [],
+    monsters: [],
+    notes: [],
+    pillars: [],
+    pits: [],
+    secrets: [],
+    corners: [],
+    walls,
+  });
+
+  it('isWallEdge finds the wall standing on an edge between two cells', () => {
+    const wall = { x: 2, y: 1, side: Side.RIGHT };
+    const layout = makeLayoutWithWalls([wall]);
+
+    expect(isWallEdge(layout, 2, 1, 3, 1)).toBe(wall);
+    expect(isWallEdge(layout, 3, 1, 2, 1)).toBe(wall);
+    expect(isWallEdge(layout, 2, 1, 2, 2)).toBeUndefined();
+    expect(isWallEdge(layout, 2, 2, 3, 2)).toBeUndefined();
+  });
+
+  it('crossesWallEdge blocks orthogonal steps and diagonal wall pinches', () => {
+    // A vertical wall line between x=2 and x=3 spanning both rows
+    const layout = makeLayoutWithWalls([
+      { x: 2, y: 1, side: Side.RIGHT },
+      { x: 2, y: 2, side: Side.RIGHT },
+    ]);
+
+    // Orthogonal crossing, from either side
+    expect(crossesWallEdge(layout, { x: 2, y: 1 }, { x: 3, y: 1 })).toBe(true);
+    expect(crossesWallEdge(layout, { x: 3, y: 1 }, { x: 2, y: 1 })).toBe(true);
+
+    // Movement along either side of the wall stays free
+    expect(crossesWallEdge(layout, { x: 1, y: 1 }, { x: 2, y: 1 })).toBe(false);
+    expect(crossesWallEdge(layout, { x: 3, y: 1 }, { x: 3, y: 2 })).toBe(false);
+
+    // Diagonal across the wall: both routes around the pinch are walled
+    expect(crossesWallEdge(layout, { x: 2, y: 1 }, { x: 3, y: 2 })).toBe(true);
+    expect(crossesWallEdge(layout, { x: 3, y: 2 }, { x: 2, y: 1 })).toBe(true);
+
+    // Diagonal fully on one side of the wall stays free
+    expect(crossesWallEdge(layout, { x: 1, y: 1 }, { x: 2, y: 2 })).toBe(false);
+
+    // A single wall on the line still leaves the other route open
+    const singleWallLayout = makeLayoutWithWalls([
+      { x: 2, y: 1, side: Side.RIGHT },
+    ]);
+    expect(
+      crossesWallEdge(singleWallLayout, { x: 2, y: 1 }, { x: 3, y: 2 }),
+    ).toBe(false);
+  });
+
+  it('canSearchThrough blocks through an edge wall', () => {
+    const layout = makeLayoutWithWalls([{ x: 2, y: 1, side: Side.RIGHT }]);
+
+    expect(canSearchThrough(layout, { x: 2, y: 1 }, { x: 3, y: 1 })).toBe(
+      false,
+    );
+    expect(canSearchThrough(layout, { x: 1, y: 1 }, { x: 2, y: 1 })).toBe(true);
+  });
+
+  it('hasLineOfSight walking and ranged are blocked by an edge wall', () => {
+    const layout = makeLayoutWithWalls([
+      { x: 2, y: 1, side: Side.RIGHT },
+      { x: 2, y: 2, side: Side.RIGHT },
+    ]);
+    const state = {
+      dungeon: {
+        layout,
+      },
+      heroes: [],
+    } as unknown as GameState;
+
+    // Walking path across the wall
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 1 }, 48, state, true),
+    ).toBe(false);
+    // Ranged line of sight across the wall
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 1 }, 48, state, false),
+    ).toBe(false);
+    // Without walls the same lines are clear
+    layout.walls = [];
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 1 }, 48, state, true),
+    ).toBe(true);
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 1 }, 48, state, false),
+    ).toBe(true);
+  });
+
+  it('findNeighbouringHeroes ignores heroes across an edge wall', () => {
+    const layout = makeLayoutWithWalls([{ x: 2, y: 1, side: Side.RIGHT }]);
+    const state = {
+      dungeon: { layout },
+      heroes: [
+        { name: 'Fearik', health: 5, position: { x: 1, y: 1 } },
+        { name: 'Mirred', health: 5, position: { x: 3, y: 1 } },
+      ],
+    } as unknown as GameState;
+    const actor = {
+      name: 'Orc',
+      position: { x: 2, y: 1 },
+    } as unknown as Actor;
+
+    const neighbours = findNeighbouringHeroes(state, actor);
+    // (1, 1) is reachable, (3, 1) sits across the wall edge
+    expect(neighbours).toHaveLength(1);
+    expect(neighbours[0].position).toEqual({ x: 1, y: 1 });
   });
 });

@@ -12,7 +12,7 @@ import {
   type Weapon,
 } from '../types';
 import { createDoor, createMonster } from '../dungeon/DungeonLogic';
-import { resetRng, setRng } from '../core/dice';
+import { resetRng, setRng } from '../core';
 import {
   hasTwoAttackActions,
   isAttackSlot,
@@ -277,8 +277,29 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
 
     const grid = createPassableGrid(state);
     // (2, 2) to (3, 2) is blocked by door
-    expect(grid.isDoorBlocked(2, 2, 3, 2)).toBe(true);
+    expect(grid.isEdgeBlocked(2, 2, 3, 2)).toBe(true);
     expect(grid.isPassableStep(2, 2, 3, 2)).toBe(false);
+  });
+
+  it('edge walls block monster steps like closed doors', () => {
+    const state = createTestState();
+    state.dungeon.layout.walls = [
+      { x: 2, y: 2, side: Side.RIGHT },
+      { x: 2, y: 3, side: Side.RIGHT },
+    ];
+
+    const grid = createPassableGrid(state);
+    // The walled edge is impassable in both directions
+    expect(grid.isEdgeBlocked(2, 2, 3, 2)).toBe(true);
+    expect(grid.isEdgeBlocked(3, 2, 2, 2)).toBe(true);
+    expect(grid.isPassableStep(2, 2, 3, 2)).toBe(false);
+    expect(grid.isPassableStep(3, 2, 2, 2)).toBe(false);
+    // An edge without a wall stays passable
+    expect(grid.isPassableStep(2, 1, 3, 1)).toBe(true);
+    // A diagonal across a fully walled pinch point is blocked too
+    expect(grid.isPassableStep(2, 2, 3, 3)).toBe(false);
+    // ...while a diagonal with a route around the wall stays open
+    expect(grid.isPassableStep(2, 1, 3, 2)).toBe(true);
   });
 
   it('routes around other monsters without stepping on them', () => {

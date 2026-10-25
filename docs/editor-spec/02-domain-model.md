@@ -23,6 +23,12 @@ resize):
 | `?`         | Collapsed corridor cell (see `collapsedCorridor`)                  |
 | `A`–`Z`     | A cell belonging to the room or corridor identified by that letter |
 
+`#` walls occupy a full grid cell. For rooms that are not separated by a
+whole cell of rock, the layout also carries **edge walls** (`walls`) — thin
+walls that sit on the boundary between two adjacent floor cells, defined as
+a cell plus a side, exactly like doors. They block movement, line of sight,
+search and light like a closed door does.
+
 Room vs corridor is **positional, not typographic**: any letter listed in
 `corridors` is a corridor; every other letter is a room. Rooms are discovered
 as units when a hero enters any of their cells; corridors are explored cell
@@ -65,30 +71,32 @@ custom `Actor` heroes (stats, starting equipment, sprite) are out of scope.
 
 Mirrors `DeclarativeDungeon`:
 
-| Field                  | Type                  | Notes                                           |
-| ---------------------- | --------------------- | ----------------------------------------------- |
-| `id`                   | String                | file stem for `dungeons/<id>.ts`, e.g. `e1m0`   |
-| `nameKey` / `introKey` | String                | `campaign.<ns>.<id>.name` / `.intro`            |
-| `grid`                 | List<String>          | see above                                       |
-| `corridors`            | List<Char>            | letters that are corridors                      |
-| `discoveredRooms`      | List<Char>            | rooms visible at start; default `['A']`         |
-| `startingPositions`    | List<Position>        | up to 4, order matters (hero order)             |
-| `doors`                | List<DoorDoc>         |                                                 |
-| `monsters`             | List<MonsterDoc>      |                                                 |
-| `secrets`              | List<SecretDoc>       |                                                 |
-| `notes`                | List<NoteDoc>         |                                                 |
-| `items`                | List<ItemPlacement>   | floor items; `item` optional (random loot)      |
-| `interactables`        | List<InteractableDoc> |                                                 |
-| `lights`               | List<LightDoc>        |                                                 |
-| `pillars` / `pits`     | List<Position>        |                                                 |
-| `winConditions`        | List<WinConditionDoc> |                                                 |
-| `events`               | List<Int>?            | allowed global event numbers in this dungeon    |
-| `ambientLight`         | Double?               | 0..1, default 1                                 |
-| `tileset`              | String?               | per-dungeon tileset override                    |
-| `music`                | String?               | path under `static/`                            |
-| `collapsedCorridor`    | Char?                 | corridor letter that resets to collapsed        |
-| `portal`               | Position?             |                                                 |
-| `onRoomDiscovered`     | Map<Char, String>?    | room letter -> translation key of a log message |
+| Field                  | Type                  | Notes                                                          |
+| ---------------------- | --------------------- | -------------------------------------------------------------- |
+| `id`                   | String                | file stem for `dungeons/<id>.ts`, e.g. `e1m0`                  |
+| `nameKey` / `introKey` | String                | `campaign.<ns>.<id>.name` / `.intro`                           |
+| `grid`                 | List<String>          | see above                                                      |
+| `corridors`            | List<Char>            | letters that are corridors                                     |
+| `discoveredRooms`      | List<Char>            | rooms visible at start; default `['A']`                        |
+| `startingPositions`    | List<Position>        | up to 4, order matters (hero order)                            |
+| `doors`                | List<DoorDoc>         |                                                                |
+| `monsters`             | List<MonsterDoc>      |                                                                |
+| `secrets`              | List<SecretDoc>       |                                                                |
+| `notes`                | List<NoteDoc>         |                                                                |
+| `items`                | List<ItemPlacement>   | floor items; `item` optional (random loot)                     |
+| `interactables`        | List<InteractableDoc> |                                                                |
+| `lights`               | List<LightDoc>        |                                                                |
+| `pillars` / `pits`     | List<Position>        |                                                                |
+| `walls`                | List<WallDoc>         | edge walls between adjacent floor cells                        |
+| `wallColour`           | String?               | fill colour of edge walls (default grey); per-wall colours win |
+| `winConditions`        | List<WinConditionDoc> |                                                                |
+| `events`               | List<Int>?            | allowed global event numbers in this dungeon                   |
+| `ambientLight`         | Double?               | 0..1, default 1                                                |
+| `tileset`              | String?               | per-dungeon tileset override                                   |
+| `music`                | String?               | path under `static/`                                           |
+| `collapsedCorridor`    | Char?                 | corridor letter that resets to collapsed                       |
+| `portal`               | Position?             |                                                                |
+| `onRoomDiscovered`     | Map<Char, String>?    | room letter -> translation key of a log message                |
 
 ### DoorDoc
 
@@ -99,6 +107,23 @@ Mirrors `DeclarativeDungeon`:
 | `locked`, `trapped`, `hidden`, `open`, `reinforced` | Boolean (default false)                                                         |
 | `trapAttacks`                                       | Int (only when `trapped`)                                                       |
 | `id`                                                | String?                                                                         |
+
+### WallDoc
+
+An edge wall on the boundary between two adjacent floor cells — for rooms
+that are not separated by a full `#` cell. Blocks movement, line of sight,
+search and light like a closed door.
+
+| Field      | Type                                                                             |
+| ---------- | -------------------------------------------------------------------------------- |
+| `position` | Position                                                                         |
+| `side`     | `Side` enum (`UP`, `DOWN`, `LEFT`, `RIGHT` — edge of the cell the wall sits on)  |
+| `colour`   | String? (per-wall fill colour override; `wallColour` is the layout-wide default) |
+
+Rendering: flat strip on the cell boundary, same thickness and positioning
+as a closed door leaf. The wall renders once at least one adjacent cell is
+discovered. A wall is never combined with a door on the same edge (see 07),
+so the door never needs to replace it.
 
 ### MonsterDoc
 
@@ -122,11 +147,11 @@ Mirrors `DeclarativeDungeon`:
 
 ### NoteDoc
 
-| Field        | Type     |
+| Field        | Type     | Notes                                  |
 | ------------ | -------- | -------------------------------------- |
-| `position`   | Position |
+| `position`   | Position |                                        |
 | `messageKey` | String   | `campaign.<ns>.<dungeonId>.notes.<id>` |
-| `id`         | String   |
+| `id`         | String   |                                        |
 
 ### ItemPlacement / InteractableDoc / LightDoc
 
@@ -153,7 +178,7 @@ Mirrors `DeclarativeDungeon`:
 
 ### TranslationsDoc
 
-| Field       | Type                             |
+| Field       | Type                             | Notes                                    |
 | ----------- | -------------------------------- | ---------------------------------------- |
 | `languages` | List<String>                     | v1 ships `en` and `sv` (game convention) |
 | `entries`   | Map<String, Map<String, String>> | key -> language -> text                  |

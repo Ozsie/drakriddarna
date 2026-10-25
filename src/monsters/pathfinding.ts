@@ -9,7 +9,7 @@ export interface PassableGrid {
   width: number;
   height: number;
   isWalkableTile: (x: number, y: number) => boolean;
-  isDoorBlocked: (
+  isEdgeBlocked: (
     fromX: number,
     fromY: number,
     toX: number,
@@ -42,10 +42,12 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
     return walkableGrid[y]?.[x] ?? false;
   };
 
-  const closedDoorEdges = new Set<string>();
+  // Edges a monster cannot cross: closed doors and edge walls alike. Both
+  // block the shared edge between two cells in exactly the same way.
+  const blockedEdges = new Set<string>();
   const addEdge = (x1: number, y1: number, x2: number, y2: number) => {
-    closedDoorEdges.add(`${x1},${y1}->${x2},${y2}`);
-    closedDoorEdges.add(`${x2},${y2}->${x1},${y1}`);
+    blockedEdges.add(`${x1},${y1}->${x2},${y2}`);
+    blockedEdges.add(`${x2},${y2}->${x1},${y1}`);
   };
 
   layout.doors?.forEach((door) => {
@@ -67,12 +69,29 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
     }
   });
 
-  const isDoorBlocked = (
+  layout.walls?.forEach((wall) => {
+    switch (wall.side) {
+      case Side.RIGHT:
+        addEdge(wall.x, wall.y, wall.x + 1, wall.y);
+        break;
+      case Side.LEFT:
+        addEdge(wall.x, wall.y, wall.x - 1, wall.y);
+        break;
+      case Side.UP:
+        addEdge(wall.x, wall.y, wall.x, wall.y - 1);
+        break;
+      case Side.DOWN:
+        addEdge(wall.x, wall.y, wall.x, wall.y + 1);
+        break;
+    }
+  });
+
+  const isEdgeBlocked = (
     fromX: number,
     fromY: number,
     toX: number,
     toY: number,
-  ): boolean => closedDoorEdges.has(`${fromX},${fromY}->${toX},${toY}`);
+  ): boolean => blockedEdges.has(`${fromX},${fromY}->${toX},${toY}`);
 
   const isPassableStep = (
     fromX: number,
@@ -89,7 +108,7 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
 
     // Orthogonal step
     if (dx === 0 || dy === 0) {
-      return !isDoorBlocked(fromX, fromY, toX, toY);
+      return !isEdgeBlocked(fromX, fromY, toX, toY);
     }
 
     // Diagonal step
@@ -97,15 +116,15 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
     const i1Y = fromY;
     const path1Clear =
       isWalkableTile(i1X, i1Y) &&
-      !isDoorBlocked(fromX, fromY, i1X, i1Y) &&
-      !isDoorBlocked(i1X, i1Y, toX, toY);
+      !isEdgeBlocked(fromX, fromY, i1X, i1Y) &&
+      !isEdgeBlocked(i1X, i1Y, toX, toY);
 
     const i2X = fromX;
     const i2Y = fromY + dy;
     const path2Clear =
       isWalkableTile(i2X, i2Y) &&
-      !isDoorBlocked(fromX, fromY, i2X, i2Y) &&
-      !isDoorBlocked(i2X, i2Y, toX, toY);
+      !isEdgeBlocked(fromX, fromY, i2X, i2Y) &&
+      !isEdgeBlocked(i2X, i2Y, toX, toY);
 
     return path1Clear || path2Clear;
   };
@@ -114,7 +133,7 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
     width,
     height,
     isWalkableTile,
-    isDoorBlocked,
+    isEdgeBlocked,
     isPassableStep,
   };
 };
