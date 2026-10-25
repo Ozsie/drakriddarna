@@ -426,6 +426,9 @@ export const onReset: {
     if (self.properties) self.properties[USED] = false;
     state.heroes.forEach((hero) => (hero.ignoredByMonsters = false));
   },
+  ringOfPrecisionOnReset: (state: GameState, self: Item) => {
+    if (self.properties) self.properties[USED] = false;
+  },
   // Backward compatibility alias
   necklaceOfLightOnUse: (state: GameState, self: Item) => {
     if (self.properties) self.properties[USED] = false;

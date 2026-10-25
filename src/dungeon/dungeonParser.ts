@@ -34,6 +34,7 @@ import {
   createTrappedLockedDoor,
 } from './DungeonLogic';
 import { assertValidDungeon } from './dungeonValidator';
+import { findRoomCells } from '../core';
 import { autoDetectCorners } from './cornerDetection';
 
 export type PositionTuple = [x: number, y: number];
@@ -725,6 +726,7 @@ export const defineDungeon = (
   dungeonDef: DeclarativeDungeon,
   options: DefineDungeonOptions = { validate: true },
 ): Dungeon => {
+  const layout = defineLayout(dungeonDef.layout);
   const dungeon: Dungeon = {
     name: dungeonDef.name,
     intro: dungeonDef.intro,
@@ -734,11 +736,18 @@ export const defineDungeon = (
     nextDungeon: dungeonDef.nextDungeon,
     startingPositions: dungeonDef.startingPositions.map(parsePosition),
     discoveredRooms: dungeonDef.discoveredRooms ?? ['A'],
-    layout: defineLayout(dungeonDef.layout),
+    layout,
     killCount: dungeonDef.killCount ?? 0,
     ...(dungeonDef.events ? { events: dungeonDef.events } : {}),
     ...(dungeonDef.collapsedCorridor
-      ? { collapsedCorridor: dungeonDef.collapsedCorridor }
+      ? {
+          collapsedCorridors: [
+            {
+              letter: dungeonDef.collapsedCorridor,
+              cells: findRoomCells(layout.grid, dungeonDef.collapsedCorridor),
+            },
+          ],
+        }
       : {}),
     ...(dungeonDef.onRoomDiscovered
       ? { onRoomDiscovered: dungeonDef.onRoomDiscovered }

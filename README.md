@@ -31,25 +31,25 @@ See the [Rules & Player Guide](./RULES.md).
 ## Todo
 
 ### Bugs
-- [ ] RULES.md XP wording is wrong: the official rules (and the code) award the killer monster-specific points (orc 1, troll 2, dark lord 4) plus +1 per surviving rider per adventure — replace "every surviving hero earns +1 per kill"
-- [ ] Halberd (range-2) attacks ignore line of sight — require `hasLineOfSight` in the attack branch of `onTargetCell` and the sword cursor in `getCursorType`
-- [ ] Click movement (`onTargetCell`) bypasses the zone-of-control halt (path loop continues after movement is zeroed) — break on 0 movement (note: passing through other heroes is legal per the official rules)
-- [ ] Searching is allowed while adjacent to a monster — the official rules forbid LETA next to a monster — gate the Search action
-- [ ] Heroes cannot move through other dragon riders — the official rules allow pass-through (just not stopping in the same square) — allow friendly-figure pass-through
-- [ ] Click movement skips `checkForItemRevealedSecret`, unlike stepwise `move()` — e.g. e1m4's necklace stair won't reveal on click moves
-- [ ] Foresight event pops the wrong secret (`secrets.pop()` ignores its own filter) — pick from the filtered `notDiscoveredSecret` list and skip secrets without items
-- [ ] Ring of Precision re-roll is a no-op (`takeDamage` recomputes the same result) and has no once-per-round limit (RULES.md) — re-roll the attack dice when damage is 0 and cap usage
-- [ ] Two landslides in one deck cycle lose the first corridor (`collapsedCorridor` holds one letter, `restoreCorridor` replaceAll can mislabel cells) — track each collapse separately
-- [ ] `randomItem`/`randomMagicItem` return undefined when the deck is empty and crash on `.amountInDeck` — guard the callers
-- [ ] Revived heroes keep their old level at 0 XP — reset `hero.level` to Apprentice in `replaceDeadHeroes` (official rules: points vanish, restart as Apprentice, equipment kept)
+- [X] RULES.md XP wording is wrong: the official rules (and the code) award the killer monster-specific points (orc 1, troll 2, dark lord 4) plus +1 per surviving rider per adventure — replace "every surviving hero earns +1 per kill"
+- [X] Halberd (range-2) attacks ignore line of sight — require `hasLineOfSight` in the attack branch of `onTargetCell` and the sword cursor in `getCursorType`
+- [X] Click movement (`onTargetCell`) bypasses the zone-of-control halt (path loop continues after movement is zeroed) — break on 0 movement (note: passing through other heroes is legal per the official rules)
+- [X] Searching is allowed while adjacent to a monster — the official rules forbid LETA next to a monster — gate the Search action (and lock picking, which is a LETA)
+- [X] Heroes cannot move through other dragon riders — the official rules allow pass-through (just not stopping in the same square) — verified: click-path movement already passes through heroes, stepwise moves cannot stop on one
+- [X] Click movement skips `checkForItemRevealedSecret`, unlike stepwise `move()` — e.g. e1m4's necklace stair won't reveal on click moves
+- [X] Foresight event pops the wrong secret (`secrets.pop()` ignores its own filter) — pick from the filtered `notDiscoveredSecret` list and skip secrets without items
+- [X] Ring of Precision re-roll is a no-op (`takeDamage` recomputes the same result) and has no once-per-round limit (RULES.md) — re-roll the attack dice when damage is 0 and cap usage
+- [X] Two landslides in one deck cycle lose the first corridor (`collapsedCorridor` holds one letter, `restoreCorridor` replaceAll can mislabel cells) — track each collapse separately (`collapsedCorridors` with exact cells)
+- [X] `randomItem`/`randomMagicItem` return undefined when the deck is empty and crash on `.amountInDeck` — guard the callers
+- [X] Revived heroes keep their old level at 0 XP — reset `hero.level` to Apprentice in `replaceDeadHeroes` (official rules: points vanish, restart as Apprentice, equipment kept)
 
 ### Worth investigating
 - [ ] Necklace of Light: usable once per round and makes the wearer fully untargetable (esp. e1m6) — consider once per scenario and/or a weaker effect
 - [ ] Potion of Speed never resets (`USED` without `RESET_ON`) — add `RESET_ON: [NEXT_SCENARIO]` if once-per-scenario is intended
-- [ ] Items lost when a monster is killed by non-hero damage (earthquake, chaos sword): the monster is never removed from the layout, grants no XP and doesn't count toward `KILL_AT_LEAST`, and its inventory is lost — route all deaths through one `killMonster`-style path (like the sun-stone event does)
+- [ ] Items lost when a monster is killed by non-hero damage (earthquake, chaos sword): the monster is never removed from the layout, grants no XP and doesn't count toward `KILL_AT_LEAST`, and its inventory is lost — route all deaths through one `killMonster`-style path (like the sun-stone event does); dead monsters at least no longer trigger the zone of control after the `isAdjacentToMonster` health fix
 - [ ] `checkForNextToMonster` ignores room discovery — heroes are halted (and log-spoiled) by monsters standing in undiscovered areas
 - [ ] Diagonal movement cost differs between click-path (`distanceInGrid`, `floor(√2·diagonals + straights)`) and keyboard steps (1 per step) for paths with 3+ diagonal cells — unify
-- [ ] Orc bow LOS: officially the shot line is blocked by any figure, but `isBlockingCell` ignores heroes, so orcs can shoot through party members — make figures block combat LOS (also affects the halberd LOS fix)
+- [X] Orc bow LOS: officially the shot line is blocked by any figure — already correct: the combat LOS path (`stepAlongLine` with `walking=false`) blocks heroes and monsters; only the walking variant ignores heroes
 - [ ] Dark lord fire spray deviations: officially an adjacent rider forces the sword (impl can spray), the green lord hits one rider plus adjacent figures (impl hits the whole room), and monster targets aren't LOS-filtered
 - [ ] Door opening: officially only the square directly in front of a door can open it (a figure standing there blocks others) — impl allows opening from any adjacent square including diagonals
 - [ ] Event deck subsets: officially the tutorial has no event cards and adventures 1-2 use only cards 1-6 (7-16 come later) — impl uses the full deck from e1m1 with GM pacing instead — consider per-dungeon subsets
@@ -72,8 +72,8 @@ See the [Rules & Player Guide](./RULES.md).
 - [ ] Action-cost block (`actions > 1 && movement < max ? -2 : -1`) repeated in attack/search/interact/pickLock/herbs/chaos sword — extract one helper (and reconcile with `consumeActions`)
 - [ ] `distanceInGrid` defined in both `core/grid.ts` and `ClickInputLogic.ts`, and `MonsterLogic` imports the hero-side copy — keep only the core one
 - [ ] Side-to-offset switch triplicated (`isDoorEdge`/`isWallEdge`, pathfinding, `HeroLogic.sideOffset`) — single `sideOffset()` in core
+- [X] `onTargetCell` re-implements the per-step `move()` logic (notes, interactables, traps) and had drifted (no item-secret reveal, no ZoC break) — extracted a shared `arriveOnCell` step handler
 - [ ] `moveOverDoor` and `openDoorAtHero` duplicate the open/break-lock/trap sequence — merge
-- [ ] `onTargetCell` re-implements the per-step `move()` logic (notes, interactables, traps) and has drifted (no item-secret reveal, no ZoC break) — extract a shared step handler
 - [ ] `killMonster` and chaos-sword `killTarget` duplicate monster removal/XP, and `killTarget` skips the inventory drop — share one function
 - [ ] `resetOnNext` and `resetOnNextDungeon` are identical except the trigger predicate — merge into one
 - [ ] Hazard actors (`doorAsActor`, `secretAsActor`, earthquake actor) share most of their boilerplate — one factory
@@ -84,7 +84,7 @@ See the [Rules & Player Guide](./RULES.md).
 #### Optimization
 - [ ] `executeSlotAction` rebuilds `createPassableGrid` in its fallbacks although the monster turn already built one — pass it through
 - [ ] `findVisibleHeroes` is recomputed per slot, each time running resolution-48 `hasLineOfSight` per hero — compute once per monster turn (or cache LOS results)
-- [ ] `takeDamage` scans the inventory and logs "usedEffect" for every matching bonus item on every attack — log only when the effect actually applies
+- [X] `takeDamage` scanned the inventory and logged "usedEffect" for every matching bonus item on every attack — passive bonuses are now silent; the ring only logs when a re-roll actually happens
 - [ ] Route remaining `Math.random()` gameplay paths (event deck shuffle, random item, spawn and temperament picks, fountain draw) through the seeded rng; also pick a random spawn cell instead of `pool[0]`
 - [ ] `Dungeon.svelte` is 2100+ lines against the thin-layer architecture note — split logic into colocated `.ts` modules
 

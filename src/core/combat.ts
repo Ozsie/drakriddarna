@@ -166,25 +166,19 @@ export const takeDamage = (
       weapon: i18n(weapon.name),
     });
   }
-  const canReRoll = source.inventory
-    .filter((item) => item && item?.properties?.[RE_ROLL_ATTACK])
-    .some((item) => {
-      addLog(state, 'logs.takeDamage.usedEffect', {
-        actor: i18n(source.name),
-        item: i18n(item.name),
-      });
-      return item.properties?.[RE_ROLL_ATTACK];
-    });
+  const rerollItem = source.inventory.find(
+    (item) =>
+      item &&
+      !item.disabled &&
+      !item.properties?.USED &&
+      item.properties?.[RE_ROLL_ATTACK],
+  );
   const attackBonus = source.inventory
     .filter((item) => item && item?.properties?.[ATTACK_BONUS])
-    .map((item) => {
-      addLog(state, 'logs.takeDamage.usedEffect', {
-        actor: i18n(source.name),
-        item: i18n(item.name),
-      });
-      return item.properties?.[ATTACK_BONUS] as number;
-    })
-    .reduce((partial, bonus) => partial + bonus, 0);
+    .reduce(
+      (partial, item) => partial + (item.properties?.[ATTACK_BONUS] as number),
+      0,
+    );
   const blindedSubtraction = source.blinded ? 1 : 0;
   const weakenedSubtraction = source.weakened ? 1 : 0;
   const elementalAddition = source.weapon.elemental ? 1 : 0;
@@ -196,13 +190,17 @@ export const takeDamage = (
     : 0;
   const buff = attackBonus + elementalAddition + attackDifficultyModifier;
   const deBuff = blindedSubtraction + weakenedSubtraction;
-  const hits = roll(source.level, weapon.dice + buff - deBuff);
+  let hits = roll(source.level, weapon.dice + buff - deBuff);
   let damage = Math.max(
     hits - (defense + defenseDifficultyModifier + shield),
     0,
   );
-  if (damage === 0 && canReRoll) {
+  // Ring of Precision: one re-roll of the attack dice per combat round when
+  // the attack would otherwise deal no damage.
+  if (damage === 0 && rerollItem) {
     addLog(state, 'logs.takeDamage.reRoll', { actor: i18n(source.name) });
+    if (rerollItem.properties) rerollItem.properties.USED = true;
+    hits = roll(source.level, weapon.dice + buff - deBuff);
     damage = Math.max(hits - (defense + defenseDifficultyModifier + shield), 0);
   }
   const gm = getDifficulty(state);

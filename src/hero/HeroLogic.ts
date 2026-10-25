@@ -215,6 +215,14 @@ export const pickLock = (state: GameState, door?: Door) => {
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
   }
+  // Picking a lock is performed like a LETA action and may never be done
+  // while a monster stands next to the hero (official rules).
+  if (isAdjacentToMonster(state, hero)) {
+    addLog(state, 'logs.heroAction.blockedNearMonster', {
+      hero: i18n(hero.name),
+    });
+    return;
+  }
   door =
     door ??
     state.dungeon.layout.doors.find(
@@ -473,7 +481,7 @@ export const attack = (hero: Hero, state: GameState, target: Position) => {
 
 export const search = (state: GameState) => {
   doReRender(state);
-  const hero: Actor | undefined = state.currentActor;
+  const hero: Hero | undefined = state.currentActor;
   if (!hero) return;
   if (hero.blinded) {
     addLog(state, 'logs.heroAction.blinded', { hero: i18n(hero.name) });
@@ -482,6 +490,14 @@ export const search = (state: GameState) => {
   const movementModifier = getDifficulty(state).modifiers.movement;
   if (!canAct(hero, movementModifier)) {
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
+    return;
+  }
+  // Searching is a LETA action and may never be performed while a monster
+  // stands next to the hero (official rules).
+  if (isAdjacentToMonster(state, hero)) {
+    addLog(state, 'logs.heroAction.blockedNearMonster', {
+      hero: i18n(hero.name),
+    });
     return;
   }
   searchForSecret(state);
@@ -604,6 +620,9 @@ export const replaceDeadHeroes = (state: GameState) => {
   const healthModifier = getDifficulty(state).modifiers.health;
   deadHeroes(state).forEach((hero) => {
     hero.experience = 0;
+    // Dead heroes start over as Apprentices with their points lost
+    // (official rules), so the dice threshold must follow the reset XP.
+    hero.level = Level.APPRENTICE;
     hero.health = getEffectiveMaxHealth(hero, healthModifier);
     hero.movement = getEffectiveMaxMovement(hero, movementModifier);
     hero.actions = 2;
@@ -658,19 +677,24 @@ export const checkForNote = (state: GameState, hero: Hero) => {
   }
 };
 
+/** Whether a live monster stands adjacent to the hero without a wall between. */
+export const isAdjacentToMonster = (state: GameState, hero: Hero): boolean =>
+  state.dungeon.layout.monsters.some(
+    (monster) =>
+      monster.health > 0 &&
+      isNeighbouring(hero.position, monster.position.x, monster.position.y) &&
+      !crossesWallEdge(state.dungeon.layout, hero.position, monster.position),
+  );
+
 export const checkForNextToMonster = (
   state: GameState,
   hero: Hero,
 ): boolean => {
-  const nextToMonster = state.dungeon.layout.monsters.some(
-    (monster) =>
-      isNeighbouring(hero.position, monster.position.x, monster.position.y) &&
-      !crossesWallEdge(state.dungeon.layout, hero.position, monster.position),
-  );
-  if (nextToMonster) {
+  if (isAdjacentToMonster(state, hero)) {
     addLog(state, 'logs.heroAction.walkedByMonster', { hero: i18n(hero.name) });
+    return true;
   }
-  return nextToMonster;
+  return false;
 };
 
 export const dropItem = (state: GameState, item: Item, actor: Actor) => {
@@ -725,6 +749,31 @@ export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
   soundEffectManager.playPickUpItem();
 };
 
+/**
+ * Everything that happens when a hero arrives on a cell: the step
+ * animation, reading notes, revealing item-triggered secrets, stepping onto
+ * interactables and the zone-of-control check. Returns true when a live
+ * monster is adjacent, in which case the hero's movement is zeroed and
+ * callers should stop multi-step movement there.
+ */
+export const arriveOnCell = (
+  state: GameState,
+  hero: Hero,
+  pos: Position,
+): boolean => {
+  recordActorStep(hero, pos);
+  hero.position.x = pos.x;
+  hero.position.y = pos.y;
+  checkForNote(state, hero);
+  checkForItemRevealedSecret(state, hero);
+  checkForInteractable(state, hero, 'step');
+  const halted = checkForNextToMonster(state, hero);
+  if (halted) {
+    hero.movement = 0;
+  }
+  return halted;
+};
+
 const move = (
   hero: Hero,
   state: GameState,
@@ -732,16 +781,7 @@ const move = (
   newY: number,
   cost: number,
 ) => {
-  recordActorStep(hero, { x: newX, y: newY });
-  hero.position.x = newX;
-  hero.position.y = newY;
-  checkForNote(state, hero);
-  checkForItemRevealedSecret(state, hero);
-  checkForInteractable(state, hero, 'step');
-  const nextToMonster = checkForNextToMonster(state, hero);
-  if (nextToMonster) {
-    hero.movement = 0;
-  } else {
+  if (!arriveOnCell(state, hero, { x: newX, y: newY })) {
     hero.movement -= cost;
   }
 };

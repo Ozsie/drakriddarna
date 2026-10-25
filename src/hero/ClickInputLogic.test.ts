@@ -7,18 +7,23 @@ import {
   type Hero,
   ItemType,
   Level,
+  type Monster,
+  MonsterType,
   SecretType,
   type Weapon,
 } from '../types';
 import {
   onTargetCell,
+  onTargetSelf,
   screenToGridPosition,
   doMouseLogic,
+  getCursorType,
 } from './ClickInputLogic';
 import { RadialAction } from './RadialMenuLogic';
 import { get } from 'svelte/store';
 import { radialMenuStore } from '../store/radialMenuStore';
 import { TARGET, TARGET_ANY_HERO } from '../items/ItemLogic';
+import { resetRng, setRng } from '../core';
 
 const defaultWeapon: Weapon = {
   name: 'Sword',
@@ -475,5 +480,180 @@ describe('onTargetCell traps triggered while passing through', () => {
     expect(hero.incapacitated).toBe(true);
     const trap = state.dungeon.layout.secrets[0];
     expect(trap.found).toBe(true);
+  });
+});
+
+const createTestMonster = (overrides?: Partial<Monster>): Monster => ({
+  name: 'Orc',
+  type: MonsterType.ORC,
+  health: 3,
+  maxHealth: 3,
+  defense: 0,
+  actions: 1,
+  movement: 3,
+  maxMovement: 3,
+  colour: Colour.Red,
+  position: { x: 3, y: 1 },
+  experience: 1,
+  level: Level.APPRENTICE,
+  weapon: { ...defaultWeapon, name: 'Club', dice: 1 },
+  inventory: [],
+  ...overrides,
+});
+
+const createSplitState = (): GameState => {
+  const state = createTestState();
+  // Two rooms separated by a solid wall row: no line of sight between them
+  state.dungeon.discoveredRooms = ['A', 'B'];
+  state.dungeon.layout.grid = [
+    '#######',
+    '#AAAAA#',
+    '#######',
+    '#BBBBB#',
+    '#BBBBB#',
+    '#BBBBB#',
+    '#######',
+  ];
+  return state;
+};
+
+describe('zone of control during click movement', () => {
+  it('stops the move on the tile where the hero becomes adjacent to a monster', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    state.dungeon.layout.monsters = [
+      createTestMonster({ position: { x: 4, y: 2 } }),
+    ];
+
+    onTargetCell(state, { x: 4, y: 1 });
+
+    expect(hero.position).toEqual({ x: 3, y: 1 });
+  });
+});
+
+describe('reach weapon line of sight', () => {
+  it('blocks a range-2 attack through a wall', () => {
+    const state = createSplitState();
+    const hero = state.currentActor as Hero;
+    hero.position = { x: 1, y: 1 };
+    hero.weapon = { ...defaultWeapon, range: 2 };
+    const monster = createTestMonster({ position: { x: 3, y: 3 } });
+    state.dungeon.layout.monsters = [monster];
+
+    onTargetCell(state, { x: 3, y: 3 });
+
+    expect(monster.health).toBe(3);
+    expect(hero.actions).toBe(2);
+  });
+
+  it('allows a range-2 attack with clear line of sight', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    hero.weapon = { ...defaultWeapon, range: 2 };
+    const monster = createTestMonster({ position: { x: 3, y: 1 } });
+    state.dungeon.layout.monsters = [monster];
+
+    setRng(() => 5 / 6);
+    try {
+      onTargetCell(state, { x: 3, y: 1 });
+    } finally {
+      resetRng();
+    }
+
+    expect(monster.health).toBe(1);
+    expect(hero.actions).toBe(1);
+  });
+
+  it('shows the default cursor for a reach target without line of sight', () => {
+    const state = createSplitState();
+    const hero = state.currentActor as Hero;
+    hero.position = { x: 1, y: 1 };
+    hero.weapon = { ...defaultWeapon, range: 2 };
+    state.dungeon.layout.monsters = [
+      createTestMonster({ position: { x: 3, y: 3 } }),
+    ];
+
+    expect(getCursorType(state, { x: 3, y: 3 })).toBe('default');
+  });
+
+  it('shows the sword cursor for a reach target with line of sight', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    hero.weapon = { ...defaultWeapon, range: 2 };
+    state.dungeon.layout.monsters = [
+      createTestMonster({ position: { x: 3, y: 1 } }),
+    ];
+
+    expect(getCursorType(state, { x: 3, y: 1 })).toBe('sword');
+  });
+});
+
+describe('moving through other heroes', () => {
+  it('lets click movement pass through another hero without stopping on it', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    const other = createTestHero('Helbran', 2, 1);
+    state.heroes.push(other);
+
+    onTargetCell(state, { x: 3, y: 1 });
+
+    expect(hero.position).toEqual({ x: 3, y: 1 });
+    expect(other.position).toEqual({ x: 2, y: 1 });
+  });
+
+  it('still prevents ending a move on a tile occupied by another hero', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    const other = createTestHero('Helbran', 3, 1);
+    state.heroes.push(other);
+
+    onTargetCell(state, { x: 3, y: 1 });
+
+    expect(hero.position).toEqual({ x: 1, y: 1 });
+  });
+});
+
+describe('item-revealed secrets during click movement', () => {
+  it('reveals an item-triggered secret when moving through the room by click', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    hero.inventory.push({
+      id: 'necklace_of_light',
+      name: 'Necklace of Light',
+      type: ItemType.MAGIC,
+      amountInDeck: 1,
+      value: 0,
+    });
+    state.dungeon.layout.secrets = [
+      {
+        id: 'stair',
+        type: SecretType.NOTE,
+        name: 'Secret Stair',
+        found: false,
+        position: { x: 4, y: 1 },
+        revealedBy: 'necklace_of_light',
+      },
+    ];
+
+    onTargetCell(state, { x: 3, y: 1 });
+
+    expect(state.dungeon.layout.secrets[0].found).toBe(true);
+  });
+});
+
+describe('picking up items with an exhausted deck', () => {
+  it('clears an unassigned item location without crashing when the deck is empty', () => {
+    const state = createTestState();
+    state.itemDeck = [];
+    state.dungeon.layout.items = [{ position: { x: 1, y: 1 } }];
+
+    expect(() => onTargetSelf(state, { x: 1, y: 1 })).not.toThrow();
+
+    expect(state.dungeon.layout.items).toHaveLength(0);
+    expect(
+      state.actionLog.some(
+        (l) => l.key === 'logs.heroAction.searchFoundNothing',
+      ),
+    ).toBe(true);
   });
 });

@@ -9,7 +9,6 @@ import {
   isRoomDiscovered,
   isSamePosition,
   isWalkable,
-  recordActorStep,
 } from '../core';
 import type {
   ItemLocation,
@@ -27,13 +26,11 @@ import {
   removeFoundItemFromDeck,
   removeFoundMagicItemFromDeck,
 } from '../secrets/SecretsLogic';
-import { checkForInteractable } from '../interactables/InteractableLogic';
 import {
+  arriveOnCell,
   attack,
   canAct,
   canOpenDoor,
-  checkForNextToMonster,
-  checkForNote,
   consumeActions,
   hasGiantsGlove,
   interact,
@@ -81,13 +78,21 @@ const pickUpItemAtHero = (
   itemLocation: ItemLocation,
 ) => {
   const item = itemLocation.item ?? randomItem(state);
+  const index = state.dungeon.layout.items.indexOf(itemLocation);
+  state.dungeon.layout.items.splice(index, 1);
+  if (!item) {
+    // Nothing left to draw (e.g. an unassigned item spot with an empty
+    // deck) — the location is cleared so it can not be clicked again.
+    addLog(state, 'logs.heroAction.searchFoundNothing', {
+      hero: i18n(hero.name),
+    });
+    return;
+  }
   if (item.type === ItemType.MAGIC) {
     removeFoundMagicItemFromDeck(state, item);
   } else {
     removeFoundItemFromDeck(state, item);
   }
-  const index = state.dungeon.layout.items.indexOf(itemLocation);
-  state.dungeon.layout.items.splice(index, 1);
   addLog(state, 'logs.heroAction.pickUp', {
     hero: i18n(hero.name),
     item: i18n(item.name),
@@ -228,12 +233,8 @@ export const onTargetCell = (state: GameState, target: Position) => {
       !isBlockedByMonster(state, target.x, target.y) &&
       !isSamePosition(hero.position, target)
     ) {
-      recordActorStep(hero, target);
-      hero.position = target;
+      arriveOnCell(state, hero, target);
       hero.movement = 0;
-      checkForNote(state, hero);
-      checkForNextToMonster(state, hero);
-      checkForInteractable(state, hero, 'step');
       addLog(state, 'logs.events.hexagramTeleport', { hero: i18n(hero.name) });
       if (checkForTrapDoor(state)) {
         return;
@@ -261,21 +262,22 @@ export const onTargetCell = (state: GameState, target: Position) => {
       const path = cellsAlongLine(hero.position, target);
       hero.movement -= distance;
       for (const cell of path) {
-        recordActorStep(hero, cell);
-        hero.position = cell;
-        checkForNote(state, hero);
-        checkForInteractable(state, hero, 'step');
-        const nextToMonster = checkForNextToMonster(state, hero);
-        if (nextToMonster) {
-          hero.movement = 0;
-        }
+        // The zone of control ends the move on the tile where the hero
+        // becomes adjacent to a monster — remaining path cells are dropped.
+        const halted = arriveOnCell(state, hero, cell);
         if (checkForTrapDoor(state)) {
           return;
+        }
+        if (halted) {
+          break;
         }
       }
       consumeActions(hero, getDifficulty(state).modifiers.movement);
     } else if (blockedByMonster) {
-      if (distance <= hero.weapon.range) {
+      if (
+        distance <= hero.weapon.range &&
+        hasLineOfSight(hero.position, target, 48, state, false)
+      ) {
         attack(hero, state, target);
       } else {
         addLog(state, 'logs.heroAction.monsterOutOfRange');
@@ -316,7 +318,11 @@ export const getCursorType = (
 
   if (monster) {
     const distance = distanceInGrid(hero.position, target);
-    if (distance <= hero.weapon.range) return 'sword';
+    if (
+      distance <= hero.weapon.range &&
+      hasLineOfSight(hero.position, target, 48, state, false)
+    )
+      return 'sword';
     return 'default';
   }
 

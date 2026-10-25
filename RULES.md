@@ -129,7 +129,9 @@ The required face value for a die to count as a **Success** depends directly on 
 
 #### Gaining Experience
 
-- Whenever an enemy monster is slain, **every surviving hero in the party earns +1 Experience (XP)**.
+- Whenever a hero slays an enemy monster, **the killing hero earns the monster's Experience (XP)**: Orcs 1 XP, Trolls 2 XP, Dark Lords 4 XP.
+- Every hero who survives a scenario earns an additional **+1 XP** when it is completed.
+- If a hero dies, their accumulated XP is lost and they return as an Apprentice in the next scenario; found equipment is kept by their successor.
 - If all heroes fall in battle, the scenario restarts with revived heroes starting at 0 XP (Apprentice level).
 
 ### Action Economy

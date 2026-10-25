@@ -13,7 +13,9 @@ import {
   ItemType,
   Level,
   MonsterType,
+  SecretType,
   type Item,
+  type Secret,
   type TurnEvent,
 } from '../types';
 import {
@@ -1169,7 +1171,9 @@ describe('landslide event', () => {
     eventEffects.landslide(state, landslideEvent());
 
     expect(state.dungeon.layout.grid).toEqual(['#####', '#AA?#', '#####']);
-    expect(state.dungeon.collapsedCorridor).toBe('B');
+    expect(state.dungeon.collapsedCorridors).toEqual([
+      { letter: 'B', cells: [{ x: 3, y: 1 }] },
+    ]);
   });
 
   it('collapses only the declared corridor cells of a room', () => {
@@ -1186,7 +1190,15 @@ describe('landslide event', () => {
     eventEffects.landslide(state, landslideEvent());
 
     expect(state.dungeon.layout.grid).toEqual(['#####', '#??A#', '#####']);
-    expect(state.dungeon.collapsedCorridor).toBe('A');
+    expect(state.dungeon.collapsedCorridors).toEqual([
+      {
+        letter: 'A',
+        cells: [
+          { x: 1, y: 1 },
+          { x: 2, y: 1 },
+        ],
+      },
+    ]);
   });
 
   it('restores collapsed corridor cells on resetEventEffects', () => {
@@ -1204,7 +1216,32 @@ describe('landslide event', () => {
     resetEventEffects(state);
 
     expect(state.dungeon.layout.grid).toEqual(['#####', '#AAA#', '#####']);
-    expect(state.dungeon.collapsedCorridor).toBeUndefined();
+    expect(state.dungeon.collapsedCorridors).toEqual([]);
+  });
+
+  it('keeps and restores both corridors after two landslides in one cycle', () => {
+    const state = init();
+    clearActors(state);
+    state.dungeon.layout.grid = ['#####', '#ACB#', '#####'];
+    state.dungeon.layout.corridors = ['B', 'C'];
+    state.dungeon.layout.corridorCells = [];
+    state.dungeon.discoveredRooms = ['A', 'B'];
+
+    // First landslide can only reach corridor B (C is undiscovered)
+    eventEffects.landslide(state, landslideEvent());
+    expect(state.dungeon.layout.grid).toEqual(['#####', '#AC?#', '#####']);
+
+    // Second landslide reaches corridor C
+    state.dungeon.discoveredRooms = ['A', 'B', 'C'];
+    eventEffects.landslide(state, landslideEvent());
+    expect(state.dungeon.layout.grid).toEqual(['#####', '#A??#', '#####']);
+    expect(state.dungeon.collapsedCorridors).toHaveLength(2);
+
+    state.eventDeck.forEach((event) => (event.used = true));
+    resetEventEffects(state);
+
+    expect(state.dungeon.layout.grid).toEqual(['#####', '#ACB#', '#####']);
+    expect(state.dungeon.collapsedCorridors).toEqual([]);
   });
 
   it('leaves the dungeon untouched when the only corridor cells are blocked by a hero', () => {
@@ -1221,6 +1258,119 @@ describe('landslide event', () => {
 
     expect(event.used).toBe(true);
     expect(state.dungeon.layout.grid).toEqual(['#####', '#AAA#', '#####']);
-    expect(state.dungeon.collapsedCorridor).toBeUndefined();
+    expect(state.dungeon.collapsedCorridors).toBeUndefined();
+  });
+});
+
+describe('foresight event', () => {
+  const foresightEvent = () => {
+    const event = events.find((e) => e.id === 'foresight') as TurnEvent;
+    return { ...event, used: false };
+  };
+
+  const clearActors = (state: ReturnType<typeof init>) => {
+    state.dungeon.layout.monsters = [];
+    state.heroes.forEach((hero) => (hero.position = { x: 0, y: 0 }));
+  };
+
+  const sword: Item = {
+    id: 'sword',
+    name: 'Sword',
+    type: ItemType.WEAPON,
+    amountInDeck: 1,
+    value: 0,
+  };
+
+  const setUpTwoRooms = (state: ReturnType<typeof init>, secrets: Secret[]) => {
+    state.dungeon.layout.grid = ['#####', '#AAA#', '#####', '#BBB#', '#####'];
+    state.dungeon.discoveredRooms = ['A'];
+    state.dungeon.layout.secrets = secrets;
+  };
+
+  it('reveals a still-hidden item secret in an undiscovered room', () => {
+    const state = init();
+    clearActors(state);
+    setUpTwoRooms(state, [
+      {
+        id: 'equip1',
+        type: SecretType.EQUIPMENT,
+        name: 'Equipment',
+        found: false,
+        position: { x: 2, y: 3 },
+        item: sword,
+      },
+    ]);
+
+    eventEffects.foresight(state, foresightEvent());
+
+    expect(state.dungeon.layout.secrets).toHaveLength(0);
+    expect(state.dungeon.layout.items).toHaveLength(1);
+    expect(state.dungeon.layout.items[0].item).toBe(sword);
+    expect(state.dungeon.layout.items[0].position).toEqual({ x: 2, y: 3 });
+  });
+
+  it('reveals exactly one secret when several qualify and keeps the rest', () => {
+    const state = init();
+    clearActors(state);
+    setUpTwoRooms(state, [
+      {
+        id: 'equip1',
+        type: SecretType.EQUIPMENT,
+        name: 'Equipment',
+        found: false,
+        position: { x: 1, y: 3 },
+        item: { ...sword, id: 'flail' },
+      },
+      {
+        id: 'magic1',
+        type: SecretType.MAGIC_ITEM,
+        name: 'Magic Item',
+        found: false,
+        position: { x: 3, y: 3 },
+        item: { ...sword, id: 'potion' },
+      },
+    ]);
+
+    eventEffects.foresight(state, foresightEvent());
+
+    expect(state.dungeon.layout.secrets).toHaveLength(1);
+    expect(state.dungeon.layout.items).toHaveLength(1);
+    const revealedId = state.dungeon.layout.items[0].item?.id;
+    expect(['flail', 'potion']).toContain(revealedId);
+  });
+
+  it('does nothing when no undiscovered item secret qualifies', () => {
+    const state = init();
+    clearActors(state);
+    setUpTwoRooms(state, [
+      {
+        id: 'equip1',
+        type: SecretType.EQUIPMENT,
+        name: 'Equipment',
+        found: false,
+        position: { x: 2, y: 1 },
+        item: sword,
+      },
+      {
+        id: 'trap1',
+        type: SecretType.TRAP_DOOR,
+        name: 'Trap Door',
+        found: false,
+        position: { x: 2, y: 3 },
+      },
+      {
+        id: 'stair',
+        type: SecretType.NOTE,
+        name: 'Secret Stair',
+        found: false,
+        position: { x: 1, y: 3 },
+        revealedBy: 'necklace_of_light',
+      },
+    ]);
+
+    eventEffects.foresight(state, foresightEvent());
+
+    expect(state.dungeon.layout.secrets).toHaveLength(3);
+    expect(state.dungeon.layout.items).toHaveLength(0);
   });
 });

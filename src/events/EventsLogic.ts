@@ -35,9 +35,17 @@ import {
   hasLineOfSight,
   i18n,
   isPartyBelowHalfHealth,
+  shuffle,
 } from '../core';
 import { roll } from '../core';
-import { findCell, isRoomDiscovered, toArray, EMPTY, WALL } from '../core';
+import {
+  findCell,
+  findRoomCells,
+  isRoomDiscovered,
+  toArray,
+  EMPTY,
+  WALL,
+} from '../core';
 import { takeDamage } from '../core';
 import { COLLAPSED, createLight, createMonster } from '../dungeon/DungeonLogic';
 import { events } from './events';
@@ -374,17 +382,18 @@ export const eventEffects: Record<
     if (candidates.length > 0) {
       const randomIndex = Math.floor(Math.random() * candidates.length);
       const candidate = candidates[randomIndex];
-      state.dungeon.collapsedCorridor = candidate.letter;
-      if (candidate.cells) {
-        const cells = candidate.cells;
-        state.dungeon.layout.grid = state.dungeon.layout.grid.map((row, y) =>
-          collapseCellsInRow(row, cells, y),
-        );
-      } else {
-        state.dungeon.layout.grid = state.dungeon.layout.grid.map((row) =>
-          row.replaceAll(candidate.letter, COLLAPSED),
-        );
+      state.dungeon.layout.grid = state.dungeon.layout.grid.map((row, y) =>
+        collapseCellsInRow(row, candidate.cells, y),
+      );
+      // Each collapse is tracked with its exact cells, so a second
+      // landslide elsewhere cannot lose or mislabel the first one.
+      if (!state.dungeon.collapsedCorridors) {
+        state.dungeon.collapsedCorridors = [];
       }
+      state.dungeon.collapsedCorridors.push({
+        letter: candidate.letter,
+        cells: candidate.cells,
+      });
     }
     event.used = true;
   },
@@ -408,11 +417,17 @@ export const eventEffects: Record<
         return !isRoomDiscovered(state.dungeon, secretRoom);
       });
     if (notDiscoveredSecret.length > 0) {
-      const secret = state.dungeon.layout.secrets.pop();
-      if (secret && secret.item) {
+      // Reveal one of the still-hidden item secrets: the foresight only
+      // ever targets the secrets it sensed, never an arbitrary one.
+      const secret = shuffle([...notDiscoveredSecret])[0];
+      state.dungeon.layout.secrets.splice(
+        state.dungeon.layout.secrets.indexOf(secret),
+        1,
+      );
+      if (secret.item) {
         addLog(state, 'logs.events.foreSight', {
-          x: `${secret.position.x + 2}`,
-          y: `${secret.position.y - 1}`,
+          x: `${secret.position.x}`,
+          y: `${secret.position.y}`,
         });
         state.dungeon.layout.items.push({
           item: secret.item,
@@ -709,13 +724,15 @@ const restoreOrcDrums = (state: GameState) => {
 };
 
 const restoreCorridor = (state: GameState) => {
-  const collapsed = state.dungeon.collapsedCorridor;
-  if (collapsed) {
+  const collapsed = state.dungeon.collapsedCorridors;
+  if (collapsed && collapsed.length > 0) {
     addLog(state, 'logs.events.landslideRestored');
-    state.dungeon.layout.grid = state.dungeon.layout.grid.map((row) =>
-      row.replaceAll(COLLAPSED, collapsed),
-    );
-    state.dungeon.collapsedCorridor = undefined;
+    collapsed.forEach((group) => {
+      state.dungeon.layout.grid = state.dungeon.layout.grid.map((row, y) =>
+        restoreCellsInRow(row, group.cells, y, group.letter),
+      );
+    });
+    state.dungeon.collapsedCorridors = [];
   }
 };
 
@@ -845,21 +862,30 @@ const isRoomBlocked = (state: GameState, roomKey: string) => {
   return isBlocked.some((blocked) => blocked);
 };
 
-// A corridor the landslide can collapse: either a whole corridor letter
-// (`cells` undefined) or the declared corridor cells of a room letter
-// (`cells` set), see `Layout.corridorCells`.
+// A corridor the landslide can collapse: the exact cells that would cave
+// in — either every cell of a corridor letter, or the declared corridor
+// cells of a room letter (see `Layout.corridorCells`).
 interface LandslideCandidate {
   letter: string;
-  cells?: Position[];
+  cells: Position[];
 }
 
 const getLandslideCandidates = (state: GameState): LandslideCandidate[] => {
   const layout = state.dungeon.layout;
+  const isCollapsed = (letter: string) =>
+    (state.dungeon.collapsedCorridors ?? []).some(
+      (group) => group.letter === letter,
+    );
   const fullCorridors: LandslideCandidate[] = layout.corridors
+    .filter((corridor) => !isCollapsed(corridor))
     .filter((corridor) => !isRoomBlocked(state, corridor))
     .filter((corridor) => isRoomDiscovered(state.dungeon, corridor))
-    .map((corridor) => ({ letter: corridor }));
+    .map((corridor) => ({
+      letter: corridor,
+      cells: findRoomCells(layout.grid, corridor),
+    }));
   const partialCorridors: LandslideCandidate[] = getPartialCorridors(layout)
+    .filter(({ letter }) => !isCollapsed(letter))
     .filter(({ letter }) => isRoomDiscovered(state.dungeon, letter))
     .filter(
       ({ cells }) =>
@@ -903,6 +929,25 @@ const collapseCellsInRow = (
   let newRow = '';
   for (let x = 0; x < row.length; x++) {
     newRow += xs.has(x) ? COLLAPSED : row[x];
+  }
+  return newRow;
+};
+
+// Restores only the cells this collapse group actually owns (and only if
+// they are still collapsed), so overlapping state can never be mislabeled.
+const restoreCellsInRow = (
+  row: string,
+  cells: Position[],
+  y: number,
+  letter: string,
+): string => {
+  const xs = new Set(
+    cells.filter((cell) => cell.y === y).map((cell) => cell.x),
+  );
+  if (xs.size === 0) return row;
+  let newRow = '';
+  for (let x = 0; x < row.length; x++) {
+    newRow += xs.has(x) && row[x] === COLLAPSED ? letter : row[x];
   }
   return newRow;
 };

@@ -253,6 +253,14 @@ export enum Level {
   MASTER = 'master',
 }
 
+export type CollapsedCorridor = {
+  // Room/corridor letter the collapsed cells will be restored to.
+  letter: string;
+  // The exact cells that were collapsed, so several independent collapses
+  // can coexist and be restored without touching each other.
+  cells: Position[];
+};
+
 export type Dungeon = {
   name: string;
   intro: string;
@@ -265,7 +273,7 @@ export type Dungeon = {
   nextDungeon?: Dungeon;
   killCount: number;
   events?: number[];
-  collapsedCorridor?: string;
+  collapsedCorridors?: CollapsedCorridor[];
   portal?: Position;
   onRoomDiscovered?: Record<string, string>;
   music?: string;
