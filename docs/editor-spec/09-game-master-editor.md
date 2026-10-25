@@ -1,7 +1,6 @@
 # 09 — Game Master Editor (Design)
 
-> **Status: design for phase 2.** The campaign editor (milestones M1–M7,
-> 08) comes first; this doc spec'ed the GM feature so it can be scheduled
+> **Status: design for phase 2.** The campaign editor (milestones M1–M7, 08) comes first; this doc spec'ed the GM feature so it can be scheduled
 > without re-opening the architecture. It reuses the M1–M4 infrastructure
 > (project file protocol, catalog, marker protection, generation panel) and
 > adds no new architectural concepts.
@@ -21,11 +20,11 @@ campaigns. Translations merge into the **`content`** namespace under
 The `GameMaster` type mixes plain data with behaviour functions. The editor
 splits it into three tiers:
 
-| Tier | Fields | Editor support |
-|---|---|---|
-| **Declarative** (fully edited) | `id`, `nameTranslationKey`, `descriptionTranslationKey`, `modifiers` (attack/defense/movement/search/health), `startingEquipment` (weapon/shield/armour + inventory), `events.minMonsterSpawnDistance`, `events.earliestMonsterRound`, `events.skipHungryTrollBelowHalfHealth`, `monsterBehavior.bowForgottenChance`, `initialState` (arbitrary JSON object) | Form UI, validated |
-| **Modelled behaviour** (declarative DSL, see below) | `monsterBehavior.getDirectorState` (director pacing), `monsterBehavior.calculateBehaviorWeight` (tag weight multipliers) | Rule editor UI |
-| **Raw code** (escape hatch only) | `GameMasterRules` (modifySearchRoll, onSearchFailed, damage modifiers, onHeroDowned), `EventDifficulty.modifyEventDeck`, `EventDifficulty.onEventDrawn`, all `GameMasterLifecycleHooks` | Monospace text areas; stored and emitted verbatim |
+| Tier                                                | Fields                                                                                                                                                                                                                                                                                                                                                       | Editor support                                    |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| **Declarative** (fully edited)                      | `id`, `nameTranslationKey`, `descriptionTranslationKey`, `modifiers` (attack/defense/movement/search/health), `startingEquipment` (weapon/shield/armour + inventory), `events.minMonsterSpawnDistance`, `events.earliestMonsterRound`, `events.skipHungryTrollBelowHalfHealth`, `monsterBehavior.bowForgottenChance`, `initialState` (arbitrary JSON object) | Form UI, validated                                |
+| **Modelled behaviour** (declarative DSL, see below) | `monsterBehavior.getDirectorState` (director pacing), `monsterBehavior.calculateBehaviorWeight` (tag weight multipliers)                                                                                                                                                                                                                                     | Rule editor UI                                    |
+| **Raw code** (escape hatch only)                    | `GameMasterRules` (modifySearchRoll, onSearchFailed, damage modifiers, onHeroDowned), `EventDifficulty.modifyEventDeck`, `EventDifficulty.onEventDrawn`, all `GameMasterLifecycleHooks`                                                                                                                                                                      | Monospace text areas; stored and emitted verbatim |
 
 The split is empirical: the three built-in GMs (`storyTeller`, `tactician`,
 `brutalOverlord`) use only the declarative + modelled tiers — a GM built
@@ -163,7 +162,11 @@ export const myMaster: GameMaster = {
   modifiers: { attack: 0, defense: 0, movement: 0, search: 2, health: 1 },
   monsterBehavior: {
     bowForgottenChance: 0.2,
-    getDirectorState: ({ hasDeadHero, partyHpPercentage, aliveMonsterCount }): DirectorState => {
+    getDirectorState: ({
+      hasDeadHero,
+      partyHpPercentage,
+      aliveMonsterCount,
+    }): DirectorState => {
       if (hasDeadHero || partyHpPercentage < 0.45) {
         return 'EASE';
       }
@@ -179,7 +182,11 @@ export const myMaster: GameMaster = {
       return baseWeight;
     },
   },
-  events: { minMonsterSpawnDistance: 3, earliestMonsterRound: 4, skipHungryTrollBelowHalfHealth: true },
+  events: {
+    minMonsterSpawnDistance: 3,
+    earliestMonsterRound: 4,
+    skipHungryTrollBelowHalfHealth: true,
+  },
   startingEquipment: { weapon: weapons[0], inventory: [] },
 };
 
@@ -242,18 +249,18 @@ validation panel at the bottom, Save/Generate in the shared header:
 
 ## Validation
 
-| Rule | Severity |
-|---|---|
-| `id` matches `^[a-zA-Z][a-zA-Z0-9]*$` (identifier, needed for the exported variable) | Blocking |
-| Duplicate GM id (another `src/gameMasters/<id>/` exists) | Blocking |
-| Modifier outside -2..+2 | Warning |
+| Rule                                                                                                     | Severity |
+| -------------------------------------------------------------------------------------------------------- | -------- |
+| `id` matches `^[a-zA-Z][a-zA-Z0-9]*$` (identifier, needed for the exported variable)                     | Blocking |
+| Duplicate GM id (another `src/gameMasters/<id>/` exists)                                                 | Blocking |
+| Modifier outside -2..+2                                                                                  | Warning  |
 | `bowForgottenChance` outside 0..1; `partyHpAbove`/`partyHpBelow` outside 0..1; `monstersAtMost` negative | Blocking |
-| `partyHpAbove` and `partyHpBelow` both set in one rule and inconsistent (above <= below) | Warning |
-| Unreachable director rule (fully shadowed by an earlier rule) | Warning |
-| Director rule with no conditions set | Blocking |
-| Catalog refs unresolvable | Blocking |
-| Raw snippet fails brace-balance check or contains `import` | Blocking |
-| Name/description missing in any language | Blocking |
+| `partyHpAbove` and `partyHpBelow` both set in one rule and inconsistent (above <= below)                 | Warning  |
+| Unreachable director rule (fully shadowed by an earlier rule)                                            | Warning  |
+| Director rule with no conditions set                                                                     | Blocking |
+| Catalog refs unresolvable                                                                                | Blocking |
+| Raw snippet fails brace-balance check or contains `import`                                               | Blocking |
+| Name/description missing in any language                                                                 | Blocking |
 
 Blocking rules gate generation; findings reuse the 07 finding codes
 (`gm.id`, `gm.director.unreachable`, ...) and the shared panel/canvas-free

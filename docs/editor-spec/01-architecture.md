@@ -2,16 +2,16 @@
 
 ## Tech stack
 
-| Concern | Choice | Notes |
-|---|---|---|
-| Language | Kotlin (latest stable) | |
-| Framework | Compose Multiplatform (JetBrains) | Desktop only, JVM target. Use the official `compose.desktop` Gradle setup. |
-| Targets | `jvm` only | KMP structure is kept so iOS/Android could be added later, but v1 compiles for desktop only. Do not add other targets. |
-| Serialization | `kotlinx.serialization` (JSON) | Editor project file and catalogs. |
-| Coroutines | `kotlinx.coroutines` | File I/O, generation. |
-| File I/O | `java.nio` in the desktop module | Kept out of `core` via interfaces (below). |
-| Testing | `kotlin.test` / JUnit 5 | Golden-file tests for codegen (see 04, 08). |
-| Build | Gradle version catalog (`libs.versions.toml`) | |
+| Concern       | Choice                                        | Notes                                                                                                                  |
+| ------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Language      | Kotlin (latest stable)                        |                                                                                                                        |
+| Framework     | Compose Multiplatform (JetBrains)             | Desktop only, JVM target. Use the official `compose.desktop` Gradle setup.                                             |
+| Targets       | `jvm` only                                    | KMP structure is kept so iOS/Android could be added later, but v1 compiles for desktop only. Do not add other targets. |
+| Serialization | `kotlinx.serialization` (JSON)                | Editor project file and catalogs.                                                                                      |
+| Coroutines    | `kotlinx.coroutines`                          | File I/O, generation.                                                                                                  |
+| File I/O      | `java.nio` in the desktop module              | Kept out of `core` via interfaces (below).                                                                             |
+| Testing       | `kotlin.test` / JUnit 5                       | Golden-file tests for codegen (see 04, 08).                                                                            |
+| Build         | Gradle version catalog (`libs.versions.toml`) |                                                                                                                        |
 
 No other UI framework, no additional state-management library. Compose
 state + an explicit `EditorStore` class is sufficient.

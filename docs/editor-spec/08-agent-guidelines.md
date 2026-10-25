@@ -48,6 +48,7 @@ Work strictly in order; each milestone ends with its definition of done
 code effects.
 
 ### M1 — Domain + project file
+
 - Implement the 02 model in `core` with `@Serializable` types, defaults per
   02, project load/save (`formatVersion`, migrations skeleton, atomic save).
 - Catalog model + a hand-written starter `catalog.json` from the current
@@ -56,11 +57,13 @@ code effects.
   fixture covering every entity kind; migration test for v0->v1 stub.
 
 ### M2 — Validation
+
 - Implement 07 in `core` with stable finding codes.
 - **DoD**: one unit test per finding code (green + red cases); the fixture
   from M1 validates clean.
 
 ### M3 — Code generation
+
 - Implement 04: `campaign.ts`, `dungeons/<id>.ts`, translation JSONs,
   marker protocol, stale-file reporting, deterministic ordering.
 - **DoD**: golden-file tests pass byte-for-byte; generator is a pure
@@ -70,6 +73,7 @@ code effects.
   once by the user or agent running `npm run dev`).
 
 ### M4 — App shell + campaign section
+
 - Compose window, EditorStore with snapshot undo/redo (01), open/save/new
   project, campaign section forms (06), generation panel.
 - **DoD**: create a new project, fill campaign metadata, save, generate,
@@ -77,6 +81,7 @@ code effects.
   warning work.
 
 ### M5 — Dungeon editor
+
 - Grid canvas, tools, inspector, chaining panel per 05.
 - **DoD**: recreate a small dungeon (2 rooms, 1 corridor, 2 doors incl. one
   hidden, 3 monsters, 1 secret, 1 note, 2 lights, 4 starting positions,
@@ -84,11 +89,13 @@ code effects.
   same dungeon authored by hand in the fixture.
 
 ### M6 — Translations editor
+
 - Key inventory derivation, matrix UI, filters, validation per 06/07.
 - **DoD**: all derived keys manageable end-to-end; missing-translation
   generation blocking works; en/sv JSON output nested correctly.
 
 ### M7 — Catalog refresh + polish
+
 - `scripts/export-editor-catalog.ts` in the game repo; editor refresh
   command; stale-ref errors; final keyboard shortcut pass; crash-free
   malformed-project handling.
@@ -103,6 +110,7 @@ Do not start before M7 is done. Read
 the M1–M4 infrastructure and adds a second document kind.
 
 ### M8 — GM domain + codegen
+
 - `GameMasterDoc` model, `gameMaster.editor.json` project file (second
   document kind in the open/save/new flow), GM generator with the
   director-policy DSL, `behaviorTagWeights`, `initialState`, and the
@@ -113,6 +121,7 @@ the M1–M4 infrastructure and adds a second document kind.
   and the GM appears in the game's GM list.
 
 ### M9 — GM editor UI
+
 - Form editor per 09: identity + translations, modifiers, monster
   behaviour with rule list and simulation strip, events, starting
   equipment, advanced raw-TS section; validation findings wired in.
@@ -122,6 +131,7 @@ the M1–M4 infrastructure and adds a second document kind.
   green/red tests.
 
 ### M10 — GM integration polish
+
 - Shared-translation merge safety (multiple GMs writing the same
   `translations/en.json`), stale-file reporting for GM folders, catalog
   coverage for starting-equipment refs.
