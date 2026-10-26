@@ -1176,6 +1176,9 @@ describe('landslide event', () => {
     expect(state.dungeon.collapsedCorridors).toEqual([
       { letter: 'B', cells: [{ x: 3, y: 1 }] },
     ]);
+    // The collapsing rock shakes the board around the corridor.
+    expect(state.shakeEffects).toHaveLength(1);
+    expect(state.shakeEffects?.[0].epicenter).toEqual({ x: 3, y: 1 });
   });
 
   it('collapses only the declared corridor cells of a room', () => {

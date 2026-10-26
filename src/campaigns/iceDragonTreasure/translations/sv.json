@@ -74,6 +74,10 @@
       },
       "fog": {
         "name": "giftig dimma"
+      },
+      "interactables": {
+        "gasValve": "Gasventil",
+        "lavaVent": "Lavaöppning"
       }
     }
   }

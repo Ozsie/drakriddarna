@@ -20,6 +20,22 @@ export const roomFogAt = (
   return cell ? layout.roomFog?.[cell] : undefined;
 };
 
+// Fills a room or corridor with fog, merging the given options over any
+// fog the room already has. Used by dungeon authors declaratively (via
+// `roomFog`) and by effects at runtime, e.g. a gas valve an interactable
+// opens; because the fog becomes part of the layout, it persists in the
+// save like any other dungeon state.
+export const fillRoomFog = (
+  state: GameState,
+  room: string,
+  options: RoomFogOptions,
+): void => {
+  state.dungeon.layout.roomFog = {
+    ...state.dungeon.layout.roomFog,
+    [room]: { ...state.dungeon.layout.roomFog?.[room], ...options },
+  };
+};
+
 // Everything that happens when an actor arrives on a cell: the fog's
 // damage on enter, if the room's fog is configured to hurt. Called for
 // heroes (arriveOnCell) and monsters (monsterMove /

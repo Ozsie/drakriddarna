@@ -7,8 +7,12 @@ import {
   renderFlameEffects,
   renderProjectiles,
   renderActorFlash,
+  activeShakes,
+  createShake,
+  shakeJitter,
   BLOOD_SPLATTER_DURATION_MS,
   FLAME_EFFECT_DURATION_MS,
+  SHAKE_DURATION_MS,
 } from './CombatEffects';
 import {
   flashActor,
@@ -17,12 +21,12 @@ import {
   clearActorAnimations,
   isActorAnimating,
   hasActiveActorAnimations,
-} from '../core/ActorAnimation';
-import { takeDamage } from '../core/combat';
+} from '../core';
+import { takeDamage } from '../core';
 import { resolveChaosSwordAttack } from '../items/ItemLogic';
 import type { Actor, GameState, Hero, Monster } from '../types';
 import { Colour, Level, MonsterType } from '../types';
-import { resetRng, setRng } from '../core/dice';
+import { resetRng, setRng } from '../core';
 import { weapons, monsterWeapons } from '../items/weapons';
 import { createMonster } from '../dungeon/DungeonLogic';
 
@@ -597,6 +601,68 @@ describe('CombatEffects', () => {
       expect(state.flameEffects?.length).toBeGreaterThanOrEqual(1);
       expect(state.flameEffects?.[0].position).toEqual({ x: 3, y: 3 });
       randomSpy.mockRestore();
+    });
+  });
+
+  describe('Shake Effect', () => {
+    it('createShake fills in defaults and copies the epicenter', () => {
+      const shake = createShake({ epicenter: { x: 2, y: 3 } });
+      expect(shake.id).toMatch(/^shake-/);
+      expect(shake.epicenter).toEqual({ x: 2, y: 3 });
+      expect(shake.amplitude).toBe(6);
+      expect(shake.radius).toBe(8);
+      expect(shake.durationMs).toBe(SHAKE_DURATION_MS);
+      expect(shake.timestamp).toBeDefined();
+      const screenWide = createShake();
+      expect(screenWide.epicenter).toBeUndefined();
+    });
+
+    it('activeShakes keeps only effects currently running', () => {
+      const now = 1000;
+      const active = createShake({ timestamp: now - 100 });
+      const future = createShake({ timestamp: now + 100 });
+      const expired = createShake({ timestamp: now - SHAKE_DURATION_MS - 1 });
+      const result = activeShakes([active, future, expired], now);
+      expect(result).toEqual([active]);
+    });
+
+    it('shakes the whole screen regardless of the view without an epicenter', () => {
+      const shake = createShake({
+        amplitude: 10,
+        timestamp: 1000,
+        durationMs: 400,
+      });
+      const jitter = shakeJitter([shake], { x: 500, y: 500 }, 1200);
+      expect(Math.abs(jitter.x)).toBeLessThanOrEqual(10);
+      expect(Math.abs(jitter.y)).toBeLessThanOrEqual(10);
+    });
+
+    it('attenuates an epicenter shake with the distance to the view', () => {
+      const epicenter = { x: 5, y: 5 };
+      const shake = createShake({
+        epicenter,
+        amplitude: 10,
+        radius: 8,
+        timestamp: 1000,
+        durationMs: 400,
+      });
+      // View on the epicenter: full strength.
+      const near = shakeJitter([shake], epicenter, 1000);
+      expect(Math.abs(near.x)).toBeLessThanOrEqual(10);
+      expect(Math.abs(near.y)).toBeLessThanOrEqual(10);
+      // View beyond the reach: no jitter at all.
+      const far = shakeJitter([shake], { x: 100, y: 100 }, 1000);
+      expect(far).toEqual({ x: 0, y: 0 });
+    });
+
+    it('decays to zero at the end of the shake', () => {
+      const shake = createShake({
+        amplitude: 10,
+        timestamp: 1000,
+        durationMs: 400,
+      });
+      const jitter = shakeJitter([shake], { x: 0, y: 0 }, 1400);
+      expect(jitter).toEqual({ x: 0, y: 0 });
     });
   });
 });

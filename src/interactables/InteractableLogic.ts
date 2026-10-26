@@ -4,9 +4,11 @@ import type {
   Hero,
   InteractableCell,
   Position,
+  RoomFogOptions,
+  TerrainOptions,
   TurnEvent,
 } from '../types';
-import { Colour, SecretType } from '../types';
+import { Colour, SecretType, TerrainType } from '../types';
 import {
   addLog,
   clearActorAnimations,
@@ -27,6 +29,9 @@ import {
 } from '../hero/HeroLogic';
 import { resetOnNextDungeon } from '../items/ItemLogic';
 import { getEventsForDungeon } from '../events/EventsLogic';
+import { fillRoomFog } from '../dungeon/RoomFogLogic';
+import { applyTerrainEnterEffects, terrainAt } from '../dungeon/TerrainLogic';
+import { createShake } from '../combat';
 import { soundEffectManager } from '../audio';
 
 let getCampaignDeck:
@@ -231,6 +236,92 @@ interactableEffects.toggleLight = (
   return toggled;
 };
 
+// Fills a room or corridor with fog: `args.room` (default: the room the
+// interactable stands in) and `args.options` (RoomFogOptions). The fog
+// becomes part of the layout and so persists in the save — a burst pipe
+// keeps flooding the room.
+interactableEffects.fillRoomFog = (
+  state: GameState,
+  interactable: InteractableCell,
+  actor?: Actor | Hero,
+): boolean => {
+  const args = interactable.args ?? {};
+  const room =
+    (args.room as string | undefined) ??
+    findCell(
+      state.dungeon.layout.grid,
+      interactable.position.x,
+      interactable.position.y,
+    );
+  if (!room) return false;
+
+  const options = (args.options as RoomFogOptions | undefined) ?? {};
+  fillRoomFog(state, room, options);
+  addLog(state, 'logs.heroAction.fogFilled', {
+    hero: i18n(actor?.name ?? ''),
+    room,
+  });
+  return true;
+};
+
+// Lets lava erupt from the floor: `args.cells` (a list of [x, y] tuples
+// or positions, default: the interactable's own cell), `args.options`
+// (TerrainOptions without the type — it is always lava), and an optional
+// `args.shake` (max jitter in pixels) for the eruption's tremor. Anyone
+// standing on a flooded cell takes the lava's damage on enter
+// immediately. The lava persists in the layout like any terrain.
+interactableEffects.spawnLava = (
+  state: GameState,
+  interactable: InteractableCell,
+  actor?: Actor | Hero,
+): boolean => {
+  const args = interactable.args ?? {};
+  const cells = (args.cells as Position[] | undefined) ?? [
+    interactable.position,
+  ];
+  const options = (args.options as Omit<TerrainOptions, 'type'>) ?? {};
+  const damage = options.damageOnEnter ?? 1;
+
+  cells.forEach((cell) => {
+    if (terrainAt(state.dungeon.layout, cell)) return;
+    state.dungeon.layout.terrain = [
+      ...(state.dungeon.layout.terrain ?? []),
+      {
+        position: { x: cell.x, y: cell.y },
+        type: TerrainType.LAVA,
+        ...options,
+      },
+    ];
+    // The floor erupting under an actor hurts right away.
+    [...state.heroes, ...state.dungeon.layout.monsters].forEach((victim) => {
+      if (
+        victim.health > 0 &&
+        victim.position.x === cell.x &&
+        victim.position.y === cell.y
+      ) {
+        applyTerrainEnterEffects(state, victim);
+      }
+    });
+  });
+
+  const shakeAmplitude = args.shake as number | undefined;
+  if (shakeAmplitude !== 0) {
+    state.shakeEffects = [
+      ...(state.shakeEffects ?? []),
+      createShake({
+        epicenter: cells[0],
+        amplitude: shakeAmplitude ?? 8,
+        durationMs: 500,
+      }),
+    ];
+  }
+  addLog(state, 'logs.heroAction.lavaErupted', {
+    hero: i18n(actor?.name ?? ''),
+    damage: `${damage}`,
+  });
+  return true;
+};
+
 export const registerInteractableEffect = (
   name: string,
   handler: InteractableEffectHandler,
@@ -285,15 +376,6 @@ export const findInteractableAtHero = (
     )
   );
 };
-
-export const findInteractablesAt = (
-  state: GameState,
-  x: number,
-  y: number,
-): InteractableCell[] =>
-  (state.dungeon.layout.interactables ?? []).filter(
-    (item) => item.position.x === x && item.position.y === y,
-  );
 
 export const checkForInteractable = (
   state: GameState,

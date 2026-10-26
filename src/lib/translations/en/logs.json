@@ -72,6 +72,8 @@
     "interact": "{{hero}} interacted with {{interactable}}.",
     "heroJoined": "{{newHero}} joined the party!",
     "trapsRemoved": "All traps in room {{room}} were disabled.",
+    "fogFilled": "{{hero}} released a cloud of fog that fills room {{room}}.",
+    "lavaErupted": "Lava erupts from the floor where {{hero}} meddled, dealing {{damage}} damage to anyone standing in it.",
     "turnFailed": "Failed to advance to the next turn."
   },
   "item": {

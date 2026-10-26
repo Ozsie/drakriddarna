@@ -43,6 +43,8 @@ export type GameState = {
   bloodSplatters?: BloodSplatter[];
   projectiles?: ProjectileAnimation[];
   flameEffects?: FlameEffect[];
+  // Screen shakes active or recently expired; the renderer prunes them.
+  shakeEffects?: ShakeEffect[];
   roundActionsDelta?: number;
   // Transient light sources spawned by events, cleared at round reset.
   eventLights?: LightSource[];
@@ -136,6 +138,22 @@ export type FlameEffect = {
   id: string;
   position: Position;
   particles: FlameParticle[];
+  timestamp?: number;
+  durationMs?: number;
+};
+
+// A screen shake, usually spawned by a dramatic event: a landslide, a
+// lava burst. Purely visual — jitter applied to the world canvases for a
+// short time, stronger near the epicenter.
+export type ShakeEffect = {
+  id: string;
+  // World cell the shake emanates from; omit for a screen-wide shake.
+  epicenter?: Position;
+  // Max jitter in pixels at the epicenter (default: 6).
+  amplitude?: number;
+  // Reach of the shake in cells from the epicenter (default: 8); the
+  // jitter fades linearly to zero at the edge.
+  radius?: number;
   timestamp?: number;
   durationMs?: number;
 };

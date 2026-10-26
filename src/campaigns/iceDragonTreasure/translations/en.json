@@ -74,6 +74,10 @@
       },
       "fog": {
         "name": "poisonous fog"
+      },
+      "interactables": {
+        "gasValve": "Gas Valve",
+        "lavaVent": "Lava Vent"
       }
     }
   }

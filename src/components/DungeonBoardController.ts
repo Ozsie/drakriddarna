@@ -77,6 +77,8 @@ import {
   renderBloodSplatters,
   renderProjectiles,
   renderFlameEffects,
+  activeShakes,
+  shakeJitter,
 } from '../combat';
 import { clearTileTextureCache } from '../dungeon/TileTextureCache';
 import { hasActiveActorAnimations } from '../core';
@@ -176,6 +178,7 @@ export class DungeonBoardController {
   private lastUiSignature = '';
   private overlayAnimationId: number | null = null;
   private dynamicAnimationId: number | null = null;
+  private shakeAnimationId: number | null = null;
   private lastDungeonKey = '';
   private lastTileset = '';
   private lastLocale = '';
@@ -497,6 +500,10 @@ export class DungeonBoardController {
     if (this.dynamicAnimationId) {
       cancelAnimationFrame(this.dynamicAnimationId);
       this.dynamicAnimationId = null;
+    }
+    if (this.shakeAnimationId) {
+      cancelAnimationFrame(this.shakeAnimationId);
+      this.shakeAnimationId = null;
     }
   }
 
@@ -1207,6 +1214,70 @@ export class DungeonBoardController {
     this.renderDynamicLayer(force);
     this.renderOverlayLayer(force);
     this.renderUiLayer(force);
+    this.updateShake();
+  };
+
+  // Screen shakes: a per-frame CSS translate on the world canvases
+  // (static, actors, overlays), never the UI canvas, so the cached static
+  // layer is never redrawn for a shake. The loop self-schedules while a
+  // shake is active and prunes expired effects when it ends — the same
+  // pattern the overlay layer uses for blood and flames.
+  private updateShake = () => {
+    if (!browser || !this.activeState) return;
+    const now = Date.now();
+    const shakes = this.activeState.shakeEffects ?? [];
+    const active = activeShakes(shakes, now);
+    const worldCanvases = [
+      this.staticCanvas,
+      this.actorCanvas,
+      this.overlayCanvas,
+    ];
+
+    if (active.length > 0) {
+      // The view centre in cells, matching the light viewport maths.
+      const centerOffsetX = this.startPosition
+        ? (this.startPosition.x + 0.5) * this.cellSize
+        : 0;
+      const centerOffsetY = this.startPosition
+        ? (this.startPosition.y + 0.5) * this.cellSize
+        : 0;
+      const viewCenter = {
+        x:
+          (centerOffsetX - this.panX - this.containerWidth / 2) /
+            this.cellSize +
+          this.containerWidth / (2 * this.cellSize),
+        y:
+          (centerOffsetY - this.panY - this.containerHeight / 2) /
+            this.cellSize +
+          this.containerHeight / (2 * this.cellSize),
+      };
+      const jitter = shakeJitter(active, viewCenter, now);
+      const transform = `translate(${jitter.x.toFixed(2)}px, ${jitter.y.toFixed(
+        2,
+      )}px)`;
+      worldCanvases.forEach(
+        (canvas) => canvas && (canvas.style.transform = transform),
+      );
+      if (this.shakeAnimationId) {
+        cancelAnimationFrame(this.shakeAnimationId);
+      }
+      this.shakeAnimationId = requestAnimationFrame(() => this.updateShake());
+    } else {
+      if (this.shakeAnimationId) {
+        this.shakeAnimationId = null;
+        worldCanvases.forEach(
+          (canvas) => canvas && (canvas.style.transform = ''),
+        );
+      }
+      // Prune expired shakes from the state, mirroring the overlay
+      // layer's cleanup of blood and flame effects.
+      if (shakes.length > 0) {
+        this.activeState.shakeEffects = [];
+        if (!this.externalState) {
+          gameStateStore.set(this.activeState);
+        }
+      }
+    }
   };
 
   private initCanvas = (

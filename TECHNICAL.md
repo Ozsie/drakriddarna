@@ -298,6 +298,19 @@ Animations (actor movement, projectiles, damage indicators) are managed as
 small state machines in `core/ActorAnimation.ts`, driven by
 `requestAnimationFrame` only while an animation is in flight.
 
+Screen shakes are transient effects on the game state like blood and
+flames (`shakeEffects`, `createShake` in `src/combat/CombatEffects.ts`),
+but render differently: the board controller jitters the three world
+canvases with a CSS `translate` per frame while a shake runs — the cached
+static layer is never redrawn for it, and the UI canvas stays steady. A
+shake's jitter decays quadratically over its lifetime and attenuates with
+the distance between its epicenter and the view centre. Triggers today:
+the landslide event shakes around the collapsed corridor, and
+interactables can shake via the built-in `fillRoomFog` and `spawnLava`
+effects (`src/interactables/InteractableLogic.ts`), which respectively
+flood a room with persistent fog and erupt lava cells that damage anyone
+standing on them when they appear.
+
 ## State, persistence and save migration
 
 The entire game lives in one `GameState` object, held in a Svelte `writable`

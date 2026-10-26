@@ -11,6 +11,7 @@ import {
   LightEffect,
   SecretType,
   Side,
+  TerrainType,
   type Weapon,
 } from '../types';
 import {
@@ -832,5 +833,91 @@ describe('toggleLight effect', () => {
       interacted: false,
     };
     expect(handler!(state, interactable as never, hero)).toBe(false);
+  });
+});
+
+describe('fillRoomFog effect', () => {
+  it('fills the given room with fog options', () => {
+    const hero = createTestHero(1, 1);
+    const state = createTestState(hero);
+    const interactable = {
+      position: { x: 2, y: 2 },
+      effect: 'fillRoomFog',
+      args: { room: 'B', options: { opacity: 0.5, damageOnEnter: 1 } },
+      oneTime: true,
+    };
+
+    triggerInteractable(state, interactable, hero);
+
+    expect(state.dungeon.layout.roomFog?.B).toEqual({
+      opacity: 0.5,
+      damageOnEnter: 1,
+    });
+  });
+
+  it('defaults to the room the interactable stands in', () => {
+    const hero = createTestHero(1, 1);
+    const state = createTestState(hero);
+    const interactable = {
+      position: { x: 2, y: 2 },
+      effect: 'fillRoomFog',
+      args: { options: { opacity: 0.4 } },
+      oneTime: true,
+    };
+
+    triggerInteractable(state, interactable, hero);
+
+    expect(state.dungeon.layout.roomFog?.A).toEqual({ opacity: 0.4 });
+  });
+});
+
+describe('spawnLava effect', () => {
+  it('floods cells with lava, hurting actors standing there', () => {
+    const hero = createTestHero(3, 3);
+    hero.health = 6;
+    const state = createTestState(hero);
+    const interactable = {
+      position: { x: 4, y: 4 },
+      effect: 'spawnLava',
+      args: {
+        cells: [
+          { x: 3, y: 3 },
+          { x: 4, y: 3 },
+        ],
+        options: { damageOnEnter: 2, damageOnTurnEnd: 1 },
+        shake: 10,
+      },
+      oneTime: true,
+    };
+
+    triggerInteractable(state, interactable, hero);
+
+    expect(state.dungeon.layout.terrain).toHaveLength(2);
+    state.dungeon.layout.terrain?.forEach((cell) => {
+      expect(cell.type).toBe(TerrainType.LAVA);
+      expect(cell.damageOnEnter).toBe(2);
+      expect(cell.damageOnTurnEnd).toBe(1);
+    });
+    // The hero standing on a flooded cell takes the enter damage at once.
+    expect(hero.health).toBe(4);
+    // The eruption shakes the board from the first flooded cell.
+    expect(state.shakeEffects).toHaveLength(1);
+    expect(state.shakeEffects?.[0].epicenter).toEqual({ x: 3, y: 3 });
+  });
+
+  it('never stacks a second lava terrain on an already flooded cell', () => {
+    const hero = createTestHero(1, 1);
+    const state = createTestState(hero);
+    const interactable = {
+      position: { x: 4, y: 4 },
+      effect: 'spawnLava',
+      args: { cells: [{ x: 3, y: 3 }], options: {} },
+      oneTime: true,
+    };
+
+    triggerInteractable(state, interactable, hero);
+    triggerInteractable(state, interactable, hero);
+
+    expect(state.dungeon.layout.terrain).toHaveLength(1);
   });
 });

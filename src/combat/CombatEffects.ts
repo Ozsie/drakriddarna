@@ -7,12 +7,17 @@ import type {
   GameState,
   Position,
   ProjectileAnimation,
+  ShakeEffect,
 } from '../types';
-import { getActorFlashIntensity } from '../core/ActorAnimation';
+import { getActorFlashIntensity } from '../core';
 
 export const BLOOD_SPLATTER_DURATION_MS = 500;
 export const PROJECTILE_DURATION_MS = 220;
 export const FLAME_EFFECT_DURATION_MS = 600;
+export const SHAKE_DURATION_MS = 450;
+
+// Default reach of an epicenter shake, in cells from the epicenter.
+export const SHAKE_DEFAULT_RADIUS_CELLS = 8;
 
 export const FLAME_COLORS = [
   '#fff3b0',
@@ -141,6 +146,69 @@ export const createFlameEffect = (
     timestamp: options?.timestamp ?? Date.now(),
     durationMs: options?.durationMs ?? FLAME_EFFECT_DURATION_MS,
   };
+};
+
+export const createShake = (options?: {
+  epicenter?: Position;
+  amplitude?: number;
+  radius?: number;
+  timestamp?: number;
+  durationMs?: number;
+}): ShakeEffect => ({
+  id: `shake-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+  ...(options?.epicenter ? { epicenter: { ...options.epicenter } } : {}),
+  amplitude: options?.amplitude ?? 6,
+  radius: options?.radius ?? SHAKE_DEFAULT_RADIUS_CELLS,
+  timestamp: options?.timestamp ?? Date.now(),
+  durationMs: options?.durationMs ?? SHAKE_DURATION_MS,
+});
+
+// The shake effects still running at `now`.
+export const activeShakes = (
+  shakes: ShakeEffect[] | undefined,
+  now: number,
+): ShakeEffect[] =>
+  (shakes ?? []).filter((shake) => {
+    const start = shake.timestamp ?? 0;
+    const duration = shake.durationMs ?? SHAKE_DURATION_MS;
+    return now >= start && now < start + duration;
+  });
+
+// The screen jitter of the active shakes at `now`, in pixels, as one
+// summed offset: each shake contributes a random jitter that decays
+// quadratically over its life, scaled by how far the view centre sits
+// from the shake's epicenter (a screen-wide shake ignores the view).
+// Visual-only randomness, so Math.random is fine here.
+export const shakeJitter = (
+  shakes: ShakeEffect[],
+  viewCenter: Position,
+  now: number,
+): { x: number; y: number } => {
+  let x = 0;
+  let y = 0;
+  shakes.forEach((shake) => {
+    const start = shake.timestamp ?? 0;
+    const duration = shake.durationMs ?? SHAKE_DURATION_MS;
+    const elapsed = Math.min(Math.max(now - start, 0), duration);
+    const progress = duration > 0 ? elapsed / duration : 1;
+    const decay = (1 - progress) * (1 - progress);
+    let attenuation = 1;
+    if (shake.epicenter) {
+      const distance = Math.hypot(
+        shake.epicenter.x - viewCenter.x,
+        shake.epicenter.y - viewCenter.y,
+      );
+      attenuation = Math.max(
+        0,
+        1 - distance / (shake.radius ?? SHAKE_DEFAULT_RADIUS_CELLS),
+      );
+    }
+    const strength = (shake.amplitude ?? 6) * decay * attenuation;
+    if (strength <= 0) return;
+    x += (Math.random() * 2 - 1) * strength;
+    y += (Math.random() * 2 - 1) * strength;
+  });
+  return { x, y };
 };
 
 export const renderActorFlash = (

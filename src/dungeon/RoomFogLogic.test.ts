@@ -4,6 +4,7 @@ import { Level } from '../types';
 import {
   applyRoomFogEnterEffects,
   applyRoomFogTurnEndEffects,
+  fillRoomFog,
   roomFogAt,
 } from './RoomFogLogic';
 
@@ -111,5 +112,30 @@ describe('applyRoomFogTurnEndEffects', () => {
     expect(state.actionLog[0].properties?.terrain).toBe(
       'campaign.test.poisonFog',
     );
+  });
+});
+
+describe('fillRoomFog', () => {
+  it('fills a room with the given fog options', () => {
+    const state = makeState(['AAA', 'ABB'], {}, []);
+    fillRoomFog(state, 'B', { opacity: 0.5, damageOnEnter: 2 });
+    expect(state.dungeon.layout.roomFog?.B).toEqual({
+      opacity: 0.5,
+      damageOnEnter: 2,
+    });
+  });
+
+  it('merges new options over fog the room already has', () => {
+    const state = makeState(
+      ['AAA', 'ABB'],
+      { B: { color: '#9ccc9c', opacity: 0.3 } },
+      [],
+    );
+    fillRoomFog(state, 'B', { opacity: 0.5, blocksLight: true });
+    expect(state.dungeon.layout.roomFog?.B).toEqual({
+      color: '#9ccc9c',
+      opacity: 0.5,
+      blocksLight: true,
+    });
   });
 });

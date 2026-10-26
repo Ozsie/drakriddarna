@@ -50,6 +50,7 @@ import { events } from './events';
 import { ACTIVE, onDrop, onPickup } from '../items/ItemLogic';
 import { findVisibleMonsters } from '../monsters/MonsterLogic';
 import { getMonsterTemplate } from '../monsters/MonsterRegistry';
+import { createShake } from '../combat';
 import { soundEffectManager } from '../audio';
 
 export const getEventsForDungeon = (
@@ -396,6 +397,12 @@ export const eventEffects: Record<
         letter: candidate.letter,
         cells: candidate.cells,
       });
+      // The collapsing rock shakes the board around the corridor.
+      const epicenter = candidate.cells[0];
+      state.shakeEffects = [
+        ...(state.shakeEffects ?? []),
+        createShake({ epicenter, amplitude: 9, durationMs: 600 }),
+      ];
     }
     event.used = true;
   },

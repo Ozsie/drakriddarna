@@ -158,7 +158,9 @@ export const testingGrounds: Dungeon = defineDungeon({
       [6, 9, TerrainType.LAVA, { damageOnEnter: 1, damageOnTurnEnd: 1 }],
     ],
     // Unlit brazier: interact with it (repeatedly) to toggle its torch
-    // light.
+    // light. The gas valve floods room C with sleeping-green fog; the
+    // lava vent floods four cells with burning lava and shakes the
+    // board.
     interactables: [
       [
         4,
@@ -176,6 +178,48 @@ export const testingGrounds: Dungeon = defineDungeon({
             effect: LightEffect.FLICKER,
             rate: 1.5,
             enabled: false,
+          },
+        },
+      ],
+      [
+        4,
+        1,
+        'fillRoomFog',
+        {
+          oneTime: true,
+          nameTranslationKey:
+            'campaign.iceDragon.testingGrounds.interactables.gasValve',
+          args: {
+            room: 'C',
+            options: {
+              color: '#9ccc9c',
+              opacity: 0.4,
+              rate: 0.5,
+              softness: 0.7,
+              density: 0.4,
+              damageOnEnter: 1,
+              nameTranslationKey: 'campaign.iceDragon.testingGrounds.fog.name',
+            },
+          },
+        },
+      ],
+      [
+        4,
+        3,
+        'spawnLava',
+        {
+          oneTime: true,
+          nameTranslationKey:
+            'campaign.iceDragon.testingGrounds.interactables.lavaVent',
+          args: {
+            cells: [
+              { x: 3, y: 2 },
+              { x: 4, y: 2 },
+              { x: 3, y: 3 },
+              { x: 4, y: 3 },
+            ],
+            options: { damageOnEnter: 1, damageOnTurnEnd: 1 },
+            shake: 10,
           },
         },
       ],
