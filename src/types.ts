@@ -17,6 +17,10 @@ export interface GameSettings {
 
 export type GameState = {
   campaignId?: string;
+  // Save format version; undefined means a pre-versioning save (version 0)
+  // and is migrated up to CURRENT_SAVE_VERSION on load
+  // (see src/saveMigration.ts).
+  saveVersion?: number;
   // The selected game master (difficulty). The single source of truth:
   // legacy saves carrying `difficulty`/`gameMasterId` are migrated onto
   // this field in `loadState`.

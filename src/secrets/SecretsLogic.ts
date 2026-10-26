@@ -9,7 +9,7 @@ import {
   isNeighbouring,
   isSamePosition,
 } from '../core';
-import { roll } from '../core';
+import { randomInt, roll } from '../core';
 import { createHazardActor, takeDamage } from '../core';
 import { pickupItem } from '../hero/HeroLogic';
 import { onPickup, SEARCH_BONUS } from '../items/ItemLogic';
@@ -275,14 +275,14 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
 export const randomItem = (state: GameState): Item | undefined => {
   const itemCount = state.itemDeck.length;
   if (itemCount === 0) return undefined;
-  const index = Math.floor(Math.random() * itemCount);
+  const index = randomInt(itemCount);
   return state.itemDeck[index];
 };
 
 const randomMagicItem = (state: GameState): Item | undefined => {
   const itemCount = state.magicItemDeck.length;
   if (itemCount === 0) return undefined;
-  const index = Math.floor(Math.random() * itemCount);
+  const index = randomInt(itemCount);
   return state.magicItemDeck[index];
 };
 

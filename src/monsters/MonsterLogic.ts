@@ -37,7 +37,7 @@ import {
   takeDamage,
 } from '../core';
 import { liveHeroes } from '../hero/HeroLogic';
-import { distanceInGrid } from '../core';
+import { distanceInGrid, nextRandom } from '../core';
 import {
   createPassableGrid,
   findBestPathToHeroes,
@@ -149,7 +149,7 @@ export const monsterActions = async (
 
     // Initialize turn state
     if (!monster.temperament) {
-      monster.temperament = Math.random() < 0.5 ? 'bold' : 'wary';
+      monster.temperament = nextRandom() < 0.5 ? 'bold' : 'wary';
     }
     monster.forgotBowThisTurn = rollBowForgotten(state);
 
@@ -177,11 +177,12 @@ export const monsterActions = async (
     );
 
     const passableGrid = createPassableGrid(state);
+    const visibleHeroesCache = createVisibleHeroesCache(state);
     const neighbouringHeroes: Hero[] = findNeighbouringHeroes(
       state,
       monster,
     ).filter((hero: Hero) => !hero.ignoredByMonsters);
-    const visibleHeroes: Hero[] = findVisibleHeroes(state, monster);
+    const visibleHeroes: Hero[] = visibleHeroesCache(monster);
 
     const context: BehaviorContext = {
       state,
@@ -244,6 +245,7 @@ export const monsterActions = async (
         state,
         monster,
         passableGrid,
+        visibleHeroesCache,
         opts,
         () => {
           performedAttack = true;
@@ -286,7 +288,7 @@ export const monsterActions = async (
       const neighbours = findNeighbouringHeroes(state, monster).filter(
         (h) => !h.ignoredByMonsters,
       );
-      const visible = findVisibleHeroes(state, monster);
+      const visible = visibleHeroesCache(monster);
 
       if (neighbours.length > 0) {
         const target = selectMeleeTarget(neighbours, monster, state);
@@ -369,6 +371,7 @@ const executeSlotAction = async (
   state: GameState,
   monster: Monster,
   passableGrid: PassableGrid,
+  visibleHeroes: (monster: Monster) => Hero[],
   opts: MonsterTurnOptions,
   onAttack: () => void,
   chosenBehavior?: MonsterBehavior,
@@ -392,7 +395,8 @@ const executeSlotAction = async (
           'move',
           state,
           monster,
-          createPassableGrid(state),
+          passableGrid,
+          visibleHeroes,
           opts,
           onAttack,
           chosenBehavior,
@@ -403,7 +407,7 @@ const executeSlotAction = async (
       break;
     }
     case 'shoot': {
-      const visible = findVisibleHeroes(state, monster);
+      const visible = visibleHeroes(monster);
       if (
         visible.length > 0 &&
         monster.rangedWeapon &&
@@ -422,7 +426,8 @@ const executeSlotAction = async (
           'move',
           state,
           monster,
-          createPassableGrid(state),
+          passableGrid,
+          visibleHeroes,
           opts,
           onAttack,
           chosenBehavior,
@@ -519,7 +524,7 @@ const executeSlotAction = async (
       break;
     }
     case 'fire_spray': {
-      const visible = findVisibleHeroes(state, monster);
+      const visible = visibleHeroes(monster);
       const diag = findDiagonalTargets(
         [...visible, ...getNonDarkLordMonsters(state)],
         monster,
@@ -566,7 +571,8 @@ const executeSlotAction = async (
           'move',
           state,
           monster,
-          createPassableGrid(state),
+          passableGrid,
+          visibleHeroes,
           opts,
           onAttack,
           chosenBehavior,
@@ -660,6 +666,52 @@ export const selectMeleeTarget = (
     stepsByHero: () => 0,
     rng,
   });
+};
+
+/**
+ * A per-monster-turn cache for `findVisibleHeroes`. Visibility only changes
+ * when the actors move, die or change their ignored flag, so the
+ * resolution-48 line-of-sight sweep per hero is only re-run when one of
+ * those changes — the cache key captures all of them.
+ */
+export const createVisibleHeroesCache = (
+  state: GameState,
+): ((monster: Monster) => Hero[]) => {
+  const cache = new Map<Monster, { signature: string; heroes: Hero[] }>();
+  return (monster: Monster): Hero[] => {
+    const signature = [
+      String(monster.position.x) + ',' + String(monster.position.y),
+      ...state.heroes.map(
+        (hero) =>
+          hero.name +
+          ':' +
+          String(hero.position.x) +
+          ',' +
+          String(hero.position.y) +
+          ':' +
+          String(hero.health) +
+          ':' +
+          (hero.ignoredByMonsters ? '1' : '0'),
+      ),
+      ...state.dungeon.layout.monsters.map(
+        (m) =>
+          m.name +
+          '@' +
+          String(m.position.x) +
+          ',' +
+          String(m.position.y) +
+          ':' +
+          (m.health > 0 ? '1' : '0'),
+      ),
+    ].join('|');
+    const cached = cache.get(monster);
+    if (cached && cached.signature === signature) {
+      return cached.heroes;
+    }
+    const heroes = findVisibleHeroes(state, monster);
+    cache.set(monster, { signature, heroes });
+    return heroes;
+  };
 };
 
 const findVisibleHeroes = (state: GameState, monster: Monster): Hero[] =>

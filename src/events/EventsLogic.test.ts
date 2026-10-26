@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { init } from '../game';
 import {
   drawNextEvent,
@@ -30,6 +30,8 @@ import {
   getEventMinSpawnDistance,
   getEarliestMonsterEventRound,
   isPartyBelowHalfHealth,
+  resetRng,
+  setRng,
   toArray,
 } from '../core';
 
@@ -861,22 +863,22 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
         h.maxHealth = 10;
       });
 
-      // Math.random < 0.5 triggers fountain_of_youth selection
-      vi.spyOn(Math, 'random').mockReturnValue(0.2);
+      // Seeded rng < 0.5 triggers fountain_of_youth selection
+      setRng(() => 0.2);
       const drawn1 = drawNextEvent(state);
       expect(drawn1.id).toBe('fountain_of_youth');
       expect(state.eventDeck[0].id).toBe('fountain_of_youth');
 
-      // Math.random >= 0.5 draws normally from top of unused events
+      // Seeded rng >= 0.5 draws normally from top of unused events
       state.eventDeck = [
         { ...otherEvent, used: false },
         { ...fountain, used: false },
       ];
-      vi.spyOn(Math, 'random').mockReturnValue(0.7);
+      setRng(() => 0.7);
       const drawn2 = drawNextEvent(state);
       expect(drawn2.id).toBe(otherEvent.id);
 
-      vi.restoreAllMocks();
+      resetRng();
     });
 
     it('does NOT trigger 50% fountain_of_youth chance if it was played in the previous round', () => {
@@ -902,7 +904,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       // Fountain of youth was played previous round
       state.previousEvent = { ...fountain };
 
-      vi.spyOn(Math, 'random').mockReturnValue(0.1);
+      setRng(() => 0.1);
       const drawn = drawNextEvent(state);
       expect(drawn.id).toBe(otherEvent.id);
 
@@ -912,7 +914,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
       const drawn2 = drawNextEvent(state);
       expect(drawn2.id).toBe(otherEvent.id);
 
-      vi.restoreAllMocks();
+      resetRng();
     });
 
     it('does NOT trigger 50% fountain_of_youth chance if party average health is 50% or above', () => {
@@ -935,11 +937,11 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
         h.maxHealth = 10;
       });
 
-      vi.spyOn(Math, 'random').mockReturnValue(0.1);
+      setRng(() => 0.1);
       const drawn = drawNextEvent(state);
       expect(drawn.id).toBe(otherEvent.id);
 
-      vi.restoreAllMocks();
+      resetRng();
     });
   });
 
@@ -994,7 +996,7 @@ describe('Monster spawn events: difficulty distance, early round skip, and party
 
 describe('Event light sources', () => {
   it('sun stone drops a troll carried item on the floor where the troll stood', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    setRng(() => 0.1);
     const state = init();
     const event = events.find((e) => e.id === 'sun_stone') as TurnEvent;
     const hero = state.heroes[0];
@@ -1024,7 +1026,7 @@ describe('Event light sources', () => {
     expect(droppedLocation).toBeDefined();
     expect(droppedLocation?.position).toEqual(troll.position);
 
-    vi.restoreAllMocks();
+    resetRng();
   });
 
   it('sun stone adds a lingering golden flash light at the affected hero', () => {

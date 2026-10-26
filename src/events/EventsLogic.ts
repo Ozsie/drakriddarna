@@ -35,7 +35,7 @@ import {
   isPartyBelowHalfHealth,
   shuffle,
 } from '../core';
-import { roll } from '../core';
+import { roll, nextRandom, randomInt } from '../core';
 import {
   findCell,
   findRoomCells,
@@ -94,7 +94,7 @@ export const drawNextEvent = (state: GameState): TurnEvent => {
     const hasFountain = state.eventDeck.some(
       (event) => event.id === 'fountain_of_youth',
     );
-    if (hasFountain && Math.random() < 0.5) {
+    if (hasFountain && nextRandom() < 0.5) {
       selectNextEvent(state, 'fountain_of_youth');
       return state.eventDeck[0];
     }
@@ -142,7 +142,7 @@ export const eventEffects: Record<
   sunStone: (state: GameState, event: TurnEvent) => {
     eventDescriptionLog(state, event);
     const maxIndex = liveHeroes(state).length;
-    const randomIndex = Math.floor(Math.random() * maxIndex);
+    const randomIndex = randomInt(maxIndex);
     const hero = liveHeroes(state)[randomIndex];
     const heroCell = findCell(
       state.dungeon.layout.grid,
@@ -382,7 +382,7 @@ export const eventEffects: Record<
     eventDescriptionLog(state, event);
     const candidates = getLandslideCandidates(state);
     if (candidates.length > 0) {
-      const randomIndex = Math.floor(Math.random() * candidates.length);
+      const randomIndex = randomInt(candidates.length);
       const candidate = candidates[randomIndex];
       state.dungeon.layout.grid = state.dungeon.layout.grid.map((row, y) =>
         collapseCellsInRow(row, candidate.cells, y),
@@ -480,16 +480,14 @@ export const eventEffects: Record<
 
     if (heroesWithMagicalItems.length > 0) {
       const maxHeroIndex = heroesWithMagicalItems.length;
-      const randomHeroIndex = Math.floor(Math.random() * maxHeroIndex);
+      const randomHeroIndex = randomInt(maxHeroIndex);
       const hero = heroesWithMagicalItems[randomHeroIndex];
       const magicItems = hero.inventory.filter(
         (item) => item && item.type === ItemType.MAGIC,
       );
       if (magicItems.length > 0) {
         const magicItemMaxIndex = magicItems.length;
-        const randomMagicItemIndex = Math.floor(
-          Math.random() * magicItemMaxIndex,
-        );
+        const randomMagicItemIndex = Math.floor(randomInt(magicItemMaxIndex));
         const item = magicItems[randomMagicItemIndex];
         item.disabled = true;
         if (item && !item.properties?.[ACTIVE] && item.pickup && item.drop) {
@@ -504,7 +502,7 @@ export const eventEffects: Record<
     eventDescriptionLog(state, event);
     const heroes = liveHeroes(state);
     const maxHeroIndex = heroes.length;
-    const randomHeroIndex = Math.floor(Math.random() * maxHeroIndex);
+    const randomHeroIndex = randomInt(maxHeroIndex);
     const hero = heroes[randomHeroIndex];
     if (hero) {
       hero.weapon.elemental = true;
@@ -575,7 +573,7 @@ export const eventEffects: Record<
     });
     if (heroesInDiscoveredRooms.length > 0) {
       const maxHeroIndex = heroesInDiscoveredRooms.length;
-      const randomHeroIndex = Math.floor(Math.random() * maxHeroIndex);
+      const randomHeroIndex = randomInt(maxHeroIndex);
       const hero = heroesInDiscoveredRooms[randomHeroIndex];
       state.dungeon.portal = { x: hero.position.x, y: hero.position.y };
       addLog(state, 'logs.events.hexagram', {
@@ -691,7 +689,7 @@ const restoreHeroState = (
 
 const getRandomRoom = (state: GameState) => {
   const maxRoomIndex = state.dungeon.discoveredRooms.length;
-  const randomIndex = Math.floor(Math.random() * maxRoomIndex);
+  const randomIndex = randomInt(maxRoomIndex);
   return state.dungeon.discoveredRooms[randomIndex];
 };
 
@@ -746,7 +744,7 @@ const spawnRandomMonster = (state: GameState, monsterType: MonsterType) => {
     ),
   );
   const pool = outOfLosCells.length > 0 ? outOfLosCells : candidateCells;
-  const chosenCell = pool[0];
+  const chosenCell = pool[randomInt(pool.length)];
 
   const monster = createMonster(
     monsterType,
@@ -768,7 +766,7 @@ const shuffleEvents = (array: TurnEvent[]): TurnEvent[] => {
   let currentIndex = array.length,
     randomIndex;
   while (currentIndex > 0) {
-    randomIndex = Math.floor(Math.random() * currentIndex);
+    randomIndex = randomInt(currentIndex);
     currentIndex--;
 
     [array[currentIndex], array[randomIndex]] = [

@@ -28,7 +28,7 @@ import {
   selectRangedTarget,
 } from '../MonsterLogic';
 import { attack } from '../../hero/HeroLogic';
-import { takeDamage } from '../../core';
+import { resetRng, setRng, takeDamage } from '../../core';
 
 const defaultWeapon: Weapon = {
   name: 'Sword',
@@ -423,7 +423,7 @@ describe('Target Scoring System', () => {
       monster.lastAttackedBy = hero1.name;
       hero2.roundTargetCount = 2;
 
-      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9); // no kill notice, deterministic random
+      setRng(() => 0.9); // no kill notice, deterministic random
       const selectedMelee = selectMeleeTarget(
         [hero1, hero2],
         monster,
@@ -439,7 +439,7 @@ describe('Target Scoring System', () => {
         () => 0.5,
       );
       expect(selectedRanged).toBe(hero1);
-      randomSpy.mockRestore();
+      resetRng();
     });
   });
 
