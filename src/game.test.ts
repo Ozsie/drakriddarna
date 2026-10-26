@@ -394,7 +394,7 @@ describe('loadState legacy collapsed corridor migration', () => {
     expect('collapsedCorridor' in dungeon).toBe(false);
   });
 
-  it('does not migrate the next dungeon', () => {
+  it('migrates the next dungeon chain too', () => {
     const state = init();
     const nextDungeon = structuredClone(
       state.dungeon,
@@ -406,7 +406,9 @@ describe('loadState legacy collapsed corridor migration', () => {
 
     loadState(state);
 
-    expect(nextDungeon.collapsedCorridor).toBe('B');
-    expect(nextDungeon.collapsedCorridors).toBeUndefined();
+    expect('collapsedCorridor' in nextDungeon).toBe(false);
+    expect(nextDungeon.collapsedCorridors).toEqual([
+      { letter: 'B', cells: [{ x: 3, y: 1 }] },
+    ]);
   });
 });

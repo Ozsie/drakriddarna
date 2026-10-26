@@ -36,11 +36,22 @@ export const migrateGameMasterFields = (state: GameState): void => {
   delete legacy.gameMasterId;
 };
 
-/** Converts a legacy single-letter `collapsedCorridor` into restore groups. */
+/**
+ * Converts a legacy single-letter `collapsedCorridor` into restore groups.
+ * The whole pending chain is migrated: nothing re-runs migrations when a
+ * nextDungeon later becomes the active dungeon, so its restore groups must
+ * exist by the time the save is loaded.
+ */
 export const migrateCollapsedCorridor = (state: GameState): void => {
-  // Only the active dungeon is migrated — an untouched nextDungeon keeps
-  // its legacy shape and migrates when it becomes active.
-  const legacyDungeon = state.dungeon as Dungeon & {
+  let dungeon: Dungeon | undefined = state.dungeon;
+  while (dungeon) {
+    migrateCollapsedCorridorOnDungeon(dungeon);
+    dungeon = dungeon.nextDungeon;
+  }
+};
+
+const migrateCollapsedCorridorOnDungeon = (dungeon: Dungeon): void => {
+  const legacyDungeon = dungeon as Dungeon & {
     collapsedCorridor?: string;
   };
   if (!legacyDungeon.collapsedCorridor) {

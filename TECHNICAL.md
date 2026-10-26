@@ -181,9 +181,12 @@ Two payoffs of that discipline:
 
 Every gameplay-affecting random path — dice, shuffles, behavior selection,
 spawn and event-effect picks, monster temperament — runs through the seeded
-rng now, so any playthrough is exactly reproducible given its seed; only
-visual effects (particles) and DOM element ids still use unseeded
-randomness, and they have no gameplay effect.
+rng now; only visual effects (particles) and DOM element ids still use
+unseeded randomness, and they have no gameplay effect. Note the limit of that
+claim: a seed reproduces the _random sequence_, not the playthrough.
+Reproducing a full human playthrough additionally requires recording and
+replaying its input events — the benchmark achieves this by driving the game
+from code, while a browser session records nothing.
 
 ## The opponent: monster AI and "Game Masters"
 
