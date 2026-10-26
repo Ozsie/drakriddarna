@@ -55,7 +55,7 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/gameMasters/   difficulty "personalities" (auto-discovered)
 ├── src/store/         Svelte stores wrapping the game state
 ├── src/ui/            pure functions that draw UI panels onto canvases
-├── src/components/    Dungeon.svelte — the one big canvas component
+├── src/components/    Dungeon.svelte (thin shell) + DungeonBoardController
 └── src/audio/         sound effect and music managers
 ```
 
@@ -70,11 +70,26 @@ is what makes two unusual things possible:
    directly, the way you would test any other business logic.
 
 The UI layer is deliberately thin. Only three `.svelte` components exist; the
-game view (`Dungeon.svelte`) owns the canvases and wires input to store calls,
-while all actual drawing lives in plain `.ts` modules (`DungeonRendering.ts`,
-`MonsterRendering.ts`, `TopBarRendering.ts`, …) that take a canvas 2D context
-and the game state as arguments. The same functions are unit-tested by giving
-them a stubbed context.
+game view (`Dungeon.svelte`, ~130 lines) is pure reactive glue — it derives
+state from the stores and forwards it to `DungeonBoardController`, a colocated
+plain-TS class that owns the canvases, the layered render loop, pan/drag/touch
+handling and all pointer/keyboard dispatch. The controller's pure decision
+parts are extracted into colocated modules with their own tests
+(`DungeonBoardSignatures.ts` — dirty-check keys gating each render layer,
+`DungeonBoardUiHit.ts` — the ordered "which UI element is under the pointer"
+cascade with injectable hit-testers, `DungeonBoardHover.ts` — the hover state
+machine as pure reducers). All actual drawing lives in plain `.ts` modules
+(`DungeonRendering.ts`, `MonsterRendering.ts`, `TopBarRendering.ts`, …) that
+take a canvas 2D context and the game state as arguments. The same functions
+are unit-tested by giving them a stubbed context.
+
+One consequence of this split deserves emphasis: Svelte's reactivity cannot
+see mutations of controller state, so everything the template renders is
+either a DOM binding (`bind:this`, `bind:clientWidth`) or set directly by the
+controller. Anything that looks like interpolated controller state in the
+template is computed once and silently goes stale — the mouse cursor is the
+canonical example: the controller writes it onto the canvas element itself,
+and the template carries only a static initial value.
 
 ## The domain model
 
@@ -256,9 +271,11 @@ reloads.
 
 Save migration is treated as a real concern: `loadState()` rewrites older
 save shapes (e.g. it collapses the legacy `difficulty`/`gameMasterId` fields
-into today's single `gameMaster` object, and falls back to the default
-campaign if the saved `campaignId` no longer exists). Backwards compatibility
-with existing saves is maintained in code rather than by versioning saves.
+into today's single `gameMaster` object, converts the pre-multi-collapse
+`collapsedCorridor` letter into the current per-collapse restore groups, and
+falls back to the default campaign if the saved `campaignId` no longer
+exists). Backwards compatibility with existing saves is maintained in code
+rather than by versioning saves.
 
 ## Internationalization
 
@@ -275,8 +292,9 @@ Three layers of verification:
 
 1. **Colocated unit tests** (Vitest). 54 `*.test.ts` files next to the code
    they cover — dice distributions, LOS edge cases, combat resolution, target
-   scoring, store behavior, and even rendering modules against stubbed canvas
-   contexts.
+   scoring, store behavior, rendering modules against stubbed canvas
+   contexts, and the board's extracted UI decision logic (render
+   dirty-check signatures, the hit-test cascade, the hover state machine).
 2. **Headless game benchmark** (`src/benchmark/`). A bot
    (`benchmark/bot.ts`) plays the hero side with a fixed aggressive policy
    while monster turns run with animation delays disabled. The suite plays
@@ -348,10 +366,13 @@ current design costs:
   programmer-only activity. That is precisely why the Campaign Editor exists:
   it is a concession that the content pipeline needs a GUI, implemented as a
   code generator rather than a runtime content format.
-- **`Dungeon.svelte` is 2,100+ lines.** The "thin UI" rule is honored by the
-  rendering modules but the component that wires input, canvases and stores
-  has grown into the repo's acknowledged hot spot; splitting it is tracked in
-  the README refactor list.
+- **The board's DOM glue is concentrated in one class.** `Dungeon.svelte`
+  was once 2,100+ lines and is now a ~130-line reactive shell, but the
+  extracted `DungeonBoardController` (~1,700 lines) still bundles the render
+  loop, canvas setup, pan handling and input dispatch. Its pure decision
+  parts (hover state, hit-test cascade, render signatures) are extracted
+  into colocated modules and unit-tested; the glue itself needs a real DOM
+  and remains untested.
 - **Determinism gaps.** A few peripheral random paths are still unseeded (see
   [Determinism](#determinism-a-seeded-rng-everywhere-it-matters)); until
   they are routed through the seeded RNG, only the benchmark's games are

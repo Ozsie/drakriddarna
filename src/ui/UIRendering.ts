@@ -1,5 +1,6 @@
 import type { RadialMenuState } from '../store/radialMenuStore';
 import type { GameState } from '../types';
+import type { CursorType } from '../hero/ClickInputLogic';
 import { renderRadialMenu } from './RadialMenuRendering';
 import { renderTopBar, type RenderTopBarOptions } from './TopBarRendering';
 import {
@@ -176,3 +177,27 @@ export {
   type RenderBetweenDungeonsOptions,
   type BetweenDungeonsHitResult,
 } from './BetweenDungeonsRendering';
+
+// Board cursors for the three interactive tile actions; '' means the plain
+// default cursor. The CSS cursor for each is built once and cached.
+const cursorEmojis: Record<CursorType, string> = {
+  sword: '⚔️',
+  boot: '🥾',
+  menu: '📜',
+  default: '',
+};
+
+const emojiCursorCache = new Map<CursorType, string>();
+
+export const emojiCursor = (cursorType: CursorType): string => {
+  if (cursorType === 'default') return 'default';
+  const cached = emojiCursorCache.get(cursorType);
+  if (cached) return cached;
+  const emoji = cursorEmojis[cursorType];
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><text x='0' y='16' font-size='20'>${emoji}</text></svg>`;
+  const cursor = `url("data:image/svg+xml,${encodeURIComponent(
+    svg,
+  )}") 4 28, pointer`;
+  emojiCursorCache.set(cursorType, cursor);
+  return cursor;
+};
