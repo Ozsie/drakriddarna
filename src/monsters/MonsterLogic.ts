@@ -61,6 +61,10 @@ import {
 } from './behavior';
 import { createFlameEffect } from '../combat';
 import {
+  applyRoomFogEnterEffects,
+  applyRoomFogTurnEndEffects,
+} from '../dungeon/RoomFogLogic';
+import {
   applyTerrainEnterEffects,
   applyTerrainTurnEndEffects,
 } from '../dungeon/TerrainLogic';
@@ -349,9 +353,10 @@ export const monsterActions = async (
     }
     monster.forgotBowThisTurn = false;
 
-    // Terrain the monster ends its turn on (e.g. standing in lava) takes
-    // its toll.
+    // Terrain the monster ends its turn on (e.g. standing in lava) or fog
+    // of the room it stands in takes its toll.
     applyTerrainTurnEndEffects(state, monster);
+    applyRoomFogTurnEndEffects(state, monster);
 
     monster.actions = maxActions;
     monster.movement = getEffectiveMaxMovement(monster);
@@ -788,6 +793,7 @@ export const monsterMoveToPosition = (
     });
     monster.movement--;
     applyTerrainEnterEffects(state, monster);
+    applyRoomFogEnterEffects(state, monster);
     if (monster.health <= 0) break;
   }
   monster.actions--;
@@ -890,6 +896,7 @@ export const monsterMove = (
     });
     monster.movement--;
     applyTerrainEnterEffects(state, monster);
+    applyRoomFogEnterEffects(state, monster);
     if (monster.health <= 0) break;
 
     if (

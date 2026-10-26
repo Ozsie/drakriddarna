@@ -249,12 +249,24 @@ with the rest of the scene.
 
 Terrain cells (water, lava, …) are declarative floor materials: each cell
 tints the floor with a translucent colour fill on the static layer, can
-carry a light (lava glows through the same lighting system as torches), and
-can be configured with gameplay effects — damage on entering the cell,
+carry a light (lava glows through the same lighting system as torches),
+and can be configured with gameplay effects — damage on entering the cell,
 damage on ending a turn standing in it, and a per-cell movement cost
 (`src/dungeon/TerrainLogic.ts`). The damage is environmental, bypassing the
 armour and shield rolls of combat, and is applied at the movement and
-turn-resolution hooks for heroes and monsters alike.
+turn-resolution hooks for heroes and monsters alike. Built-in materials
+also animate: water carries drifting wave crests and lava breathes with a
+pulsing glow plus slow hotspots, drawn on the dynamic layer above the lit
+scene but below the actors, so figures wading stand on top of the
+shimmer and the ambient darkness veil still darkens unlit material.
+
+Rooms and corridors can be filled with atmospheric fog
+(`roomFog`, `src/dungeon/RoomFogLogic.ts`), declared per grid letter: an
+undulating translucent cloud over every discovered cell of the room,
+drawn above actors and pillar shafts but below the darkness veil. Fog is
+visual by default but can be configured to damage actors entering or
+ending their turn in the room (e.g. poison gas), reusing the same
+environmental damage path as terrain.
 
 The lighting (`src/dungeon/LightRendering.ts`) is the most graphics-heavy
 code in the repo: a 2D visibility technique where each light source casts a

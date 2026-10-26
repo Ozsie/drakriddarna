@@ -392,10 +392,32 @@ export type TerrainOptions = {
   movementCost?: number;
   // Light emitted by the cell, e.g. the glow of lava.
   light?: ItemLight;
+  // How many times per second the animated overlay loops (default: per
+  // terrain type).
+  rate?: number;
 };
 
 export type TerrainCell = TerrainOptions & {
   position: Position;
+};
+
+// Atmospheric fog filling every cell of a room or corridor, declared per
+// grid letter. Purely visual by default, but can be configured to damage
+// actors that enter or end their turn in the room, e.g. poison gas.
+export type RoomFogOptions = {
+  // Colour of the fog cloud (default: grey blue).
+  color?: string;
+  // 0..1 transparency of the fog cloud (default: 0.35).
+  opacity?: number;
+  // How many times per second the cloud undulates (default: 0.3).
+  rate?: number;
+  // Flat damage taken when a hero or monster enters the room.
+  damageOnEnter?: number;
+  // Flat damage taken when a hero or monster ends its turn in the room.
+  damageOnTurnEnd?: number;
+  // Translation key of the fog's display name, used in the damage log
+  // (default: 'content.fog.name').
+  nameTranslationKey?: string;
 };
 
 export type Layout = {
@@ -418,6 +440,8 @@ export type Layout = {
   // tints the floor and can hurt or slow actors that enter or stand on
   // them, and can emit light.
   terrain?: TerrainCell[];
+  // Fog filling whole rooms or corridors, keyed by grid letter.
+  roomFog?: Record<string, RoomFogOptions>;
   corners: Corner[];
   interactables?: InteractableCell[];
   lights?: LightSource[];

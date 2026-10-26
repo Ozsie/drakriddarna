@@ -147,5 +147,8 @@
   "terrain": {
     "water": "water",
     "lava": "lava"
+  },
+  "fog": {
+    "name": "fog"
   }
 }

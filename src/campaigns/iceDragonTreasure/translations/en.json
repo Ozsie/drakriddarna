@@ -71,6 +71,9 @@
       "name": "Testing Grounds",
       "secrets": {
         "trapDoor": "Welcome to Drakriddarna"
+      },
+      "fog": {
+        "name": "poisonous fog"
       }
     }
   }

@@ -384,6 +384,15 @@ export const validateLayout = (
     }
   });
 
+  Object.keys(layout.roomFog || {}).forEach((room) => {
+    if (!gridCells.has(room)) {
+      errors.push({
+        type: 'room',
+        message: `Fog room '${room}' does not exist in the grid.`,
+      });
+    }
+  });
+
   // Corridor cells inside a room letter
   const seenCorridorCells = new Set<string>();
   (layout.corridorCells || []).forEach((corridorCell) => {

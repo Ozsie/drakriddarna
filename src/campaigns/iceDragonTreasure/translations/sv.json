@@ -71,6 +71,9 @@
       "name": "Testområde",
       "secrets": {
         "trapDoor": "Välkommen till Drakriddarna"
+      },
+      "fog": {
+        "name": "giftig dimma"
       }
     }
   }

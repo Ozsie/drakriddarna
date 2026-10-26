@@ -30,9 +30,12 @@ import {
   renderPillars,
   renderPillarTops,
   renderPortal,
+  renderRoomFog,
   renderSecrets,
   renderTerrain,
+  renderTerrainAnimation,
   renderWalls,
+  hasAnimatedTerrainEffects,
 } from '../dungeon/DungeonRendering';
 import {
   activeLights,
@@ -644,6 +647,13 @@ export class DungeonBoardController {
       lightViewport,
       frameLights,
     );
+    // Animated terrain overlays (water shimmer, lava pulse) and room fog
+    // undulate every frame while visible.
+    const hasTerrainEffects = hasAnimatedTerrainEffects(
+      this.activeState,
+      debugMode,
+      lightViewport,
+    );
     const sig = getDynamicSignature(
       this.activeState,
       this.debugMode ?? false,
@@ -653,6 +663,7 @@ export class DungeonBoardController {
       !force &&
       !hasActiveAnimations &&
       !hasLightEffects &&
+      !hasTerrainEffects &&
       sig === this.lastDynamicSignature
     )
       return;
@@ -754,6 +765,17 @@ export class DungeonBoardController {
       );
     }
 
+    // Animated terrain material (water shimmer, lava pulse) sits above the
+    // lit scene but below the actors, so figures wading stand on top of it.
+    renderTerrainAnimation(
+      ctx,
+      this.cellSize,
+      this.activeState,
+      debugMode,
+      currentTime,
+      lightViewport,
+    );
+
     const hasActiveMonsters = renderMonsters(
       ctx,
       this.actors,
@@ -784,6 +806,17 @@ export class DungeonBoardController {
       );
     }
 
+    // Room fog drifts above the actors and pillar shafts, but below the
+    // darkness veil so unlit fog darkens with the room.
+    renderRoomFog(
+      ctx,
+      this.cellSize,
+      this.activeState,
+      debugMode,
+      currentTime,
+      lightViewport,
+    );
+
     if (this.darknessCanvas && this.lightCanvas) {
       renderAmbientDarkness(
         ctx,
@@ -807,6 +840,7 @@ export class DungeonBoardController {
       hasActiveMonsters ||
       hasActiveHeroes ||
       hasLightEffects ||
+      hasTerrainEffects ||
       hasActiveActorAnimations(currentTime)
     ) {
       this.dynamicAnimationId = requestAnimationFrame(() => {

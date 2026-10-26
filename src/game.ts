@@ -14,6 +14,7 @@ import {
   resetLiveHeroes,
 } from './hero/HeroLogic';
 import { resetOnNext, resetOnNextDungeon } from './items/ItemLogic';
+import { applyRoomFogTurnEndEffects } from './dungeon/RoomFogLogic';
 import { applyTerrainTurnEndEffects } from './dungeon/TerrainLogic';
 import {
   drawNextEvent,
@@ -173,9 +174,11 @@ export const next = async (
   }
   if (state.currentActor === undefined) return state;
   else {
-    // Terrain the hero ends its turn on (e.g. standing in lava) takes its
-    // toll before the turn passes on.
+    // Terrain the hero ends its turn on (e.g. standing in lava) or fog
+    // of the room it stands in (e.g. poison gas) takes its toll before
+    // the turn passes on.
     applyTerrainTurnEndEffects(state, state.currentActor);
+    applyRoomFogTurnEndEffects(state, state.currentActor);
     addLog(state, 'logs.endedTurn', {
       name: i18n(state.currentActor.name),
     });

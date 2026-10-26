@@ -57,6 +57,7 @@ import {
   triggerInteractable,
 } from '../interactables/InteractableLogic';
 import { executeRoomDiscoveredEffect } from '../dungeon/RoomEffectsLogic';
+import { applyRoomFogEnterEffects } from '../dungeon/RoomFogLogic';
 import {
   applyTerrainEnterEffects,
   terrainMovementCost,
@@ -712,6 +713,7 @@ export const arriveOnCell = (
   hero.position.x = pos.x;
   hero.position.y = pos.y;
   applyTerrainEnterEffects(state, hero);
+  applyRoomFogEnterEffects(state, hero);
   checkForNote(state, hero);
   checkForItemRevealedSecret(state, hero);
   checkForInteractable(state, hero, 'step');

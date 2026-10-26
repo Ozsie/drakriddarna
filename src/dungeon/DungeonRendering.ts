@@ -3,9 +3,13 @@ import {
   type Corner,
   type Door,
   type GameState,
+  type Position,
+  type RoomFogOptions,
   type Secret,
+  type TerrainCell,
   SecretType,
   Side,
+  TerrainType,
   type WallEdge,
 } from '../types';
 import { COLLAPSED, EMPTY, SEALED_DOOR, WALL } from '../core';
@@ -20,8 +24,10 @@ import { autoDetectCorners } from './cornerDetection';
 import { drawCachedTile } from './TileTextureCache';
 import {
   TERRAIN_DEFAULT_OPACITY,
+  TERRAIN_DEFAULT_RATE,
   TERRAIN_DEFAULT_STYLING,
 } from './TerrainLogic';
+import type { LightViewport } from './LightRendering';
 
 export const background = '#1E1C19';
 
@@ -320,6 +326,289 @@ export const renderTerrain = (
       );
       ctx.globalAlpha = 1;
     });
+};
+
+// --- Animated terrain and fog overlays (dynamic layer) --------------------
+
+// Fog cloud styling defaults.
+const DEFAULT_FOG_COLOR = '#b9c6cf';
+const DEFAULT_FOG_OPACITY = 0.35;
+const DEFAULT_FOG_RATE = 0.3;
+
+// Only the built-in terrain types have an animated overlay; unknown types
+// render their static fill alone.
+const isAnimatedTerrainType = (type: string): boolean =>
+  type === TerrainType.WATER || type === TerrainType.LAVA;
+
+const fract = (v: number): number => v - Math.floor(v);
+
+// Deterministic pseudo-random 0..1 phase per cell, so the overlays move
+// stably across frames without flicker and without stored per-cell state.
+const cellHash = (x: number, y: number, salt = 0): number =>
+  fract(
+    Math.sin((x + 1) * 12.9898 + (y + 1) * 78.233 + salt * 37.719) * 43758.5453,
+  );
+
+const cellInViewport = (cell: Position, viewport?: LightViewport): boolean => {
+  if (!viewport) return true;
+  return (
+    cell.x + 1 > viewport.x &&
+    cell.x < viewport.x + viewport.width &&
+    cell.y + 1 > viewport.y &&
+    cell.y < viewport.y + viewport.height
+  );
+};
+
+const terrainOverlayRate = (cell: TerrainCell): number =>
+  cell.rate ?? TERRAIN_DEFAULT_STYLING[cell.type]?.rate ?? TERRAIN_DEFAULT_RATE;
+
+// The visible fog cells of all fogged rooms: one grid scan collects each
+// discovered cell whose grid letter carries fog options.
+const collectFogCells = (
+  state: GameState,
+  debugMode: boolean,
+  viewport?: LightViewport,
+): { position: Position; options: RoomFogOptions }[] => {
+  const fog = state.dungeon.layout.roomFog;
+  if (!fog) return [];
+  const cells: { position: Position; options: RoomFogOptions }[] = [];
+  state.dungeon.layout.grid.forEach((row, y) => {
+    toArray(row).forEach((letter: string, x: number) => {
+      const options = fog[letter];
+      if (
+        options &&
+        (debugMode || isDiscovered(state.dungeon, x, y)) &&
+        cellInViewport({ x, y }, viewport)
+      ) {
+        cells.push({ position: { x, y }, options });
+      }
+    });
+  });
+  return cells;
+};
+
+// Whether any animated terrain or fog overlay is visible, and so the
+// dynamic layer needs continuous re-rendering.
+export const hasAnimatedTerrainEffects = (
+  state: GameState,
+  debugMode: boolean,
+  viewport?: LightViewport,
+): boolean =>
+  (state.dungeon.layout.terrain ?? []).some(
+    (cell) =>
+      isAnimatedTerrainType(cell.type) &&
+      (debugMode ||
+        isDiscovered(state.dungeon, cell.position.x, cell.position.y)) &&
+      cellInViewport(cell.position, viewport),
+  ) || collectFogCells(state, debugMode, viewport).length > 0;
+
+// Travelling wave crests: two translucent lines drift down the water
+// cell, fading in and out, wiggling slightly to read as ripples.
+// Traces one horizontal water wave: a sine sampled across the cell width,
+// so the crest reads as a ripple instead of a straight line.
+const strokeWaterWave = (
+  ctx: CanvasRenderingContext2D,
+  x0: number,
+  yBase: number,
+  cellSize: number,
+  amplitude: number,
+  wavelength: number,
+  phase: number,
+  style: string,
+  lineWidth: number,
+): void => {
+  const SEGMENTS = 6;
+  ctx.strokeStyle = style;
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+  for (let segment = 0; segment <= SEGMENTS; segment++) {
+    const px = x0 + (segment / SEGMENTS) * cellSize;
+    const py =
+      yBase +
+      Math.sin(((px - x0) / wavelength) * Math.PI * 2 + phase) * amplitude;
+    if (segment === 0) {
+      ctx.moveTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
+  }
+  ctx.stroke();
+};
+
+// Three wave bands drift down the cell at staggered depths and speeds —
+// the back bands slower and dimmer, giving a parallax feel — each fading
+// in and out as it travels. Every crest is followed by a darker trough
+// line, so the water reads as lit ripples with shadowed valleys.
+const renderWaterShimmer = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  cell: TerrainCell,
+  timeMs: number,
+): void => {
+  const rate = terrainOverlayRate(cell);
+  const t = timeMs / 1000;
+  const x0 = cell.position.x * cellSize;
+  const y0 = cell.position.y * cellSize;
+  for (let band = 0; band < 3; band++) {
+    const phase = cellHash(cell.position.x, cell.position.y, band);
+    // Back bands travel down more slowly: parallax between the layers.
+    const progress = fract(t * rate * (1 - band * 0.22) + phase);
+    const alpha = Math.sin(Math.PI * progress) * (0.32 - band * 0.09);
+    if (alpha <= 0.01) continue;
+    const bandY = y0 + progress * cellSize;
+    const amplitude = cellSize * (0.07 - band * 0.015);
+    const wavelength = cellSize * (0.85 + band * 0.3);
+    // The ripple pattern travels sideways, phase-shifted per cell and band.
+    const ripplePhase = 2 * Math.PI * (t * (0.6 + band * 0.2) + phase);
+    strokeWaterWave(
+      ctx,
+      x0,
+      bandY,
+      cellSize,
+      amplitude,
+      wavelength,
+      ripplePhase,
+      `rgba(235,247,255,${alpha.toFixed(3)})`,
+      1.5 + (band === 0 ? 1 : 0),
+    );
+    // Shadowed trough trailing the crest.
+    strokeWaterWave(
+      ctx,
+      x0,
+      bandY + cellSize * 0.22,
+      cellSize,
+      amplitude * 0.8,
+      wavelength,
+      ripplePhase + 0.6,
+      `rgba(8,30,52,${(alpha * 0.55).toFixed(3)})`,
+      2,
+    );
+  }
+};
+
+// The lava cell breathes: a bright overlay pulses over the base fill,
+// dark crust spots sit nearly still in the molten material — standing out
+// most when the glow ebbs — and two hotspots drift slowly between them.
+const renderLavaPulse = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  cell: TerrainCell,
+  timeMs: number,
+): void => {
+  const rate = terrainOverlayRate(cell);
+  const t = (timeMs / 1000) * rate;
+  const glow =
+    0.5 +
+    0.5 *
+      Math.sin(2 * Math.PI * (t + cellHash(cell.position.x, cell.position.y)));
+  const x = cell.position.x * cellSize;
+  const y = cell.position.y * cellSize;
+  ctx.globalAlpha = 0.1 + 0.14 * glow;
+  ctx.fillStyle = '#ff8c1a';
+  ctx.fillRect(x, y, cellSize, cellSize);
+  // Dark crust spots: cooled blotches in the molten pool. They wander a
+  // fraction of a cell and swell slightly, but never leave their spot —
+  // unlike the hotspots, they anchor the motion.
+  for (let spot = 0; spot < 3; spot++) {
+    const spotPhase = cellHash(cell.position.x, cell.position.y, spot + 1);
+    const driftX = 0.05 * Math.sin(2 * Math.PI * (t * 0.35 + spotPhase));
+    const driftY = 0.05 * Math.cos(2 * Math.PI * (t * 0.3 + spotPhase * 0.618));
+    const sx = x + (0.15 + 0.6 * fract(spotPhase * 1.618) + driftX) * cellSize;
+    const sy = y + (0.15 + 0.6 * fract(spotPhase * 2.414) + driftY) * cellSize;
+    const radius =
+      cellSize *
+      (0.08 + 0.05 * fract(spotPhase * 3.303)) *
+      (0.9 + 0.2 * (1 - glow));
+    ctx.globalAlpha = 0.42 + 0.16 * (1 - glow);
+    ctx.fillStyle = '#4a0e02';
+    ctx.beginPath();
+    ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (let spot = 0; spot < 2; spot++) {
+    const spotPhase = cellHash(cell.position.x, cell.position.y, spot + 4);
+    const drift = Math.sin(2 * Math.PI * (t * 0.6 + spotPhase));
+    const sx = x + (0.3 + 0.4 * fract(spotPhase) + 0.12 * drift) * cellSize;
+    const sy =
+      y + (0.3 + 0.4 * fract(spotPhase * 0.618) - 0.12 * drift) * cellSize;
+    ctx.globalAlpha = 0.16 + 0.2 * glow;
+    ctx.fillStyle = '#ffd166';
+    ctx.beginPath();
+    ctx.arc(sx, sy, cellSize * 0.13, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+};
+
+// Animated material overlays for discovered terrain cells, drawn on the
+// dynamic layer above the static base fill and below the actors, so
+// figures wading in the water stand on top of the shimmer. The ambient
+// darkness veil applies afterwards, keeping unlit terrain dark.
+export const renderTerrainAnimation = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+  timeMs: number,
+  viewport?: LightViewport,
+): void => {
+  (state.dungeon.layout.terrain ?? [])
+    .filter(
+      (cell) =>
+        isAnimatedTerrainType(cell.type) &&
+        (debugMode ||
+          isDiscovered(state.dungeon, cell.position.x, cell.position.y)) &&
+        cellInViewport(cell.position, viewport),
+    )
+    .forEach((cell) => {
+      if (cell.type === TerrainType.WATER) {
+        renderWaterShimmer(ctx, cellSize, cell, timeMs);
+      } else {
+        renderLavaPulse(ctx, cellSize, cell, timeMs);
+      }
+    });
+};
+
+// The fog cloud of a fogged room: a translucent fill over every discovered
+// cell of the room, undulating per 2x2-cell block so the cloud reads as
+// drifting instead of a flat film. Drawn above pillar shafts and actors
+// but before the ambient darkness veil, so unlit fog darkens with the
+// room.
+export const renderRoomFog = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+  timeMs: number,
+  viewport?: LightViewport,
+): void => {
+  const fog = state.dungeon.layout.roomFog;
+  if (!fog) return;
+  collectFogCells(state, debugMode, viewport).forEach(
+    ({ position, options }) => {
+      const rate = options.rate ?? DEFAULT_FOG_RATE;
+      const t = (timeMs / 1000) * rate;
+      // The undulation phase is shared per 2x2 block of cells, with a
+      // small per-cell jitter, so neighbouring cells breathe together.
+      const phase = cellHash(
+        Math.floor(position.x / 2),
+        Math.floor(position.y / 2),
+      );
+      const jitter = cellHash(position.x, position.y) * 0.15;
+      const alpha =
+        (options.opacity ?? DEFAULT_FOG_OPACITY) *
+        (0.72 + 0.28 * Math.sin(2 * Math.PI * (t + phase + jitter)));
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = options.color ?? DEFAULT_FOG_COLOR;
+      ctx.fillRect(
+        position.x * cellSize,
+        position.y * cellSize,
+        cellSize,
+        cellSize,
+      );
+    },
+  );
+  ctx.globalAlpha = 1;
 };
 
 // A pillar renders in two passes. The base tile is an ordinary floor

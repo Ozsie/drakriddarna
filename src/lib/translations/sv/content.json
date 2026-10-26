@@ -147,5 +147,8 @@
   "terrain": {
     "water": "vattnet",
     "lava": "lavan"
+  },
+  "fog": {
+    "name": "dimman"
   }
 }

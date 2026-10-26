@@ -10,6 +10,7 @@ import {
   parsePosition,
   parseWall,
   parseSecret,
+  parseRoomFog,
   parseTerrain,
   parseTileMap,
 } from './dungeonParser';
@@ -317,6 +318,21 @@ describe('dungeonParser', () => {
     });
   });
 
+  describe('parseRoomFog', () => {
+    it('turns a list of room letters into default fog options', () => {
+      expect(parseRoomFog(['A', 'G'])).toEqual({ A: {}, G: {} });
+    });
+
+    it('keeps keyed fog options as declared', () => {
+      const fog = parseRoomFog({
+        J: { color: '#9ccc9c', opacity: 0.4, rate: 0.6, damageOnEnter: 1 },
+      });
+      expect(fog).toEqual({
+        J: { color: '#9ccc9c', opacity: 0.4, rate: 0.6, damageOnEnter: 1 },
+      });
+    });
+  });
+
   describe('defineLayout and defineDungeon', () => {
     it('fills default properties when defining layout and dungeon', () => {
       const layout = defineLayout({
@@ -329,6 +345,7 @@ describe('dungeonParser', () => {
       expect(layout.items).toEqual([]);
       expect(layout.lights).toEqual([]);
       expect(layout.terrain).toEqual([]);
+      expect(layout.roomFog).toEqual({});
       expect(layout.walls).toEqual([]);
 
       const layoutWithLights = defineLayout({

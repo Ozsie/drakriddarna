@@ -26,6 +26,7 @@ Welcome to **Drakriddarna** (Dragonfire), a tactical turn-based dungeon-crawling
    - [Searching for Secrets & Traps](#searching-for-secrets--traps)
    - [Pitfalls & Hidden Hazards](#pitfalls--hidden-hazards)
    - [Terrain Cells](#terrain-cells)
+   - [Room Fog](#room-fog)
    - [Interactables & Dungeon Notes](#interactables--dungeon-notes)
 5. [Equipment & Items](#equipment--items)
    - [Weapons](#weapons)
@@ -234,6 +235,13 @@ Some dungeons have floor cells covered in a material, most commonly water or lav
 - **Damage on Turn End**: Ending a turn while standing on the cell deals the terrain's damage, on heroes and monsters alike.
 - **Movement Cost**: Entering the cell may cost more than one point of movement (e.g. wading through water costs `2`).
 - **Light**: Lava and other glowing materials emit light of their own, working like any other light source.
+
+### Room Fog
+
+Some rooms and corridors are filled with fog, visible as a drifting cloud over the whole room. Like terrain, what a fog does is decided per dungeon and always shows in the game log the first time a hero is affected.
+
+- **Damage on Entering / Turn End**: Fog can be dangerous (e.g. poison gas), damaging heroes and monsters that enter the room or end their turn in it. Harmless fog is purely visual.
+- **Cover**: Figures inside the fog remain visible; it does not block line of sight or movement.
 
 ### Interactables & Dungeon Notes
 

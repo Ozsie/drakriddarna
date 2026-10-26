@@ -181,6 +181,14 @@ export const testingGrounds: Dungeon = defineDungeon({
       ],
     ],
     corridors: ['G', 'E', 'F'],
+    // Room J is filled with a slowly undulating fog that is harmless to
+    // enter but damages anyone ending their turn in it (poison gas).
+    roomFog: {
+      J: {
+        damageOnTurnEnd: 1,
+        nameTranslationKey: 'campaign.iceDragon.testingGrounds.fog.name',
+      },
+    },
     doors: [
       [Side.UP, 3, 8, { trapped: 1, hidden: true }],
       [Side.LEFT, 7, 6, { locked: true }],
