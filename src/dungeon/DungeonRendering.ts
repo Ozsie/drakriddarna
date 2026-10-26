@@ -334,6 +334,8 @@ export const renderTerrain = (
 const DEFAULT_FOG_COLOR = '#b9c6cf';
 const DEFAULT_FOG_OPACITY = 0.35;
 const DEFAULT_FOG_RATE = 0.3;
+const DEFAULT_FOG_SOFTNESS = 0.6;
+const DEFAULT_FOG_DENSITY = 0.3;
 
 // Only the built-in terrain types have an animated overlay; unknown types
 // render their static fill alone.
@@ -363,15 +365,17 @@ const terrainOverlayRate = (cell: TerrainCell): number =>
   cell.rate ?? TERRAIN_DEFAULT_STYLING[cell.type]?.rate ?? TERRAIN_DEFAULT_RATE;
 
 // The visible fog cells of all fogged rooms: one grid scan collects each
-// discovered cell whose grid letter carries fog options.
+// discovered cell whose grid letter carries fog options, together with
+// the letter so renderers can group cells into whole-room shapes.
 const collectFogCells = (
   state: GameState,
   debugMode: boolean,
   viewport?: LightViewport,
-): { position: Position; options: RoomFogOptions }[] => {
+): { position: Position; room: string; options: RoomFogOptions }[] => {
   const fog = state.dungeon.layout.roomFog;
   if (!fog) return [];
-  const cells: { position: Position; options: RoomFogOptions }[] = [];
+  const cells: { position: Position; room: string; options: RoomFogOptions }[] =
+    [];
   state.dungeon.layout.grid.forEach((row, y) => {
     toArray(row).forEach((letter: string, x: number) => {
       const options = fog[letter];
@@ -380,7 +384,7 @@ const collectFogCells = (
         (debugMode || isDiscovered(state.dungeon, x, y)) &&
         cellInViewport({ x, y }, viewport)
       ) {
-        cells.push({ position: { x, y }, options });
+        cells.push({ position: { x, y }, room: letter, options });
       }
     });
   });
@@ -569,11 +573,34 @@ export const renderTerrainAnimation = (
     });
 };
 
+// The blur radius of a fog cloud's edges, in pixels. `softness` 0 keeps
+// hard cell edges; 1 feathers the cloud roughly half a cell out and in.
+const fogEdgeBlurPx = (options: RoomFogOptions, cellSize: number): number =>
+  Math.max(
+    0,
+    Math.round((options.softness ?? DEFAULT_FOG_SOFTNESS) * 0.3 * cellSize),
+  );
+
+// Traces a whole room's fog cells as one path on the context, so a single
+// fill (and so a single blur pass) covers the union of the cells — solid
+// inside, soft only at the room's boundary.
+const traceRoomPath = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  cells: { position: Position }[],
+): void => {
+  ctx.beginPath();
+  cells.forEach(({ position }) => {
+    ctx.rect(position.x * cellSize, position.y * cellSize, cellSize, cellSize);
+  });
+};
+
 // The fog cloud of a fogged room: a translucent fill over every discovered
-// cell of the room, undulating per 2x2-cell block so the cloud reads as
-// drifting instead of a flat film. Drawn above pillar shafts and actors
-// but before the ambient darkness veil, so unlit fog darkens with the
-// room.
+// cell of the room, drawn as one whole-room shape so the cloud reads as a
+// single body. The whole cloud slowly breathes (its alpha undulates with a
+// per-room phase) and its edges blur into the room's surroundings —
+// `softness` 0 keeps hard cell edges. Drawn above pillar shafts and actors
+// but before the ambient darkness veil, so unlit fog darkens with the room.
 export const renderRoomFog = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
@@ -584,31 +611,88 @@ export const renderRoomFog = (
 ): void => {
   const fog = state.dungeon.layout.roomFog;
   if (!fog) return;
+  const rooms = new Map<
+    string,
+    { position: Position; options: RoomFogOptions }[]
+  >();
   collectFogCells(state, debugMode, viewport).forEach(
-    ({ position, options }) => {
-      const rate = options.rate ?? DEFAULT_FOG_RATE;
-      const t = (timeMs / 1000) * rate;
-      // The undulation phase is shared per 2x2 block of cells, with a
-      // small per-cell jitter, so neighbouring cells breathe together.
-      const phase = cellHash(
-        Math.floor(position.x / 2),
-        Math.floor(position.y / 2),
-      );
-      const jitter = cellHash(position.x, position.y) * 0.15;
-      const alpha =
-        (options.opacity ?? DEFAULT_FOG_OPACITY) *
-        (0.72 + 0.28 * Math.sin(2 * Math.PI * (t + phase + jitter)));
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = options.color ?? DEFAULT_FOG_COLOR;
-      ctx.fillRect(
-        position.x * cellSize,
-        position.y * cellSize,
-        cellSize,
-        cellSize,
-      );
+    ({ position, room, options }) => {
+      const group = rooms.get(room) ?? [];
+      group.push({ position, options });
+      rooms.set(room, group);
     },
   );
-  ctx.globalAlpha = 1;
+  rooms.forEach((cells, room) => {
+    const options = cells[0].options;
+    const rate = options.rate ?? DEFAULT_FOG_RATE;
+    const t = (timeMs / 1000) * rate;
+    const alpha =
+      (options.opacity ?? DEFAULT_FOG_OPACITY) *
+      (0.78 +
+        0.22 * Math.sin(2 * Math.PI * (t + cellHash(room.charCodeAt(0), 0))));
+    const blurPx = fogEdgeBlurPx(options, cellSize);
+    ctx.save();
+    if (blurPx > 0) {
+      // Same graceful degradation as the light glow: browsers without
+      // canvas filter support ignore the assignment, leaving hard edges.
+      ctx.filter = `blur(${blurPx}px)`;
+    }
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = options.color ?? DEFAULT_FOG_COLOR;
+    traceRoomPath(ctx, cellSize, cells);
+    ctx.fill();
+    ctx.restore();
+  });
+};
+
+// Fog absorbs light: every fogged room with a density erases that
+// fraction of the light mask inside the room, so glows shining into or
+// standing in the fog dim, and the ambient darkness veil — which is
+// punched by the same mask — closes in over the room. Rooms that block
+// light entirely are handled by the ray cast (their occlusion map cells
+// read as fog of war) and are skipped here. The erase uses the same
+// soft whole-room shape and edge blur as the visible cloud, so the dimmed
+// glow matches the fog's boundary.
+export const renderFogLightDim = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+  viewport?: LightViewport,
+): void => {
+  const fog = state.dungeon.layout.roomFog;
+  if (!fog) return;
+  const rooms = new Map<
+    string,
+    { position: Position; options: RoomFogOptions }[]
+  >();
+  collectFogCells(state, debugMode, viewport).forEach(
+    ({ position, room, options }) => {
+      if (
+        (options.density ?? DEFAULT_FOG_DENSITY) <= 0 ||
+        options.blocksLight
+      ) {
+        return;
+      }
+      const group = rooms.get(room) ?? [];
+      group.push({ position, options });
+      rooms.set(room, group);
+    },
+  );
+  rooms.forEach((cells) => {
+    const options = cells[0].options;
+    const density = options.density ?? DEFAULT_FOG_DENSITY;
+    const blurPx = fogEdgeBlurPx(options, cellSize);
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    if (blurPx > 0) {
+      ctx.filter = `blur(${blurPx}px)`;
+    }
+    ctx.globalAlpha = density;
+    traceRoomPath(ctx, cellSize, cells);
+    ctx.fill();
+    ctx.restore();
+  });
 };
 
 // A pillar renders in two passes. The base tile is an ordinary floor

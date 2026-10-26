@@ -263,10 +263,19 @@ shimmer and the ambient darkness veil still darkens unlit material.
 Rooms and corridors can be filled with atmospheric fog
 (`roomFog`, `src/dungeon/RoomFogLogic.ts`), declared per grid letter: an
 undulating translucent cloud over every discovered cell of the room,
-drawn above actors and pillar shafts but below the darkness veil. Fog is
-visual by default but can be configured to damage actors entering or
-ending their turn in the room (e.g. poison gas), reusing the same
-environmental damage path as terrain.
+drawn above actors and pillar shafts but below the darkness veil. Each
+room renders as one whole-room shape whose edges blur into its
+surroundings (`softness`, via the same canvas filter technique and
+graceful degradation as soft light edges). Fog is visual by default but
+can be configured to damage actors entering or ending their turn in the
+room (e.g. poison gas), reusing the same environmental damage path as
+terrain. It also interacts with lighting in two configurable ways: a
+`density` (default 0.3) erases that fraction of the light mask inside the
+fog, dimming glows that shine into the room and letting the ambient
+darkness veil close in — one erase per room per frame, feathered to match
+the visible cloud — while `blocksLight` fog instead marks the room's cells
+as fog in the ray-cast occlusion map, so no light enters the room at all,
+exactly like undiscovered fog of war.
 
 The lighting (`src/dungeon/LightRendering.ts`) is the most graphics-heavy
 code in the repo: a 2D visibility technique where each light source casts a

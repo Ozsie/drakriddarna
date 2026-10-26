@@ -181,13 +181,18 @@ export const testingGrounds: Dungeon = defineDungeon({
       ],
     ],
     corridors: ['G', 'E', 'F'],
-    // Room J is filled with a slowly undulating fog that is harmless to
-    // enter but damages anyone ending their turn in it (poison gas).
+    // Room J is filled with a slowly breathing, soft-edged poisonous fog:
+    // harmless to enter, damaging to linger in, and absorbing the light
+    // of glows shining through it. Corridor G is a wall of dense mist no
+    // light penetrates.
     roomFog: {
       J: {
+        softness: 0.8,
+        density: 0.6,
         damageOnTurnEnd: 1,
         nameTranslationKey: 'campaign.iceDragon.testingGrounds.fog.name',
       },
+      G: { blocksLight: true },
     },
     doors: [
       [Side.UP, 3, 8, { trapped: 1, hidden: true }],

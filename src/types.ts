@@ -411,6 +411,16 @@ export type RoomFogOptions = {
   opacity?: number;
   // How many times per second the cloud undulates (default: 0.3).
   rate?: number;
+  // 0..1 softness of the cloud's edges (default: 0.6): 0 keeps hard cell
+  // edges, 1 feathers the cloud about half a cell into its surroundings.
+  softness?: number;
+  // 0..1 how much of the light inside the room the cloud absorbs, dimming
+  // the glow of lights shining into or standing in the fog and letting
+  // the ambient darkness veil close in (default: 0.3).
+  density?: number;
+  // When true, no light passes through the fog at all: like fog of war,
+  // light rays stop at the room's boundary.
+  blocksLight?: boolean;
   // Flat damage taken when a hero or monster enters the room.
   damageOnEnter?: number;
   // Flat damage taken when a hero or monster ends its turn in the room.

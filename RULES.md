@@ -238,10 +238,10 @@ Some dungeons have floor cells covered in a material, most commonly water or lav
 
 ### Room Fog
 
-Some rooms and corridors are filled with fog, visible as a drifting cloud over the whole room. Like terrain, what a fog does is decided per dungeon and always shows in the game log the first time a hero is affected.
+Some rooms and corridors are filled with fog, visible as a drifting cloud over the whole room with soft edges. Like terrain, what a fog does is decided per dungeon and always shows in the game log the first time a hero is affected.
 
 - **Damage on Entering / Turn End**: Fog can be dangerous (e.g. poison gas), damaging heroes and monsters that enter the room or end their turn in it. Harmless fog is purely visual.
-- **Cover**: Figures inside the fog remain visible; it does not block line of sight or movement.
+- **Light**: Fog absorbs part of the light shining into it, so lit areas inside a fogged room glow dimmer and darker. Dense fog can even block light entirely, leaving the room in darkness. Figures inside the fog remain visible; fog does not hide them or block movement.
 
 ### Interactables & Dungeon Notes
 

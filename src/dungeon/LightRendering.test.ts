@@ -108,6 +108,7 @@ const createState = (
     monsters?: Monster[];
     heroes?: Hero[];
     discoveredRooms?: string[];
+    roomFog?: GameState['dungeon']['layout']['roomFog'];
   } = {},
 ): GameState => ({
   dungeon: {
@@ -132,6 +133,7 @@ const createState = (
       pillars: overrides.pillars ?? [],
       pits: [],
       corners: [],
+      ...(overrides.roomFog ? { roomFog: overrides.roomFog } : {}),
     },
     startingPositions: [{ x: 1, y: 1 }],
     winConditions: [],
@@ -292,6 +294,41 @@ describe('computeLightPolygon', () => {
       expect(distance).toBeGreaterThan(1.5 * CELL_SIZE - CELL_SIZE / 6 - 1);
       expect(distance).toBeLessThanOrEqual(1.5 * CELL_SIZE + 1);
     });
+  });
+
+  it('stops at the boundary of a fogged room that blocks light', () => {
+    // Grid '#AAABB#': room A spans columns 1-3, fogged room B columns 4-5,
+    // so the light-blocking boundary sits at x = 4 cells.
+    const grid = ['#######', '#AAABB#', '#######'];
+    const light = createLight({ position: { x: 1, y: 1 }, radius: 5 });
+    const blocked = createState({
+      grid,
+      discoveredRooms: ['A', 'B'],
+      heroes: [],
+      roomFog: { B: { blocksLight: true } },
+    });
+    const points = computeLightPolygon(light, blocked, CELL_SIZE, false);
+    points.forEach((point) => {
+      expect(point.x).toBeLessThanOrEqual(4 * CELL_SIZE);
+    });
+    // The horizontal ray stops right at the shared edge.
+    const maxX = Math.max(...points.map((point) => point.x));
+    expect(maxX).toBeCloseTo(4 * CELL_SIZE, 0);
+  });
+
+  it('does not stop at fog that merely dims light', () => {
+    const grid = ['#######', '#AAABB#', '#######'];
+    const light = createLight({ position: { x: 1, y: 1 }, radius: 5 });
+    const dimmed = createState({
+      grid,
+      discoveredRooms: ['A', 'B'],
+      heroes: [],
+      roomFog: { B: { density: 0.6 } },
+    });
+    const points = computeLightPolygon(light, dimmed, CELL_SIZE, false);
+    const maxX = Math.max(...points.map((point) => point.x));
+    // Rays pass through the fogged room deep into room B.
+    expect(maxX).toBeGreaterThan(4.5 * CELL_SIZE);
   });
 
   it('illuminates walls only partway into the wall cell', () => {

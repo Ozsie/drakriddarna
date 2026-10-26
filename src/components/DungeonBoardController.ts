@@ -25,6 +25,7 @@ import { renderMonsters } from '../monsters/MonsterRendering';
 import {
   background,
   renderDoors,
+  renderFogLightDim,
   renderGrid,
   renderInteractables,
   renderPillars,
@@ -749,6 +750,16 @@ export class DungeonBoardController {
           frameLights,
         );
       }
+      // Fog absorbs part of the light mask inside fogged rooms, so the
+      // composited glow dims and the darkness veil closes in there. The
+      // light ctx is on the world transform here.
+      renderFogLightDim(
+        lightCtx,
+        this.cellSize,
+        this.activeState,
+        debugMode,
+        lightViewport,
+      );
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(this.lightCanvas, 0, 0);
@@ -762,6 +773,13 @@ export class DungeonBoardController {
         currentTime,
         lightViewport,
         frameLights,
+      );
+      renderFogLightDim(
+        ctx,
+        this.cellSize,
+        this.activeState,
+        debugMode,
+        lightViewport,
       );
     }
 

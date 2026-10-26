@@ -213,6 +213,10 @@ const buildOcclusionMap = (
       const cell = findCell(grid, x, y);
       if (cell === '' || (!debugMode && !isDiscovered(state.dungeon, x, y))) {
         data[index] = OCCLUSION_FOG;
+      } else if (state.dungeon.layout.roomFog?.[cell]?.blocksLight) {
+        // Fog configured to block light reads like fog of war to the
+        // rays: light stops at the room's near boundary.
+        data[index] = OCCLUSION_FOG;
       }
     }
   }
@@ -642,7 +646,15 @@ const lightStateKey = (
     .map((door) => (door.open ? '1' : '0'))
     .join('');
   const rooms = state.dungeon.discoveredRooms.join(',');
-  return `${state.dungeon.name}|${actors}|${doors}|${rooms}|${cellSize}|${
+  // Fog configured to block light changes the occlusion map like a
+  // discovery does, so it is part of the key.
+  const lightBlockingFog = Object.entries(state.dungeon.layout.roomFog ?? {})
+    .filter(([, options]) => options.blocksLight)
+    .map(([room]) => room)
+    .join(',');
+  return `${
+    state.dungeon.name
+  }|${actors}|${doors}|${rooms}|${lightBlockingFog}|${cellSize}|${
     debugMode ? 'd' : 'n'
   }`;
 };
