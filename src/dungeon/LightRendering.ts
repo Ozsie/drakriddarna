@@ -895,6 +895,13 @@ export const activeLights = (
     }
   });
 
+  // Terrain cells can carry a light (e.g. the glow of lava).
+  (state.dungeon.layout.terrain ?? []).forEach((cell) => {
+    if (cell.light && cell.light.enabled !== false) {
+      lights.push({ ...cell.light, position: cell.position });
+    }
+  });
+
   // Flying projectiles (dark lord fire bullets) carry an intense,
   // short-range light that travels with them.
   (state.projectiles ?? []).forEach((projectile) => {

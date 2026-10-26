@@ -143,5 +143,9 @@
       "master": "Master (3+ on dice): Elite mastery with 67% chance on all dice rolls."
     }
   },
-  "turn": "Turn"
+  "turn": "Turn",
+  "terrain": {
+    "water": "water",
+    "lava": "lava"
+  }
 }

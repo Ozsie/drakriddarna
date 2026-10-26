@@ -14,6 +14,9 @@ import type {
   Note,
   Position,
   Secret,
+  TerrainCell,
+  TerrainOptions,
+  TerrainType,
   WallEdge,
   WinCondition,
 } from '../types';
@@ -258,6 +261,25 @@ export type DeclarativeLight =
   | DeclarativeLightObject
   | DeclarativeLightTuple;
 
+export type DeclarativeTerrainObject = TerrainOptions & {
+  x: number;
+  y: number;
+};
+
+export type DeclarativeTerrainTuple =
+  | [x: number, y: number, type: TerrainType]
+  | [
+      x: number,
+      y: number,
+      type: TerrainType,
+      options: Omit<TerrainOptions, 'type'>,
+    ];
+
+export type DeclarativeTerrain =
+  | TerrainCell
+  | DeclarativeTerrainObject
+  | DeclarativeTerrainTuple;
+
 export type DeclarativeLayout = {
   grid: string[];
   doors?: DeclarativeDoor[];
@@ -267,6 +289,7 @@ export type DeclarativeLayout = {
   items?: DeclarativeItem[];
   interactables?: DeclarativeInteractable[];
   lights?: DeclarativeLight[];
+  terrain?: DeclarativeTerrain[];
   corridors?: string[];
   corridorCells?: DeclarativePosition[];
   pillars?: DeclarativePosition[];
@@ -704,6 +727,43 @@ export const parseLight = (lightDef: DeclarativeLight): LightSource => {
   });
 };
 
+export const parseTerrain = (terrainDef: DeclarativeTerrain): TerrainCell => {
+  if ('position' in terrainDef) {
+    return terrainDef;
+  }
+
+  const definedOptions = (options: Partial<TerrainOptions>) => ({
+    ...(options.color !== undefined ? { color: options.color } : {}),
+    ...(options.opacity !== undefined ? { opacity: options.opacity } : {}),
+    ...(options.damageOnEnter !== undefined
+      ? { damageOnEnter: options.damageOnEnter }
+      : {}),
+    ...(options.damageOnTurnEnd !== undefined
+      ? { damageOnTurnEnd: options.damageOnTurnEnd }
+      : {}),
+    ...(options.movementCost !== undefined
+      ? { movementCost: options.movementCost }
+      : {}),
+    ...(options.light ? { light: options.light } : {}),
+  });
+
+  if (Array.isArray(terrainDef)) {
+    const [x, y, type, options] = terrainDef;
+    return {
+      position: parsePosition({ x, y }),
+      type,
+      ...definedOptions(options ?? {}),
+    };
+  }
+
+  const { x, y, type, ...options } = terrainDef;
+  return {
+    position: parsePosition({ x, y }),
+    type,
+    ...definedOptions(options),
+  };
+};
+
 export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
   grid: layoutDef.grid,
   doors: (layoutDef.doors ?? []).map(parseDoor),
@@ -713,6 +773,7 @@ export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
   items: (layoutDef.items ?? []).map(parseItem),
   interactables: (layoutDef.interactables ?? []).map(parseInteractable),
   lights: (layoutDef.lights ?? []).map(parseLight),
+  terrain: (layoutDef.terrain ?? []).map(parseTerrain),
   corridors: layoutDef.corridors ?? [],
   corridorCells: (layoutDef.corridorCells ?? []).map(parsePosition),
   pillars: (layoutDef.pillars ?? []).map(parsePosition),

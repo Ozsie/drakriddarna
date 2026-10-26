@@ -364,6 +364,40 @@ export type LightSource = {
   enabled?: boolean;
 };
 
+// Terrain cell types. 'water' and 'lava' are the built-ins; the set is
+// intentionally open-ended like `LightEffect`: unknown type strings keep
+// their configured colour and effects but get no default styling.
+export const TerrainType = {
+  WATER: 'water',
+  LAVA: 'lava',
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type TerrainType =
+  | (typeof TerrainType)[keyof typeof TerrainType]
+  | string;
+
+// Configuration of a terrain cell. Everything except the type is optional:
+// a cell can be purely decorative, purely gameplay-affecting, or both.
+export type TerrainOptions = {
+  type: TerrainType;
+  // Base fill colour of the cell.
+  color?: string;
+  // 0..1 transparency of the base fill (default: 0.6).
+  opacity?: number;
+  // Flat damage taken when a hero or monster enters the cell.
+  damageOnEnter?: number;
+  // Flat damage taken when a hero or monster ends its turn on the cell.
+  damageOnTurnEnd?: number;
+  // Movement points a step onto this cell costs instead of 1.
+  movementCost?: number;
+  // Light emitted by the cell, e.g. the glow of lava.
+  light?: ItemLight;
+};
+
+export type TerrainCell = TerrainOptions & {
+  position: Position;
+};
+
 export type Layout = {
   grid: string[];
   doors: Door[];
@@ -380,6 +414,10 @@ export type Layout = {
   corridorCells?: Position[];
   pillars?: Position[];
   pits?: Position[];
+  // Terrain cells: floor cells with a material (water, lava, ...) that
+  // tints the floor and can hurt or slow actors that enter or stand on
+  // them, and can emit light.
+  terrain?: TerrainCell[];
   corners: Corner[];
   interactables?: InteractableCell[];
   lights?: LightSource[];

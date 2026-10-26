@@ -135,7 +135,8 @@ deep-merged into i18n namespaces.
 
 Dungeons themselves are authored in a declarative DSL built on plain
 TypeScript helpers. A layout is an ASCII string matrix (one character per
-cell) plus declarative lists of doors, monsters, items, secrets and lights:
+cell) plus declarative lists of doors, monsters, items, secrets, lights and
+terrain cells:
 
 ```ts
 export const e1m1: Dungeon = defineDungeon({
@@ -245,6 +246,15 @@ static, while its shaft tile is drawn on the actor layer after monsters and
 heroes — so a figure standing in the cell behind a pillar is occluded by the
 rising shaft — but before the ambient darkness veil, so unlit shafts darken
 with the rest of the scene.
+
+Terrain cells (water, lava, …) are declarative floor materials: each cell
+tints the floor with a translucent colour fill on the static layer, can
+carry a light (lava glows through the same lighting system as torches), and
+can be configured with gameplay effects — damage on entering the cell,
+damage on ending a turn standing in it, and a per-cell movement cost
+(`src/dungeon/TerrainLogic.ts`). The damage is environmental, bypassing the
+armour and shield rolls of combat, and is applied at the movement and
+turn-resolution hooks for heroes and monsters alike.
 
 The lighting (`src/dungeon/LightRendering.ts`) is the most graphics-heavy
 code in the repo: a 2D visibility technique where each light source casts a

@@ -10,6 +10,7 @@ import type {
   Note,
   Position,
   Secret,
+  TerrainCell,
   WallEdge,
   WinCondition,
 } from '../types';
@@ -347,6 +348,11 @@ export const validateLayout = (
 
   (layout.pillars || []).forEach((pillar: Position) => {
     checkPositionInBounds(pillar, 'Pillar');
+  });
+
+  // 9b. Terrain cells
+  (layout.terrain || []).forEach((cell: TerrainCell) => {
+    checkPositionInBounds(cell.position, `Terrain '${cell.type}'`);
   });
 
   // 10. Corners

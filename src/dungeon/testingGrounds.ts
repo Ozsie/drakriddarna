@@ -7,6 +7,7 @@ import {
   MonsterType,
   SecretType,
   Side,
+  TerrainType,
 } from '../types';
 import { defineDungeon } from './DungeonLogic';
 import { weapons } from '../items/weapons';
@@ -130,6 +131,31 @@ export const testingGrounds: Dungeon = defineDungeon({
     pits: [
       [6, 3],
       [6, 2],
+    ],
+    // Terrain cells: a slow-moving water patch and a lava patch that
+    // burns on enter and at turn end, glowing on its own.
+    terrain: [
+      [2, 8, TerrainType.WATER, { movementCost: 2 }],
+      [3, 8, TerrainType.WATER, { movementCost: 2 }],
+      [
+        6,
+        8,
+        TerrainType.LAVA,
+        {
+          damageOnEnter: 1,
+          damageOnTurnEnd: 1,
+          light: {
+            alignment: CellAlignment.CENTER,
+            color: '#FF6A00',
+            radius: 1.5,
+            intensity: 0.35,
+            softness: 0.4,
+            effect: LightEffect.FLICKER,
+            rate: 2,
+          },
+        },
+      ],
+      [6, 9, TerrainType.LAVA, { damageOnEnter: 1, damageOnTurnEnd: 1 }],
     ],
     // Unlit brazier: interact with it (repeatedly) to toggle its torch
     // light.

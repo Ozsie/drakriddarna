@@ -67,6 +67,22 @@ export const removeDamageIndicator = (state: GameState, id: string): void => {
   );
 };
 
+// Everything that happens when an actor is downed by damage: clamps
+// health, resets the level, plays the death animation and sound, and fires
+// the difficulty's onHeroDowned hook for heroes. Shared by combat and
+// environmental damage (e.g. terrain).
+export const processActorDowned = (state: GameState, target: Actor): void => {
+  target.health = 0;
+  target.level = Level.APPRENTICE;
+  playActorDeath(target);
+  if (state.heroes.includes(target)) {
+    const gm = getDifficulty(state);
+    const onHeroDowned = gm.rules?.onHeroDowned ?? gm.onHeroDowned;
+    onHeroDowned?.(target as Hero, state);
+  }
+  soundEffectManager.playActorDeath(target);
+};
+
 export const getEffectiveMaxMovement = (
   actor: Actor,
   movementModifier = 0,
@@ -353,14 +369,7 @@ export const takeDamage = (
       actor: i18n(source.name),
       target: i18n(target.name),
     });
-    target.health = 0;
-    target.level = Level.APPRENTICE;
-    playActorDeath(target);
-    if (isHeroTarget) {
-      const onHeroDowned = gm.rules?.onHeroDowned ?? gm.onHeroDowned;
-      onHeroDowned?.(target as Hero, state);
-    }
-    soundEffectManager.playActorDeath(target);
+    processActorDowned(state, target);
   } else {
     if (damage > 0) {
       soundEffectManager.playActorHurt(target);

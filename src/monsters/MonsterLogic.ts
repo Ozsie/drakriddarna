@@ -60,6 +60,10 @@ import {
   selectScoredTarget,
 } from './behavior';
 import { createFlameEffect } from '../combat';
+import {
+  applyTerrainEnterEffects,
+  applyTerrainTurnEndEffects,
+} from '../dungeon/TerrainLogic';
 import { soundEffectManager } from '../audio';
 
 export { resetRoundTargetCounters } from './behavior';
@@ -344,6 +348,10 @@ export const monsterActions = async (
       monster.passiveStreak = 0;
     }
     monster.forgotBowThisTurn = false;
+
+    // Terrain the monster ends its turn on (e.g. standing in lava) takes
+    // its toll.
+    applyTerrainTurnEndEffects(state, monster);
 
     monster.actions = maxActions;
     monster.movement = getEffectiveMaxMovement(monster);
@@ -779,6 +787,8 @@ export const monsterMoveToPosition = (
       y: `${nextPos.y}`,
     });
     monster.movement--;
+    applyTerrainEnterEffects(state, monster);
+    if (monster.health <= 0) break;
   }
   monster.actions--;
 };
@@ -879,6 +889,8 @@ export const monsterMove = (
       y: `${nextPos.y}`,
     });
     monster.movement--;
+    applyTerrainEnterEffects(state, monster);
+    if (monster.health <= 0) break;
 
     if (
       isNeighbouring(

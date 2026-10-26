@@ -31,6 +31,7 @@ import {
   renderPillarTops,
   renderPortal,
   renderSecrets,
+  renderTerrain,
   renderWalls,
 } from '../dungeon/DungeonRendering';
 import {
@@ -561,6 +562,12 @@ export class DungeonBoardController {
     renderGrid(
       ctx,
       this.ground,
+      this.cellSize,
+      this.activeState,
+      this.debugMode ?? false,
+    );
+    renderTerrain(
+      ctx,
       this.cellSize,
       this.activeState,
       this.debugMode ?? false,

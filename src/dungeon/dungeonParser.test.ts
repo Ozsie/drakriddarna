@@ -10,6 +10,7 @@ import {
   parsePosition,
   parseWall,
   parseSecret,
+  parseTerrain,
   parseTileMap,
 } from './dungeonParser';
 import {
@@ -21,6 +22,7 @@ import {
   MonsterType,
   SecretType,
   Side,
+  TerrainType,
 } from '../types';
 import { weapons } from '../items/weapons';
 import { magicItems } from '../items/magicItems';
@@ -266,6 +268,55 @@ describe('dungeonParser', () => {
     });
   });
 
+  describe('parseTerrain', () => {
+    it('parses tuple [x, y, type]', () => {
+      expect(parseTerrain([3, 4, TerrainType.LAVA])).toEqual({
+        position: { x: 3, y: 4 },
+        type: 'lava',
+      });
+    });
+
+    it('parses tuple [x, y, type, options]', () => {
+      const terrain = parseTerrain([
+        2,
+        3,
+        TerrainType.WATER,
+        { color: '#2e6f9e', movementCost: 2, damageOnEnter: 1 },
+      ]);
+      expect(terrain).toEqual({
+        position: { x: 2, y: 3 },
+        type: 'water',
+        color: '#2e6f9e',
+        movementCost: 2,
+        damageOnEnter: 1,
+      });
+    });
+
+    it('parses object format', () => {
+      const terrain = parseTerrain({
+        x: 1,
+        y: 2,
+        type: TerrainType.LAVA,
+        opacity: 0.9,
+        damageOnTurnEnd: 2,
+        light: { color: '#FF6A00', radius: 2 },
+      });
+      expect(terrain.position).toEqual({ x: 1, y: 2 });
+      expect(terrain.type).toBe('lava');
+      expect(terrain.opacity).toBe(0.9);
+      expect(terrain.damageOnTurnEnd).toBe(2);
+      expect(terrain.light?.color).toBe('#FF6A00');
+    });
+
+    it('passes through an already parsed TerrainCell', () => {
+      const cell = {
+        position: { x: 7, y: 8 },
+        type: TerrainType.WATER,
+      };
+      expect(parseTerrain(cell)).toBe(cell);
+    });
+  });
+
   describe('defineLayout and defineDungeon', () => {
     it('fills default properties when defining layout and dungeon', () => {
       const layout = defineLayout({
@@ -277,6 +328,7 @@ describe('dungeonParser', () => {
       expect(layout.notes).toEqual([]);
       expect(layout.items).toEqual([]);
       expect(layout.lights).toEqual([]);
+      expect(layout.terrain).toEqual([]);
       expect(layout.walls).toEqual([]);
 
       const layoutWithLights = defineLayout({

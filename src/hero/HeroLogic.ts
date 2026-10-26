@@ -58,6 +58,10 @@ import {
 } from '../interactables/InteractableLogic';
 import { executeRoomDiscoveredEffect } from '../dungeon/RoomEffectsLogic';
 import {
+  applyTerrainEnterEffects,
+  terrainMovementCost,
+} from '../dungeon/TerrainLogic';
+import {
   ACTIVE,
   BREAK_LOCK,
   onDrop,
@@ -188,7 +192,13 @@ export const act = (direction: MoveDirection | string, state: GameState) => {
       if (blockedByMonster) {
         attack(hero, state, newPosition);
       } else {
-        move(hero, state, newPosition.x, newPosition.y, 1);
+        move(
+          hero,
+          state,
+          newPosition.x,
+          newPosition.y,
+          terrainMovementCost(state.dungeon.layout, newPosition),
+        );
       }
     }
   } else {
@@ -701,6 +711,7 @@ export const arriveOnCell = (
   recordActorStep(hero, pos);
   hero.position.x = pos.x;
   hero.position.y = pos.y;
+  applyTerrainEnterEffects(state, hero);
   checkForNote(state, hero);
   checkForItemRevealedSecret(state, hero);
   checkForInteractable(state, hero, 'step');

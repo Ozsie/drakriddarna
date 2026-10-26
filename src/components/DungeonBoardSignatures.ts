@@ -7,6 +7,7 @@ import type {
   LightSource,
   Monster,
   Secret,
+  TerrainCell,
 } from '../types';
 
 // Signature helpers for the Dungeon board's layered render loop: each
@@ -54,7 +55,14 @@ export const getStaticSignature = (
     )
     .join(';')}|${String(String(String(d.layout?.pits?.length ?? 0)))}|${String(
     d.layout?.pits?.length ?? 0,
-  )}|${String(String(String(d.portal?.x)))},${String(
+  )}|${(d.layout?.terrain ?? [])
+    .map(
+      (t: TerrainCell) =>
+        `${String(t.position.x)},${String(t.position.y)},${String(
+          t.type,
+        )},${String(t.color ?? '')},${String(t.opacity ?? '')}`,
+    )
+    .join(';')}|${String(String(String(d.portal?.x)))},${String(
     String(String(d.portal?.y)),
   )}|${String(String(size))}|${String(String(dbg))}`;
 };

@@ -14,6 +14,7 @@ import {
   resetLiveHeroes,
 } from './hero/HeroLogic';
 import { resetOnNext, resetOnNextDungeon } from './items/ItemLogic';
+import { applyTerrainTurnEndEffects } from './dungeon/TerrainLogic';
 import {
   drawNextEvent,
   eventEffects,
@@ -172,6 +173,9 @@ export const next = async (
   }
   if (state.currentActor === undefined) return state;
   else {
+    // Terrain the hero ends its turn on (e.g. standing in lava) takes its
+    // toll before the turn passes on.
+    applyTerrainTurnEndEffects(state, state.currentActor);
     addLog(state, 'logs.endedTurn', {
       name: i18n(state.currentActor.name),
     });

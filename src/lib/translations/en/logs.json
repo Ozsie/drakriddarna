@@ -26,6 +26,11 @@
     "killed": "{{actor}} killed {{target}}.",
     "paralyzed": "{{target}} is paralyzed by {{weapon}} and loses the rest of the turn."
   },
+  "terrain": {
+    "enterDamage": "{{actor}} takes {{damage}} damage from the {{terrain}}.",
+    "turnEndDamage": "{{actor}} takes {{damage}} damage from standing in the {{terrain}}.",
+    "killed": "{{actor}} perished in the {{terrain}}."
+  },
   "events": {
     "sunStone": "{{monster}} was killed by the Sun Stone.",
     "foreSight": "You sense the object is close to ({{x}},{{y}}).",

@@ -18,6 +18,10 @@ import {
 } from '../core';
 import { autoDetectCorners } from './cornerDetection';
 import { drawCachedTile } from './TileTextureCache';
+import {
+  TERRAIN_DEFAULT_OPACITY,
+  TERRAIN_DEFAULT_STYLING,
+} from './TerrainLogic';
 
 export const background = '#1E1C19';
 
@@ -281,6 +285,40 @@ const renderPits = (
     ?.filter((pit) => isDiscovered(state.dungeon, pit.x, pit.y) || debugMode)
     ?.forEach((pit) => {
       drawTile(ctx, ground, 13, 0, cellSize, pit.x, pit.y, state);
+    });
+};
+
+// Fill colour of a terrain cell that configures neither its own colour nor
+// has a default styling for its type.
+const DEFAULT_TERRAIN_COLOR = '#56606a';
+
+// Terrain cells (water, lava, ...) tint the floor with a translucent
+// colour fill. The fill lives on the static layer like the floor itself;
+// animated material highlights will render on the dynamic layer.
+export const renderTerrain = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+) => {
+  (state.dungeon.layout.terrain ?? [])
+    .filter(
+      (cell) =>
+        isDiscovered(state.dungeon, cell.position.x, cell.position.y) ||
+        debugMode,
+    )
+    .forEach((cell) => {
+      const styling = TERRAIN_DEFAULT_STYLING[cell.type];
+      ctx.globalAlpha =
+        cell.opacity ?? styling?.opacity ?? TERRAIN_DEFAULT_OPACITY;
+      ctx.fillStyle = cell.color ?? styling?.color ?? DEFAULT_TERRAIN_COLOR;
+      ctx.fillRect(
+        cell.position.x * cellSize,
+        cell.position.y * cellSize,
+        cellSize,
+        cellSize,
+      );
+      ctx.globalAlpha = 1;
     });
 };
 
