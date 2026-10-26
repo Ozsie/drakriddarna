@@ -82,6 +82,7 @@ import {
   handleTwoFingerTouchEnd,
 } from '../input/TouchPanLogic';
 import { musicManager, soundEffectManager } from '../audio';
+import { selectMusicIntensity } from '../audio/MusicIntensity';
 import {
   getStaticSignature,
   getDynamicSignature,
@@ -254,7 +255,18 @@ export class DungeonBoardController {
       musicManager.setMuted(!isMusicEnabled);
       soundEffectManager.setMuted(!isSoundEnabled);
       if (props.dungeon && isMusicEnabled) {
-        musicManager.playDungeonMusic(props.dungeon.music);
+        musicManager.playDungeonMusic(
+          props.dungeon.music,
+          props.dungeon.musicTension,
+        );
+        if (props.activeState) {
+          musicManager.setIntensity(
+            selectMusicIntensity(
+              props.activeState,
+              musicManager.getIntensity(),
+            ),
+          );
+        }
       }
     }
 
