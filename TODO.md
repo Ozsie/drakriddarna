@@ -39,6 +39,7 @@
 # Features
 
 - [ ] Multiple saves
+- [ ] Multiple music intensity levels, based on monster count, health, monster type etc
 - [ ] Responsive layout
 - [ ] Graphics
   - [ ] Sprites for actors
