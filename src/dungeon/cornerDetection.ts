@@ -85,6 +85,13 @@ export const detectCornerType = (
   const SW = visibleCell(grid, x - 1, y + 1, discoveredRooms);
   const SE = visibleCell(grid, x + 1, y + 1, discoveredRooms);
 
+  // Two cells out along each axis: whether a junction stem continues into
+  // more wall (it is then part of a wall run, not a stub).
+  const beyondN = findCell(grid, x, y - 2);
+  const beyondS = findCell(grid, x, y + 2);
+  const beyondW = findCell(grid, x - 2, y);
+  const beyondE = findCell(grid, x + 2, y);
+
   const fN = isFloor(N);
   const fS = isFloor(S);
   const fW = isFloor(W);
@@ -121,21 +128,58 @@ export const detectCornerType = (
   }
 
   // 2. Three-Way Intersections (T-junctions)
-  // The stem of a T must be a free-standing stub of real rock: a sealed
-  // doorway renders as a door, not wall, and a stem touching a wall on either
-  // lateral flank is not a stub at all but embedded in a thicker wall mass.
-  // Such cells render as plain wall pieces, or as the corner caps of the
-  // floor wrapping the mass, instead.
-  if (N === WALL && wW && wE && !wS && !wNW && !wNE && ((fNW && fNE) || fS)) {
+  // A T-junction is built entirely from real, terminating rock: the stem and
+  // both arms must be real walls (a sealed doorway renders as a door, never
+  // as crossbar or stub), the stem must be free-standing — touching a wall on
+  // either lateral flank means it is embedded in a thicker wall mass — and it
+  // must terminate, with no wall two cells out. Otherwise the cell renders as
+  // a plain wall piece or as the corner cap of the floor wrapping the mass.
+  if (
+    N === WALL &&
+    W === WALL &&
+    E === WALL &&
+    !wS &&
+    !wNW &&
+    !wNE &&
+    beyondN !== WALL &&
+    ((fNW && fNE) || fS)
+  ) {
     return CornerType.THREE_WAY_INTERSECTION_UP;
   }
-  if (S === WALL && wW && wE && !wN && !wSW && !wSE && ((fSW && fSE) || fN)) {
+  if (
+    S === WALL &&
+    W === WALL &&
+    E === WALL &&
+    !wN &&
+    !wSW &&
+    !wSE &&
+    beyondS !== WALL &&
+    ((fSW && fSE) || fN)
+  ) {
     return CornerType.THREE_WAY_INTERSECTION_DOWN;
   }
-  if (W === WALL && wN && wS && !wE && !wNW && !wSW && ((fNW && fSW) || fE)) {
+  if (
+    W === WALL &&
+    N === WALL &&
+    S === WALL &&
+    !wE &&
+    !wNW &&
+    !wSW &&
+    beyondW !== WALL &&
+    ((fNW && fSW) || fE)
+  ) {
     return CornerType.THREE_WAY_INTERSECTION_LEFT;
   }
-  if (E === WALL && wN && wS && !wW && !wNE && !wSE && ((fNE && fSE) || fW)) {
+  if (
+    E === WALL &&
+    N === WALL &&
+    S === WALL &&
+    !wW &&
+    !wNE &&
+    !wSE &&
+    beyondE !== WALL &&
+    ((fNE && fSE) || fW)
+  ) {
     return CornerType.THREE_WAY_INTERSECTION_RIGHT;
   }
 

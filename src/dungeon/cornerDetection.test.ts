@@ -72,18 +72,19 @@ describe('Corner Detection Algorithm', () => {
     expect(detectCornerType(grid, 6, 5)).toBe(CornerType.OUTER_BOTTOM_RIGHT);
     expect(detectCornerType(grid, 8, 6)).toBe(CornerType.LEFT_END);
     expect(detectCornerType(grid, 9, 6)).toBe(CornerType.OUTER_TOP_RIGHT);
-    expect(detectCornerType(grid, 0, 7)).toBe(
-      CornerType.THREE_WAY_INTERSECTION_RIGHT,
-    );
+    // The wall cell (0,7) is the cap of room A's floor at (1,8); the wall
+    // run it sits in continues east, so it is not a junction stub
+    expect(detectCornerType(grid, 0, 7)).toBe(CornerType.INNER_TOP_LEFT);
     expect(detectCornerType(grid, 2, 7)).toBe(CornerType.OUTER_BOTTOM_RIGHT);
     expect(detectCornerType(grid, 4, 7)).toBe(CornerType.LEFT_END);
     expect(detectCornerType(grid, 6, 7)).toBe(CornerType.RIGHT_END);
     expect(detectCornerType(grid, 0, 11)).toBe(CornerType.INNER_BOTTOM_LEFT);
     expect(detectCornerType(grid, 1, 11)).toBe(CornerType.OUTER_TOP_RIGHT);
     expect(detectCornerType(grid, 3, 11)).toBe(CornerType.OUTER_TOP_LEFT);
-    expect(detectCornerType(grid, 9, 11)).toBe(
-      CornerType.THREE_WAY_INTERSECTION_UP,
-    );
+    // The wall column above (9,11) continues past the row into (9,9), so the
+    // cell is a wall bend, not a junction: it renders as the corner cap of
+    // D's floor at (10,10)
+    expect(detectCornerType(grid, 9, 11)).toBe(CornerType.INNER_BOTTOM_LEFT);
     expect(detectCornerType(grid, 10, 11)).toBe(CornerType.INNER_TOP_RIGHT);
     expect(detectCornerType(grid, 3, 12)).toBe(CornerType.BOTTOM_END);
     expect(detectCornerType(grid, 8, 13)).toBe(CornerType.TOP_END);

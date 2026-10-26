@@ -6,6 +6,8 @@ import { SEALED_DOOR } from '../core';
 import { CornerType } from '../types';
 import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
+import { e2m2 } from '../campaigns/earthHour/dungeons/e2m2';
+import { e1m2 } from '../campaigns/iceDragonTreasure/dungeons/e1m2';
 
 const stateFor = (
   discoveredRooms: string[],
@@ -273,5 +275,63 @@ describe('sealed door corner classification', () => {
 
     const paints = renderTiles(state);
     expect(paints.get('13,8')).toBe('0,6');
+  });
+
+  it('does not build junctions against the sealed doorways of e2m2', () => {
+    // e2m2 room C has two north doors to the hidden E corridor; the sealed
+    // cell (7,5) between the two door frames may not form a T-junction with
+    // the doorways as its crossbar. It renders as the corner cap of the C
+    // maze corridor instead.
+    const state = stateFor(['A', 'C'], e2m2);
+    const corners = autoDetectCorners(
+      sealedCornerGrid(state),
+      state.dungeon.discoveredRooms,
+    );
+    expect(corners).toContainEqual({
+      position: { x: 7, y: 5 },
+      type: CornerType.INNER_TOP_LEFT,
+    });
+
+    const paints = renderTiles(state);
+    expect(paints.get('7,5')).toBe('0,4');
+    // The wall bend at (13,7): its stem continues into the wall run, so the
+    // cell renders as the corner cap of the C corridor at (14,8)
+    expect(paints.get('13,7')).toBe('0,4');
+  });
+
+  it('caps the wall beside the sealed west door of e2m2', () => {
+    // With room D discovered and E hidden behind the west-facing door at
+    // (9,2), the wall cell (9,3) between D's floor and the sealed doorway may
+    // not claim the doorway as a junction arm; it renders as room A's
+    // north-west corner cap.
+    const state = stateFor(['A', 'D'], e2m2);
+    const corners = autoDetectCorners(
+      sealedCornerGrid(state),
+      state.dungeon.discoveredRooms,
+    );
+    expect(corners).toContainEqual({
+      position: { x: 9, y: 3 },
+      type: CornerType.INNER_TOP_LEFT,
+    });
+
+    const paints = renderTiles(state);
+    expect(paints.get('9,3')).toBe('0,4');
+  });
+
+  it('seals the near side of a door approached from behind', () => {
+    // The locked door [RIGHT, 6, 8] of e1m2 connects corridor J (near, west)
+    // to room I (far, east). Room I is reachable via the H corridor, so the
+    // door can be approached from behind with J still hidden: the door cell
+    // (6,8) must then render as a wall piece facing I, not as a dark hole
+    // behind the door leaf.
+    const state = stateFor(['A', 'B', 'C', 'H', 'I'], e1m2);
+    const grid = sealedCornerGrid(state);
+    expect(grid[8][6]).toBe(SEALED_DOOR);
+
+    const paints = renderTiles(state);
+    expect(paints.get('6,8')).toBe('0,5');
+    // The corridor walls flanking the doorway still render facing I
+    expect(paints.get('6,7')).toBe('0,5');
+    expect(paints.get('6,9')).toBe('0,5');
   });
 });

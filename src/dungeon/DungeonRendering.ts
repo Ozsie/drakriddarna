@@ -557,16 +557,17 @@ const isVerticalWall = (x: number, y: number, state: GameState): string => {
   }
 };
 
-// A closed door whose far side is undiscovered is drawn as wall pieces
-// (renderClosedDoor / renderClosedHiddenDoor), sealing the passage until it
-// is opened. The corner classifier must see the same sealed geometry: the far
-// cell and the two cells flanking the doorway are replaced with the SEALED_DOOR
-// marker wherever they are not discovered yet. Sealed cells count as wall for
-// closed sides — a corridor end gets its corner caps exactly like a dead end,
-// and the corner cells beside a door set in a solid wall render their caps too
-// — but never as the stem of a junction, since a sealed doorway renders as a
-// door rather than rock. Invisible sealed cells (no discovered floor bordering
-// them) resolve to unknown during classification, so sealing never fabricates
+// A closed door is drawn as wall pieces (renderClosedDoor /
+// renderClosedHiddenDoor plus the wall pieces the sealed cells classify as),
+// sealing the passage until it is opened. The corner classifier must see the
+// same sealed geometry from both sides: whichever side of the doorway is not
+// discovered yet has its cell and the two cells flanking the doorway replaced
+// with the SEALED_DOOR marker. Sealed cells count as wall for closed sides —
+// a corridor end gets its corner caps exactly like a dead end, and the corner
+// cells beside a door set in a solid wall render their caps too — but never
+// as the stem of a junction, since a sealed doorway renders as a door rather
+// than rock. Invisible sealed cells (no discovered floor bordering them)
+// resolve to unknown during classification, so sealing never fabricates
 // junction shapes on the wall pieces themselves.
 export const sealedCornerGrid = (state: GameState): string[] => {
   const grid = [...state.dungeon.layout.grid];
@@ -590,15 +591,26 @@ export const sealedCornerGrid = (state: GameState): string[] => {
         ? door.y - 1
         : door.y;
     const farCell = findCell(grid, farX, farY);
+    const nearCell = findCell(grid, door.x, door.y);
     const farDiscovered = farCell !== '' && !isEmpty(farCell, state);
-    if (farDiscovered) return;
+    const nearDiscovered = nearCell !== '' && !isEmpty(nearCell, state);
     const flankX = door.side === Side.UP || door.side === Side.DOWN ? 1 : 0;
     const flankY = door.side === Side.LEFT || door.side === Side.RIGHT ? 1 : 0;
-    [
-      [farX, farY],
-      [farX - flankX, farY - flankY],
-      [farX + flankX, farY + flankY],
-    ].forEach(([x, y]) => {
+    // Seal whichever side of the doorway is still undiscovered: the far side
+    // when approaching the door from the front, the near side when it is
+    // approached from behind
+    const sealed: [number, number][] = [];
+    if (!farDiscovered) {
+      sealed.push([farX, farY]);
+      sealed.push([farX - flankX, farY - flankY]);
+      sealed.push([farX + flankX, farY + flankY]);
+    }
+    if (!nearDiscovered) {
+      sealed.push([door.x, door.y]);
+      sealed.push([door.x - flankX, door.y - flankY]);
+      sealed.push([door.x + flankX, door.y + flankY]);
+    }
+    sealed.forEach(([x, y]) => {
       if (!sealable(findCell(grid, x, y))) return;
       grid[y] = grid[y].slice(0, x) + SEALED_DOOR + grid[y].slice(x + 1);
     });
