@@ -179,8 +179,14 @@ Two payoffs of that discipline:
   compares results across runs, which only means something if the simulation
   is deterministic.
 
-A known gap, tracked in README.md: a few peripheral paths (event deck shuffle
-at init, some spawn picks) still use unseeded randomness.
+Every gameplay-affecting random path — dice, shuffles, behavior selection,
+spawn and event-effect picks, monster temperament — runs through the seeded
+rng now; only visual effects (particles) and DOM element ids still use
+unseeded randomness, and they have no gameplay effect. Note the limit of that
+claim: a seed reproduces the _random sequence_, not the playthrough.
+Reproducing a full human playthrough additionally requires recording and
+replaying its input events — the benchmark achieves this by driving the game
+from code, while a browser session records nothing.
 
 ## The opponent: monster AI and "Game Masters"
 
@@ -269,13 +275,15 @@ persistence. Saving is `JSON.stringify(state)` to `localStorage`, plus a
 separate "reload guard" key that restores an in-progress game across page
 reloads.
 
-Save migration is treated as a real concern: `loadState()` rewrites older
-save shapes (e.g. it collapses the legacy `difficulty`/`gameMasterId` fields
-into today's single `gameMaster` object, converts the pre-multi-collapse
-`collapsedCorridor` letter into the current per-collapse restore groups, and
-falls back to the default campaign if the saved `campaignId` no longer
-exists). Backwards compatibility with existing saves is maintained in code
-rather than by versioning saves.
+Save migration is treated as a real concern and is versioned: the state
+schema carries a `saveVersion`, and `loadState()` runs the ordered,
+individually unit-tested migration steps in `saveMigration.ts` (e.g.
+collapsing the legacy `difficulty`/`gameMasterId` fields into today's single
+`gameMaster` object, and converting the pre-multi-collapse `collapsedCorridor`
+letter into the current per-collapse restore groups) before falling back to
+the default campaign if the saved `campaignId` no longer exists. Backwards
+compatibility with existing saves is maintained in code rather than by an
+export/import cycle.
 
 ## Internationalization
 
@@ -356,10 +364,10 @@ current design costs:
   (at minimum for logs, cards and menus), which the current rendering
   architecture does not provide. No accessibility work has been done yet.
 - **One big `GameState`.** A single serializable object makes save/load and
-  headless replay trivial, but it has real costs: exactly one save slot,
-  no schema versioning (migration is shape-sniffing in `loadState()`), and any
-  structural change ripples through every module that takes the state.
-  Multiple saves and versioned saves are both on the wishlist.
+  headless replay trivial, but it has real costs: exactly one save slot, and
+  any structural change ripples through every module that takes the state.
+  Migration is versioned and tested now, but the single object still couples
+  everything that touches it; multiple saves remain on the wishlist.
 - **TypeScript-as-data cuts both ways.** Authoring dungeons in TypeScript gets
   you type-checking, refactoring and validation for free — the usual
   config-as-code argument — but it makes content authoring a
@@ -373,10 +381,10 @@ current design costs:
   parts (hover state, hit-test cascade, render signatures) are extracted
   into colocated modules and unit-tested; the glue itself needs a real DOM
   and remains untested.
-- **Determinism gaps.** A few peripheral random paths are still unseeded (see
-  [Determinism](#determinism-a-seeded-rng-everywhere-it-matters)); until
-  they are routed through the seeded RNG, only the benchmark's games are
-  exactly reproducible, not every real playthrough.
+- **Determinism only as deep as the state.** All gameplay randomness is
+  seeded, but a real playthrough is still not bit-reproducible end to end
+  unless every input event is also recorded and replayed — the benchmark
+  achieves it by driving the game from code, a human session does not.
 - **Aging framework line.** The project is on SvelteKit 1.x and Svelte 4.
   That is well off the current major versions; an upgrade (Svelte 5 runes in
   particular would change how the store wiring works) is unprioritized work

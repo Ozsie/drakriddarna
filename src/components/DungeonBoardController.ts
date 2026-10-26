@@ -1,7 +1,3 @@
-// Render-loop and hover-signature strings intentionally interpolate
-// numbers and booleans into plain dirty-check keys; the strict
-// template-literal rule is aimed at user-facing text instead.
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
 import { get } from 'svelte/store';
 import { browser } from '$app/environment';
 import actorSprites from '$lib/Dungeon_Character_3.png';
@@ -197,9 +193,6 @@ export class DungeonBoardController {
   // template cannot react to mutations of controller state, so keeping
   // the style interpolation in sync from the component is not possible.
   private boardCursorValue = 'default';
-  private get boardCursor(): string {
-    return this.boardCursorValue;
-  }
   private set boardCursor(cursor: string) {
     this.boardCursorValue = cursor;
     if (this.uiCanvas) {
@@ -326,7 +319,9 @@ export class DungeonBoardController {
     }
 
     const dungeonKey = props.dungeon
-      ? `${props.dungeon.name}|${props.startPosition?.x},${props.startPosition?.y}`
+      ? `${String(String(String(props.dungeon.name)))}|${String(
+          props.startPosition?.x,
+        )},${String(String(String(props.startPosition?.y)))}`
       : '';
     if (dungeonKey !== this.lastDungeonKey) {
       this.lastDungeonKey = dungeonKey;
@@ -889,7 +884,11 @@ export class DungeonBoardController {
       ctx.fillStyle = 'white';
       ctx.font = '10px Arial';
       ctx.fillText(
-        `Re-renders: ${this.totalReRenderCount} (Static: ${this.staticRenderCount}, Dynamic: ${this.dynamicRenderCount})`,
+        `Re-renders: ${String(
+          String(this.totalReRenderCount),
+        )} (Static: ${String(
+          String(this.staticRenderCount),
+        )}, Dynamic: ${String(String(this.dynamicRenderCount))})`,
         10,
         14,
       );
@@ -934,58 +933,108 @@ export class DungeonBoardController {
     const menu = get(radialMenuStore);
     const recentLogs = this.activeState?.actionLog?.slice(0, 8);
     const logSig = recentLogs
-      ? recentLogs.map((l) => `${l.turn}:${l.key}`).join(';')
+      ? recentLogs
+          .map(
+            (l) =>
+              `${String(String(String(l.turn)))}:${String(
+                String(String(l.key)),
+              )}`,
+          )
+          .join(';')
       : '';
     const heroesSig = this.activeState?.heroes
       ? (this.activeState.heroes as Hero[])
           .map(
             (h) =>
-              `${h.name}:${h.health}:${h.actions}:${h.movement}:${h.isInventoryOpen}:${h.experience}:${h.inventory?.length}`,
+              `${String(String(String(h.name)))}:${String(
+                String(String(h.health)),
+              )}:${String(h.actions)}:${String(
+                String(String(h.movement)),
+              )}:${String(String(h.isInventoryOpen))}:${String(
+                String(h.experience),
+              )}:${String(String(h.inventory?.length))}`,
           )
           .join(';')
       : '';
     const monstersSig = (this.activeState?.dungeon?.layout?.monsters ?? [])
-      .map((m) => `${m.name}:${m.health}:${m.position.x},${m.position.y}`)
+      .map(
+        (m) =>
+          `${String(String(String(m.name)))}:${String(
+            String(String(m.health)),
+          )}:${String(m.position.x)},${String(String(String(m.position.y)))}`,
+      )
       .join(';');
     const roomsSig = (this.activeState?.dungeon?.discoveredRooms ?? []).join(
       ',',
     );
-    const hoverSig = `${this.hover.hoveredInventoryHeroName}:${this.hover.hoveredCloseHeroName}:${this.hover.hoveredUseItem?.heroName}-${this.hover.hoveredUseItem?.itemIndex}`;
-    const targetSig = `${this.activeState?.targetActor?.name}:${this.activeState?.currentActor?.name}`;
-    const winSig = `${this.activeState?.dungeon?.killCount}:${(
-      this.activeState?.dungeon?.winConditions ?? []
-    )
-      .map((w) => `${w.fulfilled}`)
+    const hoverSig = `${String(
+      String(this.hover.hoveredInventoryHeroName),
+    )}:${String(String(this.hover.hoveredCloseHeroName))}:${String(
+      String(this.hover.hoveredUseItem?.heroName),
+    )}-${String(String(this.hover.hoveredUseItem?.itemIndex))}`;
+    const targetSig = `${String(
+      String(this.activeState?.targetActor?.name),
+    )}:${String(String(this.activeState?.currentActor?.name))}`;
+    const winSig = `${String(
+      String(String(this.activeState?.dungeon?.killCount)),
+    )}:${(this.activeState?.dungeon?.winConditions ?? [])
+      .map((w) => `${String(String(String(w.fulfilled)))}`)
       .join(',')}`;
     const diarySig = `${(this.activeState?.dungeon?.layout?.notes ?? [])
       .filter((n) => n.found)
-      .map((n) => `${n.id}:${n.foundOn}`)
+      .map(
+        (n) =>
+          `${String(String(String(n.id)))}:${String(
+            String(String(n.foundOn)),
+          )}`,
+      )
       .join(',')}`;
-    const eventSig = `${this.activeState?.currentEvent?.id ?? ''}:${(
-      this.activeState?.eventDeck ?? []
-    )
-      .map((e) => `${e.number}-${e.used}`)
-      .join(',')}:${this.isEventCardCollapsed}:${
-      this.hover.isEventCardToggleHovered
-    }`;
-    const introSig = `${this.showDungeonIntro}:${
-      this.hover.isDungeonIntroCloseHovered
-    }:${this.activeState?.dungeon?.intro ?? ''}`;
+    const eventSig = `${String(
+      String(this.activeState?.currentEvent?.id ?? ''),
+    )}:${(this.activeState?.eventDeck ?? [])
+      .map(
+        (e) =>
+          `${String(String(String(e.number)))}-${String(
+            String(String(e.used)),
+          )}`,
+      )
+      .join(',')}:${String(String(String(this.isEventCardCollapsed)))}:${String(
+      this.hover.isEventCardToggleHovered,
+    )}`;
+    const introSig = `${String(String(String(this.showDungeonIntro)))}:${String(
+      this.hover.isDungeonIntroCloseHovered,
+    )}:${String(String(String(this.activeState?.dungeon?.intro ?? '')))}`;
     const currentDebug = this.debugMode;
-    const menuSig = `${this.isCanvasMenuOpen}:${this.currentMenuView}:${
-      this.hover.hoveredMenuItemId
-    }:${currentDebug}:${get(locale)}:${this.activeState?.settings?.[
-      'locale'
-    ]}:${this.activeState?.gameMaster?.id}:${this.activeState?.dungeon
-      ?.beaten}:${this.activeState?.settings?.['music']}`;
-    const sig = `${menu?.x},${menu?.y},${menu?.entries?.length ?? 0},${
-      this.hover.hoveredRadialIndex
-    },${this.cellSize},${this.containerWidth},${this.containerHeight},${this
-      .activeState?.turnCount},${logSig},${this.hover.isMenuHovered},${
-      this.hover.isDebugHovered
-    },${this.hover.isLogHovered},${
-      this.isLogOpen
-    },${heroesSig},${monstersSig},${roomsSig},${hoverSig},${targetSig},${winSig},${diarySig},${eventSig},${introSig},${menuSig}`;
+    const menuSig = `${String(String(String(this.isCanvasMenuOpen)))}:${String(
+      this.currentMenuView,
+    )}:${String(String(this.hover.hoveredMenuItemId))}:${String(
+      String(currentDebug),
+    )}:${String(String(get(locale)))}:${String(
+      this.activeState?.settings?.['locale'],
+    )}:${String(String(this.activeState?.gameMaster?.id))}:${String(
+      this.activeState?.dungeon?.beaten,
+    )}:${String(String(this.activeState?.settings?.['music']))}`;
+    const sig = `${String(String(String(menu?.x)))},${String(
+      String(String(menu?.y)),
+    )},${String(menu?.entries?.length ?? 0)},${String(
+      String(this.hover.hoveredRadialIndex),
+    )},${String(String(this.cellSize))},${String(
+      String(this.containerWidth),
+    )},${String(String(this.containerHeight))},${String(
+      String(this.activeState?.turnCount),
+    )},${String(String(logSig))},${String(
+      String(this.hover.isMenuHovered),
+    )},${String(String(this.hover.isDebugHovered))},${String(
+      String(this.hover.isLogHovered),
+    )},${String(String(this.isLogOpen))},${String(String(heroesSig))},${String(
+      String(monstersSig),
+    )},${String(String(String(roomsSig)))},${String(
+      String(String(hoverSig)),
+    )},${String(targetSig)},${String(String(String(winSig)))},${String(
+      String(String(diarySig)),
+    )},${String(String(eventSig))},${String(String(introSig))},${String(
+      String(String(menuSig)),
+    )}`;
     if (!force && sig === this.lastUiSignature) return;
     this.lastUiSignature = sig;
 
@@ -1110,8 +1159,8 @@ export class DungeonBoardController {
     if (!canvas || width <= 0 || height <= 0) return;
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    canvas.style.width = `${String(String(String(width)))}px`;
+    canvas.style.height = `${String(String(String(height)))}px`;
     const ctx = canvas.getContext('2d');
     if (ctx) {
       const centerOffsetX = this.startPosition
@@ -1128,60 +1177,6 @@ export class DungeonBoardController {
         ratio * (width / 2 + this.panX - centerOffsetX),
         ratio * (height / 2 + this.panY - centerOffsetY),
       );
-    }
-  };
-
-  private updateDimensions = () => {
-    if (
-      this.containerWidth !== this.lastContainerWidth ||
-      this.containerHeight !== this.lastContainerHeight
-    ) {
-      this.lastContainerWidth = this.containerWidth;
-      this.lastContainerHeight = this.containerHeight;
-      const ratio = (browser && window.devicePixelRatio) || 1;
-      this.initCanvas(
-        this.staticCanvas,
-        this.containerWidth,
-        this.containerHeight,
-        ratio,
-      );
-      this.initCanvas(
-        this.actorCanvas,
-        this.containerWidth,
-        this.containerHeight,
-        ratio,
-      );
-      this.initCanvas(
-        this.lightCanvas,
-        this.containerWidth,
-        this.containerHeight,
-        ratio,
-      );
-      this.initCanvas(
-        this.staticLightCanvas,
-        this.containerWidth,
-        this.containerHeight,
-        ratio,
-      );
-      this.initCanvas(
-        this.darknessCanvas,
-        this.containerWidth,
-        this.containerHeight,
-        ratio,
-      );
-      this.initCanvas(
-        this.overlayCanvas,
-        this.containerWidth,
-        this.containerHeight,
-        ratio,
-      );
-      this.initCanvas(
-        this.uiCanvas,
-        this.containerWidth,
-        this.containerHeight,
-        ratio,
-      );
-      this.renderCanvas(true);
     }
   };
 

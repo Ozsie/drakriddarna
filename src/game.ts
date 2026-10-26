@@ -1,6 +1,7 @@
-import type { Dungeon, GameState, GameMaster, Hero, Position } from './types';
+import type { GameState, Hero, Position } from './types';
 import { ConditionType } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
+import { CURRENT_SAVE_VERSION, migrateSaveState } from './saveMigration';
 import { getCampaign, isKnownCampaign, DEFAULT_CAMPAIGN_ID } from './campaigns';
 import {
   monsterActions,
@@ -20,7 +21,7 @@ import {
   resetEventEffects,
 } from './events/EventsLogic';
 import { browser } from '$app/environment';
-import { addLog, COLLAPSED, doReRender, i18n, toArray } from './core';
+import { addLog, doReRender, i18n } from './core';
 import { shuffle } from './core';
 import {
   getEffectiveMaxMovement,
@@ -48,50 +49,7 @@ export const loadState = (newState: GameState) => {
   newState.currentActor = newState.heroes.find(
     (hero) => hero.name === newState.currentActor?.name,
   ) as Hero | undefined;
-  // Migrate saves written before the game master was collapsed into the
-  // single `gameMaster` field: they carry `difficulty` and/or
-  // `gameMasterId` instead.
-  const legacy = newState as GameState & {
-    difficulty?: GameMaster;
-    gameMasterId?: string;
-  };
-  if (!newState.gameMaster) {
-    newState.gameMaster =
-      (legacy.difficulty
-        ? legacy.difficulty.modifiers
-          ? legacy.difficulty
-          : getGameMaster(legacy.difficulty.id)
-        : undefined) ??
-      (legacy.gameMasterId ? getGameMaster(legacy.gameMasterId) : undefined) ??
-      getGameMaster(DEFAULT_GAME_MASTER_ID);
-  }
-  delete legacy.difficulty;
-  delete legacy.gameMasterId;
-  // Migrate saves written before landslides tracked each collapse with
-  // its exact cells: the dungeon carries a single `collapsedCorridor`
-  // letter while the collapsed cells sit in the grid as COLLAPSED. Only
-  // the active dungeon is migrated — an untouched nextDungeon keeps its
-  // legacy shape.
-  const legacyDungeon = newState.dungeon as Dungeon & {
-    collapsedCorridor?: string;
-  };
-  if (legacyDungeon.collapsedCorridor) {
-    const collapsedCells: Position[] = [];
-    legacyDungeon.layout.grid.forEach((row, y) => {
-      toArray(row).forEach((cell, x) => {
-        if (cell === COLLAPSED) {
-          collapsedCells.push({ x, y });
-        }
-      });
-    });
-    if (collapsedCells.length > 0) {
-      legacyDungeon.collapsedCorridors = [
-        ...(legacyDungeon.collapsedCorridors ?? []),
-        { letter: legacyDungeon.collapsedCorridor, cells: collapsedCells },
-      ];
-    }
-    delete legacyDungeon.collapsedCorridor;
-  }
+  migrateSaveState(newState);
   // Older saves may not have a campaignId at all, and any save could in
   // theory reference a campaign that no longer exists (e.g. removed
   // during development). Fall back to the default campaign rather than
@@ -138,6 +96,7 @@ export const init = (
 
   const state: GameState = {
     campaignId: campaign.id,
+    saveVersion: CURRENT_SAVE_VERSION,
     gameMaster: selectedGameMaster,
     heroes: campaign.heroes,
     dungeon: campaign.dungeons[0],

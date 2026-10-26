@@ -1,5 +1,6 @@
 import type { Actor, GameState, Hero, Monster } from '../../types';
 import { Level } from '../../types';
+import { nextRandom } from '../../core';
 import { logMonsterTargetSelection } from './logger';
 
 export interface TargetScoreOptions {
@@ -115,7 +116,7 @@ export const scoreHero = (
       ? options.noticeRoll
       : options.rng
       ? options.rng()
-      : Math.random();
+      : nextRandom();
 
   const noticedKill = hero.health <= expectedDamage && noticeRoll < 0.5;
   if (noticedKill) {
@@ -125,7 +126,7 @@ export const scoreHero = (
   const randomBonus =
     options.randomVal !== undefined
       ? options.randomVal
-      : (options.rng ? options.rng() : Math.random()) * 3;
+      : (options.rng ? options.rng() : nextRandom()) * 3;
 
   score += randomBonus;
 

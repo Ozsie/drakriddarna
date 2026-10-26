@@ -1,5 +1,5 @@
 import type { Difficulty, GameState } from '../../types';
-import { getDifficulty, getGameMaster } from '../../core';
+import { getDifficulty, getGameMaster, nextRandom } from '../../core';
 import type {
   BehaviorContext,
   DirectorState,
@@ -54,7 +54,7 @@ export const rollBowForgotten = (
   }
 
   const chance = difficulty?.monsterBehavior?.bowForgottenChance ?? 0.15;
-  return Math.random() < chance;
+  return nextRandom() < chance;
 };
 
 export const calculateBehaviorWeight = (
@@ -175,7 +175,7 @@ export const selectBehavior = (
     (sum, b) => sum + b.finalWeight,
     0,
   );
-  let roll = Math.random() * totalWeight;
+  let roll = nextRandom() * totalWeight;
 
   for (const item of eligibleEvaluated) {
     roll -= item.finalWeight;

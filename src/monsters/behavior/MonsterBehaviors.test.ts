@@ -10,7 +10,7 @@ import {
   MonsterType,
   type Weapon,
 } from '../../types';
-import { getGameMaster } from '../../core';
+import { getGameMaster, resetRng, setRng } from '../../core';
 import { createMonster } from '../../dungeon/DungeonLogic';
 import { createPassableGrid } from '../pathfinding';
 import {
@@ -146,15 +146,15 @@ describe('Monster Behavioral Modifiers & Formulas', () => {
     const hardDiff = getGameMaster('hard');
     expect(hardDiff?.monsterBehavior?.bowForgottenChance).toBe(0);
 
-    const randomSpy = vi.spyOn(Math, 'random');
-    randomSpy.mockReturnValue(0.15); // 0.2 < 0.25 (easy) but >= 0.15 (normal)
+    // 0.2 < 0.25 (easy) but >= 0.15 (normal)
+    setRng(() => 0.15);
     expect(rollBowForgotten('easy')).toBe(true);
     expect(rollBowForgotten(easyDiff)).toBe(true);
     expect(rollBowForgotten('normal')).toBe(false);
     expect(rollBowForgotten(normalDiff)).toBe(false);
     expect(rollBowForgotten('hard')).toBe(false);
     expect(rollBowForgotten(hardDiff)).toBe(false);
-    randomSpy.mockRestore();
+    resetRng();
   });
 
   it('applies temperament, director, and anti-stall multipliers to weights', () => {

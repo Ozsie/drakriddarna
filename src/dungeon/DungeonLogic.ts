@@ -23,7 +23,7 @@ import { monsterWeapons } from '../items/weapons';
 import { monsterArmour } from '../items/armours';
 import { monsterShields } from '../items/shields';
 import { liveHeroes } from '../hero/HeroLogic';
-import { addLog } from '../core';
+import { addLog, nextRandom } from '../core';
 import { COLLAPSED, EMPTY, WALL } from '../core';
 import {
   getMonsterTemplate,
@@ -365,7 +365,7 @@ export const createMonster = (
     position: { x, y },
     incapacitated: false,
     inventory: [],
-    temperament: Math.random() < 0.5 ? 'bold' : 'wary',
+    temperament: nextRandom() < 0.5 ? 'bold' : 'wary',
     passiveStreak: 0,
     ...(walkSound ? { walkSound, walk: walkSound } : {}),
     ...(hurtSound ? { hurtSound, hurt: hurtSound } : {}),

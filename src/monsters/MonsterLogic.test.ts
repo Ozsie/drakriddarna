@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   Colour,
   ConditionType,
@@ -16,6 +16,7 @@ import { resetRng, setRng } from '../core';
 import {
   hasTwoAttackActions,
   isAttackSlot,
+  createVisibleHeroesCache,
   monsterActions,
   monsterMove,
 } from './MonsterLogic';
@@ -366,7 +367,7 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
   });
 
   it('monsterActions executes full turn with pathfinding movement then attack', async () => {
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    setRng(() => 0.9);
     const state = createTestState();
     const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
     monster.actions = 2;
@@ -387,11 +388,11 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
       state.actionLog.some((l) => l.key === 'logs.takeDamage.attackedWith'),
     ).toBe(true);
 
-    randomSpy.mockRestore();
+    resetRng();
   });
 
   it('monsterActions executes multiple monsters sequentially with callbacks and delays', async () => {
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    setRng(() => 0.9);
     const state = createTestState();
     const monster1 = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
     monster1.actions = 2;
@@ -434,11 +435,11 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
       ),
     ).toBe(true);
 
-    randomSpy.mockRestore();
+    resetRng();
   });
 
   it('executes Brawl against adjacent hero when adjacent', async () => {
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    setRng(() => 0.9);
     const state = createTestState();
     const monster = createMonster(MonsterType.ORC, Colour.Green, 2, 2);
     monster.actions = 2;
@@ -463,7 +464,7 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
       ),
     ).toBe(true);
 
-    randomSpy.mockRestore();
+    resetRng();
   });
 
   it('monsterActions logs when no visible monsters are found', async () => {
@@ -519,7 +520,7 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
   });
 
   it('Peek shot resets passiveStreak to 0 because it performs an attack', async () => {
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    setRng(() => 0.9);
     const state = createTestState();
     // Grid with cover: hero at (1, 4), monster at (1, 1), cover tile at (2, 1) behind wall (2, 2)
     state.dungeon.layout.grid = [
@@ -557,7 +558,7 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
     });
 
     expect(monster.passiveStreak).toBe(0);
-    randomSpy.mockRestore();
+    resetRng();
   });
 
   describe('Multi-attack charge fallback', () => {
@@ -614,7 +615,7 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
 
     it('monster with Brawl (2 attacks) charges towards distant hero if first attack kills adjacent hero', async () => {
       setRng(() => 5 / 6);
-      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+      setRng(() => 0.9);
       const state = createTestState();
       // Monster at (2, 2)
       const monster = createMonster(MonsterType.ORC, Colour.Green, 2, 2);
@@ -659,12 +660,12 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
         ),
       ).toBe(true);
 
-      randomSpy.mockRestore();
+      resetRng();
       resetRng();
     });
 
     it('monster with Brawl attacks second hero instead of charging if another valid adjacent target exists', async () => {
-      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+      setRng(() => 0.9);
       const state = createTestState();
       const monster = createMonster(MonsterType.ORC, Colour.Green, 2, 2);
       monster.actions = 2;
@@ -692,7 +693,83 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
       );
       expect(attacks.length).toBe(2);
 
-      randomSpy.mockRestore();
+      resetRng();
     });
+  });
+});
+
+describe('createVisibleHeroesCache', () => {
+  const twoRoomState = (): GameState => {
+    const state = createTestState();
+    state.dungeon.layout.grid = [
+      '#######',
+      '#AA#BB#',
+      '#AA#BB#',
+      '#AA#BB#',
+      '#AA#BB#',
+      '#######',
+    ];
+    return state;
+  };
+
+  it('returns the same hero list while nothing moves', () => {
+    const state = twoRoomState();
+    state.heroes = [createTestHero('Fearik', 2, 2)];
+    const monster = createMonster('Orc', Colour.Red, 2, 1);
+    state.dungeon.layout.monsters = [monster];
+
+    const visibleHeroes = createVisibleHeroesCache(state);
+    const first = visibleHeroes(monster);
+    const second = visibleHeroes(monster);
+
+    expect(second).toEqual(first);
+    expect(first).toHaveLength(1);
+  });
+
+  it('recomputes when a hero moves out of sight', () => {
+    const state = twoRoomState();
+    state.heroes = [createTestHero('Fearik', 2, 1)];
+    const monster = createMonster('Orc', Colour.Red, 2, 2);
+    state.dungeon.layout.monsters = [monster];
+
+    const visibleHeroes = createVisibleHeroesCache(state);
+    expect(visibleHeroes(monster)).toHaveLength(1);
+
+    // The hero crosses the wall into the other room: the cache must not
+    // serve the stale, still-visible list.
+    state.heroes[0].position = { x: 4, y: 1 };
+    expect(visibleHeroes(monster)).toHaveLength(0);
+  });
+
+  it('recomputes when a hero dies or is ignored by monsters', () => {
+    const state = createTestState();
+    state.heroes = [createTestHero('Fearik', 3, 1)];
+    const monster = createMonster('Orc', Colour.Red, 2, 1);
+    state.dungeon.layout.monsters = [monster];
+
+    const visibleHeroes = createVisibleHeroesCache(state);
+    expect(visibleHeroes(monster)).toHaveLength(1);
+
+    state.heroes[0].health = 0;
+    expect(visibleHeroes(monster)).toHaveLength(0);
+
+    state.heroes[0].health = 10;
+    expect(visibleHeroes(monster)).toHaveLength(1);
+    state.heroes[0].ignoredByMonsters = true;
+    expect(visibleHeroes(monster)).toHaveLength(0);
+  });
+
+  it('recomputes when the monster itself moves', () => {
+    const state = twoRoomState();
+    state.heroes = [createTestHero('Fearik', 4, 2)];
+    const monster = createMonster('Orc', Colour.Red, 2, 1);
+    state.dungeon.layout.monsters = [monster];
+
+    const visibleHeroes = createVisibleHeroesCache(state);
+    expect(visibleHeroes(monster)).toHaveLength(0);
+
+    // The monster crosses into the hero's room and gains line of sight.
+    monster.position = { x: 4, y: 1 };
+    expect(visibleHeroes(monster)).toHaveLength(1);
   });
 });

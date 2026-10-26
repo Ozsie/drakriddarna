@@ -295,6 +295,7 @@ describe('loadState legacy save migration', () => {
     const state = init('iceDragonTreasure', 'easy');
     const legacy = state as LegacyGameMasterState;
     legacy.difficulty = state.gameMaster as GameMaster;
+    state.saveVersion = undefined; // legacy save: no version stamp
     legacy.gameMasterId = state.gameMaster?.id;
     legacy.gameMaster = undefined;
 
@@ -309,6 +310,7 @@ describe('loadState legacy save migration', () => {
     const state = init('iceDragonTreasure', 'hard');
     const legacy = state as LegacyGameMasterState;
     legacy.gameMasterId = 'brutalOverlord';
+    state.saveVersion = undefined; // legacy save: no version stamp
     legacy.gameMaster = undefined;
 
     loadState(state);
@@ -322,6 +324,7 @@ describe('loadState legacy save migration', () => {
     const state = init();
     const legacy = state as LegacyGameMasterState;
     legacy.difficulty = { id: 'easy' } as unknown as GameMaster;
+    state.saveVersion = undefined; // legacy save: no version stamp
     legacy.gameMaster = undefined;
 
     loadState(state);
@@ -334,6 +337,7 @@ describe('loadState legacy save migration', () => {
     const state = init();
     const legacy = state as LegacyGameMasterState;
     legacy.gameMaster = undefined;
+    state.saveVersion = undefined; // legacy save: no version stamp
 
     loadState(state);
 
@@ -351,6 +355,7 @@ describe('loadState legacy collapsed corridor migration', () => {
     const dungeon = state.dungeon as LegacyCollapsedDungeon;
     dungeon.layout.grid = ['#####', '#AA?#', '#####'];
     dungeon.collapsedCorridor = 'B';
+    state.saveVersion = undefined; // legacy save: no version stamp
 
     loadState(state);
 
@@ -367,6 +372,7 @@ describe('loadState legacy collapsed corridor migration', () => {
     dungeon.collapsedCorridors = [existingGroup];
     dungeon.layout.grid = ['#####', '#AA?#', '#####'];
     dungeon.collapsedCorridor = 'B';
+    state.saveVersion = undefined; // legacy save: no version stamp
 
     loadState(state);
 
@@ -380,6 +386,7 @@ describe('loadState legacy collapsed corridor migration', () => {
     const state = init();
     const dungeon = state.dungeon as LegacyCollapsedDungeon;
     dungeon.collapsedCorridor = 'B';
+    state.saveVersion = undefined; // legacy save: no version stamp
 
     loadState(state);
 
@@ -387,18 +394,21 @@ describe('loadState legacy collapsed corridor migration', () => {
     expect('collapsedCorridor' in dungeon).toBe(false);
   });
 
-  it('does not migrate the next dungeon', () => {
+  it('migrates the next dungeon chain too', () => {
     const state = init();
     const nextDungeon = structuredClone(
       state.dungeon,
     ) as LegacyCollapsedDungeon;
     nextDungeon.layout.grid = ['#####', '#AA?#', '#####'];
     nextDungeon.collapsedCorridor = 'B';
+    state.saveVersion = undefined; // legacy save: no version stamp
     state.dungeon.nextDungeon = nextDungeon;
 
     loadState(state);
 
-    expect(nextDungeon.collapsedCorridor).toBe('B');
-    expect(nextDungeon.collapsedCorridors).toBeUndefined();
+    expect('collapsedCorridor' in nextDungeon).toBe(false);
+    expect(nextDungeon.collapsedCorridors).toEqual([
+      { letter: 'B', cells: [{ x: 3, y: 1 }] },
+    ]);
   });
 });

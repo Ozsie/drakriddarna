@@ -41,6 +41,17 @@ export const roll = (level: Level, dice: number): number => {
   return results.length;
 };
 
+/**
+ * The raw seeded random value, for gameplay randomness that is neither a
+ * dice roll nor a shuffle (never call `Math.random()` directly for
+ * gameplay-affecting decisions).
+ */
+export const nextRandom = (): number => rng();
+
+/** A random integer in [0, max) from the seeded rng. */
+export const randomInt = (max: number): number =>
+  max <= 0 ? 0 : Math.floor(rng() * max);
+
 export const shuffle = <T>(array: T[]): T[] => {
   let currentIndex = array.length,
     randomIndex;
