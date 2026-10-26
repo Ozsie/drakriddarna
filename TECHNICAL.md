@@ -219,6 +219,12 @@ the DOM:
   braziers) are rendered once and cached; only dynamic lights (swaying
   chandeliers, carried items) recompute per animation frame.
 
+Tall props fake height by splitting across layers: a pillar's base tile is
+static, while its shaft tile is drawn on the actor layer after monsters and
+heroes — so a figure standing in the cell behind a pillar is occluded by the
+rising shaft — but before the ambient darkness veil, so unlit shafts darken
+with the rest of the scene.
+
 The lighting (`src/dungeon/LightRendering.ts`) is the most graphics-heavy
 code in the repo: a 2D visibility technique where each light source casts a
 fan of rays (120 per source) that walk the grid cell by cell — jumping from

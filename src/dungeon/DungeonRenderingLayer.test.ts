@@ -5,6 +5,7 @@ import {
   renderGrid,
   renderInteractables,
   renderPillars,
+  renderPillarTops,
   renderSecrets,
 } from './DungeonRendering';
 import { renderHeroes } from '../hero/HeroRendering';
@@ -167,6 +168,29 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     renderPillars(staticCtx, mockGround, 48, state, false);
 
     expect(staticCtx.drawImage).toHaveBeenCalled();
+  });
+
+  it('renders the pillar shaft on the dynamic layer in the cell above the pillar, not on the static layer', () => {
+    const state = createMockState();
+    const staticCtx = createMockCtx();
+    const dynamicCtx = createMockCtx();
+    const mockGround = { src: 'ground.png' } as unknown as CanvasImageSource;
+
+    const drewIntoRowAbove = (ctx: CanvasRenderingContext2D): boolean =>
+      (
+        ctx.drawImage as unknown as { mock: { calls: unknown[][] } }
+      ).mock.calls.some((call) => call.includes(-48));
+
+    // The static pass draws only the pillar base in its own cell (0, 0).
+    renderPillars(staticCtx, mockGround, 48, state, false);
+    expect(staticCtx.drawImage).toHaveBeenCalled();
+    expect(drewIntoRowAbove(staticCtx)).toBe(false);
+
+    // The overhead pass draws the shaft into the cell above, at y = -1
+    // cells, covering actors that stand north of the pillar.
+    renderPillarTops(dynamicCtx, mockGround, 48, state, false);
+    expect(dynamicCtx.drawImage).toHaveBeenCalled();
+    expect(drewIntoRowAbove(dynamicCtx)).toBe(true);
   });
 
   it('renders a highlight on interactable cells when secret is false, and does not render highlight when secret is true', () => {

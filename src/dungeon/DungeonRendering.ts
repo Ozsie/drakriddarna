@@ -284,6 +284,13 @@ const renderPits = (
     });
 };
 
+// A pillar renders in two passes. The base tile is an ordinary floor
+// object and lives on the static layer (renderPillars). The shaft tile
+// above it simulates height and must cover actors standing in the cell
+// behind it, so it is drawn on the dynamic layer after the actors
+// (renderPillarTops). Both tiles are opaque: the pillar is a physical
+// occluder in the light mask, and a translucent shaft would both tint
+// itself with the floor behind it and show a hard edge against the base.
 export const renderPillars = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
@@ -297,9 +304,27 @@ export const renderPillars = (
     )
     ?.forEach((pillar) => {
       drawTile(ctx, ground, 7, 2, cellSize, pillar.x, pillar.y, state);
-      ctx.globalAlpha = 0.4;
+    });
+};
+
+// The upper half of a pillar, rising into the cell behind it. Drawn after
+// monsters and heroes so figures north of the pillar stand behind its
+// shaft, and before the ambient darkness veil so unlit shafts darken like
+// the rest of the scene. Fog rules match the base: only a discovered
+// pillar renders its shaft.
+export const renderPillarTops = (
+  ctx: CanvasRenderingContext2D,
+  ground: CanvasImageSource,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+) => {
+  state.dungeon.layout.pillars
+    ?.filter(
+      (pillar) => isDiscovered(state.dungeon, pillar.x, pillar.y) || debugMode,
+    )
+    ?.forEach((pillar) => {
       drawTile(ctx, ground, 7, 1, cellSize, pillar.x, pillar.y - 1, state);
-      ctx.globalAlpha = 1;
     });
 };
 

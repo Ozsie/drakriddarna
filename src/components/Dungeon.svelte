@@ -31,6 +31,7 @@
     renderGrid,
     renderInteractables,
     renderPillars,
+    renderPillarTops,
     renderPortal,
     renderSecrets,
     renderWalls,
@@ -542,6 +543,13 @@
       activeDebugMode ?? false,
       currentTime,
     );
+
+    // Pillar shafts rise over the cell behind them: drawn after the actors
+    // so figures standing north of a pillar are occluded by its height,
+    // and before the darkness veil so unlit shafts darken with the scene.
+    if (ground) {
+      renderPillarTops(ctx, ground, cellSize, activeState, debugMode);
+    }
 
     if (darknessCanvas && lightCanvas) {
       renderAmbientDarkness(ctx, darknessCanvas, lightCanvas, activeState);
