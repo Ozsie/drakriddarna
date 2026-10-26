@@ -27,6 +27,8 @@ import {
   openDoorAtHero,
   checkForNextToMonster,
   search,
+  dropItem,
+  pickupItem,
 } from './HeroLogic';
 import { findDoorsAtHero } from './RadialMenuLogic';
 import { getGameMaster } from '../core';
@@ -858,5 +860,43 @@ describe('searching with exhausted item decks', () => {
 
     expect(state.dungeon.layout.secrets[0].found).toBe(true);
     expect(hero.inventory).toHaveLength(0);
+  });
+});
+
+describe('dropItem', () => {
+  it('leaves the dropped item behind when the hero later moves', () => {
+    const hero = createTestHero({ position: { x: 2, y: 2 } });
+    const monster = createTestMonster({ position: { x: 5, y: 5 } });
+    const state = createTestState(hero, monster);
+    const oldWeapon = hero.weapon;
+
+    dropItem(state, oldWeapon, hero);
+    hero.position.x = 3;
+
+    expect(state.dungeon.layout.items).toHaveLength(1);
+    expect(state.dungeon.layout.items[0].position).toEqual({ x: 2, y: 2 });
+  });
+
+  it('drops the replaced weapon on the floor when picking up a new one', () => {
+    const hero = createTestHero({ position: { x: 2, y: 2 } });
+    const monster = createTestMonster({ position: { x: 5, y: 5 } });
+    const state = createTestState(hero, monster);
+    const oldWeapon = hero.weapon;
+    const newWeapon: Weapon = {
+      ...chaosSwordWeapon,
+      id: 'new_sword',
+      name: 'New Sword',
+    };
+
+    pickupItem(state, newWeapon, hero);
+
+    expect(hero.weapon).toBe(newWeapon);
+    expect(state.dungeon.layout.items).toHaveLength(1);
+    expect(state.dungeon.layout.items[0].item).toBe(oldWeapon);
+    expect(state.dungeon.layout.items[0].position).toEqual({ x: 2, y: 2 });
+
+    hero.position.x = 3;
+
+    expect(state.dungeon.layout.items[0].position).toEqual({ x: 2, y: 2 });
   });
 });

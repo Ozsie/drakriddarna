@@ -641,7 +641,7 @@ export const dropItem = (state: GameState, item: Item, actor: Actor) => {
   });
   state.dungeon.layout.items.push({
     item,
-    position: actor.position,
+    position: { x: actor.position.x, y: actor.position.y },
   });
   if (item && item.drop) {
     const drop = onDrop[item.drop];
