@@ -20,7 +20,7 @@
 # Features
 
 - [ ] Multiple saves
-- [ ] Scoring, 50 point per hp at end of scenario, 30*xp points per monster killed, -2 per round, more?
+- [ ] Scoring, 50 point per hp at end of scenario, 30\*xp points per monster killed, -2 per round, more?
 - [ ] Dungeon timer, with optional speed running feature
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc
 - [ ] Responsive layout
