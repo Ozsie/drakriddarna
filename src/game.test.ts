@@ -353,6 +353,89 @@ describe('game orchestrator', () => {
       expect(state.heroes[0].position).toEqual({ x: 5, y: 5 });
       expect(state.turnCount).toBe(0);
     });
+
+    it('awards the scenario score once, when win conditions are first fulfilled', async () => {
+      const state = init();
+      const nextDungeon = {
+        ...state.dungeon,
+        name: 'campaign.iceDragon.e1m1.name',
+        startingPositions: [{ x: 5, y: 5 }],
+        winConditions: [],
+        beaten: false,
+      };
+
+      state.dungeon.layout.monsters = [];
+      state.dungeon.winConditions = [];
+      state.dungeon.layout.secrets = [];
+      state.dungeon.nextDungeon = nextDungeon;
+      state.turnCount = 3;
+      const heroHealth = state.heroes.reduce(
+        (partial, hero) => partial + Math.max(0, hero.health),
+        0,
+      );
+      const expectedScore = 50 * heroHealth - 2 * 3;
+
+      await next(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      expect(state.dungeon.beaten).toBe(true);
+      expect(state.dungeon.score?.total).toBe(expectedScore);
+      expect(state.score).toBe(expectedScore);
+      expect(state.betweenDungeons?.scenarioScore?.total).toBe(expectedScore);
+      expect(state.betweenDungeons?.campaignScore).toBe(expectedScore);
+
+      // A re-check while already beaten must not add the score twice
+      await next(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      expect(state.score).toBe(expectedScore);
+    });
+
+    it('opens the campaign-complete screen when the last dungeon is beaten', async () => {
+      const state = init();
+      state.dungeon.layout.monsters = [];
+      state.dungeon.winConditions = [];
+      state.dungeon.layout.secrets = [];
+      state.dungeon.nextDungeon = undefined;
+      state.turnCount = 2;
+      const xpBefore = state.heroes.map((hero) => hero.experience);
+
+      await next(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      expect(state.dungeon.beaten).toBe(true);
+      expect(state.betweenDungeons?.step).toBe('campaignComplete');
+      expect(state.betweenDungeons?.nextDungeon).toBeUndefined();
+      expect(state.betweenDungeons?.levelUps).toEqual([]);
+      expect(state.betweenDungeons?.scenarioScore?.total).toBe(state.score);
+      expect(state.scenarioScores?.length).toBe(1);
+      expect(state.scenarioScores?.[0].rounds).toBe(2);
+      // No between-dungeons progression on the final screen: heroes keep
+      // the experience they ended the campaign with.
+      expect(state.heroes.map((hero) => hero.experience)).toEqual(xpBefore);
+
+      // Re-checking the beaten final dungeon does not duplicate records
+      await next(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+      expect(state.scenarioScores?.length).toBe(1);
+      expect(state.score).toBe(state.scenarioScores?.[0].score.total);
+    });
   });
 });
 

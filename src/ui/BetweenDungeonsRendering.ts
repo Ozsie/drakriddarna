@@ -9,7 +9,7 @@ import {
   Colour,
 } from '../types';
 import { ItemType } from '../types';
-import { i18n } from '../core';
+import { i18n, SCORE_POINTS_PER_SECRET } from '../core';
 import { getHeroTradableItems } from '../dungeon/BetweenDungeonsLogic';
 import {
   drawRoundedRect,
@@ -19,17 +19,71 @@ import {
 
 export interface BetweenDungeonsLayout {
   hasContent: boolean;
-  step: 'levelUp' | 'trade';
+  step: 'levelUp' | 'trade' | 'campaignComplete';
   backdropBounds: CardBounds;
   panelBounds: CardBounds;
   titleText: string;
   subtitleText: string;
+  scoreSection?: ScoreSectionLayout | null;
+  campaignComplete?: CampaignCompleteLayout | null;
   heroes: HeroSectionLayoutItem[];
   actionButtonBounds: CardBounds;
   actionButtonLabel: string;
   secondaryButtonBounds?: CardBounds;
   secondaryButtonLabel?: string;
   giveButtons: GiveButtonLayoutItem[];
+}
+
+export interface ScoreSectionLayout {
+  bounds: CardBounds;
+  totalText: string;
+  campaignText: string;
+  breakdownTexts: string[];
+}
+
+export interface CampaignCompleteScenarioRow {
+  nameText: string;
+  roundsText: string;
+  killsText: string;
+  scoreText: string;
+  y: number;
+}
+
+export interface CampaignCompleteHeroRow {
+  title: string;
+  colour: Colour;
+  levelText: string;
+  xpText: string;
+  hpText: string;
+  killsText: string;
+  itemsText: string;
+  alive: boolean;
+  y: number;
+}
+
+export interface CampaignCompleteLayout {
+  scoreText: string;
+  scoreY: number;
+  summaryText: string;
+  summaryY: number;
+  scenarioHeader: {
+    name: string;
+    rounds: string;
+    kills: string;
+    score: string;
+  };
+  scenarioHeaderY: number;
+  scenarioRows: CampaignCompleteScenarioRow[];
+  heroHeader: {
+    name: string;
+    level: string;
+    xp: string;
+    health: string;
+    kills: string;
+    items: string;
+  };
+  heroHeaderY: number;
+  heroRows: CampaignCompleteHeroRow[];
 }
 
 export interface HeroSectionLayoutItem {
@@ -88,6 +142,97 @@ const DESC_FONT = '12px Arial, Helvetica, sans-serif';
 const BUTTON_FONT = 'bold 14px Arial, Helvetica, sans-serif';
 const ITEM_FONT = '11px Arial, Helvetica, sans-serif';
 const SMALL_BTN_FONT = 'bold 11px Arial, Helvetica, sans-serif';
+const CAMPAIGN_SCORE_FONT = 'bold 20px Arial, Helvetica, sans-serif';
+const TABLE_HEADER_FONT = 'bold 11px Arial, Helvetica, sans-serif';
+const TABLE_FONT = '11px Arial, Helvetica, sans-serif';
+
+const heroColourHex = (colour: Colour): string =>
+  colour === Colour.Red
+    ? '#ef4444'
+    : colour === Colour.Blue
+    ? '#3b82f6'
+    : colour === Colour.Yellow
+    ? '#eab308'
+    : '#10b981';
+
+/**
+ * Draws the campaign-complete statistics: score headline, campaign
+ * summary, the per-scenario score table and one row per hero.
+ */
+const renderCampaignCompleteSection = (
+  ctx: CanvasRenderingContext2D,
+  panel: CardBounds,
+  cc: CampaignCompleteLayout,
+): void => {
+  const x = panel.x + 18;
+  const right = panel.x + panel.width - 18;
+
+  ctx.textBaseline = 'top';
+
+  // Score headline
+  ctx.fillStyle = '#fce28a';
+  ctx.font = CAMPAIGN_SCORE_FONT;
+  ctx.textAlign = 'left';
+  ctx.fillText(cc.scoreText, x, cc.scoreY);
+
+  // Campaign summary
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = DESC_FONT;
+  ctx.fillText(cc.summaryText, x, cc.summaryY);
+
+  // Per-scenario table
+  ctx.font = TABLE_HEADER_FONT;
+  ctx.fillStyle = '#cbd5e1';
+  ctx.fillText(cc.scenarioHeader.name, x, cc.scenarioHeaderY);
+  ctx.textAlign = 'right';
+  ctx.fillText(cc.scenarioHeader.rounds, right - 260, cc.scenarioHeaderY);
+  ctx.fillText(cc.scenarioHeader.kills, right - 180, cc.scenarioHeaderY);
+  ctx.fillText(cc.scenarioHeader.score, right, cc.scenarioHeaderY);
+
+  for (const row of cc.scenarioRows) {
+    ctx.font = TABLE_FONT;
+    ctx.fillStyle = '#e2e8f0';
+    ctx.textAlign = 'left';
+    ctx.fillText(row.nameText, x, row.y);
+    ctx.textAlign = 'right';
+    ctx.fillText(row.roundsText, right - 260, row.y);
+    ctx.fillText(row.killsText, right - 180, row.y);
+    ctx.fillStyle = '#fcd34d';
+    ctx.fillText(row.scoreText, right, row.y);
+  }
+
+  // Per-hero table
+  ctx.font = TABLE_HEADER_FONT;
+  ctx.fillStyle = '#cbd5e1';
+  ctx.textAlign = 'left';
+  ctx.fillText(cc.heroHeader.name, x, cc.heroHeaderY);
+  ctx.textAlign = 'right';
+  ctx.fillText(cc.heroHeader.level, right - 360, cc.heroHeaderY);
+  ctx.fillText(cc.heroHeader.xp, right - 290, cc.heroHeaderY);
+  ctx.fillText(cc.heroHeader.health, right - 200, cc.heroHeaderY);
+  ctx.fillText(cc.heroHeader.kills, right - 120, cc.heroHeaderY);
+  ctx.fillText(cc.heroHeader.items, right, cc.heroHeaderY);
+
+  for (const row of cc.heroRows) {
+    ctx.font = TABLE_FONT;
+    ctx.fillStyle = row.alive ? '#e2e8f0' : '#64748b';
+    if (row.alive) {
+      ctx.beginPath();
+      ctx.arc(x + 5, row.y + 6, 5, 0, Math.PI * 2);
+      ctx.fillStyle = heroColourHex(row.colour);
+      ctx.fill();
+    }
+    ctx.textAlign = 'left';
+    ctx.fillText(row.title, x + 16, row.y);
+    ctx.textAlign = 'right';
+    ctx.fillText(row.levelText, right - 360, row.y);
+    ctx.fillStyle = row.alive ? '#e2e8f0' : '#64748b';
+    ctx.fillText(row.xpText, right - 290, row.y);
+    ctx.fillText(row.hpText, right - 200, row.y);
+    ctx.fillText(row.killsText, right - 120, row.y);
+    ctx.fillText(row.itemsText, right, row.y);
+  }
+};
 
 export const getBetweenDungeonsLayout = (
   viewWidth: number,
@@ -113,6 +258,7 @@ export const getBetweenDungeonsLayout = (
 
   const bd = state.betweenDungeons;
   const isLevelUp = bd.step === 'levelUp';
+  const isCampaignComplete = bd.step === 'campaignComplete';
 
   const marginX = Math.max(12, Math.floor(viewWidth * 0.05));
   const marginY = Math.max(12, Math.floor(viewHeight * 0.05));
@@ -130,18 +276,24 @@ export const getBetweenDungeonsLayout = (
     ? i18n(bd.completedDungeonName)
     : '';
 
-  const titleText = isLevelUp
+  const titleText = isCampaignComplete
+    ? i18n('content.campaignComplete.title', {
+        name: i18n(bd.completedCampaignName ?? bd.completedDungeonName),
+      })
+    : isLevelUp
     ? i18n('content.betweenDungeons.titleLevelUp', { name: completedName })
     : i18n('content.betweenDungeons.titleTrade');
 
-  const subtitleText = isLevelUp
+  const subtitleText = isCampaignComplete
+    ? i18n('content.campaignComplete.subtitle')
+    : isLevelUp
     ? i18n('content.betweenDungeons.subtitleLevelUp')
     : i18n('content.betweenDungeons.subtitleTrade', {
         nextDungeon: nextDungeonName || completedName,
       });
 
   const btnHeight = 36;
-  const btnWidth = isLevelUp ? 180 : 220;
+  const btnWidth = isCampaignComplete ? 200 : isLevelUp ? 180 : 220;
   const btnY = panelY + panelHeight - paddingY - btnHeight;
   const btnX = panelX + panelWidth - paddingX - btnWidth;
 
@@ -152,7 +304,9 @@ export const getBetweenDungeonsLayout = (
     height: btnHeight,
   };
 
-  const actionButtonLabel = isLevelUp
+  const actionButtonLabel = isCampaignComplete
+    ? i18n('content.betweenDungeons.buttons.finishCampaign')
+    : isLevelUp
     ? i18n('content.betweenDungeons.buttons.tradeItems')
     : bd.nextDungeon
     ? i18n('content.betweenDungeons.buttons.startNextDungeon')
@@ -161,7 +315,7 @@ export const getBetweenDungeonsLayout = (
   let secondaryButtonBounds: CardBounds | undefined = undefined;
   let secondaryButtonLabel: string | undefined = undefined;
 
-  if (!isLevelUp) {
+  if (bd.step === 'trade') {
     const secWidth = 100;
     secondaryButtonBounds = {
       x: panelX + paddingX,
@@ -174,16 +328,130 @@ export const getBetweenDungeonsLayout = (
     );
   }
 
+  // Score breakdown of the completed scenario, shown on the level-up step
+  // between the subtitle and the hero cards.
+  let scoreSection: ScoreSectionLayout | null = null;
+  if (isLevelUp && bd.scenarioScore) {
+    const s = bd.scenarioScore;
+    scoreSection = {
+      bounds: {
+        x: panelX + paddingX,
+        y: panelY + paddingY + 54,
+        width: contentWidth,
+        height: 46,
+      },
+      totalText: i18n('content.scoring.scenarioScore', {
+        score: String(s.total),
+      }),
+      campaignText: i18n('content.scoring.campaignTotal', {
+        score: String(bd.campaignScore ?? 0),
+      }),
+      breakdownTexts: [
+        i18n('content.scoring.health', { points: String(s.healthPoints) }),
+        i18n('content.scoring.monsters', { points: String(s.killPoints) }),
+        i18n('content.scoring.loot', { points: String(s.itemPoints) }),
+        i18n('content.scoring.secrets', { points: String(s.secretPoints) }),
+        i18n('content.scoring.rounds', { points: String(s.roundPenalty) }),
+      ],
+    };
+  }
+
+  // Campaign-complete statistics: campaign score headline, a per-scenario
+  // score table and one final row of statistics per hero.
+  let campaignComplete: CampaignCompleteLayout | null = null;
+  if (isCampaignComplete) {
+    const records = state.scenarioScores ?? [];
+    const totalRounds = records.reduce((sum, r) => sum + r.rounds, 0);
+    const totalKills = records.reduce((sum, r) => sum + r.kills, 0);
+    const totalSecrets = records.reduce(
+      (sum, r) => sum + r.score.secretPoints / SCORE_POINTS_PER_SECRET,
+      0,
+    );
+
+    const scoreY = panelY + paddingY + 58;
+    const summaryY = scoreY + 24;
+    const scenarioHeaderY = summaryY + 26;
+    const scenarioRowHeight = 16;
+    const heroHeaderY =
+      scenarioHeaderY + 18 + records.length * scenarioRowHeight + 14;
+    const heroRowHeight = 20;
+
+    campaignComplete = {
+      scoreText: i18n('content.scoring.campaignTotal', {
+        score: String(bd.campaignScore ?? 0),
+      }),
+      scoreY,
+      summaryText: i18n('content.campaignComplete.summary', {
+        scenarios: String(records.length),
+        rounds: String(totalRounds),
+        kills: String(totalKills),
+        secrets: String(totalSecrets),
+      }),
+      summaryY,
+      scenarioHeader: {
+        name: i18n('content.campaignComplete.scenarioHeader'),
+        rounds: i18n('content.campaignComplete.roundsHeader'),
+        kills: i18n('content.campaignComplete.killsHeader'),
+        score: i18n('content.campaignComplete.scoreHeader'),
+      },
+      scenarioHeaderY,
+      scenarioRows: records.map((record, index) => ({
+        nameText: i18n(record.dungeonName),
+        roundsText: String(record.rounds),
+        killsText: String(record.kills),
+        scoreText: String(record.score.total),
+        y: scenarioHeaderY + 18 + index * scenarioRowHeight,
+      })),
+      heroHeader: {
+        name: i18n('content.campaignComplete.heroHeader'),
+        level: i18n('content.campaignComplete.levelHeader'),
+        xp: 'XP',
+        health: i18n('content.campaignComplete.healthHeader'),
+        kills: i18n('content.campaignComplete.killsHeader'),
+        items: i18n('content.campaignComplete.itemsHeader'),
+      },
+      heroHeaderY,
+      heroRows: (state.heroes as Hero[]).map((hero, index) => {
+        const alive = hero.health > 0;
+        const itemsCarried =
+          hero.inventory.filter((item) => item).length +
+          (hero.weapon ? 1 : 0) +
+          (hero.armour ? 1 : 0) +
+          (hero.shield ? 1 : 0);
+        return {
+          title: i18n(hero.name),
+          colour: hero.colour,
+          levelText: i18n(`content.level.${hero.level}`),
+          xpText: String(hero.experience),
+          hpText: alive
+            ? `${hero.health}/${hero.maxHealth}`
+            : i18n('content.campaignComplete.fallen'),
+          killsText: String(hero.kills ?? 0),
+          itemsText: String(itemsCarried),
+          alive,
+          y: heroHeaderY + 18 + index * heroRowHeight,
+        };
+      }),
+    };
+  }
+
   // Calculate layout for heroes
   const heroList = state.heroes as Hero[];
   const heroCount = heroList.length;
-  const heroesY = panelY + paddingY + 54;
+  const heroesY =
+    panelY +
+    paddingY +
+    54 +
+    (scoreSection ? scoreSection.bounds.height + 8 : 0);
   const availableHeroHeight = btnY - heroesY - 12;
 
   const heroesLayout: HeroSectionLayoutItem[] = [];
   const giveButtonsLayout: GiveButtonLayoutItem[] = [];
 
-  if (isLevelUp) {
+  if (isCampaignComplete) {
+    // The campaign-complete step draws its own statistics tables instead
+    // of the hero cards.
+  } else if (isLevelUp) {
     // Vertical list of heroes with level up details
     const cardGap = 8;
     const cardHeight = Math.max(
@@ -349,6 +617,8 @@ export const getBetweenDungeonsLayout = (
     },
     titleText,
     subtitleText,
+    scoreSection,
+    campaignComplete,
     heroes: heroesLayout,
     actionButtonBounds,
     actionButtonLabel,
@@ -461,8 +731,37 @@ export const renderBetweenDungeons = (
   ctx.font = SUBTITLE_FONT;
   ctx.fillText(layout.subtitleText, p.x + 18, p.y + 38);
 
-  // Render Heroes
-  if (layout.step === 'levelUp') {
+  // Scenario score breakdown
+  const score = layout.scoreSection;
+  if (score && layout.step === 'levelUp') {
+    const sb = score.bounds;
+    ctx.fillStyle = 'rgba(212, 175, 55, 0.08)';
+    drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
+    ctx.fill();
+    ctx.strokeStyle = '#574f2a';
+    ctx.lineWidth = 1;
+    drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
+    ctx.stroke();
+
+    ctx.font = HERO_NAME_FONT;
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#fce28a';
+    ctx.fillText(score.totalText, sb.x + 10, sb.y + 8);
+    ctx.textAlign = 'right';
+    ctx.fillText(score.campaignText, sb.x + sb.width - 10, sb.y + 8);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = DESC_FONT;
+    ctx.textAlign = 'left';
+    ctx.fillText(score.breakdownTexts.join('  ·  '), sb.x + 10, sb.y + 30);
+    ctx.textAlign = 'left';
+  }
+
+  // Render Heroes / campaign statistics
+  if (layout.campaignComplete && layout.step === 'campaignComplete') {
+    renderCampaignCompleteSection(ctx, p, layout.campaignComplete);
+  } else if (layout.step === 'levelUp') {
     for (const h of layout.heroes) {
       const hb = h.bounds;
       ctx.fillStyle = h.isLeveledUp

@@ -51,9 +51,16 @@ export type GameState = {
   drawEvents: boolean;
   roundTargetCounts?: Record<string, number>;
   betweenDungeons?: BetweenDungeonsState;
+  // Running campaign score: the sum of every completed scenario's score
+  // (see src/core/scoring.ts). Undefined/0 until the first scenario is
+  // beaten.
+  score?: number;
+  // Per-scenario score records, appended when each scenario is first
+  // beaten; the campaign-complete screen shows them as statistics.
+  scenarioScores?: ScenarioScoreRecord[];
 };
 
-export type BetweenDungeonsStep = 'levelUp' | 'trade';
+export type BetweenDungeonsStep = 'levelUp' | 'trade' | 'campaignComplete';
 
 export type TradeItemSlot = 'weapon' | 'armour' | 'shield' | number;
 
@@ -72,9 +79,16 @@ export interface HeroLevelUpInfo {
 
 export interface BetweenDungeonsState {
   completedDungeonName: string;
+  // Campaign name, set only on the campaignComplete step (the final
+  // screen after the last dungeon).
+  completedCampaignName?: string;
   nextDungeon?: Dungeon;
   step: BetweenDungeonsStep;
   levelUps: HeroLevelUpInfo[];
+  // Score breakdown of the scenario just completed, for the results view.
+  scenarioScore?: ScenarioScore;
+  // Running campaign score after adding the completed scenario.
+  campaignScore?: number;
   selectedTradeItem?: {
     heroIndex: number;
     slot: TradeItemSlot;
@@ -235,6 +249,9 @@ export type Actor = {
 
 export type Hero = Actor & {
   isInventoryOpen: boolean;
+  // Monsters slain by this hero over the campaign, counted in
+  // `killMonster`. Replacement heroes start again from zero.
+  kills?: number;
 };
 
 export type Monster = Actor & {
@@ -307,6 +324,41 @@ export type Dungeon = {
   // Base light level of the whole dungeon: 1 = fully lit (default), 0 =
   // pitch black. Light sources illuminate their surroundings.
   ambientLight?: number;
+  // Score tracking for the current scenario: the summed experience of
+  // monsters killed by the heroes (snapshotted at kill time, independent
+  // of hero XP which is spent on levels) and the points from items picked
+  // up during the scenario.
+  killedMonsterXp?: number;
+  pickedUpItemPoints?: number;
+  // Score breakdown, computed once when the scenario is first beaten
+  // (see src/core/scoring.ts).
+  score?: ScenarioScore;
+};
+
+export type ScenarioScore = {
+  // 50 points per remaining hero health point at victory
+  // (SCORE_POINTS_PER_HP).
+  healthPoints: number;
+  // 30 points per experience point of monsters killed
+  // (SCORE_POINTS_PER_MONSTER_XP).
+  killPoints: number;
+  // Points from items picked up during the scenario (item values and a
+  // flat magic-item bonus).
+  itemPoints: number;
+  // 50 points per secret found (SCORE_POINTS_PER_SECRET).
+  secretPoints: number;
+  // -2 points per round played (SCORE_PENALTY_PER_ROUND).
+  roundPenalty: number;
+  total: number;
+};
+
+// One entry per completed scenario, kept as campaign statistics for the
+// final campaign-complete screen.
+export type ScenarioScoreRecord = {
+  dungeonName: string;
+  score: ScenarioScore;
+  rounds: number;
+  kills: number;
 };
 
 export type WinCondition = {

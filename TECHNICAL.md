@@ -369,6 +369,34 @@ global defaults when omitted. Since the selector is pure and deterministic,
 it is unit-tested like any other logic module while the manager stays a thin
 browser-side effect.
 
+## Scenario scoring
+
+On top of the win conditions sits a small scoring meta-game
+(`src/core/scoring.ts`): when a dungeon's win conditions are first
+fulfilled, the state is snapshotted into a score breakdown — remaining
+hero health, the experience of monsters the heroes killed, points for
+items picked up, secrets found, minus a per-round penalty — and added to
+a running campaign total. Two details make it deterministic and
+double-count-proof: monster kills and item pickups accumulate on the
+dungeon _as they happen_ (hero XP is spent on levels, so it cannot serve
+as the source), and the award is guarded by the dungeon's `beaten` flag,
+so re-checking an already-won scenario or reloading a save never adds
+the score twice. The breakdown is shown on the between-dungeons screen
+and the campaign total as a chip in the top bar; both are plain
+`GameState`/`Dungeon` fields, so they persist in saves without a
+migration.
+
+When the _last_ dungeon of a campaign is beaten, the same overlay opens
+on a `campaignComplete` step instead of the between-dungeons
+progression (no +1 XP reward, no hero replacement — heroes are shown
+exactly as they finished). It renders the campaign score, aggregate
+statistics and two canvas tables — one row per completed scenario and
+one row per hero (level, XP, health, kills, items carried) — built from
+the per-scenario score records appended to the state as each scenario
+ends. Per-hero kill counts accumulate in `killMonster` the same way the
+score does. The finish button closes the overlay and returns the player
+to the main menu.
+
 ## State, persistence and save migration
 
 The entire game lives in one `GameState` object, held in a Svelte `writable`

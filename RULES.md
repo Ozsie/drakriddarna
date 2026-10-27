@@ -43,6 +43,7 @@ Welcome to **Drakriddarna** (Dragonfire), a tactical turn-based dungeon-crawling
 8. [Turn Events & Difficulty Scaling](#turn-events--difficulty-scaling)
    - [Monster Spawn Events](#monster-spawn-events-the-hungry-troll-the-lost-orc)
    - [Recovery Events](#recovery-events-fountain-of-youth)
+9. [Scenario Scoring](#scenario-scoring)
 
 ---
 
@@ -448,3 +449,26 @@ Turn events introduce dynamic occurrences each round, including monster reinforc
 ### Recovery Events (`Fountain of Youth`)
 
 - **Low-Health Priority Draw**: If the party's average health is below 50%, the `Fountain of Youth` event has a **50% chance** to be the next event drawn from the deck, unless it was already played in the previous round.
+
+---
+
+## Scenario Scoring
+
+Scoring is a digital meta-game on top of the board game rules (the official rules have no score). Every dungeon awards a scenario score the moment its win conditions are first fulfilled, and each scenario's score adds to a running campaign total shown in the top bar.
+
+| Component                        | Points                                                                                                    |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Remaining hero health at victory | **+50 per health point** across all live heroes                                                           |
+| Monsters slain                   | **+30 per experience point** of each monster killed by the heroes                                         |
+| Loot                             | **+25 per item value** of every item picked up during the scenario; magic items are worth a flat **+100** |
+| Secrets found                    | **+50 per secret** discovered                                                                             |
+| Rounds played                    | **−2 per round**                                                                                          |
+
+Notes:
+
+- Dead heroes contribute no health points, so losing a hero is a heavy score penalty on its own.
+- Monster kill points are tracked at the moment of the kill, independent of hero experience (which is spent on level-ups).
+- Loot points are awarded when an item is picked up and never reversed: dropping or trading an item later keeps its points.
+- The scenario score is a snapshot taken at the instant the win conditions are fulfilled; later changes to the heroes or the dungeon do not alter it.
+- The breakdown is shown on the between-dungeons screen, and the campaign total is carried across every dungeon of the campaign.
+- When the last dungeon of a campaign is won, a final screen shows the campaign score, per-scenario statistics (rounds, monsters slain, score) and per-hero statistics (level, experience, health, kills, items carried). Heroes who fell on the final scenario are listed as fallen.

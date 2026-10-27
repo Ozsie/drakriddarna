@@ -155,6 +155,30 @@
     }
   },
   "turn": "Runda",
+  "campaignComplete": {
+    "title": "Kampanjen klar: {{name}}",
+    "subtitle": "Den sista striden är vunnen. Slutställning:",
+    "summary": "{{scenarios}} scenarier · {{rounds}} rundor · {{kills}} dödade monster · {{secrets}} hittade hemligheter",
+    "scenarioHeader": "Scenario",
+    "roundsHeader": "Rundor",
+    "killsHeader": "Dödade",
+    "scoreHeader": "Poäng",
+    "heroHeader": "Hjälte",
+    "levelHeader": "Nivå",
+    "healthHeader": "Hälsa",
+    "itemsHeader": "Föremål",
+    "fallen": "Föll i strid"
+  },
+  "scoring": {
+    "topBar": "Poäng",
+    "scenarioScore": "Scenariopoäng: {{score}}",
+    "campaignTotal": "Kampanjens totalpoäng: {{score}}",
+    "health": "Hälsa +{{points}}",
+    "monsters": "Monster +{{points}}",
+    "loot": "Byte +{{points}}",
+    "secrets": "Hemligheter +{{points}}",
+    "rounds": "Rundor {{points}}"
+  },
   "terrain": {
     "water": "vattnet",
     "lava": "lavan"

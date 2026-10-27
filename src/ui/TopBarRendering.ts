@@ -13,6 +13,7 @@ export interface TopBarLayout {
   menuButton: TopBarElementBounds & { label: string };
   debugButton?: TopBarElementBounds & { label: string };
   logSection: TopBarElementBounds & { text: string };
+  scoreCounter: TopBarElementBounds & { text: string };
   turnCounter: TopBarElementBounds & { text: string };
   logDropdown: TopBarElementBounds & { entries: string[] };
 }
@@ -66,6 +67,13 @@ export const formatTurnCounter = (turnCount?: number | null): string => {
   const turnLabel = i18n('content.turn');
   const label = turnLabel === 'content.turn' ? 'Turn' : turnLabel || 'Turn';
   return `${label} ${turnCount ?? 0}`;
+};
+
+export const formatScoreCounter = (score?: number | null): string => {
+  const scoreLabel = i18n('content.scoring.topBar');
+  const label =
+    scoreLabel === 'content.scoring.topBar' ? 'Score' : scoreLabel || 'Score';
+  return `${label} ${score ?? 0}`;
 };
 
 export const truncateText = (
@@ -149,11 +157,18 @@ export const getTopBarLayout = (
     80,
   );
 
+  const scoreText = formatScoreCounter(state?.score);
+  const scoreCounterWidth = Math.max(
+    Math.round(measureTextWidth(ctx, scoreText, DEFAULT_FONT) + paddingX * 2),
+    70,
+  );
+
   const menuX = margin;
   const debugX = menuX + menuWidth + gap;
   const logX = isDebug ? debugX + debugWidth + gap : menuX + menuWidth + gap;
   const turnX = Math.max(logX, viewWidth - margin - turnCounterWidth);
-  const logWidth = Math.max(0, turnX - gap - logX);
+  const scoreX = Math.max(logX, turnX - gap - scoreCounterWidth);
+  const logWidth = Math.max(0, scoreX - gap - logX);
 
   const latestLog = state?.actionLog?.[0];
   const logText = formatLatestLog(latestLog);
@@ -188,6 +203,13 @@ export const getTopBarLayout = (
       width: logWidth,
       height,
       text: logText,
+    },
+    scoreCounter: {
+      x: scoreX,
+      y: top,
+      width: scoreCounterWidth,
+      height,
+      text: scoreText,
     },
     turnCounter: {
       x: turnX,
@@ -376,7 +398,28 @@ export const renderTopBar = (
     }
   }
 
-  // 3. Render Turn Counter
+  // 3. Render Score Counter
+  const score = layout.scoreCounter;
+  if (score.width > 0) {
+    drawRoundedRect(ctx, score.x, score.y, score.width, score.height, 4);
+    ctx.fillStyle = 'rgba(37, 41, 50, 0.9)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(212, 175, 55, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#fcd34d';
+    ctx.font = DEFAULT_FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      score.text,
+      score.x + score.width / 2,
+      score.y + score.height / 2,
+    );
+  }
+
+  // 4. Render Turn Counter
   const turn = layout.turnCounter;
   if (turn.width > 0) {
     drawRoundedRect(ctx, turn.x, turn.y, turn.width, turn.height, 4);
@@ -393,7 +436,7 @@ export const renderTopBar = (
     ctx.fillText(turn.text, turn.x + turn.width / 2, turn.y + turn.height / 2);
   }
 
-  // 4. Render Log Dropdown (if open)
+  // 5. Render Log Dropdown (if open)
   const dropdown = layout.logDropdown;
   if (isLogOpen && dropdown.width > 0 && dropdown.entries.length > 0) {
     drawRoundedRect(

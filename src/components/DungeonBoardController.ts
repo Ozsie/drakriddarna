@@ -1883,7 +1883,15 @@ export class DungeonBoardController {
         const bdHit = hit.hit;
         if (bdHit.type === 'actionButton') {
           soundEffectManager.playButtonClick();
-          if (activeState.betweenDungeons.step === 'levelUp') {
+          if (activeState.betweenDungeons.step === 'campaignComplete') {
+            // Final screen dismissed: the campaign is over, so the player
+            // returns to the main menu.
+            activeState.betweenDungeons = undefined;
+            this.isCanvasMenuOpen = true;
+            this.currentMenuView = 'main';
+            this.hover.hoveredMenuItemId = null;
+            this.syncGameInputEnabled();
+          } else if (activeState.betweenDungeons.step === 'levelUp') {
             setBetweenDungeonsStep(activeState, 'trade');
           } else {
             completeBetweenDungeonsAndStartNext(activeState);

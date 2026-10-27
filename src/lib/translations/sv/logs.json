@@ -9,6 +9,7 @@
   "failedToReset": "Misslyckades med att återställa nivån. Vänligen ladda om.",
   "allConditionsFulfilled": "Alla mål har uppfyllts.",
   "clearedDungeon": "Du har klarat {{name}}.",
+  "scenarioScore": "Scenariopoäng: {{score}} (kampanjens totalpoäng: {{total}}).",
   "moveToNext": "Tryck på 'Nästa' för att gå vidare till nästa nivå: {{name}}.",
   "playingCampaign": "Spelar {{name}}.",
   "gameInitialized": "Spelet initialiserat.",

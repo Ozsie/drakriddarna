@@ -155,6 +155,30 @@
     }
   },
   "turn": "Turn",
+  "campaignComplete": {
+    "title": "Campaign Complete: {{name}}",
+    "subtitle": "The final battle is won. Final standings:",
+    "summary": "{{scenarios}} scenarios · {{rounds}} rounds · {{kills}} monsters slain · {{secrets}} secrets found",
+    "scenarioHeader": "Scenario",
+    "roundsHeader": "Rounds",
+    "killsHeader": "Slain",
+    "scoreHeader": "Score",
+    "heroHeader": "Hero",
+    "levelHeader": "Level",
+    "healthHeader": "Health",
+    "itemsHeader": "Items",
+    "fallen": "Fell in battle"
+  },
+  "scoring": {
+    "topBar": "Score",
+    "scenarioScore": "Scenario score: {{score}}",
+    "campaignTotal": "Campaign total: {{score}}",
+    "health": "Health +{{points}}",
+    "monsters": "Monsters +{{points}}",
+    "loot": "Loot +{{points}}",
+    "secrets": "Secrets +{{points}}",
+    "rounds": "Rounds {{points}}"
+  },
   "terrain": {
     "water": "water",
     "lava": "lava"

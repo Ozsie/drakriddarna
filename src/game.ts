@@ -26,6 +26,7 @@ import {
 import { browser } from '$app/environment';
 import { addLog, doReRender, i18n } from './core';
 import { shuffle } from './core';
+import { awardScenarioScore } from './core';
 import {
   getEffectiveMaxMovement,
   getDifficulty,
@@ -167,9 +168,9 @@ export const next = async (
   if (state.settings['debug']) console.log(state);
   doReRender(state);
   checkWinConditions(state);
-  if (state.dungeon.beaten && state.dungeon.nextDungeon) {
+  if (state.dungeon.beaten) {
     hasWon(state);
-    return state;
+    if (state.betweenDungeons) return state;
   }
   if (state.currentActor === undefined) return state;
   else {
@@ -411,6 +412,11 @@ const checkWinConditions = (state: GameState) => {
     if (!previouslyBeaten) {
       const gm = getDifficulty(state);
       gm.onDungeonComplete?.(state);
+      const score = awardScenarioScore(state);
+      addLog(state, 'logs.scenarioScore', {
+        score: String(score.total),
+        total: String(state.score ?? 0),
+      });
     }
     addLog(state, 'logs.allConditionsFulfilled');
     addLog(state, 'logs.clearedDungeon', { name: i18n(state.dungeon.name) });
@@ -436,11 +442,16 @@ const scrollTo = (pos: Position, cellSize: number) => {
   }
 };
 
-import { openBetweenDungeons } from './dungeon/BetweenDungeonsLogic';
+import {
+  openBetweenDungeons,
+  openCampaignComplete,
+} from './dungeon/BetweenDungeonsLogic';
 
 export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
     openBetweenDungeons(state);
+  } else if (state.dungeon.beaten && !state.betweenDungeons) {
+    openCampaignComplete(state);
   }
 };
 

@@ -176,6 +176,38 @@ export const openBetweenDungeons = (state: GameState): BetweenDungeonsState => {
     nextDungeon,
     step: 'levelUp',
     levelUps,
+    scenarioScore: state.dungeon.score,
+    campaignScore: state.score,
+    selectedTradeItem: null,
+  };
+
+  state.betweenDungeons = betweenDungeonsState;
+  doReRender(state);
+  return betweenDungeonsState;
+};
+
+/**
+ * Opens the final campaign-complete screen after the last dungeon of a
+ * campaign is beaten: the same overlay as between dungeons, but without
+ * the progression side effects — no +1 XP reward, no hero replacement.
+ * Heroes are shown exactly as they finished the final scenario.
+ */
+export const openCampaignComplete = (
+  state: GameState,
+): BetweenDungeonsState => {
+  clearActorAnimations();
+  const campaignName =
+    state.campaignId && isKnownCampaign(state.campaignId)
+      ? getCampaign(state.campaignId).name
+      : state.dungeon.name;
+
+  const betweenDungeonsState: BetweenDungeonsState = {
+    completedDungeonName: state.dungeon.name,
+    completedCampaignName: campaignName,
+    step: 'campaignComplete',
+    levelUps: [],
+    scenarioScore: state.dungeon.score,
+    campaignScore: state.score,
     selectedTradeItem: null,
   };
 
