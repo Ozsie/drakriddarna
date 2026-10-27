@@ -1536,10 +1536,13 @@ const renderLightDirect = (
 // except sweep (rotating polygon), sway (swinging center) and sparkle
 // (per-twinkle brightness) — can have their full-brightness output baked
 // once into a sprite and then only blitted, alpha-scaled by the current
-// animation brightness. The scaling is pixel-exact only while
-// intensity * peakFactor <= 1: beyond that the direct path clamps the
-// gradient's peak at full alpha while the sprite would dim linearly, so
-// bright lights keep rendering directly.
+// animation brightness. For animated lights the scaling is pixel-exact
+// only while intensity * peakFactor <= 1: beyond that the direct path
+// clamps the gradient's peak at full alpha while the sprite would dim
+// linearly, so bright animated lights keep rendering directly. Static
+// lights never alpha-scale (their intensity scale is a constant 1), so
+// their sprite is pixel-exact at any intensity — baking them keeps the
+// softness blur out of every static-layer rebuild, pan moves included.
 const lightPeakFactor = (light: LightSource): number =>
   light.effect === LightEffect.AURA
     ? 1.8
@@ -1555,8 +1558,9 @@ const isBakeableLight = (light: LightSource): boolean => {
       return false;
     default:
       return (
+        !isAnimatedLight(light) ||
         (light.intensity ?? DEFAULT_LIGHT_INTENSITY) * lightPeakFactor(light) <=
-        1
+          1
       );
   }
 };
