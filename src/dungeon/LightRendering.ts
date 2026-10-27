@@ -1590,6 +1590,17 @@ type LightSprite = {
 // One entry per distinct light (identity without the occlusion state);
 // the entry's key carries the full invalidation state and is replaced
 // whenever it changes.
+// Upper bound on baked light sprites, mirroring
+// MAX_LIGHT_POLYGON_CACHE_ENTRIES. Each light identity (position,
+// alignment, colour, radius, intensity, softness, effect) holds one
+// offscreen canvas; without a bound a long session of moving carried
+// lights, projectiles and event lights — every one a fresh identity —
+// would grow the cache without limit. Eviction only happens when a new
+// identity is added: existing entries stay reusable while their
+// occlusion key is unchanged, and clearLightSpriteCache still empties
+// the whole map.
+export const MAX_LIGHT_SPRITE_CACHE_ENTRIES = 64;
+
 const lightSpriteCaches = new Map<string, LightSprite>();
 
 export const clearLightSpriteCache = (): void => {
@@ -1722,6 +1733,16 @@ const lightSpriteFor = (
     key,
   );
   if (sprite) {
+    if (
+      !lightSpriteCaches.has(identity) &&
+      lightSpriteCaches.size >= MAX_LIGHT_SPRITE_CACHE_ENTRIES
+    ) {
+      // Evict the oldest entry: Map keys iterate in insertion order.
+      for (const oldest of lightSpriteCaches.keys()) {
+        lightSpriteCaches.delete(oldest);
+        break;
+      }
+    }
     lightSpriteCaches.set(identity, sprite);
   }
   return sprite;

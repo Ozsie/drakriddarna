@@ -700,10 +700,28 @@ const buildFogCloudCanvas = (
   return canvas;
 };
 
+// All discovered (or debug-visible) cells of one room letter, independent
+// of the viewport: the cached fog cloud covers the whole visible room, so
+// its pixels — and so its cache key — stay valid across pans.
+const collectRoomFogCells = (
+  state: GameState,
+  room: string,
+  debugMode: boolean,
+): Position[] => {
+  const cells: Position[] = [];
+  state.dungeon.layout.grid.forEach((row, y) => {
+    toArray(row).forEach((letter: string, x: number) => {
+      if (letter === room && (debugMode || isDiscovered(state.dungeon, x, y))) {
+        cells.push({ x, y });
+      }
+    });
+  });
+  return cells;
+};
+
 const fogCloudFor = (
   state: GameState,
   room: string,
-  cells: { position: Position }[],
   options: RoomFogOptions,
   cellSize: number,
   debugMode: boolean,
@@ -712,6 +730,15 @@ const fogCloudFor = (
   const key = fogCloudCacheKey(state, room, cellSize, debugMode);
   const cached = fogCloudCaches.get(room);
   if (cached && cached.key === key) return cached;
+
+  // The cloud is built from every visible cell of the room, not the
+  // viewport-culled subset: the cache key does not include the viewport,
+  // so the cached pixels must not depend on it either. Callers still use
+  // the viewport to decide which rooms render at all.
+  const cells = collectRoomFogCells(state, room, debugMode).map((position) => ({
+    position,
+  }));
+  if (cells.length === 0) return null;
 
   const minX = Math.min(...cells.map(({ position }) => position.x));
   const minY = Math.min(...cells.map(({ position }) => position.y));
@@ -780,7 +807,7 @@ export const renderRoomFog = (
         0.22 * Math.sin(2 * Math.PI * (t + cellHash(room.charCodeAt(0), 0))));
 
     // Fast path: blit the cached blurred cloud with the breathing alpha.
-    const cache = fogCloudFor(state, room, cells, options, cellSize, debugMode);
+    const cache = fogCloudFor(state, room, options, cellSize, debugMode);
     if (cache) {
       ctx.save();
       ctx.globalAlpha = alpha;
@@ -831,7 +858,7 @@ export const renderFogLightDim = (
     }
 
     // Fast path: erase through the cached blurred dim mask.
-    const cache = fogCloudFor(state, room, cells, options, cellSize, debugMode);
+    const cache = fogCloudFor(state, room, options, cellSize, debugMode);
     if (cache) {
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';

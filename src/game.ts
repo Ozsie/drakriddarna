@@ -176,16 +176,30 @@ export const next = async (
   else {
     // Terrain the hero ends its turn on (e.g. standing in lava) or fog
     // of the room it stands in (e.g. poison gas) takes its toll before
-    // the turn passes on.
-    applyTerrainTurnEndEffects(state, state.currentActor);
-    applyRoomFogTurnEndEffects(state, state.currentActor);
+    // the turn passes on. The toll can down the acting hero, so the
+    // live-heroes index is captured while they are still alive: a
+    // survivor advances by one, a downed hero keeps the captured index —
+    // which then points at the next live hero, and still triggers the
+    // normal round-end processing when they were last in the round.
+    const turnEndActor = state.currentActor;
+    const currentIndex = liveHeroes(state).indexOf(turnEndActor);
+    applyTerrainTurnEndEffects(state, turnEndActor);
+    applyRoomFogTurnEndEffects(state, turnEndActor);
     addLog(state, 'logs.endedTurn', {
-      name: i18n(state.currentActor.name),
+      name: i18n(turnEndActor.name),
     });
-    state.currentActor.actions = 0;
-    state.currentActor.movement = 0;
-    const currentIndex = liveHeroes(state).indexOf(state.currentActor);
-    let nextIndex = currentIndex + 1;
+    turnEndActor.actions = 0;
+    turnEndActor.movement = 0;
+    let nextIndex =
+      currentIndex === -1
+        ? 0
+        : turnEndActor.health > 0
+        ? currentIndex + 1
+        : currentIndex;
+    // Whether the round wrapped around — distinct from `nextIndex`
+    // being 0, which also happens when the first hero of the round was
+    // downed by their turn-end toll: only a wrap starts a new round.
+    let roundEnded = false;
     if (nextIndex >= liveHeroes(state).length) {
       state.currentActor = undefined;
       const gm = getDifficulty(state);
@@ -193,6 +207,7 @@ export const next = async (
       await monsterActions(state, monsterOptions);
       gm.onMonsterPhaseEnd?.(state);
       nextIndex = 0;
+      roundEnded = true;
       resetOnNext(state);
     }
     if (liveHeroes(state).length === 0) {
@@ -219,6 +234,7 @@ export const next = async (
         await monsterActions(state, monsterOptions);
         gm.onMonsterPhaseEnd?.(state);
         nextIndex = 0;
+        roundEnded = true;
         resetOnNext(state);
       }
       guard++;
@@ -233,13 +249,13 @@ export const next = async (
       state.currentActor,
       getDifficulty(state).modifiers.movement,
     );
-    if (nextIndex === 0) {
+    if (roundEnded) {
       state.turnCount = (state.turnCount ?? 0) + 1;
       const gm = getDifficulty(state);
       gm.onRoundStart?.(state.turnCount, state);
     }
     const hasKilledAll = killAllMonstersAchieved(state);
-    if (nextIndex === 0 && !hasKilledAll) {
+    if (roundEnded && !hasKilledAll) {
       resetEventEffects(state);
       if (state.drawEvents) {
         state.previousEvent = state.currentEvent;

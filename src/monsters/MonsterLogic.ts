@@ -766,6 +766,10 @@ export const monsterMoveToPosition = (
 
     if (isOccupied) break;
 
+    const previousPosition = {
+      x: monster.position.x,
+      y: monster.position.y,
+    };
     recordActorStep(monster, nextPos);
     monster.position = nextPos;
     addLog(state, 'logs.monsterAction.movedTowards', {
@@ -776,7 +780,7 @@ export const monsterMoveToPosition = (
     });
     monster.movement--;
     applyTerrainEnterEffects(state, monster);
-    applyRoomFogEnterEffects(state, monster);
+    applyRoomFogEnterEffects(state, monster, previousPosition);
     if (monster.health <= 0) break;
   }
   monster.actions--;
@@ -869,6 +873,10 @@ export const monsterMove = (
       continue;
     }
 
+    const previousPosition = {
+      x: monster.position.x,
+      y: monster.position.y,
+    };
     recordActorStep(monster, nextPos);
     monster.position = nextPos;
     addLog(state, 'logs.monsterAction.movedTowards', {
@@ -879,7 +887,7 @@ export const monsterMove = (
     });
     monster.movement--;
     applyTerrainEnterEffects(state, monster);
-    applyRoomFogEnterEffects(state, monster);
+    applyRoomFogEnterEffects(state, monster, previousPosition);
     if (monster.health <= 0) break;
 
     if (

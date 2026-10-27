@@ -72,6 +72,37 @@ describe('applyRoomFogEnterEffects', () => {
     applyRoomFogEnterEffects(state, hero);
     expect(hero.health).toBe(5);
   });
+
+  it('applies no damage when moving within the same fogged room', () => {
+    const hero = actor(5);
+    hero.position = { x: 1, y: 0 };
+    const state = makeState(['AAA', 'AAA'], { A: { damageOnEnter: 2 } }, [
+      hero,
+    ]);
+    applyRoomFogEnterEffects(state, hero, { x: 0, y: 0 });
+    expect(hero.health).toBe(5);
+    expect(state.actionLog).toHaveLength(0);
+  });
+
+  it('applies damage when entering the fogged room from another room', () => {
+    const hero = actor(5);
+    hero.position = { x: 1, y: 0 };
+    const state = makeState(['AAA', 'ABB'], { A: { damageOnEnter: 2 } }, [
+      hero,
+    ]);
+    applyRoomFogEnterEffects(state, hero, { x: 1, y: 1 });
+    expect(hero.health).toBe(3);
+  });
+
+  it('applies damage when no previous position is known', () => {
+    const hero = actor(5);
+    hero.position = { x: 1, y: 1 };
+    const state = makeState(['AAA', 'AAA'], { A: { damageOnEnter: 2 } }, [
+      hero,
+    ]);
+    applyRoomFogEnterEffects(state, hero);
+    expect(hero.health).toBe(3);
+  });
 });
 
 describe('applyRoomFogTurnEndEffects', () => {

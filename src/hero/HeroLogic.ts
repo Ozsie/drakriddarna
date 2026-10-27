@@ -115,7 +115,7 @@ export const newHero = (
 export const act = (direction: MoveDirection | string, state: GameState) => {
   doReRender(state);
   const hero: Hero | undefined = state.currentActor;
-  if (!hero || hero.actions <= 0) {
+  if (!hero || hero.health <= 0 || hero.actions <= 0) {
     if (hero) {
       hero.actions = 0;
       hero.movement = 0;
@@ -709,11 +709,25 @@ export const arriveOnCell = (
   hero: Hero,
   pos: Position,
 ): boolean => {
+  const previousPosition = { x: hero.position.x, y: hero.position.y };
   recordActorStep(hero, pos);
   hero.position.x = pos.x;
   hero.position.y = pos.y;
-  applyTerrainEnterEffects(state, hero);
-  applyRoomFogEnterEffects(state, hero);
+  // Opening a door without stepping through it routes through here as
+  // a same-cell "move": terrain and room-fog enter effects only apply
+  // to an actual change of cell, so a hero standing in lava that opens
+  // a door is not hurt a second time.
+  const movedToNewCell =
+    previousPosition.x !== pos.x || previousPosition.y !== pos.y;
+  if (movedToNewCell) {
+    applyTerrainEnterEffects(state, hero);
+    applyRoomFogEnterEffects(state, hero, previousPosition);
+  }
+  // The enter effects can down the hero: no further arrival effects
+  // run — the corpse reads no notes and triggers no interactables.
+  if (hero.health <= 0) {
+    return true;
+  }
   checkForNote(state, hero);
   checkForItemRevealedSecret(state, hero);
   checkForInteractable(state, hero, 'step');

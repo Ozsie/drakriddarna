@@ -30,6 +30,10 @@ import {
 import { resetOnNextDungeon } from '../items/ItemLogic';
 import { getEventsForDungeon } from '../events/EventsLogic';
 import { fillRoomFog } from '../dungeon/RoomFogLogic';
+import {
+  parsePosition,
+  type DeclarativePosition,
+} from '../dungeon/dungeonParser';
 import { applyTerrainEnterEffects, terrainAt } from '../dungeon/TerrainLogic';
 import { createShake } from '../combat';
 import { soundEffectManager } from '../audio';
@@ -276,11 +280,17 @@ interactableEffects.spawnLava = (
   actor?: Actor | Hero,
 ): boolean => {
   const args = interactable.args ?? {};
-  const cells = (args.cells as Position[] | undefined) ?? [
+  // `args.cells` accepts both [x, y] tuples and {x, y} positions.
+  const rawCells = (args.cells as DeclarativePosition[] | undefined) ?? [
     interactable.position,
   ];
+  const cells = rawCells.map(parsePosition);
   const options = (args.options as Omit<TerrainOptions, 'type'>) ?? {};
   const damage = options.damageOnEnter ?? 1;
+  // The created cell must carry the damage the eruption log reports:
+  // without it, standing victims take the terrain default instead of
+  // the resolved value. An explicitly provided option still wins.
+  const lavaOptions = { damageOnEnter: damage, ...options };
 
   cells.forEach((cell) => {
     if (terrainAt(state.dungeon.layout, cell)) return;
@@ -289,7 +299,7 @@ interactableEffects.spawnLava = (
       {
         position: { x: cell.x, y: cell.y },
         type: TerrainType.LAVA,
-        ...options,
+        ...lavaOptions,
       },
     ];
     // The floor erupting under an actor hurts right away.

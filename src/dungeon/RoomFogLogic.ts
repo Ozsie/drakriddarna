@@ -39,22 +39,39 @@ export const fillRoomFog = (
 // Everything that happens when an actor arrives on a cell: the fog's
 // damage on enter, if the room's fog is configured to hurt. Called for
 // heroes (arriveOnCell) and monsters (monsterMove /
-// monsterMoveToPosition).
+// monsterMoveToPosition). The damage applies only on entering the
+// fogged room — the room letter changing between the previous and the
+// current position. Without a previous position (spawn, teleport) the
+// arrival counts as an entry.
 export const applyRoomFogEnterEffects = (
   state: GameState,
   actor: Actor,
+  previousPosition?: Position,
 ): void => {
   if (actor.health <= 0) return;
   const fog = roomFogAt(state.dungeon.layout, actor.position);
-  if (fog && (fog.damageOnEnter ?? 0) > 0) {
-    damageActorFromEffect(
-      state,
-      actor,
-      fog.nameTranslationKey ?? DEFAULT_FOG_NAME_KEY,
-      fog.damageOnEnter ?? 0,
-      'logs.terrain.enterDamage',
-    );
-  }
+  if (!fog || (fog.damageOnEnter ?? 0) <= 0) return;
+  const cell = findCell(
+    state.dungeon.layout.grid,
+    actor.position.x,
+    actor.position.y,
+  );
+  const previousCell = previousPosition
+    ? findCell(
+        state.dungeon.layout.grid,
+        previousPosition.x,
+        previousPosition.y,
+      )
+    : undefined;
+  // Moving within the same room (same letter) is not an entry.
+  if (previousCell !== undefined && previousCell === cell) return;
+  damageActorFromEffect(
+    state,
+    actor,
+    fog.nameTranslationKey ?? DEFAULT_FOG_NAME_KEY,
+    fog.damageOnEnter ?? 0,
+    'logs.terrain.enterDamage',
+  );
 };
 
 // Everything that happens when an actor ends its turn in a room: the

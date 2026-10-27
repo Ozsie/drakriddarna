@@ -824,13 +824,22 @@ export class DungeonBoardController {
       debugMode,
       lightViewport,
     );
+    // The painted frame also depends on where the view sits and which
+    // surface it was painted on: panning moves every world pixel (the
+    // canvas transform only affects new draws, not existing ones), and
+    // a canvas resize clears them. Folding both into the ambient
+    // signature keeps a forced repaint after a pan or a canvas
+    // reinitialization from being mistaken for a redundant one.
+    const surfaceSig = `${String(this.panX)},${String(this.panY)},${String(
+      this.actorCanvas?.width ?? 0,
+    )},${String(this.actorCanvas?.height ?? 0)}`;
     const ambientSig =
       hasLightEffects || hasTerrainEffects
         ? `${lightSig}|${
             hasTerrainEffects
               ? Math.floor(currentTime / TERRAIN_ANIMATION_STEP_MS)
               : ''
-          }`
+          }|${surfaceSig}`
         : '';
     const sig = getDynamicSignature(
       this.activeState,

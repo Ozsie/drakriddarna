@@ -187,6 +187,7 @@ export const testingGrounds: Dungeon = defineDungeon({
         'fillRoomFog',
         {
           oneTime: true,
+          name: 'campaign.iceDragon.testingGrounds.interactables.gasValve',
           nameTranslationKey:
             'campaign.iceDragon.testingGrounds.interactables.gasValve',
           args: {
@@ -209,6 +210,7 @@ export const testingGrounds: Dungeon = defineDungeon({
         'spawnLava',
         {
           oneTime: true,
+          name: 'campaign.iceDragon.testingGrounds.interactables.lavaVent',
           nameTranslationKey:
             'campaign.iceDragon.testingGrounds.interactables.lavaVent',
           args: {
