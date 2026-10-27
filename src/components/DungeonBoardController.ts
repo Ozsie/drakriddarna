@@ -24,6 +24,7 @@ import { renderHeroes, renderHeroOverlays } from '../hero/HeroRendering';
 import { renderMonsters } from '../monsters/MonsterRendering';
 import {
   background,
+  dungeonViewBackdrop,
   renderDoors,
   renderFogLightDim,
   renderGrid,
@@ -297,6 +298,7 @@ export class DungeonBoardController {
         this.containerWidth,
         this.containerHeight,
         ratio,
+        { alpha: false },
       );
       this.initCanvas(
         this.actorCanvas,
@@ -375,7 +377,9 @@ export class DungeonBoardController {
       this.lastContainerWidth = width;
       this.lastContainerHeight = height;
       const ratio = this.canvasRatio;
-      this.initCanvas(this.staticCanvas, width, height, ratio);
+      this.initCanvas(this.staticCanvas, width, height, ratio, {
+        alpha: false,
+      });
       this.initCanvas(this.actorCanvas, width, height, ratio);
       this.initCanvas(this.lightCanvas, width, height, ratio);
       this.initCanvas(this.staticLightCanvas, width, height, ratio);
@@ -438,6 +442,7 @@ export class DungeonBoardController {
         this.containerWidth,
         this.containerHeight,
         ratio,
+        { alpha: false },
       );
       this.initCanvas(
         this.actorCanvas,
@@ -558,7 +563,16 @@ export class DungeonBoardController {
       this.overlayCanvas,
       this.uiCanvas,
     ]) {
-      this.initCanvas(canvas, width, height, ratio);
+      // Only the static canvas is opaque: it fills a solid backdrop, so
+      // the browser can skip blending it into the page. Every other
+      // layer composites over the ones below and needs its alpha.
+      this.initCanvas(
+        canvas,
+        width,
+        height,
+        ratio,
+        canvas === this.staticCanvas ? { alpha: false } : undefined,
+      );
     }
     this.lastStaticLightKey = '';
   };
@@ -664,9 +678,15 @@ export class DungeonBoardController {
 
     this.staticRenderCount++;
     this.totalReRenderCount++;
+    // The static context is opaque (alpha: false), so instead of clearing,
+    // the whole canvas is painted with the dungeon view's backdrop colour:
+    // opaque paints let the browser skip blending this layer, and the area
+    // outside the dungeon world stays the colour the CSS background used
+    // to show through the transparent canvas.
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, this.staticCanvas.width, this.staticCanvas.height);
+    ctx.fillStyle = dungeonViewBackdrop;
+    ctx.fillRect(0, 0, this.staticCanvas.width, this.staticCanvas.height);
     ctx.restore();
 
     const gridCols = this.activeState.dungeon?.layout?.grid?.[0]?.length ?? 40;
@@ -1440,13 +1460,14 @@ export class DungeonBoardController {
     width: number,
     height: number,
     ratio: number,
+    options?: CanvasRenderingContext2DSettings,
   ) => {
     if (!canvas || width <= 0 || height <= 0) return;
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
     canvas.style.width = `${String(String(String(width)))}px`;
     canvas.style.height = `${String(String(String(height)))}px`;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', options);
     if (ctx) {
       const centerOffsetX = this.startPosition
         ? (this.startPosition.x + 0.5) * this.cellSize

@@ -31,6 +31,12 @@ import type { LightViewport } from './LightRendering';
 
 export const background = '#1E1C19';
 
+// The dungeon view's backdrop colour, mirroring `--color-bg-dungeon` in
+// theme.css. Painted as the opaque static canvas's full-canvas base so
+// the area outside the dungeon world looks the same as it did when the
+// CSS background showed through a transparent canvas.
+export const dungeonViewBackdrop = '#121418';
+
 export const renderDoors = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
