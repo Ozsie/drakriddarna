@@ -228,7 +228,8 @@ starting equipment. Three ship with the game: StoryTeller (easy), Tactician
 (default), BrutalOverlord (hard). Like campaigns, they are auto-discovered,
 and they carry per-monster _director states_ (`EASE`/`PUSH`/`NEUTRAL`) that
 shift monster aggression based on party HP — rubber-banding rather than a flat
-difficulty multiplier.
+difficulty multiplier. The full field-by-field reference for the `GameMaster`
+type lives in [docs/gameMaster-definition.md](./docs/gameMaster-definition.md).
 
 ## Rendering: hand-rolled 2D, layered and on-demand
 

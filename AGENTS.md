@@ -39,28 +39,37 @@ Run `npm run check`, `npm test`, and `npm run lint` before considering work done
 - The write-up describes components and techniques, not line numbers or exact counts — update it in the same change as the code; do not let it drift.
 - New features at the level of the existing sections (e.g. a new rendering technique, a changed save format, a new benchmark capability) get a matching paragraph or section update.
 
-## Campaign and dungeon definition specs
+## Content definition specs
 
-- [docs/campaign-definition.md](./docs/campaign-definition.md) and
-  [docs/dungeon-definition.md](./docs/dungeon-definition.md) are the
+- [docs/campaign-definition.md](./docs/campaign-definition.md),
+  [docs/dungeon-definition.md](./docs/dungeon-definition.md) and
+  [docs/gameMaster-definition.md](./docs/gameMaster-definition.md) are the
   field-by-field reference for the content definition types: the `Campaign`
-  object and campaign folder structure, and the `Dungeon` type with its
+  object and campaign folder structure, the `Dungeon` type with its
   `defineDungeon`/`defineLayout`/`parseTileMap` authoring DSL, win conditions
-  and validation rules.
-- Update them in the same change as any edit to what they document: the
-  `Campaign`, `Dungeon`, `Layout`, `WinCondition` and related types in
-  `src/types.ts`; the declarative shorthand formats, defaults and parsing in
-  `src/dungeon/dungeonParser.ts`; the structural rules in
-  `src/dungeon/dungeonValidator.ts`; and the win-condition checks in
-  `src/game.ts` or the registries they reference (`onCheckFulfilled`,
+  and validation rules, and the `GameMaster` type (modifiers, director
+  states, event hooks, lifecycle callbacks, id resolution).
+- Update the campaign/dungeon specs in the same change as any edit to what
+  they document: the `Campaign`, `Dungeon`, `Layout`, `WinCondition` and
+  related types in `src/types.ts`; the declarative shorthand formats,
+  defaults and parsing in `src/dungeon/dungeonParser.ts`; the structural
+  rules in `src/dungeon/dungeonValidator.ts`; and the win-condition checks
+  in `src/game.ts` or the registries they reference (`onCheckFulfilled`,
   `roomEffects`).
+- Update the game-master spec in the same change as any edit to the
+  `GameMaster` types in `src/types.ts`, the discovery/alias resolution in
+  `src/gameMasters/index.ts`, or where the hooks are consumed (turn flow in
+  `src/game.ts`, events in `src/events/EventsLogic.ts`, search in
+  `src/secrets/SecretsLogic.ts`, combat in `src/core/combat.ts`, monster AI
+  in `src/monsters/`).
 - The specs list exact default values, tuple shorthands and validation
   rules — a changed default, an added/removed/reordered field or a new
   validation rule must be reflected there; do not let them drift from the
-  parser.
-- [src/campaigns/README.md](./src/campaigns/README.md) is the hands-on
-  how-to; when a documented authoring capability changes, update the spec and
-  the README together, not just one of them.
+  code.
+- [src/campaigns/README.md](./src/campaigns/README.md) and
+  [src/gameMasters/README.md](./src/gameMasters/README.md) are the hands-on
+  how-tos; when a documented authoring capability changes, update the spec
+  and the matching README together, not just one of them.
 
 ## Code style
 
