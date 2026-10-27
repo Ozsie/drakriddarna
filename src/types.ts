@@ -300,6 +300,9 @@ export type Dungeon = {
   portal?: Position;
   onRoomDiscovered?: Record<string, string>;
   music?: string;
+  // Alternative track played when monsters are near the heroes. Falls back
+  // to the global default tension track when omitted.
+  musicTension?: string;
   tileset?: string;
   // Base light level of the whole dungeon: 1 = fully lit (default), 0 =
   // pitch black. Light sources illuminate their surroundings.
