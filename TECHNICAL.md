@@ -289,7 +289,11 @@ gradient under the softness blur, at full brightness and device
 resolution. Per frame it is a single `drawImage` alpha-scaled by the
 light's animation brightness — pixel-exact for every built-in preset —
 which also turns the static light layer into a handful of blits, making
-the viewport-keyed rebuild during panning cheap. Third, ambient redraws
+the viewport-keyed rebuild during panning cheap. The visibility-polygon
+cache underneath is keyed by the light's stable geometry (id, position,
+radius, alignment, effect) rather than object identity — activeLights()
+recreates derived lights as fresh objects every pass — and is
+size-bounded, so long animations cannot grow it. Third, ambient redraws
 are driven by a quantized animation signature instead of the frame
 clock: each animated light contributes its stepped visible output
 (flicker is inherently stepped, pulse/aura/gas in 1/16 alpha steps,

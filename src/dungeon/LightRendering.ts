@@ -623,9 +623,29 @@ export const lightInViewport = (
 // rays every frame. Sweep lights are excluded: their polygon rotates
 // with time. Sway lights are excluded too: their swinging center moves
 // the whole polygon with time.
+//
+// The cache is keyed by a stable geometry string, not by object
+// identity: activeLights() recreates derived lights (carried item
+// lights, interactables, event lights, the portal, projectiles, flames)
+// as fresh objects on every call, so an identity-keyed map would miss
+// every frame and re-march all their rays. The bound keeps a long
+// animation with changing lights from growing the cache without limit;
+// the oldest entry is evicted first (Maps iterate in insertion order).
+export const MAX_LIGHT_POLYGON_CACHE_ENTRIES = 64;
+
+const lightPolygonCacheKey = (light: LightSource): string =>
+  [
+    light.id ?? '',
+    light.position.x,
+    light.position.y,
+    light.alignment ?? '',
+    light.radius ?? '',
+    light.effect ?? '',
+  ].join(',');
+
 let lightPolygonCache: {
   key: string;
-  polygons: Map<LightSource, Position[]>;
+  polygons: Map<string, Position[]>;
 } | null = null;
 
 // Everything that can change a light polygon, hashed into a cache key.
@@ -685,7 +705,8 @@ export const lightPolygonFor = (
   if (!lightPolygonCache || lightPolygonCache.key !== key) {
     lightPolygonCache = { key, polygons: new Map() };
   }
-  let points = lightPolygonCache.polygons.get(light);
+  const cacheKey = lightPolygonCacheKey(light);
+  let points = lightPolygonCache.polygons.get(cacheKey);
   if (!points) {
     points = computeLightPolygon(
       light,
@@ -695,7 +716,14 @@ export const lightPolygonFor = (
       timeMs,
       key,
     );
-    lightPolygonCache.polygons.set(light, points);
+    if (lightPolygonCache.polygons.size >= MAX_LIGHT_POLYGON_CACHE_ENTRIES) {
+      // Evict the oldest entry: Map keys iterate in insertion order.
+      for (const oldest of lightPolygonCache.polygons.keys()) {
+        lightPolygonCache.polygons.delete(oldest);
+        break;
+      }
+    }
+    lightPolygonCache.polygons.set(cacheKey, points);
   }
   return points;
 };

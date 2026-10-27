@@ -16,6 +16,7 @@ import {
   lightPolygonFor,
   lightSwayOffset,
   lightSweepAngle,
+  MAX_LIGHT_POLYGON_CACHE_ENTRIES,
   renderAmbientDarkness,
   renderAnimatedLights,
   renderLights,
@@ -1263,6 +1264,55 @@ describe('light culling and polygon cache', () => {
     const second = lightPolygonFor(light, state, CELL_SIZE, false, 250);
     expect(second).not.toBe(first);
     expect(second).not.toEqual(first);
+  });
+
+  it('reuses the polygon for a structurally identical fresh light object', () => {
+    const state = createState();
+    const light = createLight({
+      id: 'derived_light',
+      position: { x: 3, y: 2 },
+    });
+    const first = lightPolygonFor(light, state, CELL_SIZE, false, 0);
+
+    // activeLights() recreates derived lights (item lights, event lights,
+    // the portal, projectiles, flames) as fresh objects every call: they
+    // must still hit the geometry-keyed cache instead of re-marching rays.
+    const recreated = createLight({
+      id: 'derived_light',
+      position: { x: 3, y: 2 },
+    });
+    const second = lightPolygonFor(recreated, state, CELL_SIZE, false, 1000);
+    expect(second).toBe(first);
+
+    // A different geometry misses and recomputes.
+    const other = createLight({
+      id: 'derived_light',
+      position: { x: 2, y: 2 },
+    });
+    expect(lightPolygonFor(other, state, CELL_SIZE, false, 0)).not.toBe(first);
+  });
+
+  it('bounds the polygon cache and evicts the oldest entry', () => {
+    const state = createState();
+    const first = createLight({ id: 'light_0', position: { x: 3, y: 2 } });
+    const firstPolygon = lightPolygonFor(first, state, CELL_SIZE, false, 0);
+
+    // Fill the cache with distinct geometries beyond its bound.
+    for (let i = 1; i < MAX_LIGHT_POLYGON_CACHE_ENTRIES + 1; i++) {
+      lightPolygonFor(
+        createLight({ id: `light_${i}`, position: { x: 1, y: 2 } }),
+        state,
+        CELL_SIZE,
+        false,
+        0,
+      );
+    }
+
+    // The oldest entry was evicted: asking for it again recomputes the
+    // polygon instead of returning the cached reference.
+    const recomputed = lightPolygonFor(first, state, CELL_SIZE, false, 0);
+    expect(recomputed).not.toBe(firstPolygon);
+    expect(recomputed).toEqual(firstPolygon);
   });
 });
 
