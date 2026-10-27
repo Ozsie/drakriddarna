@@ -22,6 +22,12 @@ import {
 } from '../store/gameStateStore';
 import { locale, setLocale } from '$lib/translations';
 import { hasWon, init, loadState, save } from '../game';
+import {
+  getSaveHint,
+  getSaveHintFromStateString,
+  listSaves,
+  readSaveStateString,
+} from '../saves/SavesLogic';
 import { testingGrounds } from '../dungeon/testingGrounds';
 import {
   getEventsForDungeon,
@@ -36,6 +42,7 @@ import { campaigns, DEFAULT_CAMPAIGN_ID } from '../campaigns';
 export interface CanvasMenuItem {
   id: string;
   label: string;
+  hint?: string;
   debugOnly?: boolean;
   disabled?: boolean;
   onClick: (activeState: GameState) => void;
@@ -45,7 +52,6 @@ export type MenuView =
   | 'main'
   | 'campaign'
   | 'gameMaster'
-  | 'load'
   | 'event'
   | 'debug'
   | 'rights';
@@ -55,6 +61,12 @@ export interface MenuCallbacks {
   closeMenu?: () => void;
   setState?: (state: GameState) => void;
   setSelectedCampaign?: (campaignId: string) => void;
+  /** Opens the centered save dialog (name input), from the main menu. */
+  openSaveDialog?: () => void;
+  /** Opens the centered load dialog (list of saves), from the main menu. */
+  openLoadDialog?: () => void;
+  /** Dismisses the save/load dialog; passed to its load-row items. */
+  closeDialog?: () => void;
 }
 
 let selectedCampaignId: string = DEFAULT_CAMPAIGN_ID;
@@ -117,8 +129,8 @@ export const getMainMenuItems = (
       id: 'save_game',
       debugOnly: false,
       label: i18n('content.menu.mainMenu.buttons.saveGame'),
-      onClick: (state) => {
-        onSaveGame(state);
+      onClick: () => {
+        callbacks?.openSaveDialog?.();
         callbacks?.closeMenu?.();
       },
     },
@@ -127,7 +139,8 @@ export const getMainMenuItems = (
       debugOnly: false,
       label: i18n('content.menu.mainMenu.buttons.loadGame'),
       onClick: () => {
-        callbacks?.setView?.('load');
+        callbacks?.openLoadDialog?.();
+        callbacks?.closeMenu?.();
       },
     },
     {
@@ -303,6 +316,9 @@ export const getGameMasterMenuItems = (
   return items;
 };
 
+// Rows for the load dialog: the autosave plus every named save, each with a
+// campaign/dungeon hint. Rendered by the centered save/load dialog, not by
+// the canvas menu, so there is no back item — the dialog has its own button.
 export const getSavedGameMenuItems = (
   activeState: GameState,
   callbacks?: MenuCallbacks,
@@ -316,37 +332,29 @@ export const getSavedGameMenuItems = (
         id: 'load_autosave',
         debugOnly: false,
         label: i18n('content.menu.loadGame.buttons.autoSave'),
+        hint: getSaveHintFromStateString(autoSave),
         onClick: (state) => {
           onClickLoad(autoSave, state, callbacks?.setState);
-          callbacks?.closeMenu?.();
-          callbacks?.setView?.('main');
+          callbacks?.closeDialog?.();
         },
       });
     }
 
-    const manualSave = localStorage.getItem('state');
-    if (manualSave) {
+    for (const meta of listSaves()) {
+      const savedStateString = readSaveStateString(meta.id);
+      if (!savedStateString) continue;
       items.push({
-        id: 'load_manual',
+        id: `load_save_${meta.id}`,
         debugOnly: false,
-        label: i18n('content.menu.loadGame.buttons.manualSave'),
+        label: meta.name,
+        hint: getSaveHint(meta),
         onClick: (state) => {
-          onClickLoad(manualSave, state, callbacks?.setState);
-          callbacks?.closeMenu?.();
-          callbacks?.setView?.('main');
+          onClickLoad(savedStateString, state, callbacks?.setState);
+          callbacks?.closeDialog?.();
         },
       });
     }
   }
-
-  items.push({
-    id: 'load_back',
-    debugOnly: false,
-    label: i18n('content.menu.loadGame.buttons.back'),
-    onClick: () => {
-      callbacks?.setView?.('main');
-    },
-  });
 
   return items;
 };
@@ -457,9 +465,6 @@ export const getMenuItemsForView = (
     case 'gameMaster':
       items = getGameMasterMenuItems(activeState, callbacks);
       break;
-    case 'load':
-      items = getSavedGameMenuItems(activeState, callbacks);
-      break;
     case 'event':
       items = getEventMenuItems(activeState, callbacks);
       break;
@@ -488,8 +493,6 @@ export const getMenuHeader = (view: MenuView): string => {
       return i18n('content.menu.selectCampaign.header');
     case 'gameMaster':
       return i18n('content.menu.selectGameMaster.header');
-    case 'load':
-      return i18n('content.menu.loadGame.header');
     case 'event':
       return i18n('content.menu.selectNextEvent.header');
     case 'rights':
@@ -561,11 +564,11 @@ export const setMusicMode = (activeState?: GameState) => {
   }
 };
 
-export const onSaveGame = (activeState?: GameState) => {
+export const onSaveGame = (activeState?: GameState, name = '') => {
   if (activeState) {
-    save(activeState);
+    save(activeState, name);
   } else {
-    saveGame();
+    saveGame(name);
   }
 };
 

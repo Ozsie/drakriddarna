@@ -20,8 +20,19 @@
         "rights": "Rättigheter & Licenser"
       }
     },
+    "saveGame": {
+      "header": "Spara spel",
+      "subtitle": "Namnge ditt sparade spel",
+      "buttons": {
+        "save": "Spara",
+        "cancel": "Avbryt"
+      },
+      "defaultName": "Sparat spel"
+    },
     "loadGame": {
       "header": "Ladda spel",
+      "subtitle": "Välj ett sparat spel att ladda",
+      "moreSaves": "+{{count}} fler sparade spel",
       "buttons": {
         "autoSave": "Autosparat spel",
         "manualSave": "Manuellt sparat spel",

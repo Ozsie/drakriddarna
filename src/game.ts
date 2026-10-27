@@ -2,6 +2,7 @@ import type { GameState, Hero, Position } from './types';
 import { ConditionType } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
 import { CURRENT_SAVE_VERSION, migrateSaveState } from './saveMigration';
+import { writeSave } from './saves/SavesLogic';
 import { getCampaign, isKnownCampaign, DEFAULT_CAMPAIGN_ID } from './campaigns';
 import {
   monsterActions,
@@ -38,11 +39,9 @@ import { soundEffectManager } from './audio';
 // Re-exported because gameStateStore consumes it through the game module.
 export { removeDamageIndicator } from './core/combat';
 
-export const save = (state: GameState) => {
+export const save = (state: GameState, name?: string) => {
   doReRender(state);
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('state', JSON.stringify(state));
-  }
+  writeSave(state, name ?? '');
   addLog(state, 'logs.gameSaved');
 };
 

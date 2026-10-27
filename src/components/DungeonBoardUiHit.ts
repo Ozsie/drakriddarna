@@ -8,11 +8,16 @@ import {
   getHeroCardsHit,
   getMenuHit,
   getMonsterCardsHit,
+  getSaveLoadDialogHit,
   getTopBarHit,
 } from '../ui/UIRendering';
 import type { BetweenDungeonsHitResult } from '../ui/BetweenDungeonsRendering';
 import type { TopBarHitElement } from '../ui/TopBarRendering';
 import type { MenuHitResult } from '../ui/MenuRendering';
+import type {
+  SaveLoadDialogHitResult,
+  SaveLoadDialogMode,
+} from '../ui/SaveLoadDialogRendering';
 import type { HeroCardsHitResult } from '../ui/HeroCardRendering';
 import type { MonsterCardsHitResult } from '../ui/MonsterCardRendering';
 import type { DiaryAndWinConditionsHitResult } from '../ui/DiaryAndWinConditionRendering';
@@ -21,10 +26,12 @@ import type { DungeonIntroHitResult } from '../ui/DungeonIntroRendering';
 
 // The first UI element under a board position, in the fixed cascade order
 // the board dispatches UI input: between-dungeons overlay, dungeon intro,
-// top bar, canvas menu, hero cards, monster cards, diary and event card.
+// save/load dialog, top bar, canvas menu, hero cards, monster cards, diary
+// and event card.
 export type UiHit =
   | { kind: 'betweenDungeons'; hit: BetweenDungeonsHitResult }
   | { kind: 'dungeonIntro'; hit: DungeonIntroHitResult }
+  | { kind: 'saveLoadDialog'; hit: SaveLoadDialogHitResult }
   | { kind: 'topBar'; hit: TopBarHitElement }
   | { kind: 'menu'; hit: MenuHitResult }
   | { kind: 'heroCards'; hit: HeroCardsHitResult }
@@ -48,6 +55,9 @@ export interface UiHitContext {
   menuCallbacks: MenuCallbacks;
   buildInfo?: { date: string; hash: string } | null;
   eventCardCollapsed: boolean;
+  /** Open centered save/load dialog mode, or null when closed. */
+  saveLoadDialogMode: SaveLoadDialogMode | null;
+  saveName: string;
 }
 
 // The individual hit testers, injectable so the cascade order itself can
@@ -55,6 +65,7 @@ export interface UiHitContext {
 export interface UiHitTesters {
   betweenDungeons: typeof getBetweenDungeonsHit;
   dungeonIntro: typeof getDungeonIntroHit;
+  saveLoadDialog: typeof getSaveLoadDialogHit;
   topBar: typeof getTopBarHit;
   menu: typeof getMenuHit;
   heroCards: typeof getHeroCardsHit;
@@ -66,6 +77,7 @@ export interface UiHitTesters {
 export const defaultUiHitTesters: UiHitTesters = {
   betweenDungeons: getBetweenDungeonsHit,
   dungeonIntro: getDungeonIntroHit,
+  saveLoadDialog: getSaveLoadDialogHit,
   topBar: getTopBarHit,
   menu: getMenuHit,
   heroCards: getHeroCardsHit,
@@ -102,6 +114,22 @@ export const findUiHit = (
     );
     if (hit) {
       return { kind: 'dungeonIntro', hit };
+    }
+  }
+  if (context.saveLoadDialogMode) {
+    const hit = testers.saveLoadDialog(
+      context.viewWidth,
+      context.viewHeight,
+      context.state,
+      {
+        mode: context.saveLoadDialogMode,
+        callbacks: context.menuCallbacks,
+      },
+      context.x,
+      context.y,
+    );
+    if (hit) {
+      return { kind: 'saveLoadDialog', hit };
     }
   }
   const topBarHit = testers.topBar(

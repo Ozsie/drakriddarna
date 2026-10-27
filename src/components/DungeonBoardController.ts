@@ -10,6 +10,7 @@ import { radialMenuStore } from '../store/radialMenuStore';
 import {
   gameStateStore,
   handleCanvasClick,
+  saveGame,
   toggleHeroInventory,
   useHeroItem,
 } from '../store/gameStateStore';
@@ -62,6 +63,8 @@ import {
   renderDiaryAndWinConditions,
   renderEventCard,
   renderMenuModal,
+  renderSaveLoadDialog,
+  type SaveLoadDialogMode,
   renderDungeonIntro,
   shouldShowDungeonIntro,
   dismissDungeonIntro,
@@ -87,13 +90,16 @@ import {
 } from '../combat';
 import { clearTileTextureCache } from '../dungeon/TileTextureCache';
 import { clearFogCloudCaches } from '../dungeon/DungeonRendering';
-import { hasActiveActorAnimations } from '../core';
+import { hasActiveActorAnimations, i18n } from '../core';
+import { MAX_SAVE_NAME_LENGTH } from '../saves/SavesLogic';
+import { onSaveGame } from '../menu/MenuLogic';
 import {
   createTouchPanState,
   handleTwoFingerTouchStart,
   handleTwoFingerTouchMove,
   handleTwoFingerTouchEnd,
 } from '../input/TouchPanLogic';
+import { inputManager } from '../input/InputManager';
 import { musicManager, soundEffectManager } from '../audio';
 import { selectMusicIntensity } from '../audio/MusicIntensity';
 import {
@@ -263,6 +269,13 @@ export class DungeonBoardController {
   private isLogOpen = false;
   private isCanvasMenuOpen = false;
   private currentMenuView: MenuView = 'main';
+  // Centered save/load dialog, a sibling of the between-dungeons overlay
+  // rather than a canvas-menu view. Opened from the main menu, closed by
+  // its buttons, the backdrop, or Escape.
+  private saveLoadDialogMode: SaveLoadDialogMode | null = null;
+  // Text typed into the save dialog's name input, owned by the controller
+  // because the dialog is drawn on the UI canvas rather than the DOM.
+  private saveNameInput = '';
   private isEventCardCollapsed = false;
   private isDungeonIntroDismissed = false;
   private showDungeonIntro = false;
@@ -277,11 +290,21 @@ export class DungeonBoardController {
       this.isCanvasMenuOpen = false;
       this.currentMenuView = 'main';
       this.hover.hoveredMenuItemId = null;
+      this.syncGameInputEnabled();
       this.renderUiLayer(true);
     },
     setState: (nextState: GameState) => {
       this.props.onExternalStateChange(nextState);
       this.renderCanvas(true);
+    },
+    openSaveDialog: () => {
+      this.openSaveLoadDialog('save');
+    },
+    openLoadDialog: () => {
+      this.openSaveLoadDialog('load');
+    },
+    closeDialog: () => {
+      this.closeSaveLoadDialog();
     },
   };
 
@@ -549,6 +572,11 @@ export class DungeonBoardController {
   }
 
   destroy(): void {
+    // The input manager is a singleton outliving the board; never leave
+    // it disabled if a modal was open at teardown.
+    if (this.isCanvasMenuOpen || this.saveLoadDialogMode) {
+      inputManager.setEnabled(true);
+    }
     if (browser) {
       window.removeEventListener('mousemove', this.onWindowMouseMove);
       window.removeEventListener('mouseup', this.onWindowMouseUp);
@@ -1311,7 +1339,11 @@ export class DungeonBoardController {
       this.activeState?.settings?.['locale'],
     )}:${String(String(this.activeState?.gameMaster?.id))}:${String(
       this.activeState?.dungeon?.beaten,
-    )}:${String(String(this.activeState?.settings?.['music']))}`;
+    )}:${String(String(this.activeState?.settings?.['music']))}:${String(
+      this.saveLoadDialogMode,
+    )}:${String(this.saveNameInput)}:${String(
+      String(this.hover.isSdActionHovered),
+    )}:${String(String(this.hover.isSdSecondaryHovered))}`;
     const sig = `${String(String(String(menu?.x)))},${String(
       String(String(menu?.y)),
     )},${String(menu?.entries?.length ?? 0)},${String(
@@ -1404,6 +1436,22 @@ export class DungeonBoardController {
             buildInfo,
             debugMode: currentDebug,
             callbacks: this.menuCallbacks,
+          },
+        );
+      }
+      if (this.saveLoadDialogMode) {
+        renderSaveLoadDialog(
+          ctx,
+          this.containerWidth,
+          this.containerHeight,
+          this.activeState,
+          {
+            mode: this.saveLoadDialogMode,
+            callbacks: this.menuCallbacks,
+            saveName: this.saveNameInput,
+            hoveredItemId: this.hover.hoveredMenuItemId,
+            hoveredAction: this.hover.isSdActionHovered,
+            hoveredSecondary: this.hover.isSdSecondaryHovered,
           },
         );
       }
@@ -1627,11 +1675,103 @@ export class DungeonBoardController {
     }
   };
   private onWindowKeyDown = (event: KeyboardEvent) => {
+    // While the save/load dialog is open it captures every key: the save
+    // mode feeds the name input, both modes dismiss on Escape.
+    if (this.saveLoadDialogMode) {
+      this.handleSaveLoadDialogKeyDown(event);
+      return;
+    }
     if (event.key === 'Escape' && get(radialMenuStore)) {
       radialMenuStore.set(null);
       this.hover.hoveredRadialIndex = null;
       this.renderUiLayer(true);
     }
+  };
+
+  private handleSaveLoadDialogKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeSaveLoadDialog();
+      return;
+    }
+    if (this.saveLoadDialogMode !== 'save') return;
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.confirmSaveDialog();
+      return;
+    }
+    if (event.key === 'Backspace') {
+      event.preventDefault();
+      this.saveNameInput = this.saveNameInput.slice(0, -1);
+      this.renderUiLayer(true);
+      return;
+    }
+    if (
+      event.key.length === 1 &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      this.saveNameInput.length < MAX_SAVE_NAME_LENGTH
+    ) {
+      event.preventDefault();
+      this.saveNameInput += event.key;
+      this.renderUiLayer(true);
+    }
+  };
+
+  /**
+   * Game keyboard/touch input is suppressed while any modal surface is
+   * open: the canvas menu, or the save/load dialog. The save-name input
+   * is canvas-drawn, so the InputManager's DOM-text-input guard cannot
+   * see it — enablement is driven explicitly here instead.
+   */
+  private syncGameInputEnabled(): void {
+    inputManager.setEnabled(!this.isCanvasMenuOpen && !this.saveLoadDialogMode);
+  }
+
+  /** Opens the centered save/load dialog and closes the canvas menu. */
+  private openSaveLoadDialog(mode: SaveLoadDialogMode): void {
+    this.isCanvasMenuOpen = false;
+    this.currentMenuView = 'main';
+    this.saveLoadDialogMode = mode;
+    this.syncGameInputEnabled();
+    if (mode === 'save') {
+      // Prefill the save name with the current dungeon's name.
+      const dungeon = this.activeState?.dungeon;
+      this.saveNameInput = dungeon
+        ? i18n(dungeon.nameTranslationKey ?? dungeon.name)
+        : '';
+    }
+    this.hover.hoveredMenuItemId = null;
+    this.renderUiLayer(true);
+  }
+
+  private closeSaveLoadDialog(): void {
+    if (!this.saveLoadDialogMode) return;
+    this.saveLoadDialogMode = null;
+    this.syncGameInputEnabled();
+    this.hover.hoveredMenuItemId = null;
+    this.hover.isSdActionHovered = false;
+    this.hover.isSdSecondaryHovered = false;
+    this.renderUiLayer(true);
+  }
+
+  /** Saves under the current input name and closes the dialog. */
+  private confirmSaveDialog = () => {
+    const activeState = this.activeState;
+    if (!activeState) return;
+    if (this.externalState) {
+      onSaveGame(activeState, this.saveNameInput);
+      gameStateStore.set(this.externalState);
+    } else {
+      saveGame(this.saveNameInput);
+    }
+    this.saveLoadDialogMode = null;
+    this.syncGameInputEnabled();
+    this.hover.hoveredMenuItemId = null;
+    this.hover.isSdActionHovered = false;
+    this.hover.isSdSecondaryHovered = false;
+    this.renderCanvas(true);
   };
   // --- UI input helpers ------------------------------------------------------
 
@@ -1658,6 +1798,8 @@ export class DungeonBoardController {
       menuCallbacks: this.menuCallbacks,
       buildInfo,
       eventCardCollapsed: this.isEventCardCollapsed,
+      saveLoadDialogMode: this.saveLoadDialogMode,
+      saveName: this.saveNameInput,
     });
   }
 
@@ -1795,6 +1937,28 @@ export class DungeonBoardController {
         return;
       }
 
+      if (hit?.kind === 'saveLoadDialog') {
+        const dialogHit = hit.hit;
+        if (dialogHit.type === 'row' && dialogHit.item) {
+          soundEffectManager.playButtonClick();
+          dialogHit.item.onClick(activeState);
+          this.renderCanvas(true);
+        } else if (dialogHit.type === 'action') {
+          soundEffectManager.playButtonClick();
+          if (this.saveLoadDialogMode === 'save') {
+            this.confirmSaveDialog();
+          } else {
+            this.closeSaveLoadDialog();
+          }
+        } else if (dialogHit.type === 'secondary') {
+          soundEffectManager.playButtonClick();
+          this.closeSaveLoadDialog();
+        } else if (dialogHit.type === 'backdrop') {
+          this.closeSaveLoadDialog();
+        }
+        return;
+      }
+
       if (hit?.kind === 'topBar') {
         const topBarHit = hit.hit;
         if (topBarHit === 'menu') {
@@ -1806,6 +1970,7 @@ export class DungeonBoardController {
             this.currentMenuView = 'main';
           }
           this.hover.hoveredMenuItemId = null;
+          this.syncGameInputEnabled();
           this.renderUiLayer(true);
           return;
         }
@@ -1818,6 +1983,7 @@ export class DungeonBoardController {
             this.currentMenuView = 'debug';
           }
           this.hover.hoveredMenuItemId = null;
+          this.syncGameInputEnabled();
           this.renderUiLayer(true);
           return;
         }
@@ -1834,6 +2000,7 @@ export class DungeonBoardController {
           this.isCanvasMenuOpen = false;
           this.currentMenuView = 'main';
           this.hover.hoveredMenuItemId = null;
+          this.syncGameInputEnabled();
           this.renderUiLayer(true);
         }
         return;

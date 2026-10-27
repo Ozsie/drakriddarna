@@ -182,6 +182,15 @@ export {
   getDebugPrintoutPosition,
   type DebugPrintoutCounts,
 } from './DebugOverlayRendering';
+export {
+  renderSaveLoadDialog,
+  getSaveLoadDialogLayout,
+  getSaveLoadDialogHit,
+  type RenderSaveLoadDialogOptions,
+  type SaveLoadDialogHitResult,
+  type SaveLoadDialogLayout,
+  type SaveLoadDialogMode,
+} from './SaveLoadDialogRendering';
 
 // Board cursors for the three interactive tile actions; '' means the plain
 // default cursor. The CSS cursor for each is built once and cached.

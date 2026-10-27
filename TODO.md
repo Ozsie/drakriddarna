@@ -19,7 +19,6 @@
 
 # Features
 
-- [ ] Multiple saves
 - [ ] Scoring, 50 point per hp at end of scenario, 30\*xp points per monster killed, -2 per round, more?
 - [ ] Dungeon timer, with optional speed running feature
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc
@@ -31,6 +30,7 @@
 - [ ] Alvkonungens Borg - [Official Dungeon and Heroes](<https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg>)
   - [x] Edge based walls
 - [ ] Level editor
+- [x] Multiple saves
 - [x] Sound Effects
 - [x] e1m5
   - [x] multiple copies of items in treasure room

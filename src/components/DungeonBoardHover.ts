@@ -4,6 +4,7 @@ import type {
   EventCardHitResult,
   HeroCardsHitResult,
   MenuHitResult,
+  SaveLoadDialogHitResult,
   TopBarHitElement,
 } from '../ui/UIRendering';
 import type { UiHit } from './DungeonBoardUiHit';
@@ -27,6 +28,8 @@ export interface BoardHoverState {
   isBdSecondaryHovered: boolean;
   hoveredBdItem: { heroIndex: number; itemIndex: number } | null;
   hoveredBdGiveHeroIndex: number | null;
+  isSdActionHovered: boolean;
+  isSdSecondaryHovered: boolean;
 }
 
 export const createBoardHoverState = (): BoardHoverState => ({
@@ -44,6 +47,8 @@ export const createBoardHoverState = (): BoardHoverState => ({
   isBdSecondaryHovered: false,
   hoveredBdItem: null,
   hoveredBdGiveHeroIndex: null,
+  isSdActionHovered: false,
+  isSdSecondaryHovered: false,
 });
 
 export interface HoverResult {
@@ -306,6 +311,41 @@ export const updateEventCardHover = (
   return { cursor: isToggle ? 'pointer' : 'default', changed };
 };
 
+export const updateSaveLoadDialogHover = (
+  hover: BoardHoverState,
+  hit: SaveLoadDialogHitResult,
+): HoverResult => {
+  hover.hoveredRadialIndex = null;
+  let changed = clearTopBarHovers(hover);
+  if (clearHeroCardHovers(hover)) {
+    changed = true;
+  }
+  if (hover.isEventCardToggleHovered) {
+    hover.isEventCardToggleHovered = false;
+    changed = true;
+  }
+  const isAction = hit.type === 'action';
+  const isSecondary = hit.type === 'secondary';
+  if (hover.isSdActionHovered !== isAction) {
+    hover.isSdActionHovered = isAction;
+    changed = true;
+  }
+  if (hover.isSdSecondaryHovered !== isSecondary) {
+    hover.isSdSecondaryHovered = isSecondary;
+    changed = true;
+  }
+  const newHoveredId = hit.type === 'row' && hit.item ? hit.item.id : null;
+  if (hover.hoveredMenuItemId !== newHoveredId) {
+    hover.hoveredMenuItemId = newHoveredId;
+    changed = true;
+  }
+  return {
+    cursor:
+      isAction || isSecondary || hit.type === 'row' ? 'pointer' : 'default',
+    changed,
+  };
+};
+
 export const updateHoverForUiHit = (
   hover: BoardHoverState,
   hit: UiHit,
@@ -316,6 +356,8 @@ export const updateHoverForUiHit = (
       return updateBetweenDungeonsHover(hover, hit.hit);
     case 'dungeonIntro':
       return updateDungeonIntroHover(hover, hit.hit);
+    case 'saveLoadDialog':
+      return updateSaveLoadDialogHover(hover, hit.hit);
     case 'topBar':
       return updateTopBarHover(hover, hit.hit, isLogOpen);
     case 'menu':
@@ -377,6 +419,14 @@ export const clearBoardHovers = (
   }
   if (hover.hoveredMenuItemId !== null) {
     hover.hoveredMenuItemId = null;
+    changed = true;
+  }
+  if (hover.isSdActionHovered) {
+    hover.isSdActionHovered = false;
+    changed = true;
+  }
+  if (hover.isSdSecondaryHovered) {
+    hover.isSdSecondaryHovered = false;
     changed = true;
   }
   return changed;

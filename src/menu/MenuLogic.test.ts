@@ -16,6 +16,7 @@ import {
   setSelectedCampaign,
 } from './MenuLogic';
 import { DifficultLevels } from '../core';
+import { writeSave } from '../saves/SavesLogic';
 import { Colour, type GameState, type Hero, ItemType, Level } from '../types';
 
 const createMockHero = (name = 'Hero1'): Hero => ({
@@ -185,12 +186,30 @@ describe('MenuLogic', () => {
       expect(setView).toHaveBeenCalledWith('campaign');
     });
 
-    it('navigates to load view on load_game click', () => {
-      const setView = vi.fn();
-      const items = getMainMenuItems(mockState, { setView });
+    it('opens the load dialog on load_game click and closes the menu', () => {
+      const openLoadDialog = vi.fn();
+      const closeMenu = vi.fn();
+      const items = getMainMenuItems(mockState, {
+        openLoadDialog,
+        closeMenu,
+      });
       const loadGameItem = items.find((i) => i.id === 'load_game');
       loadGameItem?.onClick(mockState);
-      expect(setView).toHaveBeenCalledWith('load');
+      expect(openLoadDialog).toHaveBeenCalled();
+      expect(closeMenu).toHaveBeenCalled();
+    });
+
+    it('opens the save dialog on save_game click and closes the menu', () => {
+      const openSaveDialog = vi.fn();
+      const closeMenu = vi.fn();
+      const items = getMainMenuItems(mockState, {
+        openSaveDialog,
+        closeMenu,
+      });
+      const saveGameItem = items.find((i) => i.id === 'save_game');
+      saveGameItem?.onClick(mockState);
+      expect(openSaveDialog).toHaveBeenCalled();
+      expect(closeMenu).toHaveBeenCalled();
     });
 
     it('navigates to rights view on rights click', () => {
@@ -361,9 +380,9 @@ describe('MenuLogic', () => {
   });
 
   describe('getSavedGameMenuItems', () => {
-    it('returns only back button when no saved games exist', () => {
+    it('returns no rows when no saved games exist', () => {
       const items = getSavedGameMenuItems(mockState);
-      expect(items.map((i) => i.id)).toEqual(['load_back']);
+      expect(items.map((i) => i.id)).toEqual([]);
     });
 
     it('returns saved games when present in localStorage', () => {
@@ -373,8 +392,29 @@ describe('MenuLogic', () => {
       const items = getSavedGameMenuItems(mockState);
       const ids = items.map((i) => i.id);
       expect(ids).toContain('load_autosave');
-      expect(ids).toContain('load_manual');
-      expect(ids).toContain('load_back');
+      // The legacy `state` slot is imported as a named save.
+      expect(ids.some((id) => id.startsWith('load_save_'))).toBe(true);
+      // The dialog has its own Back button, so there is no back item.
+      expect(ids).not.toContain('load_back');
+    });
+
+    it('returns named saves with hints from the save index', () => {
+      writeSave(mockState, 'My Save');
+
+      const items = getSavedGameMenuItems(mockState);
+      const saveItem = items.find((i) => i.id.startsWith('load_save_'));
+      expect(saveItem?.label).toBe('My Save');
+      expect(saveItem?.hint).toBeDefined();
+    });
+
+    it('loads a named save and closes the dialog on click', () => {
+      writeSave(mockState, 'My Save');
+      const closeDialog = vi.fn();
+
+      const items = getSavedGameMenuItems(mockState, { closeDialog });
+      const saveItem = items.find((i) => i.id.startsWith('load_save_'));
+      saveItem?.onClick(mockState);
+      expect(closeDialog).toHaveBeenCalled();
     });
   });
 
@@ -479,7 +519,6 @@ describe('MenuLogic', () => {
       expect(getMenuHeader('debug')).toBeTruthy();
       expect(getMenuHeader('campaign')).toBeTruthy();
       expect(getMenuHeader('gameMaster')).toBeTruthy();
-      expect(getMenuHeader('load')).toBeTruthy();
       expect(getMenuHeader('event')).toBeTruthy();
       expect(getMenuHeader('rights')).toBeTruthy();
     });

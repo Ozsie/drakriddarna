@@ -8,6 +8,7 @@ import type {
   MenuHitResult,
   MonsterCardsHitResult,
   DiaryAndWinConditionsHitResult,
+  SaveLoadDialogHitResult,
   TopBarHitElement,
 } from '../ui/UIRendering';
 import {
@@ -63,6 +64,8 @@ const createContext = (overrides?: Partial<UiHitContext>): UiHitContext => ({
   menuCallbacks: {},
   buildInfo: { date: 'today', hash: 'abc' },
   eventCardCollapsed: false,
+  saveLoadDialogMode: null,
+  saveName: '',
   ...overrides,
 });
 
@@ -79,10 +82,15 @@ const monsterHit: MonsterCardsHitResult = {
 };
 const diaryHit: DiaryAndWinConditionsHitResult = { type: 'panel' };
 const eventHit: EventCardHitResult = { type: 'toggle' };
+const saveLoadDialogHit: SaveLoadDialogHitResult = {
+  type: 'row',
+  item: { id: 'load_autosave' } as never,
+};
 
 const noHitTesters: UiHitTesters = {
   betweenDungeons: () => null,
   dungeonIntro: () => null,
+  saveLoadDialog: () => null,
   topBar: () => null,
   menu: () => null,
   heroCards: () => null,
@@ -140,6 +148,35 @@ describe('findUiHit cascade', () => {
 
     const hit = findUiHit(createContext({ showDungeonIntro: true }), testers);
     expect(hit).toEqual({ kind: 'dungeonIntro', hit: introHit });
+  });
+
+  it('only tests the save/load dialog while it is open', () => {
+    const testers = {
+      ...noHitTesters,
+      saveLoadDialog: vi.fn(() => saveLoadDialogHit),
+    };
+    expect(findUiHit(createContext(), testers)).toBeNull();
+    expect(testers.saveLoadDialog).not.toHaveBeenCalled();
+
+    const hit = findUiHit(
+      createContext({ saveLoadDialogMode: 'load' }),
+      testers,
+    );
+    expect(hit).toEqual({ kind: 'saveLoadDialog', hit: saveLoadDialogHit });
+  });
+
+  it('orders the save/load dialog before the top bar', () => {
+    const testers = {
+      ...noHitTesters,
+      saveLoadDialog: vi.fn(() => saveLoadDialogHit),
+      topBar: () => 'menu' as TopBarHitElement,
+    };
+    const hit = findUiHit(
+      createContext({ saveLoadDialogMode: 'save' }),
+      testers,
+    );
+    expect(hit).toEqual({ kind: 'saveLoadDialog', hit: saveLoadDialogHit });
+    expect(testers.saveLoadDialog).toHaveBeenCalled();
   });
 
   it('only tests the canvas menu while it is open', () => {

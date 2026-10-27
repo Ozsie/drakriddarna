@@ -149,9 +149,9 @@ export const loadGameState = (loadedState: GameState): GameState => {
   return state;
 };
 
-export const saveGame = (): void => {
+export const saveGame = (name?: string): void => {
   const state = get(gameStateStore);
-  save(state);
+  save(state, name);
   syncStore(state, true);
 };
 

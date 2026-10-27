@@ -53,6 +53,7 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/events/        event deck (card draw effects)
 ├── src/campaigns/     campaign content (auto-discovered)
 ├── src/gameMasters/   difficulty "personalities" (auto-discovered)
+├── src/saves/         named-save storage (index + blobs in localStorage)
 ├── src/store/         Svelte stores wrapping the game state
 ├── src/ui/            pure functions that draw UI panels onto canvases
 ├── src/components/    Dungeon.svelte (thin shell) + DungeonBoardController
@@ -372,9 +373,16 @@ browser-side effect.
 
 The entire game lives in one `GameState` object, held in a Svelte `writable`
 store (`src/store/gameStateStore.ts`) that also owns input handling glue and
-persistence. Saving is `JSON.stringify(state)` to `localStorage`, plus a
-separate "reload guard" key that restores an in-progress game across page
-reloads.
+persistence. Manual saves are user-named and unlimited: a centered modal
+dialog (drawn like the between-dungeons dialog — full-screen dim, centered
+panel, on the UI canvas) opens with a name input on save and a list of saves
+(each showing its campaign and dungeon) on load. Storage lives in
+`src/saves/SavesLogic.ts` — a JSON index of
+save metadata under one `localStorage` key plus one full `GameState` blob per
+save, so listing saves never parses the blobs. The pre-named-saves single
+`state` slot is imported into the list on first access. Alongside the manual
+saves, an `autosave` key is refreshed on turn transitions and a separate
+"reload guard" key restores an in-progress game across page reloads.
 
 Save migration is treated as a real concern and is versioned: the state
 schema carries a `saveVersion`, and `loadState()` runs the ordered,
@@ -465,10 +473,10 @@ current design costs:
   (at minimum for logs, cards and menus), which the current rendering
   architecture does not provide. No accessibility work has been done yet.
 - **One big `GameState`.** A single serializable object makes save/load and
-  headless replay trivial, but it has real costs: exactly one save slot, and
+  headless replay trivial, but it has real costs: the saved blob is large, and
   any structural change ripples through every module that takes the state.
   Migration is versioned and tested now, but the single object still couples
-  everything that touches it; multiple saves remain on the wishlist.
+  everything that touches it.
 - **TypeScript-as-data cuts both ways.** Authoring dungeons in TypeScript gets
   you type-checking, refactoring and validation for free — the usual
   config-as-code argument — but it makes content authoring a
