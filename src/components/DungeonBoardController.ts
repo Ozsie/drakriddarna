@@ -46,6 +46,7 @@ import {
   renderAnimatedLights,
   renderLights,
   renderStaticLights,
+  setLightBlurDisabled,
   staticLightCacheKey,
   animatedLightsSignature,
 } from '../dungeon/LightRendering';
@@ -206,6 +207,11 @@ export class DungeonBoardController {
   private dragStartPanY = 0;
   private hasMovedDuringDrag = false;
   private touchPanState = createTouchPanState();
+  // Reduced render quality while a pan drag is active: canvases at CSS
+  // pixel ratio (1) instead of the device pixel ratio, light glow without
+  // its softness blur. Cuts the per-frame fill cost roughly 4x on retina
+  // phones; the first frame after the drag ends restores full quality.
+  private lowQualityPan = false;
 
   // --- hover / UI state -----------------------------------------------------
   // The cursor is applied straight onto the ui canvas: the Svelte
@@ -285,7 +291,7 @@ export class DungeonBoardController {
       this.cellSize = nextCellSize;
       this.lastCellSize = nextCellSize;
       clearTileTextureCache();
-      const ratio = (browser && window.devicePixelRatio) || 1;
+      const ratio = this.canvasRatio;
       this.initCanvas(
         this.staticCanvas,
         this.containerWidth,
@@ -368,7 +374,7 @@ export class DungeonBoardController {
     ) {
       this.lastContainerWidth = width;
       this.lastContainerHeight = height;
-      const ratio = (browser && window.devicePixelRatio) || 1;
+      const ratio = this.canvasRatio;
       this.initCanvas(this.staticCanvas, width, height, ratio);
       this.initCanvas(this.actorCanvas, width, height, ratio);
       this.initCanvas(this.lightCanvas, width, height, ratio);
@@ -425,7 +431,7 @@ export class DungeonBoardController {
       window.addEventListener('keydown', this.onWindowKeyDown);
     }
 
-    const ratio = (browser && window.devicePixelRatio) || 1;
+    const ratio = this.canvasRatio;
     if (this.containerWidth && this.containerHeight) {
       this.initCanvas(
         this.staticCanvas,
@@ -522,16 +528,75 @@ export class DungeonBoardController {
     }
     clearFogCloudCaches();
     clearLightSpriteCache();
+    setLightBlurDisabled(false);
   }
 
   private isReady = (img: HTMLImageElement | null): boolean =>
     !!img && img.complete && img.naturalWidth > 0;
+
+  // The device pixel ratio the canvases are sized at — except while a pan
+  // drag is active, when everything renders at CSS pixel ratio instead.
+  private get canvasRatio(): number {
+    return (browser && !this.lowQualityPan && window.devicePixelRatio) || 1;
+  }
+
+  // Re-sizes every canvas to the current ratio. Resizing clears the
+  // canvases, so the static light layer's cache key is invalidated too —
+  // it is the one cached layer with no force path, redrawn only when its
+  // key changes.
+  private reinitCanvases = () => {
+    if (!this.containerWidth || !this.containerHeight) return;
+    const ratio = this.canvasRatio;
+    const width = this.containerWidth;
+    const height = this.containerHeight;
+    for (const canvas of [
+      this.staticCanvas,
+      this.actorCanvas,
+      this.lightCanvas,
+      this.staticLightCanvas,
+      this.darknessCanvas,
+      this.overlayCanvas,
+      this.uiCanvas,
+    ]) {
+      this.initCanvas(canvas, width, height, ratio);
+    }
+    this.lastStaticLightKey = '';
+  };
+
+  // Switches to reduced quality on the first actual pan movement of a
+  // drag (not on press: a click-and-hold without movement stays sharp).
+  // The resize clears every canvas, so one full low-quality redraw is
+  // forced right away; the pan frame scheduled right after renders into
+  // the low-quality surfaces.
+  private enterLowQualityPan = () => {
+    if (this.lowQualityPan) return;
+    this.lowQualityPan = true;
+    setLightBlurDisabled(true);
+    this.reinitCanvases();
+    this.renderCanvas(true);
+  };
+
+  // Restores full quality when the drag ends. A pan frame may still be
+  // pending; it is cancelled so the full-quality redraw below is the one
+  // that lands.
+  private exitLowQualityPan = () => {
+    if (!this.lowQualityPan) return;
+    this.lowQualityPan = false;
+    setLightBlurDisabled(false);
+    if (this.panRenderAnimationId !== null) {
+      cancelAnimationFrame(this.panRenderAnimationId);
+      this.panRenderAnimationId = null;
+    }
+    this.reinitCanvases();
+    this.renderCanvas(true);
+  };
 
   // Pan moves can arrive far faster than the display refreshes, so the
   // handlers only update panX/panY and coalesce the repaint into a single
   // requestAnimationFrame; the browser shows one frame either way.
   private schedulePanRender = () => {
     if (this.panRenderAnimationId !== null) return;
+    this.enterLowQualityPan();
     this.panRenderAnimationId = requestAnimationFrame(() => {
       this.panRenderAnimationId = null;
       this.updateAllCanvasTransforms();
@@ -550,7 +615,7 @@ export class DungeonBoardController {
 
   private updateAllCanvasTransforms = () => {
     if (!this.containerWidth || !this.containerHeight) return;
-    const ratio = (browser && window.devicePixelRatio) || 1;
+    const ratio = this.canvasRatio;
     const centerOffsetX = this.startPosition
       ? (this.startPosition.x + 0.5) * this.cellSize
       : 0;
@@ -1207,7 +1272,7 @@ export class DungeonBoardController {
       this.containerHeight > 0 &&
       this.activeState
     ) {
-      const ratio = (browser && window.devicePixelRatio) || 1;
+      const ratio = this.canvasRatio;
       ctx.save();
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       renderTopBar(ctx, this.containerWidth, this.activeState, {
@@ -1421,6 +1486,7 @@ export class DungeonBoardController {
     }
     if (this.isDragging) {
       this.isDragging = false;
+      this.exitLowQualityPan();
       if (this.hasMovedDuringDrag) {
         setTimeout(() => {
           this.hasMovedDuringDrag = false;
@@ -1464,6 +1530,7 @@ export class DungeonBoardController {
       y: this.panY,
     });
     if (result.shouldEnd) {
+      this.exitLowQualityPan();
       if (this.hasMovedDuringDrag) {
         setTimeout(() => {
           this.hasMovedDuringDrag = false;
@@ -1474,6 +1541,7 @@ export class DungeonBoardController {
 
   public onTouchCancel = () => {
     this.touchPanState.isDragging = false;
+    this.exitLowQualityPan();
     if (this.hasMovedDuringDrag) {
       setTimeout(() => {
         this.hasMovedDuringDrag = false;

@@ -1160,6 +1160,18 @@ export const animatedLightsSignature = (
 // darkness) with soft edges when the light asks for them. `ctx.filter`
 // blurs the filled shape; on browsers without canvas filter support the
 // assignment is ignored and edges stay hard.
+//
+// While a pan drag is active the controller disables the blur (see
+// `setLightBlurDisabled`): the direct per-frame draws drop their filter
+// as a fill-cost cut, trading soft light rims for drag smoothness. Sprite
+// bakes always blur — the sprite cache key does not encode this flag, so
+// a bake must always produce full-quality pixels.
+let lightBlurDisabled = false;
+
+export const setLightBlurDisabled = (disabled: boolean): void => {
+  lightBlurDisabled = disabled;
+};
+
 const fillLightShape = (
   ctx: CanvasRenderingContext2D,
   trace: (ctx: CanvasRenderingContext2D) => void,
@@ -1167,7 +1179,7 @@ const fillLightShape = (
   light: LightSource,
   cellSize: number,
 ) => {
-  const blurPx = lightBlurPx(light, cellSize);
+  const blurPx = lightBlurDisabled ? 0 : lightBlurPx(light, cellSize);
   if (blurPx > 0) {
     ctx.filter = `blur(${blurPx}px)`;
   }
@@ -1675,7 +1687,16 @@ const buildLightSprite = (
   if (!spriteCtx) return null;
   spriteCtx.scale(ratio, ratio);
   spriteCtx.translate(extent - center.x, extent - center.y);
-  draw(spriteCtx);
+  // Bakes always run at full quality, even mid-drag: the sprite cache
+  // key does not encode the blur flag, so an unblurred bake would poison
+  // the cache for the post-drag full-quality frames.
+  const blurWasDisabled = lightBlurDisabled;
+  lightBlurDisabled = false;
+  try {
+    draw(spriteCtx);
+  } finally {
+    lightBlurDisabled = blurWasDisabled;
+  }
   return { key, canvas, x: center.x - extent, y: center.y - extent, size };
 };
 
