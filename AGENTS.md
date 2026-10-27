@@ -39,6 +39,29 @@ Run `npm run check`, `npm test`, and `npm run lint` before considering work done
 - The write-up describes components and techniques, not line numbers or exact counts — update it in the same change as the code; do not let it drift.
 - New features at the level of the existing sections (e.g. a new rendering technique, a changed save format, a new benchmark capability) get a matching paragraph or section update.
 
+## Campaign and dungeon definition specs
+
+- [docs/campaign-definition.md](./docs/campaign-definition.md) and
+  [docs/dungeon-definition.md](./docs/dungeon-definition.md) are the
+  field-by-field reference for the content definition types: the `Campaign`
+  object and campaign folder structure, and the `Dungeon` type with its
+  `defineDungeon`/`defineLayout`/`parseTileMap` authoring DSL, win conditions
+  and validation rules.
+- Update them in the same change as any edit to what they document: the
+  `Campaign`, `Dungeon`, `Layout`, `WinCondition` and related types in
+  `src/types.ts`; the declarative shorthand formats, defaults and parsing in
+  `src/dungeon/dungeonParser.ts`; the structural rules in
+  `src/dungeon/dungeonValidator.ts`; and the win-condition checks in
+  `src/game.ts` or the registries they reference (`onCheckFulfilled`,
+  `roomEffects`).
+- The specs list exact default values, tuple shorthands and validation
+  rules — a changed default, an added/removed/reordered field or a new
+  validation rule must be reflected there; do not let them drift from the
+  parser.
+- [src/campaigns/README.md](./src/campaigns/README.md) is the hands-on
+  how-to; when a documented authoring capability changes, update the spec and
+  the README together, not just one of them.
+
 ## Code style
 
 - Prettier with single quotes, 2-space indent, trailing commas (`npm run prettier:format`).

@@ -17,6 +17,14 @@ behaviour that live entirely inside its own folder (see
 [Adding new events](#adding-new-events-optional) and
 [Adding interactable cells](#adding-interactable-cells-optional) below).
 
+Full reference documentation for the definition types lives in
+[docs/campaign-definition.md](../../docs/campaign-definition.md) (the
+`Campaign` type and what a campaign bundle contains) and
+[docs/dungeon-definition.md](../../docs/dungeon-definition.md) (the
+`Dungeon` type, the `defineDungeon`/`defineLayout`/`parseTileMap` authoring
+DSL, win conditions and validation rules). This README is the hands-on
+how-to; those documents are the field-by-field reference.
+
 ## Directory layout
 
 Each campaign lives in its own folder, named after its `id`:
@@ -644,10 +652,10 @@ const tileMap = parseTileMap(
     '######',
   ],
   {
-    '#': { room: 'A' },
-    '.': { room: 'A' },
+    '#': { roomOrTile: 'A' },
+    '.': { roomOrTile: 'A' },
     'L': {
-      room: 'A',
+      roomOrTile: 'A',
       interactable: {
         effect: 'removeTrapsInRoom',
         name: 'Trap Disarm Lever',
@@ -655,7 +663,7 @@ const tileMap = parseTileMap(
       },
     },
     'H': {
-      room: 'A',
+      roomOrTile: 'A',
       interactable: {
         effect: 'addHero',
         args: { name: 'Siedel', colour: Colour.Green },

@@ -158,6 +158,13 @@ runs structural validation (`dungeonValidator.ts` — rooms are sealed, doors
 sit on walls, win conditions reference real cells), and auto-detects wall
 corners so they render correctly without being authored by hand.
 
+The full authoring reference for both content types lives in
+[docs/campaign-definition.md](./docs/campaign-definition.md) (the
+`Campaign` type, campaign folders, shared vs. campaign-owned content) and
+[docs/dungeon-definition.md](./docs/dungeon-definition.md) (the `Dungeon`
+type, the `defineDungeon`/`defineLayout`/`parseTileMap` DSL, win conditions
+and validation rules).
+
 There is no runtime loading of external data files: content is compiled into
 the bundle. Because authoring TypeScript modules by hand is a programmer-only
 activity, a separate visual Campaign Editor (a Kotlin Multiplatform desktop
