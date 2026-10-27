@@ -95,21 +95,26 @@ describe('DebugOverlayRendering', () => {
       totalReRenders: 7,
       staticReRenders: 3,
       dynamicReRenders: 4,
+      dynamicFps: 60,
+      overlayFps: 30,
     });
 
     expect(ctx.save).toHaveBeenCalled();
     expect(ctx.setTransform).toHaveBeenCalledWith(1, 0, 0, 1, 0, 0);
     expect(ctx.restore).toHaveBeenCalled();
-    expect(ctx.fillText).toHaveBeenCalledTimes(2);
+    expect(ctx.fillText).toHaveBeenCalledTimes(3);
     const calls = vi.mocked(ctx.fillText).mock.calls;
     expect(calls[0][0]).toBe('Re-renders: 7 (Static: 3, Dynamic: 4)');
     expect(calls[0][1]).toBe(8);
-    expect(calls[0][2]).toBe(heroCardsTop - 6 - 12);
-    expect(calls[1][0]).toBe(
+    expect(calls[0][2]).toBe(heroCardsTop - 6 - 24);
+    expect(calls[1][0]).toBe('FPS (Dynamic: 60, Overlay: 30)');
+    expect(calls[1][1]).toBe(8);
+    expect(calls[1][2]).toBe(heroCardsTop - 6 - 12);
+    expect(calls[2][0]).toBe(
       `Director: ${String(getCurrentDirectorState(state))}`,
     );
-    expect(calls[1][1]).toBe(8);
-    expect(calls[1][2]).toBe(heroCardsTop - 6);
+    expect(calls[2][1]).toBe(8);
+    expect(calls[2][2]).toBe(heroCardsTop - 6);
   });
 
   it('shows a placeholder director line without state', () => {
@@ -118,11 +123,13 @@ describe('DebugOverlayRendering', () => {
       totalReRenders: 1,
       staticReRenders: 1,
       dynamicReRenders: 0,
+      dynamicFps: 0,
+      overlayFps: 0,
     });
 
     const calls = vi.mocked(ctx.fillText).mock.calls;
-    expect(calls[1][0]).toBe('Director: -');
-    expect(calls[1][2]).toBe(600 - 6);
+    expect(calls[2][0]).toBe('Director: -');
+    expect(calls[2][2]).toBe(600 - 6);
   });
 
   it('falls back to the bottom of the view without hero cards', () => {
@@ -134,9 +141,11 @@ describe('DebugOverlayRendering', () => {
       totalReRenders: 1,
       staticReRenders: 1,
       dynamicReRenders: 0,
+      dynamicFps: 0,
+      overlayFps: 0,
     });
 
-    const [, , y] = vi.mocked(ctx.fillText).mock.calls[1];
+    const [, , y] = vi.mocked(ctx.fillText).mock.calls[2];
     expect(y).toBe(viewHeight - 6);
   });
 
@@ -146,6 +155,8 @@ describe('DebugOverlayRendering', () => {
       totalReRenders: 1,
       staticReRenders: 1,
       dynamicReRenders: 0,
+      dynamicFps: 0,
+      overlayFps: 0,
     });
 
     const [, , y] = vi.mocked(ctx.fillText).mock.calls[0];

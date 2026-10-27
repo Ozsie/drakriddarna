@@ -10,6 +10,12 @@ export interface DebugPrintoutCounts {
   totalReRenders: number;
   staticReRenders: number;
   dynamicReRenders: number;
+  // Frames per second of the continuously repainted canvases: the
+  // dynamic layer (actors, lights) and the overlay layer (effects).
+  // The debug printout itself lives on the overlay layer, so its own
+  // loop shows up in `overlayFps`.
+  dynamicFps: number;
+  overlayFps: number;
 }
 
 const MARGIN_X = 8;
@@ -68,6 +74,9 @@ export const renderDebugPrintout = (
     `Re-renders: ${String(counts.totalReRenders)} (Static: ${String(
       counts.staticReRenders,
     )}, Dynamic: ${String(counts.dynamicReRenders)})`,
+    `FPS (Dynamic: ${String(counts.dynamicFps)}, Overlay: ${String(
+      counts.overlayFps,
+    )})`,
     `Director: ${String(directorState ?? '-')}`,
   ];
 

@@ -126,6 +126,36 @@ export interface DungeonBoardProps {
   onExternalStateChange: (next: GameState) => void;
 }
 
+// Rolling frames-per-second trackers for the continuously repainted
+// layers (dynamic actors/lights, overlay effects). Every layer render
+// counts as a frame, whatever triggered it; the snapshot is the frame
+// count in the trailing second, refreshed at most once a second. While
+// nothing animates the layer stops repainting, so the last shown value
+// freezes along with the canvas itself.
+interface FpsTracker {
+  frames: number[];
+  fps: number;
+  lastSnapshot: number;
+}
+
+const createFpsTracker = (): FpsTracker => ({
+  frames: [],
+  fps: 0,
+  lastSnapshot: 0,
+});
+
+const trackFps = (tracker: FpsTracker, now: number): void => {
+  tracker.frames.push(now);
+  const cutoff = now - 1000;
+  while (tracker.frames.length > 0 && tracker.frames[0] < cutoff) {
+    tracker.frames.shift();
+  }
+  if (now - tracker.lastSnapshot >= 1000) {
+    tracker.fps = tracker.frames.length;
+    tracker.lastSnapshot = now;
+  }
+};
+
 export class DungeonBoardController {
   // Ambient-only dynamic frames (light effects, terrain, fog) render at
   // most this often; actor-driven frames run at the display's rate.
@@ -191,6 +221,8 @@ export class DungeonBoardController {
   private dynamicAnimationId: number | null = null;
   private shakeAnimationId: number | null = null;
   private panRenderAnimationId: number | null = null;
+  private dynamicFpsTracker = createFpsTracker();
+  private overlayFpsTracker = createFpsTracker();
   private lastDynamicFrameTs = 0;
   private lastDungeonKey = '';
   private lastTileset = '';
@@ -750,6 +782,7 @@ export class DungeonBoardController {
       return;
     if (!this.isReady(this.actors)) return;
     const currentTime = Date.now();
+    trackFps(this.dynamicFpsTracker, currentTime);
     this.lastDynamicFrameTs = performance.now();
     const debugMode = this.debugMode ?? false;
     // The visible part of the world, in cells: lights whose glow cannot
@@ -1092,6 +1125,7 @@ export class DungeonBoardController {
     ctx.restore();
 
     const now = Date.now();
+    trackFps(this.overlayFpsTracker, now);
     const hasActiveProjectiles = renderProjectiles(
       ctx,
       this.cellSize,
@@ -1132,6 +1166,8 @@ export class DungeonBoardController {
           totalReRenders: this.totalReRenderCount,
           staticReRenders: this.staticRenderCount,
           dynamicReRenders: this.dynamicRenderCount,
+          dynamicFps: this.dynamicFpsTracker.fps,
+          overlayFps: this.overlayFpsTracker.fps,
         },
       );
     }
