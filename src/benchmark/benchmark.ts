@@ -1,3 +1,4 @@
+import { appendFileSync } from 'node:fs';
 import type { Dungeon, Hero } from '../types';
 import { createSeededRng, resetRng, setRng } from '../core';
 import { init, next } from '../game';
@@ -374,6 +375,15 @@ export const runGameMasterBenchmark = async (options: {
 };
 
 export const runDifficultyBenchmark = runGameMasterBenchmark;
+
+// Appends a benchmark report to the file named by BENCHMARK_REPORT_FILE,
+// when set — the PR workflow uses this to collect reports for posting as
+// PR comments. Local runs without the variable are unaffected.
+export const writeBenchmarkReport = (report: string): void => {
+  const file = process.env.BENCHMARK_REPORT_FILE;
+  if (!file) return;
+  appendFileSync(file, `${report}\n`);
+};
 
 /**
  * Formats benchmark summaries as a readable ASCII report table.
