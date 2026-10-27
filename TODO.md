@@ -17,29 +17,10 @@
 - [ ] Door traps (1-2 dice) are weak compared to the suggested 3 dice — reconsider `trapAttacks` values
 - [x] Orc bow LOS: officially the shot line is blocked by any figure — already correct: the combat LOS path (`stepAlongLine` with `walking=false`) blocks heroes and monsters; only the walking variant ignores heroes
 
-## Refactoring
-
-### Optimization
-
-- [x] `executeSlotAction` rebuilt `createPassableGrid` in its fallbacks although the monster turn already built one — the turn grid is now passed through
-- [x] `findVisibleHeroes` was recomputed per slot, each time running resolution-48 `hasLineOfSight` per hero — now a per-turn cache (`createVisibleHeroesCache`) recomputes only when the monster, a hero or a blocking figure moves, dies or is ignored (+tests)
-- [x] Remaining `Math.random()` gameplay paths (event deck shuffle, random item, spawn/temperament/behavior/fountain picks) now run through the seeded rng (`nextRandom`/`randomInt` in core/dice); the event spawn picks a random eligible cell instead of `pool[0]` — only visual effects and DOM ids still use `Math.random`
-- [x] `Dungeon.svelte` was 2100+ lines against the thin-layer architecture note — now a ~130-line shell: pure render signatures in colocated `DungeonBoardSignatures.ts` (+tests), the emoji cursor builder in `ui/UIRendering.ts`, and all canvas/render/pan/hover/event glue in the colocated `DungeonBoardController` class
-- [x] `takeDamage` scanned the inventory and logged "usedEffect" for every matching bonus item on every attack — passive bonuses are now silent; the ring only logs when a re-roll actually happens
-
-### Testing
-
-- [x] `DungeonBoardController.ts` and `DungeonBoardSignatures.ts` carried a file-level `restrict-template-expressions` disable — dirty-check interpolations are wrapped in `String()` and both disables are gone
-- [x] `DungeonBoardController` had no direct tests — its pure decision parts are now testable and tested: the hover state machine (23 tests) and the UI hit cascade (9 tests) live in colocated modules, and the render signatures have their own tests; the render-loop glue itself remains untested (it needs a DOM)
-
-### Save format
-
-- [x] `GameState` carries a `saveVersion` (see `src/saveMigration.ts`): migrations are explicit, ordered steps with their own tests; `loadState` just calls `migrateSaveState` (+11 tests)
-
 # Features
 
 - [ ] Multiple saves
-- [ ] Scoring, 50 point per hp at end of scenario, 30*xp points per monster killed, -2 per round, more?
+- [ ] Scoring, 50 point per hp at end of scenario, 30\*xp points per monster killed, -2 per round, more?
 - [ ] Dungeon timer, with optional speed running feature
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc
 - [ ] Responsive layout
@@ -118,6 +99,44 @@
 - [x] Monster close combat attack
 - [x] Locked doors
 - [x] Saving & loading
+
+## Performance improvements
+
+### Lighting
+
+- [ ] Render the light mask and darkness at lower resolution. Each frame does about six full-canvas passes at devicePixelRatio: clear, static copy, glow copy, veil fill, destination-out and the veil composite. Soft gradients survive 0.5x scaling almost unchanged, which cuts fill cost 4 to 8 times on retina screens. Hard-edged lights (softness 0) will look slightly softer. Separately, you can fold the darkness canvas into the mask canvas with a source-out fill, which saves one canvas and one pass.
+- [ ] Make polygon invalidation per-light. One key over all actors, doors and discovered rooms invalidates every light whenever any figure moves, which means the full 8 ms pass per step. Key each light on the actors within its radius plus one cell, and leave actors out of ceiling lights’ keys entirely, since those ignore actors.
+- [ ] Cheapen the ray cast itself. Scale the ray count with radius instead of a fixed 120. At radius 2 the rays sit about 0.1 cell apart, finer than the blur hides. Precompute the 120 sin/cos pairs and use typed arrays instead of Position[]. Hoist the two closures created per call and the per-step {x, y} allocations. I did not read isDoorEdge and crossesWallEdge in core/grid.ts. If they scan the door or wall arrays per cell step, an edge bitmask beside the occlusion map would help.
+- [ ] Longer term, put lights and darkness on their own canvas above the actors. Then a flicker redraws only the light layers, not every sprite and overlay.
+
+### Pan
+
+- [x] Coalesce pan renders into requestAnimationFrame. The handlers should only store the new pan and schedule one render. Touch events arrive at 60 to 120 Hz, mice often faster, and the browser shows one frame, so extra repaints are wasted. This is a few lines, and I’d do it first.
+- [x] Stop repainting layers that don’t move. The UI canvas is redrawn on every pan. Anything screen-anchored (HUD panels, log, top bar) shouldn’t need that, and only world-anchored elements like the radial menu need repositioning. I only read the start of renderUiLayer, so check what in there is anchored to the world.
+- [x] Keep lights out of the pan path. Right now the static light layer’s cache key includes the viewport, so each pan event re-blurs every static light. Once panning is a transform (item 2), lights simply move with the world. Until then, the sprite baking from my earlier list makes the redraw cheap.
+- [x] Reduce quality only while dragging, as a stopgap. Draw at ratio 1 instead of devicePixelRatio, and skip ctx.filter blur on lights, then redraw at full quality shortly after the drag ends. That cuts fill cost about 4x on retina phones.
+- [x] Make the opaque base canvas getContext('2d', { alpha: false }). The static canvas fills a solid background, so the browser can skip blending it. This is small but free.
+- [ ] Cut the static layer’s per-repaint cost if it still repaints. Draw only the visible cell range, precompute the grid rows once instead of calling toArray each time, and batch the per-cell grid lines into one path per style. Culling matters most on big dungeons. Revisit if a dungeon larger around 50x50 or larger is added.
+- [ ] Probably not: Pan with a CSS transform instead of repainting. Render the world once into canvases that extend past the viewport (or the whole dungeon where it fits; 18×18 cells at 64 px is about 1150 px square). Pan by moving that container with transform: translate3d(...), which the compositor handles with no JavaScript painting. Re-render only when state changes or the view nears the canvas edge. Lights, darkness and actors are already drawn in world coordinates, so they move with it. Cap the canvas size on large dungeons to protect memory. If that restructuring is too big a first step, cache the static layer as a whole-dungeon bitmap and blit the visible sub-rectangle with one drawImage per pan event instead of about 1,255 calls.
+
+## Refactoring
+
+### Optimization
+
+- [x] `executeSlotAction` rebuilt `createPassableGrid` in its fallbacks although the monster turn already built one — the turn grid is now passed through
+- [x] `findVisibleHeroes` was recomputed per slot, each time running resolution-48 `hasLineOfSight` per hero — now a per-turn cache (`createVisibleHeroesCache`) recomputes only when the monster, a hero or a blocking figure moves, dies or is ignored (+tests)
+- [x] Remaining `Math.random()` gameplay paths (event deck shuffle, random item, spawn/temperament/behavior/fountain picks) now run through the seeded rng (`nextRandom`/`randomInt` in core/dice); the event spawn picks a random eligible cell instead of `pool[0]` — only visual effects and DOM ids still use `Math.random`
+- [x] `Dungeon.svelte` was 2100+ lines against the thin-layer architecture note — now a ~130-line shell: pure render signatures in colocated `DungeonBoardSignatures.ts` (+tests), the emoji cursor builder in `ui/UIRendering.ts`, and all canvas/render/pan/hover/event glue in the colocated `DungeonBoardController` class
+- [x] `takeDamage` scanned the inventory and logged "usedEffect" for every matching bonus item on every attack — passive bonuses are now silent; the ring only logs when a re-roll actually happens
+
+### Testing
+
+- [x] `DungeonBoardController.ts` and `DungeonBoardSignatures.ts` carried a file-level `restrict-template-expressions` disable — dirty-check interpolations are wrapped in `String()` and both disables are gone
+- [x] `DungeonBoardController` had no direct tests — its pure decision parts are now testable and tested: the hover state machine (23 tests) and the UI hit cascade (9 tests) live in colocated modules, and the render signatures have their own tests; the render-loop glue itself remains untested (it needs a DOM)
+
+### Save format
+
+- [x] `GameState` carries a `saveVersion` (see `src/saveMigration.ts`): migrations are explicit, ordered steps with their own tests; `loadState` just calls `migrateSaveState` (+11 tests)
 
 ## Bugs
 

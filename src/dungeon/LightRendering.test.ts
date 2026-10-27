@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   activeLights,
   ambientLightLevel,
+  animatedLightsSignature,
   computeLightPolygon,
   computeSparkles,
   hasAnimatedLights,
@@ -15,6 +16,7 @@ import {
   lightPolygonFor,
   lightSwayOffset,
   lightSweepAngle,
+  MAX_LIGHT_POLYGON_CACHE_ENTRIES,
   renderAmbientDarkness,
   renderAnimatedLights,
   renderLights,
@@ -28,6 +30,7 @@ import {
   Colour,
   ItemType,
   Level,
+  LightEffect,
   MonsterType,
   Side,
 } from '../types';
@@ -108,6 +111,8 @@ const createState = (
     monsters?: Monster[];
     heroes?: Hero[];
     discoveredRooms?: string[];
+    roomFog?: GameState['dungeon']['layout']['roomFog'];
+    lights?: GameState['dungeon']['layout']['lights'];
   } = {},
 ): GameState => ({
   dungeon: {
@@ -132,6 +137,8 @@ const createState = (
       pillars: overrides.pillars ?? [],
       pits: [],
       corners: [],
+      ...(overrides.lights ? { lights: overrides.lights } : {}),
+      ...(overrides.roomFog ? { roomFog: overrides.roomFog } : {}),
     },
     startingPositions: [{ x: 1, y: 1 }],
     winConditions: [],
@@ -292,6 +299,41 @@ describe('computeLightPolygon', () => {
       expect(distance).toBeGreaterThan(1.5 * CELL_SIZE - CELL_SIZE / 6 - 1);
       expect(distance).toBeLessThanOrEqual(1.5 * CELL_SIZE + 1);
     });
+  });
+
+  it('stops at the boundary of a fogged room that blocks light', () => {
+    // Grid '#AAABB#': room A spans columns 1-3, fogged room B columns 4-5,
+    // so the light-blocking boundary sits at x = 4 cells.
+    const grid = ['#######', '#AAABB#', '#######'];
+    const light = createLight({ position: { x: 1, y: 1 }, radius: 5 });
+    const blocked = createState({
+      grid,
+      discoveredRooms: ['A', 'B'],
+      heroes: [],
+      roomFog: { B: { blocksLight: true } },
+    });
+    const points = computeLightPolygon(light, blocked, CELL_SIZE, false);
+    points.forEach((point) => {
+      expect(point.x).toBeLessThanOrEqual(4 * CELL_SIZE);
+    });
+    // The horizontal ray stops right at the shared edge.
+    const maxX = Math.max(...points.map((point) => point.x));
+    expect(maxX).toBeCloseTo(4 * CELL_SIZE, 0);
+  });
+
+  it('does not stop at fog that merely dims light', () => {
+    const grid = ['#######', '#AAABB#', '#######'];
+    const light = createLight({ position: { x: 1, y: 1 }, radius: 5 });
+    const dimmed = createState({
+      grid,
+      discoveredRooms: ['A', 'B'],
+      heroes: [],
+      roomFog: { B: { density: 0.6 } },
+    });
+    const points = computeLightPolygon(light, dimmed, CELL_SIZE, false);
+    const maxX = Math.max(...points.map((point) => point.x));
+    // Rays pass through the fogged room deep into room B.
+    expect(maxX).toBeGreaterThan(4.5 * CELL_SIZE);
   });
 
   it('illuminates walls only partway into the wall cell', () => {
@@ -1212,16 +1254,106 @@ describe('light culling and polygon cache', () => {
     expect(second).not.toBe(first);
   });
 
-  it('never caches sway light polygons', () => {
+  it('recomputes a sway polygon only once the swing has moved a visible step', () => {
     const state = createState();
     const light = createLight({
       position: { x: 3, y: 2 },
       effect: 'sway',
     });
     const first = lightPolygonFor(light, state, CELL_SIZE, false, 0);
+
+    // A sub-step swing movement reuses the cached polygon: the center
+    // has moved less than 1/32 of a cell.
+    const still = lightPolygonFor(light, state, CELL_SIZE, false, 4);
+    expect(still).toBe(first);
+
+    // A quarter period later the swing is at its outermost point, far
+    // beyond the step: the polygon is recomputed with new geometry.
     const second = lightPolygonFor(light, state, CELL_SIZE, false, 250);
     expect(second).not.toBe(first);
     expect(second).not.toEqual(first);
+  });
+
+  it('assembles a sweep beam from the cached ray endpoints', () => {
+    const state = createState();
+    const light = createLight({
+      position: { x: 3, y: 2 },
+      effect: 'sweep',
+    });
+    // At timeMs 0 the beam points along angle 0.
+    const sweepPolygon = lightPolygonFor(light, state, CELL_SIZE, false, 0);
+
+    // The endpoints of every ray, computed without the sweep filter.
+    const endpoints = computeLightPolygon(
+      { ...light, effect: undefined },
+      state,
+      CELL_SIZE,
+      false,
+      0,
+    );
+    expect(sweepPolygon).toHaveLength(endpoints.length);
+
+    // Ray 0 lies along the beam direction: its endpoint is used as-is.
+    expect(sweepPolygon[0]).toEqual(endpoints[0]);
+    // Ray 30 (90 degrees away) is outside the beam: it collapses onto
+    // the light's center.
+    const center = lightCenter(light, CELL_SIZE, 0);
+    expect(sweepPolygon[30]).toEqual(center);
+
+    // Rotating the beam re-selects rays without re-marching: the
+    // quarter-turn beam now skips ray 0.
+    const rotated = lightPolygonFor(light, state, CELL_SIZE, false, 250);
+    expect(rotated).toHaveLength(endpoints.length);
+    expect(rotated[0]).toEqual(center);
+  });
+
+  it('reuses the polygon for a structurally identical fresh light object', () => {
+    const state = createState();
+    const light = createLight({
+      id: 'derived_light',
+      position: { x: 3, y: 2 },
+    });
+    const first = lightPolygonFor(light, state, CELL_SIZE, false, 0);
+
+    // activeLights() recreates derived lights (item lights, event lights,
+    // the portal, projectiles, flames) as fresh objects every call: they
+    // must still hit the geometry-keyed cache instead of re-marching rays.
+    const recreated = createLight({
+      id: 'derived_light',
+      position: { x: 3, y: 2 },
+    });
+    const second = lightPolygonFor(recreated, state, CELL_SIZE, false, 1000);
+    expect(second).toBe(first);
+
+    // A different geometry misses and recomputes.
+    const other = createLight({
+      id: 'derived_light',
+      position: { x: 2, y: 2 },
+    });
+    expect(lightPolygonFor(other, state, CELL_SIZE, false, 0)).not.toBe(first);
+  });
+
+  it('bounds the polygon cache and evicts the oldest entry', () => {
+    const state = createState();
+    const first = createLight({ id: 'light_0', position: { x: 3, y: 2 } });
+    const firstPolygon = lightPolygonFor(first, state, CELL_SIZE, false, 0);
+
+    // Fill the cache with distinct geometries beyond its bound.
+    for (let i = 1; i < MAX_LIGHT_POLYGON_CACHE_ENTRIES + 1; i++) {
+      lightPolygonFor(
+        createLight({ id: `light_${i}`, position: { x: 1, y: 2 } }),
+        state,
+        CELL_SIZE,
+        false,
+        0,
+      );
+    }
+
+    // The oldest entry was evicted: asking for it again recomputes the
+    // polygon instead of returning the cached reference.
+    const recomputed = lightPolygonFor(first, state, CELL_SIZE, false, 0);
+    expect(recomputed).not.toBe(firstPolygon);
+    expect(recomputed).toEqual(firstPolygon);
   });
 });
 
@@ -1868,5 +2000,93 @@ describe('gas fills its room', () => {
     const gradientCall = (ctx.createRadialGradient as ReturnType<typeof vi.fn>)
       .mock.calls[0];
     expect(gradientCall[5]).toBeGreaterThan(4 * CELL_SIZE);
+  });
+});
+
+describe('animatedLightsSignature', () => {
+  it('is empty without animated lights in view', () => {
+    const state = createState({ heroes: [] });
+    expect(animatedLightsSignature(state, false, 1000)).toBe('');
+  });
+
+  it('is empty for animated lights outside the viewport', () => {
+    const light = createLight({
+      position: { x: 2, y: 2 },
+      effect: LightEffect.FLICKER,
+    });
+    const state = createState({ heroes: [], lights: [light] });
+    expect(
+      animatedLightsSignature(state, false, 1000, {
+        x: 20,
+        y: 20,
+        width: 2,
+        height: 2,
+      }),
+    ).toBe('');
+  });
+
+  it('is stable within a flicker step and changes across steps', () => {
+    const light = createLight({
+      position: { x: 2, y: 2 },
+      effect: LightEffect.FLICKER,
+      rate: 1,
+    });
+    const state = createState({ heroes: [], lights: [light] });
+    // rate 1 flicker steps every 1/8 s: 100ms and 120ms share step 0,
+    // 130ms is step 1 with a different quantized brightness.
+    expect(animatedLightsSignature(state, false, 100)).toBe(
+      animatedLightsSignature(state, false, 120),
+    );
+    expect(animatedLightsSignature(state, false, 100)).not.toBe(
+      animatedLightsSignature(state, false, 130),
+    );
+  });
+
+  it('quantizes continuous pulse brightness in 1/16 alpha steps', () => {
+    const light = createLight({
+      position: { x: 2, y: 2 },
+      effect: LightEffect.PULSE,
+      rate: 1,
+    });
+    const state = createState({ heroes: [], lights: [light] });
+    // 0ms and 50ms land in the same 1/16 alpha step; 500ms does not.
+    expect(animatedLightsSignature(state, false, 0)).toBe(
+      animatedLightsSignature(state, false, 50),
+    );
+    expect(animatedLightsSignature(state, false, 0)).not.toBe(
+      animatedLightsSignature(state, false, 500),
+    );
+  });
+
+  it('quantizes a sway swing in 1/32-cell position steps', () => {
+    const light = createLight({
+      position: { x: 2, y: 2 },
+      effect: LightEffect.SWAY,
+      rate: 1,
+    });
+    const state = createState({ heroes: [], lights: [light] });
+    // The start of the swing and its outermost point are far apart.
+    expect(animatedLightsSignature(state, false, 0)).not.toBe(
+      animatedLightsSignature(state, false, 250),
+    );
+  });
+
+  it('counts every animated light in view', () => {
+    const lights = [
+      createLight({
+        position: { x: 1, y: 2 },
+        effect: LightEffect.FLICKER,
+        rate: 1,
+      }),
+      createLight({
+        position: { x: 3, y: 2 },
+        effect: LightEffect.PULSE,
+        rate: 1,
+      }),
+    ];
+    const state = createState({ heroes: [], lights });
+    expect(animatedLightsSignature(state, false, 1000).split('|')).toHaveLength(
+      2,
+    );
   });
 });

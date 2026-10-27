@@ -7,6 +7,7 @@ import {
   MonsterType,
   SecretType,
   Side,
+  TerrainType,
 } from '../types';
 import { defineDungeon } from './DungeonLogic';
 import { weapons } from '../items/weapons';
@@ -131,8 +132,35 @@ export const testingGrounds: Dungeon = defineDungeon({
       [6, 3],
       [6, 2],
     ],
+    // Terrain cells: a slow-moving water patch and a lava patch that
+    // burns on enter and at turn end, glowing on its own.
+    terrain: [
+      [2, 8, TerrainType.WATER, { movementCost: 2 }],
+      [3, 8, TerrainType.WATER, { movementCost: 2 }],
+      [
+        6,
+        8,
+        TerrainType.LAVA,
+        {
+          damageOnEnter: 1,
+          damageOnTurnEnd: 1,
+          light: {
+            alignment: CellAlignment.CENTER,
+            color: '#FF6A00',
+            radius: 1.5,
+            intensity: 0.35,
+            softness: 0.4,
+            effect: LightEffect.FLICKER,
+            rate: 2,
+          },
+        },
+      ],
+      [6, 9, TerrainType.LAVA, { damageOnEnter: 1, damageOnTurnEnd: 1 }],
+    ],
     // Unlit brazier: interact with it (repeatedly) to toggle its torch
-    // light.
+    // light. The gas valve floods room C with sleeping-green fog; the
+    // lava vent floods four cells with burning lava and shakes the
+    // board.
     interactables: [
       [
         4,
@@ -153,8 +181,65 @@ export const testingGrounds: Dungeon = defineDungeon({
           },
         },
       ],
+      [
+        4,
+        1,
+        'fillRoomFog',
+        {
+          oneTime: true,
+          name: 'campaign.iceDragon.testingGrounds.interactables.gasValve',
+          nameTranslationKey:
+            'campaign.iceDragon.testingGrounds.interactables.gasValve',
+          args: {
+            room: 'C',
+            options: {
+              color: '#9ccc9c',
+              opacity: 0.4,
+              rate: 0.5,
+              softness: 0.7,
+              density: 0.4,
+              damageOnEnter: 1,
+              nameTranslationKey: 'campaign.iceDragon.testingGrounds.fog.name',
+            },
+          },
+        },
+      ],
+      [
+        4,
+        3,
+        'spawnLava',
+        {
+          oneTime: true,
+          name: 'campaign.iceDragon.testingGrounds.interactables.lavaVent',
+          nameTranslationKey:
+            'campaign.iceDragon.testingGrounds.interactables.lavaVent',
+          args: {
+            cells: [
+              { x: 3, y: 2 },
+              { x: 4, y: 2 },
+              { x: 3, y: 3 },
+              { x: 4, y: 3 },
+            ],
+            options: { damageOnEnter: 1, damageOnTurnEnd: 1 },
+            shake: 10,
+          },
+        },
+      ],
     ],
     corridors: ['G', 'E', 'F'],
+    // Room J is filled with a slowly breathing, soft-edged poisonous fog:
+    // harmless to enter, damaging to linger in, and absorbing the light
+    // of glows shining through it. Corridor G is a wall of dense mist no
+    // light penetrates.
+    roomFog: {
+      J: {
+        softness: 0.8,
+        density: 0.6,
+        damageOnTurnEnd: 1,
+        nameTranslationKey: 'campaign.iceDragon.testingGrounds.fog.name',
+      },
+      G: { blocksLight: true },
+    },
     doors: [
       [Side.UP, 3, 8, { trapped: 1, hidden: true }],
       [Side.LEFT, 7, 6, { locked: true }],

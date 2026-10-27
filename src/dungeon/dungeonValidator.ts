@@ -10,6 +10,7 @@ import type {
   Note,
   Position,
   Secret,
+  TerrainCell,
   WallEdge,
   WinCondition,
 } from '../types';
@@ -349,6 +350,11 @@ export const validateLayout = (
     checkPositionInBounds(pillar, 'Pillar');
   });
 
+  // 9b. Terrain cells
+  (layout.terrain || []).forEach((cell: TerrainCell) => {
+    checkPositionInBounds(cell.position, `Terrain '${cell.type}'`);
+  });
+
   // 10. Corners
   (layout.corners || []).forEach((corner: Corner) => {
     if (isOutOfBounds(corner.position)) {
@@ -374,6 +380,15 @@ export const validateLayout = (
       errors.push({
         type: 'room',
         message: `Corridor '${corridor}' does not exist in the grid.`,
+      });
+    }
+  });
+
+  Object.keys(layout.roomFog || {}).forEach((room) => {
+    if (!gridCells.has(room)) {
+      errors.push({
+        type: 'room',
+        message: `Fog room '${room}' does not exist in the grid.`,
       });
     }
   });

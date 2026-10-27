@@ -50,6 +50,11 @@ export const isCeilingLight = (light: LightSource): boolean =>
 const SWAY_ARM_CELLS = 0.6;
 const SWAY_MAX_ANGLE = Math.PI / 6;
 
+// The visible movement step of a swaying light, in cells (1/32 of a
+// cell — about a device pixel): both the ambient repaint signature and
+// the sway polygon cache treat smaller center movements as invisible.
+const SWAY_STEP_CELLS = 1 / 32;
+
 // The pendulum offset of a swaying light's center, in world pixels: zero
 // for lights that do not sway.
 export const lightSwayOffset = (
@@ -213,6 +218,10 @@ const buildOcclusionMap = (
       const cell = findCell(grid, x, y);
       if (cell === '' || (!debugMode && !isDiscovered(state.dungeon, x, y))) {
         data[index] = OCCLUSION_FOG;
+      } else if (state.dungeon.layout.roomFog?.[cell]?.blocksLight) {
+        // Fog configured to block light reads like fog of war to the
+        // rays: light stops at the room's near boundary.
+        data[index] = OCCLUSION_FOG;
       }
     }
   }
@@ -324,7 +333,8 @@ const rayExitThroughCell = (
 // starts behind it — or the light's radius. Rays pass freely between
 // diagonally adjacent opaque cells, through their shared corner. For sweep
 // lights only the rays within the rotating beam cone contribute; the rest
-// collapse onto the light source.
+// collapse onto the light source — assembled from the cached ray endpoints
+// without marching anything.
 export const computeLightPolygon = (
   light: LightSource,
   state: GameState,
@@ -420,19 +430,32 @@ export const computeLightPolygon = (
   // For sweep lights: the beam only covers rays within its half angle of
   // the sweep direction; the rest collapse onto the light source.
   const sweep = lightSweepAngle(light, timeMs);
-
-  for (let i = 0; i < LIGHT_RAY_COUNT; i++) {
-    const angle = (2 * Math.PI * i) / LIGHT_RAY_COUNT;
-    if (sweep !== undefined) {
+  if (sweep !== undefined) {
+    // A sweep beam only selects which rays contribute to the polygon:
+    // each ray's endpoint is time-independent, so all 120 endpoints are
+    // marched once per occlusion state and every frame just re-selects
+    // the rays inside the rotating beam — no per-frame ray marching.
+    const endpoints = sweepRayEndpointsFor(
+      light,
+      state,
+      cellSize,
+      debugMode,
+      occlusionKey,
+    );
+    return endpoints.map((endpoint, index) => {
+      const angle = (2 * Math.PI * index) / LIGHT_RAY_COUNT;
       let diff = Math.abs(angle - sweep) % (2 * Math.PI);
       if (diff > Math.PI) {
         diff = 2 * Math.PI - diff;
       }
-      if (diff > SWEEP_BEAM_HALF_ANGLE) {
-        points.push({ x: center.x, y: center.y });
-        continue;
-      }
-    }
+      return diff > SWEEP_BEAM_HALF_ANGLE
+        ? { x: center.x, y: center.y }
+        : endpoint;
+    });
+  }
+
+  for (let i = 0; i < LIGHT_RAY_COUNT; i++) {
+    const angle = (2 * Math.PI * i) / LIGHT_RAY_COUNT;
     const dirX = Math.cos(angle);
     const dirY = Math.sin(angle);
     let end: Position = {
@@ -520,6 +543,44 @@ export const computeLightPolygon = (
       }
     }
     points.push(end);
+  }
+  return points;
+};
+
+// Cache of the ray endpoints of every sweep light, one marching pass per
+// occlusion state: the rotating beam only re-selects rays, it never
+// changes an endpoint.
+let sweepEndpointCache: {
+  key: string;
+  endpoints: Map<string, Position[]>;
+} | null = null;
+
+const sweepRayEndpointsFor = (
+  light: LightSource,
+  state: GameState,
+  cellSize: number,
+  debugMode: boolean,
+  occlusionKey?: string,
+): Position[] => {
+  const key = occlusionKey ?? lightStateKey(state, cellSize, debugMode);
+  if (!sweepEndpointCache || sweepEndpointCache.key !== key) {
+    sweepEndpointCache = { key, endpoints: new Map() };
+  }
+  const geometry = lightPolygonCacheKey(light);
+  let points = sweepEndpointCache.endpoints.get(geometry);
+  if (!points) {
+    // March every ray to its endpoint, ignoring the sweep: the stripped
+    // light runs the plain polygon computation for all rays at once. The
+    // march is time-independent without the sweep, so timeMs is 0.
+    points = computeLightPolygon(
+      { ...light, effect: undefined },
+      state,
+      cellSize,
+      debugMode,
+      0,
+      key,
+    );
+    sweepEndpointCache.endpoints.set(geometry, points);
   }
   return points;
 };
@@ -616,12 +677,32 @@ export const lightInViewport = (
 // light's geometry and the occlusion state — actor positions, door
 // states, fog of war, cell size — none of which change between animation
 // frames, so animated lights reuse their polygon instead of re-marching
-// rays every frame. Sweep lights are excluded: their polygon rotates
-// with time. Sway lights are excluded too: their swinging center moves
-// the whole polygon with time.
+// rays every frame. Sway lights cache per quantized center step (their
+// polygon moves with the swing); sweep lights never enter this cache —
+// their beams assemble from the ray endpoint cache instead.
+//
+// The cache is keyed by a stable geometry string, not by object
+// identity: activeLights() recreates derived lights (carried item
+// lights, interactables, event lights, the portal, projectiles, flames)
+// as fresh objects on every call, so an identity-keyed map would miss
+// every frame and re-march all their rays. The bound keeps a long
+// animation with changing lights from growing the cache without limit;
+// the oldest entry is evicted first (Maps iterate in insertion order).
+export const MAX_LIGHT_POLYGON_CACHE_ENTRIES = 64;
+
+const lightPolygonCacheKey = (light: LightSource): string =>
+  [
+    light.id ?? '',
+    light.position.x,
+    light.position.y,
+    light.alignment ?? '',
+    light.radius ?? '',
+    light.effect ?? '',
+  ].join(',');
+
 let lightPolygonCache: {
   key: string;
-  polygons: Map<LightSource, Position[]>;
+  polygons: Map<string, { points: Position[]; center: Position }>;
 } | null = null;
 
 // Everything that can change a light polygon, hashed into a cache key.
@@ -642,7 +723,15 @@ const lightStateKey = (
     .map((door) => (door.open ? '1' : '0'))
     .join('');
   const rooms = state.dungeon.discoveredRooms.join(',');
-  return `${state.dungeon.name}|${actors}|${doors}|${rooms}|${cellSize}|${
+  // Fog configured to block light changes the occlusion map like a
+  // discovery does, so it is part of the key.
+  const lightBlockingFog = Object.entries(state.dungeon.layout.roomFog ?? {})
+    .filter(([, options]) => options.blocksLight)
+    .map(([room]) => room)
+    .join(',');
+  return `${
+    state.dungeon.name
+  }|${actors}|${doors}|${rooms}|${lightBlockingFog}|${cellSize}|${
     debugMode ? 'd' : 'n'
   }`;
 };
@@ -659,7 +748,9 @@ export const lightPolygonFor = (
   timeMs: number,
   occlusionKey?: string,
 ): Position[] => {
-  if (light.effect === LightEffect.SWEEP || light.effect === LightEffect.SWAY) {
+  if (light.effect === LightEffect.SWEEP) {
+    // The beam assembles from the per-occlusion ray endpoint cache; no
+    // marching happens per frame.
     return computeLightPolygon(
       light,
       state,
@@ -673,18 +764,39 @@ export const lightPolygonFor = (
   if (!lightPolygonCache || lightPolygonCache.key !== key) {
     lightPolygonCache = { key, polygons: new Map() };
   }
-  let points = lightPolygonCache.polygons.get(light);
-  if (!points) {
-    points = computeLightPolygon(
-      light,
-      state,
-      cellSize,
-      debugMode,
-      timeMs,
-      key,
-    );
-    lightPolygonCache.polygons.set(light, points);
+  const cacheKey = lightPolygonCacheKey(light);
+  const center = lightCenter(light, cellSize, timeMs);
+  const cached = lightPolygonCache.polygons.get(cacheKey);
+  if (cached) {
+    // A swaying light's polygon follows its swinging center: recompute
+    // only once the center has moved a visible step (1/32 cell, the same
+    // quantum the repaint gate uses). The swing arm is 0.6 cells, so the
+    // steps are invisible while the marching drops from every frame to a
+    // handful of times per second.
+    if (
+      light.effect !== LightEffect.SWAY ||
+      Math.hypot(center.x - cached.center.x, center.y - cached.center.y) <=
+        SWAY_STEP_CELLS * cellSize
+    ) {
+      return cached.points;
+    }
   }
+  const points = computeLightPolygon(
+    light,
+    state,
+    cellSize,
+    debugMode,
+    timeMs,
+    key,
+  );
+  if (lightPolygonCache.polygons.size >= MAX_LIGHT_POLYGON_CACHE_ENTRIES) {
+    // Evict the oldest entry: Map keys iterate in insertion order.
+    for (const oldest of lightPolygonCache.polygons.keys()) {
+      lightPolygonCache.polygons.delete(oldest);
+      break;
+    }
+  }
+  lightPolygonCache.polygons.set(cacheKey, { points, center });
   return points;
 };
 
@@ -895,6 +1007,13 @@ export const activeLights = (
     }
   });
 
+  // Terrain cells can carry a light (e.g. the glow of lava).
+  (state.dungeon.layout.terrain ?? []).forEach((cell) => {
+    if (cell.light && cell.light.enabled !== false) {
+      lights.push({ ...cell.light, position: cell.position });
+    }
+  });
+
   // Flying projectiles (dark lord fire bullets) carry an intense,
   // short-range light that travels with them.
   (state.projectiles ?? []).forEach((projectile) => {
@@ -977,10 +1096,82 @@ export const hasAnimatedLights = (
       lightInViewport(light, viewport),
   );
 
+// --- Ambient repaint signature ---------------------------------------------
+
+// Quantization steps for the time-varying parts of an animated light.
+// Flicker and blink are already stepped by their own effect math; the
+// continuous effects are quantized so the dynamic layer repaints only
+// when the visible output actually changes: intensity in 1/16 alpha
+// steps, sweep rotation in 4-degree steps, sway position in 1/32-cell
+// steps, sparkle twinkle phase in 1/16-loop steps. The sway step also
+// drives the sway polygon cache (see lightPolygonFor).
+const INTENSITY_QUANTUM = 1 / 16;
+const SWEEP_STEP_RADIANS = Math.PI / 45;
+const SPARKLE_STEP = 1 / 16;
+
+// The quantized animation state of every animated light visible in the
+// viewport, as one comparable string; empty when none animate. Two
+// renders with the same signature paint identical light output, so the
+// dynamic layer can skip the repaint entirely — a flickering brazier
+// (rate 1, 8 jitter steps per loop) repaints about 8 times per second
+// instead of every frame, a torch at rate 2 about 16 times.
+export const animatedLightsSignature = (
+  state: GameState,
+  debugMode: boolean,
+  now: number = Date.now(),
+  viewport?: LightViewport,
+  frameLights?: LightSource[],
+): string =>
+  (frameLights ?? activeLights(state, now))
+    .filter(
+      (light) =>
+        isAnimatedLight(light) &&
+        isLightRenderable(state, light, debugMode) &&
+        lightInViewport(light, viewport),
+    )
+    .map((light) => {
+      const t = (now / 1000) * lightRate(light);
+      const scale = lightIntensityScale(light, now);
+      const sweep = lightSweepAngle(light, now);
+      const sweepStep =
+        sweep === undefined ? '' : `${Math.floor(sweep / SWEEP_STEP_RADIANS)}`;
+      let sway = '';
+      if (light.effect === LightEffect.SWAY) {
+        // Cell units (cellSize 1), so the signature is cell-size agnostic.
+        const offset = lightSwayOffset(light, 1, now);
+        sway = `${Math.round(offset.x / SWAY_STEP_CELLS)},${Math.round(
+          offset.y / SWAY_STEP_CELLS,
+        )}`;
+      }
+      const sparkle =
+        light.effect === LightEffect.SPARKLE
+          ? `${Math.floor(t / SPARKLE_STEP)}`
+          : '';
+      return [
+        Math.floor(scale / INTENSITY_QUANTUM),
+        sweepStep,
+        sway,
+        sparkle,
+      ].join('.');
+    })
+    .join('|');
+
 // Fills a light shape (a polygon glow, an aura ring, a hole punched into
 // darkness) with soft edges when the light asks for them. `ctx.filter`
 // blurs the filled shape; on browsers without canvas filter support the
 // assignment is ignored and edges stay hard.
+//
+// While a pan drag is active the controller disables the blur (see
+// `setLightBlurDisabled`): the direct per-frame draws drop their filter
+// as a fill-cost cut, trading soft light rims for drag smoothness. Sprite
+// bakes always blur — the sprite cache key does not encode this flag, so
+// a bake must always produce full-quality pixels.
+let lightBlurDisabled = false;
+
+export const setLightBlurDisabled = (disabled: boolean): void => {
+  lightBlurDisabled = disabled;
+};
+
 const fillLightShape = (
   ctx: CanvasRenderingContext2D,
   trace: (ctx: CanvasRenderingContext2D) => void,
@@ -988,7 +1179,7 @@ const fillLightShape = (
   light: LightSource,
   cellSize: number,
 ) => {
-  const blurPx = lightBlurPx(light, cellSize);
+  const blurPx = lightBlurDisabled ? 0 : lightBlurPx(light, cellSize);
   if (blurPx > 0) {
     ctx.filter = `blur(${blurPx}px)`;
   }
@@ -1148,6 +1339,7 @@ const createAuraGradient = (
   light: LightSource,
   cellSize: number,
   timeMs: number,
+  scaleOverride?: number,
 ) => {
   const center = lightCenter(light, cellSize, timeMs);
   const radiusPx = cellSize / 2;
@@ -1156,7 +1348,7 @@ const createAuraGradient = (
   // Slightly brighter than a plain glow so the ring reads as a halo.
   const peak = Math.min(
     1,
-    intensity * 1.8 * lightIntensityScale(light, timeMs),
+    intensity * 1.8 * (scaleOverride ?? lightIntensityScale(light, timeMs)),
   );
   const gradient = ctx.createRadialGradient(
     center.x,
@@ -1196,6 +1388,7 @@ const createGasGradient = (
   cellSize: number,
   timeMs: number,
   gradientRadiusPx?: number,
+  scaleOverride?: number,
 ) => {
   const center = lightCenter(light, cellSize, timeMs);
   const color = light.color ?? DEFAULT_LIGHT_COLOR;
@@ -1212,7 +1405,7 @@ const createGasGradient = (
   );
   const alpha = Math.min(
     1,
-    intensity * 1.4 * lightIntensityScale(light, timeMs),
+    intensity * 1.4 * (scaleOverride ?? lightIntensityScale(light, timeMs)),
   );
   const stops = [0, 0.15, 0.3, 0.45, 0.55, 0.7, 0.85, 1];
   stops.forEach((t) => {
@@ -1260,6 +1453,7 @@ const createLightGradient = (
   light: LightSource,
   cellSize: number,
   timeMs: number,
+  scaleOverride?: number,
 ) => {
   const center = lightCenter(light, cellSize, timeMs);
   const color = light.color ?? DEFAULT_LIGHT_COLOR;
@@ -1275,7 +1469,7 @@ const createLightGradient = (
   );
   const peakIntensity = Math.min(
     1,
-    intensity * 1.5 * lightIntensityScale(light, timeMs),
+    intensity * 1.5 * (scaleOverride ?? lightIntensityScale(light, timeMs)),
   );
   const falloffStops = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1];
   falloffStops.forEach((t) => {
@@ -1285,18 +1479,19 @@ const createLightGradient = (
   return gradient;
 };
 
-const renderLight = (
+// Renders the light's full-brightness output directly onto `ctx` — the
+// pre-sprite path, still used for effects whose geometry or per-part
+// brightness changes every frame, and where offscreen canvases are
+// unavailable (the node test environment).
+const renderLightDirect = (
   ctx: CanvasRenderingContext2D,
+  light: LightSource,
   cellSize: number,
   state: GameState,
-  light: LightSource,
   debugMode: boolean,
   timeMs: number,
   occlusionKey?: string,
-) => {
-  if (!isLightRenderable(state, light, debugMode)) return;
-
-  const center = lightCenter(light, cellSize, timeMs);
+): void => {
   switch (light.effect) {
     case LightEffect.SPARKLE:
       renderSparkles(ctx, light, cellSize, timeMs);
@@ -1345,8 +1540,270 @@ const renderLight = (
       );
       break;
   }
+};
+
+// --- Light sprites ----------------------------------------------------------
+
+// Lights whose glow geometry never changes between frames — everything
+// except sweep (rotating polygon), sway (swinging center) and sparkle
+// (per-twinkle brightness) — can have their full-brightness output baked
+// once into a sprite and then only blitted, alpha-scaled by the current
+// animation brightness. For animated lights the scaling is pixel-exact
+// only while intensity * peakFactor <= 1: beyond that the direct path
+// clamps the gradient's peak at full alpha while the sprite would dim
+// linearly, so bright animated lights keep rendering directly. Static
+// lights never alpha-scale (their intensity scale is a constant 1), so
+// their sprite is pixel-exact at any intensity — baking them keeps the
+// softness blur out of every static-layer rebuild, pan moves included.
+const lightPeakFactor = (light: LightSource): number =>
+  light.effect === LightEffect.AURA
+    ? 1.8
+    : light.effect === LightEffect.GAS
+    ? 1.4
+    : 1.5;
+
+const isBakeableLight = (light: LightSource): boolean => {
+  switch (light.effect) {
+    case LightEffect.SWEEP:
+    case LightEffect.SWAY:
+    case LightEffect.SPARKLE:
+      return false;
+    default:
+      return (
+        !isAnimatedLight(light) ||
+        (light.intensity ?? DEFAULT_LIGHT_INTENSITY) * lightPeakFactor(light) <=
+          1
+      );
+  }
+};
+
+type LightSprite = {
+  key: string;
+  canvas: HTMLCanvasElement;
+  // World-pixel offset of the sprite's top-left corner.
+  x: number;
+  y: number;
+  // World-pixel size of the sprite (the canvas is deviceRatio times this).
+  size: number;
+};
+
+// One entry per distinct light (identity without the occlusion state);
+// the entry's key carries the full invalidation state and is replaced
+// whenever it changes.
+// Upper bound on baked light sprites, mirroring
+// MAX_LIGHT_POLYGON_CACHE_ENTRIES. Each light identity (position,
+// alignment, colour, radius, intensity, softness, effect) holds one
+// offscreen canvas; without a bound a long session of moving carried
+// lights, projectiles and event lights — every one a fresh identity —
+// would grow the cache without limit. Eviction only happens when a new
+// identity is added: existing entries stay reusable while their
+// occlusion key is unchanged, and clearLightSpriteCache still empties
+// the whole map.
+export const MAX_LIGHT_SPRITE_CACHE_ENTRIES = 64;
+
+const lightSpriteCaches = new Map<string, LightSprite>();
+
+export const clearLightSpriteCache = (): void => {
+  lightSpriteCaches.clear();
+};
+
+const canBuildLightSprite = (): boolean =>
+  typeof document !== 'undefined' &&
+  typeof document.createElement === 'function';
+
+const lightSpriteIdentity = (light: LightSource): string =>
+  [
+    light.position.x,
+    light.position.y,
+    light.alignment ?? '',
+    light.color ?? '',
+    light.radius ?? '',
+    light.intensity ?? '',
+    light.softness ?? '',
+    light.effect ?? '',
+  ].join(',');
+
+// Bakes the light's full-brightness glow into an offscreen canvas: the
+// visibility polygon (or aura ring or gas cloud) filled with its radial
+// gradient under the softness blur, exactly as the direct path renders,
+// but at animation scale 1 and only once per occlusion state.
+const buildLightSprite = (
+  state: GameState,
+  light: LightSource,
+  cellSize: number,
+  debugMode: boolean,
+  stateKey: string,
+  key: string,
+): LightSprite | null => {
+  if (!canBuildLightSprite()) return null;
+  const timeMs = 0;
+  const center = lightCenter(light, cellSize, timeMs);
+  const blurPx = lightBlurPx(light, cellSize);
+  let draw: (c: CanvasRenderingContext2D) => void;
+  let extent: number;
+  if (light.effect === LightEffect.AURA) {
+    extent = cellSize / 2 + blurPx + 2;
+    draw = (c) =>
+      fillLightShape(
+        c,
+        traceAuraCircle(light, cellSize, timeMs),
+        createAuraGradient(c, light, cellSize, timeMs, 1),
+        light,
+        cellSize,
+      );
+  } else {
+    const points = lightPolygonFor(
+      light,
+      state,
+      cellSize,
+      debugMode,
+      timeMs,
+      stateKey,
+    );
+    extent = polygonExtentPx(center, points) + blurPx + 2;
+    draw =
+      light.effect === LightEffect.GAS
+        ? (c) =>
+            fillLightPolygon(
+              c,
+              points,
+              createGasGradient(
+                c,
+                light,
+                cellSize,
+                timeMs,
+                polygonExtentPx(center, points),
+                1,
+              ),
+              light,
+              cellSize,
+            )
+        : (c) =>
+            fillLightPolygon(
+              c,
+              points,
+              createLightGradient(c, light, cellSize, timeMs, 1),
+              light,
+              cellSize,
+            );
+  }
+
+  const size = Math.ceil(extent * 2);
+  if (size <= 0) return null;
+  const ratio = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil(size * ratio);
+  canvas.height = Math.ceil(size * ratio);
+  const spriteCtx = canvas.getContext('2d');
+  if (!spriteCtx) return null;
+  spriteCtx.scale(ratio, ratio);
+  spriteCtx.translate(extent - center.x, extent - center.y);
+  // Bakes always run at full quality, even mid-drag: the sprite cache
+  // key does not encode the blur flag, so an unblurred bake would poison
+  // the cache for the post-drag full-quality frames.
+  const blurWasDisabled = lightBlurDisabled;
+  lightBlurDisabled = false;
+  try {
+    draw(spriteCtx);
+  } finally {
+    lightBlurDisabled = blurWasDisabled;
+  }
+  return { key, canvas, x: center.x - extent, y: center.y - extent, size };
+};
+
+const lightSpriteFor = (
+  state: GameState,
+  light: LightSource,
+  cellSize: number,
+  debugMode: boolean,
+  occlusionKey?: string,
+): LightSprite | null => {
+  if (!canBuildLightSprite()) return null;
+  const stateKey = occlusionKey ?? lightStateKey(state, cellSize, debugMode);
+  const identity = lightSpriteIdentity(light);
+  const key = `${stateKey}|${identity}`;
+  const cached = lightSpriteCaches.get(identity);
+  if (cached && cached.key === key) return cached;
+  const sprite = buildLightSprite(
+    state,
+    light,
+    cellSize,
+    debugMode,
+    stateKey,
+    key,
+  );
+  if (sprite) {
+    if (
+      !lightSpriteCaches.has(identity) &&
+      lightSpriteCaches.size >= MAX_LIGHT_SPRITE_CACHE_ENTRIES
+    ) {
+      // Evict the oldest entry: Map keys iterate in insertion order.
+      for (const oldest of lightSpriteCaches.keys()) {
+        lightSpriteCaches.delete(oldest);
+        break;
+      }
+    }
+    lightSpriteCaches.set(identity, sprite);
+  }
+  return sprite;
+};
+
+const renderLight = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  light: LightSource,
+  debugMode: boolean,
+  timeMs: number,
+  occlusionKey?: string,
+) => {
+  if (!isLightRenderable(state, light, debugMode)) return;
+
+  if (isBakeableLight(light)) {
+    const sprite = lightSpriteFor(
+      state,
+      light,
+      cellSize,
+      debugMode,
+      occlusionKey,
+    );
+    if (sprite) {
+      ctx.save();
+      ctx.globalAlpha = lightIntensityScale(light, timeMs);
+      ctx.drawImage(
+        sprite.canvas,
+        sprite.x,
+        sprite.y,
+        sprite.size,
+        sprite.size,
+      );
+      ctx.restore();
+      if (debugMode) {
+        const center = lightCenter(light, cellSize, timeMs);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, cellSize * 0.2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      return;
+    }
+  }
+
+  renderLightDirect(
+    ctx,
+    light,
+    cellSize,
+    state,
+    debugMode,
+    timeMs,
+    occlusionKey,
+  );
 
   if (debugMode) {
+    const center = lightCenter(light, cellSize, timeMs);
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.lineWidth = 1;

@@ -177,6 +177,11 @@ export {
   type RenderBetweenDungeonsOptions,
   type BetweenDungeonsHitResult,
 } from './BetweenDungeonsRendering';
+export {
+  renderDebugPrintout,
+  getDebugPrintoutPosition,
+  type DebugPrintoutCounts,
+} from './DebugOverlayRendering';
 
 // Board cursors for the three interactive tile actions; '' means the plain
 // default cursor. The CSS cursor for each is built once and cached.

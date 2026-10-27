@@ -57,6 +57,11 @@ import {
   triggerInteractable,
 } from '../interactables/InteractableLogic';
 import { executeRoomDiscoveredEffect } from '../dungeon/RoomEffectsLogic';
+import { applyRoomFogEnterEffects } from '../dungeon/RoomFogLogic';
+import {
+  applyTerrainEnterEffects,
+  terrainMovementCost,
+} from '../dungeon/TerrainLogic';
 import {
   ACTIVE,
   BREAK_LOCK,
@@ -110,7 +115,7 @@ export const newHero = (
 export const act = (direction: MoveDirection | string, state: GameState) => {
   doReRender(state);
   const hero: Hero | undefined = state.currentActor;
-  if (!hero || hero.actions <= 0) {
+  if (!hero || hero.health <= 0 || hero.actions <= 0) {
     if (hero) {
       hero.actions = 0;
       hero.movement = 0;
@@ -188,7 +193,13 @@ export const act = (direction: MoveDirection | string, state: GameState) => {
       if (blockedByMonster) {
         attack(hero, state, newPosition);
       } else {
-        move(hero, state, newPosition.x, newPosition.y, 1);
+        move(
+          hero,
+          state,
+          newPosition.x,
+          newPosition.y,
+          terrainMovementCost(state.dungeon.layout, newPosition),
+        );
       }
     }
   } else {
@@ -698,9 +709,25 @@ export const arriveOnCell = (
   hero: Hero,
   pos: Position,
 ): boolean => {
+  const previousPosition = { x: hero.position.x, y: hero.position.y };
   recordActorStep(hero, pos);
   hero.position.x = pos.x;
   hero.position.y = pos.y;
+  // Opening a door without stepping through it routes through here as
+  // a same-cell "move": terrain and room-fog enter effects only apply
+  // to an actual change of cell, so a hero standing in lava that opens
+  // a door is not hurt a second time.
+  const movedToNewCell =
+    previousPosition.x !== pos.x || previousPosition.y !== pos.y;
+  if (movedToNewCell) {
+    applyTerrainEnterEffects(state, hero);
+    applyRoomFogEnterEffects(state, hero, previousPosition);
+  }
+  // The enter effects can down the hero: no further arrival effects
+  // run — the corpse reads no notes and triggers no interactables.
+  if (hero.health <= 0) {
+    return true;
+  }
   checkForNote(state, hero);
   checkForItemRevealedSecret(state, hero);
   checkForInteractable(state, hero, 'step');

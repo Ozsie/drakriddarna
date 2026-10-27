@@ -201,10 +201,12 @@ export const executeRadialAction = (
 export const onTargetCell = (state: GameState, target: Position) => {
   doReRender(state);
   const hero = state.currentActor as Hero;
-  if (hero.actions <= 0) {
-    hero.actions = 0;
-    hero.movement = 0;
-    addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
+  if (!hero || hero.health <= 0 || hero.actions <= 0) {
+    if (hero) {
+      hero.actions = 0;
+      hero.movement = 0;
+      addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
+    }
     return;
   }
   const portal = state.dungeon.portal;
@@ -257,6 +259,12 @@ export const onTargetCell = (state: GameState, target: Position) => {
         // illegal, so the hero walks on past the monster instead and the
         // zone of control applies again at the next tile.
         const halted = arriveOnCell(state, hero, cell);
+        // The terrain or fog enter effects can down the hero mid-walk:
+        // the remaining path cells are dropped, so no further arrival
+        // effects run.
+        if (hero.health <= 0) {
+          break;
+        }
         if (checkForTrapDoor(state)) {
           return;
         }

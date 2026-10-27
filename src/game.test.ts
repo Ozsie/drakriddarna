@@ -3,6 +3,7 @@ import { init, endAction, loadState, next, hasWon } from './game';
 import { completeBetweenDungeonsAndStartNext } from './dungeon/BetweenDungeonsLogic';
 import { liveHeroes } from './hero/HeroLogic';
 import { eventEffects } from './events/EventsLogic';
+import { TerrainType } from './types';
 import type { Dungeon, GameMaster, Hero, GameState } from './types';
 
 describe('game orchestrator', () => {
@@ -92,6 +93,76 @@ describe('game orchestrator', () => {
     expect(state.currentActor?.name).toBe(hero1.name);
     expect(hero1.actions).toBe(2);
     expect(hero1.movement).toBeGreaterThan(0);
+  });
+
+  it('the hero after a middle hero downed by turn-end lava acts, without starting a new round', async () => {
+    const state = init();
+    expect(state.heroes.length).toBeGreaterThanOrEqual(3);
+
+    // The middle hero ends its turn standing on lava hot enough to
+    // down it.
+    const middleHero = state.heroes[1] as Hero;
+    state.currentActor = middleHero;
+    state.dungeon.layout.terrain = [
+      ...(state.dungeon.layout.terrain ?? []),
+      {
+        position: { x: middleHero.position.x, y: middleHero.position.y },
+        type: TerrainType.LAVA,
+        damageOnEnter: 1,
+        damageOnTurnEnd: middleHero.health,
+      },
+    ];
+    const turnCountBefore = state.turnCount ?? 0;
+    const heroAfter = state.heroes[2];
+
+    await next(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    // The turn-end toll downed the middle hero.
+    expect(middleHero.health).toBeLessThanOrEqual(0);
+
+    // The hero after them acts, with a fresh turn...
+    expect(state.currentActor?.name).toBe(heroAfter.name);
+    expect(state.currentActor?.actions).toBe(2);
+
+    // ...and the round did not wrap: no new round, no turn counter
+    // increment, no event redraw.
+    expect(state.turnCount ?? 0).toBe(turnCountBefore);
+    expect(state.currentEvent).toBeUndefined();
+  });
+
+  it('a first hero downed by turn-end lava hands the turn to the next hero without starting a new round', async () => {
+    const state = init();
+
+    const firstHero = state.heroes[0] as Hero;
+    state.currentActor = firstHero;
+    state.dungeon.layout.terrain = [
+      ...(state.dungeon.layout.terrain ?? []),
+      {
+        position: { x: firstHero.position.x, y: firstHero.position.y },
+        type: TerrainType.LAVA,
+        damageOnEnter: 1,
+        damageOnTurnEnd: firstHero.health,
+      },
+    ];
+    const turnCountBefore = state.turnCount ?? 0;
+
+    await next(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    expect(firstHero.health).toBeLessThanOrEqual(0);
+    // The second hero acts...
+    expect(state.currentActor?.name).toBe(state.heroes[1].name);
+    // ...without the round restarting.
+    expect(state.turnCount ?? 0).toBe(turnCountBefore);
   });
 
   it('endAction decrements actions and clears movement when actions hit 0', async () => {

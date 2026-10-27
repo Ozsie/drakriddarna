@@ -43,6 +43,8 @@ export type GameState = {
   bloodSplatters?: BloodSplatter[];
   projectiles?: ProjectileAnimation[];
   flameEffects?: FlameEffect[];
+  // Screen shakes active or recently expired; the renderer prunes them.
+  shakeEffects?: ShakeEffect[];
   roundActionsDelta?: number;
   // Transient light sources spawned by events, cleared at round reset.
   eventLights?: LightSource[];
@@ -136,6 +138,22 @@ export type FlameEffect = {
   id: string;
   position: Position;
   particles: FlameParticle[];
+  timestamp?: number;
+  durationMs?: number;
+};
+
+// A screen shake, usually spawned by a dramatic event: a landslide, a
+// lava burst. Purely visual — jitter applied to the world canvases for a
+// short time, stronger near the epicenter.
+export type ShakeEffect = {
+  id: string;
+  // World cell the shake emanates from; omit for a screen-wide shake.
+  epicenter?: Position;
+  // Max jitter in pixels at the epicenter (default: 6).
+  amplitude?: number;
+  // Reach of the shake in cells from the epicenter (default: 8); the
+  // jitter fades linearly to zero at the edge.
+  radius?: number;
   timestamp?: number;
   durationMs?: number;
 };
@@ -367,6 +385,72 @@ export type LightSource = {
   enabled?: boolean;
 };
 
+// Terrain cell types. 'water' and 'lava' are the built-ins; the set is
+// intentionally open-ended like `LightEffect`: unknown type strings keep
+// their configured colour and effects but get no default styling.
+export const TerrainType = {
+  WATER: 'water',
+  LAVA: 'lava',
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type TerrainType =
+  | (typeof TerrainType)[keyof typeof TerrainType]
+  | string;
+
+// Configuration of a terrain cell. Everything except the type is optional:
+// a cell can be purely decorative, purely gameplay-affecting, or both.
+export type TerrainOptions = {
+  type: TerrainType;
+  // Base fill colour of the cell.
+  color?: string;
+  // 0..1 transparency of the base fill (default: 0.6).
+  opacity?: number;
+  // Flat damage taken when a hero or monster enters the cell.
+  damageOnEnter?: number;
+  // Flat damage taken when a hero or monster ends its turn on the cell.
+  damageOnTurnEnd?: number;
+  // Movement points a step onto this cell costs instead of 1.
+  movementCost?: number;
+  // Light emitted by the cell, e.g. the glow of lava.
+  light?: ItemLight;
+  // How many times per second the animated overlay loops (default: per
+  // terrain type).
+  rate?: number;
+};
+
+export type TerrainCell = TerrainOptions & {
+  position: Position;
+};
+
+// Atmospheric fog filling every cell of a room or corridor, declared per
+// grid letter. Purely visual by default, but can be configured to damage
+// actors that enter or end their turn in the room, e.g. poison gas.
+export type RoomFogOptions = {
+  // Colour of the fog cloud (default: grey blue).
+  color?: string;
+  // 0..1 transparency of the fog cloud (default: 0.35).
+  opacity?: number;
+  // How many times per second the cloud undulates (default: 0.3).
+  rate?: number;
+  // 0..1 softness of the cloud's edges (default: 0.6): 0 keeps hard cell
+  // edges, 1 feathers the cloud about half a cell into its surroundings.
+  softness?: number;
+  // 0..1 how much of the light inside the room the cloud absorbs, dimming
+  // the glow of lights shining into or standing in the fog and letting
+  // the ambient darkness veil close in (default: 0.3).
+  density?: number;
+  // When true, no light passes through the fog at all: like fog of war,
+  // light rays stop at the room's boundary.
+  blocksLight?: boolean;
+  // Flat damage taken when a hero or monster enters the room.
+  damageOnEnter?: number;
+  // Flat damage taken when a hero or monster ends its turn in the room.
+  damageOnTurnEnd?: number;
+  // Translation key of the fog's display name, used in the damage log
+  // (default: 'content.fog.name').
+  nameTranslationKey?: string;
+};
+
 export type Layout = {
   grid: string[];
   doors: Door[];
@@ -383,6 +467,12 @@ export type Layout = {
   corridorCells?: Position[];
   pillars?: Position[];
   pits?: Position[];
+  // Terrain cells: floor cells with a material (water, lava, ...) that
+  // tints the floor and can hurt or slow actors that enter or stand on
+  // them, and can emit light.
+  terrain?: TerrainCell[];
+  // Fog filling whole rooms or corridors, keyed by grid letter.
+  roomFog?: Record<string, RoomFogOptions>;
   corners: Corner[];
   interactables?: InteractableCell[];
   lights?: LightSource[];

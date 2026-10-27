@@ -26,6 +26,11 @@
     "killed": "{{actor}} killed {{target}}.",
     "paralyzed": "{{target}} is paralyzed by {{weapon}} and loses the rest of the turn."
   },
+  "terrain": {
+    "enterDamage": "{{actor}} takes {{damage}} damage from the {{terrain}}.",
+    "turnEndDamage": "{{actor}} takes {{damage}} damage from standing in the {{terrain}}.",
+    "killed": "{{actor}} perished in the {{terrain}}."
+  },
   "events": {
     "sunStone": "{{monster}} was killed by the Sun Stone.",
     "foreSight": "You sense the object is close to ({{x}},{{y}}).",
@@ -67,6 +72,8 @@
     "interact": "{{hero}} interacted with {{interactable}}.",
     "heroJoined": "{{newHero}} joined the party!",
     "trapsRemoved": "All traps in room {{room}} were disabled.",
+    "fogFilled": "{{hero}} released a cloud of fog that fills room {{room}}.",
+    "lavaErupted": "Lava erupts from the floor where {{hero}} meddled, dealing {{damage}} damage to anyone standing in it.",
     "turnFailed": "Failed to advance to the next turn."
   },
   "item": {

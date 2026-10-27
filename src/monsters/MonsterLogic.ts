@@ -30,12 +30,7 @@ import {
   isNeighbouring,
   isRoomDiscovered,
 } from '../core';
-import {
-  getDifficulty,
-  getEffectiveMaxHealth,
-  getEffectiveMaxMovement,
-  takeDamage,
-} from '../core';
+import { getEffectiveMaxMovement, takeDamage } from '../core';
 import { liveHeroes } from '../hero/HeroLogic';
 import { distanceInGrid, nextRandom } from '../core';
 import {
@@ -52,6 +47,7 @@ import {
   findRetreatPosition,
   findSprayAlignPosition,
   getBehaviorsForMonsterType,
+  getDirectorContext,
   getDirectorState,
   logMonsterBehaviorDecision,
   resetRoundTargetCounters,
@@ -60,6 +56,14 @@ import {
   selectScoredTarget,
 } from './behavior';
 import { createFlameEffect } from '../combat';
+import {
+  applyRoomFogEnterEffects,
+  applyRoomFogTurnEndEffects,
+} from '../dungeon/RoomFogLogic';
+import {
+  applyTerrainEnterEffects,
+  applyTerrainTurnEndEffects,
+} from '../dungeon/TerrainLogic';
 import { soundEffectManager } from '../audio';
 
 export { resetRoundTargetCounters } from './behavior';
@@ -154,21 +158,8 @@ export const monsterActions = async (
     monster.forgotBowThisTurn = rollBowForgotten(state);
 
     // Compute director context
-    const allHeroes = state.heroes;
-    const healthModifier = getDifficulty(state).modifiers.health;
-    const totalMaxHp = allHeroes.reduce(
-      (sum, h) => sum + getEffectiveMaxHealth(h, healthModifier),
-      0,
-    );
-    const totalCurrentHp = allHeroes.reduce(
-      (sum, h) => sum + Math.max(0, h.health),
-      0,
-    );
-    const partyHpPercentage = totalMaxHp > 0 ? totalCurrentHp / totalMaxHp : 1;
-    const hasDeadHero = allHeroes.some((h) => h.health <= 0 || h.incapacitated);
-    const aliveMonsterCount = state.dungeon.layout.monsters.filter(
-      (m) => m.health > 0,
-    ).length;
+    const { hasDeadHero, partyHpPercentage, aliveMonsterCount } =
+      getDirectorContext(state);
     const directorState = getDirectorState(
       hasDeadHero,
       partyHpPercentage,
@@ -344,6 +335,11 @@ export const monsterActions = async (
       monster.passiveStreak = 0;
     }
     monster.forgotBowThisTurn = false;
+
+    // Terrain the monster ends its turn on (e.g. standing in lava) or fog
+    // of the room it stands in takes its toll.
+    applyTerrainTurnEndEffects(state, monster);
+    applyRoomFogTurnEndEffects(state, monster);
 
     monster.actions = maxActions;
     monster.movement = getEffectiveMaxMovement(monster);
@@ -770,6 +766,10 @@ export const monsterMoveToPosition = (
 
     if (isOccupied) break;
 
+    const previousPosition = {
+      x: monster.position.x,
+      y: monster.position.y,
+    };
     recordActorStep(monster, nextPos);
     monster.position = nextPos;
     addLog(state, 'logs.monsterAction.movedTowards', {
@@ -779,6 +779,9 @@ export const monsterMoveToPosition = (
       y: `${nextPos.y}`,
     });
     monster.movement--;
+    applyTerrainEnterEffects(state, monster);
+    applyRoomFogEnterEffects(state, monster, previousPosition);
+    if (monster.health <= 0) break;
   }
   monster.actions--;
 };
@@ -870,6 +873,10 @@ export const monsterMove = (
       continue;
     }
 
+    const previousPosition = {
+      x: monster.position.x,
+      y: monster.position.y,
+    };
     recordActorStep(monster, nextPos);
     monster.position = nextPos;
     addLog(state, 'logs.monsterAction.movedTowards', {
@@ -879,6 +886,9 @@ export const monsterMove = (
       y: `${nextPos.y}`,
     });
     monster.movement--;
+    applyTerrainEnterEffects(state, monster);
+    applyRoomFogEnterEffects(state, monster, previousPosition);
+    if (monster.health <= 0) break;
 
     if (
       isNeighbouring(

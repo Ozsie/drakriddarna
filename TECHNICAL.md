@@ -135,7 +135,8 @@ deep-merged into i18n namespaces.
 
 Dungeons themselves are authored in a declarative DSL built on plain
 TypeScript helpers. A layout is an ASCII string matrix (one character per
-cell) plus declarative lists of doors, monsters, items, secrets and lights:
+cell) plus declarative lists of doors, monsters, items, secrets, lights and
+terrain cells:
 
 ```ts
 export const e1m1: Dungeon = defineDungeon({
@@ -246,6 +247,70 @@ heroes — so a figure standing in the cell behind a pillar is occluded by the
 rising shaft — but before the ambient darkness veil, so unlit shafts darken
 with the rest of the scene.
 
+Terrain cells (water, lava, …) are declarative floor materials: each cell
+tints the floor with a translucent colour fill on the static layer, can
+carry a light (lava glows through the same lighting system as torches),
+and can be configured with gameplay effects — damage on entering the cell,
+damage on ending a turn standing in it, and a per-cell movement cost
+(`src/dungeon/TerrainLogic.ts`). The damage is environmental, bypassing the
+armour and shield rolls of combat, and is applied at the movement and
+turn-resolution hooks for heroes and monsters alike. Built-in materials
+also animate: water carries drifting wave crests and lava breathes with a
+pulsing glow plus slow hotspots, drawn on the dynamic layer above the lit
+scene but below the actors, so figures wading stand on top of the
+shimmer and the ambient darkness veil still darkens unlit material.
+
+Rooms and corridors can be filled with atmospheric fog
+(`roomFog`, `src/dungeon/RoomFogLogic.ts`), declared per grid letter: an
+undulating translucent cloud over every discovered cell of the room,
+drawn above actors and pillar shafts but below the darkness veil. Each
+room renders as one whole-room shape whose edges blur into its
+surroundings (`softness`, via the same canvas filter technique and
+graceful degradation as soft light edges). Fog is visual by default but
+can be configured to damage actors entering or ending their turn in the
+room (e.g. poison gas), reusing the same environmental damage path as
+terrain. Room fog also interacts with lighting in two configurable ways: a
+`density` (default 0.3) erases that fraction of the light mask inside the
+fog, dimming glows that shine into the room and letting the ambient
+darkness veil close in, while `blocksLight` fog instead marks the room's
+cells as fog in the occlusion map, so no light enters the room at all,
+exactly like undiscovered fog of war.
+
+Performance of the always-animating effects gets four systematic
+treatments. First, the blurred fog cloud and light-dim mask of every
+fogged room are rasterized once per fog state into small offscreen
+canvases and then only blitted with the animated alpha — the canvas blur
+filter, by far the most expensive fog operation, never runs per frame.
+Second, every light whose glow geometry is fixed ('static', flicker,
+pulse, blink, aura, gas — everything except sweeping, swaying and
+sparkling lights) is baked once per occlusion state into a small
+offscreen sprite: the visibility polygon filled with its 9-stop radial
+gradient under the softness blur, at full brightness and device
+resolution. Per frame it is a single `drawImage` alpha-scaled by the
+light's animation brightness — pixel-exact for every built-in preset —
+which also turns the static light layer into a handful of blits, making
+the viewport-keyed rebuild during panning cheap. The visibility-polygon
+cache underneath is keyed by the light's stable geometry (id, position,
+radius, alignment, effect) rather than object identity — activeLights()
+recreates derived lights as fresh objects every pass — and is
+size-bounded, so long animations cannot grow it. Swaying chandeliers
+recompute their polygon only once their swing crosses the same
+1/32-cell step the repaint gate treats as invisible, and sweeping beams
+never march rays per frame at all: a beam only selects which rays
+contribute, so the endpoints are marched once per occlusion state and
+the rotating beam re-selects among them. Third, ambient redraws
+are driven by a quantized animation signature instead of the frame
+clock: each animated light contributes its stepped visible output
+(flicker is inherently stepped, pulse/aura/gas in 1/16 alpha steps,
+sweep in 4-degree steps, sway in 1/32-cell position steps), terrain and
+fog contribute a shared time step, and the dynamic layer only clears and
+repaints when the signature actually changes — a flickering brazier
+repaints about 8 times per second instead of 60. Fourth, the rAF loop
+keeps ticking at display rate but a minimum-interval gate caps
+continuous effects (sweeping beams, twinkling sparkles) at 30 repaints
+per second, and actor-driven frames (movement, projectiles) always run
+at full rate.
+
 The lighting (`src/dungeon/LightRendering.ts`) is the most graphics-heavy
 code in the repo: a 2D visibility technique where each light source casts a
 fan of rays (120 per source) that walk the grid cell by cell — jumping from
@@ -266,6 +331,19 @@ generally.
 Animations (actor movement, projectiles, damage indicators) are managed as
 small state machines in `core/ActorAnimation.ts`, driven by
 `requestAnimationFrame` only while an animation is in flight.
+
+Screen shakes are transient effects on the game state like blood and
+flames (`shakeEffects`, `createShake` in `src/combat/CombatEffects.ts`),
+but render differently: the board controller jitters the three world
+canvases with a CSS `translate` per frame while a shake runs — the cached
+static layer is never redrawn for it, and the UI canvas stays steady. A
+shake's jitter decays quadratically over its lifetime and attenuates with
+the distance between its epicenter and the view centre. Triggers today:
+the landslide event shakes around the collapsed corridor, and
+interactables can shake via the built-in `fillRoomFog` and `spawnLava`
+effects (`src/interactables/InteractableLogic.ts`), which respectively
+flood a room with persistent fog and erupt lava cells that damage anyone
+standing on them when they appear.
 
 ## Adaptive music
 

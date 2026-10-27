@@ -5,6 +5,7 @@ import {
   runGameMasterBenchmark,
   runSingleGame,
   formatBenchmarkReport,
+  writeBenchmarkReport,
 } from './benchmark';
 import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
 import { e2m1 } from '../campaigns/earthHour/dungeons/e2m1';
@@ -64,6 +65,8 @@ describe('e1m0 Game Master & Playability Benchmark', () => {
 
     // eslint-disable-next-line no-console
     console.log('\n' + report + '\n');
+
+    writeBenchmarkReport(report);
 
     expect(storyTellerSummary.totalRuns).toBe(runsPerGameMaster);
     expect(tacticianSummary.totalRuns).toBe(runsPerGameMaster);
@@ -131,6 +134,8 @@ describe('e1m1 Game Master & Playability Benchmark', () => {
     // eslint-disable-next-line no-console
     console.log('\n' + report + '\n');
 
+    writeBenchmarkReport(report);
+
     expect(storyTellerSummary.totalRuns).toBe(runsPerGameMaster);
     expect(tacticianSummary.totalRuns).toBe(runsPerGameMaster);
     expect(brutalOverlordSummary.totalRuns).toBe(runsPerGameMaster);
@@ -196,6 +201,8 @@ describe('e2m1 Game Master & Playability Benchmark', () => {
 
     // eslint-disable-next-line no-console
     console.log('\n' + report + '\n');
+
+    writeBenchmarkReport(report);
 
     expect(storyTellerSummary.totalRuns).toBe(runsPerGameMaster);
     expect(tacticianSummary.totalRuns).toBe(runsPerGameMaster);

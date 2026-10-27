@@ -143,5 +143,12 @@
       "master": "Mästare (3+ på tärning): Mästarnivå med 67% chans på alla tärningsslag."
     }
   },
-  "turn": "Runda"
+  "turn": "Runda",
+  "terrain": {
+    "water": "vattnet",
+    "lava": "lavan"
+  },
+  "fog": {
+    "name": "dimman"
+  }
 }

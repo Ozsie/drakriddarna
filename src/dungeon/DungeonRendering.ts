@@ -3,9 +3,13 @@ import {
   type Corner,
   type Door,
   type GameState,
+  type Position,
+  type RoomFogOptions,
   type Secret,
+  type TerrainCell,
   SecretType,
   Side,
+  TerrainType,
   type WallEdge,
 } from '../types';
 import { COLLAPSED, EMPTY, SEALED_DOOR, WALL } from '../core';
@@ -18,8 +22,20 @@ import {
 } from '../core';
 import { autoDetectCorners } from './cornerDetection';
 import { drawCachedTile } from './TileTextureCache';
+import {
+  TERRAIN_DEFAULT_OPACITY,
+  TERRAIN_DEFAULT_RATE,
+  TERRAIN_DEFAULT_STYLING,
+} from './TerrainLogic';
+import type { LightViewport } from './LightRendering';
 
 export const background = '#1E1C19';
+
+// The dungeon view's backdrop colour, mirroring `--color-bg-dungeon` in
+// theme.css. Painted as the opaque static canvas's full-canvas base so
+// the area outside the dungeon world looks the same as it did when the
+// CSS background showed through a transparent canvas.
+export const dungeonViewBackdrop = '#121418';
 
 export const renderDoors = (
   ctx: CanvasRenderingContext2D,
@@ -282,6 +298,588 @@ const renderPits = (
     ?.forEach((pit) => {
       drawTile(ctx, ground, 13, 0, cellSize, pit.x, pit.y, state);
     });
+};
+
+// Fill colour of a terrain cell that configures neither its own colour nor
+// has a default styling for its type.
+const DEFAULT_TERRAIN_COLOR = '#56606a';
+
+// Terrain cells (water, lava, ...) tint the floor with a translucent
+// colour fill. The fill lives on the static layer like the floor itself;
+// animated material highlights will render on the dynamic layer.
+export const renderTerrain = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+) => {
+  (state.dungeon.layout.terrain ?? [])
+    .filter(
+      (cell) =>
+        isDiscovered(state.dungeon, cell.position.x, cell.position.y) ||
+        debugMode,
+    )
+    .forEach((cell) => {
+      const styling = TERRAIN_DEFAULT_STYLING[cell.type];
+      ctx.globalAlpha =
+        cell.opacity ?? styling?.opacity ?? TERRAIN_DEFAULT_OPACITY;
+      ctx.fillStyle = cell.color ?? styling?.color ?? DEFAULT_TERRAIN_COLOR;
+      ctx.fillRect(
+        cell.position.x * cellSize,
+        cell.position.y * cellSize,
+        cellSize,
+        cellSize,
+      );
+      ctx.globalAlpha = 1;
+    });
+};
+
+// --- Animated terrain and fog overlays (dynamic layer) --------------------
+
+// Fog cloud styling defaults.
+const DEFAULT_FOG_COLOR = '#b9c6cf';
+const DEFAULT_FOG_OPACITY = 0.35;
+const DEFAULT_FOG_RATE = 0.3;
+const DEFAULT_FOG_SOFTNESS = 0.6;
+const DEFAULT_FOG_DENSITY = 0.3;
+
+// The animated terrain and fog overlays change their output slowly
+// (travelling wave crests, breathing glow, undulating cloud), so the
+// dynamic layer repaints them at most this often: the ambient repaint
+// gate in the board controller steps time by this amount.
+export const TERRAIN_ANIMATION_STEP_MS = 1000 / 15;
+
+// Only the built-in terrain types have an animated overlay; unknown types
+// render their static fill alone.
+const isAnimatedTerrainType = (type: string): boolean =>
+  type === TerrainType.WATER || type === TerrainType.LAVA;
+
+const fract = (v: number): number => v - Math.floor(v);
+
+// Deterministic pseudo-random 0..1 phase per cell, so the overlays move
+// stably across frames without flicker and without stored per-cell state.
+const cellHash = (x: number, y: number, salt = 0): number =>
+  fract(
+    Math.sin((x + 1) * 12.9898 + (y + 1) * 78.233 + salt * 37.719) * 43758.5453,
+  );
+
+const cellInViewport = (cell: Position, viewport?: LightViewport): boolean => {
+  if (!viewport) return true;
+  return (
+    cell.x + 1 > viewport.x &&
+    cell.x < viewport.x + viewport.width &&
+    cell.y + 1 > viewport.y &&
+    cell.y < viewport.y + viewport.height
+  );
+};
+
+const terrainOverlayRate = (cell: TerrainCell): number =>
+  cell.rate ?? TERRAIN_DEFAULT_STYLING[cell.type]?.rate ?? TERRAIN_DEFAULT_RATE;
+
+// The visible fog cells of all fogged rooms: one grid scan collects each
+// discovered cell whose grid letter carries fog options, together with
+// the letter so renderers can group cells into whole-room shapes.
+const collectFogCells = (
+  state: GameState,
+  debugMode: boolean,
+  viewport?: LightViewport,
+): { position: Position; room: string; options: RoomFogOptions }[] => {
+  const fog = state.dungeon.layout.roomFog;
+  if (!fog) return [];
+  const cells: { position: Position; room: string; options: RoomFogOptions }[] =
+    [];
+  state.dungeon.layout.grid.forEach((row, y) => {
+    toArray(row).forEach((letter: string, x: number) => {
+      const options = fog[letter];
+      if (
+        options &&
+        (debugMode || isDiscovered(state.dungeon, x, y)) &&
+        cellInViewport({ x, y }, viewport)
+      ) {
+        cells.push({ position: { x, y }, room: letter, options });
+      }
+    });
+  });
+  return cells;
+};
+
+// Whether any animated terrain or fog overlay is visible, and so the
+// dynamic layer needs continuous re-rendering.
+export const hasAnimatedTerrainEffects = (
+  state: GameState,
+  debugMode: boolean,
+  viewport?: LightViewport,
+): boolean =>
+  (state.dungeon.layout.terrain ?? []).some(
+    (cell) =>
+      isAnimatedTerrainType(cell.type) &&
+      (debugMode ||
+        isDiscovered(state.dungeon, cell.position.x, cell.position.y)) &&
+      cellInViewport(cell.position, viewport),
+  ) || collectFogCells(state, debugMode, viewport).length > 0;
+
+// Travelling wave crests: two translucent lines drift down the water
+// cell, fading in and out, wiggling slightly to read as ripples.
+// Traces one horizontal water wave: a sine sampled across the cell width,
+// so the crest reads as a ripple instead of a straight line.
+const strokeWaterWave = (
+  ctx: CanvasRenderingContext2D,
+  x0: number,
+  yBase: number,
+  cellSize: number,
+  amplitude: number,
+  wavelength: number,
+  phase: number,
+  style: string,
+  lineWidth: number,
+): void => {
+  const SEGMENTS = 6;
+  ctx.strokeStyle = style;
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+  for (let segment = 0; segment <= SEGMENTS; segment++) {
+    const px = x0 + (segment / SEGMENTS) * cellSize;
+    const py =
+      yBase +
+      Math.sin(((px - x0) / wavelength) * Math.PI * 2 + phase) * amplitude;
+    if (segment === 0) {
+      ctx.moveTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
+  }
+  ctx.stroke();
+};
+
+// Three wave bands drift down the cell at staggered depths and speeds —
+// the back bands slower and dimmer, giving a parallax feel — each fading
+// in and out as it travels. Every crest is followed by a darker trough
+// line, so the water reads as lit ripples with shadowed valleys.
+const renderWaterShimmer = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  cell: TerrainCell,
+  timeMs: number,
+): void => {
+  const rate = terrainOverlayRate(cell);
+  const t = timeMs / 1000;
+  const x0 = cell.position.x * cellSize;
+  const y0 = cell.position.y * cellSize;
+  for (let band = 0; band < 3; band++) {
+    const phase = cellHash(cell.position.x, cell.position.y, band);
+    // Back bands travel down more slowly: parallax between the layers.
+    const progress = fract(t * rate * (1 - band * 0.22) + phase);
+    const alpha = Math.sin(Math.PI * progress) * (0.32 - band * 0.09);
+    if (alpha <= 0.01) continue;
+    const bandY = y0 + progress * cellSize;
+    const amplitude = cellSize * (0.07 - band * 0.015);
+    const wavelength = cellSize * (0.85 + band * 0.3);
+    // The ripple pattern travels sideways, phase-shifted per cell and band.
+    const ripplePhase = 2 * Math.PI * (t * (0.6 + band * 0.2) + phase);
+    strokeWaterWave(
+      ctx,
+      x0,
+      bandY,
+      cellSize,
+      amplitude,
+      wavelength,
+      ripplePhase,
+      `rgba(235,247,255,${alpha.toFixed(3)})`,
+      1.5 + (band === 0 ? 1 : 0),
+    );
+    // Shadowed trough trailing the crest.
+    strokeWaterWave(
+      ctx,
+      x0,
+      bandY + cellSize * 0.22,
+      cellSize,
+      amplitude * 0.8,
+      wavelength,
+      ripplePhase + 0.6,
+      `rgba(8,30,52,${(alpha * 0.55).toFixed(3)})`,
+      2,
+    );
+  }
+};
+
+// The lava cell breathes: a bright overlay pulses over the base fill,
+// dark crust spots sit nearly still in the molten material — standing out
+// most when the glow ebbs — and two hotspots drift slowly between them.
+const renderLavaPulse = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  cell: TerrainCell,
+  timeMs: number,
+): void => {
+  const rate = terrainOverlayRate(cell);
+  const t = (timeMs / 1000) * rate;
+  const glow =
+    0.5 +
+    0.5 *
+      Math.sin(2 * Math.PI * (t + cellHash(cell.position.x, cell.position.y)));
+  const x = cell.position.x * cellSize;
+  const y = cell.position.y * cellSize;
+  ctx.globalAlpha = 0.1 + 0.14 * glow;
+  ctx.fillStyle = '#ff8c1a';
+  ctx.fillRect(x, y, cellSize, cellSize);
+  // Dark crust spots: cooled blotches in the molten pool. They wander a
+  // fraction of a cell and swell slightly, but never leave their spot —
+  // unlike the hotspots, they anchor the motion.
+  for (let spot = 0; spot < 3; spot++) {
+    const spotPhase = cellHash(cell.position.x, cell.position.y, spot + 1);
+    const driftX = 0.05 * Math.sin(2 * Math.PI * (t * 0.35 + spotPhase));
+    const driftY = 0.05 * Math.cos(2 * Math.PI * (t * 0.3 + spotPhase * 0.618));
+    const sx = x + (0.15 + 0.6 * fract(spotPhase * 1.618) + driftX) * cellSize;
+    const sy = y + (0.15 + 0.6 * fract(spotPhase * 2.414) + driftY) * cellSize;
+    const radius =
+      cellSize *
+      (0.08 + 0.05 * fract(spotPhase * 3.303)) *
+      (0.9 + 0.2 * (1 - glow));
+    ctx.globalAlpha = 0.42 + 0.16 * (1 - glow);
+    ctx.fillStyle = '#4a0e02';
+    ctx.beginPath();
+    ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (let spot = 0; spot < 2; spot++) {
+    const spotPhase = cellHash(cell.position.x, cell.position.y, spot + 4);
+    const drift = Math.sin(2 * Math.PI * (t * 0.6 + spotPhase));
+    const sx = x + (0.3 + 0.4 * fract(spotPhase) + 0.12 * drift) * cellSize;
+    const sy =
+      y + (0.3 + 0.4 * fract(spotPhase * 0.618) - 0.12 * drift) * cellSize;
+    ctx.globalAlpha = 0.16 + 0.2 * glow;
+    ctx.fillStyle = '#ffd166';
+    ctx.beginPath();
+    ctx.arc(sx, sy, cellSize * 0.13, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+};
+
+// Animated material overlays for discovered terrain cells, drawn on the
+// dynamic layer above the static base fill and below the actors, so
+// figures wading in the water stand on top of the shimmer. The ambient
+// darkness veil applies afterwards, keeping unlit terrain dark.
+export const renderTerrainAnimation = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+  timeMs: number,
+  viewport?: LightViewport,
+): void => {
+  (state.dungeon.layout.terrain ?? [])
+    .filter(
+      (cell) =>
+        isAnimatedTerrainType(cell.type) &&
+        (debugMode ||
+          isDiscovered(state.dungeon, cell.position.x, cell.position.y)) &&
+        cellInViewport(cell.position, viewport),
+    )
+    .forEach((cell) => {
+      if (cell.type === TerrainType.WATER) {
+        renderWaterShimmer(ctx, cellSize, cell, timeMs);
+      } else {
+        renderLavaPulse(ctx, cellSize, cell, timeMs);
+      }
+    });
+};
+
+// The blur radius of a fog cloud's edges, in pixels. `softness` 0 keeps
+// hard cell edges; 1 feathers the cloud roughly half a cell out and in.
+const fogEdgeBlurPx = (options: RoomFogOptions, cellSize: number): number =>
+  Math.max(
+    0,
+    Math.round((options.softness ?? DEFAULT_FOG_SOFTNESS) * 0.3 * cellSize),
+  );
+
+// Traces a whole room's fog cells as one path on the context, so a single
+// fill (and so a single blur pass) covers the union of the cells — solid
+// inside, soft only at the room's boundary.
+const traceRoomPath = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  cells: { position: Position }[],
+): void => {
+  ctx.beginPath();
+  cells.forEach(({ position }) => {
+    ctx.rect(position.x * cellSize, position.y * cellSize, cellSize, cellSize);
+  });
+};
+
+// The fog rooms currently relevant for rendering, grouped by grid letter.
+const groupFogRooms = (
+  state: GameState,
+  debugMode: boolean,
+  viewport?: LightViewport,
+): Map<string, { position: Position; options: RoomFogOptions }[]> => {
+  const rooms = new Map<
+    string,
+    { position: Position; options: RoomFogOptions }[]
+  >();
+  collectFogCells(state, debugMode, viewport).forEach(
+    ({ position, room, options }) => {
+      const group = rooms.get(room) ?? [];
+      group.push({ position, options });
+      rooms.set(room, group);
+    },
+  );
+  return rooms;
+};
+
+// --- Fog cloud caching -----------------------------------------------------
+
+// The blurred fog cloud of each room — the visible fill and the light-dim
+// mask — is rasterized once per fog state into an offscreen canvas and then
+// only blitted with the animated alpha. This keeps the canvas blur filter,
+// by far the most expensive part of fog rendering, off the per-frame path:
+// a fogged room costs two drawImage calls per frame instead of two
+// blurred fills. Falls back to direct (per-frame blurred) rendering where
+// offscreen canvases are unavailable, e.g. in the node test environment.
+type FogCloudCacheEntry = {
+  key: string;
+  // World offset of the canvases, in pixels.
+  x: number;
+  y: number;
+  cloud: HTMLCanvasElement;
+  dim: HTMLCanvasElement;
+};
+const fogCloudCaches = new Map<string, FogCloudCacheEntry>();
+
+export const clearFogCloudCaches = (): void => fogCloudCaches.clear();
+
+const canBuildOffscreenCanvas = (): boolean =>
+  typeof document !== 'undefined' &&
+  typeof document.createElement === 'function';
+
+// Everything that changes a room's fog cloud: the room, its fog options
+// (runtime fog fills mutate these), the discovered cells it covers, the
+// grid itself (collapses rewrite room letters) and the cell size.
+const fogCloudCacheKey = (
+  state: GameState,
+  room: string,
+  cellSize: number,
+  debugMode: boolean,
+): string =>
+  `${state.dungeon.name}|${room}|${cellSize}|${debugMode ? 'd' : 'n'}|${
+    state.dungeon.discoveredRooms.includes(room) ? 'd' : 'n'
+  }|${state.dungeon.layout.grid.join('')}|${JSON.stringify(
+    state.dungeon.layout.roomFog?.[room] ?? null,
+  )}`;
+
+const buildFogCloudCanvas = (
+  cells: { position: Position }[],
+  fillStyle: string,
+  blurPx: number,
+  cellSize: number,
+  minX: number,
+  minY: number,
+  width: number,
+  height: number,
+): HTMLCanvasElement | null => {
+  if (!canBuildOffscreenCanvas()) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, width);
+  canvas.height = Math.max(1, height);
+  const cloudCtx = canvas.getContext('2d');
+  if (!cloudCtx) return null;
+  if (blurPx > 0) {
+    cloudCtx.filter = `blur(${blurPx}px)`;
+  }
+  cloudCtx.fillStyle = fillStyle;
+  cloudCtx.beginPath();
+  cells.forEach(({ position }) => {
+    cloudCtx.rect(
+      (position.x - minX) * cellSize,
+      (position.y - minY) * cellSize,
+      cellSize,
+      cellSize,
+    );
+  });
+  cloudCtx.fill();
+  return canvas;
+};
+
+// All discovered (or debug-visible) cells of one room letter, independent
+// of the viewport: the cached fog cloud covers the whole visible room, so
+// its pixels — and so its cache key — stay valid across pans.
+const collectRoomFogCells = (
+  state: GameState,
+  room: string,
+  debugMode: boolean,
+): Position[] => {
+  const cells: Position[] = [];
+  state.dungeon.layout.grid.forEach((row, y) => {
+    toArray(row).forEach((letter: string, x: number) => {
+      if (letter === room && (debugMode || isDiscovered(state.dungeon, x, y))) {
+        cells.push({ x, y });
+      }
+    });
+  });
+  return cells;
+};
+
+const fogCloudFor = (
+  state: GameState,
+  room: string,
+  options: RoomFogOptions,
+  cellSize: number,
+  debugMode: boolean,
+): FogCloudCacheEntry | null => {
+  if (!canBuildOffscreenCanvas()) return null;
+  const key = fogCloudCacheKey(state, room, cellSize, debugMode);
+  const cached = fogCloudCaches.get(room);
+  if (cached && cached.key === key) return cached;
+
+  // The cloud is built from every visible cell of the room, not the
+  // viewport-culled subset: the cache key does not include the viewport,
+  // so the cached pixels must not depend on it either. Callers still use
+  // the viewport to decide which rooms render at all.
+  const cells = collectRoomFogCells(state, room, debugMode).map((position) => ({
+    position,
+  }));
+  if (cells.length === 0) return null;
+
+  const minX = Math.min(...cells.map(({ position }) => position.x));
+  const minY = Math.min(...cells.map(({ position }) => position.y));
+  const maxX = Math.max(...cells.map(({ position }) => position.x));
+  const maxY = Math.max(...cells.map(({ position }) => position.y));
+  const blurPx = fogEdgeBlurPx(options, cellSize);
+  const cloud = buildFogCloudCanvas(
+    cells,
+    options.color ?? DEFAULT_FOG_COLOR,
+    blurPx,
+    cellSize,
+    minX,
+    minY,
+    (maxX - minX + 1) * cellSize,
+    (maxY - minY + 1) * cellSize,
+  );
+  // The dim mask is the same shape in opaque black: destination-out only
+  // reads the drawn pixels' alpha.
+  const dim = cloud
+    ? buildFogCloudCanvas(
+        cells,
+        '#000000',
+        blurPx,
+        cellSize,
+        minX,
+        minY,
+        (maxX - minX + 1) * cellSize,
+        (maxY - minY + 1) * cellSize,
+      )
+    : null;
+  if (!cloud || !dim) return null;
+  const entry: FogCloudCacheEntry = {
+    key,
+    x: minX * cellSize,
+    y: minY * cellSize,
+    cloud,
+    dim,
+  };
+  fogCloudCaches.set(room, entry);
+  return entry;
+};
+
+// The fog cloud of a fogged room: a translucent fill over every discovered
+// cell of the room, drawn as one whole-room shape so the cloud reads as a
+// single body. The whole cloud slowly breathes (its alpha undulates with a
+// per-room phase) and its edges blur into the room's surroundings —
+// `softness` 0 keeps hard cell edges. Drawn above pillar shafts and actors
+// but before the ambient darkness veil, so unlit fog darkens with the room.
+export const renderRoomFog = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+  timeMs: number,
+  viewport?: LightViewport,
+): void => {
+  const fog = state.dungeon.layout.roomFog;
+  if (!fog) return;
+  groupFogRooms(state, debugMode, viewport).forEach((cells, room) => {
+    const options = cells[0].options;
+    const rate = options.rate ?? DEFAULT_FOG_RATE;
+    const t = (timeMs / 1000) * rate;
+    const alpha =
+      (options.opacity ?? DEFAULT_FOG_OPACITY) *
+      (0.78 +
+        0.22 * Math.sin(2 * Math.PI * (t + cellHash(room.charCodeAt(0), 0))));
+
+    // Fast path: blit the cached blurred cloud with the breathing alpha.
+    const cache = fogCloudFor(state, room, options, cellSize, debugMode);
+    if (cache) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(cache.cloud, cache.x, cache.y);
+      ctx.restore();
+      return;
+    }
+
+    // Direct path (no offscreen canvases): the blurred fill itself.
+    const blurPx = fogEdgeBlurPx(options, cellSize);
+    ctx.save();
+    if (blurPx > 0) {
+      // Same graceful degradation as the light glow: browsers without
+      // canvas filter support ignore the assignment, leaving hard edges.
+      ctx.filter = `blur(${blurPx}px)`;
+    }
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = options.color ?? DEFAULT_FOG_COLOR;
+    traceRoomPath(ctx, cellSize, cells);
+    ctx.fill();
+    ctx.restore();
+  });
+};
+
+// Fog absorbs light: every fogged room with a density erases that
+// fraction of the light mask inside the room, so glows shining into or
+// standing in the fog dim, and the ambient darkness veil — which is
+// punched by the same mask — closes in over the room. Rooms that block
+// light entirely are handled by the ray cast (their occlusion map cells
+// read as fog of war) and are skipped here. The erase uses the same
+// soft whole-room shape and edge blur as the visible cloud, so the dimmed
+// glow matches the fog's boundary.
+export const renderFogLightDim = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+  viewport?: LightViewport,
+): void => {
+  const fog = state.dungeon.layout.roomFog;
+  if (!fog) return;
+  const rooms = groupFogRooms(state, debugMode, viewport);
+  rooms.forEach((cells, room) => {
+    const options = cells[0].options;
+    const density = options.density ?? DEFAULT_FOG_DENSITY;
+    if (density <= 0 || options.blocksLight) {
+      return;
+    }
+
+    // Fast path: erase through the cached blurred dim mask.
+    const cache = fogCloudFor(state, room, options, cellSize, debugMode);
+    if (cache) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.globalAlpha = density;
+      ctx.drawImage(cache.dim, cache.x, cache.y);
+      ctx.restore();
+      return;
+    }
+
+    // Direct path (no offscreen canvases).
+    const blurPx = fogEdgeBlurPx(options, cellSize);
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    if (blurPx > 0) {
+      ctx.filter = `blur(${blurPx}px)`;
+    }
+    ctx.globalAlpha = density;
+    traceRoomPath(ctx, cellSize, cells);
+    ctx.fill();
+    ctx.restore();
+  });
 };
 
 // A pillar renders in two passes. The base tile is an ordinary floor

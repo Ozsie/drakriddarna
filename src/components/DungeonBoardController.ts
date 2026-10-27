@@ -24,23 +24,32 @@ import { renderHeroes, renderHeroOverlays } from '../hero/HeroRendering';
 import { renderMonsters } from '../monsters/MonsterRendering';
 import {
   background,
+  dungeonViewBackdrop,
   renderDoors,
+  renderFogLightDim,
   renderGrid,
   renderInteractables,
   renderPillars,
   renderPillarTops,
   renderPortal,
+  renderRoomFog,
   renderSecrets,
+  renderTerrain,
+  renderTerrainAnimation,
   renderWalls,
+  hasAnimatedTerrainEffects,
+  TERRAIN_ANIMATION_STEP_MS,
 } from '../dungeon/DungeonRendering';
 import {
   activeLights,
+  clearLightSpriteCache,
   renderAmbientDarkness,
   renderAnimatedLights,
   renderLights,
   renderStaticLights,
+  setLightBlurDisabled,
   staticLightCacheKey,
-  hasAnimatedLights,
+  animatedLightsSignature,
 } from '../dungeon/LightRendering';
 import type { LightViewport } from '../dungeon/LightRendering';
 import { renderItems } from '../items/ItemRendering';
@@ -58,6 +67,7 @@ import {
   dismissDungeonIntro,
   renderBetweenDungeons,
   getBetweenDungeonsHit,
+  renderDebugPrintout,
   emojiCursor,
 } from '../ui/UIRendering';
 import {
@@ -72,8 +82,11 @@ import {
   renderBloodSplatters,
   renderProjectiles,
   renderFlameEffects,
+  activeShakes,
+  shakeJitter,
 } from '../combat';
 import { clearTileTextureCache } from '../dungeon/TileTextureCache';
+import { clearFogCloudCaches } from '../dungeon/DungeonRendering';
 import { hasActiveActorAnimations } from '../core';
 import {
   createTouchPanState,
@@ -114,7 +127,41 @@ export interface DungeonBoardProps {
   onExternalStateChange: (next: GameState) => void;
 }
 
+// Rolling frames-per-second trackers for the continuously repainted
+// layers (dynamic actors/lights, overlay effects). Every layer render
+// counts as a frame, whatever triggered it; the snapshot is the frame
+// count in the trailing second, refreshed at most once a second. While
+// nothing animates the layer stops repainting, so the last shown value
+// freezes along with the canvas itself.
+interface FpsTracker {
+  frames: number[];
+  fps: number;
+  lastSnapshot: number;
+}
+
+const createFpsTracker = (): FpsTracker => ({
+  frames: [],
+  fps: 0,
+  lastSnapshot: 0,
+});
+
+const trackFps = (tracker: FpsTracker, now: number): void => {
+  tracker.frames.push(now);
+  const cutoff = now - 1000;
+  while (tracker.frames.length > 0 && tracker.frames[0] < cutoff) {
+    tracker.frames.shift();
+  }
+  if (now - tracker.lastSnapshot >= 1000) {
+    tracker.fps = tracker.frames.length;
+    tracker.lastSnapshot = now;
+  }
+};
+
 export class DungeonBoardController {
+  // Ambient-only dynamic frames (light effects, terrain, fog) render at
+  // most this often; actor-driven frames run at the display's rate.
+  static readonly AMBIENT_FRAME_MIN_MS = 1000 / 30;
+
   // --- props + derived -----------------------------------------------------
   private props: DungeonBoardProps = {
     state: undefined,
@@ -168,10 +215,16 @@ export class DungeonBoardController {
   private lastStaticLightKey = '';
   private lastStaticSignature = '';
   private lastDynamicSignature = '';
+  private lastAmbientSignature = '';
   private lastOverlaySignature = '';
   private lastUiSignature = '';
   private overlayAnimationId: number | null = null;
   private dynamicAnimationId: number | null = null;
+  private shakeAnimationId: number | null = null;
+  private panRenderAnimationId: number | null = null;
+  private dynamicFpsTracker = createFpsTracker();
+  private overlayFpsTracker = createFpsTracker();
+  private lastDynamicFrameTs = 0;
   private lastDungeonKey = '';
   private lastTileset = '';
   private lastLocale = '';
@@ -188,6 +241,11 @@ export class DungeonBoardController {
   private dragStartPanY = 0;
   private hasMovedDuringDrag = false;
   private touchPanState = createTouchPanState();
+  // Reduced render quality while a pan drag is active: canvases at CSS
+  // pixel ratio (1) instead of the device pixel ratio, light glow without
+  // its softness blur. Cuts the per-frame fill cost roughly 4x on retina
+  // phones; the first frame after the drag ends restores full quality.
+  private lowQualityPan = false;
 
   // --- hover / UI state -----------------------------------------------------
   // The cursor is applied straight onto the ui canvas: the Svelte
@@ -278,12 +336,13 @@ export class DungeonBoardController {
       this.cellSize = nextCellSize;
       this.lastCellSize = nextCellSize;
       clearTileTextureCache();
-      const ratio = (browser && window.devicePixelRatio) || 1;
+      const ratio = this.canvasRatio;
       this.initCanvas(
         this.staticCanvas,
         this.containerWidth,
         this.containerHeight,
         ratio,
+        { alpha: false },
       );
       this.initCanvas(
         this.actorCanvas,
@@ -361,8 +420,10 @@ export class DungeonBoardController {
     ) {
       this.lastContainerWidth = width;
       this.lastContainerHeight = height;
-      const ratio = (browser && window.devicePixelRatio) || 1;
-      this.initCanvas(this.staticCanvas, width, height, ratio);
+      const ratio = this.canvasRatio;
+      this.initCanvas(this.staticCanvas, width, height, ratio, {
+        alpha: false,
+      });
       this.initCanvas(this.actorCanvas, width, height, ratio);
       this.initCanvas(this.lightCanvas, width, height, ratio);
       this.initCanvas(this.staticLightCanvas, width, height, ratio);
@@ -418,13 +479,14 @@ export class DungeonBoardController {
       window.addEventListener('keydown', this.onWindowKeyDown);
     }
 
-    const ratio = (browser && window.devicePixelRatio) || 1;
+    const ratio = this.canvasRatio;
     if (this.containerWidth && this.containerHeight) {
       this.initCanvas(
         this.staticCanvas,
         this.containerWidth,
         this.containerHeight,
         ratio,
+        { alpha: false },
       );
       this.initCanvas(
         this.actorCanvas,
@@ -505,14 +567,113 @@ export class DungeonBoardController {
       cancelAnimationFrame(this.dynamicAnimationId);
       this.dynamicAnimationId = null;
     }
+    if (this.shakeAnimationId) {
+      cancelAnimationFrame(this.shakeAnimationId);
+      this.shakeAnimationId = null;
+    }
+    if (this.panRenderAnimationId !== null) {
+      cancelAnimationFrame(this.panRenderAnimationId);
+      this.panRenderAnimationId = null;
+    }
+    clearFogCloudCaches();
+    clearLightSpriteCache();
+    setLightBlurDisabled(false);
   }
 
   private isReady = (img: HTMLImageElement | null): boolean =>
     !!img && img.complete && img.naturalWidth > 0;
 
+  // The device pixel ratio the canvases are sized at — except while a pan
+  // drag is active, when everything renders at CSS pixel ratio instead.
+  private get canvasRatio(): number {
+    return (browser && !this.lowQualityPan && window.devicePixelRatio) || 1;
+  }
+
+  // Re-sizes every canvas to the current ratio. Resizing clears the
+  // canvases, so the static light layer's cache key is invalidated too —
+  // it is the one cached layer with no force path, redrawn only when its
+  // key changes.
+  private reinitCanvases = () => {
+    if (!this.containerWidth || !this.containerHeight) return;
+    const ratio = this.canvasRatio;
+    const width = this.containerWidth;
+    const height = this.containerHeight;
+    for (const canvas of [
+      this.staticCanvas,
+      this.actorCanvas,
+      this.lightCanvas,
+      this.staticLightCanvas,
+      this.darknessCanvas,
+      this.overlayCanvas,
+      this.uiCanvas,
+    ]) {
+      // Only the static canvas is opaque: it fills a solid backdrop, so
+      // the browser can skip blending it into the page. Every other
+      // layer composites over the ones below and needs its alpha.
+      this.initCanvas(
+        canvas,
+        width,
+        height,
+        ratio,
+        canvas === this.staticCanvas ? { alpha: false } : undefined,
+      );
+    }
+    this.lastStaticLightKey = '';
+  };
+
+  // Switches to reduced quality on the first actual pan movement of a
+  // drag (not on press: a click-and-hold without movement stays sharp).
+  // The resize clears every canvas, so one full low-quality redraw is
+  // forced right away; the pan frame scheduled right after renders into
+  // the low-quality surfaces.
+  private enterLowQualityPan = () => {
+    if (this.lowQualityPan) return;
+    this.lowQualityPan = true;
+    setLightBlurDisabled(true);
+    this.reinitCanvases();
+    this.renderCanvas(true);
+  };
+
+  // Restores full quality when the drag ends. A pan frame may still be
+  // pending; it is cancelled so the full-quality redraw below is the one
+  // that lands.
+  private exitLowQualityPan = () => {
+    if (!this.lowQualityPan) return;
+    this.lowQualityPan = false;
+    setLightBlurDisabled(false);
+    if (this.panRenderAnimationId !== null) {
+      cancelAnimationFrame(this.panRenderAnimationId);
+      this.panRenderAnimationId = null;
+    }
+    this.reinitCanvases();
+    this.renderCanvas(true);
+  };
+
+  // Pan moves can arrive far faster than the display refreshes, so the
+  // handlers only update panX/panY and coalesce the repaint into a single
+  // requestAnimationFrame; the browser shows one frame either way.
+  private schedulePanRender = () => {
+    if (this.panRenderAnimationId !== null) return;
+    this.enterLowQualityPan();
+    this.panRenderAnimationId = requestAnimationFrame(() => {
+      this.panRenderAnimationId = null;
+      this.updateAllCanvasTransforms();
+      this.renderStaticLayer(true);
+      this.renderDynamicLayer(true);
+      this.renderOverlayLayer(true);
+      // Everything on the UI canvas is anchored to the screen — top bar,
+      // hero cards, log, modals — except the radial menu, which is drawn
+      // in world coordinates and must follow the pan. So the HUD layer is
+      // repainted only when its signature changed; an open radial menu is
+      // the one case that forces a repositioning repaint.
+      this.renderUiLayer(!!get(radialMenuStore));
+      this.updateShake();
+    });
+  };
+
   private updateAllCanvasTransforms = () => {
     if (!this.containerWidth || !this.containerHeight) return;
-    const ratio = (browser && window.devicePixelRatio) || 1;
+    const ratio = this.canvasRatio;
     const centerOffsetX = this.startPosition
       ? (this.startPosition.x + 0.5) * this.cellSize
       : 0;
@@ -561,9 +722,15 @@ export class DungeonBoardController {
 
     this.staticRenderCount++;
     this.totalReRenderCount++;
+    // The static context is opaque (alpha: false), so instead of clearing,
+    // the whole canvas is painted with the dungeon view's backdrop colour:
+    // opaque paints let the browser skip blending this layer, and the area
+    // outside the dungeon world stays the colour the CSS background used
+    // to show through the transparent canvas.
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, this.staticCanvas.width, this.staticCanvas.height);
+    ctx.fillStyle = dungeonViewBackdrop;
+    ctx.fillRect(0, 0, this.staticCanvas.width, this.staticCanvas.height);
     ctx.restore();
 
     const gridCols = this.activeState.dungeon?.layout?.grid?.[0]?.length ?? 40;
@@ -573,6 +740,12 @@ export class DungeonBoardController {
     renderGrid(
       ctx,
       this.ground,
+      this.cellSize,
+      this.activeState,
+      this.debugMode ?? false,
+    );
+    renderTerrain(
+      ctx,
       this.cellSize,
       this.activeState,
       this.debugMode ?? false,
@@ -621,6 +794,8 @@ export class DungeonBoardController {
       return;
     if (!this.isReady(this.actors)) return;
     const currentTime = Date.now();
+    trackFps(this.dynamicFpsTracker, currentTime);
+    this.lastDynamicFrameTs = performance.now();
     const debugMode = this.debugMode ?? false;
     // The visible part of the world, in cells: lights whose glow cannot
     // reach it are culled from rendering and animation alike.
@@ -637,18 +812,47 @@ export class DungeonBoardController {
       height: this.containerHeight / this.cellSize,
     };
     const hasActiveAnimations = hasActiveActorAnimations();
-    // Light effects (pulse, flicker, sweep, blink, sway) need a re-render
-    // every frame while any light animates within the viewport. The
-    // active light list is computed once per frame and shared by every
-    // lighting call below.
+    // Light effects (pulse, flicker, sweep, blink, sway) animate while any
+    // light animates within the viewport. The active light list is
+    // computed once per frame and shared by every lighting call below.
     const frameLights = activeLights(this.activeState, currentTime);
-    const hasLightEffects = hasAnimatedLights(
+    // Quantized animation state of the visible lights: two renders with
+    // the same signature paint identical light output, so the dynamic
+    // layer repaints only when it changes — a flickering brazier
+    // repaints about 8 times per second instead of every frame.
+    const lightSig = animatedLightsSignature(
       this.activeState,
       debugMode,
       currentTime,
       lightViewport,
       frameLights,
     );
+    const hasLightEffects = lightSig !== '';
+    // Animated terrain overlays (water shimmer, lava pulse) and room fog
+    // change their output slowly, so their animation state is stepped by
+    // time instead of quantized per effect.
+    const hasTerrainEffects = hasAnimatedTerrainEffects(
+      this.activeState,
+      debugMode,
+      lightViewport,
+    );
+    // The painted frame also depends on where the view sits and which
+    // surface it was painted on: panning moves every world pixel (the
+    // canvas transform only affects new draws, not existing ones), and
+    // a canvas resize clears them. Folding both into the ambient
+    // signature keeps a forced repaint after a pan or a canvas
+    // reinitialization from being mistaken for a redundant one.
+    const surfaceSig = `${String(this.panX)},${String(this.panY)},${String(
+      this.actorCanvas?.width ?? 0,
+    )},${String(this.actorCanvas?.height ?? 0)}`;
+    const ambientSig =
+      hasLightEffects || hasTerrainEffects
+        ? `${lightSig}|${
+            hasTerrainEffects
+              ? Math.floor(currentTime / TERRAIN_ANIMATION_STEP_MS)
+              : ''
+          }|${surfaceSig}`
+        : '';
     const sig = getDynamicSignature(
       this.activeState,
       this.debugMode ?? false,
@@ -658,9 +862,28 @@ export class DungeonBoardController {
       !force &&
       !hasActiveAnimations &&
       !hasLightEffects &&
+      !hasTerrainEffects &&
       sig === this.lastDynamicSignature
     )
       return;
+    // Ambient repaint gate: when only ambient effects animate and the
+    // game state is unchanged, the quantized signature tells whether the
+    // painted frame is still current. Skipping the repaint keeps the
+    // existing frame; the loop keeps ticking while anything animates.
+    if (
+      force &&
+      !hasActiveAnimations &&
+      (hasLightEffects || hasTerrainEffects) &&
+      ambientSig === this.lastAmbientSignature &&
+      sig === this.lastDynamicSignature
+    ) {
+      if (this.dynamicAnimationId) {
+        cancelAnimationFrame(this.dynamicAnimationId);
+      }
+      this.scheduleDynamicFrame(false);
+      return;
+    }
+    this.lastAmbientSignature = ambientSig;
     this.lastDynamicSignature = sig;
 
     const ctx = this.actorCanvas.getContext('2d');
@@ -743,6 +966,16 @@ export class DungeonBoardController {
           frameLights,
         );
       }
+      // Fog absorbs part of the light mask inside fogged rooms, so the
+      // composited glow dims and the darkness veil closes in there. The
+      // light ctx is on the world transform here.
+      renderFogLightDim(
+        lightCtx,
+        this.cellSize,
+        this.activeState,
+        debugMode,
+        lightViewport,
+      );
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(this.lightCanvas, 0, 0);
@@ -757,7 +990,25 @@ export class DungeonBoardController {
         lightViewport,
         frameLights,
       );
+      renderFogLightDim(
+        ctx,
+        this.cellSize,
+        this.activeState,
+        debugMode,
+        lightViewport,
+      );
     }
+
+    // Animated terrain material (water shimmer, lava pulse) sits above the
+    // lit scene but below the actors, so figures wading stand on top of it.
+    renderTerrainAnimation(
+      ctx,
+      this.cellSize,
+      this.activeState,
+      debugMode,
+      currentTime,
+      lightViewport,
+    );
 
     const hasActiveMonsters = renderMonsters(
       ctx,
@@ -789,6 +1040,17 @@ export class DungeonBoardController {
       );
     }
 
+    // Room fog drifts above the actors and pillar shafts, but below the
+    // darkness veil so unlit fog darkens with the room.
+    renderRoomFog(
+      ctx,
+      this.cellSize,
+      this.activeState,
+      debugMode,
+      currentTime,
+      lightViewport,
+    );
+
     if (this.darknessCanvas && this.lightCanvas) {
       renderAmbientDarkness(
         ctx,
@@ -812,12 +1074,38 @@ export class DungeonBoardController {
       hasActiveMonsters ||
       hasActiveHeroes ||
       hasLightEffects ||
+      hasTerrainEffects ||
       hasActiveActorAnimations(currentTime)
     ) {
-      this.dynamicAnimationId = requestAnimationFrame(() => {
-        this.renderDynamicLayer(true);
-      });
+      // Actor movement keeps the full frame rate; ambient effects
+      // (flickering torches, water, fog) render at half rate, halving
+      // the continuous CPU cost of an animated dungeon.
+      const fullRate =
+        hasActiveMonsters ||
+        hasActiveHeroes ||
+        hasActiveActorAnimations(currentTime);
+      this.scheduleDynamicFrame(fullRate);
     }
+  };
+
+  // Schedules the next dynamic-layer frame. Ambient-only frames are
+  // throttled to AMBIENT_FRAME_MIN_MS: the rAF keeps ticking at full rate
+  // but only renders when enough time has passed, so light effects stay
+  // smooth enough while the heavy per-frame work (ray casting, blur
+  // blits, full-canvas composites) runs at half frequency.
+  private scheduleDynamicFrame = (fullRate: boolean): void => {
+    this.dynamicAnimationId = requestAnimationFrame(() => {
+      const now = performance.now();
+      if (
+        !fullRate &&
+        now - this.lastDynamicFrameTs <
+          DungeonBoardController.AMBIENT_FRAME_MIN_MS
+      ) {
+        this.scheduleDynamicFrame(false);
+        return;
+      }
+      this.renderDynamicLayer(true);
+    });
   };
 
   private renderOverlayLayer = (force = false) => {
@@ -858,6 +1146,7 @@ export class DungeonBoardController {
     ctx.restore();
 
     const now = Date.now();
+    trackFps(this.overlayFpsTracker, now);
     const hasActiveProjectiles = renderProjectiles(
       ctx,
       this.cellSize,
@@ -889,22 +1178,19 @@ export class DungeonBoardController {
       hasActiveFlames;
 
     if (this.debugMode) {
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      const ratio = (browser && window.devicePixelRatio) || 1;
-      ctx.scale(ratio, ratio);
-      ctx.fillStyle = 'white';
-      ctx.font = '10px Arial';
-      ctx.fillText(
-        `Re-renders: ${String(
-          String(this.totalReRenderCount),
-        )} (Static: ${String(
-          String(this.staticRenderCount),
-        )}, Dynamic: ${String(String(this.dynamicRenderCount))})`,
-        10,
-        14,
+      renderDebugPrintout(
+        ctx,
+        this.containerWidth,
+        this.containerHeight,
+        this.activeState,
+        {
+          totalReRenders: this.totalReRenderCount,
+          staticReRenders: this.staticRenderCount,
+          dynamicReRenders: this.dynamicRenderCount,
+          dynamicFps: this.dynamicFpsTracker.fps,
+          overlayFps: this.overlayFpsTracker.fps,
+        },
       );
-      ctx.restore();
     }
 
     if (this.overlayAnimationId) {
@@ -1063,7 +1349,7 @@ export class DungeonBoardController {
       this.containerHeight > 0 &&
       this.activeState
     ) {
-      const ratio = (browser && window.devicePixelRatio) || 1;
+      const ratio = this.canvasRatio;
       ctx.save();
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       renderTopBar(ctx, this.containerWidth, this.activeState, {
@@ -1160,6 +1446,70 @@ export class DungeonBoardController {
     this.renderDynamicLayer(force);
     this.renderOverlayLayer(force);
     this.renderUiLayer(force);
+    this.updateShake();
+  };
+
+  // Screen shakes: a per-frame CSS translate on the world canvases
+  // (static, actors, overlays), never the UI canvas, so the cached static
+  // layer is never redrawn for a shake. The loop self-schedules while a
+  // shake is active and prunes expired effects when it ends — the same
+  // pattern the overlay layer uses for blood and flames.
+  private updateShake = () => {
+    if (!browser || !this.activeState) return;
+    const now = Date.now();
+    const shakes = this.activeState.shakeEffects ?? [];
+    const active = activeShakes(shakes, now);
+    const worldCanvases = [
+      this.staticCanvas,
+      this.actorCanvas,
+      this.overlayCanvas,
+    ];
+
+    if (active.length > 0) {
+      // The view centre in cells, matching the light viewport maths.
+      const centerOffsetX = this.startPosition
+        ? (this.startPosition.x + 0.5) * this.cellSize
+        : 0;
+      const centerOffsetY = this.startPosition
+        ? (this.startPosition.y + 0.5) * this.cellSize
+        : 0;
+      const viewCenter = {
+        x:
+          (centerOffsetX - this.panX - this.containerWidth / 2) /
+            this.cellSize +
+          this.containerWidth / (2 * this.cellSize),
+        y:
+          (centerOffsetY - this.panY - this.containerHeight / 2) /
+            this.cellSize +
+          this.containerHeight / (2 * this.cellSize),
+      };
+      const jitter = shakeJitter(active, viewCenter, now);
+      const transform = `translate(${jitter.x.toFixed(2)}px, ${jitter.y.toFixed(
+        2,
+      )}px)`;
+      worldCanvases.forEach(
+        (canvas) => canvas && (canvas.style.transform = transform),
+      );
+      if (this.shakeAnimationId) {
+        cancelAnimationFrame(this.shakeAnimationId);
+      }
+      this.shakeAnimationId = requestAnimationFrame(() => this.updateShake());
+    } else {
+      if (this.shakeAnimationId) {
+        this.shakeAnimationId = null;
+        worldCanvases.forEach(
+          (canvas) => canvas && (canvas.style.transform = ''),
+        );
+      }
+      // Prune expired shakes from the state, mirroring the overlay
+      // layer's cleanup of blood and flame effects.
+      if (shakes.length > 0) {
+        this.activeState.shakeEffects = [];
+        if (!this.externalState) {
+          gameStateStore.set(this.activeState);
+        }
+      }
+    }
   };
 
   private initCanvas = (
@@ -1167,13 +1517,14 @@ export class DungeonBoardController {
     width: number,
     height: number,
     ratio: number,
+    options?: CanvasRenderingContext2DSettings,
   ) => {
     if (!canvas || width <= 0 || height <= 0) return;
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
     canvas.style.width = `${String(String(String(width)))}px`;
     canvas.style.height = `${String(String(String(height)))}px`;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', options);
     if (ctx) {
       const centerOffsetX = this.startPosition
         ? (this.startPosition.x + 0.5) * this.cellSize
@@ -1201,8 +1552,7 @@ export class DungeonBoardController {
       }
       this.panX = this.dragStartPanX + dx;
       this.panY = this.dragStartPanY + dy;
-      this.updateAllCanvasTransforms();
-      this.renderCanvas(true);
+      this.schedulePanRender();
     }
   };
 
@@ -1214,6 +1564,7 @@ export class DungeonBoardController {
     }
     if (this.isDragging) {
       this.isDragging = false;
+      this.exitLowQualityPan();
       if (this.hasMovedDuringDrag) {
         setTimeout(() => {
           this.hasMovedDuringDrag = false;
@@ -1244,8 +1595,7 @@ export class DungeonBoardController {
       if (result.moved) {
         this.hasMovedDuringDrag = true;
       }
-      this.updateAllCanvasTransforms();
-      this.renderCanvas(true);
+      this.schedulePanRender();
       if (event.cancelable) {
         event.preventDefault();
       }
@@ -1258,6 +1608,7 @@ export class DungeonBoardController {
       y: this.panY,
     });
     if (result.shouldEnd) {
+      this.exitLowQualityPan();
       if (this.hasMovedDuringDrag) {
         setTimeout(() => {
           this.hasMovedDuringDrag = false;
@@ -1268,6 +1619,7 @@ export class DungeonBoardController {
 
   public onTouchCancel = () => {
     this.touchPanState.isDragging = false;
+    this.exitLowQualityPan();
     if (this.hasMovedDuringDrag) {
       setTimeout(() => {
         this.hasMovedDuringDrag = false;

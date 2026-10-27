@@ -26,6 +26,11 @@
     "killed": "{{actor}} dödade {{target}}.",
     "paralyzed": "{{target}} blir förlamad av {{weapon}} och står över resten av rundan."
   },
+  "terrain": {
+    "enterDamage": "{{actor}} tar {{damage}} skada av {{terrain}}.",
+    "turnEndDamage": "{{actor}} tar {{damage}} skada av att stå i {{terrain}}.",
+    "killed": "{{actor}} omkom i {{terrain}}."
+  },
   "events": {
     "sunStone": "{{monster}} dödades av Solstenen.",
     "foreSight": "Du känner att objektet är nära ({{x}},{{y}}).",
@@ -67,6 +72,8 @@
     "interact": "{{hero}} interagerade med {{interactable}}.",
     "heroJoined": "{{newHero}} anslöt sig till sällskapet!",
     "trapsRemoved": "Alla fällor i rum {{room}} desarmerades.",
+    "fogFilled": "{{hero}} släppte ut ett moln av dimma som fyller rum {{room}}.",
+    "lavaErupted": "Lava sprutar ur golvet där {{hero}} labbade och ger {{damage}} skada åt alla som står i den.",
     "turnFailed": "Misslyckades med att gå vidare till nästa tur."
   },
   "item": {

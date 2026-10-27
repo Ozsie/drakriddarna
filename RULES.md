@@ -25,6 +25,8 @@ Welcome to **Drakriddarna** (Dragonfire), a tactical turn-based dungeon-crawling
    - [Doors & Portals](#doors--portals)
    - [Searching for Secrets & Traps](#searching-for-secrets--traps)
    - [Pitfalls & Hidden Hazards](#pitfalls--hidden-hazards)
+   - [Terrain Cells](#terrain-cells)
+   - [Room Fog](#room-fog)
    - [Interactables & Dungeon Notes](#interactables--dungeon-notes)
 5. [Equipment & Items](#equipment--items)
    - [Weapons](#weapons)
@@ -224,6 +226,22 @@ Using the **Search** action (`F`) scans the current room/corridor for concealed 
 ### Pitfalls & Hidden Hazards
 
 - **Trap Doors / Pitfalls**: Hidden trap doors lie flush with the floor. If a hero steps onto an undiscovered trap door, they trigger a pitfall, take trap damage, lose all remaining actions and movement, and become **Incapacitated** for the round. Searching beforehand reveals the pit safely.
+
+### Terrain Cells
+
+Some dungeons have floor cells covered in a material, most commonly water or lava. Each dungeon decides which effects a terrain has; what a specific terrain does is always visible in the game log the first time a hero is affected.
+
+- **Damage on Entering**: Stepping onto the cell deals the terrain's damage directly — armour and shields do not protect against it.
+- **Damage on Turn End**: Ending a turn while standing on the cell deals the terrain's damage, on heroes and monsters alike.
+- **Movement Cost**: Entering the cell may cost more than one point of movement (e.g. wading through water costs `2`).
+- **Light**: Lava and other glowing materials emit light of their own, working like any other light source.
+
+### Room Fog
+
+Some rooms and corridors are filled with fog, visible as a drifting cloud over the whole room with soft edges. Like terrain, what a fog does is decided per dungeon and always shows in the game log the first time a hero is affected.
+
+- **Damage on Entering / Turn End**: Fog can be dangerous (e.g. poison gas), damaging heroes and monsters that enter the room or end their turn in it. Harmless fog is purely visual.
+- **Light**: Fog absorbs part of the light shining into it, so lit areas inside a fogged room glow dimmer and darker. Dense fog can even block light entirely, leaving the room in darkness. Figures inside the fog remain visible; fog does not hide them or block movement.
 
 ### Interactables & Dungeon Notes
 
