@@ -535,7 +535,16 @@ export class DungeonBoardController {
     this.panRenderAnimationId = requestAnimationFrame(() => {
       this.panRenderAnimationId = null;
       this.updateAllCanvasTransforms();
-      this.renderCanvas(true);
+      this.renderStaticLayer(true);
+      this.renderDynamicLayer(true);
+      this.renderOverlayLayer(true);
+      // Everything on the UI canvas is anchored to the screen — top bar,
+      // hero cards, log, modals — except the radial menu, which is drawn
+      // in world coordinates and must follow the pan. So the HUD layer is
+      // repainted only when its signature changed; an open radial menu is
+      // the one case that forces a repositioning repaint.
+      this.renderUiLayer(!!get(radialMenuStore));
+      this.updateShake();
     });
   };
 

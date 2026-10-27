@@ -109,7 +109,7 @@
 ### Pan
 
 - [X] Coalesce pan renders into requestAnimationFrame. The handlers should only store the new pan and schedule one render. Touch events arrive at 60 to 120 Hz, mice often faster, and the browser shows one frame, so extra repaints are wasted. This is a few lines, and I’d do it first.
-- [ ] Stop repainting layers that don’t move. The UI canvas is redrawn on every pan. Anything screen-anchored (HUD panels, log, top bar) shouldn’t need that, and only world-anchored elements like the radial menu need repositioning. I only read the start of renderUiLayer, so check what in there is anchored to the world.
+- [X] Stop repainting layers that don’t move. The UI canvas is redrawn on every pan. Anything screen-anchored (HUD panels, log, top bar) shouldn’t need that, and only world-anchored elements like the radial menu need repositioning. I only read the start of renderUiLayer, so check what in there is anchored to the world.
 - [ ] Keep lights out of the pan path. Right now the static light layer’s cache key includes the viewport, so each pan event re-blurs every static light. Once panning is a transform (item 2), lights simply move with the world. Until then, the sprite baking from my earlier list makes the redraw cheap.
 - [ ] Cut the static layer’s per-repaint cost if it still repaints. Draw only the visible cell range, precompute the grid rows once instead of calling toArray each time, and batch the per-cell grid lines into one path per style. Culling matters most on big dungeons.
 - [ ] Reduce quality only while dragging, as a stopgap. Draw at ratio 1 instead of devicePixelRatio, and skip ctx.filter blur on lights, then redraw at full quality shortly after the drag ends. That cuts fill cost about 4x on retina phones.
