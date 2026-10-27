@@ -7,6 +7,7 @@ import {
 import {
   openBetweenDungeons,
   openCampaignComplete,
+  openPartyWipe,
   setBetweenDungeonsStep,
 } from '../dungeon/BetweenDungeonsLogic';
 import { init } from '../game';
@@ -219,6 +220,148 @@ describe('BetweenDungeonsRendering', () => {
     const ctx = createMockCtx();
     expect(() => {
       renderBetweenDungeons(ctx, 800, 600, state);
+    }).not.toThrow();
+  });
+
+  it('computes the party-wipe layout with three choice buttons', () => {
+    const state = init();
+    openPartyWipe(state);
+
+    const layout = getBetweenDungeonsLayout(800, 600, state);
+    expect(layout.hasContent).toBe(true);
+    expect(layout.step).toBe('partyWipe');
+    expect(layout.wipeButtons?.length).toBe(3);
+    expect(layout.wipeButtons?.map((button) => button.action)).toEqual([
+      'restartCampaign',
+      'restartDungeon',
+      'loadSave',
+    ]);
+    expect(layout.wipeButtons?.[0].descriptionLines.length).toBeGreaterThan(0);
+    // The generic action button is replaced by the wipe choices
+    expect(layout.actionButtonBounds.width).toBe(0);
+    expect(layout.actionButtonBounds.height).toBe(0);
+    expect(layout.heroes).toEqual([]);
+    expect(layout.secondaryButtonBounds).toBeUndefined();
+    expect(layout.campaignComplete).toBeNull();
+  });
+
+  it('ranks the current run into the party-wipe high score list', () => {
+    const state = init();
+    state.score = 700;
+    state.betweenDungeons = {
+      completedDungeonName: state.dungeon.name,
+      step: 'partyWipe',
+      levelUps: [],
+      campaignScore: 700,
+      wipeHighScores: [
+        { score: 900, date: '2024-01-01T00:00:00.000Z' },
+        { score: 800, date: '2024-01-02T00:00:00.000Z' },
+        { score: 600, date: '2024-01-03T00:00:00.000Z' },
+      ],
+      selectedTradeItem: null,
+    };
+
+    const layout = getBetweenDungeonsLayout(800, 600, state);
+    const hs = layout.wipeHighScores;
+    expect(hs).toBeDefined();
+    if (!hs) return;
+    expect(hs.rows.map((row) => row.rankText)).toEqual([
+      '1.',
+      '2.',
+      '3.',
+      '4.',
+    ]);
+    expect(hs.rows.map((row) => row.scoreText)).toEqual([
+      '900',
+      '800',
+      '700',
+      '600',
+    ]);
+    expect(hs.rows.map((row) => row.isCurrent)).toEqual([
+      false,
+      false,
+      true,
+      false,
+    ]);
+  });
+
+  it('appends the current run below the top 10 with its real rank', () => {
+    const state = init();
+    const stored = Array.from({ length: 10 }, (_, i) => ({
+      score: 1000 - i * 10,
+      date: '2024-01-01T00:00:00.000Z',
+    }));
+    state.betweenDungeons = {
+      completedDungeonName: state.dungeon.name,
+      step: 'partyWipe',
+      levelUps: [],
+      campaignScore: 5,
+      wipeHighScores: stored,
+      selectedTradeItem: null,
+    };
+
+    const layout = getBetweenDungeonsLayout(800, 600, state);
+    const hs = layout.wipeHighScores;
+    expect(hs).toBeDefined();
+    if (!hs) return;
+    expect(hs.rows).toHaveLength(11);
+    expect(hs.rows[10].rankText).toBe('11.');
+    expect(hs.rows[10].scoreText).toBe('5');
+    expect(hs.rows[10].isCurrent).toBe(true);
+    expect(hs.rows.slice(0, 10).every((row) => !row.isCurrent)).toBe(true);
+  });
+
+  it('shows the current run alone when no high scores are stored', () => {
+    const state = init();
+    state.betweenDungeons = {
+      completedDungeonName: state.dungeon.name,
+      step: 'partyWipe',
+      levelUps: [],
+      campaignScore: 120,
+      wipeHighScores: [],
+      selectedTradeItem: null,
+    };
+
+    const layout = getBetweenDungeonsLayout(800, 600, state);
+    const hs = layout.wipeHighScores;
+    expect(hs).toBeDefined();
+    if (!hs) return;
+    expect(hs.rows).toHaveLength(1);
+    expect(hs.rows[0].isCurrent).toBe(true);
+    expect(hs.rows[0].rankText).toBe('1.');
+  });
+
+  it('hit-tests the party-wipe choice buttons', () => {
+    const state = init();
+    openPartyWipe(state);
+
+    const layout = getBetweenDungeonsLayout(800, 600, state);
+    const button = layout.wipeButtons?.[1];
+    expect(button).toBeDefined();
+    if (!button) return;
+    const hit = getBetweenDungeonsHit(
+      800,
+      600,
+      state,
+      button.bounds.x + 10,
+      button.bounds.y + 10,
+    );
+    expect(hit).toEqual({ type: 'wipeButton', action: 'restartDungeon' });
+
+    // A click on the backdrop still hits the overlay, never the board
+    const backdropHit = getBetweenDungeonsHit(800, 600, state, 5, 5);
+    expect(backdropHit?.type).toBe('backdrop');
+  });
+
+  it('renders the party-wipe screen without crashing', () => {
+    const state = init();
+    openPartyWipe(state);
+
+    const ctx = createMockCtx();
+    expect(() => {
+      renderBetweenDungeons(ctx, 800, 600, state, {
+        hoveredWipeAction: 'loadSave',
+      });
     }).not.toThrow();
   });
 });

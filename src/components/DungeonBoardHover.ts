@@ -7,6 +7,7 @@ import type {
   SaveLoadDialogHitResult,
   TopBarHitElement,
 } from '../ui/UIRendering';
+import type { PartyWipeAction } from '../types';
 import type { UiHit } from './DungeonBoardUiHit';
 
 // Hover tracking for the board's UI surfaces. The state is a plain object
@@ -28,6 +29,7 @@ export interface BoardHoverState {
   isBdSecondaryHovered: boolean;
   hoveredBdItem: { heroIndex: number; itemIndex: number } | null;
   hoveredBdGiveHeroIndex: number | null;
+  hoveredBdWipeAction: PartyWipeAction | null;
   isSdActionHovered: boolean;
   isSdSecondaryHovered: boolean;
 }
@@ -47,6 +49,7 @@ export const createBoardHoverState = (): BoardHoverState => ({
   isBdSecondaryHovered: false,
   hoveredBdItem: null,
   hoveredBdGiveHeroIndex: null,
+  hoveredBdWipeAction: null,
   isSdActionHovered: false,
   isSdSecondaryHovered: false,
 });
@@ -101,6 +104,7 @@ export const updateBetweenDungeonsHover = (
   const isSecondary = hit?.type === 'secondaryButton';
   const isItem = hit?.type === 'item';
   const isGive = hit?.type === 'giveItem';
+  const isWipe = hit?.type === 'wipeButton';
   if (hover.isBdActionHovered !== isAction) {
     hover.isBdActionHovered = isAction;
     changed = true;
@@ -123,8 +127,16 @@ export const updateBetweenDungeonsHover = (
     hover.hoveredBdGiveHeroIndex = giveVal;
     changed = true;
   }
+  const wipeVal = isWipe && hit?.type === 'wipeButton' ? hit.action : null;
+  if (hover.hoveredBdWipeAction !== wipeVal) {
+    hover.hoveredBdWipeAction = wipeVal;
+    changed = true;
+  }
   return {
-    cursor: isAction || isSecondary || isItem || isGive ? 'pointer' : 'default',
+    cursor:
+      isAction || isSecondary || isItem || isGive || isWipe
+        ? 'pointer'
+        : 'default',
     changed,
   };
 };

@@ -169,6 +169,20 @@
     "itemsHeader": "Items",
     "fallen": "Fell in battle"
   },
+  "partyWipe": {
+    "title": "The Party Has Fallen",
+    "subtitle": "Every hero fell in {{name}}. Choose how to continue:",
+    "highScores": "High Scores",
+    "thisRun": "(this run)",
+    "buttons": {
+      "restartCampaign": "Restart Campaign",
+      "restartCampaignDesc": "Begin a brand new campaign from the first dungeon.",
+      "restartDungeon": "Retry This Dungeon",
+      "restartDungeonDesc": "The party restarts {{name}} from its beginning, losing all experience and levels.",
+      "loadSave": "Load Saved Game",
+      "loadSaveDesc": "Continue from one of your saved games."
+    }
+  },
   "scoring": {
     "topBar": "Score",
     "scenarioScore": "Scenario score: {{score}}",

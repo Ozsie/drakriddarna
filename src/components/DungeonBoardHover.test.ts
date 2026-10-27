@@ -58,6 +58,21 @@ describe('between-dungeons hover', () => {
     expect(result.cursor).toBe('pointer');
   });
 
+  it('tracks the hovered party-wipe option and clears it again', () => {
+    const hover = createBoardHoverState();
+    const result = updateBetweenDungeonsHover(hover, {
+      type: 'wipeButton',
+      action: 'restartDungeon',
+    });
+    expect(hover.hoveredBdWipeAction).toBe('restartDungeon');
+    expect(result.cursor).toBe('pointer');
+
+    const cleared = updateBetweenDungeonsHover(hover, null);
+    expect(hover.hoveredBdWipeAction).toBeNull();
+    expect(cleared.cursor).toBe('default');
+    expect(cleared.changed).toBe(true);
+  });
+
   it('clears every flag when the pointer is over empty overlay space', () => {
     const hover = createBoardHoverState();
     updateBetweenDungeonsHover(hover, { type: 'secondaryButton' });

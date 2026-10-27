@@ -397,6 +397,21 @@ ends. Per-hero kill counts accumulate in `killMonster` the same way the
 score does. The finish button closes the overlay and returns the player
 to the main menu.
 
+The same overlay also serves as the **party-wipe screen** (`partyWipe`
+step): when every hero falls, the turn flow opens it instead of
+silently resetting, and the player picks between restarting the
+campaign from scratch (a fresh `init`), retrying the dungeon — which
+rewinds to the last autosave and zeroes the whole party's XP and
+levels, per the official defeat rules — or loading a save. The
+save/load dialog can then be open on top of the wipe overlay, so the
+UI hit cascade tests the dialog before the overlay. The wipe screen
+also shows the campaign's **high score list** (`src/saves/
+HighScoresLogic.ts`): a per-campaign top 10 persisted under its own
+`localStorage` key, recorded whenever a campaign is completed, with
+the current run's score ranked into the list at its correct position
+(highlighted as "this run"; appended with its real rank when it falls
+outside the top 10).
+
 ## State, persistence and save migration
 
 The entire game lives in one `GameState` object, held in a Svelte `writable`

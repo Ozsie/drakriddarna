@@ -6,32 +6,58 @@ import {
   type Armour,
   type Shield,
   type TradeItemSlot,
+  type PartyWipeAction,
   Colour,
 } from '../types';
 import { ItemType } from '../types';
 import { i18n, SCORE_POINTS_PER_SECRET } from '../core';
+import { MAX_HIGH_SCORES } from '../saves/HighScoresLogic';
 import { getHeroTradableItems } from '../dungeon/BetweenDungeonsLogic';
 import {
   drawRoundedRect,
   isPointInBounds,
   type CardBounds,
 } from './HeroCardRendering';
+import { wrapText } from './DiaryAndWinConditionRendering';
 
 export interface BetweenDungeonsLayout {
   hasContent: boolean;
-  step: 'levelUp' | 'trade' | 'campaignComplete';
+  step: 'levelUp' | 'trade' | 'campaignComplete' | 'partyWipe';
   backdropBounds: CardBounds;
   panelBounds: CardBounds;
   titleText: string;
   subtitleText: string;
   scoreSection?: ScoreSectionLayout | null;
   campaignComplete?: CampaignCompleteLayout | null;
+  wipeButtons?: PartyWipeButtonLayout[];
+  wipeHighScores?: PartyWipeHighScoresLayout | null;
   heroes: HeroSectionLayoutItem[];
   actionButtonBounds: CardBounds;
   actionButtonLabel: string;
   secondaryButtonBounds?: CardBounds;
   secondaryButtonLabel?: string;
   giveButtons: GiveButtonLayoutItem[];
+}
+
+export interface PartyWipeButtonLayout {
+  action: PartyWipeAction;
+  bounds: CardBounds;
+  labelText: string;
+  descriptionLines: string[];
+}
+
+export interface PartyWipeScoreRow {
+  rankText: string;
+  scoreText: string;
+  isCurrent: boolean;
+  y: number;
+}
+
+export interface PartyWipeHighScoresLayout {
+  bounds: CardBounds;
+  headerText: string;
+  currentLabelText: string;
+  rows: PartyWipeScoreRow[];
 }
 
 export interface ScoreSectionLayout {
@@ -124,6 +150,7 @@ export interface RenderBetweenDungeonsOptions {
     itemIndex?: number;
   } | null;
   hoveredGiveHeroIndex?: number | null;
+  hoveredWipeAction?: PartyWipeAction | null;
 }
 
 export type BetweenDungeonsHitResult =
@@ -131,6 +158,7 @@ export type BetweenDungeonsHitResult =
   | { type: 'secondaryButton' }
   | { type: 'item'; heroIndex: number; slot: TradeItemSlot; itemIndex: number }
   | { type: 'giveItem'; targetHeroIndex: number }
+  | { type: 'wipeButton'; action: PartyWipeAction }
   | { type: 'panel' }
   | { type: 'backdrop' };
 
@@ -259,6 +287,7 @@ export const getBetweenDungeonsLayout = (
   const bd = state.betweenDungeons;
   const isLevelUp = bd.step === 'levelUp';
   const isCampaignComplete = bd.step === 'campaignComplete';
+  const isPartyWipe = bd.step === 'partyWipe';
 
   const marginX = Math.max(12, Math.floor(viewWidth * 0.05));
   const marginY = Math.max(12, Math.floor(viewHeight * 0.05));
@@ -280,12 +309,16 @@ export const getBetweenDungeonsLayout = (
     ? i18n('content.campaignComplete.title', {
         name: i18n(bd.completedCampaignName ?? bd.completedDungeonName),
       })
+    : isPartyWipe
+    ? i18n('content.partyWipe.title')
     : isLevelUp
     ? i18n('content.betweenDungeons.titleLevelUp', { name: completedName })
     : i18n('content.betweenDungeons.titleTrade');
 
   const subtitleText = isCampaignComplete
     ? i18n('content.campaignComplete.subtitle')
+    : isPartyWipe
+    ? i18n('content.partyWipe.subtitle', { name: completedName })
     : isLevelUp
     ? i18n('content.betweenDungeons.subtitleLevelUp')
     : i18n('content.betweenDungeons.subtitleTrade', {
@@ -297,12 +330,16 @@ export const getBetweenDungeonsLayout = (
   const btnY = panelY + panelHeight - paddingY - btnHeight;
   const btnX = panelX + panelWidth - paddingX - btnWidth;
 
-  const actionButtonBounds: CardBounds = {
-    x: btnX,
-    y: btnY,
-    width: btnWidth,
-    height: btnHeight,
-  };
+  // The party-wipe screen draws its own stacked choice buttons instead of
+  // the generic action button.
+  const actionButtonBounds: CardBounds = isPartyWipe
+    ? { x: 0, y: 0, width: 0, height: 0 }
+    : {
+        x: btnX,
+        y: btnY,
+        width: btnWidth,
+        height: btnHeight,
+      };
 
   const actionButtonLabel = isCampaignComplete
     ? i18n('content.betweenDungeons.buttons.finishCampaign')
@@ -435,6 +472,108 @@ export const getBetweenDungeonsLayout = (
     };
   }
 
+  // Party-wipe options: choice buttons in the left column, the campaign
+  // high score list (with the current run ranked into it) on the right.
+  let wipeButtons: PartyWipeButtonLayout[] = [];
+  let wipeHighScores: PartyWipeHighScoresLayout | null = null;
+  if (isPartyWipe) {
+    const wipeChoices: {
+      action: PartyWipeAction;
+      labelKey: string;
+      descriptionKey: string;
+    }[] = [
+      {
+        action: 'restartCampaign',
+        labelKey: 'content.partyWipe.buttons.restartCampaign',
+        descriptionKey: 'content.partyWipe.buttons.restartCampaignDesc',
+      },
+      {
+        action: 'restartDungeon',
+        labelKey: 'content.partyWipe.buttons.restartDungeon',
+        descriptionKey: 'content.partyWipe.buttons.restartDungeonDesc',
+      },
+      {
+        action: 'loadSave',
+        labelKey: 'content.partyWipe.buttons.loadSave',
+        descriptionKey: 'content.partyWipe.buttons.loadSaveDesc',
+      },
+    ];
+    const colGap = 16;
+    const buttonColWidth = Math.floor(contentWidth * 0.52);
+    const scoreColWidth = contentWidth - buttonColWidth - colGap;
+    const scoreColX = panelX + paddingX + buttonColWidth + colGap;
+
+    const wipeBtnHeight = 68;
+    const wipeGap = 14;
+    const wipeTotalHeight =
+      wipeChoices.length * wipeBtnHeight + (wipeChoices.length - 1) * wipeGap;
+    const wipeTop =
+      panelY +
+      70 +
+      Math.max(0, Math.floor((panelHeight - 140 - wipeTotalHeight) / 2));
+    wipeButtons = wipeChoices.map((choice, index) => ({
+      action: choice.action,
+      bounds: {
+        x: panelX + paddingX,
+        y: wipeTop + index * (wipeBtnHeight + wipeGap),
+        width: buttonColWidth,
+        height: wipeBtnHeight,
+      },
+      labelText: i18n(choice.labelKey),
+      descriptionLines: wrapText(
+        null,
+        i18n(choice.descriptionKey, { name: completedName }),
+        buttonColWidth - 32,
+        DESC_FONT,
+      ),
+    }));
+
+    // High scores: the stored top 10 with the current run's score ranked
+    // into it (rank 1 + the entries that beat it).
+    const stored = bd.wipeHighScores ?? [];
+    const currentScore = bd.campaignScore ?? 0;
+    const currentRank =
+      1 + stored.filter((entry) => entry.score > currentScore).length;
+    const storedRows = stored.slice(0, MAX_HIGH_SCORES).map((entry, index) => ({
+      rank: index + 1,
+      score: entry.score,
+      isCurrent: false,
+    }));
+    const currentRow = {
+      rank: currentRank,
+      score: currentScore,
+      isCurrent: true,
+    };
+    const displayRows = (
+      currentRank <= MAX_HIGH_SCORES
+        ? [
+            ...storedRows.slice(0, currentRank - 1),
+            currentRow,
+            ...storedRows.slice(currentRank - 1),
+          ].slice(0, MAX_HIGH_SCORES)
+        : [...storedRows, currentRow]
+    )
+      // The list is sorted, so the display position is the rank.
+      .map((row, index) => ({ ...row, rank: index + 1 }));
+    const scoreRowHeight = 16;
+    wipeHighScores = {
+      bounds: {
+        x: scoreColX,
+        y: wipeTop,
+        width: scoreColWidth,
+        height: 22 + displayRows.length * scoreRowHeight,
+      },
+      headerText: i18n('content.partyWipe.highScores'),
+      currentLabelText: i18n('content.partyWipe.thisRun'),
+      rows: displayRows.map((row, index) => ({
+        rankText: `${String(row.rank)}.`,
+        scoreText: String(row.score),
+        isCurrent: row.isCurrent,
+        y: wipeTop + 22 + index * scoreRowHeight,
+      })),
+    };
+  }
+
   // Calculate layout for heroes
   const heroList = state.heroes as Hero[];
   const heroCount = heroList.length;
@@ -448,9 +587,9 @@ export const getBetweenDungeonsLayout = (
   const heroesLayout: HeroSectionLayoutItem[] = [];
   const giveButtonsLayout: GiveButtonLayoutItem[] = [];
 
-  if (isCampaignComplete) {
-    // The campaign-complete step draws its own statistics tables instead
-    // of the hero cards.
+  if (isCampaignComplete || isPartyWipe) {
+    // The campaign-complete and party-wipe steps draw their own content
+    // instead of the hero cards.
   } else if (isLevelUp) {
     // Vertical list of heroes with level up details
     const cardGap = 8;
@@ -619,6 +758,8 @@ export const getBetweenDungeonsLayout = (
     subtitleText,
     scoreSection,
     campaignComplete,
+    wipeButtons,
+    wipeHighScores,
     heroes: heroesLayout,
     actionButtonBounds,
     actionButtonLabel,
@@ -642,7 +783,10 @@ export const getBetweenDungeonsHit = (
   const layout = getBetweenDungeonsLayout(viewWidth, viewHeight, state);
   if (!layout.hasContent) return null;
 
-  if (isPointInBounds(x, y, layout.actionButtonBounds)) {
+  if (
+    layout.actionButtonBounds.width > 0 &&
+    isPointInBounds(x, y, layout.actionButtonBounds)
+  ) {
     return { type: 'actionButton' };
   }
 
@@ -669,6 +813,12 @@ export const getBetweenDungeonsHit = (
           itemIndex: item.itemIndex,
         };
       }
+    }
+  }
+
+  for (const wipeButton of layout.wipeButtons ?? []) {
+    if (isPointInBounds(x, y, wipeButton.bounds)) {
+      return { type: 'wipeButton', action: wipeButton.action };
     }
   }
 
@@ -759,7 +909,98 @@ export const renderBetweenDungeons = (
   }
 
   // Render Heroes / campaign statistics
-  if (layout.campaignComplete && layout.step === 'campaignComplete') {
+  if (layout.step === 'partyWipe' && layout.wipeButtons) {
+    for (const wb of layout.wipeButtons) {
+      const isHovered = options?.hoveredWipeAction === wb.action;
+      ctx.fillStyle = isHovered
+        ? 'rgba(153, 27, 27, 0.6)'
+        : 'rgba(127, 29, 29, 0.35)';
+      drawRoundedRect(
+        ctx,
+        wb.bounds.x,
+        wb.bounds.y,
+        wb.bounds.width,
+        wb.bounds.height,
+        8,
+      );
+      ctx.fill();
+      ctx.strokeStyle = isHovered ? '#f87171' : '#b91c1c';
+      ctx.lineWidth = isHovered ? 2 : 1;
+      drawRoundedRect(
+        ctx,
+        wb.bounds.x,
+        wb.bounds.y,
+        wb.bounds.width,
+        wb.bounds.height,
+        8,
+      );
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = BUTTON_FONT;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(
+        wb.labelText,
+        wb.bounds.x + wb.bounds.width / 2,
+        wb.bounds.y + 16,
+      );
+      ctx.fillStyle = '#fca5a5';
+      ctx.font = DESC_FONT;
+      wb.descriptionLines.forEach((line, lineIndex) => {
+        ctx.fillText(
+          line,
+          wb.bounds.x + wb.bounds.width / 2,
+          wb.bounds.y + 34 + lineIndex * 15,
+        );
+      });
+    }
+
+    const hs = layout.wipeHighScores;
+    if (hs) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+      drawRoundedRect(
+        ctx,
+        hs.bounds.x,
+        hs.bounds.y,
+        hs.bounds.width,
+        hs.bounds.height,
+        6,
+      );
+      ctx.fill();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      drawRoundedRect(
+        ctx,
+        hs.bounds.x,
+        hs.bounds.y,
+        hs.bounds.width,
+        hs.bounds.height,
+        6,
+      );
+      ctx.stroke();
+
+      ctx.textBaseline = 'top';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#fce28a';
+      ctx.font = BADGE_FONT;
+      ctx.fillText(hs.headerText, hs.bounds.x + 10, hs.bounds.y + 8);
+
+      for (const row of hs.rows) {
+        ctx.fillStyle = row.isCurrent ? '#fcd34d' : '#cbd5e1';
+        ctx.font = TABLE_FONT;
+        ctx.fillText(row.rankText, hs.bounds.x + 10, row.y);
+        ctx.textAlign = 'right';
+        const suffix = row.isCurrent ? ` ${hs.currentLabelText}` : '';
+        ctx.fillText(
+          `${row.scoreText}${suffix}`,
+          hs.bounds.x + hs.bounds.width - 10,
+          row.y,
+        );
+        ctx.textAlign = 'left';
+      }
+    }
+  } else if (layout.campaignComplete && layout.step === 'campaignComplete') {
     renderCampaignCompleteSection(ctx, p, layout.campaignComplete);
   } else if (layout.step === 'levelUp') {
     for (const h of layout.heroes) {
@@ -939,24 +1180,26 @@ export const renderBetweenDungeons = (
   // Action Button
   const ab = layout.actionButtonBounds;
   const isHovered = Boolean(options?.hoveredAction);
-  ctx.fillStyle = isHovered ? '#b45309' : '#92400e';
-  drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
-  ctx.fill();
+  if (ab.width > 0) {
+    ctx.fillStyle = isHovered ? '#b45309' : '#92400e';
+    drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
+    ctx.fill();
 
-  ctx.strokeStyle = '#fbbf24';
-  ctx.lineWidth = 1.5;
-  drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
-  ctx.stroke();
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 1.5;
+    drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
+    ctx.stroke();
 
-  ctx.fillStyle = '#ffffff';
-  ctx.font = BUTTON_FONT;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(
-    layout.actionButtonLabel,
-    ab.x + ab.width / 2,
-    ab.y + ab.height / 2,
-  );
+    ctx.fillStyle = '#ffffff';
+    ctx.font = BUTTON_FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      layout.actionButtonLabel,
+      ab.x + ab.width / 2,
+      ab.y + ab.height / 2,
+    );
+  }
 
   ctx.restore();
 };

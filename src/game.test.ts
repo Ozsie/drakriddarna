@@ -1,9 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { init, endAction, loadState, next, hasWon } from './game';
-import { completeBetweenDungeonsAndStartNext } from './dungeon/BetweenDungeonsLogic';
+import {
+  init,
+  endAction,
+  loadState,
+  next,
+  hasWon,
+  restartDungeonAfterWipe,
+} from './game';
+import {
+  completeBetweenDungeonsAndStartNext,
+  openPartyWipe,
+} from './dungeon/BetweenDungeonsLogic';
 import { liveHeroes } from './hero/HeroLogic';
 import { eventEffects } from './events/EventsLogic';
-import { TerrainType } from './types';
+import { Level, TerrainType } from './types';
 import type { Dungeon, GameMaster, Hero, GameState } from './types';
 
 describe('game orchestrator', () => {
@@ -435,6 +445,49 @@ describe('game orchestrator', () => {
       });
       expect(state.scenarioScores?.length).toBe(1);
       expect(state.score).toBe(state.scenarioScores?.[0].score.total);
+    });
+
+    it('opens the party-wipe screen when every hero falls', async () => {
+      const state = init();
+      state.heroes.forEach((hero) => {
+        hero.health = 0;
+      });
+
+      await next(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      expect(state.currentActor).toBeUndefined();
+      expect(liveHeroes(state).length).toBe(0);
+      expect(state.betweenDungeons?.step).toBe('partyWipe');
+      expect(state.dungeon.beaten).toBe(false);
+      expect(state.betweenDungeons?.campaignScore).toBe(state.score);
+      expect(state.betweenDungeons?.wipeHighScores).toEqual([]);
+    });
+
+    it('restartDungeonAfterWipe revives the party with lost xp and levels', () => {
+      const state = init();
+      state.heroes.forEach((hero) => {
+        hero.health = 0;
+        hero.experience = 10;
+        hero.level = Level.KNIGHT;
+      });
+      openPartyWipe(state);
+      expect(state.betweenDungeons?.step).toBe('partyWipe');
+
+      const updated = restartDungeonAfterWipe(state);
+
+      expect(liveHeroes(updated).length).toBe(updated.heroes.length);
+      updated.heroes.forEach((hero) => {
+        expect(hero.health).toBeGreaterThan(0);
+        expect(hero.experience).toBe(0);
+        expect(hero.level).toBe(Level.APPRENTICE);
+      });
+      expect(updated.currentActor).toBeDefined();
+      expect(updated.betweenDungeons).toBeUndefined();
     });
   });
 });

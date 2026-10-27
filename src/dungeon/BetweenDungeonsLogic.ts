@@ -28,9 +28,17 @@ import {
   RESET_ON,
 } from '../items/ItemLogic';
 import { soundEffectManager } from '../audio';
-import { i18n, clearActorAnimations, doReRender } from '../core';
-import { isKnownCampaign, getCampaign } from '../campaigns';
+import { addLog, i18n, clearActorAnimations, doReRender } from '../core';
+import {
+  isKnownCampaign,
+  getCampaign,
+  DEFAULT_CAMPAIGN_ID,
+} from '../campaigns';
 import { getEventsForDungeon } from '../events/EventsLogic';
+import {
+  getCampaignHighScores,
+  recordHighScore,
+} from '../saves/HighScoresLogic';
 
 export interface TradableItemEntry {
   slot: TradeItemSlot;
@@ -196,10 +204,17 @@ export const openCampaignComplete = (
   state: GameState,
 ): BetweenDungeonsState => {
   clearActorAnimations();
+  const campaignId =
+    state.campaignId && isKnownCampaign(state.campaignId)
+      ? state.campaignId
+      : DEFAULT_CAMPAIGN_ID;
   const campaignName =
     state.campaignId && isKnownCampaign(state.campaignId)
       ? getCampaign(state.campaignId).name
       : state.dungeon.name;
+
+  // A completed campaign records its score as a high score.
+  recordHighScore(campaignId, state.score ?? 0);
 
   const betweenDungeonsState: BetweenDungeonsState = {
     completedDungeonName: state.dungeon.name,
@@ -212,6 +227,34 @@ export const openCampaignComplete = (
   };
 
   state.betweenDungeons = betweenDungeonsState;
+  doReRender(state);
+  return betweenDungeonsState;
+};
+
+/**
+ * Opens the party-wipe screen when every hero has fallen: the same
+ * overlay as between dungeons, offering to restart the campaign from
+ * scratch, retry the current dungeon (with experience and levels lost)
+ * or load a saved game. The game state itself is left untouched until
+ * the player chooses.
+ */
+export const openPartyWipe = (state: GameState): BetweenDungeonsState => {
+  clearActorAnimations();
+  const campaignId =
+    state.campaignId && isKnownCampaign(state.campaignId)
+      ? state.campaignId
+      : DEFAULT_CAMPAIGN_ID;
+  const betweenDungeonsState: BetweenDungeonsState = {
+    completedDungeonName: state.dungeon.name,
+    step: 'partyWipe',
+    levelUps: [],
+    campaignScore: state.score,
+    wipeHighScores: getCampaignHighScores(campaignId),
+    selectedTradeItem: null,
+  };
+
+  state.betweenDungeons = betweenDungeonsState;
+  addLog(state, 'logs.allHeroesDead');
   doReRender(state);
   return betweenDungeonsState;
 };

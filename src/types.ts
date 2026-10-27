@@ -60,7 +60,14 @@ export type GameState = {
   scenarioScores?: ScenarioScoreRecord[];
 };
 
-export type BetweenDungeonsStep = 'levelUp' | 'trade' | 'campaignComplete';
+export type BetweenDungeonsStep =
+  | 'levelUp'
+  | 'trade'
+  | 'campaignComplete'
+  | 'partyWipe';
+
+// The three options on the party-wipe screen.
+export type PartyWipeAction = 'restartCampaign' | 'restartDungeon' | 'loadSave';
 
 export type TradeItemSlot = 'weapon' | 'armour' | 'shield' | number;
 
@@ -77,6 +84,13 @@ export interface HeroLevelUpInfo {
   nextLevel?: Level;
 }
 
+// One entry in a campaign's high score list (completed campaigns only;
+// see src/saves/HighScoresLogic.ts).
+export type HighScoreEntry = {
+  score: number;
+  date: string;
+};
+
 export interface BetweenDungeonsState {
   completedDungeonName: string;
   // Campaign name, set only on the campaignComplete step (the final
@@ -89,6 +103,9 @@ export interface BetweenDungeonsState {
   scenarioScore?: ScenarioScore;
   // Running campaign score after adding the completed scenario.
   campaignScore?: number;
+  // Stored high score list for the campaign, shown on the party-wipe
+  // screen next to the current run's score (campaignScore).
+  wipeHighScores?: HighScoreEntry[];
   selectedTradeItem?: {
     heroIndex: number;
     slot: TradeItemSlot;

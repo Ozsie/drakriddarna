@@ -10,6 +10,7 @@
   "allConditionsFulfilled": "Alla mål har uppfyllts.",
   "clearedDungeon": "Du har klarat {{name}}.",
   "scenarioScore": "Scenariopoäng: {{score}} (kampanjens totalpoäng: {{total}}).",
+  "partyWipeRestartedDungeon": "Hjältarna försökte om nivån och börjar om på 0 XP och lärlingsnivå.",
   "moveToNext": "Tryck på 'Nästa' för att gå vidare till nästa nivå: {{name}}.",
   "playingCampaign": "Spelar {{name}}.",
   "gameInitialized": "Spelet initialiserat.",

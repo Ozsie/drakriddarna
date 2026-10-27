@@ -1,5 +1,5 @@
 import type { GameState, Hero, Position } from './types';
-import { ConditionType } from './types';
+import { ConditionType, Level } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
 import { CURRENT_SAVE_VERSION, migrateSaveState } from './saveMigration';
 import { writeSave } from './saves/SavesLogic';
@@ -212,7 +212,8 @@ export const next = async (
     }
     if (liveHeroes(state).length === 0) {
       state.currentActor = undefined;
-      return resetLevel(state);
+      openPartyWipe(state);
+      return state;
     }
     let guard = 0;
     while (
@@ -241,7 +242,8 @@ export const next = async (
     }
     if (liveHeroes(state).length === 0 || !liveHeroes(state)[nextIndex]) {
       state.currentActor = undefined;
-      return resetLevel(state);
+      openPartyWipe(state);
+      return state;
     }
     state.currentActor = liveHeroes(state)[nextIndex];
     state.currentActor.actions = 2;
@@ -350,6 +352,32 @@ export const resetLevel = (currentState: GameState): GameState => {
   return currentState;
 };
 
+/**
+ * The party-wipe "retry this dungeon" option: rewinds to the last autosave
+ * (the dungeon's start, or an in-dungeon checkpoint) via `resetLevel` and
+ * applies the wipe penalty — the whole party restarts from 0 XP and
+ * Apprentice level, matching the official "revived heroes start over"
+ * defeat rules. Falls back to reviving the heroes on the current state
+ * when no autosave exists, so the game always stays playable.
+ */
+export const restartDungeonAfterWipe = (currentState: GameState): GameState => {
+  const state = resetLevel(currentState);
+  if (liveHeroes(state).length === 0) {
+    // resetLevel returned the unchanged, wiped state (no autosave
+    // available): revive the heroes here instead.
+    replaceDeadHeroes(state);
+    resetLiveHeroes(state);
+  }
+  state.heroes.forEach((hero) => {
+    hero.experience = 0;
+    hero.level = Level.APPRENTICE;
+  });
+  state.currentActor = liveHeroes(state)[0] ?? (state.heroes[0] as Hero);
+  state.betweenDungeons = undefined;
+  addLog(state, 'logs.partyWipeRestartedDungeon');
+  return state;
+};
+
 const checkWinConditions = (state: GameState) => {
   state.dungeon.winConditions.forEach((condition) => {
     switch (condition.type) {
@@ -445,6 +473,7 @@ const scrollTo = (pos: Position, cellSize: number) => {
 import {
   openBetweenDungeons,
   openCampaignComplete,
+  openPartyWipe,
 } from './dungeon/BetweenDungeonsLogic';
 
 export const hasWon = (state: GameState) => {

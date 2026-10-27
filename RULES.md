@@ -135,7 +135,10 @@ The required face value for a die to count as a **Success** depends directly on 
 - Whenever a hero slays an enemy monster, **the killing hero earns the monster's Experience (XP)**: Orcs 1 XP, Trolls 2 XP, Dark Lords 4 XP.
 - Every hero who survives a scenario earns an additional **+1 XP** when it is completed.
 - If a hero dies, their accumulated XP is lost and they return as an Apprentice in the next scenario; found equipment is kept by their successor.
-- If all heroes fall in battle, the scenario restarts with revived heroes starting at 0 XP (Apprentice level).
+- If all heroes fall in battle, a **party wipe screen** offers three ways to continue:
+  - **Restart Campaign** — begin a brand new campaign from the first dungeon.
+  - **Retry This Dungeon** — the scenario restarts with revived heroes, but the whole party starts over at 0 XP (Apprentice level).
+  - **Load Saved Game** — continue from an earlier save instead.
 
 ### Action Economy
 
@@ -471,4 +474,5 @@ Notes:
 - Loot points are awarded when an item is picked up and never reversed: dropping or trading an item later keeps its points.
 - The scenario score is a snapshot taken at the instant the win conditions are fulfilled; later changes to the heroes or the dungeon do not alter it.
 - The breakdown is shown on the between-dungeons screen, and the campaign total is carried across every dungeon of the campaign.
+- Completing a campaign records its score into a per-campaign **high score list** (top 10). The party-wipe screen shows the list with the current run's score ranked into it, so you can see where the run stands before choosing how to continue.
 - When the last dungeon of a campaign is won, a final screen shows the campaign score, per-scenario statistics (rounds, monsters slain, score) and per-hero statistics (level, experience, health, kills, items carried). Heroes who fell on the final scenario are listed as fallen.

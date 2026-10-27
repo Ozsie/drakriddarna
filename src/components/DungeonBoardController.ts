@@ -79,6 +79,7 @@ import {
   tradeItem,
   completeBetweenDungeonsAndStartNext,
 } from '../dungeon/BetweenDungeonsLogic';
+import { restartDungeonAfterWipe } from '../game';
 import { useItem } from '../items/ItemLogic';
 import {
   renderDamageIndicators,
@@ -90,9 +91,14 @@ import {
 } from '../combat';
 import { clearTileTextureCache } from '../dungeon/TileTextureCache';
 import { clearFogCloudCaches } from '../dungeon/DungeonRendering';
-import { hasActiveActorAnimations, i18n } from '../core';
+import {
+  hasActiveActorAnimations,
+  i18n,
+  DEFAULT_GAME_MASTER_ID,
+} from '../core';
 import { MAX_SAVE_NAME_LENGTH } from '../saves/SavesLogic';
-import { onSaveGame } from '../menu/MenuLogic';
+import { onNewGame, onSaveGame } from '../menu/MenuLogic';
+import { DEFAULT_CAMPAIGN_ID } from '../campaigns';
 import {
   createTouchPanState,
   handleTwoFingerTouchStart,
@@ -1478,6 +1484,7 @@ export class DungeonBoardController {
             hoveredSecondary: this.hover.isBdSecondaryHovered,
             hoveredItem: this.hover.hoveredBdItem,
             hoveredGiveHeroIndex: this.hover.hoveredBdGiveHeroIndex,
+            hoveredWipeAction: this.hover.hoveredBdWipeAction,
           },
         );
       }
@@ -1881,6 +1888,33 @@ export class DungeonBoardController {
 
       if (hit?.kind === 'betweenDungeons' && activeState.betweenDungeons) {
         const bdHit = hit.hit;
+        if (bdHit.type === 'wipeButton') {
+          soundEffectManager.playButtonClick();
+          if (bdHit.action === 'restartCampaign') {
+            onNewGame(
+              activeState.campaignId ?? DEFAULT_CAMPAIGN_ID,
+              activeState.gameMaster?.id ?? DEFAULT_GAME_MASTER_ID,
+              activeState,
+              this.props.onExternalStateChange,
+            );
+            this.renderCanvas(true);
+          } else if (bdHit.action === 'restartDungeon') {
+            const updated = restartDungeonAfterWipe(activeState);
+            this.props.onExternalStateChange(updated);
+            if (activeState.dungeon?.startingPositions?.[0]) {
+              this.panX = 0;
+              this.panY = 0;
+              this.updateAllCanvasTransforms();
+            }
+            this.renderCanvas(true);
+          } else {
+            // The load dialog opens on top of the wipe overlay; cancelling
+            // it returns to the wipe screen.
+            this.openSaveLoadDialog('load');
+            this.renderUiLayer(true);
+          }
+          return;
+        }
         if (bdHit.type === 'actionButton') {
           soundEffectManager.playButtonClick();
           if (activeState.betweenDungeons.step === 'campaignComplete') {
@@ -2137,8 +2171,10 @@ export class DungeonBoardController {
 
     if (this.containerWidth > 0) {
       // The between-dungeons overlay consumes the whole board while it is
-      // open: its hover state updates even when no element is hit.
-      if (this.activeState.betweenDungeons) {
+      // open: its hover state updates even when no element is hit. The
+      // save/load dialog sits on top of it, so while the dialog is open its
+      // hover wins instead.
+      if (this.activeState.betweenDungeons && !this.saveLoadDialogMode) {
         this.applyHover(
           updateBetweenDungeonsHover(
             this.hover,

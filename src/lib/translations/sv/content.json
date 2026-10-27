@@ -169,6 +169,20 @@
     "itemsHeader": "Föremål",
     "fallen": "Föll i strid"
   },
+  "partyWipe": {
+    "title": "Hjältarna har fallit",
+    "subtitle": "Alla hjältar föll i {{name}}. Välj hur du vill fortsätta:",
+    "highScores": "Topplista",
+    "thisRun": "(det här försöket)",
+    "buttons": {
+      "restartCampaign": "Starta om kampanjen",
+      "restartCampaignDesc": "Börja en helt ny kampanj från det första scenariot.",
+      "restartDungeon": "Försök om nivån",
+      "restartDungeonDesc": "Hjältarna börjar om {{name}} från början och förlorar all erfarenhet och alla nivåer.",
+      "loadSave": "Ladda sparat spel",
+      "loadSaveDesc": "Fortsätt från ett av dina sparade spel."
+    }
+  },
   "scoring": {
     "topBar": "Poäng",
     "scenarioScore": "Scenariopoäng: {{score}}",

@@ -25,9 +25,10 @@ import type { EventCardHitResult } from '../ui/EventCardRendering';
 import type { DungeonIntroHitResult } from '../ui/DungeonIntroRendering';
 
 // The first UI element under a board position, in the fixed cascade order
-// the board dispatches UI input: between-dungeons overlay, dungeon intro,
-// save/load dialog, top bar, canvas menu, hero cards, monster cards, diary
-// and event card.
+// the board dispatches UI input: save/load dialog (the topmost centered
+// modal — it can be opened on top of the between-dungeons/party-wipe
+// overlay), between-dungeons overlay, dungeon intro, top bar, canvas
+// menu, hero cards, monster cards, diary and event card.
 export type UiHit =
   | { kind: 'betweenDungeons'; hit: BetweenDungeonsHitResult }
   | { kind: 'dungeonIntro'; hit: DungeonIntroHitResult }
@@ -90,6 +91,22 @@ export const findUiHit = (
   context: UiHitContext,
   testers: UiHitTesters = defaultUiHitTesters,
 ): UiHit | null => {
+  if (context.saveLoadDialogMode) {
+    const hit = testers.saveLoadDialog(
+      context.viewWidth,
+      context.viewHeight,
+      context.state,
+      {
+        mode: context.saveLoadDialogMode,
+        callbacks: context.menuCallbacks,
+      },
+      context.x,
+      context.y,
+    );
+    if (hit) {
+      return { kind: 'saveLoadDialog', hit };
+    }
+  }
   if (context.state.betweenDungeons) {
     const hit = testers.betweenDungeons(
       context.viewWidth,
@@ -114,22 +131,6 @@ export const findUiHit = (
     );
     if (hit) {
       return { kind: 'dungeonIntro', hit };
-    }
-  }
-  if (context.saveLoadDialogMode) {
-    const hit = testers.saveLoadDialog(
-      context.viewWidth,
-      context.viewHeight,
-      context.state,
-      {
-        mode: context.saveLoadDialogMode,
-        callbacks: context.menuCallbacks,
-      },
-      context.x,
-      context.y,
-    );
-    if (hit) {
-      return { kind: 'saveLoadDialog', hit };
     }
   }
   const topBarHit = testers.topBar(
