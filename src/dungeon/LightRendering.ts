@@ -1227,6 +1227,7 @@ const createAuraGradient = (
   light: LightSource,
   cellSize: number,
   timeMs: number,
+  scaleOverride?: number,
 ) => {
   const center = lightCenter(light, cellSize, timeMs);
   const radiusPx = cellSize / 2;
@@ -1235,7 +1236,7 @@ const createAuraGradient = (
   // Slightly brighter than a plain glow so the ring reads as a halo.
   const peak = Math.min(
     1,
-    intensity * 1.8 * lightIntensityScale(light, timeMs),
+    intensity * 1.8 * (scaleOverride ?? lightIntensityScale(light, timeMs)),
   );
   const gradient = ctx.createRadialGradient(
     center.x,
@@ -1275,6 +1276,7 @@ const createGasGradient = (
   cellSize: number,
   timeMs: number,
   gradientRadiusPx?: number,
+  scaleOverride?: number,
 ) => {
   const center = lightCenter(light, cellSize, timeMs);
   const color = light.color ?? DEFAULT_LIGHT_COLOR;
@@ -1291,7 +1293,7 @@ const createGasGradient = (
   );
   const alpha = Math.min(
     1,
-    intensity * 1.4 * lightIntensityScale(light, timeMs),
+    intensity * 1.4 * (scaleOverride ?? lightIntensityScale(light, timeMs)),
   );
   const stops = [0, 0.15, 0.3, 0.45, 0.55, 0.7, 0.85, 1];
   stops.forEach((t) => {
@@ -1339,6 +1341,7 @@ const createLightGradient = (
   light: LightSource,
   cellSize: number,
   timeMs: number,
+  scaleOverride?: number,
 ) => {
   const center = lightCenter(light, cellSize, timeMs);
   const color = light.color ?? DEFAULT_LIGHT_COLOR;
@@ -1354,7 +1357,7 @@ const createLightGradient = (
   );
   const peakIntensity = Math.min(
     1,
-    intensity * 1.5 * lightIntensityScale(light, timeMs),
+    intensity * 1.5 * (scaleOverride ?? lightIntensityScale(light, timeMs)),
   );
   const falloffStops = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1];
   falloffStops.forEach((t) => {
@@ -1364,18 +1367,19 @@ const createLightGradient = (
   return gradient;
 };
 
-const renderLight = (
+// Renders the light's full-brightness output directly onto `ctx` — the
+// pre-sprite path, still used for effects whose geometry or per-part
+// brightness changes every frame, and where offscreen canvases are
+// unavailable (the node test environment).
+const renderLightDirect = (
   ctx: CanvasRenderingContext2D,
+  light: LightSource,
   cellSize: number,
   state: GameState,
-  light: LightSource,
   debugMode: boolean,
   timeMs: number,
   occlusionKey?: string,
-) => {
-  if (!isLightRenderable(state, light, debugMode)) return;
-
-  const center = lightCenter(light, cellSize, timeMs);
+): void => {
   switch (light.effect) {
     case LightEffect.SPARKLE:
       renderSparkles(ctx, light, cellSize, timeMs);
@@ -1424,8 +1428,236 @@ const renderLight = (
       );
       break;
   }
+};
+
+// --- Light sprites ----------------------------------------------------------
+
+// Lights whose glow geometry never changes between frames — everything
+// except sweep (rotating polygon), sway (swinging center) and sparkle
+// (per-twinkle brightness) — can have their full-brightness output baked
+// once into a sprite and then only blitted, alpha-scaled by the current
+// animation brightness. The scaling is pixel-exact only while
+// intensity * peakFactor <= 1: beyond that the direct path clamps the
+// gradient's peak at full alpha while the sprite would dim linearly, so
+// bright lights keep rendering directly.
+const lightPeakFactor = (light: LightSource): number =>
+  light.effect === LightEffect.AURA
+    ? 1.8
+    : light.effect === LightEffect.GAS
+    ? 1.4
+    : 1.5;
+
+const isBakeableLight = (light: LightSource): boolean => {
+  switch (light.effect) {
+    case LightEffect.SWEEP:
+    case LightEffect.SWAY:
+    case LightEffect.SPARKLE:
+      return false;
+    default:
+      return (
+        (light.intensity ?? DEFAULT_LIGHT_INTENSITY) * lightPeakFactor(light) <=
+        1
+      );
+  }
+};
+
+type LightSprite = {
+  key: string;
+  canvas: HTMLCanvasElement;
+  // World-pixel offset of the sprite's top-left corner.
+  x: number;
+  y: number;
+  // World-pixel size of the sprite (the canvas is deviceRatio times this).
+  size: number;
+};
+
+// One entry per distinct light (identity without the occlusion state);
+// the entry's key carries the full invalidation state and is replaced
+// whenever it changes.
+const lightSpriteCaches = new Map<string, LightSprite>();
+
+export const clearLightSpriteCache = (): void => {
+  lightSpriteCaches.clear();
+};
+
+const canBuildLightSprite = (): boolean =>
+  typeof document !== 'undefined' &&
+  typeof document.createElement === 'function';
+
+const lightSpriteIdentity = (light: LightSource): string =>
+  [
+    light.position.x,
+    light.position.y,
+    light.alignment ?? '',
+    light.color ?? '',
+    light.radius ?? '',
+    light.intensity ?? '',
+    light.softness ?? '',
+    light.effect ?? '',
+  ].join(',');
+
+// Bakes the light's full-brightness glow into an offscreen canvas: the
+// visibility polygon (or aura ring or gas cloud) filled with its radial
+// gradient under the softness blur, exactly as the direct path renders,
+// but at animation scale 1 and only once per occlusion state.
+const buildLightSprite = (
+  state: GameState,
+  light: LightSource,
+  cellSize: number,
+  debugMode: boolean,
+  stateKey: string,
+  key: string,
+): LightSprite | null => {
+  if (!canBuildLightSprite()) return null;
+  const timeMs = 0;
+  const center = lightCenter(light, cellSize, timeMs);
+  const blurPx = lightBlurPx(light, cellSize);
+  let draw: (c: CanvasRenderingContext2D) => void;
+  let extent: number;
+  if (light.effect === LightEffect.AURA) {
+    extent = cellSize / 2 + blurPx + 2;
+    draw = (c) =>
+      fillLightShape(
+        c,
+        traceAuraCircle(light, cellSize, timeMs),
+        createAuraGradient(c, light, cellSize, timeMs, 1),
+        light,
+        cellSize,
+      );
+  } else {
+    const points = lightPolygonFor(
+      light,
+      state,
+      cellSize,
+      debugMode,
+      timeMs,
+      stateKey,
+    );
+    extent = polygonExtentPx(center, points) + blurPx + 2;
+    draw =
+      light.effect === LightEffect.GAS
+        ? (c) =>
+            fillLightPolygon(
+              c,
+              points,
+              createGasGradient(
+                c,
+                light,
+                cellSize,
+                timeMs,
+                polygonExtentPx(center, points),
+                1,
+              ),
+              light,
+              cellSize,
+            )
+        : (c) =>
+            fillLightPolygon(
+              c,
+              points,
+              createLightGradient(c, light, cellSize, timeMs, 1),
+              light,
+              cellSize,
+            );
+  }
+
+  const size = Math.ceil(extent * 2);
+  if (size <= 0) return null;
+  const ratio = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil(size * ratio);
+  canvas.height = Math.ceil(size * ratio);
+  const spriteCtx = canvas.getContext('2d');
+  if (!spriteCtx) return null;
+  spriteCtx.scale(ratio, ratio);
+  spriteCtx.translate(extent - center.x, extent - center.y);
+  draw(spriteCtx);
+  return { key, canvas, x: center.x - extent, y: center.y - extent, size };
+};
+
+const lightSpriteFor = (
+  state: GameState,
+  light: LightSource,
+  cellSize: number,
+  debugMode: boolean,
+  occlusionKey?: string,
+): LightSprite | null => {
+  if (!canBuildLightSprite()) return null;
+  const stateKey = occlusionKey ?? lightStateKey(state, cellSize, debugMode);
+  const identity = lightSpriteIdentity(light);
+  const key = `${stateKey}|${identity}`;
+  const cached = lightSpriteCaches.get(identity);
+  if (cached && cached.key === key) return cached;
+  const sprite = buildLightSprite(
+    state,
+    light,
+    cellSize,
+    debugMode,
+    stateKey,
+    key,
+  );
+  if (sprite) {
+    lightSpriteCaches.set(identity, sprite);
+  }
+  return sprite;
+};
+
+const renderLight = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  light: LightSource,
+  debugMode: boolean,
+  timeMs: number,
+  occlusionKey?: string,
+) => {
+  if (!isLightRenderable(state, light, debugMode)) return;
+
+  if (isBakeableLight(light)) {
+    const sprite = lightSpriteFor(
+      state,
+      light,
+      cellSize,
+      debugMode,
+      occlusionKey,
+    );
+    if (sprite) {
+      ctx.save();
+      ctx.globalAlpha = lightIntensityScale(light, timeMs);
+      ctx.drawImage(
+        sprite.canvas,
+        sprite.x,
+        sprite.y,
+        sprite.size,
+        sprite.size,
+      );
+      ctx.restore();
+      if (debugMode) {
+        const center = lightCenter(light, cellSize, timeMs);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, cellSize * 0.2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      return;
+    }
+  }
+
+  renderLightDirect(
+    ctx,
+    light,
+    cellSize,
+    state,
+    debugMode,
+    timeMs,
+    occlusionKey,
+  );
 
   if (debugMode) {
+    const center = lightCenter(light, cellSize, timeMs);
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.lineWidth = 1;

@@ -41,6 +41,7 @@ import {
 } from '../dungeon/DungeonRendering';
 import {
   activeLights,
+  clearLightSpriteCache,
   renderAmbientDarkness,
   renderAnimatedLights,
   renderLights,
@@ -514,6 +515,7 @@ export class DungeonBoardController {
       this.shakeAnimationId = null;
     }
     clearFogCloudCaches();
+    clearLightSpriteCache();
   }
 
   private isReady = (img: HTMLImageElement | null): boolean =>

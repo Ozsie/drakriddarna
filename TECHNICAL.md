@@ -276,19 +276,28 @@ darkness veil close in, while `blocksLight` fog instead marks the room's
 cells as fog in the occlusion map, so no light enters the room at all,
 exactly like undiscovered fog of war.
 
-Performance of the always-animating effects gets three systematic
+Performance of the always-animating effects gets four systematic
 treatments. First, the blurred fog cloud and light-dim mask of every
 fogged room are rasterized once per fog state into small offscreen
 canvases and then only blitted with the animated alpha — the canvas blur
 filter, by far the most expensive fog operation, never runs per frame.
-Second, ambient redraws are driven by a quantized animation signature
-instead of the frame clock: each animated light contributes its stepped
-visible output (flicker is inherently stepped, pulse/aura/gas in 1/16
-alpha steps, sweep in 4-degree steps, sway in 1/32-cell position steps),
-terrain and fog contribute a shared time step, and the dynamic layer only
-clears and repaints when the signature actually changes — a flickering
-brazier repaints about 8 times per second instead of 60. Third, the rAF
-loop keeps ticking at display rate but a minimum-interval gate caps
+Second, every light whose glow geometry is fixed ('static', flicker,
+pulse, blink, aura, gas — everything except sweeping, swaying and
+sparkling lights) is baked once per occlusion state into a small
+offscreen sprite: the visibility polygon filled with its 9-stop radial
+gradient under the softness blur, at full brightness and device
+resolution. Per frame it is a single `drawImage` alpha-scaled by the
+light's animation brightness — pixel-exact for every built-in preset —
+which also turns the static light layer into a handful of blits, making
+the viewport-keyed rebuild during panning cheap. Third, ambient redraws
+are driven by a quantized animation signature instead of the frame
+clock: each animated light contributes its stepped visible output
+(flicker is inherently stepped, pulse/aura/gas in 1/16 alpha steps,
+sweep in 4-degree steps, sway in 1/32-cell position steps), terrain and
+fog contribute a shared time step, and the dynamic layer only clears and
+repaints when the signature actually changes — a flickering brazier
+repaints about 8 times per second instead of 60. Fourth, the rAF loop
+keeps ticking at display rate but a minimum-interval gate caps
 continuous effects (sweeping beams, twinkling sparkles) at 30 repaints
 per second, and actor-driven frames (movement, projectiles) always run
 at full rate.
