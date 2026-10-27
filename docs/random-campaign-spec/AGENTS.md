@@ -32,6 +32,21 @@ Where the spec and the game source disagree, **the game source wins**
 - The generator emits plain `DeclarativeLayout`/`DeclarativeDungeon` data
   and goes through `defineDungeon` like hand-authored content.
 
+## AI policy
+
+Per the project AI Policy (see the repo `README.md`): AI tools are used to
+produce, test, and review code, and to create translations of in-game texts.
+AI must not be used to produce art, music, source in-game texts, campaigns,
+dungeons, or other game content.
+
+For this spec that means: AI writes, tests, and reviews the generator code;
+the dungeon content itself comes only from the deterministic algorithm
+running its fixed seed — never from AI generation. If a change requires new
+text content (names, descriptions, logs, UI labels, dialog), a human
+authors it first in at least one language — AI may not author new text in
+any language. Once a text exists in one language, AI may create the
+translations into the other languages (`en`/`sv`).
+
 ## Non-negotiable rules
 
 - **No core changes.** The campaign registers through the existing

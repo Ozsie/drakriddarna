@@ -18,6 +18,16 @@ npm run prettier:format  # prettier fix
 
 Run `npm run check`, `npm test`, and `npm run lint` before considering work done. `npm test` does not cover `src/benchmark/**` unless run via the `benchmark` script.
 
+## AI policy
+
+Per the [AI Policy in README.md](./README.md):
+
+- AI tools are used to produce, test, and review code, and to create translations of in-game texts (the `en`/`sv` sveltekit-i18n files).
+- AI must never be used to produce art, music, source in-game texts, campaigns, dungeons, or other game content. Source texts, campaign/dungeon design, and other game content are human-authored.
+- "Source texts" means any new user-facing text content (names, descriptions, logs, UI labels, dialog, etc.). If a change requires new text content, a human authors it — AI may not create it in any language.
+- If text content already exists in one language, AI may create the translations into the other languages.
+- If a task asks you to author such content, stop and ask instead. When translating, translate existing human texts — do not rewrite, extend, or author new text.
+
 ## Rules and content authority
 
 - [RULES.md](./RULES.md) is the player guide and the authority on game rules. Game logic changes must match it; if code and RULES.md disagree, ask before "fixing" either side.

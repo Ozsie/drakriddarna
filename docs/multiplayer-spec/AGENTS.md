@@ -29,6 +29,20 @@ points, `src/store/gameStateStore.ts` for the client action surface).
 - The relay server lives in `server/` — a separate package with its own
   `package.json`, deployed separately from GitHub Pages (see 01).
 
+## AI policy
+
+Per the project AI Policy (see the repo `README.md`): AI tools are used to
+produce, test, and review code, and to create translations of in-game texts.
+AI must not be used to produce art, music, source in-game texts, campaigns,
+dungeons, or other game content.
+
+For this spec that means: AI builds, tests, and reviews the relay server and
+client integration code. "Source texts" means any new user-facing text
+content: if a change requires new text (labels, messages, dialog), a human
+authors it first in at least one language — AI may not author new text in
+any language. Once a text exists in one language, AI may create the
+translations into the other languages (`en`/`sv`).
+
 ## Non-negotiable rules
 
 - Single-player behavior is unchanged when no session is active:
