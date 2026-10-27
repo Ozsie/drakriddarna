@@ -1254,16 +1254,57 @@ describe('light culling and polygon cache', () => {
     expect(second).not.toBe(first);
   });
 
-  it('never caches sway light polygons', () => {
+  it('recomputes a sway polygon only once the swing has moved a visible step', () => {
     const state = createState();
     const light = createLight({
       position: { x: 3, y: 2 },
       effect: 'sway',
     });
     const first = lightPolygonFor(light, state, CELL_SIZE, false, 0);
+
+    // A sub-step swing movement reuses the cached polygon: the center
+    // has moved less than 1/32 of a cell.
+    const still = lightPolygonFor(light, state, CELL_SIZE, false, 4);
+    expect(still).toBe(first);
+
+    // A quarter period later the swing is at its outermost point, far
+    // beyond the step: the polygon is recomputed with new geometry.
     const second = lightPolygonFor(light, state, CELL_SIZE, false, 250);
     expect(second).not.toBe(first);
     expect(second).not.toEqual(first);
+  });
+
+  it('assembles a sweep beam from the cached ray endpoints', () => {
+    const state = createState();
+    const light = createLight({
+      position: { x: 3, y: 2 },
+      effect: 'sweep',
+    });
+    // At timeMs 0 the beam points along angle 0.
+    const sweepPolygon = lightPolygonFor(light, state, CELL_SIZE, false, 0);
+
+    // The endpoints of every ray, computed without the sweep filter.
+    const endpoints = computeLightPolygon(
+      { ...light, effect: undefined },
+      state,
+      CELL_SIZE,
+      false,
+      0,
+    );
+    expect(sweepPolygon).toHaveLength(endpoints.length);
+
+    // Ray 0 lies along the beam direction: its endpoint is used as-is.
+    expect(sweepPolygon[0]).toEqual(endpoints[0]);
+    // Ray 30 (90 degrees away) is outside the beam: it collapses onto
+    // the light's center.
+    const center = lightCenter(light, CELL_SIZE, 0);
+    expect(sweepPolygon[30]).toEqual(center);
+
+    // Rotating the beam re-selects rays without re-marching: the
+    // quarter-turn beam now skips ray 0.
+    const rotated = lightPolygonFor(light, state, CELL_SIZE, false, 250);
+    expect(rotated).toHaveLength(endpoints.length);
+    expect(rotated[0]).toEqual(center);
   });
 
   it('reuses the polygon for a structurally identical fresh light object', () => {

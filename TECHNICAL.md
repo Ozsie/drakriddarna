@@ -293,7 +293,12 @@ the viewport-keyed rebuild during panning cheap. The visibility-polygon
 cache underneath is keyed by the light's stable geometry (id, position,
 radius, alignment, effect) rather than object identity — activeLights()
 recreates derived lights as fresh objects every pass — and is
-size-bounded, so long animations cannot grow it. Third, ambient redraws
+size-bounded, so long animations cannot grow it. Swaying chandeliers
+recompute their polygon only once their swing crosses the same
+1/32-cell step the repaint gate treats as invisible, and sweeping beams
+never march rays per frame at all: a beam only selects which rays
+contribute, so the endpoints are marched once per occlusion state and
+the rotating beam re-selects among them. Third, ambient redraws
 are driven by a quantized animation signature instead of the frame
 clock: each animated light contributes its stepped visible output
 (flicker is inherently stepped, pulse/aura/gas in 1/16 alpha steps,

@@ -50,6 +50,11 @@ export const isCeilingLight = (light: LightSource): boolean =>
 const SWAY_ARM_CELLS = 0.6;
 const SWAY_MAX_ANGLE = Math.PI / 6;
 
+// The visible movement step of a swaying light, in cells (1/32 of a
+// cell — about a device pixel): both the ambient repaint signature and
+// the sway polygon cache treat smaller center movements as invisible.
+const SWAY_STEP_CELLS = 1 / 32;
+
 // The pendulum offset of a swaying light's center, in world pixels: zero
 // for lights that do not sway.
 export const lightSwayOffset = (
@@ -328,7 +333,8 @@ const rayExitThroughCell = (
 // starts behind it — or the light's radius. Rays pass freely between
 // diagonally adjacent opaque cells, through their shared corner. For sweep
 // lights only the rays within the rotating beam cone contribute; the rest
-// collapse onto the light source.
+// collapse onto the light source — assembled from the cached ray endpoints
+// without marching anything.
 export const computeLightPolygon = (
   light: LightSource,
   state: GameState,
@@ -424,19 +430,32 @@ export const computeLightPolygon = (
   // For sweep lights: the beam only covers rays within its half angle of
   // the sweep direction; the rest collapse onto the light source.
   const sweep = lightSweepAngle(light, timeMs);
-
-  for (let i = 0; i < LIGHT_RAY_COUNT; i++) {
-    const angle = (2 * Math.PI * i) / LIGHT_RAY_COUNT;
-    if (sweep !== undefined) {
+  if (sweep !== undefined) {
+    // A sweep beam only selects which rays contribute to the polygon:
+    // each ray's endpoint is time-independent, so all 120 endpoints are
+    // marched once per occlusion state and every frame just re-selects
+    // the rays inside the rotating beam — no per-frame ray marching.
+    const endpoints = sweepRayEndpointsFor(
+      light,
+      state,
+      cellSize,
+      debugMode,
+      occlusionKey,
+    );
+    return endpoints.map((endpoint, index) => {
+      const angle = (2 * Math.PI * index) / LIGHT_RAY_COUNT;
       let diff = Math.abs(angle - sweep) % (2 * Math.PI);
       if (diff > Math.PI) {
         diff = 2 * Math.PI - diff;
       }
-      if (diff > SWEEP_BEAM_HALF_ANGLE) {
-        points.push({ x: center.x, y: center.y });
-        continue;
-      }
-    }
+      return diff > SWEEP_BEAM_HALF_ANGLE
+        ? { x: center.x, y: center.y }
+        : endpoint;
+    });
+  }
+
+  for (let i = 0; i < LIGHT_RAY_COUNT; i++) {
+    const angle = (2 * Math.PI * i) / LIGHT_RAY_COUNT;
     const dirX = Math.cos(angle);
     const dirY = Math.sin(angle);
     let end: Position = {
@@ -524,6 +543,44 @@ export const computeLightPolygon = (
       }
     }
     points.push(end);
+  }
+  return points;
+};
+
+// Cache of the ray endpoints of every sweep light, one marching pass per
+// occlusion state: the rotating beam only re-selects rays, it never
+// changes an endpoint.
+let sweepEndpointCache: {
+  key: string;
+  endpoints: Map<string, Position[]>;
+} | null = null;
+
+const sweepRayEndpointsFor = (
+  light: LightSource,
+  state: GameState,
+  cellSize: number,
+  debugMode: boolean,
+  occlusionKey?: string,
+): Position[] => {
+  const key = occlusionKey ?? lightStateKey(state, cellSize, debugMode);
+  if (!sweepEndpointCache || sweepEndpointCache.key !== key) {
+    sweepEndpointCache = { key, endpoints: new Map() };
+  }
+  const geometry = lightPolygonCacheKey(light);
+  let points = sweepEndpointCache.endpoints.get(geometry);
+  if (!points) {
+    // March every ray to its endpoint, ignoring the sweep: the stripped
+    // light runs the plain polygon computation for all rays at once. The
+    // march is time-independent without the sweep, so timeMs is 0.
+    points = computeLightPolygon(
+      { ...light, effect: undefined },
+      state,
+      cellSize,
+      debugMode,
+      0,
+      key,
+    );
+    sweepEndpointCache.endpoints.set(geometry, points);
   }
   return points;
 };
@@ -620,9 +677,9 @@ export const lightInViewport = (
 // light's geometry and the occlusion state — actor positions, door
 // states, fog of war, cell size — none of which change between animation
 // frames, so animated lights reuse their polygon instead of re-marching
-// rays every frame. Sweep lights are excluded: their polygon rotates
-// with time. Sway lights are excluded too: their swinging center moves
-// the whole polygon with time.
+// rays every frame. Sway lights cache per quantized center step (their
+// polygon moves with the swing); sweep lights never enter this cache —
+// their beams assemble from the ray endpoint cache instead.
 //
 // The cache is keyed by a stable geometry string, not by object
 // identity: activeLights() recreates derived lights (carried item
@@ -645,7 +702,7 @@ const lightPolygonCacheKey = (light: LightSource): string =>
 
 let lightPolygonCache: {
   key: string;
-  polygons: Map<string, Position[]>;
+  polygons: Map<string, { points: Position[]; center: Position }>;
 } | null = null;
 
 // Everything that can change a light polygon, hashed into a cache key.
@@ -691,7 +748,9 @@ export const lightPolygonFor = (
   timeMs: number,
   occlusionKey?: string,
 ): Position[] => {
-  if (light.effect === LightEffect.SWEEP || light.effect === LightEffect.SWAY) {
+  if (light.effect === LightEffect.SWEEP) {
+    // The beam assembles from the per-occlusion ray endpoint cache; no
+    // marching happens per frame.
     return computeLightPolygon(
       light,
       state,
@@ -706,25 +765,38 @@ export const lightPolygonFor = (
     lightPolygonCache = { key, polygons: new Map() };
   }
   const cacheKey = lightPolygonCacheKey(light);
-  let points = lightPolygonCache.polygons.get(cacheKey);
-  if (!points) {
-    points = computeLightPolygon(
-      light,
-      state,
-      cellSize,
-      debugMode,
-      timeMs,
-      key,
-    );
-    if (lightPolygonCache.polygons.size >= MAX_LIGHT_POLYGON_CACHE_ENTRIES) {
-      // Evict the oldest entry: Map keys iterate in insertion order.
-      for (const oldest of lightPolygonCache.polygons.keys()) {
-        lightPolygonCache.polygons.delete(oldest);
-        break;
-      }
+  const center = lightCenter(light, cellSize, timeMs);
+  const cached = lightPolygonCache.polygons.get(cacheKey);
+  if (cached) {
+    // A swaying light's polygon follows its swinging center: recompute
+    // only once the center has moved a visible step (1/32 cell, the same
+    // quantum the repaint gate uses). The swing arm is 0.6 cells, so the
+    // steps are invisible while the marching drops from every frame to a
+    // handful of times per second.
+    if (
+      light.effect !== LightEffect.SWAY ||
+      Math.hypot(center.x - cached.center.x, center.y - cached.center.y) <=
+        SWAY_STEP_CELLS * cellSize
+    ) {
+      return cached.points;
     }
-    lightPolygonCache.polygons.set(cacheKey, points);
   }
+  const points = computeLightPolygon(
+    light,
+    state,
+    cellSize,
+    debugMode,
+    timeMs,
+    key,
+  );
+  if (lightPolygonCache.polygons.size >= MAX_LIGHT_POLYGON_CACHE_ENTRIES) {
+    // Evict the oldest entry: Map keys iterate in insertion order.
+    for (const oldest of lightPolygonCache.polygons.keys()) {
+      lightPolygonCache.polygons.delete(oldest);
+      break;
+    }
+  }
+  lightPolygonCache.polygons.set(cacheKey, { points, center });
   return points;
 };
 
@@ -1031,10 +1103,10 @@ export const hasAnimatedLights = (
 // continuous effects are quantized so the dynamic layer repaints only
 // when the visible output actually changes: intensity in 1/16 alpha
 // steps, sweep rotation in 4-degree steps, sway position in 1/32-cell
-// steps, sparkle twinkle phase in 1/16-loop steps.
+// steps, sparkle twinkle phase in 1/16-loop steps. The sway step also
+// drives the sway polygon cache (see lightPolygonFor).
 const INTENSITY_QUANTUM = 1 / 16;
 const SWEEP_STEP_RADIANS = Math.PI / 45;
-const SWAY_STEP_CELLS = 1 / 32;
 const SPARKLE_STEP = 1 / 16;
 
 // The quantized animation state of every animated light visible in the
