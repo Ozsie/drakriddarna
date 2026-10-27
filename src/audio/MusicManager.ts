@@ -1,11 +1,12 @@
+import { base } from '$app/paths';
 import type { MusicIntensity } from './MusicIntensity';
 
-const DEFAULT_EXPLORE_TRACK = '/music/explore.mp3';
-const DEFAULT_TENSION_TRACK = '/music/tension.mp3';
+const DEFAULT_EXPLORE_TRACK = `${base}/music/explore.mp3`;
+const DEFAULT_TENSION_TRACK = `${base}/music/tension.mp3`;
 // Duration of the crossfade between two tracks and how often the fading
 // volumes are stepped during it.
-const CROSSFADE_MS = 1500;
-const CROSSFADE_TICK_MS = 50;
+export const CROSSFADE_MS = 1500;
+export const CROSSFADE_TICK_MS = 50;
 
 export class MusicManager {
   private audio: HTMLAudioElement | null = null;
@@ -112,7 +113,12 @@ export class MusicManager {
       const progress = Math.min(1, (Date.now() - startedAt) / CROSSFADE_MS);
       audio.volume = this.targetVolume() * progress;
       if (previous) {
-        previous.volume = previousVolume * (1 - progress);
+        // The outgoing track fades down from the level it had when the
+        // crossfade started, clamped to the current volume setting — so
+        // setVolume(0) silences it immediately without breaking the fade
+        // progression, and it never jumps louder than it started.
+        previous.volume =
+          Math.min(previousVolume, this.targetVolume()) * (1 - progress);
       }
       if (progress >= 1) {
         this.finishFade();

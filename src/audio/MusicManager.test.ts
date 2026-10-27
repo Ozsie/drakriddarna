@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
-import { MusicManager } from './MusicManager';
+import { CROSSFADE_TICK_MS, MusicManager } from './MusicManager';
 
 type MockAudio = {
   play: Mock;
@@ -193,6 +193,47 @@ describe('MusicManager', () => {
 
     expect(explore.pause).toHaveBeenCalled();
     expect(tension.pause).toHaveBeenCalled();
+  });
+
+  it('silences the outgoing track immediately when the volume is set to 0 mid-crossfade', () => {
+    const manager = new MusicManager();
+    manager.unlock();
+    manager.playDungeonMusic();
+    advanceCrossfade();
+    const explore = lastAudio();
+
+    manager.setIntensity('tension');
+    const tension = lastAudio();
+    // Partway through the crossfade, the outgoing track is fading down.
+    vi.advanceTimersByTime(500);
+    expect(explore.volume).toBeGreaterThan(0);
+    expect(explore.volume).toBeLessThan(0.5);
+
+    // setVolume(0) must silence it on the next fade tick, not continue
+    // fading from the captured volume.
+    manager.setVolume(0);
+    vi.advanceTimersByTime(CROSSFADE_TICK_MS);
+    expect(explore.volume).toBe(0);
+    // The incoming track follows the new setting too.
+    expect(tension.volume).toBe(0);
+  });
+
+  it('keeps the outgoing fade progression when the volume setting rises mid-crossfade', () => {
+    const manager = new MusicManager();
+    manager.unlock();
+    manager.playDungeonMusic();
+    advanceCrossfade();
+    const explore = lastAudio();
+
+    manager.setIntensity('tension');
+    vi.advanceTimersByTime(500);
+    const midFadeVolume = explore.volume;
+
+    // Raising the setting must not jump the outgoing track louder than
+    // the level its fade progression reached.
+    manager.setVolume(1);
+    vi.advanceTimersByTime(CROSSFADE_TICK_MS);
+    expect(explore.volume).toBeLessThanOrEqual(midFadeVolume);
   });
 
   it('clamps the volume between 0 and 1', () => {
