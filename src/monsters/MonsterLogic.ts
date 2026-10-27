@@ -30,12 +30,7 @@ import {
   isNeighbouring,
   isRoomDiscovered,
 } from '../core';
-import {
-  getDifficulty,
-  getEffectiveMaxHealth,
-  getEffectiveMaxMovement,
-  takeDamage,
-} from '../core';
+import { getEffectiveMaxMovement, takeDamage } from '../core';
 import { liveHeroes } from '../hero/HeroLogic';
 import { distanceInGrid, nextRandom } from '../core';
 import {
@@ -52,6 +47,7 @@ import {
   findRetreatPosition,
   findSprayAlignPosition,
   getBehaviorsForMonsterType,
+  getDirectorContext,
   getDirectorState,
   logMonsterBehaviorDecision,
   resetRoundTargetCounters,
@@ -162,21 +158,8 @@ export const monsterActions = async (
     monster.forgotBowThisTurn = rollBowForgotten(state);
 
     // Compute director context
-    const allHeroes = state.heroes;
-    const healthModifier = getDifficulty(state).modifiers.health;
-    const totalMaxHp = allHeroes.reduce(
-      (sum, h) => sum + getEffectiveMaxHealth(h, healthModifier),
-      0,
-    );
-    const totalCurrentHp = allHeroes.reduce(
-      (sum, h) => sum + Math.max(0, h.health),
-      0,
-    );
-    const partyHpPercentage = totalMaxHp > 0 ? totalCurrentHp / totalMaxHp : 1;
-    const hasDeadHero = allHeroes.some((h) => h.health <= 0 || h.incapacitated);
-    const aliveMonsterCount = state.dungeon.layout.monsters.filter(
-      (m) => m.health > 0,
-    ).length;
+    const { hasDeadHero, partyHpPercentage, aliveMonsterCount } =
+      getDirectorContext(state);
     const directorState = getDirectorState(
       hasDeadHero,
       partyHpPercentage,

@@ -65,6 +65,7 @@ import {
   dismissDungeonIntro,
   renderBetweenDungeons,
   getBetweenDungeonsHit,
+  renderDebugPrintout,
   emojiCursor,
 } from '../ui/UIRendering';
 import {
@@ -1011,22 +1012,17 @@ export class DungeonBoardController {
       hasActiveFlames;
 
     if (this.debugMode) {
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      const ratio = (browser && window.devicePixelRatio) || 1;
-      ctx.scale(ratio, ratio);
-      ctx.fillStyle = 'white';
-      ctx.font = '10px Arial';
-      ctx.fillText(
-        `Re-renders: ${String(
-          String(this.totalReRenderCount),
-        )} (Static: ${String(
-          String(this.staticRenderCount),
-        )}, Dynamic: ${String(String(this.dynamicRenderCount))})`,
-        10,
-        14,
+      renderDebugPrintout(
+        ctx,
+        this.containerWidth,
+        this.containerHeight,
+        this.activeState,
+        {
+          totalReRenders: this.totalReRenderCount,
+          staticReRenders: this.staticRenderCount,
+          dynamicReRenders: this.dynamicRenderCount,
+        },
       );
-      ctx.restore();
     }
 
     if (this.overlayAnimationId) {

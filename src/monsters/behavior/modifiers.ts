@@ -1,11 +1,43 @@
 import type { Difficulty, GameState } from '../../types';
-import { getDifficulty, getGameMaster, nextRandom } from '../../core';
+import {
+  getDifficulty,
+  getEffectiveMaxHealth,
+  getGameMaster,
+  nextRandom,
+} from '../../core';
 import type {
   BehaviorContext,
   DirectorState,
   EvaluatedBehavior,
   MonsterBehavior,
 } from './types';
+
+export interface DirectorContext {
+  hasDeadHero: boolean;
+  partyHpPercentage: number;
+  aliveMonsterCount: number;
+}
+
+// The party-level inputs the director state is derived from. Shared by the
+// monster AI turn and the debug printout so both always agree.
+export const getDirectorContext = (state: GameState): DirectorContext => {
+  const allHeroes = state.heroes;
+  const healthModifier = getDifficulty(state).modifiers.health;
+  const totalMaxHp = allHeroes.reduce(
+    (sum, h) => sum + getEffectiveMaxHealth(h, healthModifier),
+    0,
+  );
+  const totalCurrentHp = allHeroes.reduce(
+    (sum, h) => sum + Math.max(0, h.health),
+    0,
+  );
+  return {
+    hasDeadHero: allHeroes.some((h) => h.health <= 0 || h.incapacitated),
+    partyHpPercentage: totalMaxHp > 0 ? totalCurrentHp / totalMaxHp : 1,
+    aliveMonsterCount: state.dungeon.layout.monsters.filter((m) => m.health > 0)
+      .length,
+  };
+};
 
 export const getDirectorState = (
   hasDeadHero: boolean,
