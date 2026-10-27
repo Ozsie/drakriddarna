@@ -267,6 +267,21 @@ Animations (actor movement, projectiles, damage indicators) are managed as
 small state machines in `core/ActorAnimation.ts`, driven by
 `requestAnimationFrame` only while an animation is in flight.
 
+## Adaptive music
+
+Music intensity is derived from the game state, not baked into the game
+logic. A pure selector (`src/audio/MusicIntensity.ts`) computes the current
+intensity — 'explore' or 'tension' — from the distance between the nearest
+alive monster in a discovered room and the heroes, comparing against an
+enter and an exit range. The gap between those ranges is hysteresis: the
+music does not flip back and forth on every monster step. The board
+controller calls the selector on each state update and hands the result to
+`MusicManager`, which crossfades (1.5 s) between the dungeon's registered
+explore and tension tracks — `music` and `musicTension` on the dungeon, with
+global defaults when omitted. Since the selector is pure and deterministic,
+it is unit-tested like any other logic module while the manager stays a thin
+browser-side effect.
+
 ## State, persistence and save migration
 
 The entire game lives in one `GameState` object, held in a Svelte `writable`
