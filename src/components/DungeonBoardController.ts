@@ -188,6 +188,7 @@ export class DungeonBoardController {
   private overlayAnimationId: number | null = null;
   private dynamicAnimationId: number | null = null;
   private shakeAnimationId: number | null = null;
+  private panRenderAnimationId: number | null = null;
   private lastDynamicFrameTs = 0;
   private lastDungeonKey = '';
   private lastTileset = '';
@@ -515,12 +516,28 @@ export class DungeonBoardController {
       cancelAnimationFrame(this.shakeAnimationId);
       this.shakeAnimationId = null;
     }
+    if (this.panRenderAnimationId !== null) {
+      cancelAnimationFrame(this.panRenderAnimationId);
+      this.panRenderAnimationId = null;
+    }
     clearFogCloudCaches();
     clearLightSpriteCache();
   }
 
   private isReady = (img: HTMLImageElement | null): boolean =>
     !!img && img.complete && img.naturalWidth > 0;
+
+  // Pan moves can arrive far faster than the display refreshes, so the
+  // handlers only update panX/panY and coalesce the repaint into a single
+  // requestAnimationFrame; the browser shows one frame either way.
+  private schedulePanRender = () => {
+    if (this.panRenderAnimationId !== null) return;
+    this.panRenderAnimationId = requestAnimationFrame(() => {
+      this.panRenderAnimationId = null;
+      this.updateAllCanvasTransforms();
+      this.renderCanvas(true);
+    });
+  };
 
   private updateAllCanvasTransforms = () => {
     if (!this.containerWidth || !this.containerHeight) return;
@@ -1383,8 +1400,7 @@ export class DungeonBoardController {
       }
       this.panX = this.dragStartPanX + dx;
       this.panY = this.dragStartPanY + dy;
-      this.updateAllCanvasTransforms();
-      this.renderCanvas(true);
+      this.schedulePanRender();
     }
   };
 
@@ -1426,8 +1442,7 @@ export class DungeonBoardController {
       if (result.moved) {
         this.hasMovedDuringDrag = true;
       }
-      this.updateAllCanvasTransforms();
-      this.renderCanvas(true);
+      this.schedulePanRender();
       if (event.cancelable) {
         event.preventDefault();
       }
