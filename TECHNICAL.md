@@ -269,13 +269,29 @@ surroundings (`softness`, via the same canvas filter technique and
 graceful degradation as soft light edges). Fog is visual by default but
 can be configured to damage actors entering or ending their turn in the
 room (e.g. poison gas), reusing the same environmental damage path as
-terrain. It also interacts with lighting in two configurable ways: a
+terrain. Room fog also interacts with lighting in two configurable ways: a
 `density` (default 0.3) erases that fraction of the light mask inside the
 fog, dimming glows that shine into the room and letting the ambient
-darkness veil close in — one erase per room per frame, feathered to match
-the visible cloud — while `blocksLight` fog instead marks the room's cells
-as fog in the ray-cast occlusion map, so no light enters the room at all,
+darkness veil close in, while `blocksLight` fog instead marks the room's
+cells as fog in the occlusion map, so no light enters the room at all,
 exactly like undiscovered fog of war.
+
+Performance of the always-animating effects gets three systematic
+treatments. First, the blurred fog cloud and light-dim mask of every
+fogged room are rasterized once per fog state into small offscreen
+canvases and then only blitted with the animated alpha — the canvas blur
+filter, by far the most expensive fog operation, never runs per frame.
+Second, ambient redraws are driven by a quantized animation signature
+instead of the frame clock: each animated light contributes its stepped
+visible output (flicker is inherently stepped, pulse/aura/gas in 1/16
+alpha steps, sweep in 4-degree steps, sway in 1/32-cell position steps),
+terrain and fog contribute a shared time step, and the dynamic layer only
+clears and repaints when the signature actually changes — a flickering
+brazier repaints about 8 times per second instead of 60. Third, the rAF
+loop keeps ticking at display rate but a minimum-interval gate caps
+continuous effects (sweeping beams, twinkling sparkles) at 30 repaints
+per second, and actor-driven frames (movement, projectiles) always run
+at full rate.
 
 The lighting (`src/dungeon/LightRendering.ts`) is the most graphics-heavy
 code in the repo: a 2D visibility technique where each light source casts a

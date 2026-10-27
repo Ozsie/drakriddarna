@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   activeLights,
   ambientLightLevel,
+  animatedLightsSignature,
   computeLightPolygon,
   computeSparkles,
   hasAnimatedLights,
@@ -28,6 +29,7 @@ import {
   Colour,
   ItemType,
   Level,
+  LightEffect,
   MonsterType,
   Side,
 } from '../types';
@@ -109,6 +111,7 @@ const createState = (
     heroes?: Hero[];
     discoveredRooms?: string[];
     roomFog?: GameState['dungeon']['layout']['roomFog'];
+    lights?: GameState['dungeon']['layout']['lights'];
   } = {},
 ): GameState => ({
   dungeon: {
@@ -133,6 +136,7 @@ const createState = (
       pillars: overrides.pillars ?? [],
       pits: [],
       corners: [],
+      ...(overrides.lights ? { lights: overrides.lights } : {}),
       ...(overrides.roomFog ? { roomFog: overrides.roomFog } : {}),
     },
     startingPositions: [{ x: 1, y: 1 }],
@@ -1905,5 +1909,93 @@ describe('gas fills its room', () => {
     const gradientCall = (ctx.createRadialGradient as ReturnType<typeof vi.fn>)
       .mock.calls[0];
     expect(gradientCall[5]).toBeGreaterThan(4 * CELL_SIZE);
+  });
+});
+
+describe('animatedLightsSignature', () => {
+  it('is empty without animated lights in view', () => {
+    const state = createState({ heroes: [] });
+    expect(animatedLightsSignature(state, false, 1000)).toBe('');
+  });
+
+  it('is empty for animated lights outside the viewport', () => {
+    const light = createLight({
+      position: { x: 2, y: 2 },
+      effect: LightEffect.FLICKER,
+    });
+    const state = createState({ heroes: [], lights: [light] });
+    expect(
+      animatedLightsSignature(state, false, 1000, {
+        x: 20,
+        y: 20,
+        width: 2,
+        height: 2,
+      }),
+    ).toBe('');
+  });
+
+  it('is stable within a flicker step and changes across steps', () => {
+    const light = createLight({
+      position: { x: 2, y: 2 },
+      effect: LightEffect.FLICKER,
+      rate: 1,
+    });
+    const state = createState({ heroes: [], lights: [light] });
+    // rate 1 flicker steps every 1/8 s: 100ms and 120ms share step 0,
+    // 130ms is step 1 with a different quantized brightness.
+    expect(animatedLightsSignature(state, false, 100)).toBe(
+      animatedLightsSignature(state, false, 120),
+    );
+    expect(animatedLightsSignature(state, false, 100)).not.toBe(
+      animatedLightsSignature(state, false, 130),
+    );
+  });
+
+  it('quantizes continuous pulse brightness in 1/16 alpha steps', () => {
+    const light = createLight({
+      position: { x: 2, y: 2 },
+      effect: LightEffect.PULSE,
+      rate: 1,
+    });
+    const state = createState({ heroes: [], lights: [light] });
+    // 0ms and 50ms land in the same 1/16 alpha step; 500ms does not.
+    expect(animatedLightsSignature(state, false, 0)).toBe(
+      animatedLightsSignature(state, false, 50),
+    );
+    expect(animatedLightsSignature(state, false, 0)).not.toBe(
+      animatedLightsSignature(state, false, 500),
+    );
+  });
+
+  it('quantizes a sway swing in 1/32-cell position steps', () => {
+    const light = createLight({
+      position: { x: 2, y: 2 },
+      effect: LightEffect.SWAY,
+      rate: 1,
+    });
+    const state = createState({ heroes: [], lights: [light] });
+    // The start of the swing and its outermost point are far apart.
+    expect(animatedLightsSignature(state, false, 0)).not.toBe(
+      animatedLightsSignature(state, false, 250),
+    );
+  });
+
+  it('counts every animated light in view', () => {
+    const lights = [
+      createLight({
+        position: { x: 1, y: 2 },
+        effect: LightEffect.FLICKER,
+        rate: 1,
+      }),
+      createLight({
+        position: { x: 3, y: 2 },
+        effect: LightEffect.PULSE,
+        rate: 1,
+      }),
+    ];
+    const state = createState({ heroes: [], lights });
+    expect(animatedLightsSignature(state, false, 1000).split('|')).toHaveLength(
+      2,
+    );
   });
 });

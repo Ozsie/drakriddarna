@@ -37,6 +37,7 @@ import {
   renderTerrainAnimation,
   renderWalls,
   hasAnimatedTerrainEffects,
+  TERRAIN_ANIMATION_STEP_MS,
 } from '../dungeon/DungeonRendering';
 import {
   activeLights,
@@ -45,7 +46,7 @@ import {
   renderLights,
   renderStaticLights,
   staticLightCacheKey,
-  hasAnimatedLights,
+  animatedLightsSignature,
 } from '../dungeon/LightRendering';
 import type { LightViewport } from '../dungeon/LightRendering';
 import { renderItems } from '../items/ItemRendering';
@@ -81,6 +82,7 @@ import {
   shakeJitter,
 } from '../combat';
 import { clearTileTextureCache } from '../dungeon/TileTextureCache';
+import { clearFogCloudCaches } from '../dungeon/DungeonRendering';
 import { hasActiveActorAnimations } from '../core';
 import {
   createTouchPanState,
@@ -121,6 +123,10 @@ export interface DungeonBoardProps {
 }
 
 export class DungeonBoardController {
+  // Ambient-only dynamic frames (light effects, terrain, fog) render at
+  // most this often; actor-driven frames run at the display's rate.
+  static readonly AMBIENT_FRAME_MIN_MS = 1000 / 30;
+
   // --- props + derived -----------------------------------------------------
   private props: DungeonBoardProps = {
     state: undefined,
@@ -174,11 +180,13 @@ export class DungeonBoardController {
   private lastStaticLightKey = '';
   private lastStaticSignature = '';
   private lastDynamicSignature = '';
+  private lastAmbientSignature = '';
   private lastOverlaySignature = '';
   private lastUiSignature = '';
   private overlayAnimationId: number | null = null;
   private dynamicAnimationId: number | null = null;
   private shakeAnimationId: number | null = null;
+  private lastDynamicFrameTs = 0;
   private lastDungeonKey = '';
   private lastTileset = '';
   private lastLocale = '';
@@ -505,6 +513,7 @@ export class DungeonBoardController {
       cancelAnimationFrame(this.shakeAnimationId);
       this.shakeAnimationId = null;
     }
+    clearFogCloudCaches();
   }
 
   private isReady = (img: HTMLImageElement | null): boolean =>
@@ -627,6 +636,7 @@ export class DungeonBoardController {
       return;
     if (!this.isReady(this.actors)) return;
     const currentTime = Date.now();
+    this.lastDynamicFrameTs = performance.now();
     const debugMode = this.debugMode ?? false;
     // The visible part of the world, in cells: lights whose glow cannot
     // reach it are culled from rendering and animation alike.
@@ -643,25 +653,38 @@ export class DungeonBoardController {
       height: this.containerHeight / this.cellSize,
     };
     const hasActiveAnimations = hasActiveActorAnimations();
-    // Light effects (pulse, flicker, sweep, blink, sway) need a re-render
-    // every frame while any light animates within the viewport. The
-    // active light list is computed once per frame and shared by every
-    // lighting call below.
+    // Light effects (pulse, flicker, sweep, blink, sway) animate while any
+    // light animates within the viewport. The active light list is
+    // computed once per frame and shared by every lighting call below.
     const frameLights = activeLights(this.activeState, currentTime);
-    const hasLightEffects = hasAnimatedLights(
+    // Quantized animation state of the visible lights: two renders with
+    // the same signature paint identical light output, so the dynamic
+    // layer repaints only when it changes — a flickering brazier
+    // repaints about 8 times per second instead of every frame.
+    const lightSig = animatedLightsSignature(
       this.activeState,
       debugMode,
       currentTime,
       lightViewport,
       frameLights,
     );
+    const hasLightEffects = lightSig !== '';
     // Animated terrain overlays (water shimmer, lava pulse) and room fog
-    // undulate every frame while visible.
+    // change their output slowly, so their animation state is stepped by
+    // time instead of quantized per effect.
     const hasTerrainEffects = hasAnimatedTerrainEffects(
       this.activeState,
       debugMode,
       lightViewport,
     );
+    const ambientSig =
+      hasLightEffects || hasTerrainEffects
+        ? `${lightSig}|${
+            hasTerrainEffects
+              ? Math.floor(currentTime / TERRAIN_ANIMATION_STEP_MS)
+              : ''
+          }`
+        : '';
     const sig = getDynamicSignature(
       this.activeState,
       this.debugMode ?? false,
@@ -675,6 +698,24 @@ export class DungeonBoardController {
       sig === this.lastDynamicSignature
     )
       return;
+    // Ambient repaint gate: when only ambient effects animate and the
+    // game state is unchanged, the quantized signature tells whether the
+    // painted frame is still current. Skipping the repaint keeps the
+    // existing frame; the loop keeps ticking while anything animates.
+    if (
+      force &&
+      !hasActiveAnimations &&
+      (hasLightEffects || hasTerrainEffects) &&
+      ambientSig === this.lastAmbientSignature &&
+      sig === this.lastDynamicSignature
+    ) {
+      if (this.dynamicAnimationId) {
+        cancelAnimationFrame(this.dynamicAnimationId);
+      }
+      this.scheduleDynamicFrame(false);
+      return;
+    }
+    this.lastAmbientSignature = ambientSig;
     this.lastDynamicSignature = sig;
 
     const ctx = this.actorCanvas.getContext('2d');
@@ -868,10 +909,35 @@ export class DungeonBoardController {
       hasTerrainEffects ||
       hasActiveActorAnimations(currentTime)
     ) {
-      this.dynamicAnimationId = requestAnimationFrame(() => {
-        this.renderDynamicLayer(true);
-      });
+      // Actor movement keeps the full frame rate; ambient effects
+      // (flickering torches, water, fog) render at half rate, halving
+      // the continuous CPU cost of an animated dungeon.
+      const fullRate =
+        hasActiveMonsters ||
+        hasActiveHeroes ||
+        hasActiveActorAnimations(currentTime);
+      this.scheduleDynamicFrame(fullRate);
     }
+  };
+
+  // Schedules the next dynamic-layer frame. Ambient-only frames are
+  // throttled to AMBIENT_FRAME_MIN_MS: the rAF keeps ticking at full rate
+  // but only renders when enough time has passed, so light effects stay
+  // smooth enough while the heavy per-frame work (ray casting, blur
+  // blits, full-canvas composites) runs at half frequency.
+  private scheduleDynamicFrame = (fullRate: boolean): void => {
+    this.dynamicAnimationId = requestAnimationFrame(() => {
+      const now = performance.now();
+      if (
+        !fullRate &&
+        now - this.lastDynamicFrameTs <
+          DungeonBoardController.AMBIENT_FRAME_MIN_MS
+      ) {
+        this.scheduleDynamicFrame(false);
+        return;
+      }
+      this.renderDynamicLayer(true);
+    });
   };
 
   private renderOverlayLayer = (force = false) => {

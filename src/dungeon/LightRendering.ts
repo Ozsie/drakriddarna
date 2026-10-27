@@ -996,6 +996,66 @@ export const hasAnimatedLights = (
       lightInViewport(light, viewport),
   );
 
+// --- Ambient repaint signature ---------------------------------------------
+
+// Quantization steps for the time-varying parts of an animated light.
+// Flicker and blink are already stepped by their own effect math; the
+// continuous effects are quantized so the dynamic layer repaints only
+// when the visible output actually changes: intensity in 1/16 alpha
+// steps, sweep rotation in 4-degree steps, sway position in 1/32-cell
+// steps, sparkle twinkle phase in 1/16-loop steps.
+const INTENSITY_QUANTUM = 1 / 16;
+const SWEEP_STEP_RADIANS = Math.PI / 45;
+const SWAY_STEP_CELLS = 1 / 32;
+const SPARKLE_STEP = 1 / 16;
+
+// The quantized animation state of every animated light visible in the
+// viewport, as one comparable string; empty when none animate. Two
+// renders with the same signature paint identical light output, so the
+// dynamic layer can skip the repaint entirely — a flickering brazier
+// (rate 1, 8 jitter steps per loop) repaints about 8 times per second
+// instead of every frame, a torch at rate 2 about 16 times.
+export const animatedLightsSignature = (
+  state: GameState,
+  debugMode: boolean,
+  now: number = Date.now(),
+  viewport?: LightViewport,
+  frameLights?: LightSource[],
+): string =>
+  (frameLights ?? activeLights(state, now))
+    .filter(
+      (light) =>
+        isAnimatedLight(light) &&
+        isLightRenderable(state, light, debugMode) &&
+        lightInViewport(light, viewport),
+    )
+    .map((light) => {
+      const t = (now / 1000) * lightRate(light);
+      const scale = lightIntensityScale(light, now);
+      const sweep = lightSweepAngle(light, now);
+      const sweepStep =
+        sweep === undefined ? '' : `${Math.floor(sweep / SWEEP_STEP_RADIANS)}`;
+      let sway = '';
+      if (light.effect === LightEffect.SWAY) {
+        // Cell units (cellSize 1), so the signature is cell-size agnostic.
+        const offset = lightSwayOffset(light, 1, now);
+        sway = `${Math.round(offset.x / SWAY_STEP_CELLS)},${Math.round(
+          offset.y / SWAY_STEP_CELLS,
+        )}`;
+      }
+      const sparkle =
+        light.effect === LightEffect.SPARKLE
+          ? `${Math.floor(t / SPARKLE_STEP)}`
+          : '';
+      return [
+        Math.floor(scale / INTENSITY_QUANTUM),
+        sweepStep,
+        sway,
+        sparkle,
+      ].join('.');
+    })
+    .join('|');
+
 // Fills a light shape (a polygon glow, an aura ring, a hole punched into
 // darkness) with soft edges when the light asks for them. `ctx.filter`
 // blurs the filled shape; on browsers without canvas filter support the

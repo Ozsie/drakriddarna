@@ -337,6 +337,12 @@ const DEFAULT_FOG_RATE = 0.3;
 const DEFAULT_FOG_SOFTNESS = 0.6;
 const DEFAULT_FOG_DENSITY = 0.3;
 
+// The animated terrain and fog overlays change their output slowly
+// (travelling wave crests, breathing glow, undulating cloud), so the
+// dynamic layer repaints them at most this often: the ambient repaint
+// gate in the board controller steps time by this amount.
+export const TERRAIN_ANIMATION_STEP_MS = 1000 / 15;
+
 // Only the built-in terrain types have an animated overlay; unknown types
 // render their static fill alone.
 const isAnimatedTerrainType = (type: string): boolean =>
@@ -595,6 +601,153 @@ const traceRoomPath = (
   });
 };
 
+// The fog rooms currently relevant for rendering, grouped by grid letter.
+const groupFogRooms = (
+  state: GameState,
+  debugMode: boolean,
+  viewport?: LightViewport,
+): Map<string, { position: Position; options: RoomFogOptions }[]> => {
+  const rooms = new Map<
+    string,
+    { position: Position; options: RoomFogOptions }[]
+  >();
+  collectFogCells(state, debugMode, viewport).forEach(
+    ({ position, room, options }) => {
+      const group = rooms.get(room) ?? [];
+      group.push({ position, options });
+      rooms.set(room, group);
+    },
+  );
+  return rooms;
+};
+
+// --- Fog cloud caching -----------------------------------------------------
+
+// The blurred fog cloud of each room — the visible fill and the light-dim
+// mask — is rasterized once per fog state into an offscreen canvas and then
+// only blitted with the animated alpha. This keeps the canvas blur filter,
+// by far the most expensive part of fog rendering, off the per-frame path:
+// a fogged room costs two drawImage calls per frame instead of two
+// blurred fills. Falls back to direct (per-frame blurred) rendering where
+// offscreen canvases are unavailable, e.g. in the node test environment.
+type FogCloudCacheEntry = {
+  key: string;
+  // World offset of the canvases, in pixels.
+  x: number;
+  y: number;
+  cloud: HTMLCanvasElement;
+  dim: HTMLCanvasElement;
+};
+const fogCloudCaches = new Map<string, FogCloudCacheEntry>();
+
+export const clearFogCloudCaches = (): void => fogCloudCaches.clear();
+
+const canBuildOffscreenCanvas = (): boolean =>
+  typeof document !== 'undefined' &&
+  typeof document.createElement === 'function';
+
+// Everything that changes a room's fog cloud: the room, its fog options
+// (runtime fog fills mutate these), the discovered cells it covers, the
+// grid itself (collapses rewrite room letters) and the cell size.
+const fogCloudCacheKey = (
+  state: GameState,
+  room: string,
+  cellSize: number,
+  debugMode: boolean,
+): string =>
+  `${state.dungeon.name}|${room}|${cellSize}|${debugMode ? 'd' : 'n'}|${
+    state.dungeon.discoveredRooms.includes(room) ? 'd' : 'n'
+  }|${state.dungeon.layout.grid.join('')}|${JSON.stringify(
+    state.dungeon.layout.roomFog?.[room] ?? null,
+  )}`;
+
+const buildFogCloudCanvas = (
+  cells: { position: Position }[],
+  fillStyle: string,
+  blurPx: number,
+  cellSize: number,
+  minX: number,
+  minY: number,
+  width: number,
+  height: number,
+): HTMLCanvasElement | null => {
+  if (!canBuildOffscreenCanvas()) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, width);
+  canvas.height = Math.max(1, height);
+  const cloudCtx = canvas.getContext('2d');
+  if (!cloudCtx) return null;
+  if (blurPx > 0) {
+    cloudCtx.filter = `blur(${blurPx}px)`;
+  }
+  cloudCtx.fillStyle = fillStyle;
+  cloudCtx.beginPath();
+  cells.forEach(({ position }) => {
+    cloudCtx.rect(
+      (position.x - minX) * cellSize,
+      (position.y - minY) * cellSize,
+      cellSize,
+      cellSize,
+    );
+  });
+  cloudCtx.fill();
+  return canvas;
+};
+
+const fogCloudFor = (
+  state: GameState,
+  room: string,
+  cells: { position: Position }[],
+  options: RoomFogOptions,
+  cellSize: number,
+  debugMode: boolean,
+): FogCloudCacheEntry | null => {
+  if (!canBuildOffscreenCanvas()) return null;
+  const key = fogCloudCacheKey(state, room, cellSize, debugMode);
+  const cached = fogCloudCaches.get(room);
+  if (cached && cached.key === key) return cached;
+
+  const minX = Math.min(...cells.map(({ position }) => position.x));
+  const minY = Math.min(...cells.map(({ position }) => position.y));
+  const maxX = Math.max(...cells.map(({ position }) => position.x));
+  const maxY = Math.max(...cells.map(({ position }) => position.y));
+  const blurPx = fogEdgeBlurPx(options, cellSize);
+  const cloud = buildFogCloudCanvas(
+    cells,
+    options.color ?? DEFAULT_FOG_COLOR,
+    blurPx,
+    cellSize,
+    minX,
+    minY,
+    (maxX - minX + 1) * cellSize,
+    (maxY - minY + 1) * cellSize,
+  );
+  // The dim mask is the same shape in opaque black: destination-out only
+  // reads the drawn pixels' alpha.
+  const dim = cloud
+    ? buildFogCloudCanvas(
+        cells,
+        '#000000',
+        blurPx,
+        cellSize,
+        minX,
+        minY,
+        (maxX - minX + 1) * cellSize,
+        (maxY - minY + 1) * cellSize,
+      )
+    : null;
+  if (!cloud || !dim) return null;
+  const entry: FogCloudCacheEntry = {
+    key,
+    x: minX * cellSize,
+    y: minY * cellSize,
+    cloud,
+    dim,
+  };
+  fogCloudCaches.set(room, entry);
+  return entry;
+};
+
 // The fog cloud of a fogged room: a translucent fill over every discovered
 // cell of the room, drawn as one whole-room shape so the cloud reads as a
 // single body. The whole cloud slowly breathes (its alpha undulates with a
@@ -611,18 +764,7 @@ export const renderRoomFog = (
 ): void => {
   const fog = state.dungeon.layout.roomFog;
   if (!fog) return;
-  const rooms = new Map<
-    string,
-    { position: Position; options: RoomFogOptions }[]
-  >();
-  collectFogCells(state, debugMode, viewport).forEach(
-    ({ position, room, options }) => {
-      const group = rooms.get(room) ?? [];
-      group.push({ position, options });
-      rooms.set(room, group);
-    },
-  );
-  rooms.forEach((cells, room) => {
+  groupFogRooms(state, debugMode, viewport).forEach((cells, room) => {
     const options = cells[0].options;
     const rate = options.rate ?? DEFAULT_FOG_RATE;
     const t = (timeMs / 1000) * rate;
@@ -630,6 +772,18 @@ export const renderRoomFog = (
       (options.opacity ?? DEFAULT_FOG_OPACITY) *
       (0.78 +
         0.22 * Math.sin(2 * Math.PI * (t + cellHash(room.charCodeAt(0), 0))));
+
+    // Fast path: blit the cached blurred cloud with the breathing alpha.
+    const cache = fogCloudFor(state, room, cells, options, cellSize, debugMode);
+    if (cache) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(cache.cloud, cache.x, cache.y);
+      ctx.restore();
+      return;
+    }
+
+    // Direct path (no offscreen canvases): the blurred fill itself.
     const blurPx = fogEdgeBlurPx(options, cellSize);
     ctx.save();
     if (blurPx > 0) {
@@ -662,26 +816,26 @@ export const renderFogLightDim = (
 ): void => {
   const fog = state.dungeon.layout.roomFog;
   if (!fog) return;
-  const rooms = new Map<
-    string,
-    { position: Position; options: RoomFogOptions }[]
-  >();
-  collectFogCells(state, debugMode, viewport).forEach(
-    ({ position, room, options }) => {
-      if (
-        (options.density ?? DEFAULT_FOG_DENSITY) <= 0 ||
-        options.blocksLight
-      ) {
-        return;
-      }
-      const group = rooms.get(room) ?? [];
-      group.push({ position, options });
-      rooms.set(room, group);
-    },
-  );
-  rooms.forEach((cells) => {
+  const rooms = groupFogRooms(state, debugMode, viewport);
+  rooms.forEach((cells, room) => {
     const options = cells[0].options;
     const density = options.density ?? DEFAULT_FOG_DENSITY;
+    if (density <= 0 || options.blocksLight) {
+      return;
+    }
+
+    // Fast path: erase through the cached blurred dim mask.
+    const cache = fogCloudFor(state, room, cells, options, cellSize, debugMode);
+    if (cache) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.globalAlpha = density;
+      ctx.drawImage(cache.dim, cache.x, cache.y);
+      ctx.restore();
+      return;
+    }
+
+    // Direct path (no offscreen canvases).
     const blurPx = fogEdgeBlurPx(options, cellSize);
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';

@@ -9,7 +9,7 @@ import type {
   ProjectileAnimation,
   ShakeEffect,
 } from '../types';
-import { getActorFlashIntensity } from '../core';
+import { getActorFlashIntensity } from '../core/ActorAnimation';
 
 export const BLOOD_SPLATTER_DURATION_MS = 500;
 export const PROJECTILE_DURATION_MS = 220;
