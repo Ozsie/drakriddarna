@@ -22,6 +22,7 @@ import {
 } from '../core';
 import { autoDetectCorners } from './cornerDetection';
 import { drawCachedTile } from './TileTextureCache';
+import { DEFAULT_TILESET_TILE_SIZE } from './TilesetLogic';
 import {
   TERRAIN_DEFAULT_OPACITY,
   TERRAIN_DEFAULT_RATE,
@@ -202,6 +203,7 @@ const drawTile = (
   x: number,
   y: number,
   state: GameState,
+  tileSize: number = DEFAULT_TILESET_TILE_SIZE,
 ) => {
   if (
     state.dungeon.discoveredRooms.some((r) => neighbourOf(x, y, r, state)) ||
@@ -210,10 +212,10 @@ const drawTile = (
     drawCachedTile(
       ctx,
       ground,
-      xPos * 48,
-      yPos * 48,
-      48,
-      48,
+      xPos * tileSize,
+      yPos * tileSize,
+      tileSize,
+      tileSize,
       x * cellSize,
       y * cellSize,
       cellSize,
@@ -1296,16 +1298,17 @@ const renderTrapDoor = (
   ground: CanvasImageSource,
   cellSize: number,
   secret: Secret,
+  tileSize: number = DEFAULT_TILESET_TILE_SIZE,
 ) => {
   const x = secret.position.x;
   const y = secret.position.y;
   drawCachedTile(
     ctx,
     ground,
-    48 * 6,
-    48 * 7,
-    48,
-    48,
+    tileSize * 6,
+    tileSize * 7,
+    tileSize,
+    tileSize,
     x * cellSize,
     y * cellSize,
     cellSize,
@@ -1318,16 +1321,17 @@ const renderFoundSecret = (
   ground: CanvasImageSource,
   cellSize: number,
   secret: Secret,
+  tileSize: number = DEFAULT_TILESET_TILE_SIZE,
 ) => {
   const x = secret.position.x;
   const y = secret.position.y;
   drawCachedTile(
     ctx,
     ground,
-    5 * 48,
-    4 * 48,
-    48,
-    48,
+    5 * tileSize,
+    4 * tileSize,
+    tileSize,
+    tileSize,
     x * cellSize,
     y * cellSize,
     cellSize,
