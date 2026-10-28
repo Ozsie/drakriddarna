@@ -1324,8 +1324,8 @@ const renderFoundSecret = (
   drawCachedTile(
     ctx,
     ground,
+    5 * 48,
     4 * 48,
-    0,
     48,
     48,
     x * cellSize,
@@ -1528,6 +1528,11 @@ const DOOR_LOCKED_SEAM = '#43434e';
 const DOOR_LOCKED_EDGE = '#2b2b34';
 const DOOR_BRASS = '#d9a83f';
 const DOOR_HOLE = '#1f1608';
+// A faint warm outline painted just around the leaf, so the door reads
+// against the grey of the surrounding wall pieces. Translucent enough to
+// stay unobtrusive where the door is easy to see, bright enough to pick
+// the leaf out of the wall in a dark corridor.
+const DOOR_OUTLINE = 'rgba(230, 206, 158, 0.4)';
 
 const doorThickness = (cellSize: number): number =>
   Math.max(5, Math.round(cellSize / 6));
@@ -1552,6 +1557,11 @@ const drawClosedDoor = (
   const leafH = vertical ? cellSize : thickness;
   const midX = door.x * cellSize + cellSize / 2;
   const midY = door.y * cellSize + cellSize / 2;
+
+  // Contrasting outline around the leaf, painted first so the leaf and
+  // its shading cover everything but the one-pixel halo.
+  ctx.fillStyle = DOOR_OUTLINE;
+  ctx.fillRect(leafX - 1, leafY - 1, leafW + 2, leafH + 2);
 
   // Leaf base and shaded long edges
   ctx.fillStyle = door.locked ? DOOR_LOCKED : DOOR_WOOD;

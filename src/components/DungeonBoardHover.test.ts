@@ -240,9 +240,17 @@ describe('monster cards and diary hover', () => {
   it('the diary also clears the event card toggle', () => {
     const hover = createBoardHoverState();
     hover.isEventCardToggleHovered = true;
-    const result = updateDiaryHover(hover);
+    const result = updateDiaryHover(hover, { type: 'panel' });
     expect(hover.isEventCardToggleHovered).toBe(false);
+    expect(hover.isDiaryToggleHovered).toBe(false);
     expect(result.changed).toBe(true);
+  });
+
+  it('the diary toggle tracks hover with a pointer cursor', () => {
+    const hover = createBoardHoverState();
+    const result = updateDiaryHover(hover, { type: 'toggle' });
+    expect(hover.isDiaryToggleHovered).toBe(true);
+    expect(result.cursor).toBe('pointer');
   });
 });
 

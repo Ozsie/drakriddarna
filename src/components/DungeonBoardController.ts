@@ -74,6 +74,7 @@ import {
   getBetweenDungeonsHit,
   renderDebugPrintout,
   emojiCursor,
+  isCompactUi,
 } from '../ui/UIRendering';
 import {
   setBetweenDungeonsStep,
@@ -303,6 +304,12 @@ export class DungeonBoardController {
   private isEventCardCollapsed = false;
   private isDungeonIntroDismissed = false;
   private showDungeonIntro = false;
+  // On narrow (compact) screens the events and diary panels collapse into
+  // corner squares; these flags remember whether the player has opened
+  // them. On wide screens the panels are always open and the flags are
+  // ignored.
+  private mobileEventsOpen = false;
+  private mobileDiaryOpen = false;
 
   private menuCallbacks: MenuCallbacks = {
     setView: (view: MenuView) => {
@@ -1317,6 +1324,8 @@ export class DungeonBoardController {
 
   private renderUiLayer = (force = false) => {
     if (!browser || !this.uiCanvas) return;
+    const eventCardCollapsed = this.effectiveEventCardCollapsed;
+    const diaryCollapsed = this.effectiveDiaryCollapsed;
     const menu = get(radialMenuStore);
     const recentLogs = this.activeState?.actionLog?.slice(0, 8);
     const logSig = recentLogs
@@ -1375,7 +1384,7 @@ export class DungeonBoardController {
             String(String(n.foundOn)),
           )}`,
       )
-      .join(',')}`;
+      .join(',')}:${String(String(String(diaryCollapsed)))}`;
     const eventSig = `${String(
       String(this.activeState?.currentEvent?.id ?? ''),
     )}:${(this.activeState?.eventDeck ?? [])
@@ -1385,9 +1394,9 @@ export class DungeonBoardController {
             String(String(e.used)),
           )}`,
       )
-      .join(',')}:${String(String(String(this.isEventCardCollapsed)))}:${String(
+      .join(',')}:${String(String(String(eventCardCollapsed)))}:${String(
       this.hover.isEventCardToggleHovered,
-    )}`;
+    )}:${String(this.hover.isDiaryToggleHovered)}`;
     const introSig = `${String(String(String(this.showDungeonIntro)))}:${String(
       this.hover.isDungeonIntroCloseHovered,
     )}:${String(String(String(this.activeState?.dungeon?.intro ?? '')))}`;
@@ -1484,6 +1493,10 @@ export class DungeonBoardController {
         this.containerWidth,
         this.containerHeight,
         this.activeState,
+        {
+          isCollapsed: diaryCollapsed,
+          isToggleHovered: this.hover.isDiaryToggleHovered,
+        },
       );
       renderEventCard(
         ctx,
@@ -1491,7 +1504,7 @@ export class DungeonBoardController {
         this.containerHeight,
         this.activeState,
         {
-          isCollapsed: this.isEventCardCollapsed,
+          isCollapsed: eventCardCollapsed,
           isToggleHovered: this.hover.isEventCardToggleHovered,
         },
       );
@@ -2018,6 +2031,26 @@ export class DungeonBoardController {
 
   // --- UI input helpers ------------------------------------------------------
 
+  /** Narrow-screen mode: corner squares, only the active actor's cards. */
+  private get isCompactUiActive(): boolean {
+    return isCompactUi(this.containerWidth);
+  }
+
+  /**
+   * Collapsed state actually passed to the renderers. Compact mode keeps
+   * its own open flags (both panels start collapsed); wide screens keep
+   * the classic behaviour (diary always open, events per user toggle).
+   */
+  private get effectiveEventCardCollapsed(): boolean {
+    return this.isCompactUiActive
+      ? !this.mobileEventsOpen
+      : this.isEventCardCollapsed;
+  }
+
+  private get effectiveDiaryCollapsed(): boolean {
+    return this.isCompactUiActive && !this.mobileDiaryOpen;
+  }
+
   /** First UI element under the given board pixel, in cascade order. */
   private uiHitAt(
     x: number,
@@ -2040,7 +2073,8 @@ export class DungeonBoardController {
       menuView: this.currentMenuView,
       menuCallbacks: this.menuCallbacks,
       buildInfo,
-      eventCardCollapsed: this.isEventCardCollapsed,
+      eventCardCollapsed: this.effectiveEventCardCollapsed,
+      diaryCollapsed: this.effectiveDiaryCollapsed,
       saveLoadDialogMode: this.saveLoadDialogMode,
       saveName: this.saveNameInput,
       isNewGameDialogOpen: this.isNewGameDialogOpen,
@@ -2352,13 +2386,29 @@ export class DungeonBoardController {
         const eventHit = hit.hit;
         if (eventHit.type === 'toggle') {
           soundEffectManager.playButtonClick();
-          this.isEventCardCollapsed = !this.isEventCardCollapsed;
+          if (this.isCompactUiActive) {
+            this.mobileEventsOpen = !this.mobileEventsOpen;
+          } else {
+            this.isEventCardCollapsed = !this.isEventCardCollapsed;
+          }
           this.renderUiLayer(true);
         }
         return;
       }
 
-      // Monster cards and the diary consume the click without dispatching.
+      if (hit?.kind === 'diary') {
+        // The diary only dispatches in compact mode, where its corner
+        // square (or the panel's close button) toggles it open/closed.
+        if (hit.hit.type === 'toggle') {
+          soundEffectManager.playButtonClick();
+          this.mobileDiaryOpen = !this.mobileDiaryOpen;
+          this.renderUiLayer(true);
+        }
+        return;
+      }
+
+      // Monster cards and the open diary consume the click without
+      // dispatching.
       if (hit) {
         return;
       }

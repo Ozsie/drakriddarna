@@ -65,6 +65,7 @@ const createContext = (overrides?: Partial<UiHitContext>): UiHitContext => ({
   menuCallbacks: {},
   buildInfo: { date: 'today', hash: 'abc' },
   eventCardCollapsed: false,
+  diaryCollapsed: false,
   saveLoadDialogMode: null,
   saveName: '',
   isNewGameDialogOpen: false,

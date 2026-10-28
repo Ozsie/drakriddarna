@@ -173,6 +173,34 @@ describe('EventCardRendering', () => {
       expect(layout.drawnEvents.length).toBe(0);
       expect(layout.activeEvent).toBeUndefined();
     });
+
+    it('collapses into a corner square on compact screens', () => {
+      const state = createMockState();
+      // 375x667: iPhone SE-sized screen
+      const layout = getEventCardLayout(375, 667, state, {
+        isCollapsed: true,
+      });
+      expect(layout.isCollapsed).toBe(true);
+      expect(layout.isCompact).toBe(true);
+      expect(layout.bounds.x).toBe(8);
+      expect(layout.bounds.y).toBe(46);
+      expect(layout.bounds.width).toBe(40);
+      expect(layout.bounds.height).toBe(40);
+      // The whole square is the toggle
+      expect(layout.toggleButtonBounds).toEqual(layout.bounds);
+    });
+
+    it('renders the collapsed square with the remaining count', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+      renderEventCard(ctx, 375, 667, state, { isCollapsed: true });
+
+      const texts = (
+        ctx.fillText as unknown as { mock: { calls: string[][] } }
+      ).mock.calls.map((call) => call[0]);
+      expect(texts).toContain('🎴');
+      expect(texts).toContain('2'); // 2 of 3 events remain
+    });
   });
 
   describe('getEventCardHit', () => {
@@ -227,6 +255,28 @@ describe('EventCardRendering', () => {
         layout.bounds.y + 40,
       );
       expect(hit).toEqual({ type: 'card' });
+    });
+
+    it('returns toggle hit when tapping the collapsed compact square', () => {
+      const state = createMockState();
+      const layout = getEventCardLayout(375, 667, state, {
+        isCollapsed: true,
+      });
+      const hit = getEventCardHit(
+        375,
+        667,
+        state,
+        true,
+        layout.bounds.x + 20,
+        layout.bounds.y + 20,
+      );
+      expect(hit).toEqual({ type: 'toggle' });
+    });
+
+    it('returns null outside the collapsed compact square', () => {
+      const state = createMockState();
+      const hit = getEventCardHit(375, 667, state, true, 200, 100);
+      expect(hit).toBeNull();
     });
   });
 
