@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
-  getBetweenDungeonsLayout,
   getBetweenDungeonsHit,
+  getBetweenDungeonsLayout,
   renderBetweenDungeons,
 } from './BetweenDungeonsRendering';
 import {
@@ -54,6 +54,48 @@ describe('BetweenDungeonsRendering', () => {
     expect(layout.heroes.length).toBeGreaterThan(0);
     expect(layout.actionButtonLabel).toBeDefined();
     expect(layout.secondaryButtonBounds).toBeUndefined();
+  });
+
+  it('includes the dungeon time in the level-up score section when the run was timed', () => {
+    const state = init();
+    state.dungeon.score = {
+      healthPoints: 300,
+      killPoints: 90,
+      itemPoints: 50,
+      secretPoints: 50,
+      roundPenalty: -20,
+      total: 470,
+    };
+
+    openBetweenDungeons(state);
+    if (state.betweenDungeons) {
+      state.betweenDungeons.dungeonTimeMs = 65_400;
+    }
+    const layout = getBetweenDungeonsLayout(800, 600, state);
+    expect(layout.scoreSection?.timeText).toBeDefined();
+
+    if (state.betweenDungeons) {
+      state.betweenDungeons.dungeonTimeMs = undefined;
+    }
+    const unTimedLayout = getBetweenDungeonsLayout(800, 600, state);
+    expect(unTimedLayout.scoreSection?.timeText).toBeUndefined();
+  });
+
+  it('includes the campaign time on the campaign-complete screen when the run was timed', () => {
+    const state = init();
+    openCampaignComplete(state);
+    if (state.betweenDungeons) {
+      state.betweenDungeons.campaignTimeMs = 3_723_000;
+    }
+
+    const layout = getBetweenDungeonsLayout(800, 600, state);
+    expect(layout.campaignComplete?.timeText).toBeDefined();
+
+    if (state.betweenDungeons) {
+      state.betweenDungeons.campaignTimeMs = undefined;
+    }
+    const unTimedLayout = getBetweenDungeonsLayout(800, 600, state);
+    expect(unTimedLayout.campaignComplete?.timeText).toBeUndefined();
   });
 
   it('computes trade layout when step is trade', () => {

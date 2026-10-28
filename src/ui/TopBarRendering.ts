@@ -1,5 +1,6 @@
 import type { GameState, LogEvent } from '../types';
 import { i18n } from '../core';
+import { formatDuration, getCurrentDungeonTimeMs } from '../core';
 
 export interface TopBarElementBounds {
   x: number;
@@ -14,6 +15,8 @@ export interface TopBarLayout {
   debugButton?: TopBarElementBounds & { label: string };
   logSection: TopBarElementBounds & { text: string };
   scoreCounter: TopBarElementBounds & { text: string };
+  /** Live dungeon timer chip; present only in speedrunner mode. */
+  timerCounter?: TopBarElementBounds & { text: string };
   turnCounter: TopBarElementBounds & { text: string };
   logDropdown: TopBarElementBounds & { entries: string[] };
 }
@@ -163,12 +166,37 @@ export const getTopBarLayout = (
     70,
   );
 
+  // Speedrunner HUD: the live dungeon timer sits left of the score chip,
+  // ticking in hundredths of a second.
+  const isSpeedrun = state?.speedrunSeed !== undefined;
+  const timerText = isSpeedrun
+    ? state
+      ? formatDuration(getCurrentDungeonTimeMs(state), { hundredths: true })
+      : ''
+    : '';
+  const timerCounterWidth = isSpeedrun
+    ? Math.max(
+        Math.round(
+          measureTextWidth(
+            ctx,
+            formatDuration(3600000, { hundredths: true }),
+            DEFAULT_FONT,
+          ) +
+            paddingX * 2,
+        ),
+        80,
+      )
+    : 0;
+
   const menuX = margin;
   const debugX = menuX + menuWidth + gap;
   const logX = isDebug ? debugX + debugWidth + gap : menuX + menuWidth + gap;
   const turnX = Math.max(logX, viewWidth - margin - turnCounterWidth);
   const scoreX = Math.max(logX, turnX - gap - scoreCounterWidth);
-  const logWidth = Math.max(0, scoreX - gap - logX);
+  const timerX = isSpeedrun
+    ? Math.max(logX, scoreX - gap - timerCounterWidth)
+    : scoreX;
+  const logWidth = Math.max(0, timerX - gap - logX);
 
   const latestLog = state?.actionLog?.[0];
   const logText = formatLatestLog(latestLog);
@@ -211,6 +239,17 @@ export const getTopBarLayout = (
       height,
       text: scoreText,
     },
+    ...(isSpeedrun
+      ? {
+          timerCounter: {
+            x: timerX,
+            y: top,
+            width: timerCounterWidth,
+            height,
+            text: timerText,
+          },
+        }
+      : {}),
     turnCounter: {
       x: turnX,
       y: top,
@@ -416,6 +455,27 @@ export const renderTopBar = (
       score.text,
       score.x + score.width / 2,
       score.y + score.height / 2,
+    );
+  }
+
+  // 3b. Render Timer Counter (speedrunner mode only)
+  const timer = layout.timerCounter;
+  if (timer && timer.width > 0) {
+    drawRoundedRect(ctx, timer.x, timer.y, timer.width, timer.height, 4);
+    ctx.fillStyle = 'rgba(37, 41, 50, 0.9)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(74, 222, 128, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#86efac';
+    ctx.font = DEFAULT_FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      timer.text,
+      timer.x + timer.width / 2,
+      timer.y + timer.height / 2,
     );
   }
 

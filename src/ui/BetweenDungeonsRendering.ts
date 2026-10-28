@@ -11,6 +11,7 @@ import {
 } from '../types';
 import { ItemType } from '../types';
 import { i18n, SCORE_POINTS_PER_SECRET } from '../core';
+import { formatDuration } from '../core';
 import { MAX_HIGH_SCORES } from '../saves/HighScoresLogic';
 import { getHeroTradableItems } from '../dungeon/BetweenDungeonsLogic';
 import {
@@ -65,6 +66,9 @@ export interface ScoreSectionLayout {
   totalText: string;
   campaignText: string;
   breakdownTexts: string[];
+  // Final wall-clock time of the completed dungeon, when the run was
+  // timed.
+  timeText?: string;
 }
 
 export interface CampaignCompleteScenarioRow {
@@ -90,6 +94,8 @@ export interface CampaignCompleteHeroRow {
 export interface CampaignCompleteLayout {
   scoreText: string;
   scoreY: number;
+  // Total wall-clock time of the whole campaign, when the run was timed.
+  timeText?: string;
   summaryText: string;
   summaryY: number;
   scenarioHeader: {
@@ -202,6 +208,14 @@ const renderCampaignCompleteSection = (
   ctx.font = CAMPAIGN_SCORE_FONT;
   ctx.textAlign = 'left';
   ctx.fillText(cc.scoreText, x, cc.scoreY);
+
+  // Campaign total time, right of the score headline
+  if (cc.timeText) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = DESC_FONT;
+    ctx.textAlign = 'right';
+    ctx.fillText(cc.timeText, right, cc.scoreY);
+  }
 
   // Campaign summary
   ctx.fillStyle = '#94a3b8';
@@ -390,6 +404,12 @@ export const getBetweenDungeonsLayout = (
         i18n('content.scoring.secrets', { points: String(s.secretPoints) }),
         i18n('content.scoring.rounds', { points: String(s.roundPenalty) }),
       ],
+      timeText:
+        bd.dungeonTimeMs !== undefined
+          ? i18n('content.scoring.time', {
+              time: formatDuration(bd.dungeonTimeMs),
+            })
+          : undefined,
     };
   }
 
@@ -417,6 +437,12 @@ export const getBetweenDungeonsLayout = (
       scoreText: i18n('content.scoring.campaignTotal', {
         score: String(bd.campaignScore ?? 0),
       }),
+      timeText:
+        bd.campaignTimeMs !== undefined
+          ? i18n('content.campaignComplete.campaignTime', {
+              time: formatDuration(bd.campaignTimeMs),
+            })
+          : undefined,
       scoreY,
       summaryText: i18n('content.campaignComplete.summary', {
         scenarios: String(records.length),
@@ -905,6 +931,10 @@ export const renderBetweenDungeons = (
     ctx.font = DESC_FONT;
     ctx.textAlign = 'left';
     ctx.fillText(score.breakdownTexts.join('  ·  '), sb.x + 10, sb.y + 30);
+    if (score.timeText) {
+      ctx.textAlign = 'right';
+      ctx.fillText(score.timeText, sb.x + sb.width - 10, sb.y + 30);
+    }
     ctx.textAlign = 'left';
   }
 

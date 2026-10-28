@@ -191,6 +191,16 @@ export {
   type SaveLoadDialogLayout,
   type SaveLoadDialogMode,
 } from './SaveLoadDialogRendering';
+export {
+  renderNewGameDialog,
+  getNewGameDialogLayout,
+  getNewGameDialogHit,
+  getCampaignRows,
+  getGameMasterRows,
+  type NewGameDialogOptions,
+  type NewGameDialogHitResult,
+  type NewGameDialogLayout,
+} from './NewGameDialogRendering';
 
 // Board cursors for the three interactive tile actions; '' means the plain
 // default cursor. The CSS cursor for each is built once and cached.

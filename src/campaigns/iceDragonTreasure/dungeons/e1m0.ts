@@ -6,7 +6,7 @@ import {
   MonsterType,
   Side,
 } from '../../../types';
-import { defineDungeon } from '../../../dungeon/DungeonLogic';
+import { defineDungeon } from '../../../dungeon/dungeonParser';
 import { e1m1 } from './e1m1';
 import { brazier, chandelier } from '../../../dungeon/LightSources';
 

@@ -48,6 +48,13 @@
     "selectGameMaster": {
       "header": "Select Game Master"
     },
+    "newGame": {
+      "speedrunnerMode": "Speedrunner mode",
+      "rngSeed": "RNG seed",
+      "buttons": {
+        "begin": "Begin"
+      }
+    },
     "rights": {
       "header": "Rights & Licenses",
       "implementation": "Implementation: © Oscar Djupfeldt",
@@ -167,6 +174,7 @@
     "levelHeader": "Level",
     "healthHeader": "Health",
     "itemsHeader": "Items",
+    "campaignTime": "Campaign time: {{time}}",
     "fallen": "Fell in battle"
   },
   "partyWipe": {
@@ -191,7 +199,8 @@
     "monsters": "Monsters +{{points}}",
     "loot": "Loot +{{points}}",
     "secrets": "Secrets +{{points}}",
-    "rounds": "Rounds {{points}}"
+    "rounds": "Rounds {{points}}",
+    "time": "Time: {{time}}"
   },
   "terrain": {
     "water": "water",
