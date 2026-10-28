@@ -1,19 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  getCampaignMenuItems,
   getDebugMenuItems,
   getDebugMenuLabel,
   getDifficultyMenuLabel,
   getEventMenuItems,
-  getGameMasterMenuItems,
   getMainMenuItems,
   getMenuHeader,
   getMenuItemsForView,
   getMusicMenuLabel,
   getRightsMenuItems,
   getSavedGameMenuItems,
-  getSelectedCampaign,
-  setSelectedCampaign,
+  onNewGame,
 } from './MenuLogic';
 import { DifficultLevels } from '../core';
 import { writeSave } from '../saves/SavesLogic';
@@ -178,12 +175,17 @@ describe('MenuLogic', () => {
       expect(ids).toContain('next_level');
     });
 
-    it('navigates to campaign view on new_game click', () => {
-      const setView = vi.fn();
-      const items = getMainMenuItems(mockState, { setView });
+    it('opens the new-game dialog on new_game click and closes the menu', () => {
+      const openNewGameDialog = vi.fn();
+      const closeMenu = vi.fn();
+      const items = getMainMenuItems(mockState, {
+        openNewGameDialog,
+        closeMenu,
+      });
       const newGameItem = items.find((i) => i.id === 'new_game');
       newGameItem?.onClick(mockState);
-      expect(setView).toHaveBeenCalledWith('campaign');
+      expect(openNewGameDialog).toHaveBeenCalled();
+      expect(closeMenu).toHaveBeenCalled();
     });
 
     it('opens the load dialog on load_game click and closes the menu', () => {
@@ -316,66 +318,21 @@ describe('MenuLogic', () => {
     });
   });
 
-  describe('getCampaignMenuItems', () => {
-    it('returns campaigns and a back button', () => {
-      const items = getCampaignMenuItems(mockState);
-      expect(items.length).toBeGreaterThan(1);
-      const backItem = items.find((i) => i.id === 'campaign_back');
-      expect(backItem).toBeDefined();
-    });
-
-    it('navigates to gameMaster view and sets selected campaign on campaign selection', () => {
-      const setView = vi.fn();
-      const items = getCampaignMenuItems(mockState, { setView });
-      const campaignItem = items.find((i) => i.id !== 'campaign_back');
-      campaignItem?.onClick(mockState);
-      expect(setView).toHaveBeenCalledWith('gameMaster');
-      expect(getSelectedCampaign()).toBe(
-        campaignItem?.id.replace('campaign_', ''),
-      );
-    });
-
-    it('navigates back to main on back button click', () => {
-      const setView = vi.fn();
-      const items = getCampaignMenuItems(mockState, { setView });
-      const backItem = items.find((i) => i.id === 'campaign_back');
-      backItem?.onClick(mockState);
-      expect(setView).toHaveBeenCalledWith('main');
-    });
-  });
-
-  describe('getGameMasterMenuItems', () => {
-    it('returns game masters and a back button', () => {
-      const items = getGameMasterMenuItems(mockState);
-      expect(items.length).toBeGreaterThan(1);
-      const backItem = items.find((i) => i.id === 'gameMaster_back');
-      expect(backItem).toBeDefined();
-    });
-
-    it('navigates back to campaign on back button click', () => {
-      const setView = vi.fn();
-      const items = getGameMasterMenuItems(mockState, { setView });
-      const backItem = items.find((i) => i.id === 'gameMaster_back');
-      backItem?.onClick(mockState);
-      expect(setView).toHaveBeenCalledWith('campaign');
-    });
-
-    it('starts new game, closes menu, and resets view to main on game master selection', () => {
-      const setView = vi.fn();
-      const closeMenu = vi.fn();
-      const setState = vi.fn();
-      setSelectedCampaign('iceDragonTreasure');
-      const items = getGameMasterMenuItems(mockState, {
-        setView,
-        closeMenu,
-        setState,
-      });
-      const gmItem = items.find((i) => i.id === 'gameMaster_tactician');
-      expect(gmItem).toBeDefined();
-      gmItem?.onClick(mockState);
+  describe('onNewGame', () => {
+    it('starts a normal run without a seed when none is given', () => {
+      const setState = vi.fn((state: GameState) => state);
+      onNewGame('iceDragonTreasure', 'tactician', mockState, setState);
       expect(setState).toHaveBeenCalled();
-      expect(closeMenu).toHaveBeenCalled();
-      expect(setView).toHaveBeenCalledWith('main');
+      const newState = setState.mock.calls[0][0];
+      expect(newState.speedrunSeed).toBeUndefined();
+    });
+
+    it('passes the speedrun seed to the new state', () => {
+      const setState = vi.fn((state: GameState) => state);
+      onNewGame('iceDragonTreasure', 'tactician', mockState, setState, 42);
+      expect(setState).toHaveBeenCalled();
+      const newState = setState.mock.calls[0][0];
+      expect(newState.speedrunSeed).toBe(42);
     });
   });
 
@@ -491,19 +448,6 @@ describe('MenuLogic', () => {
       ]);
     });
 
-    it('returns campaign menu items for campaign view', () => {
-      const items = getMenuItemsForView('campaign', mockState);
-      const ids = items.map((i) => i.id);
-      expect(ids).toContain('campaign_back');
-    });
-
-    it('returns game master menu items for gameMaster view', () => {
-      const items = getMenuItemsForView('gameMaster', mockState);
-      const ids = items.map((i) => i.id);
-      expect(ids).toContain('gameMaster_tactician');
-      expect(ids).toContain('gameMaster_back');
-    });
-
     it('returns rights menu items for rights view', () => {
       const items = getMenuItemsForView('rights', mockState);
       const ids = items.map((i) => i.id);
@@ -517,8 +461,6 @@ describe('MenuLogic', () => {
     it('returns headers for all views', () => {
       expect(getMenuHeader('main')).toBeTruthy();
       expect(getMenuHeader('debug')).toBeTruthy();
-      expect(getMenuHeader('campaign')).toBeTruthy();
-      expect(getMenuHeader('gameMaster')).toBeTruthy();
       expect(getMenuHeader('event')).toBeTruthy();
       expect(getMenuHeader('rights')).toBeTruthy();
     });

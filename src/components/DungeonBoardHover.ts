@@ -7,6 +7,7 @@ import type {
   SaveLoadDialogHitResult,
   TopBarHitElement,
 } from '../ui/UIRendering';
+import type { NewGameDialogHitResult } from '../ui/NewGameDialogRendering';
 import type { PartyWipeAction } from '../types';
 import type { UiHit } from './DungeonBoardUiHit';
 
@@ -32,6 +33,11 @@ export interface BoardHoverState {
   hoveredBdWipeAction: PartyWipeAction | null;
   isSdActionHovered: boolean;
   isSdSecondaryHovered: boolean;
+  hoveredNgCampaignId: string | null;
+  hoveredNgGameMasterId: string | null;
+  isNgCheckboxHovered: boolean;
+  isNgActionHovered: boolean;
+  isNgSecondaryHovered: boolean;
 }
 
 export const createBoardHoverState = (): BoardHoverState => ({
@@ -52,6 +58,11 @@ export const createBoardHoverState = (): BoardHoverState => ({
   hoveredBdWipeAction: null,
   isSdActionHovered: false,
   isSdSecondaryHovered: false,
+  hoveredNgCampaignId: null,
+  hoveredNgGameMasterId: null,
+  isNgCheckboxHovered: false,
+  isNgActionHovered: false,
+  isNgSecondaryHovered: false,
 });
 
 export interface HoverResult {
@@ -358,6 +369,57 @@ export const updateSaveLoadDialogHover = (
   };
 };
 
+export const updateNewGameDialogHover = (
+  hover: BoardHoverState,
+  hit: NewGameDialogHitResult,
+): HoverResult => {
+  hover.hoveredRadialIndex = null;
+  let changed = clearTopBarHovers(hover);
+  if (clearHeroCardHovers(hover)) {
+    changed = true;
+  }
+  if (hover.isEventCardToggleHovered) {
+    hover.isEventCardToggleHovered = false;
+    changed = true;
+  }
+  const isCampaign = hit.type === 'campaign';
+  const isGameMaster = hit.type === 'gameMaster';
+  const isCheckbox = hit.type === 'checkbox';
+  const isAction = hit.type === 'action';
+  const isSecondary = hit.type === 'secondary';
+  const campaignVal =
+    isCampaign && hit.type === 'campaign' ? hit.campaignId : null;
+  if (hover.hoveredNgCampaignId !== campaignVal) {
+    hover.hoveredNgCampaignId = campaignVal;
+    changed = true;
+  }
+  const gmVal =
+    isGameMaster && hit.type === 'gameMaster' ? hit.gameMasterId : null;
+  if (hover.hoveredNgGameMasterId !== gmVal) {
+    hover.hoveredNgGameMasterId = gmVal;
+    changed = true;
+  }
+  if (hover.isNgCheckboxHovered !== isCheckbox) {
+    hover.isNgCheckboxHovered = isCheckbox;
+    changed = true;
+  }
+  if (hover.isNgActionHovered !== isAction) {
+    hover.isNgActionHovered = isAction;
+    changed = true;
+  }
+  if (hover.isNgSecondaryHovered !== isSecondary) {
+    hover.isNgSecondaryHovered = isSecondary;
+    changed = true;
+  }
+  return {
+    cursor:
+      isCampaign || isGameMaster || isCheckbox || isAction || isSecondary
+        ? 'pointer'
+        : 'default',
+    changed,
+  };
+};
+
 export const updateHoverForUiHit = (
   hover: BoardHoverState,
   hit: UiHit,
@@ -370,6 +432,8 @@ export const updateHoverForUiHit = (
       return updateDungeonIntroHover(hover, hit.hit);
     case 'saveLoadDialog':
       return updateSaveLoadDialogHover(hover, hit.hit);
+    case 'newGameDialog':
+      return updateNewGameDialogHover(hover, hit.hit);
     case 'topBar':
       return updateTopBarHover(hover, hit.hit, isLogOpen);
     case 'menu':
@@ -439,6 +503,26 @@ export const clearBoardHovers = (
   }
   if (hover.isSdSecondaryHovered) {
     hover.isSdSecondaryHovered = false;
+    changed = true;
+  }
+  if (hover.hoveredNgCampaignId !== null) {
+    hover.hoveredNgCampaignId = null;
+    changed = true;
+  }
+  if (hover.hoveredNgGameMasterId !== null) {
+    hover.hoveredNgGameMasterId = null;
+    changed = true;
+  }
+  if (hover.isNgCheckboxHovered) {
+    hover.isNgCheckboxHovered = false;
+    changed = true;
+  }
+  if (hover.isNgActionHovered) {
+    hover.isNgActionHovered = false;
+    changed = true;
+  }
+  if (hover.isNgSecondaryHovered) {
+    hover.isNgSecondaryHovered = false;
     changed = true;
   }
   return changed;

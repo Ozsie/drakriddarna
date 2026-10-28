@@ -48,6 +48,13 @@
     "selectGameMaster": {
       "header": "Select Game Master"
     },
+    "newGame": {
+      "speedrunnerMode": "Speedrunner mode",
+      "rngSeed": "RNG seed",
+      "buttons": {
+        "begin": "Begin"
+      }
+    },
     "rights": {
       "header": "Rights & Licenses",
       "implementation": "Implementation: © Oscar Djupfeldt",

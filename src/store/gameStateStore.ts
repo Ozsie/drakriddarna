@@ -37,7 +37,7 @@ import { doMouseLogic, type CameraOffset } from '../hero/ClickInputLogic';
 import { testingGrounds } from '../dungeon/testingGrounds';
 import { getEventsForDungeon } from '../events/EventsLogic';
 import { saveReloadGuard, debouncedSaveReloadGuard } from '../core';
-import { beginDungeonTiming } from '../core/timer';
+import { beginDungeonTiming } from '../core';
 
 const getInitialState = (): GameState => {
   if (browser) {
@@ -138,8 +138,9 @@ let isExecutingTurn = false;
 export const initGame = (
   campaignId?: string,
   gameMasterId?: string,
+  speedrunSeed?: number,
 ): GameState => {
-  const state = init(campaignId, gameMasterId);
+  const state = init(campaignId, gameMasterId, speedrunSeed);
   syncStore(state, true);
   return state;
 };

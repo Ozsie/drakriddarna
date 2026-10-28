@@ -62,6 +62,10 @@ export type GameState = {
   // timer starts when a dungeon's intro is closed and stops when the
   // between-dungeons screen opens. Pure presentation data.
   timer?: DungeonTimer;
+  // Speedrunner mode: the fixed seed the run's rng was seeded with (see
+  // `init` in src/game.ts). Present = speedrunner mode, which also shows
+  // the live dungeon timer in the top bar; undefined = a normal run.
+  speedrunSeed?: number;
 };
 
 // Wall-clock timing of a campaign run: the accumulated milliseconds of

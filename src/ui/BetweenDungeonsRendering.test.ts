@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
-  getBetweenDungeonsLayout,
   getBetweenDungeonsHit,
+  getBetweenDungeonsLayout,
   renderBetweenDungeons,
 } from './BetweenDungeonsRendering';
 import {
@@ -58,7 +58,7 @@ describe('BetweenDungeonsRendering', () => {
 
   it('includes the dungeon time in the level-up score section when the run was timed', () => {
     const state = init();
-    const scenarioScore: ScenarioScore = {
+    state.dungeon.score = {
       healthPoints: 300,
       killPoints: 90,
       itemPoints: 50,
@@ -66,7 +66,6 @@ describe('BetweenDungeonsRendering', () => {
       roundPenalty: -20,
       total: 470,
     };
-    state.dungeon.score = scenarioScore;
 
     openBetweenDungeons(state);
     if (state.betweenDungeons) {

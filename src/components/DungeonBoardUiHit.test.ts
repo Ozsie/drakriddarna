@@ -11,6 +11,7 @@ import type {
   SaveLoadDialogHitResult,
   TopBarHitElement,
 } from '../ui/UIRendering';
+import type { NewGameDialogHitResult } from '../ui/NewGameDialogRendering';
 import {
   findUiHit,
   type UiHitContext,
@@ -66,6 +67,8 @@ const createContext = (overrides?: Partial<UiHitContext>): UiHitContext => ({
   eventCardCollapsed: false,
   saveLoadDialogMode: null,
   saveName: '',
+  isNewGameDialogOpen: false,
+  newGameDialog: {},
   ...overrides,
 });
 
@@ -86,11 +89,13 @@ const saveLoadDialogHit: SaveLoadDialogHitResult = {
   type: 'row',
   item: { id: 'load_autosave' } as never,
 };
+const newGameDialogHit: NewGameDialogHitResult = { type: 'action' };
 
 const noHitTesters: UiHitTesters = {
   betweenDungeons: () => null,
   dungeonIntro: () => null,
   saveLoadDialog: () => null,
+  newGameDialog: () => null,
   topBar: () => null,
   menu: () => null,
   heroCards: () => null,
@@ -177,6 +182,36 @@ describe('findUiHit cascade', () => {
     );
     expect(hit).toEqual({ kind: 'saveLoadDialog', hit: saveLoadDialogHit });
     expect(testers.saveLoadDialog).toHaveBeenCalled();
+  });
+
+  it('only tests the new-game dialog while it is open', () => {
+    const testers = {
+      ...noHitTesters,
+      newGameDialog: vi.fn(() => newGameDialogHit),
+    };
+    expect(findUiHit(createContext(), testers)).toBeNull();
+    expect(testers.newGameDialog).not.toHaveBeenCalled();
+
+    const hit = findUiHit(
+      createContext({ isNewGameDialogOpen: true }),
+      testers,
+    );
+    expect(hit).toEqual({ kind: 'newGameDialog', hit: newGameDialogHit });
+  });
+
+  it('orders the new-game dialog before the save/load dialog and the top bar', () => {
+    const testers = {
+      ...noHitTesters,
+      newGameDialog: vi.fn(() => newGameDialogHit),
+      saveLoadDialog: vi.fn(() => saveLoadDialogHit),
+      topBar: () => 'menu' as TopBarHitElement,
+    };
+    const hit = findUiHit(
+      createContext({ isNewGameDialogOpen: true, saveLoadDialogMode: 'save' }),
+      testers,
+    );
+    expect(hit).toEqual({ kind: 'newGameDialog', hit: newGameDialogHit });
+    expect(testers.saveLoadDialog).not.toHaveBeenCalled();
   });
 
   it('only tests the canvas menu while it is open', () => {

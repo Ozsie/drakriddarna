@@ -11,7 +11,7 @@ import {
 } from '../types';
 import { ItemType } from '../types';
 import { i18n, SCORE_POINTS_PER_SECRET } from '../core';
-import { formatDuration } from '../core/timer';
+import { formatDuration } from '../core';
 import { MAX_HIGH_SCORES } from '../saves/HighScoresLogic';
 import { getHeroTradableItems } from '../dungeon/BetweenDungeonsLogic';
 import {

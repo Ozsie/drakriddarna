@@ -197,6 +197,13 @@ Reproducing a full human playthrough additionally requires recording and
 replaying its input events — the benchmark achieves this by driving the game
 from code, while a browser session records nothing.
 
+The seeded rng is also exposed to players as a feature: the new-game dialog
+has a **speedrunner mode** checkbox with an rng seed input (defaulting to a
+fixed seed). Ticking it stores the seed in `state.speedrunSeed` and `init()`
+swaps the rng to a seeded generator before the first shuffle, so two runs
+with the same seed deal the same decks; loading a save re-applies its seed,
+and a normal (unseeded) run resets the rng to fresh randomness.
+
 ## The opponent: monster AI and "Game Masters"
 
 The monster AI (`src/monsters/`) is worth reading even outside a games
@@ -424,7 +431,10 @@ campaign total. Like the score it is pure presentation data — nothing
 in the game logic reads it — and it persists in saves without a
 migration; serialization points checkpoint the running segment into
 the accumulated time, and loading rebases it, so the offline gap
-between saving and loading is never counted.
+between saving and loading is never counted. In speedrunner mode
+(`state.speedrunSeed` set) the top bar also shows the live dungeon
+time as a chip next to the score, ticking in hundredths of a second
+(repainted about 33 times per second).
 
 ## State, persistence and save migration
 
@@ -433,7 +443,16 @@ store (`src/store/gameStateStore.ts`) that also owns input handling glue and
 persistence. Manual saves are user-named and unlimited: a centered modal
 dialog (drawn like the between-dungeons dialog — full-screen dim, centered
 panel, on the UI canvas) opens with a name input on save and a list of saves
-(each showing its campaign and dungeon) on load. Storage lives in
+(each showing its campaign and dungeon) on load. Starting a new game uses a
+sibling centered dialog with two selectable columns — campaigns and game
+masters — plus the speedrunner checkbox and its seed input; it replaces the
+old two-step campaign/game-master menu views. While any of these modal
+surfaces is open — the canvas menu, the save/load or new-game dialog, the
+dungeon intro, or the between-dungeons overlay (party wipe and campaign win
+included) — game keyboard/touch input is suppressed through the input
+manager, so no keystroke reaches the heroes; the dialogs capture keys
+themselves (Escape dismisses, Enter confirms, and the text inputs are fed
+from key events since they are canvas-drawn, not DOM inputs). Storage lives in
 `src/saves/SavesLogic.ts` — a JSON index of
 save metadata under one `localStorage` key plus one full `GameState` blob per
 save, so listing saves never parses the blobs. The pre-named-saves single

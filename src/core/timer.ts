@@ -132,15 +132,23 @@ export const getCampaignTimeMs = (
 
 /**
  * Formats milliseconds as a duration: `m:ss` under an hour, `h:mm:ss`
- * above. Rounded down to whole seconds.
+ * above. Rounded down to whole seconds, or to hundredths of a second
+ * with `{ hundredths: true }` (the live speedrun display).
  */
-export const formatDuration = (ms: number): string => {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+export const formatDuration = (
+  ms: number,
+  options?: { hundredths?: boolean },
+): string => {
+  const clamped = Math.max(0, ms);
+  const totalSeconds = Math.floor(clamped / 1000);
   const seconds = totalSeconds % 60;
   const totalMinutes = Math.floor(totalSeconds / 60);
   const minutes = totalMinutes % 60;
   const hours = Math.floor(totalMinutes / 60);
   const mm = String(minutes).padStart(2, '0');
   const ss = String(seconds).padStart(2, '0');
-  return hours > 0 ? `${hours}:${mm}:${ss}` : `${minutes}:${ss}`;
+  const base = hours > 0 ? `${hours}:${mm}:${ss}` : `${minutes}:${ss}`;
+  if (!options?.hundredths) return base;
+  const hundredths = Math.floor((clamped % 1000) / 10);
+  return `${base}.${String(hundredths).padStart(2, '0')}`;
 };

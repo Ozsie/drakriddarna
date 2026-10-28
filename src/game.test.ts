@@ -115,6 +115,40 @@ describe('game orchestrator', () => {
     });
   });
 
+  describe('speedrun seed', () => {
+    it('init without a seed leaves speedrunSeed undefined', () => {
+      const state = init();
+      expect(state.speedrunSeed).toBeUndefined();
+    });
+
+    it('init with a seed records it and shuffles decks deterministically', () => {
+      const first = init('iceDragonTreasure', 'tactician', 42);
+      const second = init('iceDragonTreasure', 'tactician', 42);
+      const third = init('iceDragonTreasure', 'tactician', 43);
+
+      expect(first.speedrunSeed).toBe(42);
+      expect(second.speedrunSeed).toBe(42);
+      expect(first.itemDeck.map((item) => item.name)).toEqual(
+        second.itemDeck.map((item) => item.name),
+      );
+      expect(first.eventDeck.map((event) => event.id)).toEqual(
+        second.eventDeck.map((event) => event.id),
+      );
+      expect(third.speedrunSeed).toBe(43);
+    });
+
+    it('loadState re-applies the seed of the loaded state', () => {
+      const seeded = init('iceDragonTreasure', 'tactician', 42);
+      const loaded = loadState(seeded);
+      expect(loaded.speedrunSeed).toBe(42);
+
+      const normal = init();
+      delete normal.speedrunSeed;
+      const loadedNormal = loadState(normal);
+      expect(loadedNormal.speedrunSeed).toBeUndefined();
+    });
+  });
+
   it('clears actions and movement to 0 when a hero ends their turn', async () => {
     const state = init();
     expect(state.currentActor).toBeDefined();

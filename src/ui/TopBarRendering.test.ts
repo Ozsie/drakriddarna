@@ -192,6 +192,33 @@ describe('TopBarRendering', () => {
         layout.scoreCounter.x + layout.scoreCounter.width,
       ).toBeLessThanOrEqual(layout.turnCounter.x);
     });
+
+    it('omits the timer chip in a normal run', () => {
+      const state = createMockState();
+      const layout = getTopBarLayout(800, state, createMockCtx());
+      expect(layout.timerCounter).toBeUndefined();
+    });
+
+    it('places the live timer chip left of the score counter in speedrunner mode', () => {
+      const state = createMockState({
+        speedrunSeed: 42,
+        timer: {
+          dungeonElapsedMs: 65000,
+          campaignElapsedMs: 0,
+        },
+      });
+      const ctx = createMockCtx();
+      const layout = getTopBarLayout(800, state, ctx);
+
+      expect(layout.timerCounter).toBeDefined();
+      expect(layout.timerCounter?.text).toBe('1:05.00');
+      expect(layout.logSection.x + layout.logSection.width).toBeLessThanOrEqual(
+        layout.timerCounter!.x,
+      );
+      expect(
+        layout.timerCounter!.x + layout.timerCounter!.width,
+      ).toBeLessThanOrEqual(layout.scoreCounter.x);
+    });
   });
 
   describe('hit testing and bounds', () => {

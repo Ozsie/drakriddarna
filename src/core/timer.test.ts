@@ -223,4 +223,12 @@ describe('formatDuration', () => {
   it('clamps negative input to zero', () => {
     expect(formatDuration(-5_000)).toBe('0:00');
   });
+
+  it('appends hundredths of a second when asked to', () => {
+    expect(formatDuration(0, { hundredths: true })).toBe('0:00.00');
+    expect(formatDuration(65_432, { hundredths: true })).toBe('1:05.43');
+    expect(formatDuration(59_999, { hundredths: true })).toBe('0:59.99');
+    expect(formatDuration(3_661_234, { hundredths: true })).toBe('1:01:01.23');
+    expect(formatDuration(-5_000, { hundredths: true })).toBe('0:00.00');
+  });
 });

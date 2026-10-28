@@ -178,22 +178,6 @@ describe('MenuRendering', () => {
       );
     });
 
-    it('creates gameMaster view layout with game master options', () => {
-      const state = createMockState();
-      const layout = getMenuLayout(800, 600, state, {
-        view: 'gameMaster',
-      });
-
-      expect(layout.view).toBe('gameMaster');
-      expect(layout.headerBounds.text).toBeTruthy();
-      expect(
-        layout.items.some((i) => i.item.id === 'gameMaster_tactician'),
-      ).toBe(true);
-      expect(layout.items.some((i) => i.item.id === 'gameMaster_back')).toBe(
-        true,
-      );
-    });
-
     it('creates rights view layout with ownership and license info', () => {
       const state = createMockState();
       const layout = getMenuLayout(800, 600, state, {

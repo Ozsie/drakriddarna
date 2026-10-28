@@ -5,7 +5,7 @@ import {
   type DirectorState,
 } from '../monsters/behavior';
 import { getHeroCardsLayout } from './HeroCardRendering';
-import { formatDuration, getCurrentDungeonTimeMs } from '../core/timer';
+import { formatDuration, getCurrentDungeonTimeMs } from '../core';
 
 export interface DebugPrintoutCounts {
   totalReRenders: number;

@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
-  shouldShowDungeonIntro,
   dismissDungeonIntro,
-  getDungeonIntroLayout,
   getDungeonIntroHit,
+  getDungeonIntroLayout,
   renderDungeonIntro,
+  shouldShowDungeonIntro,
 } from './DungeonIntroRendering';
 import type { Dungeon, GameState } from '../types';
 
-const createMockCtx = (): CanvasRenderingContext2D => {
-  const ctx = {
+const createMockCtx = (): CanvasRenderingContext2D =>
+  ({
     save: vi.fn(),
     restore: vi.fn(),
     beginPath: vi.fn(),
@@ -34,9 +34,7 @@ const createMockCtx = (): CanvasRenderingContext2D => {
     font: '',
     textAlign: '',
     textBaseline: '',
-  } as unknown as CanvasRenderingContext2D;
-  return ctx;
-};
+  }) as unknown as CanvasRenderingContext2D;
 
 const createMockState = (overrides?: Partial<GameState>): GameState =>
   ({

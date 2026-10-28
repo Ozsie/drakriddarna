@@ -1,6 +1,6 @@
 import type { GameState } from '../types';
 import { addLog, i18n } from '../core';
-import { startDungeonTimer } from '../core/timer';
+import { startDungeonTimer } from '../core';
 import {
   drawRoundedRect,
   isPointInBounds,

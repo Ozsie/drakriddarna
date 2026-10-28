@@ -33,7 +33,7 @@ import {
   addDungeonTimeToCampaign,
   beginDungeonTiming,
   stopDungeonTimer,
-} from '../core/timer';
+} from '../core';
 import {
   isKnownCampaign,
   getCampaign,
