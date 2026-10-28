@@ -2,6 +2,7 @@ import type { GameState, TurnEvent } from '../types';
 import { i18n } from '../core';
 import { drawRoundedRect, type CardBounds } from './HeroCardRendering';
 import { wrapText } from './DiaryAndWinConditionRendering';
+import { COMPACT_TOGGLE_SIZE, isCompactUi } from './UiMode';
 
 export interface DrawnEventItem {
   event: TurnEvent;
@@ -26,6 +27,7 @@ export interface EventCardLayout {
   bounds: CardBounds;
   toggleButtonBounds: CardBounds;
   isCollapsed: boolean;
+  isCompact: boolean;
   headerText: string;
   deckSummary: {
     remaining: number;
@@ -78,6 +80,7 @@ export const getEventCardLayout = (
     bounds: { x: 0, y: 0, width: 0, height: 0 },
     toggleButtonBounds: { x: 0, y: 0, width: 0, height: 0 },
     isCollapsed: Boolean(options?.isCollapsed),
+    isCompact: false,
     headerText: '',
     deckSummary: { remaining: 0, total: 0, drawn: 0 },
     drawnEvents: [],
@@ -128,7 +131,30 @@ export const getEventCardLayout = (
       : 'Events';
   const headerText = `🎴 ${eventWord} (${remaining}/${total})`;
 
+  const isCompact = isCompactUi(viewWidth);
+
   if (isCollapsed) {
+    // On narrow screens the collapsed card is a square button in the
+    // top-left corner; the bar layout would still cover too much board.
+    if (isCompact) {
+      const squareBounds: CardBounds = {
+        x: marginX,
+        y: topY,
+        width: COMPACT_TOGGLE_SIZE,
+        height: COMPACT_TOGGLE_SIZE,
+      };
+      return {
+        bounds: squareBounds,
+        toggleButtonBounds: squareBounds,
+        isCollapsed: true,
+        isCompact: true,
+        headerText,
+        deckSummary: { remaining, total, drawn },
+        drawnEvents: [],
+        hasContent: true,
+      };
+    }
+
     const collapsedHeight = 28;
     return {
       bounds: {
@@ -139,6 +165,7 @@ export const getEventCardLayout = (
       },
       toggleButtonBounds,
       isCollapsed: true,
+      isCompact: false,
       headerText,
       deckSummary: { remaining, total, drawn },
       drawnEvents: [],
@@ -234,6 +261,7 @@ export const getEventCardLayout = (
     },
     toggleButtonBounds,
     isCollapsed: false,
+    isCompact,
     headerText,
     deckSummary: { remaining, total, drawn },
     activeEvent: activeEventLayout,
@@ -306,6 +334,7 @@ export const renderEventCard = (
     bounds,
     toggleButtonBounds,
     isCollapsed,
+    isCompact,
     headerText,
     activeEvent,
     drawnEventsHeader,
@@ -314,6 +343,38 @@ export const renderEventCard = (
   } = layout;
 
   ctx.save();
+
+  // Collapsed compact mode: a square button with the event icon and the
+  // remaining card count; pressing it opens the full panel.
+  if (isCollapsed && isCompact) {
+    ctx.fillStyle = options?.isToggleHovered
+      ? 'rgba(40, 46, 58, 0.95)'
+      : 'rgba(20, 24, 33, 0.90)';
+    ctx.strokeStyle = options?.isToggleHovered
+      ? 'rgba(255, 255, 255, 0.4)'
+      : 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 1;
+    drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#f3f4f6';
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🎴', bounds.x + bounds.width / 2, bounds.y + 14);
+
+    ctx.font = 'bold 10px Arial, Helvetica, sans-serif';
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillText(
+      `${layout.deckSummary.remaining}`,
+      bounds.x + bounds.width / 2,
+      bounds.y + 30,
+    );
+
+    ctx.restore();
+    return;
+  }
 
   // Background panel
   ctx.fillStyle = 'rgba(20, 24, 33, 0.90)';

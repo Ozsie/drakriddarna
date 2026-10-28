@@ -63,6 +63,8 @@ export interface UiHitContext {
   menuCallbacks: MenuCallbacks;
   buildInfo?: { date: string; hash: string } | null;
   eventCardCollapsed: boolean;
+  /** Whether the diary panel is collapsed into its corner square. */
+  diaryCollapsed: boolean;
   /** Open centered save/load dialog mode, or null when closed. */
   saveLoadDialogMode: SaveLoadDialogMode | null;
   saveName: string;
@@ -211,6 +213,7 @@ export const findUiHit = (
     context.viewWidth,
     context.viewHeight,
     context.state,
+    context.diaryCollapsed,
     context.x,
     context.y,
     context.ctx,

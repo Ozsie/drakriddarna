@@ -109,6 +109,9 @@
     height: 100%;
     position: relative;
     touch-action: none;
+    /* iOS paints a gray flash over the tapped canvas otherwise. */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
   }
   .canvasContainer {
     position: relative;

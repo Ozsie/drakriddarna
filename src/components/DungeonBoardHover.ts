@@ -1,5 +1,6 @@
 import type {
   BetweenDungeonsHitResult,
+  DiaryAndWinConditionsHitResult,
   DungeonIntroHitResult,
   EventCardHitResult,
   HeroCardsHitResult,
@@ -26,6 +27,7 @@ export interface BoardHoverState {
   hoveredCloseHeroName: string | null;
   hoveredUseItem: { heroName: string; itemIndex: number } | null;
   isEventCardToggleHovered: boolean;
+  isDiaryToggleHovered: boolean;
   isBdActionHovered: boolean;
   isBdSecondaryHovered: boolean;
   hoveredBdItem: { heroIndex: number; itemIndex: number } | null;
@@ -51,6 +53,7 @@ export const createBoardHoverState = (): BoardHoverState => ({
   hoveredCloseHeroName: null,
   hoveredUseItem: null,
   isEventCardToggleHovered: false,
+  isDiaryToggleHovered: false,
   isBdActionHovered: false,
   isBdSecondaryHovered: false,
   hoveredBdItem: null,
@@ -163,6 +166,10 @@ export const updateDungeonIntroHover = (
   }
   if (hover.isEventCardToggleHovered) {
     hover.isEventCardToggleHovered = false;
+    changed = true;
+  }
+  if (hover.isDiaryToggleHovered) {
+    hover.isDiaryToggleHovered = false;
     changed = true;
   }
   const isClose = hit.type === 'close';
@@ -297,7 +304,7 @@ export const updateHeroCardsHover = (
 
 const clearHoverCards = (
   hover: BoardHoverState,
-  options: { eventCardToggle: boolean },
+  options: { eventCardToggle: boolean; diaryToggle: boolean },
 ): HoverResult => {
   hover.hoveredRadialIndex = null;
   let changed = clearTopBarHovers(hover);
@@ -308,14 +315,36 @@ const clearHoverCards = (
     hover.isEventCardToggleHovered = false;
     changed = true;
   }
+  if (options.diaryToggle && hover.isDiaryToggleHovered) {
+    hover.isDiaryToggleHovered = false;
+    changed = true;
+  }
   return { cursor: 'default', changed };
 };
 
 export const updateMonsterCardsHover = (hover: BoardHoverState): HoverResult =>
-  clearHoverCards(hover, { eventCardToggle: false });
+  clearHoverCards(hover, { eventCardToggle: false, diaryToggle: true });
 
-export const updateDiaryHover = (hover: BoardHoverState): HoverResult =>
-  clearHoverCards(hover, { eventCardToggle: true });
+export const updateDiaryHover = (
+  hover: BoardHoverState,
+  hit: DiaryAndWinConditionsHitResult,
+): HoverResult => {
+  hover.hoveredRadialIndex = null;
+  let changed = clearTopBarHovers(hover);
+  if (clearHeroCardHovers(hover)) {
+    changed = true;
+  }
+  if (hover.isEventCardToggleHovered) {
+    hover.isEventCardToggleHovered = false;
+    changed = true;
+  }
+  const isToggle = hit.type === 'toggle';
+  if (hover.isDiaryToggleHovered !== isToggle) {
+    hover.isDiaryToggleHovered = isToggle;
+    changed = true;
+  }
+  return { cursor: isToggle ? 'pointer' : 'default', changed };
+};
 
 export const updateEventCardHover = (
   hover: BoardHoverState,
@@ -324,6 +353,10 @@ export const updateEventCardHover = (
   hover.hoveredRadialIndex = null;
   let changed = clearTopBarHovers(hover);
   if (clearHeroCardHovers(hover)) {
+    changed = true;
+  }
+  if (hover.isDiaryToggleHovered) {
+    hover.isDiaryToggleHovered = false;
     changed = true;
   }
   const isToggle = hit.type === 'toggle';
@@ -345,6 +378,10 @@ export const updateSaveLoadDialogHover = (
   }
   if (hover.isEventCardToggleHovered) {
     hover.isEventCardToggleHovered = false;
+    changed = true;
+  }
+  if (hover.isDiaryToggleHovered) {
+    hover.isDiaryToggleHovered = false;
     changed = true;
   }
   const isAction = hit.type === 'action';
@@ -443,7 +480,7 @@ export const updateHoverForUiHit = (
     case 'monsterCards':
       return updateMonsterCardsHover(hover);
     case 'diary':
-      return updateDiaryHover(hover);
+      return updateDiaryHover(hover, hit.hit);
     case 'eventCard':
       return updateEventCardHover(hover, hit.hit);
   }
@@ -479,6 +516,10 @@ export const clearBoardHovers = (
   }
   if (hover.isEventCardToggleHovered) {
     hover.isEventCardToggleHovered = false;
+    changed = true;
+  }
+  if (hover.isDiaryToggleHovered) {
+    hover.isDiaryToggleHovered = false;
     changed = true;
   }
   if (hover.hoveredInventoryHeroName !== null) {

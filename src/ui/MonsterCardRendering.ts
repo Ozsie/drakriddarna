@@ -7,6 +7,7 @@ import {
   isPointInBounds,
   truncateText,
 } from './HeroCardRendering';
+import { isCompactUi } from './UiMode';
 
 export interface MonsterCardLayoutItem {
   monster: Monster;
@@ -71,7 +72,32 @@ export const getMonsterCardsLayout = (
   const rowGap = 6;
   const cardHeight = 85;
 
-  const numMonsters = monsters.length;
+  const currentActor = state.currentActor;
+  const targetActor = state.targetActor;
+
+  const isMonsterCurrent = (monster: Monster): boolean =>
+    Boolean(currentActor && currentActor === (monster as unknown));
+  const isMonsterTarget = (monster: Monster): boolean =>
+    Boolean(
+      targetActor &&
+        (targetActor === (monster as unknown) ||
+          (targetActor.name === monster.name &&
+            targetActor.position?.x === monster.position?.x &&
+            targetActor.position?.y === monster.position?.y)),
+    );
+
+  // On narrow screens only the active monster's card is drawn, mirroring
+  // the hero cards, so the cards never cover the whole board.
+  const compact = isCompactUi(viewWidth);
+  const visibleMonsters = compact
+    ? monsters.filter((m) => isMonsterCurrent(m) || isMonsterTarget(m))
+    : monsters;
+
+  if (visibleMonsters.length === 0) {
+    return emptyLayout;
+  }
+
+  const numMonsters = visibleMonsters.length;
   const maxTotalWidth = viewWidth * 0.5;
   const availableWidth = Math.max(0, maxTotalWidth - marginX);
 
@@ -82,9 +108,6 @@ export const getMonsterCardsLayout = (
   );
   const cardWidth = Math.min(140, calculatedCardWidth);
 
-  const currentActor = state.currentActor;
-  const targetActor = state.targetActor;
-
   const cards: MonsterCardLayoutItem[] = [];
 
   let minX = viewWidth;
@@ -92,7 +115,7 @@ export const getMonsterCardsLayout = (
   let maxX = 0;
   let maxY = 0;
 
-  monsters.forEach((monster, index) => {
+  visibleMonsters.forEach((monster, index) => {
     const row = Math.floor(index / 6);
     const col = index % 6;
 
@@ -111,16 +134,8 @@ export const getMonsterCardsLayout = (
     maxX = Math.max(maxX, bounds.x + bounds.width);
     maxY = Math.max(maxY, bounds.y + bounds.height);
 
-    const isCurrent = Boolean(
-      currentActor && currentActor === (monster as unknown),
-    );
-    const isTarget = Boolean(
-      targetActor &&
-        (targetActor === (monster as unknown) ||
-          (targetActor.name === monster.name &&
-            targetActor.position?.x === monster.position?.x &&
-            targetActor.position?.y === monster.position?.y)),
-    );
+    const isCurrent = isMonsterCurrent(monster);
+    const isTarget = isMonsterTarget(monster);
 
     const monsterNameTranslated = i18n(
       monster.nameTranslationKey ?? monster.name,

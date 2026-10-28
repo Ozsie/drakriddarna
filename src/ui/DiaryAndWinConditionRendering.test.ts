@@ -8,6 +8,7 @@ import {
   measureTextWidth,
   wrapText,
   getDiaryAndWinConditionsLayout,
+  getDiaryAndWinConditionsHit,
   renderDiaryAndWinConditions,
 } from './DiaryAndWinConditionRendering';
 import {
@@ -241,6 +242,7 @@ describe('DiaryAndWinConditionRendering', () => {
         viewWidth,
         viewHeight,
         state,
+        undefined,
         ctx,
       );
 
@@ -256,7 +258,13 @@ describe('DiaryAndWinConditionRendering', () => {
       const state = createMockState();
       const ctx = createMockCtx();
 
-      const layout = getDiaryAndWinConditionsLayout(800, 600, state, ctx);
+      const layout = getDiaryAndWinConditionsLayout(
+        800,
+        600,
+        state,
+        undefined,
+        ctx,
+      );
 
       expect(layout.winConditions).toHaveLength(2);
       expect(layout.winConditions[0].fulfilled).toBe(false);
@@ -267,7 +275,13 @@ describe('DiaryAndWinConditionRendering', () => {
       const state = createMockState();
       const ctx = createMockCtx();
 
-      const layout = getDiaryAndWinConditionsLayout(800, 600, state, ctx);
+      const layout = getDiaryAndWinConditionsLayout(
+        800,
+        600,
+        state,
+        undefined,
+        ctx,
+      );
 
       // Should only contain note-2 (turn 3) and note-1 (turn 1), in descending order (3, then 1)
       expect(layout.diaryNotes).toHaveLength(2);
@@ -330,6 +344,98 @@ describe('DiaryAndWinConditionRendering', () => {
       renderDiaryAndWinConditions(ctx, 800, 600, state);
 
       expect(ctx.fill).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('compact (narrow screen) mode', () => {
+    it('collapses into a corner square in the top-right corner', () => {
+      const state = createMockState();
+      // 375x667: iPhone SE-sized screen
+      const layout = getDiaryAndWinConditionsLayout(375, 667, state, {
+        isCollapsed: true,
+      });
+
+      expect(layout.hasContent).toBe(true);
+      expect(layout.isCollapsed).toBe(true);
+      expect(layout.bounds.x).toBe(375 - 8 - 40);
+      expect(layout.bounds.y).toBe(46);
+      expect(layout.bounds.width).toBe(40);
+      expect(layout.bounds.height).toBe(40);
+      expect(layout.toggleButtonBounds).toEqual(layout.bounds);
+    });
+
+    it('returns a toggle hit when tapping the collapsed square', () => {
+      const state = createMockState();
+      const hit = getDiaryAndWinConditionsHit(
+        375,
+        667,
+        state,
+        true,
+        375 - 8 - 20,
+        46 + 20,
+      );
+      expect(hit).toEqual({ type: 'toggle' });
+    });
+
+    it('returns null outside the collapsed square', () => {
+      const state = createMockState();
+      const hit = getDiaryAndWinConditionsHit(375, 667, state, true, 100, 100);
+      expect(hit).toBeNull();
+    });
+
+    it('adds a close button to the open compact panel', () => {
+      const state = createMockState();
+      const layout = getDiaryAndWinConditionsLayout(375, 667, state, {
+        isCollapsed: false,
+      });
+
+      expect(layout.isCollapsed).toBe(false);
+      expect(layout.toggleButtonBounds.width).toBe(18);
+
+      const hit = getDiaryAndWinConditionsHit(
+        375,
+        667,
+        state,
+        false,
+        layout.toggleButtonBounds.x + 9,
+        layout.toggleButtonBounds.y + 9,
+      );
+      expect(hit).toEqual({ type: 'toggle' });
+    });
+
+    it('still returns a panel hit on the open compact panel body', () => {
+      const state = createMockState();
+      const hit = getDiaryAndWinConditionsHit(375, 667, state, false, 300, 100);
+      expect(hit).toEqual({ type: 'panel' });
+    });
+
+    it('has no toggle button on wide screens', () => {
+      const state = createMockState();
+      const layout = getDiaryAndWinConditionsLayout(800, 600, state, {
+        isCollapsed: false,
+      });
+
+      expect(layout.isCollapsed).toBe(false);
+      expect(layout.toggleButtonBounds).toEqual({
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+      });
+    });
+
+    it('renders the collapsed square with the diary icon', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+
+      renderDiaryAndWinConditions(ctx, 375, 667, state, {
+        isCollapsed: true,
+      });
+
+      const texts = (
+        ctx.fillText as unknown as { mock: { calls: string[][] } }
+      ).mock.calls.map((call) => call[0]);
+      expect(texts).toContain('📖');
     });
   });
 });
