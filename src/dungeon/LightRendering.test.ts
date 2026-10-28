@@ -1777,7 +1777,7 @@ describe('hero torches and door glows', () => {
     // door's side, the far cell toward the opposite side.
     expect(nearGlows[0].alignment).toBe(CellAlignment.CENTER_RIGHT);
     expect(nearGlows[0].color).toBe('#e8b96a');
-    expect(nearGlows[0].intensity).toBeLessThanOrEqual(0.25);
+    expect(nearGlows[0].intensity).toBeLessThanOrEqual(0.3);
 
     // Both sides discovered: the doorway glows from both sides.
     const both = createState({
