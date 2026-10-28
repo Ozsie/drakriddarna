@@ -9,7 +9,7 @@ import {
   Side,
   TerrainType,
 } from '../types';
-import { defineDungeon } from './DungeonLogic';
+import { defineDungeon } from './dungeonParser';
 import { weapons } from '../items/weapons';
 import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { magicItems } from '../items/magicItems';
