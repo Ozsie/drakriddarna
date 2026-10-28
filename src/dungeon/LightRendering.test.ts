@@ -221,6 +221,38 @@ describe('lightCenter', () => {
       y: (cell.y + 1) * CELL_SIZE - inset,
     });
   });
+
+  it('places edge-center alignments on the middle of the named edge', () => {
+    const cell = { x: 1, y: 2 };
+    const edge = (x: number, y: number) => ({
+      x: x * CELL_SIZE,
+      y: y * CELL_SIZE,
+    });
+    expect(
+      lightCenter(
+        createLight({ ...cell, alignment: CellAlignment.CENTER_LEFT }),
+        CELL_SIZE,
+      ),
+    ).toEqual(edge(cell.x, cell.y + 0.5));
+    expect(
+      lightCenter(
+        createLight({ ...cell, alignment: CellAlignment.CENTER_RIGHT }),
+        CELL_SIZE,
+      ),
+    ).toEqual(edge(cell.x + 1, cell.y + 0.5));
+    expect(
+      lightCenter(
+        createLight({ ...cell, alignment: CellAlignment.CENTER_TOP }),
+        CELL_SIZE,
+      ),
+    ).toEqual(edge(cell.x + 0.5, cell.y));
+    expect(
+      lightCenter(
+        createLight({ ...cell, alignment: CellAlignment.CENTER_BOTTOM }),
+        CELL_SIZE,
+      ),
+    ).toEqual(edge(cell.x + 0.5, cell.y + 1));
+  });
 });
 
 describe('lightBlockInCell', () => {
@@ -545,7 +577,8 @@ describe('renderLights', () => {
     }) as unknown as CanvasRenderingContext2D;
 
   it('renders a discovered light with a single smooth radial gradient', () => {
-    const state = createState();
+    // Hero-free: the heroes' torch lights would add a second gradient.
+    const state = createState({ heroes: [] });
     state.dungeon.layout.lights = [createLight()];
     const addColorStop = vi.fn();
     const ctx = createMockCtx({ addColorStop });
@@ -577,7 +610,8 @@ describe('renderLights', () => {
 
   it('skips lights on undiscovered cells and disabled lights', () => {
     const grid = ['#######', '#AAAAA#', '#ABBBB#', '#ABBBB#', '#######'];
-    const state = createState({ grid, discoveredRooms: ['A'] });
+    // Hero-free: a hero here would carry a torch light into the mask.
+    const state = createState({ grid, discoveredRooms: ['A'], heroes: [] });
     state.dungeon.layout.lights = [
       // Undiscovered room B cell: not rendered.
       createLight({ position: { x: 2, y: 2 } }),
@@ -599,7 +633,8 @@ describe('renderLights', () => {
   });
 
   it('renders nothing when there are no lights', () => {
-    const state = createState();
+    // Hero-free: a living hero would carry a torch light.
+    const state = createState({ heroes: [] });
     const ctx = createMockCtx();
     renderLights(ctx, CELL_SIZE, state, false);
     expect(ctx.createRadialGradient).not.toHaveBeenCalled();
@@ -634,7 +669,8 @@ describe('renderLights', () => {
   });
 
   it('keeps hard edges when softness is 0', () => {
-    const state = createState();
+    // Hero-free: the torch light has soft edges and would blur.
+    const state = createState({ heroes: [] });
     state.dungeon.layout.lights = [createLight({ softness: 0 })];
     const ctx = createMockCtx();
     const filters: (string | undefined)[] = [];
@@ -747,7 +783,8 @@ describe('renderAmbientDarkness', () => {
 
   it('keeps culled lights out of the darkness via the shared mask', () => {
     const grid = ['#######', '#AAAAA#', '#ABBBB#', '#ABBBB#', '#######'];
-    const state = createState({ grid, discoveredRooms: ['A'] });
+    // Hero-free: the hero's torch light would render in the mask.
+    const state = createState({ grid, discoveredRooms: ['A'], heroes: [] });
     state.dungeon.ambientLight = 0.2;
     state.dungeon.layout.lights = [
       createLight({ position: { x: 2, y: 2 } }),
@@ -829,7 +866,8 @@ describe('viewport culling', () => {
   });
 
   it('culls lights outside the viewport when rendering', () => {
-    const state = createState();
+    // Hero-free: the hero's torch is inside the viewport.
+    const state = createState({ heroes: [] });
     state.dungeon.layout.lights = [
       createLight({ position: { x: 1, y: 2 }, radius: 1 }),
       createLight({ position: { x: 1, y: 4 }, radius: 1 }),
@@ -882,7 +920,8 @@ describe('static and animated light layers', () => {
     }) as unknown as CanvasRenderingContext2D;
 
   it('renders static lights in the static layer only', () => {
-    const state = createState();
+    // Hero-free: the heroes' torches are static lights of their own.
+    const state = createState({ heroes: [] });
     state.dungeon.layout.lights = [createLight({ position: { x: 1, y: 2 } })];
     const staticCtx = createMockCtx();
     renderStaticLights(staticCtx, CELL_SIZE, state, false);
@@ -893,7 +932,8 @@ describe('static and animated light layers', () => {
   });
 
   it('renders animated lights in the animated layer only', () => {
-    const state = createState();
+    // Hero-free: the heroes' torches are static lights of their own.
+    const state = createState({ heroes: [] });
     state.dungeon.layout.lights = [
       createLight({ position: { x: 1, y: 2 }, effect: 'flicker' }),
     ];
@@ -948,7 +988,8 @@ describe('static and animated light layers', () => {
   });
 
   it('accepts a precomputed light list without changing what renders', () => {
-    const state = createState();
+    // Hero-free: the heroes' torches count as static lights too.
+    const state = createState({ heroes: [] });
     state.dungeon.layout.lights = [
       createLight({ position: { x: 1, y: 2 }, effect: 'flicker' }),
       createLight({ position: { x: 2, y: 2 } }),
@@ -1184,7 +1225,7 @@ describe('light culling and polygon cache', () => {
     expect(maskCtx.createRadialGradient).toHaveBeenCalled();
 
     // A light on an undiscovered cell never enters the mask...
-    const culled = createState({ grid, discoveredRooms: ['A'] });
+    const culled = createState({ grid, discoveredRooms: ['A'], heroes: [] });
     culled.dungeon.ambientLight = 0.2;
     culled.dungeon.layout.lights = [createLight({ position: { x: 4, y: 2 } })];
     const maskCtx2 = createMockCtx();
@@ -1422,7 +1463,8 @@ describe('sparkle and aura effects', () => {
   });
 
   it('draws sparkles as colored glints without a radial glow', () => {
-    const state = createState();
+    // Hero-free: the hero's torch is a radial gradient.
+    const state = createState({ heroes: [] });
     state.dungeon.layout.lights = [
       createLight({ position: { x: 1, y: 2 }, effect: 'sparkle' }),
     ];
@@ -1443,7 +1485,8 @@ describe('sparkle and aura effects', () => {
   });
 
   it('renders an aura as a ring with a soft center glow, cell-limited', () => {
-    const state = createState();
+    // Hero-free: the hero's torch is a radial gradient.
+    const state = createState({ heroes: [] });
     state.dungeon.layout.lights = [
       createLight({ position: { x: 1, y: 2 }, effect: 'aura' }),
     ];
@@ -1482,7 +1525,8 @@ describe('sparkle and aura effects', () => {
   });
 
   it('renders sparkle discs and the aura ring into the light mask', () => {
-    const sparkleState = createState();
+    // Hero-free states throughout: the hero's torch is a radial gradient.
+    const sparkleState = createState({ heroes: [] });
     sparkleState.dungeon.ambientLight = 0.2;
     sparkleState.dungeon.layout.lights = [
       createLight({ position: { x: 1, y: 2 }, effect: 'sparkle' }),
@@ -1501,7 +1545,7 @@ describe('sparkle and aura effects', () => {
     expect(sparkleCtx.fill).toHaveBeenCalled();
     expect(sparkleCtx.createRadialGradient).not.toHaveBeenCalled();
 
-    const auraState = createState();
+    const auraState = createState({ heroes: [] });
     auraState.dungeon.ambientLight = 0.2;
     auraState.dungeon.layout.lights = [
       createLight({ position: { x: 1, y: 2 }, effect: 'aura' }),
@@ -1576,14 +1620,16 @@ describe('item light sources', () => {
     state.dungeon.layout.lights = [createLight({ position: { x: 2, y: 2 } })];
     state.heroes[0].inventory = [glowingItem];
     const lights = activeLights(state);
-    // The placed light plus the hero's item light at the hero's position.
-    expect(lights.length).toBe(2);
+    // The placed light, the hero's item light at the hero's position, and
+    // the hero's torch.
+    expect(lights.length).toBe(3);
     const itemLight = lights[1];
     expect(itemLight.position).toEqual({ x: 1, y: 3 });
     expect(itemLight.effect).toBe('aura');
     expect(itemLight.color).toBe('#87CEEB');
+    expect(lights[2].id).toBe('hero_torch_0');
 
-    // Dead actors do not carry their light.
+    // Dead actors do not carry their light, nor their torch.
     state.heroes[0].health = 0;
     expect(activeLights(state).length).toBe(1);
 
@@ -1592,7 +1638,7 @@ describe('item light sources', () => {
     const monster = createMonsterAt(4, 2);
     monster.inventory = [glowingItem];
     state.dungeon.layout.monsters = [monster];
-    expect(activeLights(state).length).toBe(3);
+    expect(activeLights(state).length).toBe(4);
     expect(activeLights(state)[2].position).toEqual({ x: 4, y: 2 });
   });
 
@@ -1615,7 +1661,10 @@ describe('item light sources', () => {
       },
     ];
     state.heroes[0].inventory = [state.dungeon.layout.items[1].item as Item];
-    expect(activeLights(state)).toEqual([]);
+    // Only the hero's torch remains.
+    const lights = activeLights(state);
+    expect(lights).toHaveLength(1);
+    expect(lights[0].id).toBe('hero_torch_0');
   });
 
   it('renders an item aura light at the carrying actor position', () => {
@@ -1623,7 +1672,8 @@ describe('item light sources', () => {
     state.heroes[0].inventory = [glowingItem];
     const ctx = createMockCtx();
     renderLights(ctx, CELL_SIZE, state, false, 0);
-    expect(ctx.createRadialGradient).toHaveBeenCalledTimes(1);
+    // The item's aura gradient, then the hero's torch at the same cell.
+    expect(ctx.createRadialGradient).toHaveBeenCalledTimes(2);
     // Aura gradient centered on the hero's cell (1, 3).
     const gradientCall = (ctx.createRadialGradient as ReturnType<typeof vi.fn>)
       .mock.calls[0];
@@ -1638,7 +1688,8 @@ describe('item light sources', () => {
     // The mask: the item's aura gradient at the carrier's position.
     const maskCtx = createMockCtx();
     renderLights(maskCtx, CELL_SIZE, state, false, 0);
-    expect(maskCtx.createRadialGradient).toHaveBeenCalledTimes(1);
+    // The item's aura gradient, then the hero's torch.
+    expect(maskCtx.createRadialGradient).toHaveBeenCalledTimes(2);
     const ctx = createMockCtx();
     const darknessCtx = createMockCtx();
     const lightCanvas = createDarknessCanvas(maskCtx);
@@ -1660,12 +1711,114 @@ describe('item light sources', () => {
   });
 });
 
+describe('hero torches and door glows', () => {
+  it('gives every living hero a faint torch light at their position', () => {
+    const state = createState();
+    const torch = activeLights(state).find(
+      (light) => light.id?.startsWith('hero_torch'),
+    );
+    expect(torch).toBeDefined();
+    expect(torch!.position).toEqual({ x: 1, y: 3 });
+    expect(torch!.color).toBe('#e8a44a');
+    expect(torch!.radius).toBe(1.5);
+    expect(torch!.effect).toBe('static');
+
+    // The torch follows its hero.
+    state.heroes[0].position = { x: 2, y: 2 };
+    expect(
+      activeLights(state).find((light) => light.id?.startsWith('hero_torch'))
+        ?.position,
+    ).toEqual({ x: 2, y: 2 });
+
+    // Dead heroes carry no torch.
+    state.heroes[0].health = 0;
+    expect(
+      activeLights(state).some((light) => light.id?.startsWith('hero_torch')),
+    ).toBe(false);
+
+    // One torch per hero.
+    const party = createState({
+      heroes: [createHeroAt(1, 1), createHeroAt(2, 1), createHeroAt(3, 1)],
+    });
+    expect(
+      activeLights(party).filter((light) => light.id?.startsWith('hero_torch'))
+        .length,
+    ).toBe(3);
+  });
+
+  it('keeps the torch steady, so it never drives the animation loop', () => {
+    const state = createState();
+    expect(hasAnimatedLights(state, false)).toBe(false);
+  });
+
+  it('glows the floor in front of a closed door on discovered sides only', () => {
+    const grid = ['#######', '#AAAAA#', '#ABBBB#', '#ABBBB#', '#######'];
+    const door = {
+      x: 1,
+      y: 2,
+      side: Side.RIGHT,
+      locked: false,
+      trapped: false,
+      open: false,
+      hidden: false,
+      trapAttacks: 0,
+      reinforced: false,
+    };
+    // Only room A discovered: the glow sits in front of the door on the
+    // near side, never on the undiscovered far side.
+    const state = createState({ grid, discoveredRooms: ['A'], heroes: [] });
+    state.dungeon.layout.doors = [door];
+    const nearGlows = activeLights(state).filter(
+      (light) => light.id?.startsWith('door_glow'),
+    );
+    expect(nearGlows).toHaveLength(1);
+    expect(nearGlows[0].position).toEqual({ x: 1, y: 2 });
+    // The glow hugs the doorway: the near cell is aligned toward the
+    // door's side, the far cell toward the opposite side.
+    expect(nearGlows[0].alignment).toBe(CellAlignment.CENTER_RIGHT);
+    expect(nearGlows[0].color).toBe('#e8b96a');
+    expect(nearGlows[0].intensity).toBeLessThanOrEqual(0.25);
+
+    // Both sides discovered: the doorway glows from both sides.
+    const both = createState({
+      grid,
+      discoveredRooms: ['A', 'B'],
+      heroes: [],
+    });
+    both.dungeon.layout.doors = [door];
+    const glows = activeLights(both).filter(
+      (light) => light.id?.startsWith('door_glow'),
+    );
+    expect(glows).toHaveLength(2);
+    const farGlow = glows.find(
+      (light) => light.position.x === 2 && light.position.y === 2,
+    );
+    expect(farGlow).toBeDefined();
+    expect(farGlow!.alignment).toBe(CellAlignment.CENTER_LEFT);
+
+    // An open door is a lit passage, not a landmark: no glow.
+    const opened = createState({ grid, discoveredRooms: ['A'], heroes: [] });
+    opened.dungeon.layout.doors = [{ ...door, open: true }];
+    expect(
+      activeLights(opened).some((light) => light.id?.startsWith('door_glow')),
+    ).toBe(false);
+
+    // A hidden door must not give itself away.
+    const hidden = createState({ grid, discoveredRooms: ['A'], heroes: [] });
+    hidden.dungeon.layout.doors = [{ ...door, hidden: true }];
+    expect(
+      activeLights(hidden).some((light) => light.id?.startsWith('door_glow')),
+    ).toBe(false);
+  });
+});
+
 describe('event-driven lights', () => {
   it("snuffs out all lights while the dragon's breath blinds a living hero", () => {
     const state = createState();
     state.dungeon.layout.lights = [createLight({ position: { x: 1, y: 2 } })];
     state.heroes[0].inventory = [glowingItem as unknown as Item];
-    expect(activeLights(state).length).toBe(2);
+    // The placed light, the item light, and the hero's torch.
+    expect(activeLights(state).length).toBe(3);
     state.heroes[0].blinded = true;
     expect(activeLights(state)).toEqual([]);
     // A dead blinded hero does not keep the dungeon dark.
@@ -1901,7 +2054,8 @@ describe('gas effect', () => {
   });
 
   it('punches the gas cloud mask into the ambient darkness', () => {
-    const state = createState();
+    // Hero-free: the hero's torch light would add a second gradient.
+    const state = createState({ heroes: [] });
     state.dungeon.ambientLight = 0.2;
     state.dungeon.layout.lights = [
       createLight({ position: { x: 3, y: 2 }, effect: 'gas' }),

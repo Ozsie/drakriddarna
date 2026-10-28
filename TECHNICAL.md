@@ -341,6 +341,15 @@ the occlusion cache key once per frame and shares them across its lighting
 calls. Lights have effects (`SWAY` — a pendulum-arced moving glow for
 chandeliers), alignment (a ceiling light illuminates figures without them
 casting shadows), and each dungeon sets an ambient darkness level.
+Besides the lights a dungeon places, two kinds are derived at runtime from
+the game state: every living hero carries a torch at the belt — a faint,
+steady pool of warm light around their cell, so the party's surroundings
+stay lit in a pitch-dark dungeon — and every closed, non-hidden door casts
+a faint glow onto the floor in front of it, on each discovered side of the
+doorway, so doorways read at a glance where a bare leaf disappears into
+the wall. Both ride the same pipeline as placed lights (occlusion, fog,
+caches, the darkness veil), both are recreated fresh each pass, and the
+dragon's breath snuffs them with everything else.
 Conceptually this is the same ray-casting idea used in 2D shadow algorithms
 generally.
 

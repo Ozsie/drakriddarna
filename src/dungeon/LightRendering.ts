@@ -1,5 +1,5 @@
 import type { Actor, GameState, Item, LightSource, Position } from '../types';
-import { CellAlignment, LightEffect } from '../types';
+import { CellAlignment, LightEffect, Side } from '../types';
 import { PROJECTILE_DURATION_MS } from '../combat';
 import {
   COLLAPSED,
@@ -94,6 +94,18 @@ export const lightCenter = (
       break;
     case CellAlignment.BOTTOM_RIGHT:
       center = { x: x + cellSize - inset, y: y + cellSize - inset };
+      break;
+    case CellAlignment.CENTER_LEFT:
+      center = { x, y: y + cellSize / 2 };
+      break;
+    case CellAlignment.CENTER_RIGHT:
+      center = { x: x + cellSize, y: y + cellSize / 2 };
+      break;
+    case CellAlignment.CENTER_TOP:
+      center = { x: x + cellSize / 2, y };
+      break;
+    case CellAlignment.CENTER_BOTTOM:
+      center = { x: x + cellSize / 2, y: y + cellSize };
       break;
     // A ceiling fixture lights the whole cell from above; its light pool
     // is centered on the cell, like CENTER.
@@ -646,9 +658,10 @@ const VIEWPORT_CULL_MARGIN_CELLS = 0.5;
 // Whether a light's glow can reach the viewport; lights further away are
 // culled entirely — not drawn, not animated. The glow is bounded by a
 // circle of the light's radius around its cell: every alignment keeps
-// the glow center inside the light's own cell, and a swaying light's
-// swing is covered by the margin. Gas lights have no cheap bound (they
-// fill their whole room) and always pass.
+// the glow center inside its own cell or on the cell's edge (the
+// CENTER_* alignments), and a swaying light's swing is covered by the
+// margin. Gas lights have no cheap bound (they fill their whole room)
+// and always pass.
 export const lightInViewport = (
   light: LightSource,
   viewport?: LightViewport,
@@ -935,6 +948,27 @@ const EVENT_LIGHTS = {
   },
 } as const;
 
+// The glow a closed door casts on the floor in front of it: faint, warm
+// and steady — a lit doorway, not a beacon. It only marks where the door
+// stands; discovery still decides whether it renders at all.
+const DOOR_GLOW = {
+  color: '#e8b96a',
+  radius: 1,
+  intensity: 0.3,
+  softness: 0.6,
+};
+
+// The torch every hero carries at the belt: a faint, steady pool of warm
+// light around the hero's cell, so the party's surroundings stay lit even
+// in a pitch-dark dungeon. Static on purpose — a flickering torch would
+// keep the dynamic layer repainting for as long as any hero lives.
+const HERO_TORCH = {
+  color: '#e8a44a',
+  radius: 1.5,
+  intensity: 0.3,
+  softness: 0.55,
+};
+
 // All lights that are active in a state: the lights placed in the dungeon
 // layout, plus the light sources of items carried by living actors — those
 // follow their carrier's position while in the inventory. Items lying on
@@ -950,6 +984,11 @@ const EVENT_LIGHTS = {
 // Interactables carry lights at their cell, and flying projectiles and
 // dark lord flames light their surroundings for as long as their animation
 // runs. `now` drives the position of the moving projectile lights.
+//
+// Two more lights are derived from the layout and the party itself: a
+// closed, non-hidden door glows faintly on the floor in front of it on
+// every discovered side of its doorway, and every living hero carries a
+// torch light at the belt.
 export const activeLights = (
   state: GameState,
   now: number = Date.now(),
@@ -959,6 +998,49 @@ export const activeLights = (
     return [];
   }
   const lights: LightSource[] = [...(state.dungeon.layout.lights ?? [])];
+
+  // A closed, visible door casts a faint glow onto the floor in front of
+  // it, on each discovered side of the doorway: the leaf alone disappears
+  // into the surrounding wall, a lit doorway reads at a glance. Each glow
+  // hugs the doorway — aligned with the door's side of its cell — and
+  // rides the ordinary light pipeline, so walls and the door leaf itself
+  // shadow it and it never spills through the doorway.
+  // Hidden doors stay dark, and opening the door removes the glow.
+  state.dungeon.layout.doors.forEach((door) => {
+    if (door.open || door.hidden) return;
+    const farX =
+      door.side === Side.RIGHT ? 1 : door.side === Side.LEFT ? -1 : 0;
+    const farY = door.side === Side.DOWN ? 1 : door.side === Side.UP ? -1 : 0;
+    const nearAlignment =
+      door.side === Side.RIGHT
+        ? CellAlignment.CENTER_RIGHT
+        : door.side === Side.LEFT
+        ? CellAlignment.CENTER_LEFT
+        : door.side === Side.UP
+        ? CellAlignment.CENTER_TOP
+        : CellAlignment.CENTER_BOTTOM;
+    const farAlignment =
+      door.side === Side.RIGHT
+        ? CellAlignment.CENTER_LEFT
+        : door.side === Side.LEFT
+        ? CellAlignment.CENTER_RIGHT
+        : door.side === Side.UP
+        ? CellAlignment.CENTER_BOTTOM
+        : CellAlignment.CENTER_TOP;
+    [
+      [door.x, door.y, nearAlignment] as const,
+      [door.x + farX, door.y + farY, farAlignment] as const,
+    ].forEach(([x, y, alignment]) => {
+      if (isDiscovered(state.dungeon, x, y)) {
+        lights.push(
+          createLight(x, y, alignment, {
+            id: `door_glow_${door.x}_${door.y}_${door.side}`,
+            ...DOOR_GLOW,
+          }),
+        );
+      }
+    });
+  });
 
   // The hexagram light remains where the hexagram ended up (the portal).
   const portal = state.dungeon.portal;
@@ -1068,6 +1150,20 @@ export const activeLights = (
         lights.push({ ...item.light, position: actor.position });
       }
     });
+  });
+
+  // Every living hero carries a torch at the belt. Like the other derived
+  // lights it is recreated fresh each pass, so it follows the hero around
+  // without any stored state, and is snuffed by the dragon's breath
+  // together with every other light.
+  state.heroes.forEach((hero, index) => {
+    if (hero.health <= 0) return;
+    lights.push(
+      createLight(hero.position.x, hero.position.y, CellAlignment.CENTER, {
+        id: `hero_torch_${hero.id ?? index}`,
+        ...HERO_TORCH,
+      }),
+    );
   });
   return lights;
 };

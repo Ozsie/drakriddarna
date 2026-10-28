@@ -89,6 +89,16 @@ describe('closed door rendering', () => {
     expect(leaf).toBeDefined();
     expect(leaf?.x).toBe(3 * 48 + 48 - 4);
 
+    // A faint warm outline rings the leaf, one pixel out on every side,
+    // painted before the leaf so only the halo stays visible.
+    const outline = rects.find((r) => r.style === 'rgba(230, 206, 158, 0.4)');
+    expect(outline).toBeDefined();
+    expect(outline?.x).toBe(3 * 48 + 48 - 4 - 1);
+    expect(outline?.y).toBe(2 * 48 - 1);
+    expect(outline?.w).toBe(10);
+    expect(outline?.h).toBe(50);
+    expect(rects.indexOf(outline!)).toBeLessThan(rects.indexOf(leaf!));
+
     // Textured with plank seams and shaded edges
     expect(rects.some((r) => r.style === '#6b4220')).toBe(true);
     expect(rects.some((r) => r.style === '#43290f')).toBe(true);
@@ -111,6 +121,11 @@ describe('closed door rendering', () => {
       (r) => r.style === '#5a5a66' && r.w === 8 && r.h === 48,
     );
     expect(leaf).toBeDefined();
+
+    // The outline rings the iron leaf the same way.
+    expect(rects.some((r) => r.style === 'rgba(230, 206, 158, 0.4)')).toBe(
+      true,
+    );
 
     // Brass keyhole plate centred on the leaf
     const plate = rects.find((r) => r.style === '#d9a83f' && r.h === 12);

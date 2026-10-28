@@ -727,9 +727,11 @@ registerInteractableEffect(
 Dungeon layouts can include **light sources** (`LightSource`) that render a
 colored glow on the dungeon floor. A light is placed on a grid cell and can be
 aligned within that cell (`CellAlignment.CENTER`, `TOP_LEFT`, `TOP_RIGHT`,
-`BOTTOM_LEFT`, `BOTTOM_RIGHT`) or mounted in the ceiling above the cell
-(`CellAlignment.CEILING`). Every property has a default value, so only a
-grid position is required.
+`BOTTOM_LEFT`, `BOTTOM_RIGHT`), at the midpoint of one of the cell's edges
+(`CellAlignment.CENTER_LEFT`, `CENTER_RIGHT`, `CENTER_TOP`,
+`CENTER_BOTTOM`, e.g. a glow hugging a doorway), or mounted in the ceiling
+above the cell (`CellAlignment.CEILING`). Every property has a default
+value, so only a grid position is required.
 
 Rendering is shadow-cast: walls, collapsed corridors, closed doors, pillars
 and living actors (heroes and monsters) block the light, and the glow never
@@ -890,7 +892,7 @@ export const myDungeonLayout = defineLayout({
 | Property | Type | Default | Description |
 | :-- | :-- | :-- | :-- |
 | `position` / `x, y` | `Position` or numbers | — | Grid cell the light is placed on (required). |
-| `alignment` | `CellAlignment` | `CellAlignment.CENTER` | Where in the cell the light sits: `CENTER`, `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`, or `CEILING` for a fixture in the ceiling above the cell. Corner alignments sit slightly inside the cell so the glow does not bleed into the wall corner. A `CEILING` light renders the same light pool but shines down on actors: they are fully illuminated, do not block the light and cast no shadows in it (walls, pillars, doors and fog still block it). |
+| `alignment` | `CellAlignment` | `CellAlignment.CENTER` | Where in the cell the light sits: `CENTER`, `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`, `CENTER_LEFT`, `CENTER_RIGHT`, `CENTER_TOP`, `CENTER_BOTTOM`, or `CEILING` for a fixture in the ceiling above the cell. Corner alignments sit slightly inside the cell so the glow does not bleed into the wall corner; the `CENTER_*` alignments sit at the midpoint of the named cell edge, with the glow centered on that edge. A `CEILING` light renders the same light pool but shines down on actors: they are fully illuminated, do not block the light and cast no shadows in it (walls, pillars, doors and fog still block it). |
 | `color` | `string` | `'#FFB85C'` | CSS hex color of the light glow (`'#RGB'` or `'#RRGGBB'`). |
 | `radius` | `number` | `4` | Reach of the light in grid cells, measured from the light source. |
 | `intensity` | `number` | `0.35` | Brightness at the source (`0`–`1`), fading to `0` at the radius. |
