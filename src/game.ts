@@ -1,4 +1,4 @@
-import type { GameState, Hero, Position } from './types';
+import type { Dungeon, GameState, Hero, Position } from './types';
 import { ConditionType, Level } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
 import { CURRENT_SAVE_VERSION, migrateSaveState } from './saveMigration';
@@ -26,7 +26,8 @@ import {
 import { browser } from '$app/environment';
 import { addLog, doReRender, i18n } from './core';
 import { shuffle } from './core';
-import { awardScenarioScore } from './core';
+import { awardScenarioScore, beginDungeonTiming } from './core';
+import { checkpointDungeonTimer, resumeDungeonTimer } from './core/timer';
 import {
   getEffectiveMaxMovement,
   getDifficulty,
@@ -41,6 +42,9 @@ import { soundEffectManager } from './audio';
 export { removeDamageIndicator } from './core/combat';
 
 export const save = (state: GameState, name?: string) => {
+  // The saved snapshot carries the full elapsed dungeon time under a
+  // fresh segment base, so loading it does not count the offline gap.
+  checkpointDungeonTimer(state);
   doReRender(state);
   writeSave(state, name ?? '');
   addLog(state, 'logs.gameSaved');
@@ -52,6 +56,9 @@ export const loadState = (newState: GameState) => {
     (hero) => hero.name === newState.currentActor?.name,
   ) as Hero | undefined;
   migrateSaveState(newState);
+  // Resume the run's timer without counting the time between saving and
+  // loading (the accumulated time from the save is kept).
+  resumeDungeonTimer(newState);
   // Older saves may not have a campaignId at all, and any save could in
   // theory reference a campaign that no longer exists (e.g. removed
   // during development). Fall back to the default campaign rather than
@@ -70,6 +77,11 @@ export const loadState = (newState: GameState) => {
   doReRender(newState);
   return newState;
 };
+
+// Whether a dungeon shows an intro screen the timer waits for (mirrors
+// `shouldShowDungeonIntro` in src/ui/DungeonIntroRendering.ts).
+const hasDungeonIntro = (dungeon: Dungeon): boolean =>
+  typeof dungeon.intro === 'string' && dungeon.intro.trim().length > 0;
 
 export const init = (
   campaignId: string = DEFAULT_CAMPAIGN_ID,
@@ -145,6 +157,9 @@ export const init = (
   }
   applyStartingEquipment(state.heroes as Hero[], selectedGameMaster);
   resetLiveHeroes(state);
+  // The run's timer starts when the first dungeon's intro is closed, or
+  // immediately when that dungeon has no intro.
+  beginDungeonTiming(state, hasDungeonIntro(campaign.dungeons[0]));
   selectedGameMaster?.onGameInit?.(state);
   if (state.currentActor) {
     selectedGameMaster?.onHeroTurnStart?.(state.currentActor, state);
@@ -327,6 +342,9 @@ export const resetLevel = (currentState: GameState): GameState => {
         );
         state.campaignId = DEFAULT_CAMPAIGN_ID;
       }
+      // Resuming a retry from the autosave: the timer continues from the
+      // saved elapsed time, without counting the time since the save.
+      resumeDungeonTimer(state);
       doReRender(state);
 
       replaceDeadHeroes(state);

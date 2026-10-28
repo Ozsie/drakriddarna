@@ -412,6 +412,20 @@ the current run's score ranked into the list at its correct position
 (highlighted as "this run"; appended with its real rank when it falls
 outside the top 10).
 
+Next to the score sits a wall-clock **campaign timer**
+(`src/core/timer.ts`, kept in `state.timer`): each dungeon's timer
+starts when its intro screen is closed (immediately for dungeons
+without an intro) and stops when the between-dungeons overlay opens —
+the final dungeon time is shown on the between-dungeons screen and the
+accumulated campaign time on the campaign-complete screen, while the
+debug overlay shows the live dungeon time ticking once a second. A
+failed attempt (party wipe) stops the timer but does not join the
+campaign total. Like the score it is pure presentation data — nothing
+in the game logic reads it — and it persists in saves without a
+migration; serialization points checkpoint the running segment into
+the accumulated time, and loading rebases it, so the offline gap
+between saving and loading is never counted.
+
 ## State, persistence and save migration
 
 The entire game lives in one `GameState` object, held in a Svelte `writable`

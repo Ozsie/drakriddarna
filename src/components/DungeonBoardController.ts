@@ -231,6 +231,7 @@ export class DungeonBoardController {
   private lastOverlaySignature = '';
   private lastUiSignature = '';
   private overlayAnimationId: number | null = null;
+  private overlayTimerId: ReturnType<typeof setTimeout> | null = null;
   private dynamicAnimationId: number | null = null;
   private shakeAnimationId: number | null = null;
   private panRenderAnimationId: number | null = null;
@@ -596,6 +597,10 @@ export class DungeonBoardController {
     if (this.overlayAnimationId) {
       cancelAnimationFrame(this.overlayAnimationId);
       this.overlayAnimationId = null;
+    }
+    if (this.overlayTimerId) {
+      clearTimeout(this.overlayTimerId);
+      this.overlayTimerId = null;
     }
     if (this.dynamicAnimationId) {
       cancelAnimationFrame(this.dynamicAnimationId);
@@ -1231,11 +1236,28 @@ export class DungeonBoardController {
       cancelAnimationFrame(this.overlayAnimationId);
       this.overlayAnimationId = null;
     }
+    if (this.overlayTimerId) {
+      clearTimeout(this.overlayTimerId);
+      this.overlayTimerId = null;
+    }
 
     if (hasActiveEffects) {
       this.overlayAnimationId = requestAnimationFrame(() => {
         this.renderOverlayLayer(true);
       });
+    } else if (this.debugTimerRunning()) {
+      // The debug printout shows the live dungeon timer, which ticks
+      // once per second: repaint the overlay on the next whole-second
+      // boundary instead of looping every frame.
+      if (this.overlayTimerId === null) {
+        this.overlayTimerId = setTimeout(
+          () => {
+            this.overlayTimerId = null;
+            this.renderOverlayLayer(true);
+          },
+          1001 - (Date.now() % 1000),
+        );
+      }
     } else {
       let stateChanged = false;
       if (hasDamageIndicators) {
@@ -1734,6 +1756,15 @@ export class DungeonBoardController {
    */
   private syncGameInputEnabled(): void {
     inputManager.setEnabled(!this.isCanvasMenuOpen && !this.saveLoadDialogMode);
+  }
+
+  // Whether the debug printout shows a ticking dungeon timer (and the
+  // overlay layer therefore needs its once-per-second repaints).
+  private debugTimerRunning(): boolean {
+    return (
+      Boolean(this.debugMode) &&
+      this.activeState?.timer?.runningFrom !== undefined
+    );
   }
 
   /** Opens the centered save/load dialog and closes the canvas menu. */

@@ -78,6 +78,43 @@ describe('game orchestrator', () => {
     expect(loaded.actionLog[0].key).toBe('logs.gameLoaded');
   });
 
+  describe('dungeon timer', () => {
+    it('init creates a timer that waits for the first dungeon intro to close', () => {
+      const state = init();
+      expect(state.timer).toEqual({
+        runningFrom: undefined,
+        dungeonElapsedMs: 0,
+        campaignElapsedMs: 0,
+      });
+    });
+
+    it('loadState rebases a running timer so the offline gap is not counted', () => {
+      const state = init();
+      state.timer = {
+        runningFrom: Date.now() - 3_600_000,
+        dungeonElapsedMs: 5_000,
+        campaignElapsedMs: 0,
+      };
+
+      const loaded = loadState(state);
+
+      expect(loaded.timer?.dungeonElapsedMs).toBe(5_000);
+      expect(loaded.timer?.runningFrom).toBeDefined();
+      expect(loaded.timer?.runningFrom ?? 0).toBeGreaterThanOrEqual(
+        Date.now() - 1_000,
+      );
+    });
+
+    it('loadState does not start a timer that was not running when saved', () => {
+      const state = init();
+      state.timer = { dungeonElapsedMs: 5_000, campaignElapsedMs: 0 };
+
+      const loaded = loadState(state);
+
+      expect(loaded.timer?.runningFrom).toBeUndefined();
+    });
+  });
+
   it('clears actions and movement to 0 when a hero ends their turn', async () => {
     const state = init();
     expect(state.currentActor).toBeDefined();

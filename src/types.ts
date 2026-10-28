@@ -58,6 +58,20 @@ export type GameState = {
   // Per-scenario score records, appended when each scenario is first
   // beaten; the campaign-complete screen shows them as statistics.
   scenarioScores?: ScenarioScoreRecord[];
+  // Wall-clock timing of the campaign run (see src/core/timer.ts): the
+  // timer starts when a dungeon's intro is closed and stops when the
+  // between-dungeons screen opens. Pure presentation data.
+  timer?: DungeonTimer;
+};
+
+// Wall-clock timing of a campaign run: the accumulated milliseconds of
+// the current dungeon plus the timestamp its running segment started
+// (undefined while stopped), and the accumulated total of every
+// completed dungeon. See src/core/timer.ts for the lifecycle helpers.
+export type DungeonTimer = {
+  runningFrom?: number;
+  dungeonElapsedMs: number;
+  campaignElapsedMs: number;
 };
 
 export type BetweenDungeonsStep =
@@ -103,6 +117,13 @@ export interface BetweenDungeonsState {
   scenarioScore?: ScenarioScore;
   // Running campaign score after adding the completed scenario.
   campaignScore?: number;
+  // Final wall-clock time of the scenario just completed, shown on the
+  // between-dungeons screen (set on the levelUp and campaignComplete
+  // steps).
+  dungeonTimeMs?: number;
+  // Total wall-clock time of the whole campaign, shown on the
+  // campaign-complete screen.
+  campaignTimeMs?: number;
   // Stored high score list for the campaign, shown on the party-wipe
   // screen next to the current run's score (campaignScore).
   wipeHighScores?: HighScoreEntry[];

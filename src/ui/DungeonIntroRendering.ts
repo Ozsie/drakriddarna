@@ -1,5 +1,6 @@
 import type { GameState } from '../types';
 import { addLog, i18n } from '../core';
+import { startDungeonTimer } from '../core/timer';
 import {
   drawRoundedRect,
   isPointInBounds,
@@ -52,6 +53,9 @@ export const dismissDungeonIntro = (
   if (!state?.dungeon?.intro) return false;
   const dungeon = state.dungeon;
   addLog(state, dungeon.intro);
+  // Closing the intro starts the dungeon's timer (a no-op when it
+  // already runs, e.g. a dungeon without an intro).
+  startDungeonTimer(state);
 
   if (!dungeon.layout) {
     dungeon.layout = {

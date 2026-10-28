@@ -150,6 +150,30 @@ describe('DungeonIntroRendering', () => {
       dismissDungeonIntro(state);
       expect(state.dungeon.layout.notes.length).toBe(1);
     });
+
+    it('starts the dungeon timer when the intro is closed', () => {
+      const state = createMockState();
+
+      dismissDungeonIntro(state);
+
+      expect(state.timer).toBeDefined();
+      expect(state.timer?.runningFrom).toBeDefined();
+      expect(state.timer?.dungeonElapsedMs).toBe(0);
+      expect(state.timer?.campaignElapsedMs).toBe(0);
+    });
+
+    it('does not restart a timer that already runs', () => {
+      const state = createMockState();
+      state.timer = {
+        runningFrom: 123,
+        dungeonElapsedMs: 0,
+        campaignElapsedMs: 0,
+      };
+
+      dismissDungeonIntro(state);
+
+      expect(state.timer?.runningFrom).toBe(123);
+    });
   });
 
   describe('getDungeonIntroLayout', () => {

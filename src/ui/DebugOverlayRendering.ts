@@ -5,6 +5,7 @@ import {
   type DirectorState,
 } from '../monsters/behavior';
 import { getHeroCardsLayout } from './HeroCardRendering';
+import { formatDuration, getCurrentDungeonTimeMs } from '../core/timer';
 
 export interface DebugPrintoutCounts {
   totalReRenders: number;
@@ -70,6 +71,11 @@ export const renderDebugPrintout = (
   const ratio = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
   const { x, y } = getDebugPrintoutPosition(viewWidth, viewHeight, state);
   const directorState = getCurrentDirectorState(state);
+  // Live run time of the current dungeon; '-' while the timer has not
+  // started (intro still open or a pre-timer save).
+  const timerText = state?.timer
+    ? formatDuration(getCurrentDungeonTimeMs(state))
+    : '-';
   const lines = [
     `Re-renders: ${String(counts.totalReRenders)} (Static: ${String(
       counts.staticReRenders,
@@ -78,6 +84,7 @@ export const renderDebugPrintout = (
       counts.overlayFps,
     )})`,
     `Director: ${String(directorState ?? '-')}`,
+    `Timer: ${timerText}`,
   ];
 
   ctx.save();

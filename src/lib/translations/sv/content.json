@@ -167,6 +167,7 @@
     "levelHeader": "Nivå",
     "healthHeader": "Hälsa",
     "itemsHeader": "Föremål",
+    "campaignTime": "Kampanjtid: {{time}}",
     "fallen": "Föll i strid"
   },
   "partyWipe": {
@@ -191,7 +192,8 @@
     "monsters": "Monster +{{points}}",
     "loot": "Byte +{{points}}",
     "secrets": "Hemligheter +{{points}}",
-    "rounds": "Rundor {{points}}"
+    "rounds": "Rundor {{points}}",
+    "time": "Tid: {{time}}"
   },
   "terrain": {
     "water": "vattnet",

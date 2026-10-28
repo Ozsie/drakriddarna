@@ -37,6 +37,7 @@ import { doMouseLogic, type CameraOffset } from '../hero/ClickInputLogic';
 import { testingGrounds } from '../dungeon/testingGrounds';
 import { getEventsForDungeon } from '../events/EventsLogic';
 import { saveReloadGuard, debouncedSaveReloadGuard } from '../core';
+import { beginDungeonTiming } from '../core/timer';
 
 const getInitialState = (): GameState => {
   if (browser) {
@@ -316,6 +317,9 @@ export const goToTestingGrounds = (): void => {
   state.dungeon = testingGrounds;
   state.eventDeck = getEventsForDungeon(state.dungeon);
   resetLiveHeroes(state);
+  // The testing grounds show an intro like any dungeon; its timer starts
+  // when that intro is closed.
+  beginDungeonTiming(state, true);
   syncStore(state);
 };
 

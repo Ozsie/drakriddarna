@@ -19,7 +19,8 @@
 
 # Features
 
-- [ ] Dungeon timer, with optional speed running feature that allows the user to set random seed, default to something fixed
+- [x] Dungeon timer
+- [ ] Speed running feature that allows the user to set random seed, default to something fixed
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc
 - [ ] Responsive layout
 - [ ] Graphics
