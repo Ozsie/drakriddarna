@@ -247,9 +247,9 @@ describe('TopBarRendering', () => {
     expect(
       layout.scoreCounter.x + layout.scoreCounter.width,
     ).toBeLessThanOrEqual(layout.turnCounter.x);
-    expect(
-      layout.turnCounter.x + layout.turnCounter.width,
-    ).toBeLessThanOrEqual(375 - 8);
+    expect(layout.turnCounter.x + layout.turnCounter.width).toBeLessThanOrEqual(
+      375 - 8,
+    );
     // The freed width goes to the log section.
     const wideLayout = getTopBarLayout(800, state, ctx);
     expect(layout.logSection.width).toBeGreaterThan(0);
@@ -260,7 +260,6 @@ describe('TopBarRendering', () => {
       layout.scoreCounter.width,
     );
   });
-});
 
   describe('hit testing and bounds', () => {
     it('determines if point is inside bounds', () => {
