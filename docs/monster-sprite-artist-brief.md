@@ -18,11 +18,11 @@ One PNG per monster sheet, transparent background. Each sheet is a grid of
 the hero brief. Frame size is **per monster type** and differs from the hero
 frames (32 x 56):
 
-| Monster | Frame size | Relative to hero | Height overlap in a 48 px cell |
-|---|---|---|---|
-| Orc | 36 x 48 | shorter, slightly wider | none — fits the cell exactly |
-| Troll | 40 x 64 | taller and wider | 16 px into the cell above |
-| Dark Lord | 32 x 56 | same size | 8 px into the cell above |
+| Monster   | Frame size | Relative to hero        | Height overlap in a 48 px cell |
+| --------- | ---------- | ----------------------- | ------------------------------ |
+| Orc       | 36 x 48    | shorter, slightly wider | none — fits the cell exactly   |
+| Troll     | 40 x 64    | taller and wider        | 16 px into the cell above      |
+| Dark Lord | 32 x 56    | same size               | 8 px into the cell above       |
 
 No gaps, no padding, no labels. If rows have different frame counts, either
 pad shorter rows with empty frames to the longest row, or state the exact
