@@ -20,8 +20,19 @@
         "rights": "Rättigheter & Licenser"
       }
     },
+    "saveGame": {
+      "header": "Spara spel",
+      "subtitle": "Namnge ditt sparade spel",
+      "buttons": {
+        "save": "Spara",
+        "cancel": "Avbryt"
+      },
+      "defaultName": "Sparat spel"
+    },
     "loadGame": {
       "header": "Ladda spel",
+      "subtitle": "Välj ett sparat spel att ladda",
+      "moreSaves": "+{{count}} fler sparade spel",
       "buttons": {
         "autoSave": "Autosparat spel",
         "manualSave": "Manuellt sparat spel",
@@ -36,6 +47,13 @@
     },
     "selectGameMaster": {
       "header": "Välj Spelledare"
+    },
+    "newGame": {
+      "speedrunnerMode": "Speedrunner-läge",
+      "rngSeed": "Slumpfrö",
+      "buttons": {
+        "begin": "Starta"
+      }
     },
     "rights": {
       "header": "Rättigheter & Licenser",
@@ -144,6 +162,46 @@
     }
   },
   "turn": "Runda",
+  "campaignComplete": {
+    "title": "Kampanjen klar: {{name}}",
+    "subtitle": "Den sista striden är vunnen. Slutställning:",
+    "summary": "{{scenarios}} scenarier · {{rounds}} rundor · {{kills}} dödade monster · {{secrets}} hittade hemligheter",
+    "scenarioHeader": "Scenario",
+    "roundsHeader": "Rundor",
+    "killsHeader": "Dödade",
+    "scoreHeader": "Poäng",
+    "heroHeader": "Hjälte",
+    "levelHeader": "Nivå",
+    "healthHeader": "Hälsa",
+    "itemsHeader": "Föremål",
+    "campaignTime": "Kampanjtid: {{time}}",
+    "fallen": "Föll i strid"
+  },
+  "partyWipe": {
+    "title": "Hjältarna har fallit",
+    "subtitle": "Alla hjältar föll i {{name}}. Välj hur du vill fortsätta:",
+    "highScores": "Topplista",
+    "thisRun": "(det här försöket)",
+    "buttons": {
+      "restartCampaign": "Starta om kampanjen",
+      "restartCampaignDesc": "Börja en helt ny kampanj från det första scenariot.",
+      "restartDungeon": "Försök om nivån",
+      "restartDungeonDesc": "Hjältarna börjar om {{name}} från början och förlorar all erfarenhet och alla nivåer.",
+      "loadSave": "Ladda sparat spel",
+      "loadSaveDesc": "Fortsätt från ett av dina sparade spel."
+    }
+  },
+  "scoring": {
+    "topBar": "Poäng",
+    "scenarioScore": "Scenariopoäng: {{score}}",
+    "campaignTotal": "Kampanjens totalpoäng: {{score}}",
+    "health": "Hälsa +{{points}}",
+    "monsters": "Monster +{{points}}",
+    "loot": "Byte +{{points}}",
+    "secrets": "Hemligheter +{{points}}",
+    "rounds": "Rundor {{points}}",
+    "time": "Tid: {{time}}"
+  },
   "terrain": {
     "water": "vattnet",
     "lava": "lavan"

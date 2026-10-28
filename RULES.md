@@ -43,6 +43,7 @@ Welcome to **Drakriddarna** (Dragonfire), a tactical turn-based dungeon-crawling
 8. [Turn Events & Difficulty Scaling](#turn-events--difficulty-scaling)
    - [Monster Spawn Events](#monster-spawn-events-the-hungry-troll-the-lost-orc)
    - [Recovery Events](#recovery-events-fountain-of-youth)
+9. [Scenario Scoring](#scenario-scoring)
 
 ---
 
@@ -134,7 +135,10 @@ The required face value for a die to count as a **Success** depends directly on 
 - Whenever a hero slays an enemy monster, **the killing hero earns the monster's Experience (XP)**: Orcs 1 XP, Trolls 2 XP, Dark Lords 4 XP.
 - Every hero who survives a scenario earns an additional **+1 XP** when it is completed.
 - If a hero dies, their accumulated XP is lost and they return as an Apprentice in the next scenario; found equipment is kept by their successor.
-- If all heroes fall in battle, the scenario restarts with revived heroes starting at 0 XP (Apprentice level).
+- If all heroes fall in battle, a **party wipe screen** offers three ways to continue:
+  - **Restart Campaign** — begin a brand new campaign from the first dungeon.
+  - **Retry This Dungeon** — the scenario restarts with revived heroes, but the whole party starts over at 0 XP (Apprentice level).
+  - **Load Saved Game** — continue from an earlier save instead.
 
 ### Action Economy
 
@@ -448,3 +452,27 @@ Turn events introduce dynamic occurrences each round, including monster reinforc
 ### Recovery Events (`Fountain of Youth`)
 
 - **Low-Health Priority Draw**: If the party's average health is below 50%, the `Fountain of Youth` event has a **50% chance** to be the next event drawn from the deck, unless it was already played in the previous round.
+
+---
+
+## Scenario Scoring
+
+Scoring is a digital meta-game on top of the board game rules (the official rules have no score). Every dungeon awards a scenario score the moment its win conditions are first fulfilled, and each scenario's score adds to a running campaign total shown in the top bar.
+
+| Component                        | Points                                                                                                    |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Remaining hero health at victory | **+50 per health point** across all live heroes                                                           |
+| Monsters slain                   | **+30 per experience point** of each monster killed by the heroes                                         |
+| Loot                             | **+25 per item value** of every item picked up during the scenario; magic items are worth a flat **+100** |
+| Secrets found                    | **+50 per secret** discovered                                                                             |
+| Rounds played                    | **−2 per round**                                                                                          |
+
+Notes:
+
+- Dead heroes contribute no health points, so losing a hero is a heavy score penalty on its own.
+- Monster kill points are tracked at the moment of the kill, independent of hero experience (which is spent on level-ups).
+- Loot points are awarded when an item is picked up and never reversed: dropping or trading an item later keeps its points.
+- The scenario score is a snapshot taken at the instant the win conditions are fulfilled; later changes to the heroes or the dungeon do not alter it.
+- The breakdown is shown on the between-dungeons screen, and the campaign total is carried across every dungeon of the campaign.
+- Completing a campaign records its score into a per-campaign **high score list** (top 10). The party-wipe screen shows the list with the current run's score ranked into it, so you can see where the run stands before choosing how to continue.
+- When the last dungeon of a campaign is won, a final screen shows the campaign score, per-scenario statistics (rounds, monsters slain, score) and per-hero statistics (level, experience, health, kills, items carried). Heroes who fell on the final scenario are listed as fallen.

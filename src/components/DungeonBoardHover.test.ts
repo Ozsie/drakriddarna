@@ -10,6 +10,7 @@ import {
   updateHeroCardsHover,
   updateMenuHover,
   updateMonsterCardsHover,
+  updateNewGameDialogHover,
   updateTopBarHover,
 } from './DungeonBoardHover';
 
@@ -56,6 +57,21 @@ describe('between-dungeons hover', () => {
     expect(hover.hoveredBdItem).toBeNull();
     expect(hover.hoveredBdGiveHeroIndex).toBe(3);
     expect(result.cursor).toBe('pointer');
+  });
+
+  it('tracks the hovered party-wipe option and clears it again', () => {
+    const hover = createBoardHoverState();
+    const result = updateBetweenDungeonsHover(hover, {
+      type: 'wipeButton',
+      action: 'restartDungeon',
+    });
+    expect(hover.hoveredBdWipeAction).toBe('restartDungeon');
+    expect(result.cursor).toBe('pointer');
+
+    const cleared = updateBetweenDungeonsHover(hover, null);
+    expect(hover.hoveredBdWipeAction).toBeNull();
+    expect(cleared.cursor).toBe('default');
+    expect(cleared.changed).toBe(true);
   });
 
   it('clears every flag when the pointer is over empty overlay space', () => {
@@ -248,6 +264,52 @@ describe('event card hover', () => {
   });
 });
 
+describe('new-game dialog hover', () => {
+  it('tracks the hovered campaign and game master rows', () => {
+    const hover = createBoardHoverState();
+    const result = updateNewGameDialogHover(hover, {
+      type: 'campaign',
+      campaignId: 'iceDragonTreasure',
+    });
+    expect(hover.hoveredNgCampaignId).toBe('iceDragonTreasure');
+    expect(result.cursor).toBe('pointer');
+    expect(result.changed).toBe(true);
+
+    const gmResult = updateNewGameDialogHover(hover, {
+      type: 'gameMaster',
+      gameMasterId: 'tactician',
+    });
+    expect(hover.hoveredNgCampaignId).toBeNull();
+    expect(hover.hoveredNgGameMasterId).toBe('tactician');
+    expect(gmResult.cursor).toBe('pointer');
+  });
+
+  it('tracks the checkbox and button hovers with a pointer cursor', () => {
+    const hover = createBoardHoverState();
+    expect(updateNewGameDialogHover(hover, { type: 'checkbox' }).cursor).toBe(
+      'pointer',
+    );
+    expect(hover.isNgCheckboxHovered).toBe(true);
+    expect(updateNewGameDialogHover(hover, { type: 'action' }).cursor).toBe(
+      'pointer',
+    );
+    expect(hover.isNgActionHovered).toBe(true);
+    expect(updateNewGameDialogHover(hover, { type: 'secondary' }).cursor).toBe(
+      'pointer',
+    );
+    expect(hover.isNgSecondaryHovered).toBe(true);
+  });
+
+  it('shows the default cursor over the panel and backdrop', () => {
+    const hover = createBoardHoverState();
+    hover.isNgActionHovered = true;
+    const result = updateNewGameDialogHover(hover, { type: 'panel' });
+    expect(hover.isNgActionHovered).toBe(false);
+    expect(result.cursor).toBe('default');
+    expect(result.changed).toBe(true);
+  });
+});
+
 describe('clearBoardHovers', () => {
   it('clears every hover flag and reports the change', () => {
     const hover = createBoardHoverState();
@@ -261,6 +323,11 @@ describe('clearBoardHovers', () => {
     hover.hoveredCloseHeroName = 'Fearik';
     hover.hoveredUseItem = { heroName: 'Fearik', itemIndex: 0 };
     hover.isEventCardToggleHovered = true;
+    hover.hoveredNgCampaignId = 'iceDragonTreasure';
+    hover.hoveredNgGameMasterId = 'tactician';
+    hover.isNgCheckboxHovered = true;
+    hover.isNgActionHovered = true;
+    hover.isNgSecondaryHovered = true;
 
     expect(clearBoardHovers(hover, { radial: true })).toBe(true);
     expect(hover).toEqual(createBoardHoverState());

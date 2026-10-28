@@ -19,9 +19,6 @@
 
 # Features
 
-- [ ] Multiple saves
-- [ ] Scoring, 50 point per hp at end of scenario, 30\*xp points per monster killed, -2 per round, more?
-- [ ] Dungeon timer, with optional speed running feature
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc
 - [ ] Responsive layout
 - [ ] Graphics
@@ -31,6 +28,13 @@
 - [ ] Alvkonungens Borg - [Official Dungeon and Heroes](<https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg>)
   - [x] Edge based walls
 - [ ] Level editor
+- [ ] Random campaign
+- [x] Dungeon timer
+- [x] Speed running feature that allows the user to set random seed, default to something fixed
+- [x] Party wipe screen: restart campaign, retry dungeon (lost XP/levels) or load a save, with a per-campaign top 10 high score list and the current run's score ranked in
+- [x] Scoring, 50 point per hp at end of scenario, 30\*xp points per monster killed, -2 per round, +25 per picked-up item value (magic items flat 100), +50 per secret found
+- [x] Final campaign screen with campaign score, per-scenario statistics and per-hero statistics
+- [x] Multiple saves
 - [x] Sound Effects
 - [x] e1m5
   - [x] multiple copies of items in treasure room

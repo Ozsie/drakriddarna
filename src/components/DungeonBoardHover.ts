@@ -4,8 +4,11 @@ import type {
   EventCardHitResult,
   HeroCardsHitResult,
   MenuHitResult,
+  SaveLoadDialogHitResult,
   TopBarHitElement,
 } from '../ui/UIRendering';
+import type { NewGameDialogHitResult } from '../ui/NewGameDialogRendering';
+import type { PartyWipeAction } from '../types';
 import type { UiHit } from './DungeonBoardUiHit';
 
 // Hover tracking for the board's UI surfaces. The state is a plain object
@@ -27,6 +30,14 @@ export interface BoardHoverState {
   isBdSecondaryHovered: boolean;
   hoveredBdItem: { heroIndex: number; itemIndex: number } | null;
   hoveredBdGiveHeroIndex: number | null;
+  hoveredBdWipeAction: PartyWipeAction | null;
+  isSdActionHovered: boolean;
+  isSdSecondaryHovered: boolean;
+  hoveredNgCampaignId: string | null;
+  hoveredNgGameMasterId: string | null;
+  isNgCheckboxHovered: boolean;
+  isNgActionHovered: boolean;
+  isNgSecondaryHovered: boolean;
 }
 
 export const createBoardHoverState = (): BoardHoverState => ({
@@ -44,6 +55,14 @@ export const createBoardHoverState = (): BoardHoverState => ({
   isBdSecondaryHovered: false,
   hoveredBdItem: null,
   hoveredBdGiveHeroIndex: null,
+  hoveredBdWipeAction: null,
+  isSdActionHovered: false,
+  isSdSecondaryHovered: false,
+  hoveredNgCampaignId: null,
+  hoveredNgGameMasterId: null,
+  isNgCheckboxHovered: false,
+  isNgActionHovered: false,
+  isNgSecondaryHovered: false,
 });
 
 export interface HoverResult {
@@ -96,6 +115,7 @@ export const updateBetweenDungeonsHover = (
   const isSecondary = hit?.type === 'secondaryButton';
   const isItem = hit?.type === 'item';
   const isGive = hit?.type === 'giveItem';
+  const isWipe = hit?.type === 'wipeButton';
   if (hover.isBdActionHovered !== isAction) {
     hover.isBdActionHovered = isAction;
     changed = true;
@@ -118,8 +138,16 @@ export const updateBetweenDungeonsHover = (
     hover.hoveredBdGiveHeroIndex = giveVal;
     changed = true;
   }
+  const wipeVal = isWipe && hit?.type === 'wipeButton' ? hit.action : null;
+  if (hover.hoveredBdWipeAction !== wipeVal) {
+    hover.hoveredBdWipeAction = wipeVal;
+    changed = true;
+  }
   return {
-    cursor: isAction || isSecondary || isItem || isGive ? 'pointer' : 'default',
+    cursor:
+      isAction || isSecondary || isItem || isGive || isWipe
+        ? 'pointer'
+        : 'default',
     changed,
   };
 };
@@ -306,6 +334,92 @@ export const updateEventCardHover = (
   return { cursor: isToggle ? 'pointer' : 'default', changed };
 };
 
+export const updateSaveLoadDialogHover = (
+  hover: BoardHoverState,
+  hit: SaveLoadDialogHitResult,
+): HoverResult => {
+  hover.hoveredRadialIndex = null;
+  let changed = clearTopBarHovers(hover);
+  if (clearHeroCardHovers(hover)) {
+    changed = true;
+  }
+  if (hover.isEventCardToggleHovered) {
+    hover.isEventCardToggleHovered = false;
+    changed = true;
+  }
+  const isAction = hit.type === 'action';
+  const isSecondary = hit.type === 'secondary';
+  if (hover.isSdActionHovered !== isAction) {
+    hover.isSdActionHovered = isAction;
+    changed = true;
+  }
+  if (hover.isSdSecondaryHovered !== isSecondary) {
+    hover.isSdSecondaryHovered = isSecondary;
+    changed = true;
+  }
+  const newHoveredId = hit.type === 'row' && hit.item ? hit.item.id : null;
+  if (hover.hoveredMenuItemId !== newHoveredId) {
+    hover.hoveredMenuItemId = newHoveredId;
+    changed = true;
+  }
+  return {
+    cursor:
+      isAction || isSecondary || hit.type === 'row' ? 'pointer' : 'default',
+    changed,
+  };
+};
+
+export const updateNewGameDialogHover = (
+  hover: BoardHoverState,
+  hit: NewGameDialogHitResult,
+): HoverResult => {
+  hover.hoveredRadialIndex = null;
+  let changed = clearTopBarHovers(hover);
+  if (clearHeroCardHovers(hover)) {
+    changed = true;
+  }
+  if (hover.isEventCardToggleHovered) {
+    hover.isEventCardToggleHovered = false;
+    changed = true;
+  }
+  const isCampaign = hit.type === 'campaign';
+  const isGameMaster = hit.type === 'gameMaster';
+  const isCheckbox = hit.type === 'checkbox';
+  const isAction = hit.type === 'action';
+  const isSecondary = hit.type === 'secondary';
+  const campaignVal =
+    isCampaign && hit.type === 'campaign' ? hit.campaignId : null;
+  if (hover.hoveredNgCampaignId !== campaignVal) {
+    hover.hoveredNgCampaignId = campaignVal;
+    changed = true;
+  }
+  const gmVal =
+    isGameMaster && hit.type === 'gameMaster' ? hit.gameMasterId : null;
+  if (hover.hoveredNgGameMasterId !== gmVal) {
+    hover.hoveredNgGameMasterId = gmVal;
+    changed = true;
+  }
+  if (hover.isNgCheckboxHovered !== isCheckbox) {
+    hover.isNgCheckboxHovered = isCheckbox;
+    changed = true;
+  }
+  if (hover.isNgActionHovered !== isAction) {
+    hover.isNgActionHovered = isAction;
+    changed = true;
+  }
+  if (hover.isNgSecondaryHovered !== isSecondary) {
+    hover.isNgSecondaryHovered = isSecondary;
+    changed = true;
+  }
+  return {
+    cursor:
+      isCampaign || isGameMaster || isCheckbox || isAction || isSecondary
+        ? 'pointer'
+        : 'default',
+    changed,
+  };
+};
+
 export const updateHoverForUiHit = (
   hover: BoardHoverState,
   hit: UiHit,
@@ -316,6 +430,10 @@ export const updateHoverForUiHit = (
       return updateBetweenDungeonsHover(hover, hit.hit);
     case 'dungeonIntro':
       return updateDungeonIntroHover(hover, hit.hit);
+    case 'saveLoadDialog':
+      return updateSaveLoadDialogHover(hover, hit.hit);
+    case 'newGameDialog':
+      return updateNewGameDialogHover(hover, hit.hit);
     case 'topBar':
       return updateTopBarHover(hover, hit.hit, isLogOpen);
     case 'menu':
@@ -377,6 +495,34 @@ export const clearBoardHovers = (
   }
   if (hover.hoveredMenuItemId !== null) {
     hover.hoveredMenuItemId = null;
+    changed = true;
+  }
+  if (hover.isSdActionHovered) {
+    hover.isSdActionHovered = false;
+    changed = true;
+  }
+  if (hover.isSdSecondaryHovered) {
+    hover.isSdSecondaryHovered = false;
+    changed = true;
+  }
+  if (hover.hoveredNgCampaignId !== null) {
+    hover.hoveredNgCampaignId = null;
+    changed = true;
+  }
+  if (hover.hoveredNgGameMasterId !== null) {
+    hover.hoveredNgGameMasterId = null;
+    changed = true;
+  }
+  if (hover.isNgCheckboxHovered) {
+    hover.isNgCheckboxHovered = false;
+    changed = true;
+  }
+  if (hover.isNgActionHovered) {
+    hover.isNgActionHovered = false;
+    changed = true;
+  }
+  if (hover.isNgSecondaryHovered) {
+    hover.isNgSecondaryHovered = false;
     changed = true;
   }
   return changed;

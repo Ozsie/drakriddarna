@@ -51,6 +51,23 @@ The Drakriddarna game repo lives at:
 ./gradlew build            # everything
 ```
 
+## AI policy
+
+Per the project AI Policy (see the game repo `README.md`): AI tools are used
+to produce, test, and review code, and to create translations of in-game
+texts. AI must not be used to produce art, music, source in-game texts,
+campaigns, dungeons, or other game content.
+
+For this spec that means: AI builds, tests, and reviews the editor (Kotlin,
+Compose, code generation). The campaigns and dungeons authored through the
+editor, their source in-game texts, and all other game content are
+human-authored — do not use AI to generate, complete, or "improve" them.
+"Source texts" means any new user-facing text content: if a change
+requires new text, a human authors it first in at least one language — AI
+may not author new text in any language. Once a text exists in one
+language, AI may create the translations into the other languages
+(the translation editor's `en`/`sv` values).
+
 ## Non-negotiable rules
 
 - `campaign.editor.json` is the source of truth. Generated TS files are

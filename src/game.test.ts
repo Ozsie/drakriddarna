@@ -1,9 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { init, endAction, loadState, next, hasWon } from './game';
-import { completeBetweenDungeonsAndStartNext } from './dungeon/BetweenDungeonsLogic';
+import {
+  init,
+  endAction,
+  loadState,
+  next,
+  hasWon,
+  restartDungeonAfterWipe,
+} from './game';
+import {
+  completeBetweenDungeonsAndStartNext,
+  openPartyWipe,
+} from './dungeon/BetweenDungeonsLogic';
 import { liveHeroes } from './hero/HeroLogic';
 import { eventEffects } from './events/EventsLogic';
-import { TerrainType } from './types';
+import { Level, TerrainType } from './types';
 import type { Dungeon, GameMaster, Hero, GameState } from './types';
 
 describe('game orchestrator', () => {
@@ -66,6 +76,77 @@ describe('game orchestrator', () => {
     const loaded = loadState(state);
     expect(loaded.currentActor?.name).toBe(state.heroes[0].name);
     expect(loaded.actionLog[0].key).toBe('logs.gameLoaded');
+  });
+
+  describe('dungeon timer', () => {
+    it('init creates a timer that waits for the first dungeon intro to close', () => {
+      const state = init();
+      expect(state.timer).toEqual({
+        runningFrom: undefined,
+        dungeonElapsedMs: 0,
+        campaignElapsedMs: 0,
+      });
+    });
+
+    it('loadState rebases a running timer so the offline gap is not counted', () => {
+      const state = init();
+      state.timer = {
+        runningFrom: Date.now() - 3_600_000,
+        dungeonElapsedMs: 5_000,
+        campaignElapsedMs: 0,
+      };
+
+      const loaded = loadState(state);
+
+      expect(loaded.timer?.dungeonElapsedMs).toBe(5_000);
+      expect(loaded.timer?.runningFrom).toBeDefined();
+      expect(loaded.timer?.runningFrom ?? 0).toBeGreaterThanOrEqual(
+        Date.now() - 1_000,
+      );
+    });
+
+    it('loadState does not start a timer that was not running when saved', () => {
+      const state = init();
+      state.timer = { dungeonElapsedMs: 5_000, campaignElapsedMs: 0 };
+
+      const loaded = loadState(state);
+
+      expect(loaded.timer?.runningFrom).toBeUndefined();
+    });
+  });
+
+  describe('speedrun seed', () => {
+    it('init without a seed leaves speedrunSeed undefined', () => {
+      const state = init();
+      expect(state.speedrunSeed).toBeUndefined();
+    });
+
+    it('init with a seed records it and shuffles decks deterministically', () => {
+      const first = init('iceDragonTreasure', 'tactician', 42);
+      const second = init('iceDragonTreasure', 'tactician', 42);
+      const third = init('iceDragonTreasure', 'tactician', 43);
+
+      expect(first.speedrunSeed).toBe(42);
+      expect(second.speedrunSeed).toBe(42);
+      expect(first.itemDeck.map((item) => item.name)).toEqual(
+        second.itemDeck.map((item) => item.name),
+      );
+      expect(first.eventDeck.map((event) => event.id)).toEqual(
+        second.eventDeck.map((event) => event.id),
+      );
+      expect(third.speedrunSeed).toBe(43);
+    });
+
+    it('loadState re-applies the seed of the loaded state', () => {
+      const seeded = init('iceDragonTreasure', 'tactician', 42);
+      const loaded = loadState(seeded);
+      expect(loaded.speedrunSeed).toBe(42);
+
+      const normal = init();
+      delete normal.speedrunSeed;
+      const loadedNormal = loadState(normal);
+      expect(loadedNormal.speedrunSeed).toBeUndefined();
+    });
   });
 
   it('clears actions and movement to 0 when a hero ends their turn', async () => {
@@ -352,6 +433,132 @@ describe('game orchestrator', () => {
       expect(state.dungeon.name).toBe('campaign.iceDragon.e1m1.name');
       expect(state.heroes[0].position).toEqual({ x: 5, y: 5 });
       expect(state.turnCount).toBe(0);
+    });
+
+    it('awards the scenario score once, when win conditions are first fulfilled', async () => {
+      const state = init();
+      const nextDungeon = {
+        ...state.dungeon,
+        name: 'campaign.iceDragon.e1m1.name',
+        startingPositions: [{ x: 5, y: 5 }],
+        winConditions: [],
+        beaten: false,
+      };
+
+      state.dungeon.layout.monsters = [];
+      state.dungeon.winConditions = [];
+      state.dungeon.layout.secrets = [];
+      state.dungeon.nextDungeon = nextDungeon;
+      state.turnCount = 3;
+      const heroHealth = state.heroes.reduce(
+        (partial, hero) => partial + Math.max(0, hero.health),
+        0,
+      );
+      const expectedScore = 50 * heroHealth - 2 * 3;
+
+      await next(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      expect(state.dungeon.beaten).toBe(true);
+      expect(state.dungeon.score?.total).toBe(expectedScore);
+      expect(state.score).toBe(expectedScore);
+      expect(state.betweenDungeons?.scenarioScore?.total).toBe(expectedScore);
+      expect(state.betweenDungeons?.campaignScore).toBe(expectedScore);
+
+      // A re-check while already beaten must not add the score twice
+      await next(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      expect(state.score).toBe(expectedScore);
+    });
+
+    it('opens the campaign-complete screen when the last dungeon is beaten', async () => {
+      const state = init();
+      state.dungeon.layout.monsters = [];
+      state.dungeon.winConditions = [];
+      state.dungeon.layout.secrets = [];
+      state.dungeon.nextDungeon = undefined;
+      state.turnCount = 2;
+      const xpBefore = state.heroes.map((hero) => hero.experience);
+
+      await next(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      expect(state.dungeon.beaten).toBe(true);
+      expect(state.betweenDungeons?.step).toBe('campaignComplete');
+      expect(state.betweenDungeons?.nextDungeon).toBeUndefined();
+      expect(state.betweenDungeons?.levelUps).toEqual([]);
+      expect(state.betweenDungeons?.scenarioScore?.total).toBe(state.score);
+      expect(state.scenarioScores?.length).toBe(1);
+      expect(state.scenarioScores?.[0].rounds).toBe(2);
+      // No between-dungeons progression on the final screen: heroes keep
+      // the experience they ended the campaign with.
+      expect(state.heroes.map((hero) => hero.experience)).toEqual(xpBefore);
+
+      // Re-checking the beaten final dungeon does not duplicate records
+      await next(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+      expect(state.scenarioScores?.length).toBe(1);
+      expect(state.score).toBe(state.scenarioScores?.[0].score.total);
+    });
+
+    it('opens the party-wipe screen when every hero falls', async () => {
+      const state = init();
+      state.heroes.forEach((hero) => {
+        hero.health = 0;
+      });
+
+      await next(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      expect(state.currentActor).toBeUndefined();
+      expect(liveHeroes(state).length).toBe(0);
+      expect(state.betweenDungeons?.step).toBe('partyWipe');
+      expect(state.dungeon.beaten).toBe(false);
+      expect(state.betweenDungeons?.campaignScore).toBe(state.score);
+      expect(state.betweenDungeons?.wipeHighScores).toEqual([]);
+    });
+
+    it('restartDungeonAfterWipe revives the party with lost xp and levels', () => {
+      const state = init();
+      state.heroes.forEach((hero) => {
+        hero.health = 0;
+        hero.experience = 10;
+        hero.level = Level.KNIGHT;
+      });
+      openPartyWipe(state);
+      expect(state.betweenDungeons?.step).toBe('partyWipe');
+
+      const updated = restartDungeonAfterWipe(state);
+
+      expect(liveHeroes(updated).length).toBe(updated.heroes.length);
+      updated.heroes.forEach((hero) => {
+        expect(hero.health).toBeGreaterThan(0);
+        expect(hero.experience).toBe(0);
+        expect(hero.level).toBe(Level.APPRENTICE);
+      });
+      expect(updated.currentActor).toBeDefined();
+      expect(updated.betweenDungeons).toBeUndefined();
     });
   });
 });

@@ -20,8 +20,19 @@
         "rights": "Rights & Licenses"
       }
     },
+    "saveGame": {
+      "header": "Save Game",
+      "subtitle": "Name your save",
+      "buttons": {
+        "save": "Save",
+        "cancel": "Cancel"
+      },
+      "defaultName": "Save"
+    },
     "loadGame": {
       "header": "Load Game",
+      "subtitle": "Choose a save to load",
+      "moreSaves": "+{{count}} more saves",
       "buttons": {
         "autoSave": "Auto Save",
         "manualSave": "Manual Save",
@@ -36,6 +47,13 @@
     },
     "selectGameMaster": {
       "header": "Select Game Master"
+    },
+    "newGame": {
+      "speedrunnerMode": "Speedrunner mode",
+      "rngSeed": "RNG seed",
+      "buttons": {
+        "begin": "Begin"
+      }
     },
     "rights": {
       "header": "Rights & Licenses",
@@ -144,6 +162,46 @@
     }
   },
   "turn": "Turn",
+  "campaignComplete": {
+    "title": "Campaign Complete: {{name}}",
+    "subtitle": "The final battle is won. Final standings:",
+    "summary": "{{scenarios}} scenarios · {{rounds}} rounds · {{kills}} monsters slain · {{secrets}} secrets found",
+    "scenarioHeader": "Scenario",
+    "roundsHeader": "Rounds",
+    "killsHeader": "Slain",
+    "scoreHeader": "Score",
+    "heroHeader": "Hero",
+    "levelHeader": "Level",
+    "healthHeader": "Health",
+    "itemsHeader": "Items",
+    "campaignTime": "Campaign time: {{time}}",
+    "fallen": "Fell in battle"
+  },
+  "partyWipe": {
+    "title": "The Party Has Fallen",
+    "subtitle": "Every hero fell in {{name}}. Choose how to continue:",
+    "highScores": "High Scores",
+    "thisRun": "(this run)",
+    "buttons": {
+      "restartCampaign": "Restart Campaign",
+      "restartCampaignDesc": "Begin a brand new campaign from the first dungeon.",
+      "restartDungeon": "Retry This Dungeon",
+      "restartDungeonDesc": "The party restarts {{name}} from its beginning, losing all experience and levels.",
+      "loadSave": "Load Saved Game",
+      "loadSaveDesc": "Continue from one of your saved games."
+    }
+  },
+  "scoring": {
+    "topBar": "Score",
+    "scenarioScore": "Scenario score: {{score}}",
+    "campaignTotal": "Campaign total: {{score}}",
+    "health": "Health +{{points}}",
+    "monsters": "Monsters +{{points}}",
+    "loot": "Loot +{{points}}",
+    "secrets": "Secrets +{{points}}",
+    "rounds": "Rounds {{points}}",
+    "time": "Time: {{time}}"
+  },
   "terrain": {
     "water": "water",
     "lava": "lava"

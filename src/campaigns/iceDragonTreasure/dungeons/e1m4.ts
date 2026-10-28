@@ -7,7 +7,7 @@ import {
   SecretType,
   Side,
 } from '../../../types';
-import { defineDungeon } from '../../../dungeon/DungeonLogic';
+import { defineDungeon } from '../../../dungeon/dungeonParser';
 import { magicItems } from '../../../items/magicItems';
 import { e1m5 } from './e1m5';
 import {

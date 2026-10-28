@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   formatLatestLog,
+  formatScoreCounter,
   formatTurnCounter,
   getTopBarHit,
   getTopBarLayout,
@@ -59,6 +60,13 @@ describe('TopBarRendering', () => {
       expect(formatTurnCounter(5)).toBe('Turn 5');
       expect(formatTurnCounter(undefined)).toBe('Turn 0');
       expect(formatTurnCounter(null)).toBe('Turn 0');
+    });
+
+    it('formats score counter text', () => {
+      expect(formatScoreCounter(0)).toBe('Score 0');
+      expect(formatScoreCounter(450)).toBe('Score 450');
+      expect(formatScoreCounter(undefined)).toBe('Score 0');
+      expect(formatScoreCounter(null)).toBe('Score 0');
     });
 
     it('formats latest log event with turn number', () => {
@@ -163,10 +171,53 @@ describe('TopBarRendering', () => {
         viewWidth -
         margin * 2 -
         layout.menuButton.width -
+        layout.scoreCounter.width -
         layout.turnCounter.width -
-        gap * 2;
+        gap * 3;
 
       expect(layout.logSection.width).toBe(expectedLogWidth);
+    });
+
+    it('places the score counter between the log section and the turn counter', () => {
+      const state = createMockState({ score: 450 });
+      const ctx = createMockCtx();
+      const viewWidth = 800;
+      const layout = getTopBarLayout(viewWidth, state, ctx);
+
+      expect(layout.scoreCounter.text).toBe('Score 450');
+      expect(layout.logSection.x + layout.logSection.width).toBeLessThanOrEqual(
+        layout.scoreCounter.x,
+      );
+      expect(
+        layout.scoreCounter.x + layout.scoreCounter.width,
+      ).toBeLessThanOrEqual(layout.turnCounter.x);
+    });
+
+    it('omits the timer chip in a normal run', () => {
+      const state = createMockState();
+      const layout = getTopBarLayout(800, state, createMockCtx());
+      expect(layout.timerCounter).toBeUndefined();
+    });
+
+    it('places the live timer chip left of the score counter in speedrunner mode', () => {
+      const state = createMockState({
+        speedrunSeed: 42,
+        timer: {
+          dungeonElapsedMs: 65000,
+          campaignElapsedMs: 0,
+        },
+      });
+      const ctx = createMockCtx();
+      const layout = getTopBarLayout(800, state, ctx);
+
+      expect(layout.timerCounter).toBeDefined();
+      expect(layout.timerCounter?.text).toBe('1:05.00');
+      expect(layout.logSection.x + layout.logSection.width).toBeLessThanOrEqual(
+        layout.timerCounter!.x,
+      );
+      expect(
+        layout.timerCounter!.x + layout.timerCounter!.width,
+      ).toBeLessThanOrEqual(layout.scoreCounter.x);
     });
   });
 
@@ -353,9 +404,10 @@ describe('TopBarRendering', () => {
 
       renderTopBar(ctx, 600, state, { isLogOpen: true });
 
-      // Check that fillText was called for menu, latest log, turn counter, and dropdown entries (8 entries)
-      // Total at least 1 + 1 + 1 + 8 = 11 calls
-      expect(ctx.fillText).toHaveBeenCalledTimes(11);
+      // Check that fillText was called for menu, latest log, score counter,
+      // turn counter, and dropdown entries (8 entries)
+      // Total at least 1 + 1 + 1 + 1 + 8 = 12 calls
+      expect(ctx.fillText).toHaveBeenCalledTimes(12);
     });
 
     it('does not render log dropdown when isLogOpen is false', () => {
@@ -368,8 +420,8 @@ describe('TopBarRendering', () => {
 
       renderTopBar(ctx, 600, state, { isLogOpen: false });
 
-      // Menu, latest log, turn counter = 3 calls
-      expect(ctx.fillText).toHaveBeenCalledTimes(3);
+      // Menu, latest log, score counter, turn counter = 4 calls
+      expect(ctx.fillText).toHaveBeenCalledTimes(4);
     });
 
     it('does not crash when viewWidth is 0 or ctx is null', () => {

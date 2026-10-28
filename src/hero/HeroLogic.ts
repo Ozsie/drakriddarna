@@ -70,6 +70,7 @@ import {
   resolveChaosSwordAttack,
 } from '../items/ItemLogic';
 import { COLLAPSED, EMPTY, WALL } from '../core';
+import { itemPickupScore } from '../core';
 import { soundEffectManager } from '../audio';
 
 export const newHero = (
@@ -664,6 +665,8 @@ export const dropItem = (state: GameState, item: Item, actor: Actor) => {
 };
 
 export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
+  state.dungeon.pickedUpItemPoints =
+    (state.dungeon.pickedUpItemPoints ?? 0) + itemPickupScore(item);
   if (item.id === 'sword_of_chaos') {
     if (hero.weapon) dropItem(state, hero.weapon, hero);
     hero.weapon = item as Weapon;
@@ -804,6 +807,9 @@ export const killMonster = (state: GameState, monster: Monster, hero: Hero) => {
   );
   state.dungeon.killCount++;
   hero.experience += monster.experience;
+  hero.kills = (hero.kills ?? 0) + 1;
+  state.dungeon.killedMonsterXp =
+    (state.dungeon.killedMonsterXp ?? 0) + monster.experience;
   monster.inventory.forEach((item) => {
     if (!item) return;
     addLog(state, 'logs.heroAction.found', {

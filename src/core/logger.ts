@@ -1,5 +1,6 @@
 import { t } from '$lib/translations';
 import type { GameState } from '../types';
+import { checkpointDungeonTimer } from './timer';
 
 export const i18n = (
   key: string,
@@ -11,6 +12,9 @@ let reloadGuardTimeout: ReturnType<typeof setTimeout> | null = null;
 export const saveReloadGuard = (state: GameState): void => {
   if (typeof localStorage === 'undefined') return;
   try {
+    // Checkpoint the running timer segment into the accumulated time, so
+    // a page reload resumes with the elapsed time intact.
+    checkpointDungeonTimer(state);
     localStorage.setItem('reloadGuard', JSON.stringify(state));
   } catch (err) {
     // eslint-disable-next-line no-console

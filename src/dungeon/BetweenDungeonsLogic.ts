@@ -28,9 +28,22 @@ import {
   RESET_ON,
 } from '../items/ItemLogic';
 import { soundEffectManager } from '../audio';
-import { i18n, clearActorAnimations, doReRender } from '../core';
-import { isKnownCampaign, getCampaign } from '../campaigns';
+import { addLog, i18n, clearActorAnimations, doReRender } from '../core';
+import {
+  addDungeonTimeToCampaign,
+  beginDungeonTiming,
+  stopDungeonTimer,
+} from '../core';
+import {
+  isKnownCampaign,
+  getCampaign,
+  DEFAULT_CAMPAIGN_ID,
+} from '../campaigns';
 import { getEventsForDungeon } from '../events/EventsLogic';
+import {
+  getCampaignHighScores,
+  recordHighScore,
+} from '../saves/HighScoresLogic';
 
 export interface TradableItemEntry {
   slot: TradeItemSlot;
@@ -171,15 +184,98 @@ export const openBetweenDungeons = (state: GameState): BetweenDungeonsState => {
   resetLiveHeroes(state);
   resetOnNextDungeon(state);
 
+  // The between-dungeons screen stops the dungeon timer; the completed
+  // dungeon's final time joins the campaign total.
+  stopDungeonTimer(state);
+  addDungeonTimeToCampaign(state);
+
   const betweenDungeonsState: BetweenDungeonsState = {
     completedDungeonName,
     nextDungeon,
     step: 'levelUp',
     levelUps,
+    scenarioScore: state.dungeon.score,
+    campaignScore: state.score,
+    dungeonTimeMs: state.timer?.dungeonElapsedMs,
     selectedTradeItem: null,
   };
 
   state.betweenDungeons = betweenDungeonsState;
+  doReRender(state);
+  return betweenDungeonsState;
+};
+
+/**
+ * Opens the final campaign-complete screen after the last dungeon of a
+ * campaign is beaten: the same overlay as between dungeons, but without
+ * the progression side effects — no +1 XP reward, no hero replacement.
+ * Heroes are shown exactly as they finished the final scenario.
+ */
+export const openCampaignComplete = (
+  state: GameState,
+): BetweenDungeonsState => {
+  clearActorAnimations();
+  const campaignId =
+    state.campaignId && isKnownCampaign(state.campaignId)
+      ? state.campaignId
+      : DEFAULT_CAMPAIGN_ID;
+  const campaignName =
+    state.campaignId && isKnownCampaign(state.campaignId)
+      ? getCampaign(state.campaignId).name
+      : state.dungeon.name;
+
+  // A completed campaign records its score as a high score.
+  recordHighScore(campaignId, state.score ?? 0);
+
+  // The final screen stops the dungeon timer and closes the campaign's
+  // total time.
+  stopDungeonTimer(state);
+  addDungeonTimeToCampaign(state);
+
+  const betweenDungeonsState: BetweenDungeonsState = {
+    completedDungeonName: state.dungeon.name,
+    completedCampaignName: campaignName,
+    step: 'campaignComplete',
+    levelUps: [],
+    scenarioScore: state.dungeon.score,
+    campaignScore: state.score,
+    dungeonTimeMs: state.timer?.dungeonElapsedMs,
+    campaignTimeMs: state.timer?.campaignElapsedMs,
+    selectedTradeItem: null,
+  };
+
+  state.betweenDungeons = betweenDungeonsState;
+  doReRender(state);
+  return betweenDungeonsState;
+};
+
+/**
+ * Opens the party-wipe screen when every hero has fallen: the same
+ * overlay as between dungeons, offering to restart the campaign from
+ * scratch, retry the current dungeon (with experience and levels lost)
+ * or load a saved game. The game state itself is left untouched until
+ * the player chooses.
+ */
+export const openPartyWipe = (state: GameState): BetweenDungeonsState => {
+  clearActorAnimations();
+  // The wipe screen stops the dungeon timer, but a failed attempt does
+  // not join the campaign total; a retry resumes from the autosave.
+  stopDungeonTimer(state);
+  const campaignId =
+    state.campaignId && isKnownCampaign(state.campaignId)
+      ? state.campaignId
+      : DEFAULT_CAMPAIGN_ID;
+  const betweenDungeonsState: BetweenDungeonsState = {
+    completedDungeonName: state.dungeon.name,
+    step: 'partyWipe',
+    levelUps: [],
+    campaignScore: state.score,
+    wipeHighScores: getCampaignHighScores(campaignId),
+    selectedTradeItem: null,
+  };
+
+  state.betweenDungeons = betweenDungeonsState;
+  addLog(state, 'logs.allHeroesDead');
   doReRender(state);
   return betweenDungeonsState;
 };
@@ -349,6 +445,12 @@ const startDungeon = (state: GameState, nextDungeon: Dungeon): void => {
   resetLiveHeroes(state);
   resetOnNextDungeon(state);
   state.currentActor = liveHeroes(state)[0] ?? (state.heroes[0] as Hero);
+  // The next dungeon's timer waits for its intro to close, or starts
+  // right away when it has none.
+  beginDungeonTiming(
+    state,
+    typeof nextDungeon.intro === 'string' && nextDungeon.intro.trim() !== '',
+  );
 
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem('autosave', JSON.stringify(state));

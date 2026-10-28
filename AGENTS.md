@@ -18,6 +18,16 @@ npm run prettier:format  # prettier fix
 
 Run `npm run check`, `npm test`, and `npm run lint` before considering work done. `npm test` does not cover `src/benchmark/**` unless run via the `benchmark` script.
 
+## AI policy
+
+Per the [AI Policy in README.md](./README.md):
+
+- AI tools are used to produce, test, and review code, and to create translations of in-game texts (the `en`/`sv` sveltekit-i18n files).
+- AI must never be used to produce art, music, source in-game texts, campaigns, dungeons, or other game content. Source texts, campaign/dungeon design, and other game content are human-authored.
+- "Source texts" means any new user-facing text content (names, descriptions, logs, UI labels, dialog, etc.). If a change requires new text content, a human authors it — AI may not create it in any language.
+- If text content already exists in one language, AI may create the translations into the other languages.
+- If a task asks you to author such content, stop and ask instead. When translating, translate existing human texts — do not rewrite, extend, or author new text.
+
 ## Rules and content authority
 
 - [RULES.md](./RULES.md) is the player guide and the authority on game rules. Game logic changes must match it; if code and RULES.md disagree, ask before "fixing" either side.
@@ -38,6 +48,38 @@ Run `npm run check`, `npm test`, and `npm run lint` before considering work done
 - Keep it accurate when you change anything it describes: the architecture/layering, core modules (`src/core/`, `src/game.ts`), state and persistence model, monster AI and Game Masters, rendering/lighting approach, i18n, auto-discovery (`import.meta.glob`), benchmarks, tooling, or the build/CI/deploy pipeline.
 - The write-up describes components and techniques, not line numbers or exact counts — update it in the same change as the code; do not let it drift.
 - New features at the level of the existing sections (e.g. a new rendering technique, a changed save format, a new benchmark capability) get a matching paragraph or section update.
+
+## Content definition specs
+
+- [docs/campaign-definition.md](./docs/campaign-definition.md),
+  [docs/dungeon-definition.md](./docs/dungeon-definition.md) and
+  [docs/gameMaster-definition.md](./docs/gameMaster-definition.md) are the
+  field-by-field reference for the content definition types: the `Campaign`
+  object and campaign folder structure, the `Dungeon` type with its
+  `defineDungeon`/`defineLayout`/`parseTileMap` authoring DSL, win conditions
+  and validation rules, and the `GameMaster` type (modifiers, director
+  states, event hooks, lifecycle callbacks, id resolution).
+- Update the campaign/dungeon specs in the same change as any edit to what
+  they document: the `Campaign`, `Dungeon`, `Layout`, `WinCondition` and
+  related types in `src/types.ts`; the declarative shorthand formats,
+  defaults and parsing in `src/dungeon/dungeonParser.ts`; the structural
+  rules in `src/dungeon/dungeonValidator.ts`; and the win-condition checks
+  in `src/game.ts` or the registries they reference (`onCheckFulfilled`,
+  `roomEffects`).
+- Update the game-master spec in the same change as any edit to the
+  `GameMaster` types in `src/types.ts`, the discovery/alias resolution in
+  `src/gameMasters/index.ts`, or where the hooks are consumed (turn flow in
+  `src/game.ts`, events in `src/events/EventsLogic.ts`, search in
+  `src/secrets/SecretsLogic.ts`, combat in `src/core/combat.ts`, monster AI
+  in `src/monsters/`).
+- The specs list exact default values, tuple shorthands and validation
+  rules — a changed default, an added/removed/reordered field or a new
+  validation rule must be reflected there; do not let them drift from the
+  code.
+- [src/campaigns/README.md](./src/campaigns/README.md) and
+  [src/gameMasters/README.md](./src/gameMasters/README.md) are the hands-on
+  how-tos; when a documented authoring capability changes, update the spec
+  and the matching README together, not just one of them.
 
 ## Code style
 

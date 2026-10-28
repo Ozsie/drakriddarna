@@ -1,7 +1,8 @@
-import type { GameState, Hero, Position } from './types';
-import { ConditionType } from './types';
+import type { Dungeon, GameState, Hero, Position } from './types';
+import { ConditionType, Level } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
 import { CURRENT_SAVE_VERSION, migrateSaveState } from './saveMigration';
+import { writeSave } from './saves/SavesLogic';
 import { getCampaign, isKnownCampaign, DEFAULT_CAMPAIGN_ID } from './campaigns';
 import {
   monsterActions,
@@ -25,6 +26,9 @@ import {
 import { browser } from '$app/environment';
 import { addLog, doReRender, i18n } from './core';
 import { shuffle } from './core';
+import { awardScenarioScore, beginDungeonTiming } from './core';
+import { createSeededRng, resetRng, setRng } from './core';
+import { checkpointDungeonTimer, resumeDungeonTimer } from './core';
 import {
   getEffectiveMaxMovement,
   getDifficulty,
@@ -38,11 +42,12 @@ import { soundEffectManager } from './audio';
 // Re-exported because gameStateStore consumes it through the game module.
 export { removeDamageIndicator } from './core/combat';
 
-export const save = (state: GameState) => {
+export const save = (state: GameState, name?: string) => {
+  // The saved snapshot carries the full elapsed dungeon time under a
+  // fresh segment base, so loading it does not count the offline gap.
+  checkpointDungeonTimer(state);
   doReRender(state);
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('state', JSON.stringify(state));
-  }
+  writeSave(state, name ?? '');
   addLog(state, 'logs.gameSaved');
 };
 
@@ -52,6 +57,17 @@ export const loadState = (newState: GameState) => {
     (hero) => hero.name === newState.currentActor?.name,
   ) as Hero | undefined;
   migrateSaveState(newState);
+  // Resume the run's timer without counting the time between saving and
+  // loading (the accumulated time from the save is kept).
+  resumeDungeonTimer(newState);
+  // A speedrunner save keeps its fixed seed; a normal save returns the
+  // rng to true randomness (e.g. after a seeded run in the same
+  // session).
+  if (newState.speedrunSeed !== undefined) {
+    setRng(createSeededRng(newState.speedrunSeed));
+  } else {
+    resetRng();
+  }
   // Older saves may not have a campaignId at all, and any save could in
   // theory reference a campaign that no longer exists (e.g. removed
   // during development). Fall back to the default campaign rather than
@@ -71,10 +87,27 @@ export const loadState = (newState: GameState) => {
   return newState;
 };
 
+// Whether a dungeon shows an intro screen the timer waits for (mirrors
+// `shouldShowDungeonIntro` in src/ui/DungeonIntroRendering.ts).
+const hasDungeonIntro = (dungeon: Dungeon): boolean =>
+  typeof dungeon.intro === 'string' && dungeon.intro.trim().length > 0;
+
+// The seed a speedrunner run is seeded with when the player leaves the
+// seed input at its default (see the new-game dialog).
+export const DEFAULT_SPEEDRUN_SEED = 42;
+
 export const init = (
   campaignId: string = DEFAULT_CAMPAIGN_ID,
   gameMasterId: string = DEFAULT_GAME_MASTER_ID,
+  speedrunSeed?: number,
 ): GameState => {
+  // Seed the rng before anything shuffles or rolls: with a seed the
+  // whole run is reproducible; without one the rng is truly random.
+  if (speedrunSeed !== undefined) {
+    setRng(createSeededRng(speedrunSeed));
+  } else {
+    resetRng();
+  }
   const campaign = structuredClone(getCampaign(campaignId));
   const selectedGameMaster = getGameMaster(gameMasterId);
 
@@ -139,12 +172,16 @@ export const init = (
     eventDeck: dungeonEvents,
     reRender: true,
     drawEvents: true,
+    speedrunSeed,
   };
   if (selectedGameMaster?.initialState) {
     state.gameMasterState = selectedGameMaster.initialState();
   }
   applyStartingEquipment(state.heroes as Hero[], selectedGameMaster);
   resetLiveHeroes(state);
+  // The run's timer starts when the first dungeon's intro is closed, or
+  // immediately when that dungeon has no intro.
+  beginDungeonTiming(state, hasDungeonIntro(campaign.dungeons[0]));
   selectedGameMaster?.onGameInit?.(state);
   if (state.currentActor) {
     selectedGameMaster?.onHeroTurnStart?.(state.currentActor, state);
@@ -168,9 +205,9 @@ export const next = async (
   if (state.settings['debug']) console.log(state);
   doReRender(state);
   checkWinConditions(state);
-  if (state.dungeon.beaten && state.dungeon.nextDungeon) {
+  if (state.dungeon.beaten) {
     hasWon(state);
-    return state;
+    if (state.betweenDungeons) return state;
   }
   if (state.currentActor === undefined) return state;
   else {
@@ -212,7 +249,8 @@ export const next = async (
     }
     if (liveHeroes(state).length === 0) {
       state.currentActor = undefined;
-      return resetLevel(state);
+      openPartyWipe(state);
+      return state;
     }
     let guard = 0;
     while (
@@ -241,7 +279,8 @@ export const next = async (
     }
     if (liveHeroes(state).length === 0 || !liveHeroes(state)[nextIndex]) {
       state.currentActor = undefined;
-      return resetLevel(state);
+      openPartyWipe(state);
+      return state;
     }
     state.currentActor = liveHeroes(state)[nextIndex];
     state.currentActor.actions = 2;
@@ -325,6 +364,16 @@ export const resetLevel = (currentState: GameState): GameState => {
         );
         state.campaignId = DEFAULT_CAMPAIGN_ID;
       }
+      // Resuming a retry from the autosave: the timer continues from the
+      // saved elapsed time, without counting the time since the save.
+      resumeDungeonTimer(state);
+      // The retried run keeps its rng: seeded for a speedrunner save,
+      // random otherwise.
+      if (state.speedrunSeed !== undefined) {
+        setRng(createSeededRng(state.speedrunSeed));
+      } else {
+        resetRng();
+      }
       doReRender(state);
 
       replaceDeadHeroes(state);
@@ -348,6 +397,32 @@ export const resetLevel = (currentState: GameState): GameState => {
   }
   addLog(currentState, 'logs.failedToReset');
   return currentState;
+};
+
+/**
+ * The party-wipe "retry this dungeon" option: rewinds to the last autosave
+ * (the dungeon's start, or an in-dungeon checkpoint) via `resetLevel` and
+ * applies the wipe penalty — the whole party restarts from 0 XP and
+ * Apprentice level, matching the official "revived heroes start over"
+ * defeat rules. Falls back to reviving the heroes on the current state
+ * when no autosave exists, so the game always stays playable.
+ */
+export const restartDungeonAfterWipe = (currentState: GameState): GameState => {
+  const state = resetLevel(currentState);
+  if (liveHeroes(state).length === 0) {
+    // resetLevel returned the unchanged, wiped state (no autosave
+    // available): revive the heroes here instead.
+    replaceDeadHeroes(state);
+    resetLiveHeroes(state);
+  }
+  state.heroes.forEach((hero) => {
+    hero.experience = 0;
+    hero.level = Level.APPRENTICE;
+  });
+  state.currentActor = liveHeroes(state)[0] ?? (state.heroes[0] as Hero);
+  state.betweenDungeons = undefined;
+  addLog(state, 'logs.partyWipeRestartedDungeon');
+  return state;
 };
 
 const checkWinConditions = (state: GameState) => {
@@ -412,6 +487,11 @@ const checkWinConditions = (state: GameState) => {
     if (!previouslyBeaten) {
       const gm = getDifficulty(state);
       gm.onDungeonComplete?.(state);
+      const score = awardScenarioScore(state);
+      addLog(state, 'logs.scenarioScore', {
+        score: String(score.total),
+        total: String(state.score ?? 0),
+      });
     }
     addLog(state, 'logs.allConditionsFulfilled');
     addLog(state, 'logs.clearedDungeon', { name: i18n(state.dungeon.name) });
@@ -437,11 +517,17 @@ const scrollTo = (pos: Position, cellSize: number) => {
   }
 };
 
-import { openBetweenDungeons } from './dungeon/BetweenDungeonsLogic';
+import {
+  openBetweenDungeons,
+  openCampaignComplete,
+  openPartyWipe,
+} from './dungeon/BetweenDungeonsLogic';
 
 export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
     openBetweenDungeons(state);
+  } else if (state.dungeon.beaten && !state.betweenDungeons) {
+    openCampaignComplete(state);
   }
 };
 

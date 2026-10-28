@@ -6,7 +6,7 @@ import {
   SecretType,
   Side,
 } from '../../../types';
-import { defineDungeon } from '../../../dungeon/DungeonLogic';
+import { defineDungeon } from '../../../dungeon/dungeonParser';
 import { magicItems } from '../../../items/magicItems';
 import { e1m2 } from './e1m2';
 import { brazier, chandelier, torch } from '../../../dungeon/LightSources';

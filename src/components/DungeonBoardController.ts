@@ -10,6 +10,7 @@ import { radialMenuStore } from '../store/radialMenuStore';
 import {
   gameStateStore,
   handleCanvasClick,
+  saveGame,
   toggleHeroInventory,
   useHeroItem,
 } from '../store/gameStateStore';
@@ -62,6 +63,10 @@ import {
   renderDiaryAndWinConditions,
   renderEventCard,
   renderMenuModal,
+  renderSaveLoadDialog,
+  type SaveLoadDialogMode,
+  renderNewGameDialog,
+  type NewGameDialogOptions,
   renderDungeonIntro,
   shouldShowDungeonIntro,
   dismissDungeonIntro,
@@ -76,6 +81,7 @@ import {
   tradeItem,
   completeBetweenDungeonsAndStartNext,
 } from '../dungeon/BetweenDungeonsLogic';
+import { restartDungeonAfterWipe, DEFAULT_SPEEDRUN_SEED } from '../game';
 import { useItem } from '../items/ItemLogic';
 import {
   renderDamageIndicators,
@@ -87,13 +93,21 @@ import {
 } from '../combat';
 import { clearTileTextureCache } from '../dungeon/TileTextureCache';
 import { clearFogCloudCaches } from '../dungeon/DungeonRendering';
-import { hasActiveActorAnimations } from '../core';
+import {
+  hasActiveActorAnimations,
+  i18n,
+  DEFAULT_GAME_MASTER_ID,
+} from '../core';
+import { MAX_SAVE_NAME_LENGTH } from '../saves/SavesLogic';
+import { onNewGame, onSaveGame } from '../menu/MenuLogic';
+import { DEFAULT_CAMPAIGN_ID } from '../campaigns';
 import {
   createTouchPanState,
   handleTwoFingerTouchStart,
   handleTwoFingerTouchMove,
   handleTwoFingerTouchEnd,
 } from '../input/TouchPanLogic';
+import { inputManager } from '../input/InputManager';
 import { musicManager, soundEffectManager } from '../audio';
 import { selectMusicIntensity } from '../audio/MusicIntensity';
 import {
@@ -138,6 +152,11 @@ interface FpsTracker {
   fps: number;
   lastSnapshot: number;
 }
+
+// Repaint cadence for the speedrun timer chip, which ticks in hundredths
+// of a second: ~33 repaints per second is fast enough for the display to
+// look live without redrawing the UI layer every animation frame.
+const UI_TIMER_REPAINT_MS = 30;
 
 const createFpsTracker = (): FpsTracker => ({
   frames: [],
@@ -219,6 +238,7 @@ export class DungeonBoardController {
   private lastOverlaySignature = '';
   private lastUiSignature = '';
   private overlayAnimationId: number | null = null;
+  private overlayTimerId: ReturnType<typeof setTimeout> | null = null;
   private dynamicAnimationId: number | null = null;
   private shakeAnimationId: number | null = null;
   private panRenderAnimationId: number | null = null;
@@ -263,6 +283,23 @@ export class DungeonBoardController {
   private isLogOpen = false;
   private isCanvasMenuOpen = false;
   private currentMenuView: MenuView = 'main';
+  // Centered save/load dialog, a sibling of the between-dungeons overlay
+  // rather than a canvas-menu view. Opened from the main menu, closed by
+  // its buttons, the backdrop, or Escape.
+  private saveLoadDialogMode: SaveLoadDialogMode | null = null;
+  // Text typed into the save dialog's name input, owned by the controller
+  // because the dialog is drawn on the UI canvas rather than the DOM.
+  private saveNameInput = '';
+  // Centered new-game dialog (campaign + game master columns, the
+  // speedrunner checkbox and its seed input), a sibling of the save/load
+  // dialog. Selection state lives here for the same reason as the save
+  // name: the input is canvas-drawn.
+  private isNewGameDialogOpen = false;
+  private newGameCampaignId: string | undefined = undefined;
+  private newGameGameMasterId: string | undefined = undefined;
+  private newGameSpeedrunMode = false;
+  private newGameSeedInput = String(DEFAULT_SPEEDRUN_SEED);
+  private uiTimerId: ReturnType<typeof setTimeout> | null = null;
   private isEventCardCollapsed = false;
   private isDungeonIntroDismissed = false;
   private showDungeonIntro = false;
@@ -277,11 +314,24 @@ export class DungeonBoardController {
       this.isCanvasMenuOpen = false;
       this.currentMenuView = 'main';
       this.hover.hoveredMenuItemId = null;
+      this.syncGameInputEnabled();
       this.renderUiLayer(true);
     },
     setState: (nextState: GameState) => {
       this.props.onExternalStateChange(nextState);
       this.renderCanvas(true);
+    },
+    openSaveDialog: () => {
+      this.openSaveLoadDialog('save');
+    },
+    openLoadDialog: () => {
+      this.openSaveLoadDialog('load');
+    },
+    openNewGameDialog: () => {
+      this.openNewGameDialog();
+    },
+    closeDialog: () => {
+      this.closeSaveLoadDialog();
     },
   };
 
@@ -304,6 +354,9 @@ export class DungeonBoardController {
       props.activeState,
       this.isDungeonIntroDismissed,
     );
+    // The intro and the between-dungeons overlay (party wipe and campaign
+    // win included) suppress game input, so re-sync whenever they change.
+    this.syncGameInputEnabled();
 
     if (browser) {
       const isMusicEnabled = props.activeState?.settings?.['music'] !== false;
@@ -549,6 +602,17 @@ export class DungeonBoardController {
   }
 
   destroy(): void {
+    // The input manager is a singleton outliving the board; never leave
+    // it disabled if a modal or overlay was open at teardown.
+    if (
+      this.isCanvasMenuOpen ||
+      this.saveLoadDialogMode ||
+      this.isNewGameDialogOpen ||
+      this.showDungeonIntro ||
+      this.activeState?.betweenDungeons
+    ) {
+      inputManager.setEnabled(true);
+    }
     if (browser) {
       window.removeEventListener('mousemove', this.onWindowMouseMove);
       window.removeEventListener('mouseup', this.onWindowMouseUp);
@@ -562,6 +626,14 @@ export class DungeonBoardController {
     if (this.overlayAnimationId) {
       cancelAnimationFrame(this.overlayAnimationId);
       this.overlayAnimationId = null;
+    }
+    if (this.overlayTimerId) {
+      clearTimeout(this.overlayTimerId);
+      this.overlayTimerId = null;
+    }
+    if (this.uiTimerId) {
+      clearTimeout(this.uiTimerId);
+      this.uiTimerId = null;
     }
     if (this.dynamicAnimationId) {
       cancelAnimationFrame(this.dynamicAnimationId);
@@ -1197,11 +1269,28 @@ export class DungeonBoardController {
       cancelAnimationFrame(this.overlayAnimationId);
       this.overlayAnimationId = null;
     }
+    if (this.overlayTimerId) {
+      clearTimeout(this.overlayTimerId);
+      this.overlayTimerId = null;
+    }
 
     if (hasActiveEffects) {
       this.overlayAnimationId = requestAnimationFrame(() => {
         this.renderOverlayLayer(true);
       });
+    } else if (this.debugTimerRunning()) {
+      // The debug printout shows the live dungeon timer, which ticks
+      // once per second: repaint the overlay on the next whole-second
+      // boundary instead of looping every frame.
+      if (this.overlayTimerId === null) {
+        this.overlayTimerId = setTimeout(
+          () => {
+            this.overlayTimerId = null;
+            this.renderOverlayLayer(true);
+          },
+          1001 - (Date.now() % 1000),
+        );
+      }
     } else {
       let stateChanged = false;
       if (hasDamageIndicators) {
@@ -1311,7 +1400,21 @@ export class DungeonBoardController {
       this.activeState?.settings?.['locale'],
     )}:${String(String(this.activeState?.gameMaster?.id))}:${String(
       this.activeState?.dungeon?.beaten,
-    )}:${String(String(this.activeState?.settings?.['music']))}`;
+    )}:${String(String(this.activeState?.settings?.['music']))}:${String(
+      this.saveLoadDialogMode,
+    )}:${String(this.saveNameInput)}:${String(
+      String(this.hover.isSdActionHovered),
+    )}:${String(String(this.hover.isSdSecondaryHovered))}:${String(
+      this.isNewGameDialogOpen,
+    )}:${String(this.newGameCampaignId)}:${String(
+      this.newGameGameMasterId,
+    )}:${String(this.newGameSpeedrunMode)}:${String(
+      this.newGameSeedInput,
+    )}:${String(this.hover.hoveredNgCampaignId)}:${String(
+      this.hover.hoveredNgGameMasterId,
+    )}:${String(this.hover.isNgCheckboxHovered)}:${String(
+      this.hover.isNgActionHovered,
+    )}:${String(this.hover.isNgSecondaryHovered)}`;
     const sig = `${String(String(String(menu?.x)))},${String(
       String(String(menu?.y)),
     )},${String(menu?.entries?.length ?? 0)},${String(
@@ -1407,6 +1510,30 @@ export class DungeonBoardController {
           },
         );
       }
+      if (this.saveLoadDialogMode) {
+        renderSaveLoadDialog(
+          ctx,
+          this.containerWidth,
+          this.containerHeight,
+          this.activeState,
+          {
+            mode: this.saveLoadDialogMode,
+            callbacks: this.menuCallbacks,
+            saveName: this.saveNameInput,
+            hoveredItemId: this.hover.hoveredMenuItemId,
+            hoveredAction: this.hover.isSdActionHovered,
+            hoveredSecondary: this.hover.isSdSecondaryHovered,
+          },
+        );
+      }
+      if (this.isNewGameDialogOpen) {
+        renderNewGameDialog(
+          ctx,
+          this.containerWidth,
+          this.containerHeight,
+          this.newGameDialogOptions(),
+        );
+      }
       if (this.showDungeonIntro) {
         renderDungeonIntro(
           ctx,
@@ -1430,6 +1557,7 @@ export class DungeonBoardController {
             hoveredSecondary: this.hover.isBdSecondaryHovered,
             hoveredItem: this.hover.hoveredBdItem,
             hoveredGiveHeroIndex: this.hover.hoveredBdGiveHeroIndex,
+            hoveredWipeAction: this.hover.hoveredBdWipeAction,
           },
         );
       }
@@ -1439,6 +1567,11 @@ export class DungeonBoardController {
     if (menu) {
       renderRadialMenu(ctx, this.cellSize, menu, this.hover.hoveredRadialIndex);
     }
+
+    // The speedrun timer chip in the top bar ticks in hundredths of a
+    // second; its text is deliberately not part of the signature, so the
+    // UI layer is repainted at a fixed cadence while it is running.
+    this.scheduleUiTimerRepaint();
   };
 
   private renderCanvas = (force = false) => {
@@ -1627,12 +1760,262 @@ export class DungeonBoardController {
     }
   };
   private onWindowKeyDown = (event: KeyboardEvent) => {
+    // While the new-game dialog is open it captures every key: Escape
+    // dismisses it, Enter begins the run, digits edit the seed input.
+    if (this.isNewGameDialogOpen) {
+      this.handleNewGameDialogKeyDown(event);
+      return;
+    }
+    // While the save/load dialog is open it captures every key: the save
+    // mode feeds the name input, both modes dismiss on Escape.
+    if (this.saveLoadDialogMode) {
+      this.handleSaveLoadDialogKeyDown(event);
+      return;
+    }
     if (event.key === 'Escape' && get(radialMenuStore)) {
       radialMenuStore.set(null);
       this.hover.hoveredRadialIndex = null;
       this.renderUiLayer(true);
     }
   };
+
+  private handleSaveLoadDialogKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeSaveLoadDialog();
+      return;
+    }
+    if (this.saveLoadDialogMode !== 'save') return;
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.confirmSaveDialog();
+      return;
+    }
+    if (event.key === 'Backspace') {
+      event.preventDefault();
+      this.saveNameInput = this.saveNameInput.slice(0, -1);
+      this.renderUiLayer(true);
+      return;
+    }
+    if (
+      event.key.length === 1 &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      this.saveNameInput.length < MAX_SAVE_NAME_LENGTH
+    ) {
+      event.preventDefault();
+      this.saveNameInput += event.key;
+      this.renderUiLayer(true);
+    }
+  };
+
+  /**
+   * Game keyboard/touch input is suppressed while any modal surface is
+   * open: the canvas menu, the save/load dialog, the new-game dialog, the
+   * dungeon intro, or the between-dungeons overlay (party wipe and
+   * campaign win included). The save-name and seed inputs are
+   * canvas-drawn, so the InputManager's DOM-text-input guard cannot see
+   * them — enablement is driven explicitly here instead.
+   */
+  private syncGameInputEnabled(): void {
+    inputManager.setEnabled(
+      !this.isCanvasMenuOpen &&
+        !this.saveLoadDialogMode &&
+        !this.isNewGameDialogOpen &&
+        !this.showDungeonIntro &&
+        !this.activeState?.betweenDungeons,
+    );
+  }
+
+  // Whether the debug printout shows a ticking dungeon timer (and the
+  // overlay layer therefore needs its once-per-second repaints).
+  private debugTimerRunning(): boolean {
+    return (
+      Boolean(this.debugMode) &&
+      this.activeState?.timer?.runningFrom !== undefined
+    );
+  }
+
+  /** Opens the centered save/load dialog and closes the canvas menu. */
+  private openSaveLoadDialog(mode: SaveLoadDialogMode): void {
+    this.isCanvasMenuOpen = false;
+    this.currentMenuView = 'main';
+    this.saveLoadDialogMode = mode;
+    this.syncGameInputEnabled();
+    if (mode === 'save') {
+      // Prefill the save name with the current dungeon's name.
+      const dungeon = this.activeState?.dungeon;
+      this.saveNameInput = dungeon
+        ? i18n(dungeon.nameTranslationKey ?? dungeon.name)
+        : '';
+    }
+    this.hover.hoveredMenuItemId = null;
+    this.renderUiLayer(true);
+  }
+
+  private closeSaveLoadDialog(): void {
+    if (!this.saveLoadDialogMode) return;
+    this.saveLoadDialogMode = null;
+    this.syncGameInputEnabled();
+    this.hover.hoveredMenuItemId = null;
+    this.hover.isSdActionHovered = false;
+    this.hover.isSdSecondaryHovered = false;
+    this.renderUiLayer(true);
+  }
+
+  /** Saves under the current input name and closes the dialog. */
+  private confirmSaveDialog = () => {
+    const activeState = this.activeState;
+    if (!activeState) return;
+    if (this.externalState) {
+      onSaveGame(activeState, this.saveNameInput);
+      gameStateStore.set(this.externalState);
+    } else {
+      saveGame(this.saveNameInput);
+    }
+    this.saveLoadDialogMode = null;
+    this.syncGameInputEnabled();
+    this.hover.hoveredMenuItemId = null;
+    this.hover.isSdActionHovered = false;
+    this.hover.isSdSecondaryHovered = false;
+    this.renderCanvas(true);
+  };
+
+  // --- new-game dialog -------------------------------------------------------
+
+  /** Selection/hover options shared by the hit tester and the renderer. */
+  private newGameDialogOptions(): NewGameDialogOptions {
+    return {
+      selectedCampaignId: this.newGameCampaignId,
+      selectedGameMasterId: this.newGameGameMasterId,
+      speedrunMode: this.newGameSpeedrunMode,
+      seedInput: this.newGameSeedInput,
+      hoveredCampaignId: this.hover.hoveredNgCampaignId,
+      hoveredGameMasterId: this.hover.hoveredNgGameMasterId,
+      isCheckboxHovered: this.hover.isNgCheckboxHovered,
+      hoveredAction: this.hover.isNgActionHovered,
+      hoveredSecondary: this.hover.isNgSecondaryHovered,
+    };
+  }
+
+  /** Opens the centered new-game dialog, preselecting the current run. */
+  private openNewGameDialog(): void {
+    this.isCanvasMenuOpen = false;
+    this.currentMenuView = 'main';
+    this.newGameCampaignId =
+      this.activeState?.campaignId ?? DEFAULT_CAMPAIGN_ID;
+    this.newGameGameMasterId =
+      this.activeState?.gameMaster?.id ?? DEFAULT_GAME_MASTER_ID;
+    this.newGameSpeedrunMode = false;
+    this.newGameSeedInput = String(DEFAULT_SPEEDRUN_SEED);
+    this.isNewGameDialogOpen = true;
+    this.syncGameInputEnabled();
+    this.hover.hoveredMenuItemId = null;
+    this.renderUiLayer(true);
+  }
+
+  private closeNewGameDialog(): void {
+    if (!this.isNewGameDialogOpen) return;
+    this.isNewGameDialogOpen = false;
+    this.syncGameInputEnabled();
+    this.hover.hoveredMenuItemId = null;
+    this.hover.hoveredNgCampaignId = null;
+    this.hover.hoveredNgGameMasterId = null;
+    this.hover.isNgCheckboxHovered = false;
+    this.hover.isNgActionHovered = false;
+    this.hover.isNgSecondaryHovered = false;
+    this.renderUiLayer(true);
+  }
+
+  /** Starts the selected campaign/game master and closes the dialog. */
+  private confirmNewGameDialog = () => {
+    const activeState = this.activeState;
+    if (!activeState) return;
+    const parsedSeed = parseInt(this.newGameSeedInput, 10);
+    const seed = this.newGameSpeedrunMode
+      ? Number.isNaN(parsedSeed)
+        ? DEFAULT_SPEEDRUN_SEED
+        : parsedSeed
+      : undefined;
+    onNewGame(
+      this.newGameCampaignId ?? DEFAULT_CAMPAIGN_ID,
+      this.newGameGameMasterId ?? DEFAULT_GAME_MASTER_ID,
+      activeState,
+      this.props.onExternalStateChange,
+      seed,
+    );
+    this.isNewGameDialogOpen = false;
+    this.syncGameInputEnabled();
+    this.panX = 0;
+    this.panY = 0;
+    this.updateAllCanvasTransforms();
+    this.renderCanvas(true);
+  };
+
+  /**
+   * The new-game dialog captures every key while open: Escape and Cancel
+   * dismiss it, Enter begins the run, and in speedrunner mode digits and
+   * Backspace edit the seed input.
+   */
+  private handleNewGameDialogKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeNewGameDialog();
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.confirmNewGameDialog();
+      return;
+    }
+    if (!this.newGameSpeedrunMode) return;
+    if (event.key === 'Backspace') {
+      event.preventDefault();
+      this.newGameSeedInput = this.newGameSeedInput.slice(0, -1);
+      this.renderUiLayer(true);
+      return;
+    }
+    if (
+      event.key.length === 1 &&
+      event.key >= '0' &&
+      event.key <= '9' &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      this.newGameSeedInput.length < 9
+    ) {
+      event.preventDefault();
+      this.newGameSeedInput += event.key;
+      this.renderUiLayer(true);
+    }
+  }
+
+  // Whether the speedrun timer chip shows a ticking dungeon timer (and
+  // the UI layer therefore needs its high-frequency repaints).
+  private speedrunTimerRunning(): boolean {
+    return (
+      this.activeState?.speedrunSeed !== undefined &&
+      this.activeState?.timer?.runningFrom !== undefined
+    );
+  }
+
+  private scheduleUiTimerRepaint(): void {
+    if (!this.speedrunTimerRunning()) {
+      if (this.uiTimerId) {
+        clearTimeout(this.uiTimerId);
+        this.uiTimerId = null;
+      }
+      return;
+    }
+    if (this.uiTimerId === null) {
+      this.uiTimerId = setTimeout(() => {
+        this.uiTimerId = null;
+        this.renderUiLayer(true);
+      }, UI_TIMER_REPAINT_MS);
+    }
+  }
+
   // --- UI input helpers ------------------------------------------------------
 
   /** First UI element under the given board pixel, in cascade order. */
@@ -1658,6 +2041,10 @@ export class DungeonBoardController {
       menuCallbacks: this.menuCallbacks,
       buildInfo,
       eventCardCollapsed: this.isEventCardCollapsed,
+      saveLoadDialogMode: this.saveLoadDialogMode,
+      saveName: this.saveNameInput,
+      isNewGameDialogOpen: this.isNewGameDialogOpen,
+      newGameDialog: this.newGameDialogOptions(),
     });
   }
 
@@ -1739,9 +2126,44 @@ export class DungeonBoardController {
 
       if (hit?.kind === 'betweenDungeons' && activeState.betweenDungeons) {
         const bdHit = hit.hit;
+        if (bdHit.type === 'wipeButton') {
+          soundEffectManager.playButtonClick();
+          if (bdHit.action === 'restartCampaign') {
+            onNewGame(
+              activeState.campaignId ?? DEFAULT_CAMPAIGN_ID,
+              activeState.gameMaster?.id ?? DEFAULT_GAME_MASTER_ID,
+              activeState,
+              this.props.onExternalStateChange,
+            );
+            this.renderCanvas(true);
+          } else if (bdHit.action === 'restartDungeon') {
+            const updated = restartDungeonAfterWipe(activeState);
+            this.props.onExternalStateChange(updated);
+            if (activeState.dungeon?.startingPositions?.[0]) {
+              this.panX = 0;
+              this.panY = 0;
+              this.updateAllCanvasTransforms();
+            }
+            this.renderCanvas(true);
+          } else {
+            // The load dialog opens on top of the wipe overlay; cancelling
+            // it returns to the wipe screen.
+            this.openSaveLoadDialog('load');
+            this.renderUiLayer(true);
+          }
+          return;
+        }
         if (bdHit.type === 'actionButton') {
           soundEffectManager.playButtonClick();
-          if (activeState.betweenDungeons.step === 'levelUp') {
+          if (activeState.betweenDungeons.step === 'campaignComplete') {
+            // Final screen dismissed: the campaign is over, so the player
+            // returns to the main menu.
+            activeState.betweenDungeons = undefined;
+            this.isCanvasMenuOpen = true;
+            this.currentMenuView = 'main';
+            this.hover.hoveredMenuItemId = null;
+            this.syncGameInputEnabled();
+          } else if (activeState.betweenDungeons.step === 'levelUp') {
             setBetweenDungeonsStep(activeState, 'trade');
           } else {
             completeBetweenDungeonsAndStartNext(activeState);
@@ -1795,6 +2217,55 @@ export class DungeonBoardController {
         return;
       }
 
+      if (hit?.kind === 'newGameDialog') {
+        const ngHit = hit.hit;
+        if (ngHit.type === 'campaign') {
+          soundEffectManager.playButtonClick();
+          this.newGameCampaignId = ngHit.campaignId;
+          this.renderUiLayer(true);
+        } else if (ngHit.type === 'gameMaster') {
+          soundEffectManager.playButtonClick();
+          this.newGameGameMasterId = ngHit.gameMasterId;
+          this.renderUiLayer(true);
+        } else if (ngHit.type === 'checkbox') {
+          soundEffectManager.playButtonClick();
+          this.newGameSpeedrunMode = !this.newGameSpeedrunMode;
+          if (this.newGameSpeedrunMode) {
+            this.newGameSeedInput = String(DEFAULT_SPEEDRUN_SEED);
+          }
+          this.renderUiLayer(true);
+        } else if (ngHit.type === 'action') {
+          soundEffectManager.playButtonClick();
+          this.confirmNewGameDialog();
+        } else if (ngHit.type === 'secondary' || ngHit.type === 'backdrop') {
+          soundEffectManager.playButtonClick();
+          this.closeNewGameDialog();
+        }
+        return;
+      }
+
+      if (hit?.kind === 'saveLoadDialog') {
+        const dialogHit = hit.hit;
+        if (dialogHit.type === 'row' && dialogHit.item) {
+          soundEffectManager.playButtonClick();
+          dialogHit.item.onClick(activeState);
+          this.renderCanvas(true);
+        } else if (dialogHit.type === 'action') {
+          soundEffectManager.playButtonClick();
+          if (this.saveLoadDialogMode === 'save') {
+            this.confirmSaveDialog();
+          } else {
+            this.closeSaveLoadDialog();
+          }
+        } else if (dialogHit.type === 'secondary') {
+          soundEffectManager.playButtonClick();
+          this.closeSaveLoadDialog();
+        } else if (dialogHit.type === 'backdrop') {
+          this.closeSaveLoadDialog();
+        }
+        return;
+      }
+
       if (hit?.kind === 'topBar') {
         const topBarHit = hit.hit;
         if (topBarHit === 'menu') {
@@ -1806,6 +2277,7 @@ export class DungeonBoardController {
             this.currentMenuView = 'main';
           }
           this.hover.hoveredMenuItemId = null;
+          this.syncGameInputEnabled();
           this.renderUiLayer(true);
           return;
         }
@@ -1818,6 +2290,7 @@ export class DungeonBoardController {
             this.currentMenuView = 'debug';
           }
           this.hover.hoveredMenuItemId = null;
+          this.syncGameInputEnabled();
           this.renderUiLayer(true);
           return;
         }
@@ -1834,6 +2307,7 @@ export class DungeonBoardController {
           this.isCanvasMenuOpen = false;
           this.currentMenuView = 'main';
           this.hover.hoveredMenuItemId = null;
+          this.syncGameInputEnabled();
           this.renderUiLayer(true);
         }
         return;
@@ -1962,8 +2436,14 @@ export class DungeonBoardController {
 
     if (this.containerWidth > 0) {
       // The between-dungeons overlay consumes the whole board while it is
-      // open: its hover state updates even when no element is hit.
-      if (this.activeState.betweenDungeons) {
+      // open: its hover state updates even when no element is hit. The
+      // save/load dialog sits on top of it, so while the dialog is open its
+      // hover wins instead.
+      if (
+        this.activeState.betweenDungeons &&
+        !this.saveLoadDialogMode &&
+        !this.isNewGameDialogOpen
+      ) {
         this.applyHover(
           updateBetweenDungeonsHover(
             this.hover,

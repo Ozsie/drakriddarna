@@ -9,6 +9,11 @@ via `import.meta.glob` — no core code needs to be modified to add a new Game M
 Translations under `src/gameMasters/*/translations/{en,sv}.json` are also automatically
 discovered and loaded into the `content` translation namespace.
 
+The field-by-field reference for the `GameMaster` type (modifiers, director
+states, event hooks, lifecycle callbacks, id resolution and persistence) lives
+in [docs/gameMaster-definition.md](../../docs/gameMaster-definition.md). This
+README is the hands-on how-to; that document is the type reference.
+
 ## Directory Layout
 
 Each Game Master lives in its own folder, named after its `id`:
@@ -44,20 +49,20 @@ src/gameMasters/
 Drakriddarna ships with three built-in Game Masters representing classic difficulty tiers:
 
 1. **Story Teller** (`storyTeller` / *Easy*):
-   - Hero stat buffs (+1 Attack, +1 Movement, +2 Search).
+   - Hero stat buffs (+2 Search, +1 Max HP).
    - Starts all heroes with an extra **Small Shield**.
-   - 25% chance for archer monsters to forget their bows.
-   - Forgiving spawn buffers (min distance 4 tiles, delayed until round 4).
-   - Generous AI Director: switches to `EASE` mode when party HP < 50% or any hero is dead.
+   - 20% chance for archer monsters to forget their bows.
+   - Forgiving spawn buffers (min distance 3 tiles, delayed until round 4).
+   - Generous AI Director: switches to `EASE` mode when party HP < 45% or any hero is dead.
 2. **Tactician** (`tactician` / *Normal / Default*):
    - Baseline tabletop balance (0 stat modifiers, standard sword starting equipment).
    - 15% forgotten bow chance, spawn distance 3 tiles, round 3 threshold.
    - Balanced AI Director: switches to `EASE` when party HP < 45% or any hero is dead; `PUSH` when party HP > 80% with <= 1 monster remaining.
 3. **Brutal Overlord** (`brutalOverlord` / *Hard*):
    - Hero stat penalty (-1 Max HP).
-   - 0% forgotten bow chance (flawless archer discipline), aggressive spawn buffer (1 tile, starting round 2).
+   - 0% forgotten bow chance (flawless archer discipline), aggressive spawn buffer (2 tiles, starting round 2).
    - Relentless AI Director: rarely eases off (only when hero dead AND party HP < 25%), pushes aggressively (`PUSH` when party HP > 65% or <= 2 monsters).
-   - Aggressive monster behaviors receive a +25% weight bonus (`baseWeight * 1.25`).
+   - Aggressive monster behaviors receive a +10% weight bonus (`baseWeight * 1.1`).
 
 ---
 

@@ -9,6 +9,8 @@
   "failedToReset": "Failed to reset level. Please reload.",
   "allConditionsFulfilled": "All win conditions have been fulfilled.",
   "clearedDungeon": "You have cleared {{name}}.",
+  "scenarioScore": "Scenario score: {{score}} (campaign total: {{total}}).",
+  "partyWipeRestartedDungeon": "The party retried the dungeon, starting over at 0 XP and Apprentice level.",
   "moveToNext": "Press 'Next' to move on to the next level: {{name}}.",
   "playingCampaign": "Playing {{name}}.",
   "gameInitialized": "Game initialized.",

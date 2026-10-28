@@ -53,6 +53,7 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/events/        event deck (card draw effects)
 ├── src/campaigns/     campaign content (auto-discovered)
 ├── src/gameMasters/   difficulty "personalities" (auto-discovered)
+├── src/saves/         named-save storage (index + blobs in localStorage)
 ├── src/store/         Svelte stores wrapping the game state
 ├── src/ui/            pure functions that draw UI panels onto canvases
 ├── src/components/    Dungeon.svelte (thin shell) + DungeonBoardController
@@ -158,6 +159,13 @@ runs structural validation (`dungeonValidator.ts` — rooms are sealed, doors
 sit on walls, win conditions reference real cells), and auto-detects wall
 corners so they render correctly without being authored by hand.
 
+The full authoring reference for both content types lives in
+[docs/campaign-definition.md](./docs/campaign-definition.md) (the
+`Campaign` type, campaign folders, shared vs. campaign-owned content) and
+[docs/dungeon-definition.md](./docs/dungeon-definition.md) (the `Dungeon`
+type, the `defineDungeon`/`defineLayout`/`parseTileMap` DSL, win conditions
+and validation rules).
+
 There is no runtime loading of external data files: content is compiled into
 the bundle. Because authoring TypeScript modules by hand is a programmer-only
 activity, a separate visual Campaign Editor (a Kotlin Multiplatform desktop
@@ -188,6 +196,13 @@ claim: a seed reproduces the _random sequence_, not the playthrough.
 Reproducing a full human playthrough additionally requires recording and
 replaying its input events — the benchmark achieves this by driving the game
 from code, while a browser session records nothing.
+
+The seeded rng is also exposed to players as a feature: the new-game dialog
+has a **speedrunner mode** checkbox with an rng seed input (defaulting to a
+fixed seed). Ticking it stores the seed in `state.speedrunSeed` and `init()`
+swaps the rng to a seeded generator before the first shuffle, so two runs
+with the same seed deal the same decks; loading a save re-applies its seed,
+and a normal (unseeded) run resets the rng to fresh randomness.
 
 ## The opponent: monster AI and "Game Masters"
 
@@ -221,7 +236,8 @@ starting equipment. Three ship with the game: StoryTeller (easy), Tactician
 (default), BrutalOverlord (hard). Like campaigns, they are auto-discovered,
 and they carry per-monster _director states_ (`EASE`/`PUSH`/`NEUTRAL`) that
 shift monster aggression based on party HP — rubber-banding rather than a flat
-difficulty multiplier.
+difficulty multiplier. The full field-by-field reference for the `GameMaster`
+type lives in [docs/gameMaster-definition.md](./docs/gameMaster-definition.md).
 
 ## Rendering: hand-rolled 2D, layered and on-demand
 
@@ -360,13 +376,89 @@ global defaults when omitted. Since the selector is pure and deterministic,
 it is unit-tested like any other logic module while the manager stays a thin
 browser-side effect.
 
+## Scenario scoring
+
+On top of the win conditions sits a small scoring meta-game
+(`src/core/scoring.ts`): when a dungeon's win conditions are first
+fulfilled, the state is snapshotted into a score breakdown — remaining
+hero health, the experience of monsters the heroes killed, points for
+items picked up, secrets found, minus a per-round penalty — and added to
+a running campaign total. Two details make it deterministic and
+double-count-proof: monster kills and item pickups accumulate on the
+dungeon _as they happen_ (hero XP is spent on levels, so it cannot serve
+as the source), and the award is guarded by the dungeon's `beaten` flag,
+so re-checking an already-won scenario or reloading a save never adds
+the score twice. The breakdown is shown on the between-dungeons screen
+and the campaign total as a chip in the top bar; both are plain
+`GameState`/`Dungeon` fields, so they persist in saves without a
+migration.
+
+When the _last_ dungeon of a campaign is beaten, the same overlay opens
+on a `campaignComplete` step instead of the between-dungeons
+progression (no +1 XP reward, no hero replacement — heroes are shown
+exactly as they finished). It renders the campaign score, aggregate
+statistics and two canvas tables — one row per completed scenario and
+one row per hero (level, XP, health, kills, items carried) — built from
+the per-scenario score records appended to the state as each scenario
+ends. Per-hero kill counts accumulate in `killMonster` the same way the
+score does. The finish button closes the overlay and returns the player
+to the main menu.
+
+The same overlay also serves as the **party-wipe screen** (`partyWipe`
+step): when every hero falls, the turn flow opens it instead of
+silently resetting, and the player picks between restarting the
+campaign from scratch (a fresh `init`), retrying the dungeon — which
+rewinds to the last autosave and zeroes the whole party's XP and
+levels, per the official defeat rules — or loading a save. The
+save/load dialog can then be open on top of the wipe overlay, so the
+UI hit cascade tests the dialog before the overlay. The wipe screen
+also shows the campaign's **high score list** (`src/saves/
+HighScoresLogic.ts`): a per-campaign top 10 persisted under its own
+`localStorage` key, recorded whenever a campaign is completed, with
+the current run's score ranked into the list at its correct position
+(highlighted as "this run"; appended with its real rank when it falls
+outside the top 10).
+
+Next to the score sits a wall-clock **campaign timer**
+(`src/core/timer.ts`, kept in `state.timer`): each dungeon's timer
+starts when its intro screen is closed (immediately for dungeons
+without an intro) and stops when the between-dungeons overlay opens —
+the final dungeon time is shown on the between-dungeons screen and the
+accumulated campaign time on the campaign-complete screen, while the
+debug overlay shows the live dungeon time ticking once a second. A
+failed attempt (party wipe) stops the timer but does not join the
+campaign total. Like the score it is pure presentation data — nothing
+in the game logic reads it — and it persists in saves without a
+migration; serialization points checkpoint the running segment into
+the accumulated time, and loading rebases it, so the offline gap
+between saving and loading is never counted. In speedrunner mode
+(`state.speedrunSeed` set) the top bar also shows the live dungeon
+time as a chip next to the score, ticking in hundredths of a second
+(repainted about 33 times per second).
+
 ## State, persistence and save migration
 
 The entire game lives in one `GameState` object, held in a Svelte `writable`
 store (`src/store/gameStateStore.ts`) that also owns input handling glue and
-persistence. Saving is `JSON.stringify(state)` to `localStorage`, plus a
-separate "reload guard" key that restores an in-progress game across page
-reloads.
+persistence. Manual saves are user-named and unlimited: a centered modal
+dialog (drawn like the between-dungeons dialog — full-screen dim, centered
+panel, on the UI canvas) opens with a name input on save and a list of saves
+(each showing its campaign and dungeon) on load. Starting a new game uses a
+sibling centered dialog with two selectable columns — campaigns and game
+masters — plus the speedrunner checkbox and its seed input; it replaces the
+old two-step campaign/game-master menu views. While any of these modal
+surfaces is open — the canvas menu, the save/load or new-game dialog, the
+dungeon intro, or the between-dungeons overlay (party wipe and campaign win
+included) — game keyboard/touch input is suppressed through the input
+manager, so no keystroke reaches the heroes; the dialogs capture keys
+themselves (Escape dismisses, Enter confirms, and the text inputs are fed
+from key events since they are canvas-drawn, not DOM inputs). Storage lives in
+`src/saves/SavesLogic.ts` — a JSON index of
+save metadata under one `localStorage` key plus one full `GameState` blob per
+save, so listing saves never parses the blobs. The pre-named-saves single
+`state` slot is imported into the list on first access. Alongside the manual
+saves, an `autosave` key is refreshed on turn transitions and a separate
+"reload guard" key restores an in-progress game across page reloads.
 
 Save migration is treated as a real concern and is versioned: the state
 schema carries a `saveVersion`, and `loadState()` runs the ordered,
@@ -457,10 +549,10 @@ current design costs:
   (at minimum for logs, cards and menus), which the current rendering
   architecture does not provide. No accessibility work has been done yet.
 - **One big `GameState`.** A single serializable object makes save/load and
-  headless replay trivial, but it has real costs: exactly one save slot, and
+  headless replay trivial, but it has real costs: the saved blob is large, and
   any structural change ripples through every module that takes the state.
   Migration is versioned and tested now, but the single object still couples
-  everything that touches it; multiple saves remain on the wishlist.
+  everything that touches it.
 - **TypeScript-as-data cuts both ways.** Authoring dungeons in TypeScript gets
   you type-checking, refactoring and validation for free — the usual
   config-as-code argument — but it makes content authoring a

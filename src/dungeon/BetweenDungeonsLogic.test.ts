@@ -4,6 +4,8 @@ import {
   getNextLevelInfo,
   getLevelMeaning,
   openBetweenDungeons,
+  openCampaignComplete,
+  openPartyWipe,
   setBetweenDungeonsStep,
   selectTradeItem,
   tradeItem,
@@ -370,6 +372,90 @@ describe('BetweenDungeonsLogic', () => {
 
       expect(goToNextDungeon(state)).toBe(false);
       expect(state.dungeon.name).toBe(dungeonName);
+    });
+  });
+
+  describe('dungeon timer', () => {
+    it('stopping between dungeons records the final dungeon time and adds it to the campaign total', () => {
+      const state = init();
+      state.timer = {
+        runningFrom: Date.now() - 60_000,
+        dungeonElapsedMs: 0,
+        campaignElapsedMs: 30_000,
+      };
+
+      const bd = openBetweenDungeons(state);
+
+      expect(state.timer?.runningFrom).toBeUndefined();
+      expect(bd.dungeonTimeMs).toBeDefined();
+      expect(bd.dungeonTimeMs ?? 0).toBeGreaterThanOrEqual(59_000);
+      expect(bd.dungeonTimeMs ?? 0).toBeLessThanOrEqual(61_000);
+      expect(state.timer?.campaignElapsedMs).toBe(
+        30_000 + (bd.dungeonTimeMs ?? 0),
+      );
+    });
+
+    it('the campaign-complete screen records the campaign total time', () => {
+      const state = init();
+      state.timer = {
+        dungeonElapsedMs: 60_000,
+        campaignElapsedMs: 120_000,
+      };
+
+      const bd = openCampaignComplete(state);
+
+      expect(bd.dungeonTimeMs).toBe(60_000);
+      expect(bd.campaignTimeMs).toBe(180_000);
+    });
+
+    it('the party-wipe screen stops the timer without adding to the campaign total', () => {
+      const state = init();
+      state.timer = {
+        runningFrom: Date.now() - 10_000,
+        dungeonElapsedMs: 0,
+        campaignElapsedMs: 30_000,
+      };
+
+      openPartyWipe(state);
+
+      expect(state.timer?.runningFrom).toBeUndefined();
+      expect(state.timer?.campaignElapsedMs).toBe(30_000);
+    });
+
+    it('starting the next dungeon resets the segment and waits for its intro', () => {
+      const state = init();
+      state.dungeon.nextDungeon = {
+        ...state.dungeon,
+        name: 'Next Dungeon',
+        startingPositions: [{ x: 2, y: 3 }],
+      };
+      state.timer = {
+        dungeonElapsedMs: 60_000,
+        campaignElapsedMs: 60_000,
+      };
+
+      openBetweenDungeons(state);
+      completeBetweenDungeonsAndStartNext(state);
+
+      expect(state.timer?.dungeonElapsedMs).toBe(0);
+      expect(state.timer?.runningFrom).toBeUndefined();
+      expect(state.timer?.campaignElapsedMs).toBe(120_000);
+    });
+
+    it('starting a next dungeon without an intro runs the timer immediately', () => {
+      const state = init();
+      state.dungeon.nextDungeon = {
+        ...state.dungeon,
+        name: 'Next Dungeon',
+        intro: '',
+        startingPositions: [{ x: 2, y: 3 }],
+      };
+
+      openBetweenDungeons(state);
+      completeBetweenDungeonsAndStartNext(state);
+
+      expect(state.timer?.dungeonElapsedMs).toBe(0);
+      expect(state.timer?.runningFrom).toBeDefined();
     });
   });
 });

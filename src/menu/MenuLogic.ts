@@ -22,6 +22,12 @@ import {
 } from '../store/gameStateStore';
 import { locale, setLocale } from '$lib/translations';
 import { hasWon, init, loadState, save } from '../game';
+import {
+  getSaveHint,
+  getSaveHintFromStateString,
+  listSaves,
+  readSaveStateString,
+} from '../saves/SavesLogic';
 import { testingGrounds } from '../dungeon/testingGrounds';
 import {
   getEventsForDungeon,
@@ -31,39 +37,32 @@ import {
 import { resetLiveHeroes } from '../hero/HeroLogic';
 import { revealFullMap } from '../dungeon/RoomEffectsLogic';
 import { goToNextDungeon } from '../dungeon/BetweenDungeonsLogic';
-import { campaigns, DEFAULT_CAMPAIGN_ID } from '../campaigns';
+import { DEFAULT_CAMPAIGN_ID } from '../campaigns';
 
 export interface CanvasMenuItem {
   id: string;
   label: string;
+  hint?: string;
   debugOnly?: boolean;
   disabled?: boolean;
   onClick: (activeState: GameState) => void;
 }
 
-export type MenuView =
-  | 'main'
-  | 'campaign'
-  | 'gameMaster'
-  | 'load'
-  | 'event'
-  | 'debug'
-  | 'rights';
+export type MenuView = 'main' | 'event' | 'debug' | 'rights';
 
 export interface MenuCallbacks {
   setView?: (view: MenuView) => void;
   closeMenu?: () => void;
   setState?: (state: GameState) => void;
-  setSelectedCampaign?: (campaignId: string) => void;
+  /** Opens the centered save dialog (name input), from the main menu. */
+  openSaveDialog?: () => void;
+  /** Opens the centered load dialog (list of saves), from the main menu. */
+  openLoadDialog?: () => void;
+  /** Opens the centered new-game dialog (campaign, game master, seed). */
+  openNewGameDialog?: () => void;
+  /** Dismisses the save/load dialog; passed to its load-row items. */
+  closeDialog?: () => void;
 }
-
-let selectedCampaignId: string = DEFAULT_CAMPAIGN_ID;
-
-export const setSelectedCampaign = (campaignId: string): void => {
-  selectedCampaignId = campaignId;
-};
-
-export const getSelectedCampaign = (): string => selectedCampaignId;
 
 export const getDebugMenuLabel = (
   activeState?: GameState | null,
@@ -110,15 +109,16 @@ export const getMainMenuItems = (
       debugOnly: false,
       label: i18n('content.menu.mainMenu.buttons.newGame'),
       onClick: () => {
-        callbacks?.setView?.('campaign');
+        callbacks?.openNewGameDialog?.();
+        callbacks?.closeMenu?.();
       },
     },
     {
       id: 'save_game',
       debugOnly: false,
       label: i18n('content.menu.mainMenu.buttons.saveGame'),
-      onClick: (state) => {
-        onSaveGame(state);
+      onClick: () => {
+        callbacks?.openSaveDialog?.();
         callbacks?.closeMenu?.();
       },
     },
@@ -127,7 +127,8 @@ export const getMainMenuItems = (
       debugOnly: false,
       label: i18n('content.menu.mainMenu.buttons.loadGame'),
       onClick: () => {
-        callbacks?.setView?.('load');
+        callbacks?.openLoadDialog?.();
+        callbacks?.closeMenu?.();
       },
     },
     {
@@ -247,62 +248,9 @@ export const getDebugMenuItems = (
   },
 ];
 
-export const getCampaignMenuItems = (
-  activeState: GameState,
-  callbacks?: MenuCallbacks,
-): CanvasMenuItem[] => {
-  const items: CanvasMenuItem[] = Object.values(campaigns).map((campaign) => ({
-    id: `campaign_${campaign.id}`,
-    debugOnly: false,
-    label: i18n(campaign.name),
-    onClick: () => {
-      setSelectedCampaign(campaign.id);
-      callbacks?.setSelectedCampaign?.(campaign.id);
-      callbacks?.setView?.('gameMaster');
-    },
-  }));
-
-  items.push({
-    id: 'campaign_back',
-    debugOnly: false,
-    label: i18n('content.menu.loadGame.buttons.back'),
-    onClick: () => {
-      callbacks?.setView?.('main');
-    },
-  });
-
-  return items;
-};
-
-export const getGameMasterMenuItems = (
-  activeState: GameState,
-  callbacks?: MenuCallbacks,
-  campaignId?: string,
-): CanvasMenuItem[] => {
-  const items: CanvasMenuItem[] = DifficultLevels.map((gm) => ({
-    id: `gameMaster_${gm.id}`,
-    debugOnly: false,
-    label: i18n(gm.nameTranslationKey ?? gm.id),
-    onClick: (state) => {
-      const targetCampaign = campaignId ?? getSelectedCampaign();
-      onNewGame(targetCampaign, gm.id, state, callbacks?.setState);
-      callbacks?.closeMenu?.();
-      callbacks?.setView?.('main');
-    },
-  }));
-
-  items.push({
-    id: 'gameMaster_back',
-    debugOnly: false,
-    label: i18n('content.menu.loadGame.buttons.back'),
-    onClick: () => {
-      callbacks?.setView?.('campaign');
-    },
-  });
-
-  return items;
-};
-
+// Rows for the load dialog: the autosave plus every named save, each with a
+// campaign/dungeon hint. Rendered by the centered save/load dialog, not by
+// the canvas menu, so there is no back item — the dialog has its own button.
 export const getSavedGameMenuItems = (
   activeState: GameState,
   callbacks?: MenuCallbacks,
@@ -316,37 +264,29 @@ export const getSavedGameMenuItems = (
         id: 'load_autosave',
         debugOnly: false,
         label: i18n('content.menu.loadGame.buttons.autoSave'),
+        hint: getSaveHintFromStateString(autoSave),
         onClick: (state) => {
           onClickLoad(autoSave, state, callbacks?.setState);
-          callbacks?.closeMenu?.();
-          callbacks?.setView?.('main');
+          callbacks?.closeDialog?.();
         },
       });
     }
 
-    const manualSave = localStorage.getItem('state');
-    if (manualSave) {
+    for (const meta of listSaves()) {
+      const savedStateString = readSaveStateString(meta.id);
+      if (!savedStateString) continue;
       items.push({
-        id: 'load_manual',
+        id: `load_save_${meta.id}`,
         debugOnly: false,
-        label: i18n('content.menu.loadGame.buttons.manualSave'),
+        label: meta.name,
+        hint: getSaveHint(meta),
         onClick: (state) => {
-          onClickLoad(manualSave, state, callbacks?.setState);
-          callbacks?.closeMenu?.();
-          callbacks?.setView?.('main');
+          onClickLoad(savedStateString, state, callbacks?.setState);
+          callbacks?.closeDialog?.();
         },
       });
     }
   }
-
-  items.push({
-    id: 'load_back',
-    debugOnly: false,
-    label: i18n('content.menu.loadGame.buttons.back'),
-    onClick: () => {
-      callbacks?.setView?.('main');
-    },
-  });
 
   return items;
 };
@@ -451,15 +391,6 @@ export const getMenuItemsForView = (
     case 'debug':
       items = getDebugMenuItems(activeState, callbacks);
       break;
-    case 'campaign':
-      items = getCampaignMenuItems(activeState, callbacks);
-      break;
-    case 'gameMaster':
-      items = getGameMasterMenuItems(activeState, callbacks);
-      break;
-    case 'load':
-      items = getSavedGameMenuItems(activeState, callbacks);
-      break;
     case 'event':
       items = getEventMenuItems(activeState, callbacks);
       break;
@@ -484,12 +415,6 @@ export const getMenuHeader = (view: MenuView): string => {
         ? 'Debug'
         : translated || 'Debug';
     }
-    case 'campaign':
-      return i18n('content.menu.selectCampaign.header');
-    case 'gameMaster':
-      return i18n('content.menu.selectGameMaster.header');
-    case 'load':
-      return i18n('content.menu.loadGame.header');
     case 'event':
       return i18n('content.menu.selectNextEvent.header');
     case 'rights':
@@ -502,13 +427,14 @@ export const onNewGame = (
   gameMasterId: string = DEFAULT_GAME_MASTER_ID,
   activeState?: GameState,
   setState?: (state: GameState) => void,
+  speedrunSeed?: number,
 ) => {
   if (setState) {
-    const newState = init(campaignId, gameMasterId);
+    const newState = init(campaignId, gameMasterId, speedrunSeed);
     setState(newState);
     gameStateStore.set(newState);
   } else {
-    initGame(campaignId, gameMasterId);
+    initGame(campaignId, gameMasterId, speedrunSeed);
   }
 };
 
@@ -561,11 +487,11 @@ export const setMusicMode = (activeState?: GameState) => {
   }
 };
 
-export const onSaveGame = (activeState?: GameState) => {
+export const onSaveGame = (activeState?: GameState, name = '') => {
   if (activeState) {
-    save(activeState);
+    save(activeState, name);
   } else {
-    saveGame();
+    saveGame(name);
   }
 };
 
