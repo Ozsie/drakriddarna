@@ -193,7 +193,7 @@ describe('HeroCardRendering', () => {
       const state = createMockState([activeHero, inactiveHero]);
       state.currentActor = activeHero;
 
-      const layout = getHeroCardsLayout(600, 500, state);
+      const layout = getHeroCardsLayout(800, 500, state);
       const activeCard = layout.cards.find((c) => c.hero.name === 'Fearik')!;
       const inactiveCard = layout.cards.find((c) => c.hero.name === 'Helbran')!;
 
@@ -205,6 +205,61 @@ describe('HeroCardRendering', () => {
       expect(activeCard.weaponText).toBeDefined();
       expect(activeCard.armourText).toBeDefined();
       expect(activeCard.shieldText).toBeDefined();
+    });
+
+    it('shows only the active hero card on compact (narrow) screens', () => {
+      const hero1 = createMockHero('Fearik', Colour.Yellow);
+      const hero2 = createMockHero('Helbran', Colour.Red);
+      const hero3 = createMockHero('Siedel', Colour.Green);
+      const state = createMockState([hero1, hero2, hero3]);
+      state.currentActor = hero2;
+      state.targetActor = undefined;
+
+      // 375x667: iPhone SE-sized screen
+      const layout = getHeroCardsLayout(375, 667, state);
+
+      expect(layout.cards).toHaveLength(1);
+      expect(layout.cards[0].hero.name).toBe('Helbran');
+      expect(layout.cards[0].isCurrent).toBe(true);
+    });
+
+    it('also shows the target hero card on compact screens', () => {
+      const hero1 = createMockHero('Fearik', Colour.Yellow);
+      const hero2 = createMockHero('Helbran', Colour.Red);
+      const state = createMockState([hero1, hero2]);
+      state.currentActor = hero2;
+      state.targetActor = hero1;
+
+      const layout = getHeroCardsLayout(375, 667, state);
+
+      expect(layout.cards).toHaveLength(2);
+      expect(layout.cards.some((c) => c.hero.name === 'Fearik')).toBe(true);
+      expect(layout.cards.some((c) => c.hero.name === 'Helbran')).toBe(true);
+    });
+
+    it('shows no hero cards on compact screens when no hero is active', () => {
+      const hero1 = createMockHero('Fearik', Colour.Yellow);
+      const hero2 = createMockHero('Helbran', Colour.Red);
+      const state = createMockState([hero1, hero2]);
+      state.currentActor = { name: 'Goblin' } as unknown as typeof hero1;
+      state.targetActor = undefined;
+
+      const layout = getHeroCardsLayout(375, 667, state);
+
+      expect(layout.cards).toHaveLength(0);
+    });
+
+    it('keeps showing every hero card at the compact breakpoint', () => {
+      const hero1 = createMockHero('Fearik', Colour.Yellow);
+      const hero2 = createMockHero('Helbran', Colour.Red);
+      const hero3 = createMockHero('Siedel', Colour.Green);
+      const state = createMockState([hero1, hero2, hero3]);
+      state.currentActor = hero2;
+      state.targetActor = undefined;
+
+      const layout = getHeroCardsLayout(700, 500, state);
+
+      expect(layout.cards).toHaveLength(3);
     });
 
     it('positions open inventory above the corresponding hero card', () => {

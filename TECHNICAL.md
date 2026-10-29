@@ -92,6 +92,18 @@ template is computed once and silently goes stale — the mouse cursor is the
 canonical example: the controller writes it onto the canvas element itself,
 and the template carries only a static initial value.
 
+The canvas HUD also adapts to narrow screens (phones, ~<700 CSS px) through
+a "compact UI" mode (`isCompactUi` in `src/ui/UiMode.ts`, derived from the
+view width inside the layout functions): the corner panels — events
+top-left, diary top-right — collapse into small square buttons that open
+the full panel on press, of the hero and monster card rows only the
+active actor's card (the current actor, or the target while an attack is
+in flight) is drawn, and the top-bar score and round chips shrink to an
+emoji plus the bare number. The open/closed state of both compact panels
+lives in the board controller, which passes the effective collapsed flag
+to the same layout functions used for hit-testing, so drawing and input
+can never disagree.
+
 ## The domain model
 
 If you have never worked on a grid game, the two ideas that unlock this
@@ -341,6 +353,15 @@ the occlusion cache key once per frame and shares them across its lighting
 calls. Lights have effects (`SWAY` — a pendulum-arced moving glow for
 chandeliers), alignment (a ceiling light illuminates figures without them
 casting shadows), and each dungeon sets an ambient darkness level.
+Besides the lights a dungeon places, two kinds are derived at runtime from
+the game state: every living hero carries a torch at the belt — a faint,
+steady pool of warm light around their cell, so the party's surroundings
+stay lit in a pitch-dark dungeon — and every closed, non-hidden door casts
+a faint glow onto the floor in front of it, on each discovered side of the
+doorway, so doorways read at a glance where a bare leaf disappears into
+the wall. Both ride the same pipeline as placed lights (occlusion, fog,
+caches, the darkness veil), both are recreated fresh each pass, and the
+dragon's breath snuffs them with everything else.
 Conceptually this is the same ray-casting idea used in 2D shadow algorithms
 generally.
 

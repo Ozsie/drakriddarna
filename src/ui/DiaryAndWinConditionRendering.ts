@@ -2,6 +2,7 @@ import type { GameState, Note, WinCondition } from '../types';
 import { ConditionType } from '../types';
 import { i18n } from '../core';
 import { drawRoundedRect, type CardBounds } from './HeroCardRendering';
+import { COMPACT_TOGGLE_SIZE, isCompactUi } from './UiMode';
 
 export interface WinConditionLayoutItem {
   condition: WinCondition;
@@ -24,11 +25,19 @@ export interface DiaryNoteLayoutItem {
 
 export interface DiaryAndWinConditionsLayout {
   bounds: CardBounds;
+  toggleButtonBounds: CardBounds;
+  isCollapsed: boolean;
+  isCompact: boolean;
   winConditions: WinConditionLayoutItem[];
   diaryHeader: string;
   diaryHeaderY: number;
   diaryNotes: DiaryNoteLayoutItem[];
   hasContent: boolean;
+}
+
+export interface RenderDiaryAndWinConditionsOptions {
+  isCollapsed?: boolean;
+  isToggleHovered?: boolean;
 }
 
 const DEFAULT_FONT = '10px Arial, Helvetica, sans-serif';
@@ -192,10 +201,14 @@ export const getDiaryAndWinConditionsLayout = (
   viewWidth: number,
   viewHeight: number,
   state?: GameState | null,
+  options?: RenderDiaryAndWinConditionsOptions,
   ctx?: CanvasRenderingContext2D | null,
 ): DiaryAndWinConditionsLayout => {
   const emptyLayout: DiaryAndWinConditionsLayout = {
     bounds: { x: 0, y: 0, width: 0, height: 0 },
+    toggleButtonBounds: { x: 0, y: 0, width: 0, height: 0 },
+    isCollapsed: false,
+    isCompact: false,
     winConditions: [],
     diaryHeader: '',
     diaryHeaderY: 0,
@@ -219,6 +232,31 @@ export const getDiaryAndWinConditionsLayout = (
 
   const marginX = 8;
   const topY = 46; // Just under top bar (y: 8, height: 32 + 6px gap)
+
+  const isCompact = isCompactUi(viewWidth);
+
+  // On narrow screens the panel collapses into a square button in the
+  // top-right corner; pressing it opens the full panel.
+  if (options?.isCollapsed) {
+    const squareBounds: CardBounds = {
+      x: Math.max(marginX, viewWidth - marginX - COMPACT_TOGGLE_SIZE),
+      y: topY,
+      width: COMPACT_TOGGLE_SIZE,
+      height: COMPACT_TOGGLE_SIZE,
+    };
+    return {
+      bounds: squareBounds,
+      toggleButtonBounds: squareBounds,
+      isCollapsed: true,
+      isCompact: true,
+      winConditions: [],
+      diaryHeader: '',
+      diaryHeaderY: 0,
+      diaryNotes: [],
+      hasContent: true,
+    };
+  }
+
   const paddingX = 8;
   const paddingY = 8;
   const lineHeight = 13;
@@ -230,6 +268,18 @@ export const getDiaryAndWinConditionsLayout = (
   );
   const contentWidth = Math.max(0, panelWidth - paddingX * 2);
   const panelX = Math.max(marginX, viewWidth - marginX - panelWidth);
+
+  // While open on a narrow screen, a close button sits in the panel
+  // header; on wide screens the panel has no toggle at all.
+  const toggleSize = 18;
+  const toggleButtonBounds: CardBounds = isCompact
+    ? {
+        x: panelX + panelWidth - paddingX - toggleSize,
+        y: topY + 4,
+        width: toggleSize,
+        height: toggleSize,
+      }
+    : { x: 0, y: 0, width: 0, height: 0 };
 
   // Win conditions sorted: unfulfilled first, fulfilled last
   const sortedConditions = rawConditions
@@ -301,6 +351,9 @@ export const getDiaryAndWinConditionsLayout = (
       width: panelWidth,
       height: panelHeight,
     },
+    toggleButtonBounds,
+    isCollapsed: false,
+    isCompact,
     winConditions: winConditionsLayout,
     diaryHeader,
     diaryHeaderY,
@@ -310,13 +363,14 @@ export const getDiaryAndWinConditionsLayout = (
 };
 
 export interface DiaryAndWinConditionsHitResult {
-  type: 'panel';
+  type: 'panel' | 'toggle';
 }
 
 export const getDiaryAndWinConditionsHit = (
   viewWidth: number,
   viewHeight: number,
   state: GameState | null | undefined,
+  isCollapsed: boolean,
   x: number,
   y: number,
   ctx?: CanvasRenderingContext2D | null,
@@ -327,6 +381,7 @@ export const getDiaryAndWinConditionsHit = (
     viewWidth,
     viewHeight,
     state,
+    { isCollapsed },
     ctx,
   );
   if (
@@ -338,16 +393,28 @@ export const getDiaryAndWinConditionsHit = (
   }
 
   const { bounds } = layout;
-  if (
+  const withinBounds =
     x >= bounds.x &&
     x <= bounds.x + bounds.width &&
     y >= bounds.y &&
-    y <= bounds.y + bounds.height
-  ) {
-    return { type: 'panel' };
+    y <= bounds.y + bounds.height;
+
+  if (layout.isCollapsed) {
+    return withinBounds ? { type: 'toggle' } : null;
   }
 
-  return null;
+  // Close button on the open compact panel.
+  if (
+    layout.isCompact &&
+    x >= layout.toggleButtonBounds.x &&
+    x <= layout.toggleButtonBounds.x + layout.toggleButtonBounds.width &&
+    y >= layout.toggleButtonBounds.y &&
+    y <= layout.toggleButtonBounds.y + layout.toggleButtonBounds.height
+  ) {
+    return { type: 'toggle' };
+  }
+
+  return withinBounds ? { type: 'panel' } : null;
 };
 
 export const renderDiaryAndWinConditions = (
@@ -355,6 +422,7 @@ export const renderDiaryAndWinConditions = (
   viewWidth: number,
   viewHeight: number,
   state?: GameState | null,
+  options?: RenderDiaryAndWinConditionsOptions,
 ): void => {
   if (!state || viewWidth <= 0 || viewHeight <= 0) return;
 
@@ -362,6 +430,7 @@ export const renderDiaryAndWinConditions = (
     viewWidth,
     viewHeight,
     state,
+    options,
     ctx,
   );
   if (
@@ -372,10 +441,45 @@ export const renderDiaryAndWinConditions = (
     return;
   }
 
-  const { bounds, winConditions, diaryHeader, diaryHeaderY, diaryNotes } =
-    layout;
+  const {
+    bounds,
+    toggleButtonBounds,
+    isCollapsed,
+    isCompact,
+    winConditions,
+    diaryHeader,
+    diaryHeaderY,
+    diaryNotes,
+  } = layout;
 
   ctx.save();
+
+  // Collapsed compact mode: a square button with the diary icon;
+  // pressing it opens the full panel.
+  if (isCollapsed) {
+    ctx.fillStyle = options?.isToggleHovered
+      ? 'rgba(40, 46, 58, 0.95)'
+      : 'rgba(20, 24, 33, 0.90)';
+    ctx.strokeStyle = options?.isToggleHovered
+      ? 'rgba(255, 255, 255, 0.4)'
+      : 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 1;
+    drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#f3f4f6';
+    ctx.font = '18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      '📖',
+      bounds.x + bounds.width / 2,
+      bounds.y + bounds.height / 2,
+    );
+    ctx.restore();
+    return;
+  }
 
   // Draw background panel
   ctx.fillStyle = 'rgba(20, 24, 33, 0.90)';
@@ -384,6 +488,37 @@ export const renderDiaryAndWinConditions = (
   drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
   ctx.fill();
   ctx.stroke();
+
+  // Close button ( − ) on the open compact panel.
+  if (isCompact && toggleButtonBounds.width > 0) {
+    ctx.fillStyle = options?.isToggleHovered
+      ? 'rgba(255, 255, 255, 0.2)'
+      : 'rgba(255, 255, 255, 0.08)';
+    ctx.strokeStyle = options?.isToggleHovered
+      ? 'rgba(255, 255, 255, 0.4)'
+      : 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
+    drawRoundedRect(
+      ctx,
+      toggleButtonBounds.x,
+      toggleButtonBounds.y,
+      toggleButtonBounds.width,
+      toggleButtonBounds.height,
+      3,
+    );
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = 'bold 11px Arial, Helvetica, sans-serif';
+    ctx.fillStyle = options?.isToggleHovered ? '#ffffff' : '#cbd5e1';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      '−',
+      toggleButtonBounds.x + toggleButtonBounds.width / 2,
+      toggleButtonBounds.y + toggleButtonBounds.height / 2,
+    );
+  }
 
   // Clip content to panel bounds with padding
   ctx.save();

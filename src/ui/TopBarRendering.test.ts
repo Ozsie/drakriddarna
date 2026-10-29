@@ -69,6 +69,13 @@ describe('TopBarRendering', () => {
       expect(formatScoreCounter(null)).toBe('Score 0');
     });
 
+    it('formats compact counters as emoji plus number', () => {
+      expect(formatTurnCounter(3, true)).toBe('🔄 3');
+      expect(formatTurnCounter(undefined, true)).toBe('🔄 0');
+      expect(formatScoreCounter(450, true)).toBe('🏆 450');
+      expect(formatScoreCounter(undefined, true)).toBe('🏆 0');
+    });
+
     it('formats latest log event with turn number', () => {
       expect(formatLatestLog({ key: 'logs.gameSaved', turn: 4 })).toBe(
         '(4) logs.gameSaved',
@@ -219,6 +226,39 @@ describe('TopBarRendering', () => {
         layout.timerCounter!.x + layout.timerCounter!.width,
       ).toBeLessThanOrEqual(layout.scoreCounter.x);
     });
+  });
+
+  it('shrinks the counters to emoji plus digits on compact screens', () => {
+    const state = createMockState({ score: 450, turnCount: 3 });
+    const ctx = createMockCtx();
+    // 375x667: iPhone SE-sized screen
+    const layout = getTopBarLayout(375, state, ctx);
+
+    expect(layout.turnCounter.text).toBe('🔄 3');
+    expect(layout.scoreCounter.text).toBe('🏆 450');
+    // Roomy enough for the icon plus 2 round digits / 5 score digits,
+    // but far smaller than the wide-screen chips.
+    expect(layout.turnCounter.width).toBeLessThanOrEqual(60);
+    expect(layout.scoreCounter.width).toBeLessThanOrEqual(80);
+    // The counters still stack log -> score -> turn against the right edge.
+    expect(layout.logSection.x + layout.logSection.width).toBeLessThanOrEqual(
+      layout.scoreCounter.x,
+    );
+    expect(
+      layout.scoreCounter.x + layout.scoreCounter.width,
+    ).toBeLessThanOrEqual(layout.turnCounter.x);
+    expect(layout.turnCounter.x + layout.turnCounter.width).toBeLessThanOrEqual(
+      375 - 8,
+    );
+    // The freed width goes to the log section.
+    const wideLayout = getTopBarLayout(800, state, ctx);
+    expect(layout.logSection.width).toBeGreaterThan(0);
+    expect(wideLayout.turnCounter.width).toBeGreaterThan(
+      layout.turnCounter.width,
+    );
+    expect(wideLayout.scoreCounter.width).toBeGreaterThan(
+      layout.scoreCounter.width,
+    );
   });
 
   describe('hit testing and bounds', () => {

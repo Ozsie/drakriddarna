@@ -3,6 +3,7 @@ import { liveHeroes } from '../hero/HeroLogic';
 import { i18n } from '../core';
 import { ACTIVE, DESCRIPTION, USED } from '../items/ItemLogic';
 import { drawItemSprite } from '../items/ItemSpriteRendering';
+import { isCompactUi } from './UiMode';
 
 export interface CardBounds {
   x: number;
@@ -179,7 +180,24 @@ export const getHeroCardsLayout = (
   const maxTotalWidth = viewWidth * 0.5;
   const availableWidth = Math.max(0, maxTotalWidth - marginX);
 
-  const numHeroes = heroes.length;
+  const currentActorName = state.currentActor?.name;
+  const targetActorName = state.targetActor?.name;
+
+  // On narrow screens only the active hero's card is drawn; the other
+  // cards would cover the board and overlap the monster cards.
+  const compact = isCompactUi(viewWidth);
+  const visibleHeroes = compact
+    ? heroes.filter(
+        (hero) =>
+          hero.name === currentActorName || hero.name === targetActorName,
+      )
+    : heroes;
+
+  if (visibleHeroes.length === 0) {
+    return emptyLayout;
+  }
+
+  const numHeroes = visibleHeroes.length;
   // Calculate card width such that total cards width with gaps <= 50% of viewWidth
   const calculatedCardWidth = Math.max(
     80,
@@ -187,16 +205,13 @@ export const getHeroCardsLayout = (
   );
   const cardWidth = Math.min(180, calculatedCardWidth);
 
-  const currentActorName = state.currentActor?.name;
-  const targetActorName = state.targetActor?.name;
-
   const cards: HeroCardLayoutItem[] = [];
   const inventories: InventoryPopoverLayout[] = [];
 
   let currentX = marginX;
   let minCardY = viewHeight;
 
-  heroes.forEach((hero) => {
+  visibleHeroes.forEach((hero) => {
     const isCurrent = currentActorName === hero.name;
     const isTarget = targetActorName === hero.name;
 

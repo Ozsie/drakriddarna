@@ -12,7 +12,10 @@ import {
   type RenderMonsterCardsOptions,
 } from './MonsterCardRendering';
 import { renderMenuModal, type RenderMenuOptions } from './MenuRendering';
-import { renderDiaryAndWinConditions } from './DiaryAndWinConditionRendering';
+import {
+  renderDiaryAndWinConditions,
+  type RenderDiaryAndWinConditionsOptions,
+} from './DiaryAndWinConditionRendering';
 import {
   renderEventCard,
   type RenderEventCardOptions,
@@ -31,6 +34,7 @@ export interface RenderUIOptions {
   heroCards?: RenderHeroCardsOptions;
   monsterCards?: RenderMonsterCardsOptions;
   eventCard?: RenderEventCardOptions;
+  diary?: RenderDiaryAndWinConditionsOptions;
   menu?: RenderMenuOptions;
   dungeonIntro?: RenderDungeonIntroOptions;
   betweenDungeons?: RenderBetweenDungeonsOptions;
@@ -57,7 +61,13 @@ export const renderUI = (
         state,
         options?.monsterCards,
       );
-      renderDiaryAndWinConditions(ctx, viewWidth, viewHeight, state);
+      renderDiaryAndWinConditions(
+        ctx,
+        viewWidth,
+        viewHeight,
+        state,
+        options?.diary,
+      );
       renderEventCard(ctx, viewWidth, viewHeight, state, options?.eventCard);
     }
   }
@@ -142,6 +152,7 @@ export {
   formatDiaryHeader,
   formatNoteHeader,
   formatNoteMessage,
+  type RenderDiaryAndWinConditionsOptions,
   type WinConditionLayoutItem,
   type DiaryNoteLayoutItem,
   type DiaryAndWinConditionsLayout,
@@ -182,6 +193,11 @@ export {
   getDebugPrintoutPosition,
   type DebugPrintoutCounts,
 } from './DebugOverlayRendering';
+export {
+  isCompactUi,
+  COMPACT_UI_MAX_WIDTH,
+  COMPACT_TOGGLE_SIZE,
+} from './UiMode';
 export {
   renderSaveLoadDialog,
   getSaveLoadDialogLayout,

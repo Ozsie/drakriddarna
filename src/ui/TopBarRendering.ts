@@ -1,6 +1,6 @@
 import type { GameState, LogEvent } from '../types';
-import { i18n } from '../core';
-import { formatDuration, getCurrentDungeonTimeMs } from '../core';
+import { i18n, formatDuration, getCurrentDungeonTimeMs } from '../core';
+import { isCompactUi } from './UiMode';
 
 export interface TopBarElementBounds {
   x: number;
@@ -40,6 +40,11 @@ export type TopBarHitElement =
 const DEFAULT_FONT = '13px sans-serif';
 const LOG_FONT = '12px monospace, sans-serif';
 
+// Compact (narrow screen) counter labels: an emoji instead of the localized
+// word, so each chip only needs room for the icon plus its digits.
+const COMPACT_TURN_LABEL = '🔄';
+const COMPACT_SCORE_LABEL = '🏆';
+
 export const measureTextWidth = (
   ctx: CanvasRenderingContext2D | null | undefined,
   text: string,
@@ -66,13 +71,25 @@ export const formatLatestLog = (log?: LogEvent | null): string => {
   return translated;
 };
 
-export const formatTurnCounter = (turnCount?: number | null): string => {
+export const formatTurnCounter = (
+  turnCount?: number | null,
+  compact = false,
+): string => {
+  if (compact) {
+    return `${COMPACT_TURN_LABEL} ${turnCount ?? 0}`;
+  }
   const turnLabel = i18n('content.turn');
   const label = turnLabel === 'content.turn' ? 'Turn' : turnLabel || 'Turn';
   return `${label} ${turnCount ?? 0}`;
 };
 
-export const formatScoreCounter = (score?: number | null): string => {
+export const formatScoreCounter = (
+  score?: number | null,
+  compact = false,
+): string => {
+  if (compact) {
+    return `${COMPACT_SCORE_LABEL} ${score ?? 0}`;
+  }
   const scoreLabel = i18n('content.scoring.topBar');
   const label =
     scoreLabel === 'content.scoring.topBar' ? 'Score' : scoreLabel || 'Score';
@@ -150,21 +167,56 @@ export const getTopBarLayout = (
     ? Math.max(48, Math.round(debugTextWidth + paddingX * 2))
     : 0;
 
-  const turnText = formatTurnCounter(state?.turnCount);
-  const tenCharsWidth = measureTextWidth(ctx, '0123456789', DEFAULT_FONT);
-  const turnTextWidth = measureTextWidth(ctx, turnText, DEFAULT_FONT);
-  // Ensure enough space for at least 10 characters
-  const turnCounterWidth = Math.max(
-    Math.round(tenCharsWidth + paddingX * 2),
-    Math.round(turnTextWidth + paddingX * 2),
-    80,
-  );
+  // On narrow screens the counters shrink to an emoji plus the number, so
+  // the log section keeps most of the bar width.
+  const compact = isCompactUi(viewWidth);
+  const counterPaddingX = compact ? 6 : paddingX;
+  const turnText = formatTurnCounter(state?.turnCount, compact);
+  const scoreText = formatScoreCounter(state?.score, compact);
 
-  const scoreText = formatScoreCounter(state?.score);
-  const scoreCounterWidth = Math.max(
-    Math.round(measureTextWidth(ctx, scoreText, DEFAULT_FONT) + paddingX * 2),
-    70,
-  );
+  let turnCounterWidth: number;
+  let scoreCounterWidth: number;
+  if (compact) {
+    // Reserve room for the icon plus two round digits / five score digits,
+    // so the chips do not resize whenever the numbers tick up.
+    const turnTemplateWidth = measureTextWidth(
+      ctx,
+      `${COMPACT_TURN_LABEL} 99`,
+      DEFAULT_FONT,
+    );
+    const scoreTemplateWidth = measureTextWidth(
+      ctx,
+      `${COMPACT_SCORE_LABEL} 99999`,
+      DEFAULT_FONT,
+    );
+    turnCounterWidth = Math.round(
+      Math.max(
+        turnTemplateWidth,
+        measureTextWidth(ctx, turnText, DEFAULT_FONT),
+      ) +
+        counterPaddingX * 2,
+    );
+    scoreCounterWidth = Math.round(
+      Math.max(
+        scoreTemplateWidth,
+        measureTextWidth(ctx, scoreText, DEFAULT_FONT),
+      ) +
+        counterPaddingX * 2,
+    );
+  } else {
+    const tenCharsWidth = measureTextWidth(ctx, '0123456789', DEFAULT_FONT);
+    const turnTextWidth = measureTextWidth(ctx, turnText, DEFAULT_FONT);
+    // Ensure enough space for at least 10 characters
+    turnCounterWidth = Math.max(
+      Math.round(tenCharsWidth + paddingX * 2),
+      Math.round(turnTextWidth + paddingX * 2),
+      80,
+    );
+    scoreCounterWidth = Math.max(
+      Math.round(measureTextWidth(ctx, scoreText, DEFAULT_FONT) + paddingX * 2),
+      70,
+    );
+  }
 
   // Speedrunner HUD: the live dungeon timer sits left of the score chip,
   // ticking in hundredths of a second.

@@ -182,6 +182,57 @@ describe('MonsterCardRendering', () => {
       });
     });
 
+    it('shows only the active monster card on compact (narrow) screens', () => {
+      const monster1 = createMockMonster('Orc 1', Colour.Green, {
+        position: { x: 0, y: 0 },
+      });
+      const monster2 = createMockMonster('Orc 2', Colour.Red, {
+        position: { x: 1, y: 0 },
+      });
+      const state = createMockState([monster1, monster2]);
+      state.currentActor = monster2 as unknown as typeof state.currentActor;
+      state.targetActor = undefined;
+
+      // 375x667: iPhone SE-sized screen
+      const layout = getMonsterCardsLayout(375, 667, state);
+
+      expect(layout.cards).toHaveLength(1);
+      expect(layout.cards[0].monster).toBe(monster2);
+      expect(layout.cards[0].isCurrent).toBe(true);
+    });
+
+    it('also shows the target monster card on compact screens', () => {
+      const monster1 = createMockMonster('Orc 1', Colour.Green, {
+        position: { x: 0, y: 0 },
+      });
+      const monster2 = createMockMonster('Orc 2', Colour.Red, {
+        position: { x: 1, y: 0 },
+      });
+      const state = createMockState([monster1, monster2]);
+      state.currentActor = undefined;
+      state.targetActor = monster1 as unknown as typeof state.targetActor;
+
+      const layout = getMonsterCardsLayout(375, 667, state);
+
+      expect(layout.cards).toHaveLength(1);
+      expect(layout.cards[0].monster).toBe(monster1);
+      expect(layout.cards[0].isTarget).toBe(true);
+    });
+
+    it('keeps showing every monster card at the compact breakpoint', () => {
+      const monster1 = createMockMonster('Orc 1', Colour.Green, {
+        position: { x: 0, y: 0 },
+      });
+      const monster2 = createMockMonster('Orc 2', Colour.Red, {
+        position: { x: 1, y: 0 },
+      });
+      const state = createMockState([monster1, monster2]);
+
+      const layout = getMonsterCardsLayout(700, 500, state);
+
+      expect(layout.cards).toHaveLength(2);
+    });
+
     it('creates layout for 1 visible monster in the bottom right corner', () => {
       const monster = createMockMonster('Orc 1', Colour.Green, { health: 5 });
       const state = createMockState([monster]);
