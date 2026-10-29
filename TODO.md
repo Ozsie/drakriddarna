@@ -19,6 +19,7 @@
 
 # Features
 
+- [ ] Closed doors with discovered rooms on both sides should block LoS
 - [ ] Hide debug menu option when deploying
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc
 - [ ] Graphics
