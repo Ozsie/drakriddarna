@@ -25,8 +25,11 @@ Definition of done:
 - `rng.test.ts`: same seed → same draw sequence; different seeds diverge;
   `hash(CAMPAIGN_SEED, depth, attempt)` differs per depth and attempt;
   distributions sanity-checked (bounded-range draws stay in range).
-- `config.test.ts`: table is total over depths 1–10; budgets are
-  monotonically non-decreasing.
+- `config.test.ts`: table is total over depths 1–10; ambient light gets
+  strictly darker with depth. (The original "budgets monotonically
+  non-decreasing" invariant was replaced during M5: the tuned budget table
+  is deliberately non-monotonic, shaped to hit the hero level thresholds —
+  the test now pins that progression instead.)
 
 ## M2 — Layout generator
 
@@ -84,24 +87,38 @@ Deliverables:
 - `campaign.ts` reworked: imports `generateCampaign`, keeps the decks and
   hero construction, exposes the generated chain.
 - `translations/en.json` / `sv.json`: campaign name plus floor
-  name/intro templates using sveltekit-i18n interpolation for the floor
-  number (verify the interpolation syntax the repo's i18n setup supports
-  before committing to the key shape; if interpolation is unavailable for
-  these strings, fall back to 10 explicit per-floor keys).
-- Delete `src/campaigns/brogue/dungeons/` and its imports.
+  name/intro. Interpolation turned out to be unavailable for these
+  strings: the intro screen resolves `dungeon.name`/`dungeon.intro` via
+  `i18n(key)` without params (`src/ui/DungeonIntroRendering.ts`), so
+  `{floor}` would render literally — the spec's fallback applies and the
+  campaign uses 10 explicit per-floor keys
+  (`campaign.brogue.floor1.name` ... `floor10.intro`). Per the project AI
+  policy the texts are human-authored; until then both files carry
+  empty-string placeholders for every key (the UI falls back to showing
+  the key).
 
 Definition of done:
 
 - The campaign loads through the real auto-discovery path (a test that
   imports `src/campaigns/index.ts` and finds the campaign with 10 chained
   dungeons).
-- `generateCampaign.test.ts`: same campaign seed → deep-equal chains; all
-  10 depths validate; retry counter test with a poisoned seed confirming
-  the fallback path returns a valid dungeon instead of throwing.
+- `generateCampaign.test.ts`: same campaign seed → deep-equal chains (seed
+  the global rng with `setRng(createSeededRng(...))` before each generation
+  pass — `createMonster` draws `temperament` from the global rng); all 10
+  depths validate; retry counter test with a poisoned seed confirming the
+  fallback path returns a valid dungeon instead of throwing.
 - Both languages resolve every emitted translation key (no hardcoded
   user-facing strings).
 
 ## M5 — Verification and balancing
+
+Status: complete. The property sweep (100 seeds x 10 depths) passes with
+zero fallback activations, the budget table is tuned per the procedure in
+03 (see "M5 tuning outcome" there for the level progression and benchmark
+shape), and the balancing added three generator changes beyond pure
+budget tuning: the full 16-event deck on every floor, depth-progressive
+loot with the early healing bias, and the per-room lights with
+hidden-door ember hints.
 
 Deliverables:
 
