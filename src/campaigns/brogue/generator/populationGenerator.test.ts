@@ -376,37 +376,51 @@ describe('populate', () => {
     }
   });
 
-  it('never walls a free room cell in: every free cell stays reachable from a door', () => {
-    for (let depth = 1; depth <= 10; depth++) {
-      const { generated, populated } = generatePopulated(787878, depth);
-      const grid = generated.layout.grid;
-      const blocked = new Set<string>([
-        ...((populated.layout.pillars ?? []) as [number, number][]).map(
-          ([x, y]) => `${x},${y}`,
-        ),
-        ...((populated.layout.pits ?? []) as [number, number][]).map(
-          ([x, y]) => `${x},${y}`,
-        ),
-      ]);
-      if (blocked.size === 0) continue;
-      const doorKeys = doorCellKeys(generated);
-      const rooms = new Map<string, { x: number; y: number }[]>();
-      grid.forEach((row, y) => {
-        for (let x = 0; x < row.length; x++) {
-          const cell = row[x];
-          if (cell !== ' ' && cell !== '#') {
-            const list = rooms.get(cell) ?? [];
-            list.push({ x, y });
-            rooms.set(cell, list);
+  it('never walls anything in: every free cell stays reachable from the hero start', () => {
+    for (const seedBase of [787878, 141414, 272727]) {
+      for (let depth = 1; depth <= 10; depth++) {
+        const { generated, populated } = generatePopulated(seedBase, depth);
+        const grid = generated.layout.grid;
+        const blocked = new Set<string>([
+          ...((populated.layout.pillars ?? []) as [number, number][]).map(
+            ([x, y]) => `${x},${y}`,
+          ),
+          ...((populated.layout.pits ?? []) as [number, number][]).map(
+            ([x, y]) => `${x},${y}`,
+          ),
+        ]);
+        const floorKeys = new Set<string>();
+        grid.forEach((row, y) => {
+          for (let x = 0; x < row.length; x++) {
+            const cell = row[x];
+            if (cell !== ' ' && cell !== '#') {
+              floorKeys.add(`${x},${y}`);
+            }
           }
+        });
+        // Locked doors do not count as a route: what must stay reachable
+        // has to be reachable without any locked door.
+        const offsets: Record<string, [number, number]> = {
+          [Side.UP]: [0, -1],
+          [Side.DOWN]: [0, 1],
+          [Side.LEFT]: [-1, 0],
+          [Side.RIGHT]: [1, 0],
+        };
+        const lockedEdges = new Set<string>();
+        for (const door of generated.layout.doors ?? []) {
+          const [side, x, y, options] = door as [
+            Side,
+            number,
+            number,
+            { locked?: boolean },
+          ];
+          if (!options?.locked) continue;
+          const [dx, dy] = offsets[side];
+          lockedEdges.add(`${x},${y}|${x + dx},${y + dy}`);
+          lockedEdges.add(`${x + dx},${y + dy}|${x},${y}`);
         }
-      });
-      for (const cells of rooms.values()) {
-        const roomKeys = new Set(cells.map((cell) => `${cell.x},${cell.y}`));
-        const seeds = cells.filter(
-          (cell) =>
-            doorKeys.has(`${cell.x},${cell.y}`) &&
-            !blocked.has(`${cell.x},${cell.y}`),
+        const seeds = generated.startingPositions.filter(
+          (cell) => !blocked.has(`${cell.x},${cell.y}`),
         );
         expect(seeds.length).toBeGreaterThan(0);
         const seen = new Set(seeds.map((cell) => `${cell.x},${cell.y}`));
@@ -420,14 +434,19 @@ describe('populate', () => {
             [1, 0],
           ]) {
             const key = `${current.x + dx},${current.y + dy}`;
-            if (!roomKeys.has(key) || seen.has(key) || blocked.has(key)) {
+            if (
+              !floorKeys.has(key) ||
+              seen.has(key) ||
+              blocked.has(key) ||
+              lockedEdges.has(`${current.x},${current.y}|${key}`)
+            ) {
               continue;
             }
             seen.add(key);
             queue.push({ x: current.x + dx, y: current.y + dy });
           }
         }
-        for (const key of roomKeys) {
+        for (const key of floorKeys) {
           if (!blocked.has(key)) {
             expect(seen.has(key)).toBe(true);
           }

@@ -160,6 +160,46 @@ export const populate = (
       ({ dx, dy }) => gridAt({ x: cell.x + dx, y: cell.y + dy }) === '#',
     );
 
+  const doorPlacement = (
+    door: DeclarativeDoor,
+  ):
+    | {
+        side: Side;
+        x: number;
+        y: number;
+        hidden: boolean;
+        locked: boolean;
+      }
+    | undefined => {
+    if (Array.isArray(door)) {
+      const [side, x, y, options] = door;
+      return {
+        side,
+        x,
+        y,
+        hidden: Boolean(options?.hidden),
+        locked: Boolean(options?.locked),
+      };
+    }
+    if ('x' in door && 'y' in door) {
+      return {
+        side: door.side,
+        x: door.x,
+        y: door.y,
+        hidden: Boolean(door.hidden),
+        locked: Boolean(door.locked),
+      };
+    }
+    return undefined;
+  };
+
+  const targetOffset: Record<Side, Cell> = {
+    [Side.LEFT]: { x: -1, y: 0 },
+    [Side.RIGHT]: { x: 1, y: 0 },
+    [Side.UP]: { x: 0, y: -1 },
+    [Side.DOWN]: { x: 0, y: 1 },
+  };
+
   // --- Boss room (floors 5 and 10) -----------------------------------------
   // The boss goes in the room farthest from the start room in door-graph
   // hops; that room must have at least two doors so the fight is not a
@@ -186,9 +226,10 @@ export const populate = (
   // --- Blockers: pillars and pits -------------------------------------------
   // Placed before monsters, items and secrets so every later placement
   // sees them as occupied. A blocker only goes on a room cell that keeps
-  // every remaining free cell of its room connected to a door cell (flood
-  // fill per candidate), so nothing placed later can be walled in, and
-  // never beside a doorway so the mouth of a door stays open. Wall-adjacent
+  // every free floor cell of the whole dungeon reachable from the hero
+  // start cells (a global flood fill per candidate), so nothing placed
+  // later can be cut off, and never beside a doorway so the mouth of a
+  // door stays open. Wall-adjacent
   // cells are preferred: pillars read as columns or sarcophagi along the
   // room edge, pits as floor that has given way at the room's rim.
   const pillars: [number, number][] = [];
@@ -201,12 +242,36 @@ export const populate = (
       }
     }
 
-    const keepsRoomConnected = (letter: string, candidate: Cell): boolean => {
-      const roomKeys = new Set((rooms.get(letter) ?? []).map(cellKey));
+    // A blocker is only accepted when, with it blocked, every free floor
+    // cell of the whole dungeon stays reachable from the hero start cells
+    // without passing a locked door — a global flood fill per candidate.
+    // A per-room check is not enough: a pit in a one-cell-wide passage
+    // between two doors leaves both sides connected to a door of their
+    // own while severing the only route through the dungeon.
+    const floorKeys = new Set<string>();
+    for (const cells of rooms.values()) {
+      for (const cell of cells) {
+        floorKeys.add(cellKey(cell));
+      }
+    }
+    const lockedEdges = new Set<string>();
+    for (const door of layout.doors ?? []) {
+      const placement = doorPlacement(door);
+      if (!placement?.locked) continue;
+      const offset = targetOffset[placement.side];
+      const a = cellKey({ x: placement.x, y: placement.y });
+      const b = cellKey({
+        x: placement.x + offset.x,
+        y: placement.y + offset.y,
+      });
+      lockedEdges.add(`${a}|${b}`);
+      lockedEdges.add(`${b}|${a}`);
+    }
+
+    const keepsDungeonConnected = (candidate: Cell): boolean => {
       const blocked = new Set([...blockers, cellKey(candidate)]);
-      const seeds = (rooms.get(letter) ?? []).filter(
-        (cell) =>
-          doorCellKeys.has(cellKey(cell)) && !blocked.has(cellKey(cell)),
+      const seeds = startingPositions.filter(
+        (cell) => !blocked.has(cellKey(cell)),
       );
       if (seeds.length === 0) return false;
       const seen = new Set(seeds.map(cellKey));
@@ -214,15 +279,21 @@ export const populate = (
       while (queue.length > 0) {
         const current = queue.pop() as Cell;
         for (const { dx, dy } of ORTHOGONAL_OFFSETS) {
-          const key = cellKey({ x: current.x + dx, y: current.y + dy });
-          if (!roomKeys.has(key) || seen.has(key) || blocked.has(key)) {
+          const next = { x: current.x + dx, y: current.y + dy };
+          const key = cellKey(next);
+          if (
+            !floorKeys.has(key) ||
+            seen.has(key) ||
+            blocked.has(key) ||
+            lockedEdges.has(`${cellKey(current)}|${key}`)
+          ) {
             continue;
           }
           seen.add(key);
-          queue.push({ x: current.x + dx, y: current.y + dy });
+          queue.push(next);
         }
       }
-      for (const key of roomKeys) {
+      for (const key of floorKeys) {
         if (!blocked.has(key) && !seen.has(key)) return false;
       }
       return true;
@@ -261,7 +332,7 @@ export const populate = (
           }
         }
         const valid = candidates.filter((candidate) =>
-          keepsRoomConnected(candidate.letter, candidate.cell),
+          keepsDungeonConnected(candidate.cell),
         );
         // Preference tiers: boss room first (floor 10's temple hall), then
         // wall-adjacent cells, then anywhere that stays connected.
@@ -493,31 +564,6 @@ export const populate = (
       }
     }
   }
-
-  const doorPlacement = (
-    door: DeclarativeDoor,
-  ): { side: Side; x: number; y: number; hidden: boolean } | undefined => {
-    if (Array.isArray(door)) {
-      const [side, x, y, options] = door;
-      return { side, x, y, hidden: Boolean(options?.hidden) };
-    }
-    if ('x' in door && 'y' in door) {
-      return {
-        side: door.side,
-        x: door.x,
-        y: door.y,
-        hidden: Boolean(door.hidden),
-      };
-    }
-    return undefined;
-  };
-
-  const targetOffset: Record<Side, Cell> = {
-    [Side.LEFT]: { x: -1, y: 0 },
-    [Side.RIGHT]: { x: 1, y: 0 },
-    [Side.UP]: { x: 0, y: -1 },
-    [Side.DOWN]: { x: 0, y: 1 },
-  };
 
   const inBounds = (cell: Cell): boolean =>
     cell.y >= 0 &&

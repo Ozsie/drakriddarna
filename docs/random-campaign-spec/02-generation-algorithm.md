@@ -141,11 +141,15 @@ Placement rules, enforced before any monster, item or secret is placed:
 - Blockers only go on room floor cells — never in the void, never on
   walls, never on door cells and never orthogonally adjacent to a door
   cell, so the mouth of every doorway stays open.
-- A candidate is only accepted when, with it blocked, every remaining
-  free cell of its room is still reachable from one of the room's door
-  cells (a flood fill per candidate). This is what makes the blockers
-  safe: nothing placed later — monster, item, secret or hero start — can
-  ever be walled in, because every free cell stays connected.
+- A candidate is only accepted when, with it blocked, every free floor
+  cell of the whole dungeon stays reachable from the hero start cells
+  without passing through a locked door (a global flood fill per
+  candidate). A per-room check is not enough: a pit in a one-cell-wide
+  passage between two doors leaves both sides connected to a door of
+  their own while severing the only route through the dungeon. This is
+  what makes the blockers safe: nothing placed later — monster, item,
+  secret or hero start — can ever be cut off, because every free cell
+  stays connected.
 - Wall-adjacent cells are preferred (pillars read as columns or
   sarcophagi along the room edge, pits as floor that has given way at
   the room's rim); pillars on boss floors prefer the boss room.
@@ -207,8 +211,8 @@ the grid.
 - All monsters, items, secrets and the start position lie on floor cells
   of a room (never walls, never void) and never on a door cell.
 - Pillars and pits lie on room floor cells, never on or orthogonally
-  adjacent to a door cell, and never disconnect a free room cell from
-  its room's door cells (see step 5b).
+  adjacent to a door cell, and never cut any free floor cell off from
+  the hero start cells (see step 5b).
 - The start room contains no monsters on depth 1 (and at most one on any
   depth) so a campaign never opens with an unavoidable first-round fight.
 - Grid rows are all the same length (the validator enforces bounds; the
