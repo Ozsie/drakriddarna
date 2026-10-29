@@ -20,10 +20,10 @@ folder would contain.
 
 ## Module layout
 
-All new code lives inside the campaign folder. The existing
-`src/campaigns/brogue/` folder is the target (it is currently untracked,
-work-in-progress); a different folder name is acceptable as long as the
-whole bundle stays self-contained.
+All new code lives inside the campaign folder. The target is
+`src/campaigns/brogue/` (created from scratch by this work; there is no
+pre-existing brogue folder); a different folder name is acceptable as long
+as the whole bundle stays self-contained.
 
 ```
 src/campaigns/brogue/
@@ -39,7 +39,6 @@ src/campaigns/brogue/
     populationGenerator.ts     // monsters, items, secrets, events
     generateCampaign.ts        // assembly, chaining, retry loop
     *.test.ts                  // colocated tests, one per module
-  dungeons/                    // DELETED once generation works end to end
 ```
 
 ## Data flow
@@ -78,7 +77,8 @@ play
   `docs/dungeon-definition.md` documents the full `Dungeon`/`Layout`
   authoring surface. If a core change is truly unavoidable, it is a scope
   change that must be surfaced to the user, not something to slip in.
-- **Dungeon shape follows the existing brogue dungeons.** Lowercase room
-  letters `a`..`j` filling room cells, spaces for void, `#` walls between
-  rooms, doors declared as `[Side, x, y, options?]` tuples on the
-  room-to-room boundary cells.
+- **Dungeon shape follows the existing campaigns' dungeons.** Uppercase
+  room letters `A`..`J` filling room cells, spaces for void, `#` walls
+  between rooms, doors declared as `[Side, x, y, options?]` tuples on the
+  edge between two floor cells (see 02 step 4 for why doors are carved,
+  never placed on rock).

@@ -19,6 +19,7 @@
 
 # Features
 
+- [ ] Monster name translations
 - [ ] Hide debug menu option when deploying
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc
 - [ ] Graphics
