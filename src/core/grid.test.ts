@@ -346,6 +346,53 @@ describe('grid module', () => {
     ).toBe(true);
   });
 
+  it('hasLineOfSight walking and ranged are blocked by a closed door', () => {
+    const layout = makeLayoutWithWalls([]);
+    const door: Door = {
+      x: 2,
+      y: 1,
+      side: Side.RIGHT,
+      open: false,
+      locked: false,
+      trapped: false,
+      hidden: false,
+      reinforced: false,
+      trapAttacks: 0,
+    };
+    layout.doors = [door];
+    const state = {
+      dungeon: {
+        layout,
+      },
+      heroes: [],
+    } as unknown as GameState;
+
+    // Walking path through the closed door
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 1 }, 48, state, true),
+    ).toBe(false);
+    // Ranged line of sight through the closed door
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 1 }, 48, state, false),
+    ).toBe(false);
+    // Figures directly on either side of the closed door cannot see or
+    // attack each other either
+    expect(
+      hasLineOfSight({ x: 2, y: 1 }, { x: 3, y: 1 }, 48, state, false),
+    ).toBe(false);
+    // Opening the door clears all three lines
+    door.open = true;
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 1 }, 48, state, true),
+    ).toBe(true);
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 1 }, 48, state, false),
+    ).toBe(true);
+    expect(
+      hasLineOfSight({ x: 2, y: 1 }, { x: 3, y: 1 }, 48, state, false),
+    ).toBe(true);
+  });
+
   it('findNeighbouringHeroes ignores heroes across an edge wall', () => {
     const layout = makeLayoutWithWalls([{ x: 2, y: 1, side: Side.RIGHT }]);
     const state = {

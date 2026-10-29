@@ -129,7 +129,7 @@ export const crossesWallEdge = (
 };
 
 // Any closed door or edge wall standing between two adjacent cells blocks
-// searching beyond it.
+// sight, searching and movement beyond it.
 export const isEdgeBlocked = (
   layout: Layout,
   from: Position,
@@ -315,18 +315,16 @@ export const stepAlongLine = (
     const flank1Blocked = isBlockingCell(state, flank1);
     const flank2Blocked = isBlockingCell(state, flank2);
     const flank1Walled =
-      crossesWallEdge(state.dungeon.layout, lastCell, flank1) ||
-      crossesWallEdge(state.dungeon.layout, flank1, nextCellPosition);
+      isEdgeBlocked(state.dungeon.layout, lastCell, flank1) ||
+      isEdgeBlocked(state.dungeon.layout, flank1, nextCellPosition);
     const flank2Walled =
-      crossesWallEdge(state.dungeon.layout, lastCell, flank2) ||
-      crossesWallEdge(state.dungeon.layout, flank2, nextCellPosition);
+      isEdgeBlocked(state.dungeon.layout, lastCell, flank2) ||
+      isEdgeBlocked(state.dungeon.layout, flank2, nextCellPosition);
     if ((flank1Blocked || flank1Walled) && (flank2Blocked || flank2Walled)) {
       return false;
     }
-  } else if (
-    crossesWallEdge(state.dungeon.layout, lastCell, nextCellPosition)
-  ) {
-    // Orthogonal step across an edge wall
+  } else if (isEdgeBlocked(state.dungeon.layout, lastCell, nextCellPosition)) {
+    // Orthogonal step across an edge wall or closed door
     return false;
   }
 
@@ -439,19 +437,19 @@ export const hasLineOfSight = (
         const flank1Blocked = isBlockingCell(state, flank1);
         const flank2Blocked = isBlockingCell(state, flank2);
         const flank1Walled =
-          crossesWallEdge(state.dungeon.layout, prev, flank1) ||
-          crossesWallEdge(state.dungeon.layout, flank1, cell);
+          isEdgeBlocked(state.dungeon.layout, prev, flank1) ||
+          isEdgeBlocked(state.dungeon.layout, flank1, cell);
         const flank2Walled =
-          crossesWallEdge(state.dungeon.layout, prev, flank2) ||
-          crossesWallEdge(state.dungeon.layout, flank2, cell);
+          isEdgeBlocked(state.dungeon.layout, prev, flank2) ||
+          isEdgeBlocked(state.dungeon.layout, flank2, cell);
         if (
           (flank1Blocked || flank1Walled) &&
           (flank2Blocked || flank2Walled)
         ) {
           return false;
         }
-      } else if (crossesWallEdge(state.dungeon.layout, prev, cell)) {
-        // Orthogonal step across an edge wall
+      } else if (isEdgeBlocked(state.dungeon.layout, prev, cell)) {
+        // Orthogonal step across an edge wall or closed door
         return false;
       }
       if (
@@ -465,14 +463,14 @@ export const hasLineOfSight = (
     return true;
   }
   // Adjacent figures always have combat line of sight to each other unless
-  // an edge wall separates them. In particular a diagonally adjacent
-  // figure across a wall corner is reachable: their squares touch at the
-  // corner point and the game treats them as adjacent (the same
-  // isNeighbouring + edge-wall rule as melee engagement), so the pixel
+  // an edge wall or closed door separates them. In particular a diagonally
+  // adjacent figure across a wall corner is reachable: their squares touch
+  // at the corner point and the game treats them as adjacent (the same
+  // isNeighbouring + edge rule as melee engagement), so the pixel
   // walk must not lose them to the corner-point rounding artifact.
   if (
     isNeighbouring(startPosition, targetPosition.x, targetPosition.y) &&
-    !crossesWallEdge(state.dungeon.layout, startPosition, targetPosition)
+    !isEdgeBlocked(state.dungeon.layout, startPosition, targetPosition)
   ) {
     return true;
   }

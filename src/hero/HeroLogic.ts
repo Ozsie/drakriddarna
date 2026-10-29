@@ -229,8 +229,8 @@ export const pickLock = (state: GameState, door?: Door) => {
     return;
   }
   // Picking a lock is performed like a LETA action and may never be done
-  // while a monster stands next to the hero (official rules).
-  if (isAdjacentToMonster(state, hero)) {
+  // while a visible monster stands next to the hero (official rules).
+  if (isAdjacentToVisibleMonster(state, hero)) {
     addLog(state, 'logs.heroAction.blockedNearMonster', {
       hero: i18n(hero.name),
     });
@@ -461,9 +461,9 @@ export const search = (state: GameState) => {
     addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
     return;
   }
-  // Searching is a LETA action and may never be performed while a monster
-  // stands next to the hero (official rules).
-  if (isAdjacentToMonster(state, hero)) {
+  // Searching is a LETA action and may never be performed while a visible
+  // monster stands next to the hero (official rules).
+  if (isAdjacentToVisibleMonster(state, hero)) {
     addLog(state, 'logs.heroAction.blockedNearMonster', {
       hero: i18n(hero.name),
     });
@@ -631,6 +631,25 @@ export const isAdjacentToMonster = (state: GameState, hero: Hero): boolean =>
   state.dungeon.layout.monsters.some(
     (monster) =>
       monster.health > 0 &&
+      isNeighbouring(hero.position, monster.position.x, monster.position.y) &&
+      !crossesWallEdge(state.dungeon.layout, hero.position, monster.position),
+  );
+
+/**
+ * Whether a live monster in a discovered area stands adjacent to the hero
+ * without a wall between. LETA actions (search, pick lock) are blocked by
+ * such monsters only: a monster in an undiscovered room — typically on the
+ * far side of a closed door — is not engaging the hero and must not block
+ * these actions.
+ */
+export const isAdjacentToVisibleMonster = (
+  state: GameState,
+  hero: Hero,
+): boolean =>
+  state.dungeon.layout.monsters.some(
+    (monster) =>
+      monster.health > 0 &&
+      isDiscovered(state.dungeon, monster.position.x, monster.position.y) &&
       isNeighbouring(hero.position, monster.position.x, monster.position.y) &&
       !crossesWallEdge(state.dungeon.layout, hero.position, monster.position),
   );

@@ -816,6 +816,77 @@ describe('LETA actions gated near monsters', () => {
       ),
     ).toBe(false);
   });
+
+  it('allows searching next to a monster in an undiscovered room behind a closed door', () => {
+    const hero = createTestHero({ position: { x: 2, y: 2 } });
+    const monster = createTestMonster({ position: { x: 3, y: 2 } });
+    const door: Door = {
+      x: 2,
+      y: 2,
+      side: Side.RIGHT,
+      open: false,
+      locked: false,
+      trapped: false,
+      hidden: false,
+      reinforced: false,
+      trapAttacks: 0,
+    };
+    const state = createTestState(hero, monster);
+    state.dungeon.layout.grid = [
+      '#######',
+      '#AAAAA#',
+      '#AAB###',
+      '#AAAAA#',
+      '#######',
+    ];
+    state.dungeon.layout.doors.push(door);
+
+    search(state);
+
+    expect(hero.actions).toBe(1);
+    expect(
+      state.actionLog.some(
+        (l) => l.key === 'logs.heroAction.blockedNearMonster',
+      ),
+    ).toBe(false);
+  });
+
+  it('allows picking a lock next to a monster in an undiscovered room behind a closed door', () => {
+    const hero = createTestHero({ position: { x: 2, y: 2 } });
+    const monster = createTestMonster({ position: { x: 3, y: 2 } });
+    const door: Door = {
+      x: 2,
+      y: 2,
+      side: Side.RIGHT,
+      open: false,
+      locked: true,
+      trapped: false,
+      hidden: false,
+      reinforced: false,
+      trapAttacks: 0,
+    };
+    const state = createTestState(hero, monster);
+    state.dungeon.layout.grid = [
+      '#######',
+      '#AAAAA#',
+      '#AAB###',
+      '#AAAAA#',
+      '#######',
+    ];
+    state.dungeon.layout.doors.push(door);
+
+    pickLock(state, door);
+
+    // The lock pick was attempted (a standard action was spent), not
+    // blocked by the monster — whether the roll succeeds depends on the
+    // seeded dice and is not part of this test.
+    expect(hero.actions).toBe(1);
+    expect(
+      state.actionLog.some(
+        (l) => l.key === 'logs.heroAction.blockedNearMonster',
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('replaceDeadHeroes level reset', () => {

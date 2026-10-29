@@ -19,7 +19,6 @@
 
 # Features
 
-- [ ] Closed doors with discovered rooms on both sides should block LoS
 - [ ] Monster name translations
 - [ ] Hide debug menu option when deploying
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc
@@ -27,10 +26,14 @@
   - [ ] Sprites for actors
   - [ ] Tileset for dungeons
   - [ ] Sprites for items etc
+- [ ] Hero selector, campaign specifies max starting heroes
+- [ ] Welcome to the game screen, not just straight into a campaign
 - [ ] Alvkonungens Borg - [Official Dungeon and Heroes](<https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg>)
   - [x] Edge based walls
 - [ ] Level editor
-- [ ] Random campaign
+- [x] Closed doors with discovered rooms on both sides should block LoS
+- [x] Monsters in undiscovered rooms can affect search and pick lock
+- [x] Random campaign
 - [x] Dungeon timer
 - [x] Speed running feature that allows the user to set random seed, default to something fixed
 - [x] Responsive layout
