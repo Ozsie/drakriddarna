@@ -585,7 +585,9 @@ describe('Target Scoring System', () => {
       });
 
       expect(groupSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[AI Target] Orc (Green) (Melee Target)'),
+        expect.stringContaining(
+          '[AI Target] monsters.orc.green (Melee Target)',
+        ),
       );
       expect(tableSpy).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -685,7 +687,7 @@ describe('Target Scoring System', () => {
       });
 
       expect(groupSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[AI Target] Orc'),
+        expect.stringContaining('[AI Target] monsters.orc.green'),
       );
       expect(tableSpy).toHaveBeenCalled();
 
@@ -703,7 +705,7 @@ describe('Target Scoring System', () => {
       });
 
       expect(groupSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[AI Target] Orc'),
+        expect.stringContaining('[AI Target] monsters.orc.green'),
       );
       expect(tableSpy).toHaveBeenCalled();
 

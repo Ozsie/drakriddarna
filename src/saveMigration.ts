@@ -1,10 +1,12 @@
-import type { Dungeon, GameState, GameMaster } from './types';
+import type { Dungeon, GameState, GameMaster, Monster } from './types';
+import { Colour } from './types';
 import {
   COLLAPSED,
   DEFAULT_GAME_MASTER_ID,
   getGameMaster,
   toArray,
 } from './core';
+import { getMonsterTemplate } from './monsters/MonsterRegistry';
 
 // Save format versions, in order. Bump CURRENT_SAVE_VERSION when the
 // persisted shape changes and add a migration below; old saves migrate
@@ -14,7 +16,9 @@ import {
 //   2 — landslides track every collapse with its exact cells in
 //       `collapsedCorridors` (legacy saves carry a single
 //       `collapsedCorridor` letter on the dungeon)
-export const CURRENT_SAVE_VERSION = 2;
+//   3 — monster display names become translation keys (legacy saves carry
+//       raw English names like 'Orc (Green)' in `name`/`nameTranslationKey`)
+export const CURRENT_SAVE_VERSION = 3;
 
 /** Collapses the legacy `difficulty`/`gameMasterId` fields into `gameMaster`. */
 export const migrateGameMasterFields = (state: GameState): void => {
@@ -74,6 +78,38 @@ const migrateCollapsedCorridorOnDungeon = (dungeon: Dungeon): void => {
   delete legacyDungeon.collapsedCorridor;
 };
 
+const migrateMonsterName = (monster: Monster): void => {
+  const baseKey = getMonsterTemplate(monster.type)?.nameTranslationKey;
+  if (!baseKey) {
+    return;
+  }
+  const colourIndex = Object.values(Colour).indexOf(monster.colour);
+  if (colourIndex < 0) {
+    return;
+  }
+  const colourName = Object.keys(Colour)[colourIndex].toLowerCase();
+  monster.name = `${baseKey}.${colourName}`;
+  monster.nameTranslationKey = monster.name;
+};
+
+/**
+ * Rewrites legacy English monster display names ('Orc (Green)') into the
+ * translation keys createMonster now produces ('monsters.orc.green'), so
+ * monsters in already-running games translate too. The whole pending
+ * dungeon chain is migrated, matching `migrateCollapsedCorridor`.
+ */
+export const migrateMonsterNames = (state: GameState): void => {
+  let dungeon: Dungeon | undefined = state.dungeon;
+  while (dungeon) {
+    dungeon.layout.monsters.forEach(migrateMonsterName);
+    dungeon = dungeon.nextDungeon;
+  }
+  const target = state.targetActor as Monster | undefined;
+  if (target && target.type) {
+    migrateMonsterName(target);
+  }
+};
+
 /** Runs every missing migration step, in order, and stamps the version. */
 export const migrateSaveState = (state: GameState): void => {
   const version = state.saveVersion ?? 0;
@@ -82,6 +118,9 @@ export const migrateSaveState = (state: GameState): void => {
   }
   if (version < 2) {
     migrateCollapsedCorridor(state);
+  }
+  if (version < 3) {
+    migrateMonsterNames(state);
   }
   state.saveVersion = CURRENT_SAVE_VERSION;
 };

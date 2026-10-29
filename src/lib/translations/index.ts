@@ -123,6 +123,11 @@ export const config: Config = {
       loader: async () => (await import('./en/items.json')).default,
     },
     {
+      locale: 'en',
+      key: 'monsters',
+      loader: async () => (await import('./en/monsters.json')).default,
+    },
+    {
       locale: 'sv',
       key: 'content',
       loader: async () =>
@@ -154,6 +159,11 @@ export const config: Config = {
       locale: 'sv',
       key: 'items',
       loader: async () => (await import('./sv/items.json')).default,
+    },
+    {
+      locale: 'sv',
+      key: 'monsters',
+      loader: async () => (await import('./sv/monsters.json')).default,
     },
   ],
 };

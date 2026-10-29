@@ -34,6 +34,7 @@ import {
 // types can register their own stat templates the same way via
 // `registerMonsterTemplate` (see src/monsters/MonsterRegistry.ts).
 registerMonsterTemplate(MonsterType.ORC, {
+  nameTranslationKey: 'monsters.orc',
   level: Level.APPRENTICE,
   defense: 0,
   health: 2,
@@ -47,6 +48,7 @@ registerMonsterTemplate(MonsterType.ORC, {
   deathSound: 'sfx/die_monster.wav',
 });
 registerMonsterTemplate(MonsterType.TROLL, {
+  nameTranslationKey: 'monsters.troll',
   level: Level.KNIGHT,
   defense: 1,
   health: 3,
@@ -59,22 +61,30 @@ registerMonsterTemplate(MonsterType.TROLL, {
   deathSound: 'sfx/die2_monster.wav',
 });
 registerMonsterTemplate(MonsterType.YELLOW_DARK_LORD, {
+  nameTranslationKey: 'monsters.darkLord',
   actions: 3,
   walkSound: 'sfx/walk_boss.wav',
   hurtSound: 'sfx/hurt3_monster.wav',
   deathSound: 'sfx/die_boss.wav',
 });
 registerMonsterTemplate(MonsterType.GREEN_DARK_LORD, {
+  nameTranslationKey: 'monsters.darkLord',
   weapon: monsterWeapons[4],
   walkSound: 'sfx/walk_boss.wav',
   hurtSound: 'sfx/hurt3_monster.wav',
   deathSound: 'sfx/die_boss.wav',
 });
 registerMonsterTemplate(MonsterType.BLUE_DARK_LORD, {
+  nameTranslationKey: 'monsters.darkLord',
   shield: monsterShields[0],
   walkSound: 'sfx/walk_boss.wav',
   hurtSound: 'sfx/hurt3_monster.wav',
   deathSound: 'sfx/die_boss.wav',
+});
+// The Red Dark Lord keeps the default "master" stat block (no overrides),
+// but still needs the shared translation key for its display name.
+registerMonsterTemplate(MonsterType.RED_DARK_LORD, {
+  nameTranslationKey: 'monsters.darkLord',
 });
 
 export { COLLAPSED, EMPTY, WALL };
@@ -338,7 +348,14 @@ export const createMonster = (
     deathSound = template.deathSound ?? template.death;
   }
 
-  const monsterName = type + ' (' + colourName + ')';
+  // The display name is the translation key (the same convention as items,
+  // campaigns and dungeons): `createMonster` appends the instance's colour
+  // to the type's base key from the template registry, e.g.
+  // 'monsters.orc' + '.green' -> 'monsters.orc.green'. Types without a
+  // registered key fall back to the raw '<Type> (<Colour>)' string.
+  const monsterName = template?.nameTranslationKey
+    ? `${template.nameTranslationKey}.${colourName.toLowerCase()}`
+    : type + ' (' + colourName + ')';
 
   return {
     id:

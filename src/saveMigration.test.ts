@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { GameState } from './types';
+import type { GameState, Monster } from './types';
+import { Colour, MonsterType } from './types';
 import { getGameMaster } from './core';
 import { init, loadState } from './game';
 import {
   CURRENT_SAVE_VERSION,
   migrateCollapsedCorridor,
   migrateGameMasterFields,
+  migrateMonsterNames,
   migrateSaveState,
 } from './saveMigration';
 
@@ -112,8 +114,59 @@ describe('migrateCollapsedCorridor', () => {
   });
 });
 
+describe('migrateMonsterNames', () => {
+  const legacyMonster = (type: string, colour: Colour): Monster => {
+    const colourName =
+      Object.keys(Colour)[Object.values(Colour).indexOf(colour)];
+    const legacyName = `${type} (${colourName})`;
+    return {
+      type,
+      colour,
+      name: legacyName,
+      nameTranslationKey: legacyName,
+    } as unknown as Monster;
+  };
+
+  it('rewrites legacy names of the active dungeon and the pending chain', () => {
+    const state = createBareState();
+    const orc = legacyMonster(MonsterType.ORC, Colour.Green);
+    const troll = legacyMonster(MonsterType.TROLL, Colour.Blue);
+    state.dungeon.layout.monsters.push(orc);
+    state.dungeon.nextDungeon = {
+      ...state.dungeon,
+      layout: { ...state.dungeon.layout, monsters: [troll] },
+    };
+
+    migrateMonsterNames(state);
+
+    expect(orc.name).toBe('monsters.orc.green');
+    expect(orc.nameTranslationKey).toBe('monsters.orc.green');
+    expect(troll.name).toBe('monsters.troll.blue');
+  });
+
+  it('rewrites a monster held as the current target actor', () => {
+    const state = createBareState();
+    const lord = legacyMonster(MonsterType.RED_DARK_LORD, Colour.Red);
+    state.targetActor = lord as GameState['targetActor'];
+
+    migrateMonsterNames(state);
+
+    expect(lord.name).toBe('monsters.darkLord.red');
+  });
+
+  it('leaves monsters without a registered translation key untouched', () => {
+    const state = createBareState();
+    const golem = legacyMonster('Ice Golem', Colour.Yellow);
+    state.dungeon.layout.monsters.push(golem);
+
+    migrateMonsterNames(state);
+
+    expect(golem.name).toBe('Ice Golem (Yellow)');
+  });
+});
+
 describe('migrateSaveState', () => {
-  it('runs both migrations for a pre-versioning save and stamps the version', () => {
+  it('runs all migrations for a pre-versioning save and stamps the version', () => {
     const state = createBareState();
     state.gameMaster = undefined;
     (state as { gameMasterId?: string }).gameMasterId = 'easy';

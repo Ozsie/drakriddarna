@@ -21,7 +21,9 @@ import { shields } from '../../../items/shields';
  *
  * The type strings are the in-game display names (rendered like
  * 'Orc (Red)') and are therefore user-facing text: per the project AI
- * policy they are human-authored.
+ * policy they are human-authored. The translated display names resolve
+ * via `nameTranslationKey` from this campaign's own translation files
+ * (campaign.brogue.monsters.* in translations/{en,sv}.json).
  */
 
 export const MID_TIER_MONSTER_A = 'Dark Knight';
@@ -75,6 +77,7 @@ const sorcererShield: Shield = {
 };
 
 const templateA: MonsterStatOverrides = {
+  nameTranslationKey: 'campaign.brogue.monsters.darkKnight',
   level: Level.KNIGHT,
   defense: 0,
   health: 4,
@@ -89,6 +92,7 @@ const templateA: MonsterStatOverrides = {
 };
 
 const templateB: MonsterStatOverrides = {
+  nameTranslationKey: 'campaign.brogue.monsters.sorcerer',
   level: Level.LORD,
   defense: 1,
   health: 4,

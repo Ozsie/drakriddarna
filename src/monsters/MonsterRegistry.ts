@@ -13,6 +13,13 @@ import type { Level } from '../types';
 // this file or any other shared engine file. See src/campaigns/README.md.
 
 export type MonsterStatOverrides = Partial<{
+  // Base translation key for the monster type's display name; the colour
+  // suffix is appended per instance by `createMonster` (e.g.
+  // 'monsters.orc' + '.green' -> 'monsters.orc.green'). Built-in monsters
+  // resolve against the shared 'monsters' namespace in
+  // src/lib/translations/{en,sv}/monsters.json; campaign monsters use a
+  // 'campaign.<id>.monsters.<type>' key in their own translation files.
+  nameTranslationKey: string;
   level: Level;
   actions: number;
   defense: number;

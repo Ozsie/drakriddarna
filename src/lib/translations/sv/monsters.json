@@ -1,0 +1,20 @@
+{
+  "orc": {
+    "red": "Orch (Röd)",
+    "blue": "Orch (Blå)",
+    "green": "Orch (Grön)",
+    "yellow": "Orch (Gul)"
+  },
+  "troll": {
+    "red": "Troll (Röd)",
+    "blue": "Troll (Blå)",
+    "green": "Troll (Grön)",
+    "yellow": "Troll (Gul)"
+  },
+  "darkLord": {
+    "red": "Mörkerherre (Röd)",
+    "blue": "Mörkerherre (Blå)",
+    "green": "Mörkerherre (Grön)",
+    "yellow": "Mörkerherre (Gul)"
+  }
+}

@@ -14,6 +14,20 @@
     "shields": {
       "sorcererShield": "Magic protection"
     },
+    "monsters": {
+      "darkKnight": {
+        "red": "Dark Knight (Red)",
+        "blue": "Dark Knight (Blue)",
+        "green": "Dark Knight (Green)",
+        "yellow": "Dark Knight (Yellow)"
+      },
+      "sorcerer": {
+        "red": "Sorcerer (Red)",
+        "blue": "Sorcerer (Blue)",
+        "green": "Sorcerer (Green)",
+        "yellow": "Sorcerer (Yellow)"
+      }
+    },
     "floor1": {
       "name": "The Old Mine",
       "intro": "An old, long abandoned mine opens up before you as you step down into the Forgotten Caverns."

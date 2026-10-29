@@ -46,7 +46,7 @@ describe('Type Safety & Domain Modeling', () => {
       const orc = createMonster(MonsterType.ORC, Colour.Green, 2, 3);
       expect(orc.type).toBe(MonsterType.ORC);
       expect(orc.id).toBe('orc_green_2_3');
-      expect(orc.name).toContain('Orc');
+      expect(orc.name).toBe('monsters.orc.green');
       expect(orc.nameTranslationKey).toBe(orc.name);
       expect(orc.health).toBe(2);
       expect(orc.level).toBe(Level.APPRENTICE);

@@ -444,7 +444,12 @@ can invent its own type identifiers freely.
    type, to define its stats (`level`, `actions`, `defense`, `health`,
    `maxHealth`, `experience`, `weapon`, `armour`, `rangedWeapon`, `shield`).
    Any field left out falls back to the default "master" stat block used by
-   `createMonster` (`src/dungeon/DungeonLogic.ts`).
+   `createMonster` (`src/dungeon/DungeonLogic.ts`). Set
+   `nameTranslationKey` in the overrides to the base translation key of the
+   type's display name: `createMonster` appends the instance's colour, so
+   the full keys (`campaign.<id>.monsters.<type>.<colour>` for all four
+   colours) go in your campaign's `translations/{en,sv}.json`. Without
+   it, the raw `'<Type> (<Colour>)'` type string is shown untranslated.
 3. Optionally call `registerMonsterAbility(type, ability)` for each of
    `'diagonalFireAttack'`, `'orthogonalFireAttack'`, `'sameRoomFireAttack'`
    to give the new type one of the existing "dark lord" special attacks
@@ -475,7 +480,11 @@ import { monsterWeapons } from '../../../items/weapons';
 
 export const FROST_LORD = 'Frost Lord';
 
+// `<id>` is your campaign folder name; the colour suffix is appended per
+// monster instance, so translations/<locale>.json needs
+// monsters.frostLord.{red,blue,green,yellow} under the campaign root.
 registerMonsterTemplate(FROST_LORD, {
+  nameTranslationKey: 'campaign.<id>.monsters.frostLord',
   level: Level.LORD,
   actions: 2,
   defense: 2,

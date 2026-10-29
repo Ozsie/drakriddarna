@@ -518,6 +518,16 @@ live next to their content and are globbed in automatically. Hardcoding
 user-visible text is a lint-enforced no. Campaigns can even append their own
 log-message keys to the shared namespace.
 
+Monster display names are translation keys composed per type and colour:
+the monster template registry carries each type's base key and
+`createMonster` appends the instance colour. Built-in monsters resolve
+against the shared `monsters` namespace (`monsters.orc.green` in
+`src/lib/translations/{en,sv}/monsters.json`), campaign-defined monsters
+against their own translation files (`campaign.<id>.monsters.<type>.<colour>`).
+The four dark lord types share a single `monsters.darkLord` base key — the
+colour suffix already distinguishes them. Legacy saves carrying raw English
+names are rewritten to keys by a save migration on load.
+
 ## Testing, benchmarks and balance analysis
 
 Three layers of verification:

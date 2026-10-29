@@ -14,6 +14,20 @@
     "shields": {
       "sorcererShield": "Magiskt skydd"
     },
+    "monsters": {
+      "darkKnight": {
+        "red": "Mörk riddare (Röd)",
+        "blue": "Mörk riddare (Blå)",
+        "green": "Mörk riddare (Grön)",
+        "yellow": "Mörk riddare (Gul)"
+      },
+      "sorcerer": {
+        "red": "Trollkarl (Röd)",
+        "blue": "Trollkarl (Blå)",
+        "green": "Trollkarl (Grön)",
+        "yellow": "Trollkarl (Gul)"
+      }
+    },
     "floor1": {
       "name": "Den gamla gruvan",
       "intro": "En gammal, sedan länge övergiven gruva öppnar sig framför er när ni stiger ner i De Glömda Grottorna."
