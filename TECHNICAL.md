@@ -184,6 +184,21 @@ activity, a separate visual Campaign Editor (a Kotlin Multiplatform desktop
 app specified in [docs/editor-spec/](./docs/editor-spec/)) is planned to
 _generate_ these modules; the game repo requires no changes to consume them.
 
+One campaign breaks the "authored by hand" rule on purpose: `brogue` is
+_generated at load time_ by a deterministic, Brogue-inspired dungeon
+generator (`src/campaigns/brogue/generator/`, specified in
+[docs/random-campaign-spec/](./docs/random-campaign-spec/)). A fixed
+campaign seed drives a per-depth rejection-sampling loop (up to 50 derived
+seeds per floor, then a checked-in fallback seed verified by tests, so app
+start can never throw), which grows organic room blobs on a jittered
+lattice, carves a spanning tree of doorways, and populates each floor from
+a depth table: monster XP budgets shaped to the hero level curve, loot that
+gets progressively better with depth (healing magic items biased early),
+one light per room on floors that get strictly darker every level, and
+flickering ember hints at hidden doors. Same auto-discovery, same
+validation — the generator is just another campaign folder whose dungeons
+happen to be built by code.
+
 ## Determinism: a seeded RNG everywhere it matters
 
 Gameplay-affecting randomness never calls `Math.random()` directly. All dice
@@ -543,7 +558,11 @@ Three layers of verification:
    tuning change that silently shifts difficulty.
 
 3. **Balance analysis** (`npm run balanceAnalysis`) plus a tuning test that
-   pins the BrutalOverlord's numbers.
+   pins the BrutalOverlord's numbers. The harness also models mid-campaign
+   parties: `runSingleGame({ heroExperience })` grants every hero the exact
+   XP earlier floors would have yielded before levelling them, so the
+   generated campaign's 10 floors can each be benchmarked as floor N of a
+   run rather than as a first dungeon.
 
 ## Build, CI and deployment
 
