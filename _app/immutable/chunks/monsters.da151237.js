@@ -1,0 +1,1 @@
+const r={red:"Orch (Röd)",blue:"Orch (Blå)",green:"Orch (Grön)",yellow:"Orch (Gul)"},e={red:"Troll (Röd)",blue:"Troll (Blå)",green:"Troll (Grön)",yellow:"Troll (Gul)"},l={red:"Mörkerherre (Röd)",blue:"Mörkerherre (Blå)",green:"Mörkerherre (Grön)",yellow:"Mörkerherre (Gul)"},o={orc:r,troll:e,darkLord:l};export{l as darkLord,o as default,r as orc,e as troll};
