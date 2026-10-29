@@ -8,7 +8,13 @@ import {
 } from '../../../types';
 import type { Position } from '../../../types';
 import type { DeclarativeMonster } from '../../../dungeon/dungeonParser';
-import { ember } from '../../../dungeon/LightSources';
+import {
+  chandelier,
+  ember,
+  glow,
+  goldenGlow,
+  torch,
+} from '../../../dungeon/LightSources';
 import { weapons } from '../../../items/weapons';
 import { armour } from '../../../items/armours';
 import { shields } from '../../../items/shields';
@@ -62,6 +68,8 @@ const monsterCell = (monster: DeclarativeMonster): Position => {
 };
 
 const roomOf = (grid: string[], x: number, y: number): string => grid[y][x];
+
+type LightTuple = [number, number, CellAlignment, typeof torch];
 
 const doorCellKeys = (generated: GeneratedLayout): Set<string> => {
   const keys = new Set<string>();
@@ -159,7 +167,7 @@ describe('populate', () => {
     }
   });
 
-  it('places everything on free floor cells, never on doors, walls, void or each other', () => {
+  it('places everything on free floor cells, never on doors, walls, void, blockers or each other', () => {
     for (let depth = 1; depth <= 10; depth++) {
       const { generated, populated } = generatePopulated(424242, depth);
       const grid = generated.layout.grid;
@@ -167,6 +175,14 @@ describe('populate', () => {
       const startKeys = new Set(
         generated.startingPositions.map((cell) => `${cell.x},${cell.y}`),
       );
+      const blockerKeys = new Set<string>([
+        ...((populated.layout.pillars ?? []) as [number, number][]).map(
+          ([x, y]) => `${x},${y}`,
+        ),
+        ...((populated.layout.pits ?? []) as [number, number][]).map(
+          ([x, y]) => `${x},${y}`,
+        ),
+      ]);
       const seen = new Set<string>();
       const checkCell = (x: number, y: number): void => {
         const key = `${x},${y}`;
@@ -174,6 +190,7 @@ describe('populate', () => {
         seen.add(key);
         expect(doorKeys.has(key)).toBe(false);
         expect(startKeys.has(key)).toBe(false);
+        expect(blockerKeys.has(key)).toBe(false);
         const cell = grid[y][x];
         expect(cell).not.toBe(' ');
         expect(cell).not.toBe('#');
@@ -230,13 +247,14 @@ describe('populate', () => {
     }
   });
 
-  it('places one central light per room on dark floors', () => {
+  it('places one central light per room on dark floors, plus the configured glows', () => {
     for (let depth = 1; depth <= 10; depth++) {
       const config = getDepthConfig(depth);
       const { generated, populated } = generatePopulated(121212, depth);
-      const lights = populated.layout.lights ?? [];
+      const lights = (populated.layout.lights ?? []) as LightTuple[];
       if (config.ambientLight < 1) {
-        // One light per room plus one ember per hidden door.
+        // One central light per room plus one ember per hidden door; glow
+        // floors (the mushroom grotto) add their edge glows on top.
         const roomCount = new Set(
           generated.layout.grid
             .join('')
@@ -247,9 +265,173 @@ describe('populate', () => {
           (door) =>
             (door as [Side, number, number, { hidden?: boolean }])[3]?.hidden,
         ).length;
-        expect(lights.length).toBe(roomCount + hiddenDoors);
+        const nonGlow = lights.filter((light) => light[3] !== glow);
+        expect(nonGlow.length).toBe(roomCount + hiddenDoors);
+        const glowLights = lights.filter((light) => light[3] === glow);
+        if (config.glowMin !== undefined) {
+          expect(glowLights.length).toBeGreaterThanOrEqual(config.glowMin);
+          expect(glowLights.length).toBeLessThanOrEqual(
+            config.glowMax ?? config.glowMin,
+          );
+        } else {
+          expect(glowLights).toEqual([]);
+        }
       } else {
         expect(lights).toEqual([]);
+      }
+    }
+  });
+
+  it('draws the central lights from the floor light rig', () => {
+    // Floor 2: mine torches; floor 6: crystal chandeliers; floor 9: the
+    // abyss's golden glow; floor 10: temple chandeliers.
+    const expectations: Record<number, typeof torch> = {
+      2: torch,
+      6: chandelier,
+      9: goldenGlow,
+      10: chandelier,
+    };
+    for (const [depthKey, expected] of Object.entries(expectations)) {
+      const depth = Number(depthKey);
+      const { populated } = generatePopulated(232323, depth);
+      const central = ((populated.layout.lights ?? []) as LightTuple[]).filter(
+        (light) => light[3] !== ember && light[3] !== glow,
+      );
+      expect(central.length).toBeGreaterThan(0);
+      for (const light of central) {
+        expect(light[3]).toBe(expected);
+        if (expected === chandelier) {
+          expect(light[2]).toBe(CellAlignment.CEILING);
+        }
+      }
+    }
+  });
+
+  it('places the configured pillars and pits inside rooms, never beside doors', () => {
+    for (let depth = 1; depth <= 10; depth++) {
+      const config = getDepthConfig(depth);
+      const { generated, populated } = generatePopulated(565656, depth);
+      const grid = generated.layout.grid;
+      const doorKeys = doorCellKeys(generated);
+      const doorAdjacentKeys = new Set<string>();
+      for (const key of doorKeys) {
+        const [x, y] = key.split(',').map(Number);
+        for (const [dx, dy] of [
+          [0, -1],
+          [0, 1],
+          [-1, 0],
+          [1, 0],
+        ]) {
+          doorAdjacentKeys.add(`${x + dx},${y + dy}`);
+        }
+      }
+      const startKeys = new Set(
+        generated.startingPositions.map((cell) => `${cell.x},${cell.y}`),
+      );
+      const checkBlockers = (
+        blockers: [number, number][] | undefined,
+        min: number | undefined,
+        max: number | undefined,
+      ): void => {
+        const list = blockers ?? [];
+        if (min === undefined) {
+          expect(list).toEqual([]);
+          return;
+        }
+        expect(list.length).toBeGreaterThanOrEqual(min);
+        expect(list.length).toBeLessThanOrEqual(max ?? min);
+        for (const [x, y] of list) {
+          const key = `${x},${y}`;
+          const cell = grid[y][x];
+          expect(cell).not.toBe(' ');
+          expect(cell).not.toBe('#');
+          expect(doorKeys.has(key)).toBe(false);
+          expect(doorAdjacentKeys.has(key)).toBe(false);
+          expect(startKeys.has(key)).toBe(false);
+        }
+      };
+      checkBlockers(
+        populated.layout.pillars as [number, number][] | undefined,
+        config.pillarMin,
+        config.pillarMax,
+      );
+      checkBlockers(
+        populated.layout.pits as [number, number][] | undefined,
+        config.pitMin,
+        config.pitMax,
+      );
+      // A cell is never both a pillar and a pit.
+      const pillarKeys = new Set(
+        (populated.layout.pillars ?? []).map(
+          (pillar) =>
+            `${(pillar as [number, number])[0]},${
+              (pillar as [number, number])[1]
+            }`,
+        ),
+      );
+      for (const pit of populated.layout.pits ?? []) {
+        const [x, y] = pit as [number, number];
+        expect(pillarKeys.has(`${x},${y}`)).toBe(false);
+      }
+    }
+  });
+
+  it('never walls a free room cell in: every free cell stays reachable from a door', () => {
+    for (let depth = 1; depth <= 10; depth++) {
+      const { generated, populated } = generatePopulated(787878, depth);
+      const grid = generated.layout.grid;
+      const blocked = new Set<string>([
+        ...((populated.layout.pillars ?? []) as [number, number][]).map(
+          ([x, y]) => `${x},${y}`,
+        ),
+        ...((populated.layout.pits ?? []) as [number, number][]).map(
+          ([x, y]) => `${x},${y}`,
+        ),
+      ]);
+      if (blocked.size === 0) continue;
+      const doorKeys = doorCellKeys(generated);
+      const rooms = new Map<string, { x: number; y: number }[]>();
+      grid.forEach((row, y) => {
+        for (let x = 0; x < row.length; x++) {
+          const cell = row[x];
+          if (cell !== ' ' && cell !== '#') {
+            const list = rooms.get(cell) ?? [];
+            list.push({ x, y });
+            rooms.set(cell, list);
+          }
+        }
+      });
+      for (const cells of rooms.values()) {
+        const roomKeys = new Set(cells.map((cell) => `${cell.x},${cell.y}`));
+        const seeds = cells.filter(
+          (cell) =>
+            doorKeys.has(`${cell.x},${cell.y}`) &&
+            !blocked.has(`${cell.x},${cell.y}`),
+        );
+        expect(seeds.length).toBeGreaterThan(0);
+        const seen = new Set(seeds.map((cell) => `${cell.x},${cell.y}`));
+        const queue = [...seeds];
+        while (queue.length > 0) {
+          const current = queue.pop()!;
+          for (const [dx, dy] of [
+            [0, -1],
+            [0, 1],
+            [-1, 0],
+            [1, 0],
+          ]) {
+            const key = `${current.x + dx},${current.y + dy}`;
+            if (!roomKeys.has(key) || seen.has(key) || blocked.has(key)) {
+              continue;
+            }
+            seen.add(key);
+            queue.push({ x: current.x + dx, y: current.y + dy });
+          }
+        }
+        for (const key of roomKeys) {
+          if (!blocked.has(key)) {
+            expect(seen.has(key)).toBe(true);
+          }
+        }
       }
     }
   });

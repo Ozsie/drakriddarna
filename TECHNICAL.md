@@ -194,8 +194,11 @@ start can never throw), which grows organic room blobs on a jittered
 lattice, carves a spanning tree of doorways, and populates each floor from
 a depth table: monster XP budgets shaped to the hero level curve, loot that
 gets progressively better with depth (healing magic items biased early),
-one light per room on floors that get strictly darker every level, and
-flickering ember hints at hidden doors. Same auto-discovery, same
+one light per room on floors that get strictly darker every level (drawn
+from per-floor light rigs — mine torches, crystal chandeliers, a golden
+abyss glow), flickering ember hints at hidden doors, and thematic blockers
+— pillars and pits placed with a per-candidate flood-fill check so they
+never wall in a monster, item or hero. Same auto-discovery, same
 validation — the generator is just another campaign folder whose dungeons
 happen to be built by code.
 

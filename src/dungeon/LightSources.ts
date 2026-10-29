@@ -45,3 +45,23 @@ export const iceBrazier: DeclarativeLightOptions = {
   effect: 'flicker',
   rate: 1,
 };
+
+// Pale bioluminescent glow, e.g. for a mushroom grotto.
+export const glow: DeclarativeLightOptions = {
+  color: '#9fd8b8',
+  radius: 1,
+  intensity: 0.3,
+  softness: 0.8,
+  effect: 'flicker',
+  rate: 0.5,
+};
+
+// Warm golden light, e.g. for a treasure-lit abyss.
+export const goldenGlow: DeclarativeLightOptions = {
+  color: '#f0c34e',
+  radius: 3,
+  intensity: 0.4,
+  softness: 0.7,
+  effect: 'flicker',
+  rate: 0.5,
+};

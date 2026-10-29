@@ -127,6 +127,33 @@ applied first so connectivity is secured before optional loops are added.
   `discoveredRooms` is that room's letter.
 - `winConditions`: `[{ type: ConditionType.KILL_ALL, fulfilled: false }]`.
 
+## Step 5b — Pillars and pits (population)
+
+Thematic floors emit impassable blockers through the declarative layout's
+`pillars` and `pits` fields (both render and block movement via
+`isWalkable`; no core edits). The per-floor counts come from `config.ts`
+(`pillarMin/Max`, `pitMin/Max`): pits on the sunken shaft (3) and the
+abyss (9), pillars in the crystal chamber (6), the graves (7) and around
+the final boss's temple hall (10).
+
+Placement rules, enforced before any monster, item or secret is placed:
+
+- Blockers only go on room floor cells — never in the void, never on
+  walls, never on door cells and never orthogonally adjacent to a door
+  cell, so the mouth of every doorway stays open.
+- A candidate is only accepted when, with it blocked, every remaining
+  free cell of its room is still reachable from one of the room's door
+  cells (a flood fill per candidate). This is what makes the blockers
+  safe: nothing placed later — monster, item, secret or hero start — can
+  ever be walled in, because every free cell stays connected.
+- Wall-adjacent cells are preferred (pillars read as columns or
+  sarcophagi along the room edge, pits as floor that has given way at
+  the room's rim); pillars on boss floors prefer the boss room.
+- Fewer blockers than configured is acceptable (placement stops when no
+  valid candidate remains); the floor is never rejected over blockers.
+- Later placements see blockers as occupied, so monsters, items, secrets
+  and lights never share a cell with a pillar or pit.
+
 ## Step 6 — Rejection sampling
 
 Wrap the whole per-depth generation in a retry loop:
@@ -161,10 +188,15 @@ the start room letter, the starting positions (distinct non-door cells of
 the start room, one per hero) and the cells doors sit on (the carved
 doorway cells and their targets, which population keeps free of entities).
 `populationGenerator` (see 03) fills monsters, items and secrets, places
-one light per room on the cell closest to the room's centre on floors with
-`ambientLight < 1` (torch, brazier or chandelier), adds the hidden-door
-ember hints from step 4, and emits the full shared-world event deck, then
-`generateCampaign.ts` calls `defineDungeon` with the dungeon-level fields.
+the blockers from step 5b, places one light per room on the cell closest
+to the room's centre on floors with `ambientLight < 1` — drawn from the
+floor's light rig (`lightRig` in `config.ts`; mine torches high up,
+chandeliers in the crystal chamber and the temple, a warm golden glow in
+the abyss) — adds the hidden-door ember hints from step 4, and on glow
+floors (`glowMin/Max`, the mushroom grotto) scatters extra dim
+bioluminescent lights along the room edges, then emits the full
+shared-world event deck, and `generateCampaign.ts` calls `defineDungeon`
+with the dungeon-level fields.
 Corners are **not** generated — `defineLayout` runs `autoDetectCorners` on
 the grid.
 
@@ -174,6 +206,9 @@ the grid.
   rest of the dungeon (via the door graph).
 - All monsters, items, secrets and the start position lie on floor cells
   of a room (never walls, never void) and never on a door cell.
+- Pillars and pits lie on room floor cells, never on or orthogonally
+  adjacent to a door cell, and never disconnect a free room cell from
+  its room's door cells (see step 5b).
 - The start room contains no monsters on depth 1 (and at most one on any
   depth) so a campaign never opens with an unavoidable first-round fight.
 - Grid rows are all the same length (the validator enforces bounds; the

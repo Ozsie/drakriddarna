@@ -6,24 +6,28 @@ against `npm run balanceAnalysis` in milestone M5.
 
 ## Depth configuration (tuned values)
 
-| Depth | Grid size | Rooms | Blob area (cells) | Monster XP budget | Hidden/trapped/locked door chance | Ambient light | Secrets | Items |
-| ----- | --------- | ----- | ----------------- | ----------------- | --------------------------------- | ------------- | ------- | ----- |
-| 1     | 16x16     | 4     | 6–10              | 4                 | 0 / 0 / 0                         | 1.0           | 0–1     | 2     |
-| 2     | 17x17     | 4     | 6–11              | 6                 | 5% / 0 / 0                        | 0.9           | 1       | 2     |
-| 3     | 18x18     | 5     | 7–12              | 6                 | 5% / 5% / 0                       | 0.8           | 1       | 3     |
-| 4     | 19x19     | 5     | 7–13              | 8                 | 10% / 5% / 0                      | 0.7           | 1–2     | 3     |
-| 5     | 20x20     | 6     | 8–14              | 5 (+boss)         | 10% / 10% / 5%                    | 0.6           | 2       | 3     |
-| 6     | 21x21     | 6     | 8–15              | 11                | 10% / 10% / 5%                    | 0.5           | 2       | 4     |
-| 7     | 22x22     | 7     | 9–16              | 7                 | 15% / 10% / 10%                   | 0.4           | 2–3     | 4     |
-| 8     | 23x23     | 7     | 9–17              | 16                | 15% / 15% / 10%                   | 0.3           | 3       | 4     |
-| 9     | 24x24     | 8     | 10–18             | 13                | 15% / 15% / 15%                   | 0.2           | 3       | 5     |
-| 10    | 26x26     | 9     | 10–20             | 10 (+boss)        | 20% / 15% / 15%                   | 0.1           | 3–4     | 5     |
+| Depth | Grid size | Rooms | Blob area (cells) | Monster XP budget | Hidden/trapped/locked door chance | Ambient light | Secrets | Items | Blockers / lights |
+| ----- | --------- | ----- | ----------------- | ----------------- | --------------------------------- | ------------- | ------- | ----- | ----------------- |
+| 1     | 16x16     | 4     | 6–10              | 4                 | 0 / 0 / 0                         | 1.0           | 0–1     | 2     | —                 |
+| 2     | 17x17     | 4     | 6–11              | 6                 | 5% / 0 / 0                        | 0.9           | 1       | 2     | torch rig         |
+| 3     | 18x18     | 5     | 7–12              | 6                 | 5% / 5% / 0                       | 0.8           | 1       | 3     | 2–4 pits          |
+| 4     | 19x19     | 5     | 7–13              | 8                 | 10% / 5% / 0                      | 0.7           | 1–2     | 3     | 3–5 glows         |
+| 5     | 20x20     | 5     | 9–18              | 5 (+boss)         | 10% / 10% / 5%                    | 0.6           | 2       | 3     | arena, brazier    |
+| 6     | 21x21     | 6     | 8–15              | 11                | 10% / 10% / 5%                    | 0.5           | 2       | 4     | 4–6 pillars       |
+| 7     | 22x22     | 7     | 9–16              | 7                 | 20% / 15% / 10%                   | 0.4           | 2–3     | 4     | 3–5 pillars       |
+| 8     | 23x23     | 10    | 5–10              | 16                | 15% / 15% / 10%                   | 0.3           | 3       | 4     | city, 40% loops   |
+| 9     | 24x24     | 8     | 10–18             | 13                | 15% / 15% / 15%                   | 0.2           | 3       | 5     | 4–6 pits, golden  |
+| 10    | 26x26     | 9     | 10–20             | 10 (+boss)        | 20% / 15% / 15%                   | 0.1           | 3–4     | 5     | 4–6 pillars       |
 
 Interpretation:
 
 - **Grid size / rooms / blob area** control dungeon size and exploration
   length; the growth is roughly linear so floor 10 takes about twice as
-  long to clear as floor 1.
+  long to clear as floor 1. Room counts are deliberately not monotonic:
+  floor 5 (The Black Lake) is a small set of very large rooms — the
+  colossal cavern and its boss arena — and floor 8 (The Lost City) is
+  ten small rooms with a high loop-door chance — the dense house
+  clusters and alleys of a ruined city.
 - **Monster XP budget** is the summed `experience` of all placed monsters;
   it is the primary difficulty dial (see the pool below). The tuned table
   is deliberately NOT monotonic: it is shaped to hit the hero level
@@ -33,10 +37,17 @@ Interpretation:
   than the one above, from fully lit at depth 1 down to 0.1 at depth 10
   (darker than any hand-authored dungeon). Dark floors stay readable
   because population places one light per room on the cell closest to the
-  room's centre (torch, brazier or chandelier), and every hidden door
-  gets a flickering `ember` light on the floor cell beside it — the same
-  hint convention the hand-authored dungeons use — so the darkness itself
-  points at where to search.
+  room's centre, drawn from the floor's light rig — mine torches high
+  up, chandeliers in the crystal chamber (6) and the temple (10), a warm
+  golden glow in the abyss (9) — and every hidden door gets a flickering
+  `ember` light on the floor cell beside it — the same hint convention
+  the hand-authored dungeons use — so the darkness itself points at
+  where to search. The mushroom grotto (4) additionally scatters dim
+  bioluminescent glow lights along the room edges.
+- **Blockers** (see 02, step 5b) are thematic, not a difficulty dial:
+  pits on the sunken shaft (3) and the abyss (9), pillars in the crystal
+  chamber (6), the graves (7) and the temple hall around the final boss
+  (10). They shape movement but never wall anything in.
 - **Secrets, items** scale modestly with depth.
 - **Events**: every floor's deck contains all 16 shared world events.
   `getEventsForDungeon` (`src/events/EventsLogic.ts`) shuffles the deck at

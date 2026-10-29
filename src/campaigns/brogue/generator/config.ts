@@ -7,6 +7,13 @@
 
 import { MonsterType } from '../../../types';
 import type { Item } from '../../../types';
+import type { DeclarativeLightOptions } from '../../../dungeon/dungeonParser';
+import {
+  brazier,
+  chandelier,
+  goldenGlow,
+  torch,
+} from '../../../dungeon/LightSources';
 import { MID_TIER_MONSTER_A, MID_TIER_MONSTER_B } from '../monsters/templates';
 
 /** The fixed campaign seed; every per-dungeon seed derives from it. */
@@ -42,6 +49,20 @@ export type DepthConfig = {
   items: number;
   /** Per-room monster cap. */
   maxMonstersPerRoom: number;
+  /**
+   * Light types the per-room central light picks from. Omitted floors use
+   * the standard rig (torch/brazier/chandelier).
+   */
+  lightRig?: DeclarativeLightOptions[];
+  /** Pillars placed in room interiors, drawn uniformly in [min, max]. */
+  pillarMin?: number;
+  pillarMax?: number;
+  /** Pits placed in room interiors, drawn uniformly in [min, max]. */
+  pitMin?: number;
+  pitMax?: number;
+  /** Extra dim glow lights along room edges, drawn uniformly in [min, max]. */
+  glowMin?: number;
+  glowMax?: number;
 };
 
 const DEPTH_CONFIGS: Record<number, DepthConfig> = {
@@ -76,6 +97,7 @@ const DEPTH_CONFIGS: Record<number, DepthConfig> = {
     secretsMax: 1,
     items: 2,
     maxMonstersPerRoom: 2,
+    lightRig: [torch],
   },
   3: {
     gridSize: 18,
@@ -92,6 +114,9 @@ const DEPTH_CONFIGS: Record<number, DepthConfig> = {
     secretsMax: 1,
     items: 3,
     maxMonstersPerRoom: 2,
+    lightRig: [torch, brazier],
+    pitMin: 2,
+    pitMax: 4,
   },
   4: {
     gridSize: 19,
@@ -108,22 +133,26 @@ const DEPTH_CONFIGS: Record<number, DepthConfig> = {
     secretsMax: 2,
     items: 3,
     maxMonstersPerRoom: 2,
+    lightRig: [brazier],
+    glowMin: 3,
+    glowMax: 5,
   },
   5: {
     gridSize: 20,
-    rooms: 6,
-    blobAreaMin: 8,
-    blobAreaMax: 14,
+    rooms: 5,
+    blobAreaMin: 9,
+    blobAreaMax: 18,
     monsterBudget: 5,
     hiddenDoorChance: 0.1,
     trappedDoorChance: 0.1,
     lockedDoorChance: 0.05,
-    extraDoorChance: 0.2,
+    extraDoorChance: 0.35,
     ambientLight: 0.6,
     secretsMin: 2,
     secretsMax: 2,
     items: 3,
     maxMonstersPerRoom: 3,
+    lightRig: [brazier],
   },
   6: {
     gridSize: 21,
@@ -140,6 +169,9 @@ const DEPTH_CONFIGS: Record<number, DepthConfig> = {
     secretsMax: 2,
     items: 4,
     maxMonstersPerRoom: 3,
+    lightRig: [chandelier],
+    pillarMin: 4,
+    pillarMax: 6,
   },
   7: {
     gridSize: 22,
@@ -147,8 +179,8 @@ const DEPTH_CONFIGS: Record<number, DepthConfig> = {
     blobAreaMin: 9,
     blobAreaMax: 16,
     monsterBudget: 7,
-    hiddenDoorChance: 0.15,
-    trappedDoorChance: 0.1,
+    hiddenDoorChance: 0.2,
+    trappedDoorChance: 0.15,
     lockedDoorChance: 0.1,
     extraDoorChance: 0.25,
     ambientLight: 0.4,
@@ -156,17 +188,20 @@ const DEPTH_CONFIGS: Record<number, DepthConfig> = {
     secretsMax: 3,
     items: 4,
     maxMonstersPerRoom: 3,
+    lightRig: [brazier, chandelier],
+    pillarMin: 3,
+    pillarMax: 5,
   },
   8: {
     gridSize: 23,
-    rooms: 7,
-    blobAreaMin: 9,
-    blobAreaMax: 17,
+    rooms: 10,
+    blobAreaMin: 5,
+    blobAreaMax: 10,
     monsterBudget: 16,
     hiddenDoorChance: 0.15,
     trappedDoorChance: 0.15,
     lockedDoorChance: 0.1,
-    extraDoorChance: 0.28,
+    extraDoorChance: 0.4,
     ambientLight: 0.3,
     secretsMin: 3,
     secretsMax: 3,
@@ -188,6 +223,9 @@ const DEPTH_CONFIGS: Record<number, DepthConfig> = {
     secretsMax: 3,
     items: 5,
     maxMonstersPerRoom: 3,
+    lightRig: [goldenGlow],
+    pitMin: 4,
+    pitMax: 6,
   },
   10: {
     gridSize: 26,
@@ -204,6 +242,9 @@ const DEPTH_CONFIGS: Record<number, DepthConfig> = {
     secretsMax: 4,
     items: 5,
     maxMonstersPerRoom: 3,
+    lightRig: [chandelier],
+    pillarMin: 4,
+    pillarMax: 6,
   },
 };
 

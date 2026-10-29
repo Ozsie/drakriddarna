@@ -48,12 +48,48 @@ describe('depth config table', () => {
     expect(xpBefore(10)).toBeGreaterThanOrEqual(18);
   });
 
-  it('has monotonically non-decreasing room counts and grid sizes', () => {
+  it('has strictly increasing grid sizes and room counts in the supported range', () => {
     const configs = allDepthConfigs();
     for (let i = 1; i < configs.length; i++) {
-      expect(configs[i].rooms).toBeGreaterThanOrEqual(configs[i - 1].rooms);
       expect(configs[i].gridSize).toBeGreaterThan(configs[i - 1].gridSize);
     }
+    // Room counts are deliberately not monotonic: the arena floor (5) and
+    // the dense city floor (8) break the curve on purpose. Every floor
+    // stays within the generator's supported range (3 rooms keeps a
+    // farthest room for the boss, 10 is the ROOM_LETTERS limit).
+    for (const config of configs) {
+      expect(config.rooms).toBeGreaterThanOrEqual(3);
+      expect(config.rooms).toBeLessThanOrEqual(10);
+    }
+  });
+
+  it('shapes the thematic floors as designed', () => {
+    // Floor 5 (The Black Lake): few, large rooms — the boss arena.
+    const arena = getDepthConfig(5);
+    expect(arena.rooms).toBeLessThanOrEqual(5);
+    expect(arena.blobAreaMax).toBeGreaterThanOrEqual(18);
+    // Floor 8 (The Lost City): many small rooms — the house clusters.
+    const city = getDepthConfig(8);
+    expect(city.rooms).toBeGreaterThanOrEqual(9);
+    expect(city.blobAreaMax).toBeLessThanOrEqual(10);
+  });
+
+  it('configures blockers, glows and light rigs on the thematic floors', () => {
+    // Pits: the sunken shaft (3) and the abyss (9).
+    expect(getDepthConfig(3).pitMin).toBeDefined();
+    expect(getDepthConfig(9).pitMin).toBeDefined();
+    // Pillars: the crystal chamber (6), the graves (7) and the temple (10).
+    expect(getDepthConfig(6).pillarMin).toBeDefined();
+    expect(getDepthConfig(7).pillarMin).toBeDefined();
+    expect(getDepthConfig(10).pillarMin).toBeDefined();
+    // Glows: the mushroom grotto (4).
+    expect(getDepthConfig(4).glowMin).toBeDefined();
+    // Light rigs: mine torches (2), crystal chandeliers (6), the abyss's
+    // golden glow (9), temple chandeliers (10).
+    expect(getDepthConfig(2).lightRig).toHaveLength(1);
+    expect(getDepthConfig(6).lightRig).toHaveLength(1);
+    expect(getDepthConfig(9).lightRig).toHaveLength(1);
+    expect(getDepthConfig(10).lightRig).toHaveLength(1);
   });
 
   it('keeps every range well-formed and every probability in [0, 1]', () => {
@@ -71,6 +107,16 @@ describe('depth config table', () => {
       }
       expect(config.ambientLight).toBeGreaterThan(0);
       expect(config.ambientLight).toBeLessThanOrEqual(1);
+      for (const range of [
+        [config.pillarMin, config.pillarMax],
+        [config.pitMin, config.pitMax],
+        [config.glowMin, config.glowMax],
+      ]) {
+        if (range[0] !== undefined) {
+          expect(range[0]).toBeGreaterThanOrEqual(0);
+          expect(range[1] ?? range[0]).toBeGreaterThanOrEqual(range[0]);
+        }
+      }
     }
   });
 

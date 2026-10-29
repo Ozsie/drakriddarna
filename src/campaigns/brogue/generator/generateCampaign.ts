@@ -12,7 +12,7 @@ import { populate, type PopulationDecks } from './populationGenerator';
  * checked-in fallback seeds, then the `nextDungeon` chain.
  */
 
-/** Retry bound per depth; measured usage is 1-3 attempts (see tests). */
+/** Retry bound per depth; measured usage is 1-5 attempts (see tests). */
 export const MAX_ATTEMPTS = 50;
 
 /**
@@ -25,7 +25,7 @@ export const FALLBACK_SEEDS: Record<number, number> = {
   2: 3,
   3: 1,
   4: 1,
-  5: 1,
+  5: 4,
   6: 2,
   7: 1,
   8: 1,

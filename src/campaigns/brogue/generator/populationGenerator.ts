@@ -11,6 +11,7 @@ import {
   brazier,
   chandelier,
   ember,
+  glow,
   torch,
 } from '../../../dungeon/LightSources';
 import { createRig, type Rig } from './rng';
@@ -58,6 +59,13 @@ export type PopulationDecks = {
 };
 
 type Cell = { x: number; y: number };
+
+const ORTHOGONAL_OFFSETS = [
+  { dx: 0, dy: -1 },
+  { dx: 0, dy: 1 },
+  { dx: -1, dy: 0 },
+  { dx: 1, dy: 0 },
+];
 
 const EQUIPMENT_SECRET_NAME = 'campaign.brogue.secrets.randomEquipment';
 const TRAP_DOOR_SECRET_NAME = 'campaign.brogue.secrets.trapDoor';
@@ -138,6 +146,152 @@ export const populate = (
       decks.equipment.map((item) => equipmentLootWeight(item, depth)),
     );
 
+  const doorCellKeys = new Set(doorCells.map(cellKey));
+  const blockers = new Set<string>();
+  const gridAt = (cell: Cell): string | undefined =>
+    cell.y >= 0 &&
+    cell.y < grid.length &&
+    cell.x >= 0 &&
+    cell.x < (grid[cell.y]?.length ?? 0)
+      ? grid[cell.y][cell.x]
+      : undefined;
+  const isWallAdjacent = (cell: Cell): boolean =>
+    ORTHOGONAL_OFFSETS.some(
+      ({ dx, dy }) => gridAt({ x: cell.x + dx, y: cell.y + dy }) === '#',
+    );
+
+  // --- Boss room (floors 5 and 10) -----------------------------------------
+  // The boss goes in the room farthest from the start room in door-graph
+  // hops; that room must have at least two doors so the fight is not a
+  // one-chokepoint stalemate, otherwise the attempt is rejected. The room
+  // is resolved before the blockers so pillars can prefer it (the temple
+  // hall around the final boss).
+  const bossType = BOSS_FLOORS[depth];
+  let bossRoom: string | undefined;
+  if (bossType) {
+    const farthest = letters
+      .filter((letter) => letter !== startRoom)
+      .sort(
+        (a, b) =>
+          (distances.get(b) ?? 0) - (distances.get(a) ?? 0) || (a < b ? -1 : 1),
+      );
+    bossRoom = farthest.find((letter) => (doorCounts.get(letter) ?? 0) >= 2);
+    if (!bossRoom) {
+      throw new PopulationError(
+        'No far room with two doors available for the boss',
+      );
+    }
+  }
+
+  // --- Blockers: pillars and pits -------------------------------------------
+  // Placed before monsters, items and secrets so every later placement
+  // sees them as occupied. A blocker only goes on a room cell that keeps
+  // every remaining free cell of its room connected to a door cell (flood
+  // fill per candidate), so nothing placed later can be walled in, and
+  // never beside a doorway so the mouth of a door stays open. Wall-adjacent
+  // cells are preferred: pillars read as columns or sarcophagi along the
+  // room edge, pits as floor that has given way at the room's rim.
+  const pillars: [number, number][] = [];
+  const pits: [number, number][] = [];
+  if (config.pillarMin !== undefined || config.pitMin !== undefined) {
+    const doorAdjacentKeys = new Set<string>();
+    for (const cell of doorCells) {
+      for (const { dx, dy } of ORTHOGONAL_OFFSETS) {
+        doorAdjacentKeys.add(cellKey({ x: cell.x + dx, y: cell.y + dy }));
+      }
+    }
+
+    const keepsRoomConnected = (letter: string, candidate: Cell): boolean => {
+      const roomKeys = new Set((rooms.get(letter) ?? []).map(cellKey));
+      const blocked = new Set([...blockers, cellKey(candidate)]);
+      const seeds = (rooms.get(letter) ?? []).filter(
+        (cell) =>
+          doorCellKeys.has(cellKey(cell)) && !blocked.has(cellKey(cell)),
+      );
+      if (seeds.length === 0) return false;
+      const seen = new Set(seeds.map(cellKey));
+      const queue = [...seeds];
+      while (queue.length > 0) {
+        const current = queue.pop() as Cell;
+        for (const { dx, dy } of ORTHOGONAL_OFFSETS) {
+          const key = cellKey({ x: current.x + dx, y: current.y + dy });
+          if (!roomKeys.has(key) || seen.has(key) || blocked.has(key)) {
+            continue;
+          }
+          seen.add(key);
+          queue.push({ x: current.x + dx, y: current.y + dy });
+        }
+      }
+      for (const key of roomKeys) {
+        if (!blocked.has(key) && !seen.has(key)) return false;
+      }
+      return true;
+    };
+
+    type BlockerCandidate = {
+      letter: string;
+      cell: Cell;
+      wallAdjacent: boolean;
+      preferred: boolean;
+    };
+
+    const placeBlockers = (
+      count: number,
+      target: [number, number][],
+      preferBossRoom: boolean,
+    ): void => {
+      for (let i = 0; i < count; i++) {
+        const candidates: BlockerCandidate[] = [];
+        for (const letter of letters) {
+          for (const cell of rooms.get(letter) ?? []) {
+            const key = cellKey(cell);
+            if (
+              occupied.has(key) ||
+              blockers.has(key) ||
+              doorAdjacentKeys.has(key)
+            ) {
+              continue;
+            }
+            candidates.push({
+              letter,
+              cell,
+              wallAdjacent: isWallAdjacent(cell),
+              preferred: preferBossRoom && letter === bossRoom,
+            });
+          }
+        }
+        const valid = candidates.filter((candidate) =>
+          keepsRoomConnected(candidate.letter, candidate.cell),
+        );
+        // Preference tiers: boss room first (floor 10's temple hall), then
+        // wall-adjacent cells, then anywhere that stays connected.
+        const tier =
+          [
+            valid.filter((c) => c.preferred && c.wallAdjacent),
+            valid.filter((c) => c.preferred),
+            valid.filter((c) => c.wallAdjacent),
+            valid,
+          ].find((pool) => pool.length > 0) ?? [];
+        if (tier.length === 0) return;
+        const chosen = rig.pick(tier);
+        blockers.add(cellKey(chosen.cell));
+        occupied.add(cellKey(chosen.cell));
+        target.push([chosen.cell.x, chosen.cell.y]);
+      }
+    };
+
+    const pillarCount =
+      config.pillarMin !== undefined
+        ? rig.intInRange(config.pillarMin, config.pillarMax ?? config.pillarMin)
+        : 0;
+    placeBlockers(pillarCount, pillars, true);
+    const pitCount =
+      config.pitMin !== undefined
+        ? rig.intInRange(config.pitMin, config.pitMax ?? config.pitMin)
+        : 0;
+    placeBlockers(pitCount, pits, false);
+  }
+
   const monsters: DeclarativeMonster[] = [];
   const monsterCountByRoom = new Map<string, number>(
     letters.map((letter) => [letter, 0]),
@@ -168,25 +322,9 @@ export const populate = (
   };
 
   // --- Boss (floors 5 and 10) ---------------------------------------------
-  // The boss goes in the room farthest from the start room in door-graph
-  // hops; that room must have at least two doors so the fight is not a
-  // one-chokepoint stalemate, otherwise the attempt is rejected.
-  const bossType = BOSS_FLOORS[depth];
-  if (bossType) {
-    const farthest = letters
-      .filter((letter) => letter !== startRoom)
-      .sort(
-        (a, b) =>
-          (distances.get(b) ?? 0) - (distances.get(a) ?? 0) || (a < b ? -1 : 1),
-      );
-    const bossRoom = farthest.find(
-      (letter) => (doorCounts.get(letter) ?? 0) >= 2,
-    );
-    if (!bossRoom) {
-      throw new PopulationError(
-        'No far room with two doors available for the boss',
-      );
-    }
+  // The room was resolved above, before the blockers; the boss itself is
+  // placed after them so it can never stand on a pillar or pit cell.
+  if (bossType && bossRoom) {
     if (!placeMonster(bossType, bossRoom)) {
       throw new PopulationError('No free cell for the boss');
     }
@@ -285,17 +423,21 @@ export const populate = (
 
   // --- Lights ----------------------------------------------------------------
   // Dark floors get one light per room, placed on the cell closest to the
-  // room's centre so the whole room reads as lit. Every hidden door gets a
-  // flickering ember on the floor cell beside it — the hint convention of
-  // the hand-authored dungeons — so the darkness itself points at where to
-  // search.
+  // room's centre so the whole room reads as lit; the type is drawn from
+  // the floor's light rig (mine torches high up, chandeliers in the
+  // crystal chamber and the temple, a warm golden glow in the abyss).
+  // Floors with a glow count scatter extra dim lights along the room
+  // edges (the mushroom grotto's bioluminescence). Every hidden door gets
+  // a flickering ember on the floor cell beside it — the hint convention
+  // of the hand-authored dungeons — so the darkness itself points at where
+  // to search.
   const lights: DeclarativeLayout['lights'] = [];
   if (config.ambientLight < 1) {
-    const doorCellKeys = new Set(doorCells.map(cellKey));
     for (const letter of letters) {
       const cells = rooms.get(letter) ?? [];
       const nonDoorCells = cells.filter(
-        (cell) => !doorCellKeys.has(cellKey(cell)),
+        (cell) =>
+          !doorCellKeys.has(cellKey(cell)) && !blockers.has(cellKey(cell)),
       );
       const candidates = nonDoorCells.length > 0 ? nonDoorCells : cells;
       const centreX =
@@ -312,13 +454,43 @@ export const populate = (
             a.x - b.x,
         )[0];
       if (!cell) continue;
-      const type = rig.pick([torch, brazier, chandelier]);
+      const type = rig.pick(config.lightRig ?? [torch, brazier, chandelier]);
       lights.push([
         cell.x,
         cell.y,
         type === chandelier ? CellAlignment.CEILING : CellAlignment.CENTER,
         type,
       ]);
+    }
+
+    if (config.glowMin !== undefined) {
+      const glowCount = rig.intInRange(
+        config.glowMin,
+        config.glowMax ?? config.glowMin,
+      );
+      const lightKeys = new Set(
+        lights.map((light) => {
+          const [x, y] = light as [number, number];
+          return `${x},${y}`;
+        }),
+      );
+      for (let i = 0; i < glowCount; i++) {
+        const candidates = letters.flatMap((letter) =>
+          (rooms.get(letter) ?? []).filter((cell) => {
+            const key = cellKey(cell);
+            return (
+              !doorCellKeys.has(key) &&
+              !blockers.has(key) &&
+              !lightKeys.has(key) &&
+              isWallAdjacent(cell)
+            );
+          }),
+        );
+        if (candidates.length === 0) break;
+        const cell = rig.pick(candidates);
+        lightKeys.add(cellKey(cell));
+        lights.push([cell.x, cell.y, CellAlignment.CENTER, glow]);
+      }
     }
   }
 
@@ -399,6 +571,8 @@ export const populate = (
       items,
       secrets,
       ...(lights.length > 0 ? { lights } : {}),
+      ...(pillars.length > 0 ? { pillars } : {}),
+      ...(pits.length > 0 ? { pits } : {}),
     },
     events,
     placedMagicItemId: magicItem.id ?? '',
