@@ -69,6 +69,8 @@ export interface RunDungeonOptions {
   seed?: number;
   maxTurns?: number;
   levelUpHeroes?: boolean;
+  /** Experience granted to every hero before the run (then leveled up). */
+  heroExperience?: number;
 }
 
 /**
@@ -84,6 +86,7 @@ export const runSingleGame = async (
     seed,
     maxTurns = 150,
     levelUpHeroes = false,
+    heroExperience,
   } = options;
 
   const gmId = gameMasterId ?? DEFAULT_GAME_MASTER_ID;
@@ -122,9 +125,13 @@ export const runSingleGame = async (
 
     // Model campaign progression: level the party up as if it had already
     // cleared earlier campaign dungeons before the benchmarked one.
-    if (levelUpHeroes) {
+    // `heroExperience` grants an exact amount (e.g. the XP a generated
+    // campaign's earlier floors yield); `levelUpHeroes` keeps the legacy
+    // fixed +5 model.
+    if (heroExperience !== undefined || levelUpHeroes) {
+      const xp = heroExperience ?? 5;
       state.heroes.forEach((hero) => {
-        (hero as Hero).experience += 5;
+        (hero as Hero).experience += xp;
       });
       levelUp(state);
       resetLiveHeroes(state);
@@ -278,6 +285,7 @@ export const runGameMasterBenchmark = async (options: {
   startSeed?: number;
   maxTurns?: number;
   levelUpHeroes?: boolean;
+  heroExperience?: number;
 }): Promise<GameMasterBenchmarkSummary> => {
   const {
     gameMasterId,
@@ -287,6 +295,7 @@ export const runGameMasterBenchmark = async (options: {
     campaignId,
     maxTurns,
     levelUpHeroes,
+    heroExperience,
   } = options;
 
   const gmId = gameMasterId ?? DEFAULT_GAME_MASTER_ID;
@@ -302,6 +311,7 @@ export const runGameMasterBenchmark = async (options: {
       seed,
       maxTurns,
       levelUpHeroes,
+      heroExperience,
     });
     results.push({ ...res, runId: i + 1 });
   }

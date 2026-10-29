@@ -7,20 +7,20 @@ run `npm run check && npm test && npm run lint` after every step.
 
 Ground rules (apply to every phase):
 
-- Comments explain *why* and *what a thing is for*, never restate the code.
+- Comments explain _why_ and _what a thing is for_, never restate the code.
 - No changes to game behavior, game text, or content — this is documentation
   and structure only. The AI policy in AGENTS.md applies: no AI-authored
   in-game text.
 - Prefer deleting or merging over adding when two things describe the same
   concept.
-- Do not let TECHNICAL.md or the docs/*-definition.md specs drift — if a
+- Do not let TECHNICAL.md or the docs/\*-definition.md specs drift — if a
   phase touches something they describe, update them in the same change.
 
 ## Current state (what to build on)
 
 Strengths that already exist:
 
-- AGENTS.md, TECHNICAL.md, RULES.md and docs/*-definition.md give a good
+- AGENTS.md, TECHNICAL.md, RULES.md and docs/\*-definition.md give a good
   top-level map.
 - File naming already encodes role: `*Logic.ts` (game rules), `*Rendering.ts`
   (canvas drawing), `*Controller.ts` (input wiring), `*.test.ts` colocated.
@@ -101,7 +101,7 @@ actually use:
 - The description prose is the point. TypeScript already documents parameter
   and return shapes, so do **not** add `@param`/`@returns` unless the tag
   says something the signature cannot (e.g. units, invariants, side effects).
-- Use `@see` to point at RULES.md and the docs/*-definition.md specs instead
+- Use `@see` to point at RULES.md and the docs/\*-definition.md specs instead
   of duplicating what they say — those specs remain the authority for content
   authors.
 - Use `{@link}` sparingly, only where a cross-reference genuinely helps

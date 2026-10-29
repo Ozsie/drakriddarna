@@ -1,0 +1,58 @@
+{
+  "brogue": {
+    "name": "De Glömda Grottorna",
+    "secrets": {
+      "randomEquipment": "Slumpmässig Utrustning",
+      "trapDoor": "Fälla"
+    },
+    "weapons": {
+      "magicMissile": "Magisk missil"
+    },
+    "armour": {
+      "sorcererArmour": "Skrud"
+    },
+    "shields": {
+      "sorcererShield": "Magiskt skydd"
+    },
+    "floor1": {
+      "name": "Den gamla gruvan",
+      "intro": "En gammal, sedan länge övergiven gruva öppnar sig framför er när ni stiger ner i De Glömda Grottorna."
+    },
+    "floor2": {
+      "name": "Malmgångarna",
+      "intro": "Rostig räls leder djupare in i trånga gångar där gruvarbetarna en gång letade efter silver. Tunga trästöttor knakar över era huvuden, och någonstans längre bort hörs ett rasslande ljud."
+    },
+    "floor3": {
+      "name": "Det sjunkna schaktet",
+      "intro": "Golvet har gett vika och gruvschaktet sträcker sig djupt ner i mörkret. Repen hänger söndertrasade, och kall luft stiger upp från underjorden."
+    },
+    "floor4": {
+      "name": "Svampgrottan",
+      "intro": "Gruvans mänskliga spår tunnas ut och naturen tar över. Bleka svampar lyser svagt längs väggarna, och luften är tung av fukt och mögel."
+    },
+    "floor5": {
+      "name": "Den svarta sjön",
+      "intro": "Ni når en jättelik grotta med en sedan länge uttorkad sjö. Inget ljud hörs förutom droppar som faller från taket, men något rör sig i mörkret."
+    },
+    "floor6": {
+      "name": "Kristallkammaren",
+      "intro": "Väggarna glittrar av kristaller som bryter ljuset från era facklor i tusen riktningar. Skönheten är bedräglig, för skuggorna mellan pelarna tycks röra sig av sig själva."
+    },
+    "floor7": {
+      "name": "De glömda gravarna",
+      "intro": "Här nere vilade de som en gång grävde sig ner i berget. Stenkistor står uppställda längs väggarna, och inte alla är lika stilla som de borde vara."
+    },
+    "floor8": {
+      "name": "Den förlorade staden",
+      "intro": "Bortom gravarna öppnar sig en hel underjordisk stad av söndertrasade stenhus och raserade torg. De som byggde den lämnade den i hast, och något har flyttat in i deras ställe."
+    },
+    "floor9": {
+      "name": "Ödets avgrund",
+      "intro": "Stigen smalnar av till en bräcklig bro över ett bottenlöst gap. Från djupet stiger en het, kvav vind, och långt därnere skymtar ett svagt, gyllene sken."
+    },
+    "floor10": {
+      "name": "Den döde gudens tempel",
+      "intro": "Ett uråldrigt tempel helgat åt en sedan länge död gud möter er när ni når den djupaste delen av grottorna."
+    }
+  }
+}
