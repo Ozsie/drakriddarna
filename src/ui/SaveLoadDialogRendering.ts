@@ -107,7 +107,12 @@ export const getSaveLoadDialogLayout = (
     rows: [],
     footerText: '',
   };
-  if (!state || viewWidth <= 0 || viewHeight <= 0) return emptyLayout;
+  // The load dialog also opens over the welcome screen, where no game
+  // state exists yet; only save mode requires one (it prefills the name
+  // from the current dungeon and saves the live run).
+  if ((mode === 'save' && !state) || viewWidth <= 0 || viewHeight <= 0) {
+    return emptyLayout;
+  }
 
   const marginX = Math.max(12, Math.floor(viewWidth * 0.05));
   const marginY = Math.max(12, Math.floor(viewHeight * 0.05));

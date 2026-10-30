@@ -100,6 +100,7 @@ export const init = (
   campaignId: string = DEFAULT_CAMPAIGN_ID,
   gameMasterId: string = DEFAULT_GAME_MASTER_ID,
   speedrunSeed?: number,
+  heroes?: Hero[],
 ): GameState => {
   // Seed the rng before anything shuffles or rolls: with a seed the
   // whole run is reproducible; without one the rng is truly random.
@@ -109,6 +110,13 @@ export const init = (
     resetRng();
   }
   const campaign = structuredClone(getCampaign(campaignId));
+  // The hero selection screen's override replaces the roster inside the
+  // cloned campaign (the registered campaign object is never mutated);
+  // the override heroes are already deep clones of the roster heroes
+  // with the player's names applied.
+  if (heroes && heroes.length > 0) {
+    campaign.heroes = heroes;
+  }
   const selectedGameMaster = getGameMaster(gameMasterId);
 
   let dungeonEvents = getEventsForDungeon(

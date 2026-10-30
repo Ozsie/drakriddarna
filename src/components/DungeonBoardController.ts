@@ -11,9 +11,16 @@ import {
   gameStateStore,
   handleCanvasClick,
   saveGame,
+  syncStore,
   toggleHeroInventory,
   useHeroItem,
 } from '../store/gameStateStore';
+import {
+  enterGamePhase,
+  setWelcomeView,
+  type AppPhase,
+  type WelcomeView,
+} from '../store/appPhaseStore';
 import {
   doMouseLogic,
   getCursorType,
@@ -73,9 +80,44 @@ import {
   renderBetweenDungeons,
   getBetweenDungeonsHit,
   renderDebugPrintout,
+  renderWelcome,
+  renderWelcomeBackground,
+  renderWelcomeFooter,
+  getWelcomeHit,
+  getNewGameDialogHit,
+  getSaveLoadDialogHit,
+  renderHeroSelection,
+  getHeroSelectionHit,
+  getHeroSelectionLayout,
+  buildSelectedHeroes,
+  getDefaultSelectedHeroIds,
+  getMaxHeroes,
+  toggleHeroSelection,
+  clampHeroName,
+  isHeroSelectionStartEnabled,
+  MAX_HERO_NAME_LENGTH,
+  renderSettings,
+  renderCredits,
+  getSettingsHit,
+  getCreditsHit,
+  getSettingsLayout,
+  getSliderValueFromX,
   emojiCursor,
   isCompactUi,
+  type HeroSelectionHitResult,
+  type HeroSelectionOptions,
+  type NewGameDialogHitResult,
+  type SaveLoadDialogHitResult,
+  type SettingsRowId,
+  type WelcomeButtonId,
 } from '../ui/UIRendering';
+import { getCampaign } from '../campaigns';
+import {
+  appSettingsStore,
+  applyAppSettings,
+  mirrorMusicSetting,
+  updateAppSettings,
+} from '../settings/AppSettings';
 import {
   setBetweenDungeonsStep,
   selectTradeItem,
@@ -122,6 +164,8 @@ import {
   createBoardHoverState,
   updateBetweenDungeonsHover,
   updateHoverForUiHit,
+  updateNewGameDialogHover,
+  updateSaveLoadDialogHover,
   type HoverResult,
 } from './DungeonBoardHover';
 
@@ -310,6 +354,34 @@ export class DungeonBoardController {
   // ignored.
   private mobileEventsOpen = false;
   private mobileDiaryOpen = false;
+  // --- welcome phase --------------------------------------------------------
+  // The app phase and the welcome sub view, pushed from the stores by the
+  // Svelte component (same glue as the radial menu and locale). In the
+  // 'welcome' phase the board renders the welcome UI and gates every
+  // gameplay surface off.
+  private appPhase: AppPhase = 'welcome';
+  private welcomeView: WelcomeView = 'main';
+  private hoveredWelcomeButton: WelcomeButtonId | null = null;
+  // Hero selection (reached only from the new-game dialog in the welcome
+  // phase). The selected ids are in roster order; names are the player's
+  // typed overrides by hero id.
+  private heroSelectionCampaignId: string | null = null;
+  private heroSelectionGameMasterId: string | undefined;
+  private heroSelectionSpeedrunSeed: number | undefined;
+  private heroSelectionIds: string[] = [];
+  private heroSelectionNames: Record<string, string> = {};
+  private heroSelectionFocusedId: string | null = null;
+  private hoveredHeroSelectionId: string | null = null;
+  private isHsActionHovered = false;
+  private isHsSecondaryHovered = false;
+  // Settings/credits hovers and the live volume-slider drag (the drag
+  // keeps tracking the pointer until it is released, even outside the
+  // track).
+  private hoveredSettingsRowId: SettingsRowId | null = null;
+  private isSettingsBackHovered = false;
+  private hoveredCreditsRowId: string | null = null;
+  private isCreditsBackHovered = false;
+  private settingsSliderDrag: 'musicVolume' | 'audioVolume' | null = null;
 
   private menuCallbacks: MenuCallbacks = {
     setView: (view: MenuView) => {
@@ -325,7 +397,16 @@ export class DungeonBoardController {
       this.renderUiLayer(true);
     },
     setState: (nextState: GameState) => {
-      this.props.onExternalStateChange(nextState);
+      if (this.appPhase === 'welcome') {
+        // The welcome phase has no external state: adopting a dialog-built
+        // state goes through the store so the reload guard is written and
+        // the phase switches to the game (the dialog logic already ran
+        // loadState on it).
+        syncStore(nextState, true);
+        enterGamePhase();
+      } else {
+        this.props.onExternalStateChange(nextState);
+      }
       this.renderCanvas(true);
     },
     openSaveDialog: () => {
@@ -366,13 +447,16 @@ export class DungeonBoardController {
     this.syncGameInputEnabled();
 
     if (browser) {
-      const isMusicEnabled = props.activeState?.settings?.['music'] !== false;
-      const isSoundEnabled =
-        props.activeState?.settings?.['sound'] !== false &&
-        props.activeState?.settings?.['soundEffects'] !== false;
-      musicManager.setMuted(!isMusicEnabled);
-      soundEffectManager.setMuted(!isSoundEnabled);
-      if (props.dungeon && isMusicEnabled) {
+      // The app settings are the single source of truth for audio: they
+      // are applied to both managers and the music state mirrors into
+      // the game state's saved field (loading a save never overwrites
+      // the app setting).
+      const appSettings = get(appSettingsStore);
+      applyAppSettings(appSettings);
+      if (props.activeState) {
+        mirrorMusicSetting(appSettings);
+      }
+      if (props.dungeon && appSettings.musicOn) {
         musicManager.playDungeonMusic(
           props.dungeon.music,
           props.dungeon.musicTension,
@@ -505,6 +589,22 @@ export class DungeonBoardController {
   onLocaleChange(next: string): void {
     if (this.mounted && next && next !== this.lastLocale) {
       this.lastLocale = next;
+      this.renderCanvas(true);
+    }
+  }
+
+  /** Called by the component when the app phase or welcome view changes. */
+  onAppPhaseChange(phase: AppPhase, view: WelcomeView): void {
+    const phaseChanged = phase !== this.appPhase;
+    const viewChanged = view !== this.welcomeView;
+    if (!phaseChanged && !viewChanged) return;
+    this.appPhase = phase;
+    this.welcomeView = view;
+    if (phaseChanged) {
+      this.hoveredWelcomeButton = null;
+    }
+    this.syncGameInputEnabled();
+    if (this.mounted) {
       this.renderCanvas(true);
     }
   }
@@ -1322,6 +1422,75 @@ export class DungeonBoardController {
     }
   };
 
+  // The welcome phase's UI layer: background image (or fallback), the
+  // active welcome view's panel, the build footer, and any open dialog on
+  // top. The dialogs capture all input while open, exactly as they do
+  // from the canvas menu.
+  private renderWelcomeLayer = (ctx: CanvasRenderingContext2D): void => {
+    renderWelcomeBackground(ctx, this.containerWidth, this.containerHeight);
+    if (this.welcomeView === 'heroSelection' && this.heroSelectionCampaignId) {
+      renderHeroSelection(
+        ctx,
+        this.containerWidth,
+        this.containerHeight,
+        this.heroSelectionCampaignId,
+        this.heroSelectionOptions(),
+      );
+    } else if (this.welcomeView === 'settings') {
+      renderSettings(
+        ctx,
+        this.containerWidth,
+        this.containerHeight,
+        get(appSettingsStore),
+        {
+          hoveredRowId: this.hoveredSettingsRowId,
+          hoveredBack: this.isSettingsBackHovered,
+        },
+      );
+    } else if (this.welcomeView === 'credits') {
+      renderCredits(ctx, this.containerWidth, this.containerHeight, {
+        hoveredRowId: this.hoveredCreditsRowId,
+        hoveredBack: this.isCreditsBackHovered,
+      });
+    } else {
+      renderWelcome(ctx, this.containerWidth, this.containerHeight, {
+        buildInfo,
+        hoveredButton:
+          this.welcomeView === 'main' ? this.hoveredWelcomeButton : null,
+      });
+    }
+    renderWelcomeFooter(
+      ctx,
+      this.containerWidth,
+      this.containerHeight,
+      buildInfo,
+    );
+    if (this.isNewGameDialogOpen) {
+      renderNewGameDialog(
+        ctx,
+        this.containerWidth,
+        this.containerHeight,
+        this.newGameDialogOptions(),
+      );
+    }
+    if (this.saveLoadDialogMode) {
+      renderSaveLoadDialog(
+        ctx,
+        this.containerWidth,
+        this.containerHeight,
+        this.activeState,
+        {
+          mode: this.saveLoadDialogMode,
+          callbacks: this.menuCallbacks,
+          saveName: this.saveNameInput,
+          hoveredItemId: this.hover.hoveredMenuItemId,
+          hoveredAction: this.hover.isSdActionHovered,
+          hoveredSecondary: this.hover.isSdSecondaryHovered,
+        },
+      );
+    }
+  };
+
   private renderUiLayer = (force = false) => {
     if (!browser || !this.uiCanvas) return;
     const eventCardCollapsed = this.effectiveEventCardCollapsed;
@@ -1401,6 +1570,9 @@ export class DungeonBoardController {
       this.hover.isDungeonIntroCloseHovered,
     )}:${String(String(String(this.activeState?.dungeon?.intro ?? '')))}`;
     const currentDebug = this.debugMode;
+    const welcomeSig = `${String(this.appPhase)}:${String(
+      this.welcomeView,
+    )}:${String(this.hoveredWelcomeButton)}`;
     const menuSig = `${String(String(String(this.isCanvasMenuOpen)))}:${String(
       this.currentMenuView,
     )}:${String(String(this.hover.hoveredMenuItemId))}:${String(
@@ -1444,7 +1616,7 @@ export class DungeonBoardController {
       String(String(diarySig)),
     )},${String(String(eventSig))},${String(String(introSig))},${String(
       String(String(menuSig)),
-    )}`;
+    )},${String(String(welcomeSig))}`;
     if (!force && sig === this.lastUiSignature) return;
     this.lastUiSignature = sig;
 
@@ -1455,6 +1627,19 @@ export class DungeonBoardController {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.uiCanvas.width, this.uiCanvas.height);
     ctx.restore();
+
+    // Welcome phase: the welcome UI owns the whole layer; no board or
+    // gameplay UI is drawn behind it.
+    if (this.appPhase === 'welcome') {
+      if (this.containerWidth > 0 && this.containerHeight > 0) {
+        const ratio = this.canvasRatio;
+        ctx.save();
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        this.renderWelcomeLayer(ctx);
+        ctx.restore();
+      }
+      return;
+    }
 
     if (
       this.containerWidth > 0 &&
@@ -1690,6 +1875,15 @@ export class DungeonBoardController {
   };
 
   private onWindowMouseMove = (event: MouseEvent) => {
+    // A volume-slider drag keeps tracking the pointer (even outside the
+    // track) until it is released.
+    if (this.settingsSliderDrag) {
+      const point = this.screenPointFromEvent(event);
+      if (point) {
+        this.updateSliderFromPointer(point);
+      }
+      return;
+    }
     if (this.isDragging) {
       const dx = event.clientX - this.dragStartX;
       const dy = event.clientY - this.dragStartY;
@@ -1703,6 +1897,9 @@ export class DungeonBoardController {
   };
 
   private onWindowMouseUp = () => {
+    if (this.settingsSliderDrag) {
+      this.settingsSliderDrag = null;
+    }
     if (this.isLogHeld || this.isLogOpen) {
       this.isLogHeld = false;
       this.isLogOpen = false;
@@ -1720,6 +1917,7 @@ export class DungeonBoardController {
   };
 
   public onTouchStart = (event: TouchEvent) => {
+    if (this.appPhase === 'welcome') return;
     const started = handleTwoFingerTouchStart(
       event.touches,
       { x: this.panX, y: this.panY },
@@ -1734,6 +1932,7 @@ export class DungeonBoardController {
   };
 
   public onTouchMove = (event: TouchEvent) => {
+    if (this.appPhase === 'welcome') return;
     const result = handleTwoFingerTouchMove(event.touches, this.touchPanState);
     if (result) {
       this.panX = result.panX;
@@ -1749,6 +1948,7 @@ export class DungeonBoardController {
   };
 
   public onTouchEnd = (event: TouchEvent) => {
+    if (this.appPhase === 'welcome') return;
     const result = handleTwoFingerTouchEnd(event.touches, this.touchPanState, {
       x: this.panX,
       y: this.panY,
@@ -1783,6 +1983,30 @@ export class DungeonBoardController {
     // mode feeds the name input, both modes dismiss on Escape.
     if (this.saveLoadDialogMode) {
       this.handleSaveLoadDialogKeyDown(event);
+      return;
+    }
+    if (this.appPhase === 'welcome') {
+      // Escape acts as Back on the welcome sub views; on the main view
+      // there is nothing to dismiss. While a rename input is focused it
+      // only defocuses the input.
+      if (this.welcomeView === 'heroSelection') {
+        if (this.heroSelectionFocusedId) {
+          this.handleHeroRenameKeyDown(event);
+          return;
+        }
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          this.backFromHeroSelection();
+        }
+        return;
+      }
+      if (event.key === 'Escape') {
+        if (this.welcomeView === 'settings') {
+          setWelcomeView('main');
+        } else if (this.welcomeView === 'credits') {
+          setWelcomeView('settings');
+        }
+      }
       return;
     }
     if (event.key === 'Escape' && get(radialMenuStore)) {
@@ -1833,7 +2057,8 @@ export class DungeonBoardController {
    */
   private syncGameInputEnabled(): void {
     inputManager.setEnabled(
-      !this.isCanvasMenuOpen &&
+      this.appPhase !== 'welcome' &&
+        !this.isCanvasMenuOpen &&
         !this.saveLoadDialogMode &&
         !this.isNewGameDialogOpen &&
         !this.showDungeonIntro &&
@@ -1916,12 +2141,20 @@ export class DungeonBoardController {
   private openNewGameDialog(): void {
     this.isCanvasMenuOpen = false;
     this.currentMenuView = 'main';
+    const activeState = this.activeState;
+    // In the welcome phase there is no run to preselect from: keep the
+    // previous dialog selections so returning from hero selection (Back)
+    // restores them.
     this.newGameCampaignId =
-      this.activeState?.campaignId ?? DEFAULT_CAMPAIGN_ID;
+      activeState?.campaignId ?? this.newGameCampaignId ?? DEFAULT_CAMPAIGN_ID;
     this.newGameGameMasterId =
-      this.activeState?.gameMaster?.id ?? DEFAULT_GAME_MASTER_ID;
-    this.newGameSpeedrunMode = false;
-    this.newGameSeedInput = String(DEFAULT_SPEEDRUN_SEED);
+      activeState?.gameMaster?.id ??
+      this.newGameGameMasterId ??
+      DEFAULT_GAME_MASTER_ID;
+    if (activeState) {
+      this.newGameSpeedrunMode = false;
+      this.newGameSeedInput = String(DEFAULT_SPEEDRUN_SEED);
+    }
     this.isNewGameDialogOpen = true;
     this.syncGameInputEnabled();
     this.hover.hoveredMenuItemId = null;
@@ -1943,14 +2176,35 @@ export class DungeonBoardController {
 
   /** Starts the selected campaign/game master and closes the dialog. */
   private confirmNewGameDialog = () => {
-    const activeState = this.activeState;
-    if (!activeState) return;
     const parsedSeed = parseInt(this.newGameSeedInput, 10);
     const seed = this.newGameSpeedrunMode
       ? Number.isNaN(parsedSeed)
         ? DEFAULT_SPEEDRUN_SEED
         : parsedSeed
       : undefined;
+    if (this.appPhase === 'welcome') {
+      // Begin advances to the hero selection step; Start there begins
+      // the run with the selected, possibly renamed party.
+      const campaignId = this.newGameCampaignId ?? DEFAULT_CAMPAIGN_ID;
+      this.heroSelectionCampaignId = campaignId;
+      this.heroSelectionGameMasterId =
+        this.newGameGameMasterId ?? DEFAULT_GAME_MASTER_ID;
+      this.heroSelectionSpeedrunSeed = seed;
+      this.heroSelectionIds = getDefaultSelectedHeroIds(
+        getCampaign(campaignId),
+      );
+      this.heroSelectionNames = {};
+      this.heroSelectionFocusedId = null;
+      this.hoveredHeroSelectionId = null;
+      this.isHsActionHovered = false;
+      this.isHsSecondaryHovered = false;
+      this.isNewGameDialogOpen = false;
+      this.syncGameInputEnabled();
+      setWelcomeView('heroSelection');
+      return;
+    }
+    const activeState = this.activeState;
+    if (!activeState) return;
     onNewGame(
       this.newGameCampaignId ?? DEFAULT_CAMPAIGN_ID,
       this.newGameGameMasterId ?? DEFAULT_GAME_MASTER_ID,
@@ -2099,7 +2353,528 @@ export class DungeonBoardController {
     }
   }
 
+  // --- welcome phase input ---------------------------------------------------
+
+  /** Board pixel position of a pointer event, or null without a canvas. */
+  private screenPointFromEvent(
+    event: MouseEvent,
+  ): { x: number; y: number } | null {
+    if (!this.uiCanvas) return null;
+    const rect = this.uiCanvas.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  /** Dispatches a new-game dialog click (game and welcome phases alike). */
+  private handleNewGameDialogHit(ngHit: NewGameDialogHitResult): void {
+    if (ngHit.type === 'campaign') {
+      soundEffectManager.playButtonClick();
+      this.newGameCampaignId = ngHit.campaignId;
+      this.renderUiLayer(true);
+    } else if (ngHit.type === 'gameMaster') {
+      soundEffectManager.playButtonClick();
+      this.newGameGameMasterId = ngHit.gameMasterId;
+      this.renderUiLayer(true);
+    } else if (ngHit.type === 'checkbox') {
+      soundEffectManager.playButtonClick();
+      this.newGameSpeedrunMode = !this.newGameSpeedrunMode;
+      if (this.newGameSpeedrunMode) {
+        this.newGameSeedInput = String(DEFAULT_SPEEDRUN_SEED);
+      }
+      this.renderUiLayer(true);
+    } else if (ngHit.type === 'action') {
+      soundEffectManager.playButtonClick();
+      this.confirmNewGameDialog();
+    } else if (ngHit.type === 'secondary' || ngHit.type === 'backdrop') {
+      soundEffectManager.playButtonClick();
+      this.closeNewGameDialog();
+    }
+  }
+
+  /** Dispatches a save/load dialog click (game and welcome phases alike). */
+  private handleSaveLoadDialogHit(dialogHit: SaveLoadDialogHitResult): void {
+    if (dialogHit.type === 'row' && dialogHit.item) {
+      soundEffectManager.playButtonClick();
+      dialogHit.item.onClick(this.activeState ?? null);
+      this.renderCanvas(true);
+    } else if (dialogHit.type === 'action') {
+      soundEffectManager.playButtonClick();
+      if (this.saveLoadDialogMode === 'save') {
+        this.confirmSaveDialog();
+      } else {
+        this.closeSaveLoadDialog();
+      }
+    } else if (dialogHit.type === 'secondary') {
+      soundEffectManager.playButtonClick();
+      this.closeSaveLoadDialog();
+    } else if (dialogHit.type === 'backdrop') {
+      this.closeSaveLoadDialog();
+    }
+  }
+
+  /** Pointer hover while the welcome phase owns the screen. */
+  private handleWelcomeMouseMove(event: MouseEvent): void {
+    const point = this.screenPointFromEvent(event);
+    if (!point || this.containerWidth <= 0 || this.containerHeight <= 0) {
+      this.boardCursor = 'default';
+      return;
+    }
+    if (this.isNewGameDialogOpen) {
+      const hit = getNewGameDialogHit(
+        this.containerWidth,
+        this.containerHeight,
+        point.x,
+        point.y,
+        this.newGameDialogOptions(),
+      );
+      if (hit) {
+        this.applyHover(updateNewGameDialogHover(this.hover, hit));
+      } else {
+        this.boardCursor = 'default';
+      }
+      return;
+    }
+    if (this.saveLoadDialogMode) {
+      const hit = getSaveLoadDialogHit(
+        this.containerWidth,
+        this.containerHeight,
+        this.activeState,
+        {
+          mode: this.saveLoadDialogMode,
+          callbacks: this.menuCallbacks,
+        },
+        point.x,
+        point.y,
+      );
+      if (hit) {
+        this.applyHover(updateSaveLoadDialogHover(this.hover, hit));
+      } else {
+        this.boardCursor = 'default';
+      }
+      return;
+    }
+    if (this.welcomeView === 'settings') {
+      const settings = get(appSettingsStore);
+      const hit = getSettingsHit(
+        this.containerWidth,
+        this.containerHeight,
+        settings,
+        point.x,
+        point.y,
+      );
+      const rowId =
+        hit &&
+        (hit.type === 'toggle' ||
+          hit.type === 'slider' ||
+          hit.type === 'credits')
+          ? hit.type === 'toggle'
+            ? hit.rowId
+            : hit.type === 'slider'
+            ? hit.rowId
+            : 'credits'
+          : null;
+      const isBack = hit?.type === 'back';
+      let changed = false;
+      if (this.hoveredSettingsRowId !== rowId) {
+        this.hoveredSettingsRowId = rowId;
+        changed = true;
+      }
+      if (this.isSettingsBackHovered !== Boolean(isBack)) {
+        this.isSettingsBackHovered = Boolean(isBack);
+        changed = true;
+      }
+      if (changed) {
+        this.renderUiLayer(true);
+      }
+      this.boardCursor = rowId !== null || isBack ? 'pointer' : 'default';
+      return;
+    }
+    if (this.welcomeView === 'credits') {
+      const hit = getCreditsHit(
+        this.containerWidth,
+        this.containerHeight,
+        point.x,
+        point.y,
+      );
+      const rowId = hit?.type === 'row' ? hit.rowId : null;
+      const isBack = hit?.type === 'back';
+      let changed = false;
+      if (this.hoveredCreditsRowId !== rowId) {
+        this.hoveredCreditsRowId = rowId;
+        changed = true;
+      }
+      if (this.isCreditsBackHovered !== Boolean(isBack)) {
+        this.isCreditsBackHovered = Boolean(isBack);
+        changed = true;
+      }
+      if (changed) {
+        this.renderUiLayer(true);
+      }
+      this.boardCursor = rowId !== null || isBack ? 'pointer' : 'default';
+      return;
+    }
+    if (this.welcomeView === 'heroSelection') {
+      if (!this.heroSelectionCampaignId) {
+        this.boardCursor = 'default';
+        return;
+      }
+      const hit = getHeroSelectionHit(
+        this.containerWidth,
+        this.containerHeight,
+        this.heroSelectionCampaignId,
+        point.x,
+        point.y,
+        this.heroSelectionOptions(),
+      );
+      const layout = getHeroSelectionLayout(
+        this.containerWidth,
+        this.containerHeight,
+        this.heroSelectionCampaignId,
+        this.heroSelectionOptions(),
+      );
+      const hoveredRowId =
+        hit &&
+        (hit.type === 'checkbox' ||
+          hit.type === 'row' ||
+          hit.type === 'nameInput')
+          ? hit.heroId
+          : null;
+      // Dimmed rows (party full) are not interactive.
+      const dimmedRow = layout.rows.find((r) => r.heroId === hoveredRowId);
+      const effectiveRowId =
+        dimmedRow && dimmedRow.dimmed && hit?.type !== 'nameInput'
+          ? null
+          : hoveredRowId;
+      const isAction = hit?.type === 'start';
+      const isSecondary = hit?.type === 'back';
+      let changed = false;
+      if (this.hoveredHeroSelectionId !== effectiveRowId) {
+        this.hoveredHeroSelectionId = effectiveRowId;
+        changed = true;
+      }
+      if (this.isHsActionHovered !== Boolean(isAction)) {
+        this.isHsActionHovered = Boolean(isAction);
+        changed = true;
+      }
+      if (this.isHsSecondaryHovered !== Boolean(isSecondary)) {
+        this.isHsSecondaryHovered = Boolean(isSecondary);
+        changed = true;
+      }
+      if (changed) {
+        this.renderUiLayer(true);
+      }
+      this.boardCursor =
+        effectiveRowId !== null || isAction || isSecondary
+          ? 'pointer'
+          : 'default';
+      return;
+    }
+    if (this.welcomeView !== 'main') {
+      this.boardCursor = 'default';
+      return;
+    }
+    const hit = getWelcomeHit(
+      this.containerWidth,
+      this.containerHeight,
+      point.x,
+      point.y,
+    );
+    if (hit !== this.hoveredWelcomeButton) {
+      this.hoveredWelcomeButton = hit;
+      this.renderUiLayer(true);
+    }
+    this.boardCursor = hit ? 'pointer' : 'default';
+  }
+
+  /** Pointer click while the welcome phase owns the screen. */
+  private handleWelcomeClick(event: MouseEvent): void {
+    const point = this.screenPointFromEvent(event);
+    if (!point || this.containerWidth <= 0 || this.containerHeight <= 0) {
+      return;
+    }
+    if (this.isNewGameDialogOpen) {
+      const hit = getNewGameDialogHit(
+        this.containerWidth,
+        this.containerHeight,
+        point.x,
+        point.y,
+        this.newGameDialogOptions(),
+      );
+      if (hit) {
+        this.handleNewGameDialogHit(hit);
+      }
+      return;
+    }
+    if (this.saveLoadDialogMode) {
+      const hit = getSaveLoadDialogHit(
+        this.containerWidth,
+        this.containerHeight,
+        this.activeState,
+        {
+          mode: this.saveLoadDialogMode,
+          callbacks: this.menuCallbacks,
+        },
+        point.x,
+        point.y,
+      );
+      if (hit) {
+        this.handleSaveLoadDialogHit(hit);
+      }
+      return;
+    }
+    if (this.welcomeView === 'settings') {
+      const settings = get(appSettingsStore);
+      const hit = getSettingsHit(
+        this.containerWidth,
+        this.containerHeight,
+        settings,
+        point.x,
+        point.y,
+      );
+      if (!hit) return;
+      if (hit.type === 'toggle' && hit.rowId === 'music') {
+        soundEffectManager.playButtonClick();
+        updateAppSettings({ musicOn: !settings.musicOn });
+        this.renderUiLayer(true);
+        return;
+      }
+      if (hit.type === 'toggle' && hit.rowId === 'audio') {
+        soundEffectManager.playButtonClick();
+        updateAppSettings({ sfxOn: !settings.sfxOn });
+        this.renderUiLayer(true);
+        return;
+      }
+      if (hit.type === 'slider') {
+        // Pointer down sets the value; the drag tracks until pointer up.
+        this.settingsSliderDrag = hit.rowId;
+        this.updateSliderFromPointer(point);
+        return;
+      }
+      if (hit.type === 'credits') {
+        soundEffectManager.playButtonClick();
+        setWelcomeView('credits');
+        return;
+      }
+      if (hit.type === 'back') {
+        soundEffectManager.playButtonClick();
+        setWelcomeView('main');
+      }
+      return;
+    }
+    if (this.welcomeView === 'credits') {
+      const hit = getCreditsHit(
+        this.containerWidth,
+        this.containerHeight,
+        point.x,
+        point.y,
+      );
+      if (!hit) return;
+      if (hit.type === 'row') {
+        soundEffectManager.playButtonClick();
+        if (hit.url && typeof window !== 'undefined' && window.open) {
+          window.open(hit.url, '_blank', 'noopener, noreferrer');
+        }
+        return;
+      }
+      if (hit.type === 'back') {
+        soundEffectManager.playButtonClick();
+        setWelcomeView('settings');
+      }
+      return;
+    }
+    if (this.welcomeView === 'heroSelection') {
+      if (!this.heroSelectionCampaignId) return;
+      const hit = getHeroSelectionHit(
+        this.containerWidth,
+        this.containerHeight,
+        this.heroSelectionCampaignId,
+        point.x,
+        point.y,
+        this.heroSelectionOptions(),
+      );
+      if (hit) {
+        this.handleHeroSelectionHit(hit);
+      }
+      return;
+    }
+    if (this.welcomeView !== 'main') {
+      return;
+    }
+    const hit = getWelcomeHit(
+      this.containerWidth,
+      this.containerHeight,
+      point.x,
+      point.y,
+    );
+    if (!hit) return;
+    soundEffectManager.playButtonClick();
+    if (hit === 'newGame') {
+      this.openNewGameDialog();
+    } else if (hit === 'loadGame') {
+      this.openSaveLoadDialog('load');
+    } else if (hit === 'settings') {
+      setWelcomeView('settings');
+    }
+  }
+
+  /** Selection/hover options shared by the hero selection hit and render. */
+  private heroSelectionOptions(): HeroSelectionOptions {
+    return {
+      selectedHeroIds: this.heroSelectionIds,
+      names: this.heroSelectionNames,
+      focusedHeroId: this.heroSelectionFocusedId,
+      hoveredHeroId: this.hoveredHeroSelectionId,
+      hoveredAction: this.isHsActionHovered,
+      hoveredSecondary: this.isHsSecondaryHovered,
+    };
+  }
+
+  private resetHeroSelectionState(): void {
+    this.heroSelectionCampaignId = null;
+    this.heroSelectionGameMasterId = undefined;
+    this.heroSelectionSpeedrunSeed = undefined;
+    this.heroSelectionIds = [];
+    this.heroSelectionNames = {};
+    this.heroSelectionFocusedId = null;
+    this.hoveredHeroSelectionId = null;
+    this.isHsActionHovered = false;
+    this.isHsSecondaryHovered = false;
+  }
+
+  /** Starts the run with the selected, possibly renamed party. */
+  private confirmHeroSelection = (): void => {
+    const campaignId = this.heroSelectionCampaignId;
+    if (!campaignId) return;
+    if (!isHeroSelectionStartEnabled(this.heroSelectionIds)) return;
+    const heroes = buildSelectedHeroes(
+      getCampaign(campaignId),
+      this.heroSelectionIds,
+      this.heroSelectionNames,
+    );
+    this.resetHeroSelectionState();
+    // The welcome phase has no state to build on: the store dispatcher
+    // starts the run (writing the reload guard) and switches the phase.
+    onNewGame(
+      campaignId,
+      this.heroSelectionGameMasterId ?? DEFAULT_GAME_MASTER_ID,
+      undefined,
+      undefined,
+      this.heroSelectionSpeedrunSeed,
+      heroes,
+    );
+  };
+
+  /** Back: returns to the new-game dialog, selections remembered. */
+  private backFromHeroSelection = (): void => {
+    this.heroSelectionFocusedId = null;
+    setWelcomeView('main');
+    this.openNewGameDialog();
+  };
+
+  /**
+   * While a rename input is focused the hero selection screen captures
+   * every key: characters and Backspace edit the name, Escape and Enter
+   * defocus it.
+   */
+  private handleHeroRenameKeyDown(event: KeyboardEvent): void {
+    const heroId = this.heroSelectionFocusedId;
+    if (!heroId) return;
+    if (event.key === 'Escape' || event.key === 'Enter') {
+      event.preventDefault();
+      this.heroSelectionFocusedId = null;
+      this.renderUiLayer(true);
+      return;
+    }
+    const current = this.heroSelectionNames[heroId] ?? '';
+    if (event.key === 'Backspace') {
+      event.preventDefault();
+      this.heroSelectionNames[heroId] = current.slice(0, -1);
+      this.renderUiLayer(true);
+      return;
+    }
+    if (
+      event.key.length === 1 &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      current.length < MAX_HERO_NAME_LENGTH
+    ) {
+      event.preventDefault();
+      this.heroSelectionNames[heroId] = clampHeroName(current + event.key);
+      this.renderUiLayer(true);
+    }
+  }
+
+  /** Dispatches a hero selection click (welcome phase only). */
+  private handleHeroSelectionHit(hit: HeroSelectionHitResult): void {
+    if (hit.type === 'nameInput') {
+      soundEffectManager.playButtonClick();
+      this.heroSelectionFocusedId = hit.heroId;
+      this.renderUiLayer(true);
+      return;
+    }
+    if (hit.type === 'checkbox' || hit.type === 'row') {
+      const layout = getHeroSelectionLayout(
+        this.containerWidth,
+        this.containerHeight,
+        this.heroSelectionCampaignId ?? '',
+        this.heroSelectionOptions(),
+      );
+      const row = layout.rows.find((r) => r.heroId === hit.heroId);
+      // Rows beyond the maximum are a no-op while the party is full.
+      if (row && !row.dimmed) {
+        soundEffectManager.playButtonClick();
+        this.heroSelectionIds = toggleHeroSelection(
+          layout.rows.map((r) => r.heroId),
+          this.heroSelectionIds,
+          hit.heroId,
+          // layout counts only the visible rows; the cap comes from the
+          // campaign itself.
+          getMaxHeroes(getCampaign(this.heroSelectionCampaignId ?? '')),
+        );
+        this.renderUiLayer(true);
+      }
+      return;
+    }
+    if (hit.type === 'start') {
+      if (isHeroSelectionStartEnabled(this.heroSelectionIds)) {
+        soundEffectManager.playButtonClick();
+        this.confirmHeroSelection();
+      }
+      return;
+    }
+    if (hit.type === 'back') {
+      soundEffectManager.playButtonClick();
+      this.backFromHeroSelection();
+      return;
+    }
+    // panel and backdrop: nothing to dismiss.
+  }
+
+  /**
+   * Sets the dragged slider's value from the pointer x position,
+   * applying it live (the volume changes audibly while dragging).
+   */
+  private updateSliderFromPointer(point: { x: number; y: number }): void {
+    if (!this.settingsSliderDrag) return;
+    const layout = getSettingsLayout(
+      this.containerWidth,
+      this.containerHeight,
+      get(appSettingsStore),
+    );
+    const row = layout.rows.find((r) => r.id === this.settingsSliderDrag);
+    if (!row?.slider) return;
+    const value = getSliderValueFromX(row.slider.trackBounds, point.x);
+    updateAppSettings(
+      this.settingsSliderDrag === 'musicVolume'
+        ? { musicVolume: value }
+        : { sfxVolume: value },
+    );
+    this.renderUiLayer(true);
+  }
+
   public onMouseDown = (event: MouseEvent) => {
+    // The welcome phase has no board to pan and no gameplay UI.
+    if (this.appPhase === 'welcome') return;
     if (
       event.button === 0 &&
       this.uiCanvas &&
@@ -2144,6 +2919,10 @@ export class DungeonBoardController {
       return;
     }
     if (event.button !== 0) return;
+    if (this.appPhase === 'welcome') {
+      this.handleWelcomeClick(event);
+      return;
+    }
 
     if (
       this.uiCanvas &&
@@ -2252,51 +3031,12 @@ export class DungeonBoardController {
       }
 
       if (hit?.kind === 'newGameDialog') {
-        const ngHit = hit.hit;
-        if (ngHit.type === 'campaign') {
-          soundEffectManager.playButtonClick();
-          this.newGameCampaignId = ngHit.campaignId;
-          this.renderUiLayer(true);
-        } else if (ngHit.type === 'gameMaster') {
-          soundEffectManager.playButtonClick();
-          this.newGameGameMasterId = ngHit.gameMasterId;
-          this.renderUiLayer(true);
-        } else if (ngHit.type === 'checkbox') {
-          soundEffectManager.playButtonClick();
-          this.newGameSpeedrunMode = !this.newGameSpeedrunMode;
-          if (this.newGameSpeedrunMode) {
-            this.newGameSeedInput = String(DEFAULT_SPEEDRUN_SEED);
-          }
-          this.renderUiLayer(true);
-        } else if (ngHit.type === 'action') {
-          soundEffectManager.playButtonClick();
-          this.confirmNewGameDialog();
-        } else if (ngHit.type === 'secondary' || ngHit.type === 'backdrop') {
-          soundEffectManager.playButtonClick();
-          this.closeNewGameDialog();
-        }
+        this.handleNewGameDialogHit(hit.hit);
         return;
       }
 
       if (hit?.kind === 'saveLoadDialog') {
-        const dialogHit = hit.hit;
-        if (dialogHit.type === 'row' && dialogHit.item) {
-          soundEffectManager.playButtonClick();
-          dialogHit.item.onClick(activeState);
-          this.renderCanvas(true);
-        } else if (dialogHit.type === 'action') {
-          soundEffectManager.playButtonClick();
-          if (this.saveLoadDialogMode === 'save') {
-            this.confirmSaveDialog();
-          } else {
-            this.closeSaveLoadDialog();
-          }
-        } else if (dialogHit.type === 'secondary') {
-          soundEffectManager.playButtonClick();
-          this.closeSaveLoadDialog();
-        } else if (dialogHit.type === 'backdrop') {
-          this.closeSaveLoadDialog();
-        }
+        this.handleSaveLoadDialogHit(hit.hit);
         return;
       }
 
@@ -2437,16 +3177,18 @@ export class DungeonBoardController {
       if (clickedBtn) {
         soundEffectManager.playButtonClick();
         const curState = this.externalState ?? get(gameStateStore);
-        executeRadialAction(
-          curState,
-          clickedBtn.entry.action,
-          clickedBtn.entry.door,
-          clickedBtn.entry.interactable,
-          clickedBtn.entry.item,
-          clickedBtn.entry.targetHero,
-        );
-        if (!this.externalState) {
-          gameStateStore.set(curState);
+        if (curState) {
+          executeRadialAction(
+            curState,
+            clickedBtn.entry.action,
+            clickedBtn.entry.door,
+            clickedBtn.entry.interactable,
+            clickedBtn.entry.item,
+            clickedBtn.entry.targetHero,
+          );
+          if (!this.externalState) {
+            gameStateStore.set(curState);
+          }
         }
       }
       return;
@@ -2474,6 +3216,10 @@ export class DungeonBoardController {
 
   public onMouseMove = (event: MouseEvent) => {
     if (this.isDragging) return;
+    if (this.appPhase === 'welcome') {
+      this.handleWelcomeMouseMove(event);
+      return;
+    }
     if (!this.activeState || !this.uiCanvas) {
       this.boardCursor = 'default';
       return;
@@ -2581,12 +3327,23 @@ export class DungeonBoardController {
 
   public onMouseLeave = () => {
     this.boardCursor = 'default';
+    if (this.hoveredWelcomeButton !== null) {
+      this.hoveredWelcomeButton = null;
+      if (this.appPhase === 'welcome') {
+        this.renderUiLayer(true);
+      }
+    }
     if (clearBoardHovers(this.hover, { radial: true })) {
       this.renderUiLayer(true);
     }
   };
 
   public onWheel = (event: WheelEvent) => {
+    // Nothing to pan on the welcome screen; still swallow the scroll.
+    if (this.appPhase === 'welcome') {
+      event.preventDefault();
+      return;
+    }
     this.panX -= event.deltaX;
     this.panY -= event.deltaY;
     this.updateAllCanvasTransforms();

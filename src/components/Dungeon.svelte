@@ -3,6 +3,10 @@
   import groundSprites from '$lib/DungeonTiles.png';
   import type { GameState } from '../types';
   import { gameStateStore, debugModeStore } from '../store/gameStateStore';
+  import {
+    appPhaseStore,
+    welcomeViewStore,
+  } from '../store/appPhaseStore';
   import { radialMenuStore } from '../store/radialMenuStore';
   import { locale } from '$lib/translations';
   import { getCampaign } from '../campaigns';
@@ -26,7 +30,7 @@
   let containerWidth = 0;
   let containerHeight = 0;
 
-  $: activeState = state ?? $gameStateStore;
+  $: activeState = state ?? ($gameStateStore as GameState | null) ?? undefined;
   $: activeDebugMode =
     debugMode !== undefined
       ? debugMode
@@ -49,6 +53,7 @@
   $: board.setContainerSize(containerWidth, containerHeight);
   $: board.onRadialMenuChange($radialMenuStore);
   $: board.onLocaleChange($locale);
+  $: board.onAppPhaseChange($appPhaseStore, $welcomeViewStore);
 
   onMount(() => {
     board.mount();

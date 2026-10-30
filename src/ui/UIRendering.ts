@@ -217,6 +217,57 @@ export {
   type NewGameDialogHitResult,
   type NewGameDialogLayout,
 } from './NewGameDialogRendering';
+export {
+  renderWelcome,
+  renderWelcomeBackground,
+  renderWelcomeFooter,
+  getWelcomeLayout,
+  getWelcomeHit,
+  getCoverFitBounds,
+  WELCOME_BACKGROUND_IMAGE,
+  WELCOME_FALLBACK_COLOR,
+  type WelcomeButtonId,
+  type WelcomeButtonLayout,
+  type WelcomeLayout,
+  type RenderWelcomeOptions,
+  type WelcomeHitResult,
+} from './WelcomeRendering';
+export {
+  renderHeroSelection,
+  getHeroSelectionLayout,
+  getHeroSelectionHit,
+  buildSelectedHeroes,
+  getDefaultSelectedHeroIds,
+  getMaxHeroes,
+  toggleHeroSelection,
+  clampHeroName,
+  isHeroSelectionStartEnabled,
+  MAX_HERO_NAME_LENGTH,
+  type HeroSelectionOptions,
+  type HeroSelectionLayout,
+  type HeroSelectionRowLayout,
+  type HeroSelectionHitResult,
+} from './HeroSelectionRendering';
+export {
+  renderSettings,
+  renderCredits,
+  getSettingsLayout,
+  getSettingsHit,
+  getCreditsLayout,
+  getCreditsHit,
+  getSliderValueFromX,
+  CREDITS_ROWS,
+  type SettingsRowId,
+  type SettingsLayout,
+  type SettingsRowLayout,
+  type SettingsHitResult,
+  type RenderSettingsOptions,
+  type CreditsRowDefinition,
+  type CreditsLayout,
+  type CreditsRowLayout,
+  type CreditsHitResult,
+  type RenderCreditsOptions,
+} from './SettingsRendering';
 
 // Board cursors for the three interactive tile actions; '' means the plain
 // default cursor. The CSS cursor for each is built once and cached.

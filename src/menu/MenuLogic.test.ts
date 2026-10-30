@@ -15,6 +15,8 @@ import {
 import { DifficultLevels } from '../core';
 import { writeSave } from '../saves/SavesLogic';
 import { Colour, type GameState, type Hero, ItemType, Level } from '../types';
+import { get } from 'svelte/store';
+import { appSettingsStore, updateAppSettings } from '../settings/AppSettings';
 
 const createMockHero = (name = 'Hero1'): Hero => ({
   name,
@@ -152,17 +154,18 @@ describe('MenuLogic', () => {
     });
 
     it('shows active or inactive state in music label and defaults to on', () => {
-      delete mockState.settings['music'];
+      // The app-level music setting is the source of truth for the label.
+      updateAppSettings({ musicOn: true });
       const defaultItems = getMainMenuItems(mockState);
       const musicDefault = defaultItems.find((i) => i.id === 'music');
       expect(musicDefault?.label).toBe('Music: On');
 
-      mockState.settings['music'] = false;
+      updateAppSettings({ musicOn: false });
       const offItems = getMainMenuItems(mockState);
       const musicOff = offItems.find((i) => i.id === 'music');
       expect(musicOff?.label).toBe('Music: Off');
 
-      mockState.settings['music'] = true;
+      updateAppSettings({ musicOn: true });
       const onItems = getMainMenuItems(mockState);
       const musicOn = onItems.find((i) => i.id === 'music');
       expect(musicOn?.label).toBe('Music: On');
@@ -232,14 +235,14 @@ describe('MenuLogic', () => {
       expect(mockState.settings['debug']).toBe(false);
     });
 
-    it('toggles music mode on music item click', () => {
-      delete mockState.settings['music'];
+    it('toggles the app music setting on music item click', () => {
+      updateAppSettings({ musicOn: true });
       const items = getMainMenuItems(mockState);
       const musicItem = items.find((i) => i.id === 'music');
       musicItem?.onClick(mockState);
-      expect(mockState.settings['music']).toBe(false);
+      expect(get(appSettingsStore).musicOn).toBe(false);
       musicItem?.onClick(mockState);
-      expect(mockState.settings['music']).toBe(true);
+      expect(get(appSettingsStore).musicOn).toBe(true);
     });
 
     it('cycles difficulty on difficulty item click', () => {

@@ -1,5 +1,27 @@
 {
   "menu": {
+    "welcome": {
+      "header": "Dragonfire",
+      "buttons": {
+        "loadGame": "Load Game",
+        "settings": "Settings"
+      }
+    },
+    "settings": {
+      "header": "Settings",
+      "music": "Music",
+      "audio": "SFX",
+      "musicVolume": "Music Volume",
+      "audioVolume": "SFX Volume",
+      "credits": "Credits"
+    },
+    "heroSelection": {
+      "header": "Hero Selction",
+      "count": "({{selected}} / {{max}})",
+      "buttons": {
+        "start": "Begin"
+      }
+    },
     "menuButton": "Menu",
     "mainMenu": {
       "header": "Main Menu",

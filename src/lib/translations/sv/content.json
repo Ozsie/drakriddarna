@@ -1,5 +1,27 @@
 {
   "menu": {
+    "welcome": {
+      "header": "Drakriddarna",
+      "buttons": {
+        "loadGame": "Ladda spel",
+        "settings": "Inställningar"
+      }
+    },
+    "settings": {
+      "header": "Inställningar",
+      "music": "Musik",
+      "audio": "Ljudeffekter",
+      "musicVolume": "Musikvolym",
+      "audioVolume": "Volym för ljudeffekter",
+      "credits": "Eftertexter"
+    },
+    "heroSelection": {
+      "header": "Val av hjälte",
+      "count": "({{selected}} / {{max}})",
+      "buttons": {
+        "start": "Starta"
+      }
+    },
     "menuButton": "Meny",
     "mainMenu": {
       "header": "Huvudmeny",

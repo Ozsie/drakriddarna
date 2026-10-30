@@ -252,6 +252,9 @@ export type Campaign = {
   nameTranslationKey?: string;
   dungeons: Dungeon[];
   heroes: Actor[];
+  // Maximum party size for the hero selection screen. Omitted means the
+  // campaign's own roster size; the minimum is always 1.
+  maxHeroes?: number;
   itemDeck: Item[];
   magicItemDeck: Item[];
   eventDeck?: TurnEvent[];

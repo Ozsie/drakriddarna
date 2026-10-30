@@ -5,7 +5,7 @@ import {
   getDifficulty,
   i18n,
 } from '../core';
-import type { GameState, TurnEvent } from '../types';
+import type { GameState, Hero, TurnEvent } from '../types';
 import { get } from 'svelte/store';
 import {
   dispatch,
@@ -17,7 +17,6 @@ import {
   setDebug,
   setDifficulty,
   setGameLocale,
-  setMusic,
   winLevel,
 } from '../store/gameStateStore';
 import { locale, setLocale } from '$lib/translations';
@@ -38,6 +37,7 @@ import { resetLiveHeroes } from '../hero/HeroLogic';
 import { revealFullMap } from '../dungeon/RoomEffectsLogic';
 import { goToNextDungeon } from '../dungeon/BetweenDungeonsLogic';
 import { DEFAULT_CAMPAIGN_ID } from '../campaigns';
+import { appSettingsStore, updateAppSettings } from '../settings/AppSettings';
 
 export interface CanvasMenuItem {
   id: string;
@@ -45,7 +45,10 @@ export interface CanvasMenuItem {
   hint?: string;
   debugOnly?: boolean;
   disabled?: boolean;
-  onClick: (activeState: GameState) => void;
+  // The active state is null while the welcome screen is up (a dialog can
+  // be opened from there without any game existing); every item handles
+  // it the same way as the no-state case.
+  onClick: (activeState: GameState | null) => void;
 }
 
 export type MenuView = 'main' | 'event' | 'debug' | 'rights';
@@ -85,10 +88,11 @@ export const getMusicMenuLabel = (
   activeState?: GameState | null,
   musicMode?: boolean,
 ): string => {
+  // The app-level music setting is the single source of truth (it
+  // mirrors into the game state's saved field).
+  void activeState;
   const isMusic =
-    musicMode !== undefined
-      ? musicMode
-      : activeState?.settings?.['music'] !== false;
+    musicMode !== undefined ? musicMode : get(appSettingsStore).musicOn;
   const translated = i18n('content.menu.mainMenu.buttons.music');
   const prefix =
     translated === 'content.menu.mainMenu.buttons.music'
@@ -143,8 +147,8 @@ export const getMainMenuItems = (
       id: 'music',
       debugOnly: false,
       label: getMusicMenuLabel(activeState),
-      onClick: (state) => {
-        setMusicMode(state);
+      onClick: () => {
+        setMusicMode();
       },
     },
     {
@@ -252,7 +256,7 @@ export const getDebugMenuItems = (
 // campaign/dungeon hint. Rendered by the centered save/load dialog, not by
 // the canvas menu, so there is no back item — the dialog has its own button.
 export const getSavedGameMenuItems = (
-  activeState: GameState,
+  activeState: GameState | null | undefined,
   callbacks?: MenuCallbacks,
 ): CanvasMenuItem[] => {
   const items: CanvasMenuItem[] = [];
@@ -425,22 +429,23 @@ export const getMenuHeader = (view: MenuView): string => {
 export const onNewGame = (
   campaignId: string = DEFAULT_CAMPAIGN_ID,
   gameMasterId: string = DEFAULT_GAME_MASTER_ID,
-  activeState?: GameState,
+  activeState?: GameState | null,
   setState?: (state: GameState) => void,
   speedrunSeed?: number,
+  heroes?: Hero[],
 ) => {
   if (setState) {
-    const newState = init(campaignId, gameMasterId, speedrunSeed);
+    const newState = init(campaignId, gameMasterId, speedrunSeed, heroes);
     setState(newState);
     gameStateStore.set(newState);
   } else {
-    initGame(campaignId, gameMasterId, speedrunSeed);
+    initGame(campaignId, gameMasterId, speedrunSeed, heroes);
   }
 };
 
 export const onClickLoad = (
   stateString: string,
-  activeState?: GameState,
+  activeState?: GameState | null,
   setState?: (state: GameState) => void,
 ) => {
   try {
@@ -457,7 +462,7 @@ export const onClickLoad = (
   }
 };
 
-export const onWinLevel = (activeState?: GameState) => {
+export const onWinLevel = (activeState?: GameState | null) => {
   if (activeState) {
     hasWon(activeState);
     gameStateStore.set(activeState);
@@ -466,28 +471,24 @@ export const onWinLevel = (activeState?: GameState) => {
   }
 };
 
-export const setDebugMode = (activeState?: GameState) => {
+export const setDebugMode = (activeState?: GameState | null) => {
   if (activeState) {
     activeState.settings['debug'] = !activeState.settings['debug'];
     gameStateStore.set(activeState);
   } else {
-    const isDebug = Boolean(get(gameStateStore).settings?.['debug']);
+    const isDebug = Boolean(get(gameStateStore)?.settings?.['debug']);
     setDebug(!isDebug);
   }
 };
 
-export const setMusicMode = (activeState?: GameState) => {
-  if (activeState) {
-    const isMusic = activeState.settings['music'] !== false;
-    activeState.settings['music'] = !isMusic;
-    gameStateStore.set(activeState);
-  } else {
-    const isMusic = get(gameStateStore).settings?.['music'] !== false;
-    setMusic(!isMusic);
-  }
+// Toggles the app-level music setting; the mirror keeps the saved
+// `settings['music']` field in sync.
+export const setMusicMode = (): void => {
+  const settings = get(appSettingsStore);
+  updateAppSettings({ musicOn: !settings.musicOn });
 };
 
-export const onSaveGame = (activeState?: GameState, name = '') => {
+export const onSaveGame = (activeState?: GameState | null, name = '') => {
   if (activeState) {
     save(activeState, name);
   } else {
@@ -495,7 +496,7 @@ export const onSaveGame = (activeState?: GameState, name = '') => {
   }
 };
 
-export const toTestingGrounds = (activeState?: GameState) => {
+export const toTestingGrounds = (activeState?: GameState | null) => {
   if (activeState) {
     activeState.dungeon = testingGrounds;
     activeState.eventDeck = getEventsForDungeon(activeState.dungeon);
@@ -506,7 +507,7 @@ export const toTestingGrounds = (activeState?: GameState) => {
   }
 };
 
-export const onShuffleDeck = (activeState?: GameState) => {
+export const onShuffleDeck = (activeState?: GameState | null) => {
   if (activeState) {
     shuffleEventDeck(activeState);
     gameStateStore.set(activeState);
@@ -515,7 +516,7 @@ export const onShuffleDeck = (activeState?: GameState) => {
   }
 };
 
-export const onRevealMap = (activeState?: GameState) => {
+export const onRevealMap = (activeState?: GameState | null) => {
   if (activeState) {
     revealFullMap(activeState);
     gameStateStore.set(activeState);
@@ -524,7 +525,7 @@ export const onRevealMap = (activeState?: GameState) => {
   }
 };
 
-export const onNextDungeon = (activeState?: GameState) => {
+export const onNextDungeon = (activeState?: GameState | null) => {
   if (activeState) {
     goToNextDungeon(activeState);
     gameStateStore.set(activeState);
@@ -535,7 +536,7 @@ export const onNextDungeon = (activeState?: GameState) => {
 
 export const onSelectNextEvent = (
   event: TurnEvent,
-  activeState?: GameState,
+  activeState?: GameState | null,
 ) => {
   if (activeState) {
     selectNextEvent(activeState, event.id);
@@ -545,7 +546,7 @@ export const onSelectNextEvent = (
   }
 };
 
-export const onChangeLanguage = (activeState?: GameState) => {
+export const onChangeLanguage = (activeState?: GameState | null) => {
   if (locale.get() === 'en') {
     void setLocale('sv');
     if (activeState) {
@@ -565,7 +566,8 @@ export const onChangeLanguage = (activeState?: GameState) => {
   }
 };
 
-export const onClickDifficulty = (activeState: GameState) => {
+export const onClickDifficulty = (activeState: GameState | null): void => {
+  if (!activeState) return;
   const difficulty = getDifficulty(activeState);
   const index = DifficultLevels.findIndex(
     (level) => level.id === difficulty.id,

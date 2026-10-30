@@ -25,11 +25,11 @@
   - [ ] Sprites for actors
   - [ ] Tileset for dungeons
   - [ ] Sprites for items etc
-- [ ] Welcome to the game screen, not just straight into a campaign
-- [ ] Hero selector, campaign specifies max starting heroes
 - [ ] Alvkonungens Borg - [Official Dungeon and Heroes](<https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg>)
   - [x] Edge based walls
 - [ ] Level editor
+- [x] Welcome to the game screen, not just straight into a campaign
+- [x] Hero selector, campaign specifies max starting heroes
 - [x] Monster name translations
 - [x] Closed doors with discovered rooms on both sides should block LoS
 - [x] Monsters in undiscovered rooms can affect search and pick lock
