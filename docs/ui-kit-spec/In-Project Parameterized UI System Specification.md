@@ -320,7 +320,7 @@ Per-module recipe, one PR each:
 
 ## 14. Open decisions
 
-- **D1, scope line.** Recommendation: chrome only (HUD, cards, menus, dialogs, overlays). World rendering (tiles, lighting, fog, terrain, actors, particles) is out. The Phase 0 inventory settles where the hero and monster cards, which the analysis lists among the domain-folder renderers, fall.
+- **D1, scope line (decided).** Decision: chrome only (HUD, cards, menus, dialogs, overlays). World rendering (tiles, lighting, fog, terrain, actors, particles) is out. Hero and monster cards are UI, so they are in scope: they move out of the domain folders (hero/, monsters/) into src/uikit/components/.
 - **D2, pixel parity tooling.** Recommendation: add a dev-only Node canvas (for example `@napi-rs/canvas`) so primitive consolidation can be verified by pixel diff. Alternative: manual visual review through a gallery.
 - **D3, location and name.** `src/uikit/` versus `src/ui/kit/`. Recommendation: a separate top-level folder, so the lint override and any later extraction are trivial.
 - **D4, gallery.** A dev-only gallery route (guarded so it is absent from the production build) versus Vitest-only fixtures. Recommendation: the gallery, because theming is only convincing when seen.
