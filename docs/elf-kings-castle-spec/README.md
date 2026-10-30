@@ -12,7 +12,7 @@ protected form, the armband's force field, and per-hero level display
 names).
 
 The human-authored source content lives in
-[`alvkonungen.md`](../../alvkonungen.md) (Swedish, verbatim from the
+[`alvkonungen.md`](./alvkonungen.md) (Swedish, verbatim from the
 magazine; the intro, the GM information with the nine numbered room
 descriptions, and the italic read-aloud texts) plus the printed stat
 cards transcribed in 04/06. It is the content authority; this spec is

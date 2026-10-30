@@ -54,7 +54,7 @@ selection, `src/game.ts` for turn flow and win checks).
 
 Per the project AI policy (see the repo `README.md`): all game content
 is human-authored. The Swedish source content for this adventure is
-**provided** in [`alvkonungen.md`](../../alvkonungen.md) (intro, GM
+**provided** in [`alvkonungen.md`](./alvkonungen.md) (intro, GM
 information, the nine room descriptions) and the card transcriptions
 in 04/06 — use it verbatim; AI may create the `en` translations of
 these existing texts and may not reword, extend, invent or
