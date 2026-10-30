@@ -109,6 +109,10 @@ src/campaigns/
    To fully customize a hero (starting weapon/armour/inventory/stats),
    build an `Actor` object directly instead — see the `Actor` type in
    `src/types.ts` for all available fields.
+
+   Optionally set `maxHeroes` on the campaign to cap the party size the
+   hero selection screen offers; it defaults to the roster size and the
+   minimum is always 1.
 4. **Create `campaign.ts`**, the campaign's entry point. It must have a
    **default export** of type `Campaign`:
 

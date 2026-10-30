@@ -25,11 +25,11 @@
   - [ ] Sprites for actors
   - [ ] Tileset for dungeons
   - [ ] Sprites for items etc
-- [ ] Welcome to the game screen, not just straight into a campaign
-- [ ] Hero selector, campaign specifies max starting heroes
 - [ ] Alvkonungens Borg - [Official Dungeon and Heroes](<https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg>)
   - [x] Edge based walls
 - [ ] Level editor
+- [x] Welcome to the game screen, not just straight into a campaign
+- [x] Hero selector, campaign specifies max starting heroes
 - [x] Monster name translations
 - [x] Closed doors with discovered rooms on both sides should block LoS
 - [x] Monsters in undiscovered rooms can affect search and pick lock
@@ -150,6 +150,9 @@
 
 ## Bugs
 
+- [ ] It's not possible to edit hero names in hero selection
+- [ ] The volume sliders are not draggable correctly
+- [ ] Lights do not reset positions when a new dungeon is loaded
 - [ ] Pillars can be generated in a way that blocks paths
 - [ ] Win screen text is offset outside of box
 - [x] RULES.md XP wording is wrong: the official rules (and the code) award the killer monster-specific points (orc 1, troll 2, dark lord 4) plus +1 per surviving rider per adventure — replace "every surviving hero earns +1 per kill"

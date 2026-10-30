@@ -12,6 +12,8 @@ import {
   openPartyWipe,
 } from './dungeon/BetweenDungeonsLogic';
 import { liveHeroes } from './hero/HeroLogic';
+import { getCampaign } from './campaigns';
+import { buildSelectedHeroes } from './ui/HeroSelectionRendering';
 import { eventEffects } from './events/EventsLogic';
 import { Level, TerrainType } from './types';
 import type { Dungeon, GameMaster, Hero, GameState } from './types';
@@ -119,6 +121,35 @@ describe('game orchestrator', () => {
     it('init without a seed leaves speedrunSeed undefined', () => {
       const state = init();
       expect(state.speedrunSeed).toBeUndefined();
+    });
+
+    it('init with a heroes override replaces the roster without touching the campaign registry', () => {
+      const campaign = getCampaign('iceDragonTreasure');
+      const rosterNames = campaign.heroes.map((hero) => hero.name);
+      const rosterSize = campaign.heroes.length;
+
+      const override = buildSelectedHeroes(
+        campaign,
+        [campaign.heroes[2]?.id, campaign.heroes[0]?.id].filter(
+          (id): id is string => typeof id === 'string',
+        ),
+        { [campaign.heroes[0]?.id ?? '']: 'Renowned One' },
+      );
+      const state = init('iceDragonTreasure', 'tactician', undefined, override);
+
+      // The selected, possibly renamed heroes are the run's party, in
+      // roster order; the current actor is the first of them.
+      expect(state.heroes).toHaveLength(2);
+      expect(state.heroes.map((hero) => hero.id)).toEqual(
+        override.map((hero) => hero.id),
+      );
+      expect(state.heroes[0]?.name).toBe('Renowned One');
+      expect(state.currentActor?.id).toBe(override[0]?.id);
+
+      // The registered campaign object is never mutated.
+      const after = getCampaign('iceDragonTreasure');
+      expect(after.heroes).toHaveLength(rosterSize);
+      expect(after.heroes.map((hero) => hero.name)).toEqual(rosterNames);
     });
 
     it('init with a seed records it and shuffles decks deterministically', () => {

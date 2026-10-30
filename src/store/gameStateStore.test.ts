@@ -29,8 +29,16 @@ import {
   removeDamageIndicatorAction,
 } from './gameStateStore';
 import { debouncedSaveReloadGuard, saveReloadGuard } from '../core';
-import type { Hero } from '../types';
+import type { GameState, Hero } from '../types';
 import { init } from '../game';
+
+// The store may hold null (fresh visit boots into the welcome phase);
+// every test below starts a run first, so the state is present.
+const getState = (): GameState => {
+  const state = get(gameStateStore);
+  expect(state).toBeDefined();
+  return state as GameState;
+};
 
 describe('gameStateStore and state management', () => {
   beforeEach(() => {
@@ -38,7 +46,7 @@ describe('gameStateStore and state management', () => {
   });
 
   it('initializes gameStateStore and derived stores properly', () => {
-    const state = get(gameStateStore);
+    const state = getState();
     expect(state).toBeDefined();
     expect(state.heroes.length).toBeGreaterThan(0);
 
@@ -53,7 +61,7 @@ describe('gameStateStore and state management', () => {
     expect(logs.length).toBeGreaterThan(0);
 
     const dungeon = get(dungeonStore);
-    expect(dungeon.name).toBe(state.dungeon.name);
+    expect(dungeon?.name).toBe(state.dungeon.name);
 
     const conditions = get(winConditionsStore);
     expect(conditions.length).toBeGreaterThanOrEqual(0);
@@ -99,34 +107,30 @@ describe('gameStateStore and state management', () => {
     expect(get(debugModeStore)).toBe(false);
 
     setGameLocale('sv');
-    expect(get(gameStateStore).settings['locale']).toBe('sv');
+    expect(getState().settings['locale']).toBe('sv');
   });
 
   it('selectTargetHero toggles targetActor correctly', () => {
-    const state = get(gameStateStore);
+    const state = getState();
     const hero = state.heroes[0] as Hero;
 
     selectTargetHero(hero);
-    expect(get(gameStateStore).targetActor).toBe(hero);
+    expect(getState().targetActor).toBe(hero);
 
     selectTargetHero(hero);
-    expect(get(gameStateStore).targetActor).toBeUndefined();
+    expect(getState().targetActor).toBeUndefined();
   });
 
   it('toggleHeroInventory toggles hero inventory state', () => {
-    const state = get(gameStateStore);
+    const state = getState();
     const hero = state.heroes[0] as Hero;
     const initialOpen = Boolean(hero.isInventoryOpen);
 
     toggleHeroInventory(hero);
-    expect((get(gameStateStore).heroes[0] as Hero).isInventoryOpen).toBe(
-      !initialOpen,
-    );
+    expect((getState().heroes[0] as Hero).isInventoryOpen).toBe(!initialOpen);
 
     toggleHeroInventory(hero);
-    expect((get(gameStateStore).heroes[0] as Hero).isInventoryOpen).toBe(
-      initialOpen,
-    );
+    expect((getState().heroes[0] as Hero).isInventoryOpen).toBe(initialOpen);
   });
 
   it('actions like endHeroAction, moveHero, pickLockAction, searchAction modify state and notify store', async () => {
@@ -145,7 +149,7 @@ describe('gameStateStore and state management', () => {
   });
 
   it('supports saveGame, loadGameState, nextTurn, and goToTestingGrounds', async () => {
-    const state = get(gameStateStore);
+    const state = getState();
     saveGame();
     saveReloadGuard(state);
 
@@ -158,10 +162,10 @@ describe('gameStateStore and state management', () => {
     expect(nextState).toBeDefined();
 
     loadGameState(state);
-    expect(get(gameStateStore).heroes[0].name).toBe(state.heroes[0].name);
+    expect(getState().heroes[0].name).toBe(state.heroes[0].name);
 
     goToTestingGrounds();
-    expect(get(gameStateStore).dungeon.name).toBe(
+    expect(getState().dungeon.name).toBe(
       'campaign.iceDragon.testingGrounds.name',
     );
   });
@@ -170,7 +174,7 @@ describe('gameStateStore and state management', () => {
     dispatch((s) => {
       s.settings['customSetting'] = 'testValue';
     });
-    expect(get(gameStateStore).settings['customSetting']).toBe('testValue');
+    expect(getState().settings['customSetting']).toBe('testValue');
   });
 
   it('debouncedSaveReloadGuard uses timer instead of synchronous execution', () => {

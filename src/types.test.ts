@@ -232,14 +232,14 @@ describe('Type Safety & Domain Modeling', () => {
       };
 
       dispatchAction(action);
-      expect(get(gameStateStore).settings.debug).toBe(true);
+      expect(get(gameStateStore)?.settings.debug).toBe(true);
 
       const musicAction: GameAction = {
         type: 'SET_MUSIC',
         music: false,
       };
       dispatchAction(musicAction);
-      expect(get(gameStateStore).settings.music).toBe(false);
+      expect(get(gameStateStore)?.settings.music).toBe(false);
 
       const moveAction: GameAction = {
         type: 'MOVE',

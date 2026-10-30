@@ -185,7 +185,9 @@ export const executeRadialAction = (
           if (get(isTurnInProgress)) return;
           nextTurn()
             .then((newState) => {
-              gameStateStore.set(newState);
+              if (newState) {
+                gameStateStore.set(newState);
+              }
             })
             .catch(() => {
               addLog(state, 'logs.heroAction.turnFailed');

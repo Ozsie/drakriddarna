@@ -54,7 +54,8 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/campaigns/     campaign content (auto-discovered)
 ├── src/gameMasters/   difficulty "personalities" (auto-discovered)
 ├── src/saves/         named-save storage (index + blobs in localStorage)
-├── src/store/         Svelte stores wrapping the game state
+├── src/store/         Svelte stores wrapping the game state and the app phase
+├── src/settings/      app-level audio settings (persistence + live application)
 ├── src/ui/            pure functions that draw UI panels onto canvases
 ├── src/components/    Dungeon.svelte (thin shell) + DungeonBoardController
 └── src/audio/         sound effect and music managers
@@ -103,6 +104,51 @@ emoji plus the bare number. The open/closed state of both compact panels
 lives in the board controller, which passes the effective collapsed flag
 to the same layout functions used for hit-testing, so drawing and input
 can never disagree.
+
+## The welcome screen and the app phase
+
+The app does not boot straight into a campaign. A tiny store outside
+`GameState` (`src/store/appPhaseStore.ts`) holds the **app phase** —
+`'welcome'` or `'game'` — plus the welcome screen's active sub view
+(main, settings, credits, hero selection). On boot, `getInitialState()`
+either resumes the reload guard (phase `'game'`, exactly as before) or
+leaves the game state store holding `null` with the phase at `'welcome'`:
+no campaign is initialized until the player starts or loads one. The
+phase itself is never persisted, so a fresh visit always starts at the
+welcome screen; the reload guard remains the only thing that resumes a run
+automatically.
+
+The welcome screen follows the same layered-canvas pattern as the game
+UI: pure layout/hit/render modules (`src/ui/WelcomeRendering.ts`,
+`SettingsRendering.ts`, `HeroSelectionRendering.ts`) draw a full-canvas
+cover-fit background image (the dungeon-view colour with a soft vignette
+while the human-authored art is pending), a centered panel in the
+save/load dialog style, and the build-info footer. While the phase is
+`'welcome'`, the board controller renders these instead of any gameplay
+UI and routes all pointer/keyboard input to them — board input, the HUD
+and gameplay handlers are fully gated off. The existing new-game and
+save/load dialogs open on top, unchanged.
+
+The New Game flow gains a **hero-selection step**: after the dialog's
+Begin, the player picks 1–`Campaign.maxHeroes` heroes from the campaign
+roster (the `maxHeroes` field is optional and defaults to the roster
+size; the minimum is always 1) and can rename them — player-typed names
+are clamped to 20 characters, never generated or corrected, and an empty
+name falls back to the roster default on Start. Renamed heroes keep the
+roster `id` (so saves keep resolving) and display the literal typed name.
+The selection reaches `init()` as an optional `heroes` override that
+replaces the roster inside the normal `structuredClone`-based state
+construction; the registered campaign singletons are never mutated.
+
+App-level audio settings (music and sound effects on/off, plus their
+volumes) live in `src/settings/AppSettings.ts`, persisted under
+`localStorage['appSettings']`, applied live to both audio managers and
+re-applied on every reactive update. The `musicOn` setting is the single
+source of truth for music: it mirrors into
+`GameState.settings['music']` whenever a game state exists — one-
+directionally, so loading a save never overwrites the app setting — which
+keeps saves self-contained and lets the in-game menu's Music toggle
+simply flip the app setting.
 
 ## The domain model
 
@@ -479,7 +525,9 @@ time as a chip next to the score, ticking in hundredths of a second
 
 The entire game lives in one `GameState` object, held in a Svelte `writable`
 store (`src/store/gameStateStore.ts`) that also owns input handling glue and
-persistence. Manual saves are user-named and unlimited: a centered modal
+persistence. While the welcome screen is up the store holds `null` — no game
+exists yet (see "The welcome screen and the app phase" above). Manual saves
+are user-named and unlimited: a centered modal
 dialog (drawn like the between-dungeons dialog — full-screen dim, centered
 panel, on the UI canvas) opens with a name input on save and a list of saves
 (each showing its campaign and dungeon) on load. Starting a new game uses a
