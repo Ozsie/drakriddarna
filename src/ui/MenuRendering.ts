@@ -325,7 +325,7 @@ export const renderMenuModal = (
     const footer = layout.footerBounds;
     ctx.font = composeFont(
       theme,
-      theme.typography.sizes.xs,
+      theme.typography.sizes.xxs,
       theme.typography.weights.regular,
       theme.typography.families.plain,
     );

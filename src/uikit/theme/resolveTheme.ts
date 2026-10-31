@@ -41,4 +41,4 @@ export const resolveTheme = (overrides: DeepPartial<UiTheme> = {}): UiTheme =>
       defaultTheme as unknown as Record<string, unknown>,
       overrides as Record<string, unknown>,
     ),
-  ) as UiTheme;
+  ) as unknown as UiTheme;

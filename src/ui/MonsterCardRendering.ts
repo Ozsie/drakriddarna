@@ -8,6 +8,8 @@ import {
   truncateText,
 } from './HeroCardRendering';
 import { isCompactUi } from './UiMode';
+import { composeFont } from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 export interface MonsterCardLayoutItem {
   monster: Monster;
@@ -31,16 +33,13 @@ export interface MonsterCardsLayout {
 
 export interface RenderMonsterCardsOptions {
   hoveredMonsterId?: string | null;
+  theme?: UiTheme;
 }
 
 export type MonsterCardsHitResult = {
   type: 'card';
   monster: Monster;
 };
-
-const TITLE_FONT = 'bold 11px Arial, Helvetica, sans-serif';
-const STAT_FONT = '10px Arial, Helvetica, sans-serif';
-const STAT_BOLD_FONT = 'bold 10px Arial, Helvetica, sans-serif';
 
 const translateOrFallback = (key: string, fallback: string): string => {
   const res = i18n(key);
@@ -218,6 +217,19 @@ export const renderMonsterCards = (
 
   const hoveredMonsterId = options?.hoveredMonsterId ?? null;
 
+  const theme = options?.theme ?? defaultTheme;
+  const titleFont = composeFont(
+    theme,
+    theme.typography.sizes.sm,
+    theme.typography.weights.bold,
+  );
+  const statFont = composeFont(theme, theme.typography.sizes.xxs);
+  const statBoldFont = composeFont(
+    theme,
+    theme.typography.sizes.xxs,
+    theme.typography.weights.bold,
+  );
+
   ctx.save();
 
   layout.cards.forEach((item) => {
@@ -228,75 +240,70 @@ export const renderMonsterCards = (
 
     // Card background
     drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 4);
-    ctx.fillStyle = monster.colour || '#CD5C5C';
+    ctx.fillStyle = monster.colour || theme.palette.surface.cardFallback;
     ctx.fill();
 
     // Border
     if (isCurrent) {
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = theme.shape.strokeWidth.heavy;
+      ctx.strokeStyle = theme.palette.status.monsterCurrent;
       ctx.stroke();
     } else if (isTarget) {
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = theme.shape.strokeWidth.regular;
+      ctx.strokeStyle = theme.palette.status.monsterTarget;
       ctx.stroke();
     } else if (isHovered) {
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = theme.shape.strokeWidth.regular;
+      ctx.strokeStyle = theme.palette.status.hoverCard;
       ctx.stroke();
     } else {
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.lineWidth = theme.shape.strokeWidth.thin;
+      ctx.strokeStyle = theme.palette.border.card;
       ctx.stroke();
     }
 
     const textMaxWidth = bounds.width - 8;
 
     // Title / Monster Name
-    ctx.fillStyle = '#111827';
-    ctx.font = TITLE_FONT;
+    ctx.fillStyle = theme.palette.text.cardTitle;
+    ctx.font = titleFont;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    const displayTitle = truncateText(
-      ctx,
-      item.title,
-      textMaxWidth,
-      TITLE_FONT,
-    );
+    const displayTitle = truncateText(ctx, item.title, textMaxWidth, titleFont);
     ctx.fillText(displayTitle, bounds.x + 4, bounds.y + 11);
 
     // HP
-    ctx.font = STAT_BOLD_FONT;
-    ctx.fillStyle = '#1f2937';
+    ctx.font = statBoldFont;
+    ctx.fillStyle = theme.palette.text.cardStat;
     const displayHp = truncateText(
       ctx,
       item.hpText,
       textMaxWidth,
-      STAT_BOLD_FONT,
+      statBoldFont,
     );
     ctx.fillText(displayHp, bounds.x + 4, bounds.y + 24);
 
     // Weapon
-    ctx.font = STAT_FONT;
-    ctx.fillStyle = '#374151';
+    ctx.font = statFont;
+    ctx.fillStyle = theme.palette.text.cardDetail;
     const displayWeapon = truncateText(
       ctx,
       item.weaponText,
       textMaxWidth,
-      STAT_FONT,
+      statFont,
     );
     ctx.fillText(displayWeapon, bounds.x + 4, bounds.y + 37);
 
     let armourYOffset = 50;
     let shieldYOffset = 63;
     if (monster.rangedWeapon) {
-      ctx.font = STAT_FONT;
-      ctx.fillStyle = '#374151';
+      ctx.font = statFont;
+      ctx.fillStyle = theme.palette.text.cardDetail;
       const displayWeapon = truncateText(
         ctx,
         item.rangedWeaponText,
         textMaxWidth,
-        STAT_FONT,
+        statFont,
       );
       ctx.fillText(displayWeapon, bounds.x + 4, bounds.y + 50);
       armourYOffset = 63;
@@ -308,7 +315,7 @@ export const renderMonsterCards = (
       ctx,
       item.armourText,
       textMaxWidth,
-      STAT_FONT,
+      statFont,
     );
     ctx.fillText(displayArmour, bounds.x + 4, bounds.y + armourYOffset);
 
@@ -317,7 +324,7 @@ export const renderMonsterCards = (
       ctx,
       item.shieldText,
       textMaxWidth,
-      STAT_FONT,
+      statFont,
     );
     ctx.fillText(displayShield, bounds.x + 4, bounds.y + shieldYOffset);
   });

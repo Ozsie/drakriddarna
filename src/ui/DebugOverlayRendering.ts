@@ -95,7 +95,7 @@ export const renderDebugPrintout = (
   ctx.fillStyle = theme.palette.text.debug;
   ctx.font = composeFont(
     theme,
-    theme.typography.sizes.xs,
+    theme.typography.sizes.xxs,
     theme.typography.weights.regular,
     theme.typography.families.debug,
   );

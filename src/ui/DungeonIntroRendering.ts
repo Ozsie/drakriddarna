@@ -7,6 +7,8 @@ import {
   type CardBounds,
 } from './HeroCardRendering';
 import { wrapText } from './DiaryAndWinConditionRendering';
+import { composeFont } from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 export interface DungeonIntroLayout {
   hasContent: boolean;
@@ -24,15 +26,12 @@ export interface DungeonIntroLayout {
 export interface RenderDungeonIntroOptions {
   dismissed?: boolean;
   isCloseHovered?: boolean;
+  theme?: UiTheme;
 }
 
 export interface DungeonIntroHitResult {
   type: 'close' | 'panel' | 'backdrop';
 }
-
-const DEFAULT_TEXT_FONT = '13px Arial, Helvetica, sans-serif';
-const TITLE_FONT = 'bold 16px Arial, Helvetica, sans-serif';
-const BUTTON_FONT = 'bold 13px Arial, Helvetica, sans-serif';
 
 export const shouldShowDungeonIntro = (
   state: GameState | null | undefined,
@@ -130,11 +129,14 @@ export const getDungeonIntroLayout = (
 
   const closeButtonLabel = i18n('content.winConditions.buttonClose') || 'Close';
 
+  const theme = options?.theme ?? defaultTheme;
+  const textFont = composeFont(theme, theme.typography.sizes.lg);
+
   const padding = 20;
   const panelWidth = Math.min(480, Math.max(260, viewWidth - 32));
   const contentWidth = panelWidth - padding * 2;
 
-  const introLines = wrapText(ctx, introText, contentWidth, DEFAULT_TEXT_FONT);
+  const introLines = wrapText(ctx, introText, contentWidth, textFont);
   const lineHeight = 18;
   const textHeight = introLines.length * lineHeight;
 
@@ -239,10 +241,12 @@ export const renderDungeonIntro = (
   );
   if (!layout.hasContent) return;
 
+  const theme = options?.theme ?? defaultTheme;
+
   ctx.save();
 
   // 1. Dimmed Backdrop
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+  ctx.fillStyle = theme.palette.overlay.scrimStrong;
   ctx.fillRect(
     layout.backdropBounds.x,
     layout.backdropBounds.y,
@@ -253,17 +257,21 @@ export const renderDungeonIntro = (
   // 2. Dialog Panel
   const panel = layout.panelBounds;
   drawRoundedRect(ctx, panel.x, panel.y, panel.width, panel.height, 8);
-  ctx.fillStyle = 'rgba(24, 28, 36, 0.96)';
+  ctx.fillStyle = theme.palette.surface.panelIntro;
   ctx.fill();
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+  ctx.lineWidth = theme.shape.strokeWidth.medium;
+  ctx.strokeStyle = theme.palette.border.panelIntro;
   ctx.stroke();
 
   // 3. Dungeon Title
-  ctx.font = TITLE_FONT;
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.xxxl,
+    theme.typography.weights.bold,
+  );
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.fillStyle = '#f6ad55'; // warm gold
+  ctx.fillStyle = theme.palette.text.introTitle; // warm gold
   const titleCenterX = panel.x + panel.width / 2;
   ctx.fillText(layout.titleText, titleCenterX, layout.titleBounds.y);
 
@@ -272,15 +280,15 @@ export const renderDungeonIntro = (
   ctx.beginPath();
   ctx.moveTo(panel.x + 30, dividerY);
   ctx.lineTo(panel.x + panel.width - 30, dividerY);
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = theme.palette.border.hairline;
+  ctx.lineWidth = theme.shape.strokeWidth.thin;
   ctx.stroke();
 
   // 4. Intro Text Lines
-  ctx.font = DEFAULT_TEXT_FONT;
+  ctx.font = composeFont(theme, theme.typography.sizes.lg);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.fillStyle = 'rgba(235, 240, 245, 0.95)';
+  ctx.fillStyle = theme.palette.text.introBody;
   const lineHeight = 18;
   layout.introLines.forEach((line, index) => {
     ctx.fillText(
@@ -295,19 +303,23 @@ export const renderDungeonIntro = (
   const isHovered = Boolean(options?.isCloseHovered);
   drawRoundedRect(ctx, btn.x, btn.y, btn.width, btn.height, 5);
   ctx.fillStyle = isHovered
-    ? 'rgba(49, 130, 206, 0.9)'
-    : 'rgba(45, 55, 72, 0.9)';
+    ? theme.palette.surface.buttonIntroHover
+    : theme.palette.surface.buttonIntro;
   ctx.fill();
-  ctx.lineWidth = 1;
+  ctx.lineWidth = theme.shape.strokeWidth.thin;
   ctx.strokeStyle = isHovered
-    ? 'rgba(99, 179, 237, 0.95)'
-    : 'rgba(255, 255, 255, 0.2)';
+    ? theme.palette.border.buttonIntroHover
+    : theme.palette.border.subtle;
   ctx.stroke();
 
-  ctx.font = BUTTON_FONT;
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.lg,
+    theme.typography.weights.bold,
+  );
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = theme.palette.text.bright;
   ctx.fillText(
     layout.closeButtonLabel,
     btn.x + btn.width / 2,

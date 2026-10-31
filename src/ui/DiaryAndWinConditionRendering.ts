@@ -3,6 +3,12 @@ import { ConditionType } from '../types';
 import { i18n } from '../core';
 import { drawRoundedRect, type CardBounds } from './HeroCardRendering';
 import { COMPACT_TOGGLE_SIZE, isCompactUi } from './UiMode';
+import {
+  composeFont,
+  measureTextWidth as kitMeasureTextWidth,
+  wrapText as kitWrapText,
+} from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 export interface WinConditionLayoutItem {
   condition: WinCondition;
@@ -38,56 +44,25 @@ export interface DiaryAndWinConditionsLayout {
 export interface RenderDiaryAndWinConditionsOptions {
   isCollapsed?: boolean;
   isToggleHovered?: boolean;
+  theme?: UiTheme;
 }
 
-const DEFAULT_FONT = '10px Arial, Helvetica, sans-serif';
-const HEADER_FONT = 'bold 11px Arial, Helvetica, sans-serif';
-const NOTE_HEADER_FONT = 'bold 10px Arial, Helvetica, sans-serif';
+// Per-character width used when no context is available for measuring
+// (the historical behavior of this module's helpers).
+const FALLBACK_PER_CHAR = 6.5;
 
 export const measureTextWidth = (
   ctx: CanvasRenderingContext2D | null | undefined,
   text: string,
-  font: string = DEFAULT_FONT,
-): number => {
-  if (!text) return 0;
-  if (ctx && typeof ctx.measureText === 'function') {
-    ctx.save();
-    ctx.font = font;
-    const width = ctx.measureText(text).width;
-    ctx.restore();
-    return width;
-  }
-  return text.length * 6.5;
-};
+  font: string,
+): number => kitMeasureTextWidth(ctx, text, font, FALLBACK_PER_CHAR);
 
 export const wrapText = (
   ctx: CanvasRenderingContext2D | null | undefined,
   text: string,
   maxWidth: number,
-  font: string = DEFAULT_FONT,
-): string[] => {
-  if (!text || maxWidth <= 0) return [];
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
-
-  for (const word of words) {
-    const candidate = currentLine ? `${currentLine} ${word}` : word;
-    const width = measureTextWidth(ctx, candidate, font);
-    if (width <= maxWidth) {
-      currentLine = candidate;
-    } else {
-      if (currentLine) {
-        lines.push(currentLine);
-      }
-      currentLine = word;
-    }
-  }
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-  return lines.length > 0 ? lines : [text];
-};
+  font: string,
+): string[] => kitWrapText(ctx, text, maxWidth, font, FALLBACK_PER_CHAR);
 
 export const formatWinCondition = (
   cond: WinCondition,
@@ -262,6 +237,9 @@ export const getDiaryAndWinConditionsLayout = (
   const lineHeight = 13;
   const condLineHeight = 14;
 
+  const theme = options?.theme ?? defaultTheme;
+  const bodyFont = composeFont(theme, theme.typography.sizes.xxs);
+
   const panelWidth = Math.min(
     260,
     Math.max(180, Math.min(240, viewWidth - marginX * 2)),
@@ -293,7 +271,7 @@ export const getDiaryAndWinConditionsLayout = (
     const text = formatWinCondition(cond, state.dungeon?.killCount ?? 0);
     const bullet = cond.fulfilled ? '✓ ' : '❇️ ';
     const fullText = `${bullet}${text}`;
-    const lines = wrapText(ctx, fullText, contentWidth, DEFAULT_FONT);
+    const lines = wrapText(ctx, fullText, contentWidth, bodyFont);
     const itemHeight = lines.length * condLineHeight;
 
     winConditionsLayout.push({
@@ -323,7 +301,7 @@ export const getDiaryAndWinConditionsLayout = (
   for (const note of foundNotes) {
     const header = formatNoteHeader(note);
     const message = formatNoteMessage(note);
-    const messageLines = wrapText(ctx, message, contentWidth, DEFAULT_FONT);
+    const messageLines = wrapText(ctx, message, contentWidth, bodyFont);
     const itemHeight = 14 + messageLines.length * lineHeight;
 
     diaryNotesLayout.push({
@@ -452,24 +430,42 @@ export const renderDiaryAndWinConditions = (
     diaryNotes,
   } = layout;
 
+  const theme = options?.theme ?? defaultTheme;
+  const bodyFont = composeFont(theme, theme.typography.sizes.xxs);
+  const headerFont = composeFont(
+    theme,
+    theme.typography.sizes.sm,
+    theme.typography.weights.bold,
+  );
+  const noteHeaderFont = composeFont(
+    theme,
+    theme.typography.sizes.xxs,
+    theme.typography.weights.bold,
+  );
+
   ctx.save();
 
   // Collapsed compact mode: a square button with the diary icon;
   // pressing it opens the full panel.
   if (isCollapsed) {
     ctx.fillStyle = options?.isToggleHovered
-      ? 'rgba(40, 46, 58, 0.95)'
-      : 'rgba(20, 24, 33, 0.90)';
+      ? theme.palette.surface.panelCornerHover
+      : theme.palette.surface.panelCorner;
     ctx.strokeStyle = options?.isToggleHovered
-      ? 'rgba(255, 255, 255, 0.4)'
-      : 'rgba(255, 255, 255, 0.12)';
-    ctx.lineWidth = 1;
+      ? theme.palette.border.panelCornerHover
+      : theme.palette.border.hairline;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = '#f3f4f6';
-    ctx.font = '18px sans-serif';
+    ctx.fillStyle = theme.palette.text.panelHeader;
+    ctx.font = composeFont(
+      theme,
+      theme.typography.sizes.title,
+      theme.typography.weights.regular,
+      theme.typography.families.plain,
+    );
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -482,9 +478,9 @@ export const renderDiaryAndWinConditions = (
   }
 
   // Draw background panel
-  ctx.fillStyle = 'rgba(20, 24, 33, 0.90)';
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-  ctx.lineWidth = 1;
+  ctx.fillStyle = theme.palette.surface.panelCorner;
+  ctx.strokeStyle = theme.palette.border.hairline;
+  ctx.lineWidth = theme.shape.strokeWidth.thin;
   drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
   ctx.fill();
   ctx.stroke();
@@ -492,12 +488,12 @@ export const renderDiaryAndWinConditions = (
   // Close button ( − ) on the open compact panel.
   if (isCompact && toggleButtonBounds.width > 0) {
     ctx.fillStyle = options?.isToggleHovered
-      ? 'rgba(255, 255, 255, 0.2)'
-      : 'rgba(255, 255, 255, 0.08)';
+      ? theme.palette.surface.toggleHover
+      : theme.palette.surface.toggle;
     ctx.strokeStyle = options?.isToggleHovered
-      ? 'rgba(255, 255, 255, 0.4)'
-      : 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 1;
+      ? theme.palette.border.panelCornerHover
+      : theme.palette.border.toggle;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     drawRoundedRect(
       ctx,
       toggleButtonBounds.x,
@@ -509,8 +505,10 @@ export const renderDiaryAndWinConditions = (
     ctx.fill();
     ctx.stroke();
 
-    ctx.font = 'bold 11px Arial, Helvetica, sans-serif';
-    ctx.fillStyle = options?.isToggleHovered ? '#ffffff' : '#cbd5e1';
+    ctx.font = headerFont;
+    ctx.fillStyle = options?.isToggleHovered
+      ? theme.palette.text.bright
+      : theme.palette.text.panelBody;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -532,7 +530,7 @@ export const renderDiaryAndWinConditions = (
 
   // Render Win Conditions
   for (const item of winConditions) {
-    ctx.font = DEFAULT_FONT;
+    ctx.font = bodyFont;
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
 
@@ -540,16 +538,16 @@ export const renderDiaryAndWinConditions = (
     for (let i = 0; i < item.lines.length; i++) {
       const line = item.lines[i];
       if (item.fulfilled) {
-        ctx.fillStyle = '#86efac';
+        ctx.fillStyle = theme.palette.text.success;
       } else {
-        ctx.fillStyle = '#e2e8f0';
+        ctx.fillStyle = theme.palette.text.body;
       }
       ctx.fillText(line, contentX, lineY);
 
       if (item.fulfilled) {
-        const textW = measureTextWidth(ctx, line, DEFAULT_FONT);
-        ctx.strokeStyle = '#86efac';
-        ctx.lineWidth = 1;
+        const textW = measureTextWidth(ctx, line, bodyFont);
+        ctx.strokeStyle = theme.palette.text.success;
+        ctx.lineWidth = theme.shape.strokeWidth.thin;
         ctx.beginPath();
         ctx.moveTo(contentX, lineY + 7);
         ctx.lineTo(contentX + textW, lineY + 7);
@@ -566,8 +564,8 @@ export const renderDiaryAndWinConditions = (
       winConditions[winConditions.length - 1].y +
       winConditions[winConditions.length - 1].height +
       4;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = theme.palette.border.divider;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     ctx.beginPath();
     ctx.moveTo(contentX, dividerY);
     ctx.lineTo(contentX + contentWidth, dividerY);
@@ -576,8 +574,8 @@ export const renderDiaryAndWinConditions = (
 
   // Render Diary Header
   if (diaryHeader) {
-    ctx.font = HEADER_FONT;
-    ctx.fillStyle = '#fef3c7';
+    ctx.font = headerFont;
+    ctx.fillStyle = theme.palette.text.diaryHeader;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(diaryHeader, contentX, diaryHeaderY);
@@ -588,23 +586,23 @@ export const renderDiaryAndWinConditions = (
     const noteItem = diaryNotes[idx];
 
     // Separator before note
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = theme.palette.border.separator;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     ctx.beginPath();
     ctx.moveTo(contentX, noteItem.y - 3);
     ctx.lineTo(contentX + contentWidth, noteItem.y - 3);
     ctx.stroke();
 
     // Note header (e.g. "On 2)")
-    ctx.font = NOTE_HEADER_FONT;
-    ctx.fillStyle = '#86efac';
+    ctx.font = noteHeaderFont;
+    ctx.fillStyle = theme.palette.text.success;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(noteItem.header, contentX, noteItem.y);
 
     // Note message lines
-    ctx.font = DEFAULT_FONT;
-    ctx.fillStyle = '#cbd5e1';
+    ctx.font = bodyFont;
+    ctx.fillStyle = theme.palette.text.panelBody;
     let msgY = noteItem.y + 14;
     for (const msgLine of noteItem.messageLines) {
       ctx.fillText(msgLine, contentX, msgY);

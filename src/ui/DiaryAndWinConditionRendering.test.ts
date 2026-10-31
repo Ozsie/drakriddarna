@@ -207,19 +207,33 @@ describe('DiaryAndWinConditionRendering', () => {
   describe('measureTextWidth and wrapText', () => {
     it('measures text with canvas ctx', () => {
       const ctx = createMockCtx();
-      const width = measureTextWidth(ctx, 'Hello World');
+      const width = measureTextWidth(
+        ctx,
+        'Hello World',
+        '10px Arial, Helvetica, sans-serif',
+      );
       expect(width).toBe(11 * 8);
     });
 
     it('wraps text when exceeding max width', () => {
       const ctx = createMockCtx();
-      const lines = wrapText(ctx, 'One two three four five six', 60);
+      const lines = wrapText(
+        ctx,
+        'One two three four five six',
+        60,
+        '10px Arial, Helvetica, sans-serif',
+      );
       expect(lines.length).toBeGreaterThan(1);
     });
 
     it('keeps single line if within max width', () => {
       const ctx = createMockCtx();
-      const lines = wrapText(ctx, 'Short', 100);
+      const lines = wrapText(
+        ctx,
+        'Short',
+        100,
+        '10px Arial, Helvetica, sans-serif',
+      );
       expect(lines).toEqual(['Short']);
     });
   });

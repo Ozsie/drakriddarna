@@ -3,6 +3,8 @@ import { i18n } from '../core';
 import { drawRoundedRect, type CardBounds } from './HeroCardRendering';
 import { wrapText } from './DiaryAndWinConditionRendering';
 import { COMPACT_TOGGLE_SIZE, isCompactUi } from './UiMode';
+import { composeFont } from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 export interface DrawnEventItem {
   event: TurnEvent;
@@ -44,16 +46,12 @@ export interface EventCardLayout {
 export interface RenderEventCardOptions {
   isCollapsed?: boolean;
   isToggleHovered?: boolean;
+  theme?: UiTheme;
 }
 
 export interface EventCardHitResult {
   type: 'toggle' | 'card';
 }
-
-const DEFAULT_FONT = '10px Arial, Helvetica, sans-serif';
-const HEADER_FONT = 'bold 11px Arial, Helvetica, sans-serif';
-const SUBHEADER_FONT = 'bold 10px Arial, Helvetica, sans-serif';
-const EVENT_TITLE_FONT = 'bold 10.5px Arial, Helvetica, sans-serif';
 
 export const formatEventTitle = (event: TurnEvent): string => {
   const name = i18n(event.nameTranslationKey ?? event.name);
@@ -175,6 +173,9 @@ export const getEventCardLayout = (
 
   let currentY = topY + paddingY + 16; // Header space
 
+  const theme = options?.theme ?? defaultTheme;
+  const bodyFont = composeFont(theme, theme.typography.sizes.xxs);
+
   let activeEventLayout: ActiveEventLayout | undefined;
   if (activeEvent) {
     const rawHeader = i18n('content.event.current');
@@ -184,12 +185,7 @@ export const getEventCardLayout = (
         : rawHeader || 'Current event';
     const title = formatEventTitle(activeEvent);
     const description = formatEventDescription(activeEvent);
-    const descriptionLines = wrapText(
-      ctx,
-      description,
-      contentWidth,
-      DEFAULT_FONT,
-    );
+    const descriptionLines = wrapText(ctx, description, contentWidth, bodyFont);
 
     const activeHeight = 14 + 14 + descriptionLines.length * lineHeight;
     activeEventLayout = {
@@ -234,7 +230,7 @@ export const getEventCardLayout = (
   } else {
     for (const event of drawnList) {
       const title = `• ${formatEventTitle(event)}`;
-      const lines = wrapText(ctx, title, contentWidth, DEFAULT_FONT);
+      const lines = wrapText(ctx, title, contentWidth, bodyFont);
       const itemHeight = lines.length * lineHeight;
       drawnEventsLayout.push({
         event,
@@ -342,30 +338,53 @@ export const renderEventCard = (
     drawnEvents,
   } = layout;
 
+  const theme = options?.theme ?? defaultTheme;
+  const bodyFont = composeFont(theme, theme.typography.sizes.xxs);
+  const headerFont = composeFont(
+    theme,
+    theme.typography.sizes.sm,
+    theme.typography.weights.bold,
+  );
+  const subheaderFont = composeFont(
+    theme,
+    theme.typography.sizes.xxs,
+    theme.typography.weights.bold,
+  );
+  const eventTitleFont = composeFont(
+    theme,
+    theme.typography.sizes.xs,
+    theme.typography.weights.bold,
+  );
+
   ctx.save();
 
   // Collapsed compact mode: a square button with the event icon and the
   // remaining card count; pressing it opens the full panel.
   if (isCollapsed && isCompact) {
     ctx.fillStyle = options?.isToggleHovered
-      ? 'rgba(40, 46, 58, 0.95)'
-      : 'rgba(20, 24, 33, 0.90)';
+      ? theme.palette.surface.panelCornerHover
+      : theme.palette.surface.panelCorner;
     ctx.strokeStyle = options?.isToggleHovered
-      ? 'rgba(255, 255, 255, 0.4)'
-      : 'rgba(255, 255, 255, 0.12)';
-    ctx.lineWidth = 1;
+      ? theme.palette.border.panelCornerHover
+      : theme.palette.border.hairline;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = '#f3f4f6';
-    ctx.font = '16px sans-serif';
+    ctx.fillStyle = theme.palette.text.panelHeader;
+    ctx.font = composeFont(
+      theme,
+      theme.typography.sizes.xxxl,
+      theme.typography.weights.regular,
+      theme.typography.families.plain,
+    );
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('🎴', bounds.x + bounds.width / 2, bounds.y + 14);
 
-    ctx.font = 'bold 10px Arial, Helvetica, sans-serif';
-    ctx.fillStyle = '#cbd5e1';
+    ctx.font = subheaderFont;
+    ctx.fillStyle = theme.palette.text.panelBody;
     ctx.fillText(
       `${layout.deckSummary.remaining}`,
       bounds.x + bounds.width / 2,
@@ -377,28 +396,28 @@ export const renderEventCard = (
   }
 
   // Background panel
-  ctx.fillStyle = 'rgba(20, 24, 33, 0.90)';
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-  ctx.lineWidth = 1;
+  ctx.fillStyle = theme.palette.surface.panelCorner;
+  ctx.strokeStyle = theme.palette.border.hairline;
+  ctx.lineWidth = theme.shape.strokeWidth.thin;
   drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
   ctx.fill();
   ctx.stroke();
 
   // Header Title
-  ctx.font = HEADER_FONT;
-  ctx.fillStyle = '#f3f4f6';
+  ctx.font = headerFont;
+  ctx.fillStyle = theme.palette.text.panelHeader;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText(headerText, bounds.x + 8, bounds.y + 7);
 
   // Toggle button [ − ] or [ + ]
   ctx.fillStyle = options?.isToggleHovered
-    ? 'rgba(255, 255, 255, 0.2)'
-    : 'rgba(255, 255, 255, 0.08)';
+    ? theme.palette.surface.toggleHover
+    : theme.palette.surface.toggle;
   ctx.strokeStyle = options?.isToggleHovered
-    ? 'rgba(255, 255, 255, 0.4)'
-    : 'rgba(255, 255, 255, 0.15)';
-  ctx.lineWidth = 1;
+    ? theme.palette.border.panelCornerHover
+    : theme.palette.border.toggle;
+  ctx.lineWidth = theme.shape.strokeWidth.thin;
   drawRoundedRect(
     ctx,
     toggleButtonBounds.x,
@@ -410,8 +429,10 @@ export const renderEventCard = (
   ctx.fill();
   ctx.stroke();
 
-  ctx.font = 'bold 11px Arial, Helvetica, sans-serif';
-  ctx.fillStyle = options?.isToggleHovered ? '#ffffff' : '#cbd5e1';
+  ctx.font = headerFont;
+  ctx.fillStyle = options?.isToggleHovered
+    ? theme.palette.text.bright
+    : theme.palette.text.panelBody;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const toggleSymbol = isCollapsed ? '+' : '−';
@@ -427,7 +448,7 @@ export const renderEventCard = (
   }
 
   // Divider under header
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.strokeStyle = theme.palette.border.separator;
   ctx.beginPath();
   ctx.moveTo(bounds.x + 6, bounds.y + 26);
   ctx.lineTo(bounds.x + bounds.width - 6, bounds.y + 26);
@@ -436,20 +457,20 @@ export const renderEventCard = (
   // Active event section
   if (activeEvent) {
     // Current event badge / subheader
-    ctx.font = SUBHEADER_FONT;
-    ctx.fillStyle = '#94a3b8';
+    ctx.font = subheaderFont;
+    ctx.fillStyle = theme.palette.text.muted;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(activeEvent.header, bounds.x + 8, activeEvent.y);
 
     // Event title in amber / gold
-    ctx.font = EVENT_TITLE_FONT;
-    ctx.fillStyle = '#fbbf24';
+    ctx.font = eventTitleFont;
+    ctx.fillStyle = theme.palette.text.eventTitle;
     ctx.fillText(activeEvent.title, bounds.x + 8, activeEvent.y + 13);
 
     // Description
-    ctx.font = DEFAULT_FONT;
-    ctx.fillStyle = '#e2e8f0';
+    ctx.font = bodyFont;
+    ctx.fillStyle = theme.palette.text.body;
     let lineY = activeEvent.y + 27;
     for (const line of activeEvent.descriptionLines) {
       ctx.fillText(line, bounds.x + 8, lineY);
@@ -457,7 +478,7 @@ export const renderEventCard = (
     }
 
     // Divider after active event
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.strokeStyle = theme.palette.border.separator;
     ctx.beginPath();
     ctx.moveTo(bounds.x + 6, activeEvent.y + activeEvent.height + 4);
     ctx.lineTo(
@@ -469,15 +490,15 @@ export const renderEventCard = (
 
   // Drawn Events Section
   if (drawnEventsHeader && drawnEventsHeaderY) {
-    ctx.font = SUBHEADER_FONT;
-    ctx.fillStyle = '#94a3b8';
+    ctx.font = subheaderFont;
+    ctx.fillStyle = theme.palette.text.muted;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(drawnEventsHeader, bounds.x + 8, drawnEventsHeaderY);
   }
 
-  ctx.font = DEFAULT_FONT;
-  ctx.fillStyle = '#94a3b8';
+  ctx.font = bodyFont;
+  ctx.fillStyle = theme.palette.text.muted;
   for (const item of drawnEvents) {
     let lineY = item.y;
     for (const line of item.lines) {
