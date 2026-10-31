@@ -220,6 +220,7 @@ const renderCampaignCompleteSection = (
   // Campaign summary
   ctx.fillStyle = '#94a3b8';
   ctx.font = DESC_FONT;
+  ctx.textAlign = 'left';
   ctx.fillText(cc.summaryText, x, cc.summaryY);
 
   // Per-scenario table
