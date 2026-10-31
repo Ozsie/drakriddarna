@@ -277,6 +277,12 @@ export class DungeonBoardController {
   private staticRenderCount = 0;
   private dynamicRenderCount = 0;
   private lastStaticLightKey = '';
+  // The world transform last applied to the canvases, as a signature. The
+  // static light layer's pixels are baked under that transform and copied
+  // in device space, and its cache key is built from props — the two can
+  // disagree in time, so a changed transform must invalidate the cached
+  // layer even when its key did not change.
+  private lastWorldTransformSig = '';
   private lastStaticSignature = '';
   private lastDynamicSignature = '';
   private lastAmbientSignature = '';
@@ -532,10 +538,8 @@ export class DungeonBoardController {
       this.cellSize = nextCellSize;
     }
 
-    if (props.activeState && props.debugMode !== undefined) {
-      this.renderCanvas(false);
-    }
-
+    // Dungeon change: re-center the view before any render below, so no
+    // layer bakes pixels under the previous dungeon's world transform.
     const dungeonKey = props.dungeon
       ? `${String(String(String(props.dungeon.name)))}|${String(
           props.startPosition?.x,
@@ -547,6 +551,10 @@ export class DungeonBoardController {
       this.panY = 0;
       this.updateAllCanvasTransforms();
       this.renderCanvas(true);
+    }
+
+    if (props.activeState && props.debugMode !== undefined) {
+      this.renderCanvas(false);
     }
 
     if (this.ground && props.tileset && props.tileset !== this.lastTileset) {
@@ -862,6 +870,19 @@ export class DungeonBoardController {
     const centerOffsetY = this.startPosition
       ? (this.startPosition.y + 0.5) * this.cellSize
       : 0;
+    // The transform change invalidates the static light layer: its cached
+    // pixels were drawn under the previous transform and are copied into
+    // the light mask in device space, so they would sit offset relative
+    // to the re-transformed world.
+    const transformSig = `${String(ratio)},${String(
+      this.containerWidth,
+    )},${String(this.containerHeight)},${String(this.panX)},${String(
+      this.panY,
+    )},${String(centerOffsetX)},${String(centerOffsetY)}`;
+    if (transformSig !== this.lastWorldTransformSig) {
+      this.lastWorldTransformSig = transformSig;
+      this.lastStaticLightKey = '';
+    }
     for (const canvas of [
       this.staticCanvas,
       this.actorCanvas,
@@ -1874,6 +1895,10 @@ export class DungeonBoardController {
         ratio * (width / 2 + this.panX - centerOffsetX),
         ratio * (height / 2 + this.panY - centerOffsetY),
       );
+      // Resizing a canvas clears it and this call re-applies the world
+      // transform, so the cached static light layer no longer matches the
+      // surface it was drawn on.
+      this.lastStaticLightKey = '';
     }
   };
 
