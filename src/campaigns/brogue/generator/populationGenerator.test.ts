@@ -376,7 +376,7 @@ describe('populate', () => {
     }
   });
 
-  it('never walls anything in: every free cell stays reachable from the hero start', () => {
+  it('never walls anything in: every free cell stays reachable from every hero start', () => {
     for (const seedBase of [787878, 141414, 272727]) {
       for (let depth = 1; depth <= 10; depth++) {
         const { generated, populated } = generatePopulated(seedBase, depth);
@@ -419,36 +419,41 @@ describe('populate', () => {
           lockedEdges.add(`${x},${y}|${x + dx},${y + dy}`);
           lockedEdges.add(`${x + dx},${y + dy}|${x},${y}`);
         }
-        const seeds = generated.startingPositions.filter(
+        // Every hero start must reach the whole dungeon on its own: a
+        // pillar or pit may never wall a single hero into a pocket the
+        // other starts reach around.
+        const starts = generated.startingPositions.filter(
           (cell) => !blocked.has(`${cell.x},${cell.y}`),
         );
-        expect(seeds.length).toBeGreaterThan(0);
-        const seen = new Set(seeds.map((cell) => `${cell.x},${cell.y}`));
-        const queue = [...seeds];
-        while (queue.length > 0) {
-          const current = queue.pop()!;
-          for (const [dx, dy] of [
-            [0, -1],
-            [0, 1],
-            [-1, 0],
-            [1, 0],
-          ]) {
-            const key = `${current.x + dx},${current.y + dy}`;
-            if (
-              !floorKeys.has(key) ||
-              seen.has(key) ||
-              blocked.has(key) ||
-              lockedEdges.has(`${current.x},${current.y}|${key}`)
-            ) {
-              continue;
+        expect(starts.length).toBeGreaterThan(0);
+        for (const start of starts) {
+          const seen = new Set([`${start.x},${start.y}`]);
+          const queue = [start];
+          while (queue.length > 0) {
+            const current = queue.pop()!;
+            for (const [dx, dy] of [
+              [0, -1],
+              [0, 1],
+              [-1, 0],
+              [1, 0],
+            ]) {
+              const key = `${current.x + dx},${current.y + dy}`;
+              if (
+                !floorKeys.has(key) ||
+                seen.has(key) ||
+                blocked.has(key) ||
+                lockedEdges.has(`${current.x},${current.y}|${key}`)
+              ) {
+                continue;
+              }
+              seen.add(key);
+              queue.push({ x: current.x + dx, y: current.y + dy });
             }
-            seen.add(key);
-            queue.push({ x: current.x + dx, y: current.y + dy });
           }
-        }
-        for (const key of floorKeys) {
-          if (!blocked.has(key)) {
-            expect(seen.has(key)).toBe(true);
+          for (const key of floorKeys) {
+            if (!blocked.has(key)) {
+              expect(seen.has(key)).toBe(true);
+            }
           }
         }
       }

@@ -226,10 +226,11 @@ export const populate = (
   // --- Blockers: pillars and pits -------------------------------------------
   // Placed before monsters, items and secrets so every later placement
   // sees them as occupied. A blocker only goes on a room cell that keeps
-  // every free floor cell of the whole dungeon reachable from the hero
-  // start cells (a global flood fill per candidate), so nothing placed
-  // later can be cut off, and never beside a doorway so the mouth of a
-  // door stays open. Wall-adjacent
+  // every free floor cell of the whole dungeon reachable from a single
+  // hero start cell (a global flood fill per candidate), so nothing
+  // placed later can be cut off and no hero can be walled into a pocket,
+  // and never beside a doorway so the mouth of a door stays open.
+  // Wall-adjacent
   // cells are preferred: pillars read as columns or sarcophagi along the
   // room edge, pits as floor that has given way at the room's rim.
   const pillars: [number, number][] = [];
@@ -243,11 +244,14 @@ export const populate = (
     }
 
     // A blocker is only accepted when, with it blocked, every free floor
-    // cell of the whole dungeon stays reachable from the hero start cells
+    // cell of the whole dungeon stays reachable from a single hero start
     // without passing a locked door — a global flood fill per candidate.
     // A per-room check is not enough: a pit in a one-cell-wide passage
     // between two doors leaves both sides connected to a door of their
-    // own while severing the only route through the dungeon.
+    // own while severing the only route through the dungeon. Seeding from
+    // a single start is what protects the heroes themselves: seeding from
+    // all starts together would let a pillar wall one hero into a pocket
+    // the other starts simply reach around.
     const floorKeys = new Set<string>();
     for (const cells of rooms.values()) {
       for (const cell of cells) {
@@ -270,12 +274,12 @@ export const populate = (
 
     const keepsDungeonConnected = (candidate: Cell): boolean => {
       const blocked = new Set([...blockers, cellKey(candidate)]);
-      const seeds = startingPositions.filter(
+      const seed = startingPositions.find(
         (cell) => !blocked.has(cellKey(cell)),
       );
-      if (seeds.length === 0) return false;
-      const seen = new Set(seeds.map(cellKey));
-      const queue = [...seeds];
+      if (!seed) return false;
+      const seen = new Set([cellKey(seed)]);
+      const queue = [seed];
       while (queue.length > 0) {
         const current = queue.pop() as Cell;
         for (const { dx, dy } of ORTHOGONAL_OFFSETS) {

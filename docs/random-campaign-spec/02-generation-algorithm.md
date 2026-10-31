@@ -142,14 +142,17 @@ Placement rules, enforced before any monster, item or secret is placed:
   walls, never on door cells and never orthogonally adjacent to a door
   cell, so the mouth of every doorway stays open.
 - A candidate is only accepted when, with it blocked, every free floor
-  cell of the whole dungeon stays reachable from the hero start cells
+  cell of the whole dungeon stays reachable from a single hero start cell
   without passing through a locked door (a global flood fill per
   candidate). A per-room check is not enough: a pit in a one-cell-wide
   passage between two doors leaves both sides connected to a door of
-  their own while severing the only route through the dungeon. This is
-  what makes the blockers safe: nothing placed later — monster, item,
-  secret or hero start — can ever be cut off, because every free cell
-  stays connected.
+  their own while severing the only route through the dungeon. And the
+  flood fill must seed from one start, not from all of them together:
+  seeding from every start would let a pillar wall a single hero into a
+  pocket that the other heroes simply reach around. This is what makes
+  the blockers safe: nothing placed later — monster, item, secret or
+  hero start — can ever be cut off, and no hero can be sealed in,
+  because every free cell stays connected to every hero start.
 - Wall-adjacent cells are preferred (pillars read as columns or
   sarcophagi along the room edge, pits as floor that has given way at
   the room's rim); pillars on boss floors prefer the boss room.

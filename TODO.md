@@ -152,7 +152,7 @@
 ## Bugs
 
 - [ ] Lights do not reset positions when a new dungeon is loaded
-- [ ] Pillars can be generated in a way that blocks paths
+- [x] Pillars can be generated in a way that blocks paths
 - [x] The volume sliders are not draggable correctly
 - [x] It's not possible to edit hero names in hero selection — the inputs now behave like text inputs prefilled with the roster name: Backspace erases the shown name and typing appends to it (previously the prefilled name could not be erased and typing silently replaced it)
 - [x] Win screen text is offset outside of box
