@@ -6,7 +6,7 @@ Specification · Drakriddarna · Draft v1 · 30 October 2026
 
 Build a parameterized canvas UI kit inside the repository (`src/uikit/`) and move game-specific knowledge into a thin adapter layer (`src/ui/`). Renderers stop reading `GameState`, calling `i18n()`, importing Vite asset URLs and hardcoding colors and fonts. Instead they receive three things: a **view model** (what to show), a **theme** (how it looks) and a **UI context** (translator, assets, layout mode).
 
-This is the middle path from the extraction analysis. The game stays green at every step, each conversion is a small reviewable change, and the work can stop after any phase with the value already banked. The package boundary is not cut. The kit is *package-ready* when nothing under `src/uikit/` imports from game code and a lint rule proves it.
+This is the middle path from the extraction analysis. The game stays green at every step, each conversion is a small reviewable change, and the work can stop after any phase with the value already banked. The package boundary is not cut. The kit is _package-ready_ when nothing under `src/uikit/` imports from game code and a lint rule proves it.
 
 ## 2. Goals and non-goals
 
@@ -65,10 +65,15 @@ During migration a renderer lives in `src/ui/` until converted. Moving a file in
 
 ```ts
 export type LayoutMode = 'regular' | 'compact';
-export type Translator = (key: string, params?: Record<string, string | number>) => string;
+export type Translator = (
+  key: string,
+  params?: Record<string, string | number>,
+) => string;
 export type AssetId = string;
 
-export interface TextMeasure { width(text: string, font: string): number }
+export interface TextMeasure {
+  width(text: string, font: string): number;
+}
 
 /** Everything a pure layout function needs. No canvas. */
 export interface UiEnv {
@@ -115,17 +120,19 @@ export interface UiComponent<VM, Opts, L, Hit> {
 
 Tokens, not per-component styles.
 
-| Group | Contents |
-| --- | --- |
-| palette | surface, surfaceRaised, overlayScrim, border, borderStrong, text, textMuted, textOnAccent, accent, danger, success, warning |
-| status | hp good/low/critical, disabled, hover, pressed, selected |
-| typography | font families; size scale xs to xl; weights; line-height factors |
-| spacing | a small scale used for padding and gaps |
-| shape | radii, stroke widths |
-| alpha | scrim, shadow and tint opacities |
+| Group      | Contents                                                                                                                    |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------- |
+| palette    | surface, surfaceRaised, overlayScrim, border, borderStrong, text, textMuted, textOnAccent, accent, danger, success, warning |
+| status     | hp good/low/critical, disabled, hover, pressed, selected                                                                    |
+| typography | font families; size scale xs to xl; weights; line-height factors                                                            |
+| spacing    | a small scale used for padding and gaps                                                                                     |
+| shape      | radii, stroke widths                                                                                                        |
+| alpha      | scrim, shadow and tint opacities                                                                                            |
 
 ```ts
-export interface UiTheme { /* groups above, all readonly */ }
+export interface UiTheme {
+  /* groups above, all readonly */
+}
 export const defaultTheme: UiTheme; // values copied verbatim from today's literals
 export function resolveTheme(overrides: DeepPartial<UiTheme>): UiTheme; // deep-merged, frozen
 ```
@@ -155,18 +162,21 @@ export interface HeroCardViewModel {
 }
 
 // game side: the only code allowed to read GameState
-export function toHeroCardViewModel(state: GameState, heroId: string): HeroCardViewModel;
+export function toHeroCardViewModel(
+  state: GameState,
+  heroId: string,
+): HeroCardViewModel;
 ```
 
 ## 5. Parameterization model
 
 Three channels, one rule each.
 
-| Channel | Use for | Not for |
-| --- | --- | --- |
-| Theme | Anything visual and global: color, font, radius, spacing | Per-instance structure |
-| Options | Per-instance structural choices: density, which sections show, alignment, max rows, animation on/off | Data, colors |
-| View model | Data and text | Style, structure |
+| Channel    | Use for                                                                                              | Not for                |
+| ---------- | ---------------------------------------------------------------------------------------------------- | ---------------------- |
+| Theme      | Anything visual and global: color, font, radius, spacing                                             | Per-instance structure |
+| Options    | Per-instance structural choices: density, which sections show, alignment, max rows, animation on/off | Data, colors           |
+| View model | Data and text                                                                                        | Style, structure       |
 
 A thing becomes an option only when a call site needs it. Otherwise it is a theme token or a constant. This keeps "configurable" from turning into speculative generality.
 
@@ -195,14 +205,14 @@ Call-log snapshots are brittle against harmless reordering. That is fine for lit
 
 ## 8. Phased plan
 
-| Phase | Deliverable | Exit criteria | Estimate |
-| --- | --- | --- | --- |
-| 0 | Inventory, recording context, parity snapshots, literal budget | Snapshots and inventory committed; CI green | 2–3 days |
-| 1 | Theme and shared draw primitives | Literal budget 0 in converted modules; parity unchanged; second theme renders | 3–5 days |
-| 2 | `UiEnv`/`UiContext`, translator and asset ports | No i18n or `$lib` imports in converted modules; compact mode passed as a parameter | 2–3 days |
-| 3 | Component kit | Each primitive has at least two consumers and tests | about 1 week |
-| 4 | View-model conversion of all in-scope renderers | Each module moved to `src/uikit/components/` and clean | 2–3 weeks |
-| 5 | Hardening and package-readiness | Boundary lint is an error everywhere; docs updated; readiness checklist passes | 2–3 days |
+| Phase | Deliverable                                                    | Exit criteria                                                                      | Estimate     |
+| ----- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------ |
+| 0     | Inventory, recording context, parity snapshots, literal budget | Snapshots and inventory committed; CI green                                        | 2–3 days     |
+| 1     | Theme and shared draw primitives                               | Literal budget 0 in converted modules; parity unchanged; second theme renders      | 3–5 days     |
+| 2     | `UiEnv`/`UiContext`, translator and asset ports                | No i18n or `$lib` imports in converted modules; compact mode passed as a parameter | 2–3 days     |
+| 3     | Component kit                                                  | Each primitive has at least two consumers and tests                                | about 1 week |
+| 4     | View-model conversion of all in-scope renderers                | Each module moved to `src/uikit/components/` and clean                             | 2–3 weeks    |
+| 5     | Hardening and package-readiness                                | Boundary lint is an error everywhere; docs updated; readiness checklist passes     | 2–3 days     |
 
 Estimates assume someone who knows the code and are derived from the original 4–8 week analysis, not measured. Phases 0–3 (about two weeks) deliver most of the theming and de-duplication value on their own.
 
@@ -231,16 +241,16 @@ Estimates assume someone who knows the code and are derived from the original 4�
 
 Build a primitive only when a second consumer exists.
 
-| Primitive | Notes | Proving consumers |
-| --- | --- | --- |
-| modalFrame | dim scrim, centered panel, title, close behavior | save/load, new game, dungeon intro, between-dungeons |
-| panel, button | states: normal, hover, pressed, disabled, selected | everywhere |
-| text | measure, wrap, ellipsize, align, line height | cards, diary, event card |
-| list | selectable rows, scroll, selection | save/load, new-game columns, hero selection |
-| scroll | clip, offset, scrollbar, wheel and touch hooks | diary, lists |
-| input | canvas-drawn text input with caret and max length | save name, hero rename, speedrun seed |
-| chip, bar | emoji-plus-number chip, HP bar | top bar, cards |
-| table | header, rows, column widths | campaign-complete tables, high scores |
+| Primitive     | Notes                                              | Proving consumers                                    |
+| ------------- | -------------------------------------------------- | ---------------------------------------------------- |
+| modalFrame    | dim scrim, centered panel, title, close behavior   | save/load, new game, dungeon intro, between-dungeons |
+| panel, button | states: normal, hover, pressed, disabled, selected | everywhere                                           |
+| text          | measure, wrap, ellipsize, align, line height       | cards, diary, event card                             |
+| list          | selectable rows, scroll, selection                 | save/load, new-game columns, hero selection          |
+| scroll        | clip, offset, scrollbar, wheel and touch hooks     | diary, lists                                         |
+| input         | canvas-drawn text input with caret and max length  | save name, hero rename, speedrun seed                |
+| chip, bar     | emoji-plus-number chip, HP bar                     | top bar, cards                                       |
+| table         | header, rows, column widths                        | campaign-complete tables, high scores                |
 
 ### Phase 4: View-model conversion
 
@@ -300,15 +310,15 @@ Per-module recipe, one PR each:
 
 ## 12. Risks
 
-| Risk | Mitigation |
-| --- | --- |
-| Consolidating primitives subtly changes pixels | Pixel comparison for Phase 3 (D2); literal-only steps use exact call-log parity |
-| Kit becomes over-general | Two-consumer rule; options only on demand; theme slots only for a real second theme |
-| Adapters misread state and change behavior | Adapter tests on `GameState` fixtures; keep `ItemLogic`, `campaigns` and similar reads inside adapters |
-| Stale visuals after a locale or theme change | Env identity is part of render signatures; test switching locale mid-session |
-| Long-lived refactor branch | One module per PR; trunk stays releasable; stop after any phase |
-| Tier C modules dominate the schedule | Do them last; split decide/show; deferring them still leaves a valuable kit |
-| Future Svelte 5 upgrade | Kit is plain TS; only adapters touching stores are affected |
+| Risk                                           | Mitigation                                                                                             |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Consolidating primitives subtly changes pixels | Pixel comparison for Phase 3 (D2); literal-only steps use exact call-log parity                        |
+| Kit becomes over-general                       | Two-consumer rule; options only on demand; theme slots only for a real second theme                    |
+| Adapters misread state and change behavior     | Adapter tests on `GameState` fixtures; keep `ItemLogic`, `campaigns` and similar reads inside adapters |
+| Stale visuals after a locale or theme change   | Env identity is part of render signatures; test switching locale mid-session                           |
+| Long-lived refactor branch                     | One module per PR; trunk stays releasable; stop after any phase                                        |
+| Tier C modules dominate the schedule           | Do them last; split decide/show; deferring them still leaves a valuable kit                            |
+| Future Svelte 5 upgrade                        | Kit is plain TS; only adapters touching stores are affected                                            |
 
 ## 13. Definition of done
 

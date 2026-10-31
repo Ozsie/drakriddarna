@@ -155,7 +155,7 @@
 - [ ] The volume sliders are not draggable correctly
 - [ ] Lights do not reset positions when a new dungeon is loaded
 - [ ] Pillars can be generated in a way that blocks paths
-- [X] Win screen text is offset outside of box
+- [x] Win screen text is offset outside of box
 - [x] RULES.md XP wording is wrong: the official rules (and the code) award the killer monster-specific points (orc 1, troll 2, dark lord 4) plus +1 per surviving rider per adventure — replace "every surviving hero earns +1 per kill"
 - [x] Halberd (range-2) attacks ignore line of sight — require `hasLineOfSight` in the attack branch of `onTargetCell` and the sword cursor in `getCursorType`
 - [x] Click movement (`onTargetCell`) bypasses the zone-of-control halt (path loop continues after movement is zeroed) — break on 0 movement (note: passing through other heroes is legal per the official rules)
