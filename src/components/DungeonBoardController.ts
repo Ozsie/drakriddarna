@@ -382,6 +382,9 @@ export class DungeonBoardController {
   private hoveredCreditsRowId: string | null = null;
   private isCreditsBackHovered = false;
   private settingsSliderDrag: 'musicVolume' | 'audioVolume' | null = null;
+  // True while the click that follows a slider press should be ignored
+  // (the press already applied the value).
+  private settingsSliderPressHandled = false;
 
   private menuCallbacks: MenuCallbacks = {
     setView: (view: MenuView) => {
@@ -1917,7 +1920,20 @@ export class DungeonBoardController {
   };
 
   public onTouchStart = (event: TouchEvent) => {
-    if (this.appPhase === 'welcome') return;
+    if (this.appPhase === 'welcome') {
+      const touch = event.touches[0];
+      if (touch) {
+        const point = this.screenPointFromEvent(touch);
+        if (point && this.beginSettingsSliderPress(point)) {
+          // The press owns the gesture; keep the browser from also
+          // synthesizing mouse/click events for it.
+          if (event.cancelable) {
+            event.preventDefault();
+          }
+        }
+      }
+      return;
+    }
     const started = handleTwoFingerTouchStart(
       event.touches,
       { x: this.panX, y: this.panY },
@@ -1932,7 +1948,21 @@ export class DungeonBoardController {
   };
 
   public onTouchMove = (event: TouchEvent) => {
-    if (this.appPhase === 'welcome') return;
+    if (this.appPhase === 'welcome') {
+      if (this.settingsSliderDrag) {
+        const touch = event.touches[0];
+        if (touch) {
+          const point = this.screenPointFromEvent(touch);
+          if (point) {
+            this.updateSliderFromPointer(point);
+          }
+          if (event.cancelable) {
+            event.preventDefault();
+          }
+        }
+      }
+      return;
+    }
     const result = handleTwoFingerTouchMove(event.touches, this.touchPanState);
     if (result) {
       this.panX = result.panX;
@@ -1948,7 +1978,13 @@ export class DungeonBoardController {
   };
 
   public onTouchEnd = (event: TouchEvent) => {
-    if (this.appPhase === 'welcome') return;
+    if (this.appPhase === 'welcome') {
+      if (this.settingsSliderDrag && event.touches.length === 0) {
+        this.settingsSliderDrag = null;
+        this.settingsSliderPressHandled = false;
+      }
+      return;
+    }
     const result = handleTwoFingerTouchEnd(event.touches, this.touchPanState, {
       x: this.panX,
       y: this.panY,
@@ -1964,6 +2000,8 @@ export class DungeonBoardController {
   };
 
   public onTouchCancel = () => {
+    this.settingsSliderDrag = null;
+    this.settingsSliderPressHandled = false;
     this.touchPanState.isDragging = false;
     this.exitLowQualityPan();
     if (this.hasMovedDuringDrag) {
@@ -2357,7 +2395,7 @@ export class DungeonBoardController {
 
   /** Board pixel position of a pointer event, or null without a canvas. */
   private screenPointFromEvent(
-    event: MouseEvent,
+    event: Pick<MouseEvent, 'clientX' | 'clientY'>,
   ): { x: number; y: number } | null {
     if (!this.uiCanvas) return null;
     const rect = this.uiCanvas.getBoundingClientRect();
@@ -2591,6 +2629,11 @@ export class DungeonBoardController {
     if (!point || this.containerWidth <= 0 || this.containerHeight <= 0) {
       return;
     }
+    // A slider press already applied the value (and armed the drag, which
+    // the window mouseup has since ended); only clicks without a matching
+    // press fall through to set it here.
+    const sliderPressHandled = this.settingsSliderPressHandled;
+    this.settingsSliderPressHandled = false;
     if (this.isNewGameDialogOpen) {
       const hit = getNewGameDialogHit(
         this.containerWidth,
@@ -2644,9 +2687,9 @@ export class DungeonBoardController {
         return;
       }
       if (hit.type === 'slider') {
-        // Pointer down sets the value; the drag tracks until pointer up.
-        this.settingsSliderDrag = hit.rowId;
-        this.updateSliderFromPointer(point);
+        if (!sliderPressHandled) {
+          this.setSliderValueFromPoint(hit.rowId, point);
+        }
         return;
       }
       if (hit.type === 'credits') {
@@ -2857,25 +2900,62 @@ export class DungeonBoardController {
    */
   private updateSliderFromPointer(point: { x: number; y: number }): void {
     if (!this.settingsSliderDrag) return;
+    this.setSliderValueFromPoint(this.settingsSliderDrag, point);
+  }
+
+  /** Applies a slider value for a pointer position, clamped to the track. */
+  private setSliderValueFromPoint(
+    rowId: 'musicVolume' | 'audioVolume',
+    point: { x: number; y: number },
+  ): void {
     const layout = getSettingsLayout(
       this.containerWidth,
       this.containerHeight,
       get(appSettingsStore),
     );
-    const row = layout.rows.find((r) => r.id === this.settingsSliderDrag);
+    const row = layout.rows.find((r) => r.id === rowId);
     if (!row?.slider) return;
     const value = getSliderValueFromX(row.slider.trackBounds, point.x);
     updateAppSettings(
-      this.settingsSliderDrag === 'musicVolume'
-        ? { musicVolume: value }
-        : { sfxVolume: value },
+      rowId === 'musicVolume' ? { musicVolume: value } : { sfxVolume: value },
     );
     this.renderUiLayer(true);
   }
 
+  /**
+   * Starts a volume-slider drag at a pointer press. Returns true when the
+   * press hit a slider (and the value was applied at the press position).
+   */
+  private beginSettingsSliderPress(point: { x: number; y: number }): boolean {
+    if (this.welcomeView !== 'settings') return false;
+    if (this.containerWidth <= 0 || this.containerHeight <= 0) return false;
+    const hit = getSettingsHit(
+      this.containerWidth,
+      this.containerHeight,
+      get(appSettingsStore),
+      point.x,
+      point.y,
+    );
+    if (hit?.type !== 'slider') return false;
+    this.settingsSliderDrag = hit.rowId;
+    this.settingsSliderPressHandled = true;
+    this.setSliderValueFromPoint(hit.rowId, point);
+    return true;
+  }
+
   public onMouseDown = (event: MouseEvent) => {
-    // The welcome phase has no board to pan and no gameplay UI.
-    if (this.appPhase === 'welcome') return;
+    // The welcome phase has no board to pan and no gameplay UI, but a
+    // volume-slider press starts its drag immediately: the value is set
+    // at press and tracks the pointer until release.
+    if (this.appPhase === 'welcome') {
+      if (event.button === 0) {
+        const point = this.screenPointFromEvent(event);
+        if (point) {
+          this.beginSettingsSliderPress(point);
+        }
+      }
+      return;
+    }
     if (
       event.button === 0 &&
       this.uiCanvas &&
