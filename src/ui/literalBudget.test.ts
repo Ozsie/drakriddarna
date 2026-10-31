@@ -15,8 +15,9 @@ import {
 //
 // When a module's literals are moved into the theme, update these two
 // numbers to the new totals (see docs/ui-kit-spec/05-boundary-and-verification.md).
-const COLOR_BUDGET = 341;
-const FONT_BUDGET = 71;
+// M2 progress: RadialMenu, Menu, DebugOverlay converted.
+const COLOR_BUDGET = 321;
+const FONT_BUDGET = 66;
 
 const collect = (dir: string): { file: string; count: StyleLiteralCount }[] => {
   const entries: { file: string; count: StyleLiteralCount }[] = [];

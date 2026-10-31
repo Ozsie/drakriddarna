@@ -6,6 +6,8 @@ import {
   getMenuHeader,
   getMenuItemsForView,
 } from '../menu/MenuLogic';
+import { composeFont } from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 export interface MenuItemLayout {
   item: CanvasMenuItem;
@@ -48,16 +50,13 @@ export interface RenderMenuOptions {
   buildInfo?: { date: string; hash: string } | null;
   debugMode?: boolean;
   callbacks?: MenuCallbacks;
+  theme?: UiTheme;
 }
 
 export interface MenuHitResult {
   type: 'backdrop' | 'panel' | 'item';
   item?: CanvasMenuItem;
 }
-
-const DEFAULT_FONT = '13px sans-serif';
-const HEADER_FONT = 'bold 15px sans-serif';
-const FOOTER_FONT = '10px sans-serif';
 
 export const isPointInBounds = (
   x: number,
@@ -250,28 +249,35 @@ export const renderMenuModal = (
 ) => {
   if (!ctx || !state || viewWidth <= 0 || viewHeight <= 0) return;
 
+  const theme = options?.theme ?? defaultTheme;
+
   const layout = getMenuLayout(viewWidth, viewHeight, state, options);
   if (layout.panelBounds.width === 0 || layout.panelBounds.height === 0) return;
 
   ctx.save();
 
   // 1. Semi-transparent backdrop
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.fillStyle = theme.palette.overlay.scrim;
   ctx.fillRect(0, 0, viewWidth, viewHeight);
 
   // 2. Menu Panel
   const panel = layout.panelBounds;
   drawRoundedRect(ctx, panel.x, panel.y, panel.width, panel.height, 6);
-  ctx.fillStyle = 'rgba(28, 33, 40, 0.96)';
+  ctx.fillStyle = theme.palette.surface.panelMenu;
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = theme.palette.border.subtle;
+  ctx.lineWidth = theme.shape.strokeWidth.thin;
   ctx.stroke();
 
   // 3. Header Text
   const header = layout.headerBounds;
-  ctx.font = HEADER_FONT;
-  ctx.fillStyle = '#f8fafc';
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.xxl,
+    theme.typography.weights.bold,
+    theme.typography.families.plain,
+  );
+  ctx.fillStyle = theme.palette.text.strong;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(
@@ -287,17 +293,24 @@ export const renderMenuModal = (
 
     drawMenuButtonShape(ctx, bounds.x, bounds.y, bounds.width, bounds.height);
     ctx.fillStyle = isHovered
-      ? 'rgba(71, 85, 105, 0.95)'
-      : 'rgba(37, 41, 50, 0.9)';
+      ? theme.palette.surface.itemHover
+      : theme.palette.surface.item;
     ctx.fill();
     ctx.strokeStyle = isHovered
-      ? 'rgba(255, 255, 255, 0.6)'
-      : 'rgba(255, 255, 255, 0.2)';
-    ctx.lineWidth = 1;
+      ? theme.palette.border.soft
+      : theme.palette.border.subtle;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     ctx.stroke();
 
-    ctx.font = DEFAULT_FONT;
-    ctx.fillStyle = isHovered ? '#ffffff' : '#e2e8f0';
+    ctx.font = composeFont(
+      theme,
+      theme.typography.sizes.lg,
+      theme.typography.weights.regular,
+      theme.typography.families.plain,
+    );
+    ctx.fillStyle = isHovered
+      ? theme.palette.text.bright
+      : theme.palette.text.body;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -310,8 +323,13 @@ export const renderMenuModal = (
   // 5. Footer Text (build info)
   if (layout.footerBounds) {
     const footer = layout.footerBounds;
-    ctx.font = FOOTER_FONT;
-    ctx.fillStyle = 'rgba(226, 232, 240, 0.5)';
+    ctx.font = composeFont(
+      theme,
+      theme.typography.sizes.xs,
+      theme.typography.weights.regular,
+      theme.typography.families.plain,
+    );
+    ctx.fillStyle = theme.palette.text.faint;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(

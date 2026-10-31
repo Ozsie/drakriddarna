@@ -3,6 +3,8 @@ import type { RadialMenuState } from '../store/radialMenuStore';
 import type { ItemSprite } from '../types';
 import { i18n } from '../core';
 import { drawItemSprite } from '../items/ItemSpriteRendering';
+import { composeFont } from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 export const RADIAL_MENU_ICONS: Record<RadialAction, string> = {
   [RadialAction.SEARCH]: '🔍',
@@ -111,12 +113,18 @@ export const findHoveredRadialButton = (
 export const renderRadialTooltip = (
   ctx: CanvasRenderingContext2D,
   button: RadialButtonPosition,
+  theme: UiTheme = defaultTheme,
 ) => {
   const text = button.label;
   if (!text) return;
 
   ctx.save();
-  ctx.font = '12px Arial, sans-serif';
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.md,
+    theme.typography.weights.regular,
+    theme.typography.families.compact,
+  );
   const textMetrics =
     typeof ctx.measureText === 'function'
       ? ctx.measureText(text)
@@ -129,9 +137,9 @@ export const renderRadialTooltip = (
   const boxX = button.x - boxWidth / 2;
   const boxY = button.y - button.radius - boxHeight - paddingY;
 
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-  ctx.lineWidth = 1;
+  ctx.fillStyle = theme.palette.overlay.tooltip;
+  ctx.strokeStyle = theme.palette.border.soft;
+  ctx.lineWidth = theme.shape.strokeWidth.thin;
   ctx.beginPath();
   if (typeof ctx.roundRect === 'function') {
     ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 4);
@@ -141,7 +149,7 @@ export const renderRadialTooltip = (
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = theme.palette.text.bright;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(text, button.x, boxY + boxHeight / 2);
@@ -153,6 +161,7 @@ export const renderRadialMenu = (
   cellSize: number,
   menu: RadialMenuState,
   hoveredIndex?: number | null,
+  theme: UiTheme = defaultTheme,
 ) => {
   if (!menu) return;
   const buttons = getRadialButtonPositions(menu, cellSize);
@@ -165,11 +174,13 @@ export const renderRadialMenu = (
     ctx.beginPath();
     ctx.arc(btn.x, btn.y, btn.radius, 0, Math.PI * 2);
     ctx.fillStyle = isHovered
-      ? 'rgba(255, 255, 255, 0.35)'
-      : 'rgba(0, 0, 0, 0.75)';
+      ? theme.palette.hover.radialFill
+      : theme.palette.overlay.scrimStrong;
     ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = theme.shape.strokeWidth.regular;
+    ctx.strokeStyle = isHovered
+      ? theme.palette.border.ringHover
+      : theme.palette.border.ring;
     ctx.stroke();
 
     // Draw button icon: item sprite if available, emoji icon otherwise
@@ -183,8 +194,10 @@ export const renderRadialMenu = (
         )
       : false;
     if (!spriteDrawn) {
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `${Math.round(btn.radius)}px sans-serif`;
+      ctx.fillStyle = theme.palette.text.bright;
+      ctx.font = `${Math.round(btn.radius)}px ${
+        theme.typography.families.plain
+      }`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(btn.icon, btn.x, btn.y);
@@ -199,7 +212,7 @@ export const renderRadialMenu = (
   ) {
     const hoveredBtn = buttons.find((b) => b.index === hoveredIndex);
     if (hoveredBtn) {
-      renderRadialTooltip(ctx, hoveredBtn);
+      renderRadialTooltip(ctx, hoveredBtn, theme);
     }
   }
   ctx.restore();
