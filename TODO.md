@@ -19,6 +19,7 @@
 
 # Features
 
+- [ ] Leaving campaign end screen should return user to main menu
 - [ ] Hide debug menu option when deploying
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc
 - [ ] Graphics
