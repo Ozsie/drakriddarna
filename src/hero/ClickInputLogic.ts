@@ -1,15 +1,26 @@
-import { addLog, doReRender, i18n, recordActorStep } from '../core';
 import {
+  addLog,
   cellsAlongLine,
+  distanceInGrid,
+  doReRender,
   findCell,
+  getDifficulty,
   hasLineOfSight,
+  i18n,
   isRoomDiscovered,
   isSamePosition,
   isWalkable,
 } from '../core';
-import { doorAsActor, takeDamage } from '../core';
-import type { ItemLocation, GameState, Hero, Position, Door } from '../types';
-import { ItemType, Side } from '../types';
+import type {
+  ItemLocation,
+  GameState,
+  Hero,
+  Position,
+  Door,
+  InteractableCell,
+  Item,
+} from '../types';
+import { ItemType } from '../types';
 import {
   checkForTrapDoor,
   randomItem,
@@ -17,52 +28,33 @@ import {
   removeFoundMagicItemFromDeck,
 } from '../secrets/SecretsLogic';
 import {
+  arriveOnCell,
   attack,
   canAct,
   canOpenDoor,
-  checkForNextToMonster,
-  checkForNote,
   consumeActions,
+  hasGiantsGlove,
+  interact,
   isBlockedByHero,
   isBlockedByMonster,
-  openDoor,
+  liveHeroes,
+  openDoorAtHero,
   pickLock,
   pickupItem,
   search,
 } from './HeroLogic';
 
-import { BREAK_LOCK } from '../items/ItemLogic';
+import { BREAK_LOCK, useItem } from '../items/ItemLogic';
 import {
   RadialAction,
   findDoorAtHero,
   findItemAtHero,
   getAvailableRadialActions,
+  getAvailableRadialActionsForTarget,
   findDoorsAtHero,
 } from './RadialMenuLogic';
 import { radialMenuStore } from '../store/radialMenuStore';
-import {
-  gameStateStore,
-  isTurnInProgress,
-  nextTurn,
-} from '../store/gameStateStore';
 import { get } from 'svelte/store';
-
-export const distanceInGrid = (a: Position, b: Position) => {
-  const dx = Math.abs(b.x - a.x);
-  const dy = Math.abs(b.y - a.y);
-
-  const min = Math.min(dx, dy);
-  const max = Math.max(dx, dy);
-
-  const diagonalSteps = min;
-  const straightSteps = max - min;
-  let factor = Math.sqrt(2);
-  if (straightSteps === 0) {
-    factor = 1;
-  }
-
-  return Math.floor(factor * diagonalSteps + straightSteps);
-};
 
 const pickUpItemAtHero = (
   state: GameState,
@@ -70,53 +62,26 @@ const pickUpItemAtHero = (
   itemLocation: ItemLocation,
 ) => {
   const item = itemLocation.item ?? randomItem(state);
+  const index = state.dungeon.layout.items.indexOf(itemLocation);
+  state.dungeon.layout.items.splice(index, 1);
+  if (!item) {
+    // Nothing left to draw (e.g. an unassigned item spot with an empty
+    // deck) — the location is cleared so it can not be clicked again.
+    addLog(state, 'logs.heroAction.searchFoundNothing', {
+      hero: i18n(hero.name),
+    });
+    return;
+  }
   if (item.type === ItemType.MAGIC) {
     removeFoundMagicItemFromDeck(state, item);
   } else {
     removeFoundItemFromDeck(state, item);
   }
-  const index = state.dungeon.layout.items.indexOf(itemLocation);
-  state.dungeon.layout.items.splice(index, 1);
   addLog(state, 'logs.heroAction.pickUp', {
     hero: i18n(hero.name),
     item: i18n(item.name),
   });
   pickupItem(state, item, hero);
-};
-
-const openDoorAtHero = (
-  state: GameState,
-  hero: Hero,
-  target: Position,
-  door?: Door,
-) => {
-  door = door ?? findDoorAtHero(state, hero);
-  if (!door || door.open) return;
-  const canBreakLock = hero.inventory.some(
-    (item) => item && item.properties?.[BREAK_LOCK],
-  );
-  if (!canOpenDoor(hero, canBreakLock, door)) return;
-  if (door.locked && canBreakLock)
-    addLog(state, 'logs.heroAction.brokeLock', { hero: i18n(hero.name) });
-  door.open = true;
-  if (door.trapped) {
-    takeDamage(state, doorAsActor(door), hero, false);
-  }
-  switch (door.side) {
-    case Side.RIGHT:
-      openDoor(hero, state, target.x + 1, target.y);
-      break;
-    case Side.LEFT:
-      openDoor(hero, state, target.x - 1, target.y);
-      break;
-    case Side.DOWN:
-      openDoor(hero, state, target.x, target.y + 1);
-      break;
-    case Side.UP:
-      openDoor(hero, state, target.x, target.y - 1);
-      break;
-  }
-  consumeActions(hero);
 };
 
 export const onTargetSelf = (state: GameState, target: Position) => {
@@ -141,6 +106,8 @@ export const onTargetSelf = (state: GameState, target: Position) => {
     );
     if (canOpenDoor(hero, canBreakLock, door)) {
       openDoorAtHero(state, hero, target, door);
+    } else if (door.reinforced && !hasGiantsGlove(hero)) {
+      addLog(state, 'logs.heroAction.reinforced');
     } else if (door.locked && !door.hidden) {
       if (!canAct(hero)) {
         addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
@@ -172,6 +139,9 @@ export const executeRadialAction = (
   state: GameState,
   action: RadialAction,
   door?: Door,
+  interactable?: InteractableCell,
+  item?: Item,
+  targetHero?: Hero,
 ) => {
   const hero = state.currentActor as Hero;
   switch (action) {
@@ -182,9 +152,13 @@ export const executeRadialAction = (
       addLog(state, 'logs.heroAction.locked');
       pickLock(state, door);
       break;
-    case RadialAction.OPEN_DOOR:
-      openDoorAtHero(state, hero, hero.position, door);
+    case RadialAction.OPEN_DOOR: {
+      const targetDoor = door ?? findDoorAtHero(state, hero);
+      if (targetDoor) {
+        openDoorAtHero(state, hero, hero.position, targetDoor);
+      }
       break;
+    }
     case RadialAction.PICK_UP_ITEM: {
       const itemLocation = findItemAtHero(state, hero);
       if (itemLocation) {
@@ -192,15 +166,34 @@ export const executeRadialAction = (
       }
       break;
     }
+    case RadialAction.INTERACT: {
+      interact(state, interactable);
+      break;
+    }
+    case RadialAction.USE_ITEM: {
+      if (item) {
+        if (targetHero) {
+          state.targetActor = targetHero;
+        }
+        useItem(state, item);
+      }
+      break;
+    }
     case RadialAction.NEXT: {
-      if (get(isTurnInProgress)) return;
-      nextTurn()
-        .then((newState) => {
-          gameStateStore.set(newState);
-        })
-        .catch(() => {
-          addLog(state, 'logs.heroAction.turnFailed');
-        });
+      void import('../store/gameStateStore').then(
+        ({ isTurnInProgress, nextTurn, gameStateStore }) => {
+          if (get(isTurnInProgress)) return;
+          nextTurn()
+            .then((newState) => {
+              if (newState) {
+                gameStateStore.set(newState);
+              }
+            })
+            .catch(() => {
+              addLog(state, 'logs.heroAction.turnFailed');
+            });
+        },
+      );
       break;
     }
   }
@@ -210,9 +203,12 @@ export const executeRadialAction = (
 export const onTargetCell = (state: GameState, target: Position) => {
   doReRender(state);
   const hero = state.currentActor as Hero;
-  if (hero.actions === 0) {
-    hero.movement = 0;
-    addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
+  if (!hero || hero.health <= 0 || hero.actions <= 0) {
+    if (hero) {
+      hero.actions = 0;
+      hero.movement = 0;
+      addLog(state, 'logs.heroAction.noActions', { hero: i18n(hero.name) });
+    }
     return;
   }
   const portal = state.dungeon.portal;
@@ -225,16 +221,17 @@ export const onTargetCell = (state: GameState, target: Position) => {
       !isBlockedByMonster(state, target.x, target.y) &&
       !isSamePosition(hero.position, target)
     ) {
-      recordActorStep(hero, target);
-      hero.position = target;
+      arriveOnCell(state, hero, target);
       hero.movement = 0;
-      checkForNote(state, hero);
-      checkForNextToMonster(state, hero);
       addLog(state, 'logs.events.hexagramTeleport', { hero: i18n(hero.name) });
       if (checkForTrapDoor(state)) {
         return;
       }
-      consumeActions(hero);
+      consumeActions(hero, getDifficulty(state).modifiers.movement);
+      if (hero.actions <= 0) {
+        hero.actions = 0;
+        hero.movement = 0;
+      }
       return;
     }
   }
@@ -253,53 +250,240 @@ export const onTargetCell = (state: GameState, target: Position) => {
       const path = cellsAlongLine(hero.position, target);
       hero.movement -= distance;
       for (const cell of path) {
-        recordActorStep(hero, cell);
-        hero.position = cell;
-        checkForNote(state, hero);
-        const nextToMonster = checkForNextToMonster(state, hero);
-        if (nextToMonster) {
-          hero.movement = 0;
+        const occupiedByOtherHero = liveHeroes(state).some(
+          (h) =>
+            h !== hero && h.position.x === cell.x && h.position.y === cell.y,
+        );
+        const movementBeforeStep = hero.movement;
+        // The zone of control ends the move on the tile where the hero
+        // becomes adjacent to a monster — remaining path cells are
+        // dropped, but never on top of another hero: stopping there is
+        // illegal, so the hero walks on past the monster instead and the
+        // zone of control applies again at the next tile.
+        const halted = arriveOnCell(state, hero, cell);
+        // The terrain or fog enter effects can down the hero mid-walk:
+        // the remaining path cells are dropped, so no further arrival
+        // effects run.
+        if (hero.health <= 0) {
+          break;
         }
         if (checkForTrapDoor(state)) {
           return;
         }
+        if (halted) {
+          if (occupiedByOtherHero) {
+            hero.movement = movementBeforeStep;
+          } else {
+            break;
+          }
+        }
       }
+      consumeActions(hero, getDifficulty(state).modifiers.movement);
     } else if (blockedByMonster) {
-      if (distance <= hero.weapon.range) {
+      if (
+        distance <= hero.weapon.range &&
+        hasLineOfSight(hero.position, target, 48, state, false)
+      ) {
         attack(hero, state, target);
       } else {
         addLog(state, 'logs.heroAction.monsterOutOfRange');
       }
     }
   }
-  consumeActions(hero);
+  if (hero.actions <= 0) {
+    hero.actions = 0;
+    hero.movement = 0;
+  }
+};
+
+export type CursorType = 'sword' | 'boot' | 'menu' | 'default';
+
+export const getCursorType = (
+  state: GameState,
+  target: Position,
+): CursorType => {
+  const hero = state.currentActor;
+  if (!hero) return 'default';
+  if (isSamePosition(hero.position, target)) return 'menu';
+
+  const otherHero = liveHeroes(state).find(
+    (h) =>
+      isSamePosition(h.position, target) &&
+      (h !== hero || h.name !== hero.name),
+  );
+  if (otherHero && distanceInGrid(hero.position, otherHero.position) <= 1) {
+    const actions = getAvailableRadialActionsForTarget(state, hero, otherHero);
+    if (actions.length > 0) return 'menu';
+  }
+
+  const monster = state.dungeon.layout.monsters.find((m) =>
+    isSamePosition(m.position, target),
+  );
+  const cell = findCell(state.dungeon.layout.grid, target.x, target.y);
+  if (!cell || !isRoomDiscovered(state.dungeon, cell)) return 'default';
+
+  if (monster) {
+    const distance = distanceInGrid(hero.position, target);
+    if (
+      distance <= hero.weapon.range &&
+      hasLineOfSight(hero.position, target, 48, state, false)
+    )
+      return 'sword';
+    return 'default';
+  }
+
+  if (!isWalkable(state.dungeon.layout, target.x, target.y)) return 'default';
+  if (isBlockedByHero(state, target.x, target.y)) return 'default';
+  if (isBlockedByMonster(state, target.x, target.y)) return 'default';
+
+  const distance = distanceInGrid(hero.position, target);
+  if (distance > hero.movement) return 'default';
+  if (!hasLineOfSight(hero.position, target, 2, state, true)) return 'default';
+
+  return 'boot';
+};
+
+export interface CameraOffset {
+  panX: number;
+  panY: number;
+  viewWidth?: number;
+  viewHeight?: number;
+  centerPosition?: Position;
+}
+
+export const screenToWorldPosition = (
+  screenX: number,
+  screenY: number,
+  viewWidth: number,
+  viewHeight: number,
+  panX: number,
+  panY: number,
+  cellSize: number,
+  centerPosition?: Position,
+): { x: number; y: number } => {
+  const centerOffsetX = centerPosition
+    ? (centerPosition.x + 0.5) * cellSize
+    : 0;
+  const centerOffsetY = centerPosition
+    ? (centerPosition.y + 0.5) * cellSize
+    : 0;
+  const originX = viewWidth / 2 + panX - centerOffsetX;
+  const originY = viewHeight / 2 + panY - centerOffsetY;
+  return {
+    x: screenX - originX,
+    y: screenY - originY,
+  };
+};
+
+export const screenToGridPosition = (
+  screenX: number,
+  screenY: number,
+  viewWidth: number,
+  viewHeight: number,
+  panX: number,
+  panY: number,
+  cellSize: number,
+  centerPosition?: Position,
+): Position => {
+  const world = screenToWorldPosition(
+    screenX,
+    screenY,
+    viewWidth,
+    viewHeight,
+    panX,
+    panY,
+    cellSize,
+    centerPosition,
+  );
+  return {
+    x: Math.floor(world.x / cellSize),
+    y: Math.floor(world.y / cellSize),
+  };
 };
 
 export const doMouseLogic = (
   event: MouseEvent,
   cellSize: number,
   state: GameState,
+  camera?: CameraOffset,
 ) => {
-  const c = document.getElementById('gameBoard');
+  const c =
+    typeof document !== 'undefined'
+      ? document.getElementById('uiCanvas') ??
+        document.getElementById('gameBoard')
+      : null;
   if (!c) return;
 
   const rect = c.getBoundingClientRect();
-  const x = Math.min(
-    Math.floor((event.clientX - rect.left) / cellSize),
-    state.dungeon.layout.grid[0].length - 1,
-  );
-  const y = Math.min(
-    Math.floor((event.clientY - rect.top) / cellSize),
-    state.dungeon.layout.grid.length - 1,
-  );
+  const screenX = event.clientX - rect.left;
+  const screenY = event.clientY - rect.top;
+
+  let x: number;
+  let y: number;
+
+  if (camera) {
+    const viewWidth = camera.viewWidth ?? rect.width;
+    const viewHeight = camera.viewHeight ?? rect.height;
+    const centerPosition =
+      camera.centerPosition ?? state?.dungeon?.startingPositions?.[0];
+    const pos = screenToGridPosition(
+      screenX,
+      screenY,
+      viewWidth,
+      viewHeight,
+      camera.panX,
+      camera.panY,
+      cellSize,
+      centerPosition,
+    );
+    x = pos.x;
+    y = pos.y;
+  } else {
+    x = Math.floor(screenX / cellSize);
+    y = Math.floor(screenY / cellSize);
+  }
+
+  if (
+    y < 0 ||
+    y >= state.dungeon.layout.grid.length ||
+    x < 0 ||
+    x >= (state.dungeon.layout.grid[y]?.length ?? 0)
+  ) {
+    return;
+  }
 
   const cell = state.dungeon.layout.grid[y][x];
+  if (!cell) return;
 
   const hero = state.currentActor as Hero;
   if (x === hero.position.x && y === hero.position.y) {
     onHeroClicked(state, hero);
-  } else if (isRoomDiscovered(state.dungeon, cell)) {
-    radialMenuStore.set(null);
-    onTargetCell(state, { x, y });
+  } else {
+    const targetHero = liveHeroes(state).find(
+      (h) =>
+        h.position.x === x &&
+        h.position.y === y &&
+        (h !== hero || h.name !== hero.name),
+    );
+    if (targetHero && distanceInGrid(hero.position, targetHero.position) <= 1) {
+      const entries = getAvailableRadialActionsForTarget(
+        state,
+        hero,
+        targetHero,
+      );
+      if (entries.length > 0) {
+        doReRender(state);
+        radialMenuStore.set({
+          x: targetHero.position.x,
+          y: targetHero.position.y,
+          entries,
+        });
+        return;
+      }
+    }
+    if (isRoomDiscovered(state.dungeon, cell)) {
+      radialMenuStore.set(null);
+      onTargetCell(state, { x, y });
+    }
   }
 };

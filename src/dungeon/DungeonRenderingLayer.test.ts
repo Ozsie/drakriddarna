@@ -3,14 +3,24 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   renderDoors,
   renderGrid,
+  renderInteractables,
   renderPillars,
+  renderPillarTops,
   renderSecrets,
 } from './DungeonRendering';
 import { renderHeroes } from '../hero/HeroRendering';
 import { renderMonsters } from '../monsters/MonsterRendering';
 import { renderNotes } from '../notes/NotesRendering';
 import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
+import {
+  renderBloodSplatters,
+  renderProjectiles,
+  createBloodSplatter,
+  createProjectile,
+} from '../combat/CombatEffects';
 import { renderItems } from '../items/ItemRendering';
+import { renderUI } from '../ui/UIRendering';
+import { RadialAction } from '../hero/RadialMenuLogic';
 import { recordActorStep, clearActorAnimations } from '../core';
 import { weapons, monsterWeapons } from '../items/weapons';
 import type { GameState, Hero, Monster } from '../types';
@@ -61,6 +71,7 @@ const createMockState = (): GameState => {
   return {
     dungeon: {
       name: 'Test Dungeon',
+      intro: 'test-dungeon',
       discoveredRooms: ['A'],
       layout: {
         grid: ['AAA', 'AAA', 'AAA'],
@@ -74,6 +85,7 @@ const createMockState = (): GameState => {
             hidden: false,
             trapped: false,
             trapAttacks: 0,
+            reinforced: false,
           },
         ],
         secrets: [
@@ -115,6 +127,7 @@ const createMockState = (): GameState => {
     settings: { cellSize: 48 },
     eventDeck: [],
     reRender: false,
+    drawEvents: true,
   };
 };
 
@@ -134,6 +147,7 @@ const createMockCtx = () =>
     roundRect: vi.fn(),
     fillText: vi.fn(),
     strokeText: vi.fn(),
+    measureText: vi.fn().mockReturnValue({ width: 50 }),
     save: vi.fn(),
     restore: vi.fn(),
     setTransform: vi.fn(),
@@ -149,10 +163,66 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     renderGrid(staticCtx, mockGround, 48, state, false);
     renderSecrets(staticCtx, mockGround, 48, state, false);
     renderItems(staticCtx, mockGround, 48, state, false);
+    renderInteractables(staticCtx, mockGround, 48, state, false);
     renderDoors(staticCtx, mockGround, 48, state, false);
     renderPillars(staticCtx, mockGround, 48, state, false);
 
     expect(staticCtx.drawImage).toHaveBeenCalled();
+  });
+
+  it('renders the pillar shaft on the dynamic layer in the cell above the pillar, not on the static layer', () => {
+    const state = createMockState();
+    const staticCtx = createMockCtx();
+    const dynamicCtx = createMockCtx();
+    const mockGround = { src: 'ground.png' } as unknown as CanvasImageSource;
+
+    const drewIntoRowAbove = (ctx: CanvasRenderingContext2D): boolean =>
+      (
+        ctx.drawImage as unknown as { mock: { calls: unknown[][] } }
+      ).mock.calls.some((call) => call.includes(-48));
+
+    // The static pass draws only the pillar base in its own cell (0, 0).
+    renderPillars(staticCtx, mockGround, 48, state, false);
+    expect(staticCtx.drawImage).toHaveBeenCalled();
+    expect(drewIntoRowAbove(staticCtx)).toBe(false);
+
+    // The overhead pass draws the shaft into the cell above, at y = -1
+    // cells, covering actors that stand north of the pillar.
+    renderPillarTops(dynamicCtx, mockGround, 48, state, false);
+    expect(dynamicCtx.drawImage).toHaveBeenCalled();
+    expect(drewIntoRowAbove(dynamicCtx)).toBe(true);
+  });
+
+  it('renders a highlight on interactable cells when secret is false, and does not render highlight when secret is true', () => {
+    const state = createMockState();
+    state.dungeon.layout.interactables = [
+      {
+        position: { x: 1, y: 1 },
+        effect: 'visibleEffect',
+        secret: false,
+      },
+      {
+        position: { x: 2, y: 2 },
+        effect: 'secretEffect',
+        secret: true,
+      },
+    ];
+
+    const staticCtx = createMockCtx();
+    const mockGround = { src: 'ground.png' } as unknown as CanvasImageSource;
+
+    renderInteractables(staticCtx, mockGround, 48, state, false);
+
+    // Non-secret interactable gets highlight fillRect(1 * 48, 1 * 48, 48, 48)
+    expect(staticCtx.fillRect).toHaveBeenCalledWith(48, 48, 48, 48);
+    // Secret interactable (2, 2) is not rendered when debugMode is false
+    expect(staticCtx.fillRect).not.toHaveBeenCalledWith(96, 96, 48, 48);
+
+    // In debugMode, secret interactable overlay is rendered
+    const debugCtx = createMockCtx();
+    renderInteractables(debugCtx, mockGround, 48, state, true);
+    expect(debugCtx.fillRect).toHaveBeenCalledWith(96, 96, 48, 48);
+    expect(debugCtx.fillText).toHaveBeenCalledWith('secretEffect', 98, 108);
   });
 
   it('renders dynamic actors (heroes, monsters) onto dynamic context without touching static layer', () => {
@@ -167,17 +237,26 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     expect(actorCtx.fillRect).toHaveBeenCalled();
   });
 
-  it('renders overlay notes and damage indicators onto overlay context', () => {
+  it('renders overlay notes, damage indicators, blood splatters, and projectiles onto overlay context', () => {
     const state = createMockState();
     state.damageIndicators = [{ id: '1', damage: 4, position: { x: 1, y: 1 } }];
+    state.bloodSplatters = [
+      createBloodSplatter({ x: 1, y: 1 }, { timestamp: 1000 }),
+    ];
+    state.projectiles = [
+      createProjectile({ x: 0, y: 0 }, { x: 2, y: 2 }, { timestamp: 1000 }),
+    ];
     const overlayCtx = createMockCtx();
     const mockActors = { src: 'actors.png' } as unknown as CanvasImageSource;
 
     renderNotes(overlayCtx, mockActors, 48, state, false);
-    renderDamageIndicators(overlayCtx, 48, state, Date.now());
+    renderDamageIndicators(overlayCtx, 48, state, 1050);
+    renderBloodSplatters(overlayCtx, 48, state, 1050);
+    renderProjectiles(overlayCtx, 48, state, 1050);
 
     expect(overlayCtx.fillText).toHaveBeenCalled();
     expect(overlayCtx.fill).toHaveBeenCalled();
+    expect(overlayCtx.arc).toHaveBeenCalled();
   });
 
   it('tracks active actor animations during dynamic render loop', () => {
@@ -250,5 +329,24 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     );
     expect(heroAnimFinished).toBe(false);
     expect(monsterAnimFinished).toBe(false);
+  });
+
+  it('renders fourth UI layer (radial menu) on top of overlay context', () => {
+    const uiCtx = createMockCtx();
+    const menu = {
+      x: 1,
+      y: 1,
+      entries: [
+        { action: RadialAction.SEARCH },
+        { action: RadialAction.OPEN_DOOR },
+      ],
+    };
+
+    renderUI(uiCtx, 48, menu, 0);
+
+    // Verifies radial buttons and hovered tooltip were rendered on the 4th canvas UI layer
+    expect(uiCtx.arc).toHaveBeenCalledTimes(2);
+    expect(uiCtx.fill).toHaveBeenCalledTimes(3); // 2 buttons + 1 tooltip
+    expect(uiCtx.fillText).toHaveBeenCalled();
   });
 });

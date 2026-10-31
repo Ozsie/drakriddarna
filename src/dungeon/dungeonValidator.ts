@@ -2,12 +2,16 @@ import type {
   Corner,
   Door,
   Dungeon,
+  InteractableCell,
   ItemLocation,
   Layout,
+  LightSource,
   Monster,
   Note,
   Position,
   Secret,
+  TerrainCell,
+  WallEdge,
   WinCondition,
 } from '../types';
 import { ConditionType, Side } from '../types';
@@ -19,6 +23,7 @@ export interface ValidationError {
     | 'boundary'
     | 'overlap'
     | 'door'
+    | 'wall'
     | 'room'
     | 'duplicate_id'
     | 'condition';
@@ -186,6 +191,86 @@ export const validateLayout = (
     }
   });
 
+  // 5. Edge walls
+  // Both cells the wall sits between must exist; the same edge cannot hold
+  // two walls or a wall next to a door.
+  const edgeOffset = (side: Side): Position =>
+    side === Side.RIGHT
+      ? { x: 1, y: 0 }
+      : side === Side.LEFT
+      ? { x: -1, y: 0 }
+      : side === Side.DOWN
+      ? { x: 0, y: 1 }
+      : { x: 0, y: -1 };
+  // Canonical key of the edge between two orthogonally adjacent cells, so
+  // mirrored definitions ((x, LEFT) vs (x-1, RIGHT)) collapse to one edge.
+  const edgeKey = (x: number, y: number, side: Side): string => {
+    const { x: dx, y: dy } = edgeOffset(side);
+    const x1 = Math.min(x, x + dx);
+    const y1 = Math.min(y, y + dy);
+    return dx !== 0 ? `H:${x1},${y}` : `V:${x},${y1}`;
+  };
+  const doorEdgeKeys = new Set<string>();
+  (layout.doors || []).forEach((door: Door) => {
+    doorEdgeKeys.add(edgeKey(door.x, door.y, door.side));
+  });
+  const seenWallEdgeKeys = new Set<string>();
+  (layout.walls || []).forEach((wall: WallEdge) => {
+    const wallPos: Position = { x: wall.x, y: wall.y };
+    if (isOutOfBounds(wallPos)) {
+      errors.push({
+        type: 'wall',
+        message: `Wall at (${wall.x}, ${wall.y}) is outside grid bounds (${width}x${height}).`,
+        position: wallPos,
+        entity: 'Wall',
+      });
+      return;
+    }
+    const validSides = [Side.UP, Side.DOWN, Side.LEFT, Side.RIGHT];
+    if (!validSides.includes(wall.side)) {
+      errors.push({
+        type: 'wall',
+        message: `Wall at (${wall.x}, ${wall.y}) has invalid side '${wall.side}'.`,
+        position: wallPos,
+        entity: 'Wall',
+      });
+      return;
+    }
+    const farPos: Position = {
+      x: wall.x + edgeOffset(wall.side).x,
+      y: wall.y + edgeOffset(wall.side).y,
+    };
+    if (isOutOfBounds(farPos)) {
+      errors.push({
+        type: 'wall',
+        message: `Wall at (${wall.x}, ${wall.y}) extends outside grid bounds (${width}x${height}).`,
+        position: wallPos,
+        entity: 'Wall',
+      });
+      return;
+    }
+    const key = edgeKey(wall.x, wall.y, wall.side);
+    if (doorEdgeKeys.has(key)) {
+      errors.push({
+        type: 'wall',
+        message: `Wall at (${wall.x}, ${wall.y}) sits on the same edge as a door.`,
+        position: wallPos,
+        entity: 'Wall',
+      });
+      return;
+    }
+    if (seenWallEdgeKeys.has(key)) {
+      errors.push({
+        type: 'duplicate_id',
+        message: `Duplicate wall at (${wall.x}, ${wall.y}) side '${wall.side}'.`,
+        position: wallPos,
+        entity: 'Wall',
+      });
+      return;
+    }
+    seenWallEdgeKeys.add(key);
+  });
+
   // 5. Secrets
   const seenSecretIds = new Set<string>();
   (layout.secrets || []).forEach((secret: Secret) => {
@@ -219,7 +304,44 @@ export const validateLayout = (
     );
   });
 
-  // 8. Pits & Pillars
+  // 8. Interactables
+  const seenInteractableIds = new Set<string>();
+  (layout.interactables || []).forEach((interactable: InteractableCell) => {
+    checkPositionInBounds(
+      interactable.position,
+      `Interactable '${interactable.name || interactable.effect}'`,
+    );
+    if (interactable.id) {
+      if (seenInteractableIds.has(interactable.id)) {
+        errors.push({
+          type: 'duplicate_id',
+          message: `Duplicate interactable id '${interactable.id}'.`,
+          position: interactable.position,
+          entity: interactable.name || interactable.effect,
+        });
+      }
+      seenInteractableIds.add(interactable.id);
+    }
+  });
+
+  // 9. Lights
+  const seenLightIds = new Set<string>();
+  (layout.lights || []).forEach((light: LightSource) => {
+    checkPositionInBounds(light.position, `Light '${light.id ?? 'unnamed'}'`);
+    if (light.id) {
+      if (seenLightIds.has(light.id)) {
+        errors.push({
+          type: 'duplicate_id',
+          message: `Duplicate light id '${light.id}'.`,
+          position: light.position,
+          entity: light.id,
+        });
+      }
+      seenLightIds.add(light.id);
+    }
+  });
+
+  // 9. Pits & Pillars
   (layout.pits || []).forEach((pit: Position) => {
     checkPositionInBounds(pit, 'Pit');
   });
@@ -228,7 +350,12 @@ export const validateLayout = (
     checkPositionInBounds(pillar, 'Pillar');
   });
 
-  // 9. Corners
+  // 9b. Terrain cells
+  (layout.terrain || []).forEach((cell: TerrainCell) => {
+    checkPositionInBounds(cell.position, `Terrain '${cell.type}'`);
+  });
+
+  // 10. Corners
   (layout.corners || []).forEach((corner: Corner) => {
     if (isOutOfBounds(corner.position)) {
       errors.push({
@@ -255,6 +382,58 @@ export const validateLayout = (
         message: `Corridor '${corridor}' does not exist in the grid.`,
       });
     }
+  });
+
+  Object.keys(layout.roomFog || {}).forEach((room) => {
+    if (!gridCells.has(room)) {
+      errors.push({
+        type: 'room',
+        message: `Fog room '${room}' does not exist in the grid.`,
+      });
+    }
+  });
+
+  // Corridor cells inside a room letter
+  const seenCorridorCells = new Set<string>();
+  (layout.corridorCells || []).forEach((corridorCell) => {
+    const inBounds = checkPositionInBounds(
+      corridorCell,
+      'Corridor cell',
+      false,
+    );
+    if (!inBounds) return;
+
+    const cell = findCell(layout.grid, corridorCell.x, corridorCell.y);
+    if (cell === WALL || cell === EMPTY) {
+      errors.push({
+        type: 'overlap',
+        message: `Corridor cell at (${corridorCell.x}, ${corridorCell.y}) is not on a room cell ('${cell}').`,
+        position: corridorCell,
+        entity: 'Corridor cell',
+      });
+      return;
+    }
+
+    if ((layout.corridors || []).includes(cell)) {
+      errors.push({
+        type: 'room',
+        message: `Corridor cell at (${corridorCell.x}, ${corridorCell.y}) is inside corridor '${cell}', which is already fully declared as a corridor.`,
+        position: corridorCell,
+        entity: 'Corridor cell',
+      });
+      return;
+    }
+
+    const key = `${corridorCell.x},${corridorCell.y}`;
+    if (seenCorridorCells.has(key)) {
+      errors.push({
+        type: 'duplicate_id',
+        message: `Duplicate corridor cell at (${corridorCell.x}, ${corridorCell.y}).`,
+        position: corridorCell,
+        entity: 'Corridor cell',
+      });
+    }
+    seenCorridorCells.add(key);
   });
 
   if (context?.discoveredRooms) {

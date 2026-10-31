@@ -4,6 +4,7 @@ import { i18n } from '../core';
 import { isDiscovered, isSamePosition } from '../core';
 import { renderTextBox } from '../notes/NotesRendering';
 import { drawCachedTile } from '../dungeon/TileTextureCache';
+import { drawItemSprite } from './ItemSpriteRendering';
 
 export const renderItems = (
   ctx: CanvasRenderingContext2D,
@@ -41,18 +42,31 @@ const renderMagicItem = (
 ) => {
   const x = itemLocation.position.x;
   const y = itemLocation.position.y;
-  drawCachedTile(
-    ctx,
-    ground,
-    48 * 6,
-    48 * 3,
-    48,
-    48,
-    x * cellSize,
-    y * cellSize,
-    cellSize,
-    cellSize,
-  );
+  // Item sprite sheet when the item defines one, the generic tileset item
+  // tile otherwise (and while the sheet is still loading).
+  const spriteDrawn = itemLocation.item?.sprite
+    ? drawItemSprite(
+        ctx,
+        itemLocation.item.sprite,
+        x * cellSize,
+        y * cellSize,
+        cellSize,
+      )
+    : false;
+  if (!spriteDrawn) {
+    drawCachedTile(
+      ctx,
+      ground,
+      48 * 6,
+      48 * 3,
+      48,
+      48,
+      x * cellSize,
+      y * cellSize,
+      cellSize,
+      cellSize,
+    );
+  }
   if (!state.currentActor) return;
   const actor = state.currentActor;
   if (isSamePosition(actor?.position, itemLocation.position)) {

@@ -1,0 +1,923 @@
+import { describe, expect, it, vi } from 'vitest';
+import {
+  CellAlignment,
+  Colour,
+  ConditionType,
+  type Dungeon,
+  type GameState,
+  type Hero,
+  ItemType,
+  Level,
+  LightEffect,
+  SecretType,
+  Side,
+  TerrainType,
+  type Weapon,
+} from '../types';
+import {
+  checkForInteractable,
+  findInteractableAtHero,
+  getInteractableEffect,
+  NEXT_DUNGEON,
+  registerInteractableEffect,
+  triggerInteractable,
+} from './InteractableLogic';
+import {
+  getAvailableRadialActions,
+  RadialAction,
+} from '../hero/RadialMenuLogic';
+import { defineDungeon, parseTileMap } from '../dungeon/dungeonParser';
+import { validateLayout } from '../dungeon/dungeonValidator';
+import { interact, newHero, search } from '../hero/HeroLogic';
+import { resetRng, setRng, getGameMaster } from '../core';
+
+const defaultWeapon: Weapon = {
+  name: 'Sword',
+  amountInDeck: 1,
+  dice: 2,
+  useHearHeroes: false,
+  twoHanded: false,
+  range: 1,
+  type: ItemType.WEAPON,
+  value: 10,
+  ignoresShield: false,
+  ignoresArmour: false,
+};
+
+const createTestHero = (x: number, y: number): Hero => ({
+  name: 'Fearik',
+  health: 10,
+  maxHealth: 10,
+  defense: 0,
+  actions: 2,
+  movement: 5,
+  maxMovement: 5,
+  colour: Colour.Yellow,
+  incapacitated: false,
+  position: { x, y },
+  experience: 0,
+  level: Level.APPRENTICE,
+  weapon: defaultWeapon,
+  inventory: [],
+  isInventoryOpen: false,
+  ignoredByMonsters: false,
+});
+
+const createTestState = (
+  hero: Hero,
+  overrides?: Partial<Dungeon>,
+): GameState => {
+  const dungeon: Dungeon = {
+    name: 'test-dungeon',
+    intro: 'test',
+    beaten: false,
+    winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
+    startingPositions: [{ x: 1, y: 1 }],
+    discoveredRooms: ['A', 'B'],
+    layout: {
+      grid: [
+        '#######',
+        '#AAAAA#',
+        '#AAAAA#',
+        '#BBBBB#',
+        '#BBBBB#',
+        '#BBBBB#',
+        '#######',
+      ],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      interactables: [],
+      corridors: [],
+      corners: [],
+      pits: [],
+      pillars: [],
+    },
+    killCount: 0,
+    events: [],
+    ...overrides,
+  };
+
+  return {
+    heroes: [hero],
+    dungeon,
+    currentActor: hero,
+    actionLog: [],
+    itemDeck: [],
+    magicItemDeck: [],
+    eventDeck: [],
+    settings: {},
+    drawEvents: true,
+    reRender: false,
+  };
+};
+
+describe('InteractableLogic', () => {
+  it('registers and retrieves custom interactable effects', () => {
+    const handler = vi.fn();
+    registerInteractableEffect('customLeverEffect', handler);
+
+    expect(getInteractableEffect('customLeverEffect')).toBe(handler);
+
+    const hero = createTestHero(2, 2);
+    const state = createTestState(hero);
+    const interactable = {
+      position: { x: 2, y: 2 },
+      effect: 'customLeverEffect',
+      oneTime: true,
+      interacted: false,
+    };
+
+    const triggered = triggerInteractable(state, interactable, hero);
+    expect(triggered).toBe(true);
+    expect(handler).toHaveBeenCalledWith(state, interactable, hero);
+    expect(interactable.interacted).toBe(true);
+
+    // One-time interactable should not trigger again
+    const triggeredAgain = triggerInteractable(state, interactable, hero);
+    expect(triggeredAgain).toBe(false);
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  describe('addHero effect', () => {
+    it('adds a new hero to the current heroes party at the interactable position', () => {
+      const hero = createTestHero(1, 1);
+      const state = createTestState(hero);
+
+      const interactable = {
+        position: { x: 2, y: 2 },
+        effect: 'addHero',
+        args: {
+          name: 'Rescued Knight',
+          colour: Colour.Blue,
+        },
+        oneTime: true,
+      };
+
+      triggerInteractable(state, interactable, hero);
+
+      expect(state.heroes.length).toBe(2);
+      const added = state.heroes.find((h) => h.name === 'Rescued Knight');
+      expect(added).toBeDefined();
+      expect(added?.colour).toBe(Colour.Blue);
+      expect(added?.position).toEqual({ x: 2, y: 2 });
+    });
+
+    it('adds an existing hero object to current heroes party', () => {
+      const hero = createTestHero(1, 1);
+      const state = createTestState(hero);
+      const alliedHero = newHero('Thor', Colour.Red);
+      alliedHero.health = 5;
+
+      const interactable = {
+        position: { x: 3, y: 3 },
+        effect: 'addHero',
+        args: {
+          hero: alliedHero,
+          position: { x: 4, y: 4 },
+        },
+        oneTime: true,
+      };
+
+      triggerInteractable(state, interactable, hero);
+
+      expect(state.heroes.length).toBe(2);
+      expect(state.heroes).toContain(alliedHero);
+      expect(alliedHero.position).toEqual({ x: 4, y: 4 });
+    });
+
+    it('equips newly created ally with difficulty-based starting equipment', () => {
+      const hero = createTestHero(1, 1);
+      const state = createTestState(hero);
+      state.gameMaster = getGameMaster('easy');
+
+      const interactable = {
+        position: { x: 2, y: 2 },
+        effect: 'addHero',
+        args: {
+          name: 'Rescued Paladin',
+          colour: Colour.Green,
+        },
+        oneTime: true,
+      };
+
+      triggerInteractable(state, interactable, hero);
+
+      const added = state.heroes.find((h) => h.name === 'Rescued Paladin');
+      expect(added).toBeDefined();
+      expect(added?.shield).toBeDefined();
+    });
+  });
+
+  describe('removeTrapsInRoom effect', () => {
+    it('disarms all trapped doors and trap doors in the specified room', () => {
+      const hero = createTestHero(1, 1);
+      const state = createTestState(hero);
+
+      state.dungeon.layout.doors = [
+        {
+          id: 'door_A',
+          x: 2,
+          y: 2,
+          side: Side.DOWN,
+          open: false,
+          locked: false,
+          hidden: false,
+          trapped: true,
+          trapAttacks: 2,
+          reinforced: false,
+        },
+        {
+          id: 'door_B',
+          x: 4,
+          y: 4,
+          side: Side.RIGHT,
+          open: false,
+          locked: false,
+          hidden: false,
+          trapped: true,
+          trapAttacks: 1,
+          reinforced: false,
+        },
+      ];
+
+      state.dungeon.layout.secrets = [
+        {
+          id: 'secret_trap_A',
+          name: 'Trap in room A',
+          type: SecretType.TRAP_DOOR,
+          position: { x: 3, y: 2 },
+          found: false,
+        },
+        {
+          id: 'secret_trap_B',
+          name: 'Trap in room B',
+          type: SecretType.TRAP_DOOR,
+          position: { x: 3, y: 4 },
+          found: false,
+        },
+      ];
+
+      // Interactable in room A
+      const interactable = {
+        position: { x: 1, y: 1 },
+        effect: 'removeTrapsInRoom',
+        args: { room: 'A' },
+        oneTime: true,
+      };
+
+      triggerInteractable(state, interactable, hero);
+
+      // Trapped door in room A should be disarmed
+      const doorA = state.dungeon.layout.doors.find((d) => d.id === 'door_A');
+      expect(doorA?.trapped).toBe(false);
+      expect(doorA?.trapAttacks).toBe(0);
+
+      // Trap door in room A should be marked found/disarmed
+      const secretTrapA = state.dungeon.layout.secrets.find(
+        (s) => s.id === 'secret_trap_A',
+      );
+      expect(secretTrapA?.found).toBe(true);
+
+      // Room B traps should remain unchanged
+      const doorB = state.dungeon.layout.doors.find((d) => d.id === 'door_B');
+      expect(doorB?.trapped).toBe(true);
+      const secretTrapB = state.dungeon.layout.secrets.find(
+        (s) => s.id === 'secret_trap_B',
+      );
+      expect(secretTrapB?.found).toBe(false);
+    });
+
+    it('infers room automatically from interactable cell position if not specified in args', () => {
+      const hero = createTestHero(2, 4);
+      const state = createTestState(hero);
+
+      state.dungeon.layout.doors = [
+        {
+          id: 'door_B',
+          x: 2,
+          y: 4,
+          side: Side.UP,
+          open: false,
+          locked: false,
+          hidden: false,
+          trapped: true,
+          trapAttacks: 2,
+          reinforced: false,
+        },
+      ];
+
+      // Position (2, 4) is in room 'B'
+      const interactable = {
+        position: { x: 2, y: 4 },
+        effect: 'removeTrapsInRoom',
+        oneTime: true,
+      };
+
+      triggerInteractable(state, interactable, hero);
+
+      const doorB = state.dungeon.layout.doors.find((d) => d.id === 'door_B');
+      expect(doorB?.trapped).toBe(false);
+    });
+  });
+
+  describe('Radial menu integration', () => {
+    it('includes RadialAction.INTERACT when hero is standing on an interactable cell', () => {
+      const hero = createTestHero(2, 2);
+      const state = createTestState(hero);
+      state.dungeon.layout.interactables = [
+        {
+          position: { x: 2, y: 2 },
+          effect: 'addHero',
+          oneTime: true,
+          interacted: false,
+        },
+      ];
+
+      const entries = getAvailableRadialActions(state, hero);
+      const actions = entries.map((e) => e.action);
+
+      expect(actions).toContain(RadialAction.INTERACT);
+      const interactEntry = entries.find(
+        (e) => e.action === RadialAction.INTERACT,
+      );
+      expect(interactEntry?.interactable).toBeDefined();
+    });
+
+    it('includes RadialAction.INTERACT and allows interaction from all 8 neighboring cells', () => {
+      const neighborOffsets = [
+        { x: -1, y: -1 },
+        { x: 0, y: -1 },
+        { x: 1, y: -1 },
+        { x: -1, y: 0 },
+        { x: 1, y: 0 },
+        { x: -1, y: 1 },
+        { x: 0, y: 1 },
+        { x: 1, y: 1 },
+      ];
+
+      for (const offset of neighborOffsets) {
+        const heroPos = { x: 2 + offset.x, y: 2 + offset.y };
+        const hero = createTestHero(heroPos.x, heroPos.y);
+        const state = createTestState(hero);
+        state.dungeon.layout.interactables = [
+          {
+            position: { x: 2, y: 2 },
+            effect: 'addHero',
+            args: { name: `Ally ${offset.x}_${offset.y}` },
+            oneTime: true,
+            interacted: false,
+          },
+        ];
+
+        const entries = getAvailableRadialActions(state, hero);
+        const actions = entries.map((e) => e.action);
+        expect(actions).toContain(RadialAction.INTERACT);
+
+        const found = findInteractableAtHero(state, hero);
+        expect(found).toBeDefined();
+        expect(found?.position).toEqual({ x: 2, y: 2 });
+
+        const result = interact(state);
+        expect(result).toBe(true);
+        expect(state.dungeon.layout.interactables[0].interacted).toBe(true);
+      }
+    });
+
+    it('does not allow interaction when hero is not adjacent or on the interactable cell', () => {
+      const hero = createTestHero(4, 4);
+      const state = createTestState(hero);
+      state.dungeon.layout.interactables = [
+        {
+          position: { x: 2, y: 2 },
+          effect: 'addHero',
+          args: { name: 'Distant Ally' },
+          oneTime: true,
+          interacted: false,
+        },
+      ];
+
+      const entries = getAvailableRadialActions(state, hero);
+      const actions = entries.map((e) => e.action);
+      expect(actions).not.toContain(RadialAction.INTERACT);
+
+      const found = findInteractableAtHero(state, hero);
+      expect(found).toBeUndefined();
+
+      const result = interact(state);
+      expect(result).toBe(false);
+      expect(state.dungeon.layout.interactables[0].interacted).toBe(false);
+    });
+
+    it('step trigger does not trigger on neighboring cells, only on exact cell', () => {
+      const hero = createTestHero(1, 2);
+      const state = createTestState(hero);
+      const handler = vi.fn();
+      registerInteractableEffect('pressurePlate', handler);
+
+      state.dungeon.layout.interactables = [
+        {
+          position: { x: 2, y: 2 },
+          effect: 'pressurePlate',
+          triggerOn: 'step',
+          oneTime: true,
+          interacted: false,
+        },
+      ];
+
+      // Stepping on neighboring cell (1, 2)
+      const stepNeighborResult = checkForInteractable(state, hero, 'step');
+      expect(stepNeighborResult).toBe(false);
+      expect(handler).not.toHaveBeenCalled();
+
+      // Moving to exact cell (2, 2)
+      hero.position = { x: 2, y: 2 };
+      const stepExactResult = checkForInteractable(state, hero, 'step');
+      expect(stepExactResult).toBe(true);
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not include RadialAction.INTERACT if interactable has already been used and is oneTime', () => {
+      const hero = createTestHero(2, 2);
+      const state = createTestState(hero);
+      state.dungeon.layout.interactables = [
+        {
+          position: { x: 2, y: 2 },
+          effect: 'addHero',
+          oneTime: true,
+          interacted: true,
+        },
+      ];
+
+      const entries = getAvailableRadialActions(state, hero);
+      const actions = entries.map((e) => e.action);
+
+      expect(actions).not.toContain(RadialAction.INTERACT);
+    });
+
+    it('blocks interaction when interactable has secret: true, until discovered via search action', () => {
+      setRng(() => 0.75); // Math.floor(0.75 * 6) + 1 = 5 (Apprentice success)
+      try {
+        const hero = createTestHero(2, 2);
+        const state = createTestState(hero);
+        state.dungeon.layout.interactables = [
+          {
+            position: { x: 2, y: 2 },
+            effect: 'addHero',
+            name: 'Hidden Oswin',
+            args: { name: 'Oswin' },
+            oneTime: true,
+            interacted: false,
+            secret: true,
+          },
+        ];
+
+        // 1. Secret interactable is not in radial menu
+        let entries = getAvailableRadialActions(state, hero);
+        expect(entries.map((e) => e.action)).not.toContain(
+          RadialAction.INTERACT,
+        );
+
+        // 2. Direct interact call fails
+        const directResult = interact(state);
+        expect(directResult).toBe(false);
+        expect(state.heroes.length).toBe(1);
+
+        // 3. Hero searches and finds the secret interactable
+        search(state);
+        expect(state.dungeon.layout.interactables[0].secret).toBe(false);
+        expect(
+          state.actionLog.some(
+            (log) => log.key === 'logs.heroAction.foundSecret',
+          ),
+        ).toBe(true);
+
+        // Reset hero actions for next step
+        hero.actions = 2;
+
+        // 4. Secret interactable is now available in radial menu and can be interacted with
+        entries = getAvailableRadialActions(state, hero);
+        expect(entries.map((e) => e.action)).toContain(RadialAction.INTERACT);
+
+        const interactResult = interact(state);
+        expect(interactResult).toBe(true);
+        expect(state.heroes.length).toBe(2);
+        expect(state.dungeon.layout.interactables[0].interacted).toBe(true);
+      } finally {
+        resetRng();
+      }
+    });
+
+    it('keeps interactable hidden when search roll fails or hero is out of range', () => {
+      setRng(() => 0.1); // Math.floor(0.1 * 6) + 1 = 1 (Apprentice fails)
+      try {
+        const hero = createTestHero(2, 2);
+        const state = createTestState(hero);
+        state.dungeon.layout.interactables = [
+          {
+            position: { x: 2, y: 2 },
+            effect: 'addHero',
+            secret: true,
+          },
+        ];
+
+        search(state);
+        expect(state.dungeon.layout.interactables[0].secret).toBe(true);
+        expect(interact(state)).toBe(false);
+      } finally {
+        resetRng();
+      }
+    });
+
+    it('triggerInteractable returns false directly when interactable is secret', () => {
+      const hero = createTestHero(2, 2);
+      const state = createTestState(hero);
+      const interactable = {
+        position: { x: 2, y: 2 },
+        effect: 'addHero',
+        args: { name: 'Hidden Ally' },
+        secret: true,
+      };
+
+      const result = triggerInteractable(state, interactable, hero);
+      expect(result).toBe(false);
+      expect(state.heroes.length).toBe(1);
+    });
+
+    it('interact function consumes hero action and triggers effect', () => {
+      const hero = createTestHero(2, 2);
+      const state = createTestState(hero);
+      state.dungeon.layout.interactables = [
+        {
+          position: { x: 2, y: 2 },
+          effect: 'addHero',
+          args: { name: 'New Knight' },
+          oneTime: true,
+          interacted: false,
+        },
+      ];
+
+      expect(hero.actions).toBe(2);
+      const result = interact(state);
+
+      expect(result).toBe(true);
+      expect(hero.actions).toBe(1);
+      expect(state.heroes.length).toBe(2);
+      expect(state.dungeon.layout.interactables[0].interacted).toBe(true);
+    });
+
+    describe('nextDungeon effect', () => {
+      it('NEXT_DUNGEON constant is defined as nextDungeon', () => {
+        expect(NEXT_DUNGEON).toBe('nextDungeon');
+      });
+
+      it('transitions heroes to next dungeon when nextDungeon effect is triggered', () => {
+        const hero = createTestHero(2, 2);
+        const state = createTestState(hero);
+        state.campaignId = 'iceDragonTreasure';
+
+        state.dungeon.nextDungeon = {
+          ...state.dungeon,
+          name: 'campaign.iceDragon.e1m1.name',
+          startingPositions: [{ x: 1, y: 1 }],
+        };
+
+        const interactable = {
+          position: { x: 2, y: 2 },
+          effect: 'nextDungeon',
+          oneTime: true,
+        };
+
+        const result = triggerInteractable(state, interactable, hero);
+
+        expect(result).toBe(true);
+        expect(state.dungeon.name).toBe('campaign.iceDragon.e1m1.name');
+        expect(state.actionLog[0].key).toBe('logs.youHaveReached');
+        expect(state.turnCount).toBe(0);
+      });
+
+      it('transitions to next dungeon specified in args.nextDungeon', () => {
+        const hero = createTestHero(2, 2);
+        const state = createTestState(hero);
+        state.campaignId = 'iceDragonTreasure';
+
+        const customNextDungeon: Dungeon = {
+          ...state.dungeon,
+          name: 'campaign.custom.next.name',
+          startingPositions: [{ x: 3, y: 3 }],
+        };
+
+        const interactable = {
+          position: { x: 2, y: 2 },
+          effect: NEXT_DUNGEON,
+          args: { nextDungeon: customNextDungeon },
+          oneTime: true,
+        };
+
+        const result = triggerInteractable(state, interactable, hero);
+
+        expect(result).toBe(true);
+        expect(state.dungeon.name).toBe('campaign.custom.next.name');
+      });
+
+      it('marks dungeon beaten if no next dungeon is configured', () => {
+        const hero = createTestHero(2, 2);
+        const state = createTestState(hero);
+        state.dungeon.nextDungeon = undefined;
+
+        const interactable = {
+          position: { x: 2, y: 2 },
+          effect: 'nextDungeon',
+          oneTime: true,
+        };
+
+        const result = triggerInteractable(state, interactable, hero);
+
+        expect(result).toBe(true);
+        expect(state.dungeon.beaten).toBe(true);
+        expect(
+          state.actionLog.some(
+            (log) => log.key === 'logs.allConditionsFulfilled',
+          ),
+        ).toBe(true);
+      });
+
+      it('supports NEXT_SCENARIO alias', () => {
+        const hero = createTestHero(2, 2);
+        const state = createTestState(hero);
+
+        state.dungeon.nextDungeon = {
+          ...state.dungeon,
+          name: 'campaign.iceDragon.e1m1.name',
+          startingPositions: [{ x: 1, y: 1 }],
+        };
+
+        const interactable = {
+          position: { x: 2, y: 2 },
+          effect: 'NEXT_SCENARIO',
+          oneTime: true,
+        };
+
+        const result = triggerInteractable(state, interactable, hero);
+
+        expect(result).toBe(true);
+        expect(state.dungeon.name).toBe('campaign.iceDragon.e1m1.name');
+      });
+    });
+  });
+
+  describe('Dungeon Parser & Validator', () => {
+    it('parses interactables defined in declarative layout', () => {
+      const dungeon = defineDungeon({
+        name: 'Interactable Dungeon',
+        intro: 'Intro',
+        winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
+        startingPositions: [[1, 1]],
+        layout: {
+          grid: ['#####', '#AAA#', '#AAA#', '#####'],
+          interactables: [
+            [
+              2,
+              2,
+              'removeTrapsInRoom',
+              { room: 'A', secret: true },
+              'trap_lever',
+            ],
+            {
+              x: 1,
+              y: 2,
+              effect: 'addHero',
+              name: 'Rescue Cage',
+              id: 'cage_1',
+              secret: false,
+            },
+          ],
+        },
+      });
+
+      expect(dungeon.layout.interactables?.length).toBe(2);
+      expect(dungeon.layout.interactables?.[0]).toMatchObject({
+        position: { x: 2, y: 2 },
+        effect: 'removeTrapsInRoom',
+        id: 'trap_lever',
+        secret: true,
+      });
+      expect(dungeon.layout.interactables?.[1]).toMatchObject({
+        position: { x: 1, y: 2 },
+        effect: 'addHero',
+        name: 'Rescue Cage',
+        id: 'cage_1',
+        secret: false,
+      });
+    });
+
+    it('parses interactables from tile map legend', () => {
+      const result = parseTileMap(['###', '#L#', '###'], {
+        '#': { roomOrTile: '#' },
+        L: {
+          roomOrTile: 'A',
+          interactable: {
+            effect: 'addHero',
+            name: 'Rescued Ally',
+            id: 'ally_lever',
+            secret: true,
+          },
+        },
+      });
+
+      expect(result.interactables.length).toBe(1);
+      expect(result.interactables[0]).toMatchObject({
+        position: { x: 1, y: 1 },
+        effect: 'addHero',
+        name: 'Rescued Ally',
+        id: 'ally_lever',
+        secret: true,
+      });
+    });
+
+    it('validates interactable positions and duplicate ids', () => {
+      const invalidLayout = {
+        grid: ['###', '#A#', '###'],
+        doors: [],
+        monsters: [],
+        secrets: [],
+        notes: [],
+        items: [],
+        corners: [],
+        corridors: [],
+        interactables: [
+          { position: { x: 0, y: 0 }, effect: 'someEffect', id: 'dup' }, // on wall
+          { position: { x: 1, y: 1 }, effect: 'someEffect', id: 'dup' }, // duplicate id
+        ],
+      };
+
+      const res = validateLayout(invalidLayout);
+      expect(res.valid).toBe(false);
+      expect(res.errors.some((e) => e.type === 'overlap')).toBe(true);
+      expect(res.errors.some((e) => e.type === 'duplicate_id')).toBe(true);
+    });
+  });
+});
+
+describe('toggleLight effect', () => {
+  it('toggles the interactable own light on and off', () => {
+    const hero = createTestHero(2, 2);
+    const state = createTestState(hero);
+    const interactable = {
+      position: { x: 2, y: 2 },
+      effect: 'toggleLight',
+      oneTime: false,
+      interacted: false,
+      light: {
+        alignment: CellAlignment.CENTER,
+        color: '#FFB85C',
+        radius: 2.5,
+        intensity: 0.45,
+        softness: 0.4,
+        effect: LightEffect.FLICKER,
+        rate: 1.5,
+        enabled: false,
+      },
+    };
+
+    // Starts unlit; interacting lights it, interacting again snuffs it.
+    expect(interactable.light.enabled).toBe(false);
+    expect(triggerInteractable(state, interactable as never, hero)).toBe(true);
+    expect(interactable.light.enabled).toBe(true);
+    expect(triggerInteractable(state, interactable as never, hero)).toBe(true);
+    expect(interactable.light.enabled).toBe(false);
+  });
+
+  it('toggles a placed dungeon light by args.lightId', () => {
+    const hero = createTestHero(2, 2);
+    const state = createTestState(hero);
+    state.dungeon.layout.lights = [
+      {
+        id: 'brazier_lever_target',
+        position: { x: 5, y: 5 },
+        alignment: CellAlignment.CENTER,
+        color: '#FFB85C',
+        radius: 2,
+        intensity: 0.4,
+        softness: 0.4,
+        effect: 'static',
+        rate: 1,
+        enabled: true,
+      },
+    ];
+    const lever = {
+      position: { x: 2, y: 2 },
+      effect: 'toggleLight',
+      oneTime: false,
+      interacted: false,
+      args: { lightId: 'brazier_lever_target' },
+    };
+
+    triggerInteractable(state, lever as never, hero);
+    expect(state.dungeon.layout.lights[0].enabled).toBe(false);
+    triggerInteractable(state, lever as never, hero);
+    expect(state.dungeon.layout.lights[0].enabled).toBe(true);
+  });
+
+  it('does nothing when there is no light to toggle', () => {
+    const hero = createTestHero(2, 2);
+    const state = createTestState(hero);
+    const handler = getInteractableEffect('toggleLight');
+    expect(handler).toBeDefined();
+    const interactable = {
+      position: { x: 2, y: 2 },
+      effect: 'toggleLight',
+      oneTime: false,
+      interacted: false,
+    };
+    expect(handler!(state, interactable as never, hero)).toBe(false);
+  });
+});
+
+describe('fillRoomFog effect', () => {
+  it('fills the given room with fog options', () => {
+    const hero = createTestHero(1, 1);
+    const state = createTestState(hero);
+    const interactable = {
+      position: { x: 2, y: 2 },
+      effect: 'fillRoomFog',
+      args: { room: 'B', options: { opacity: 0.5, damageOnEnter: 1 } },
+      oneTime: true,
+    };
+
+    triggerInteractable(state, interactable, hero);
+
+    expect(state.dungeon.layout.roomFog?.B).toEqual({
+      opacity: 0.5,
+      damageOnEnter: 1,
+    });
+  });
+
+  it('defaults to the room the interactable stands in', () => {
+    const hero = createTestHero(1, 1);
+    const state = createTestState(hero);
+    const interactable = {
+      position: { x: 2, y: 2 },
+      effect: 'fillRoomFog',
+      args: { options: { opacity: 0.4 } },
+      oneTime: true,
+    };
+
+    triggerInteractable(state, interactable, hero);
+
+    expect(state.dungeon.layout.roomFog?.A).toEqual({ opacity: 0.4 });
+  });
+});
+
+describe('spawnLava effect', () => {
+  it('floods cells with lava, hurting actors standing there', () => {
+    const hero = createTestHero(3, 3);
+    hero.health = 6;
+    const state = createTestState(hero);
+    const interactable = {
+      position: { x: 4, y: 4 },
+      effect: 'spawnLava',
+      args: {
+        cells: [
+          { x: 3, y: 3 },
+          { x: 4, y: 3 },
+        ],
+        options: { damageOnEnter: 2, damageOnTurnEnd: 1 },
+        shake: 10,
+      },
+      oneTime: true,
+    };
+
+    triggerInteractable(state, interactable, hero);
+
+    expect(state.dungeon.layout.terrain).toHaveLength(2);
+    state.dungeon.layout.terrain?.forEach((cell) => {
+      expect(cell.type).toBe(TerrainType.LAVA);
+      expect(cell.damageOnEnter).toBe(2);
+      expect(cell.damageOnTurnEnd).toBe(1);
+    });
+    // The hero standing on a flooded cell takes the enter damage at once.
+    expect(hero.health).toBe(4);
+    // The eruption shakes the board from the first flooded cell.
+    expect(state.shakeEffects).toHaveLength(1);
+    expect(state.shakeEffects?.[0].epicenter).toEqual({ x: 3, y: 3 });
+  });
+
+  it('never stacks a second lava terrain on an already flooded cell', () => {
+    const hero = createTestHero(1, 1);
+    const state = createTestState(hero);
+    const interactable = {
+      position: { x: 4, y: 4 },
+      effect: 'spawnLava',
+      args: { cells: [{ x: 3, y: 3 }], options: {} },
+      oneTime: true,
+    };
+
+    triggerInteractable(state, interactable, hero);
+    triggerInteractable(state, interactable, hero);
+
+    expect(state.dungeon.layout.terrain).toHaveLength(1);
+  });
+});

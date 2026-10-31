@@ -15,6 +15,7 @@ export const weapons: Weapon[] = [
     value: 0,
     ignoresShield: false,
     ignoresArmour: false,
+    attackSound: 'sfx/attack_knight.wav',
   },
   {
     id: 'two_handed_sword',
@@ -29,6 +30,7 @@ export const weapons: Weapon[] = [
     value: 3,
     ignoresShield: false,
     ignoresArmour: false,
+    attackSound: 'sfx/attack_knight.wav',
   },
   {
     id: 'halberd',
@@ -43,6 +45,7 @@ export const weapons: Weapon[] = [
     value: 2,
     ignoresShield: false,
     ignoresArmour: false,
+    attackSound: 'sfx/attack_knight.wav',
   },
   {
     id: 'flail',
@@ -57,6 +60,7 @@ export const weapons: Weapon[] = [
     value: 4,
     ignoresShield: false,
     ignoresArmour: false,
+    attackSound: 'sfx/attack_knight.wav',
   },
   {
     id: 'double_headed_axe',
@@ -71,6 +75,7 @@ export const weapons: Weapon[] = [
     value: 3,
     ignoresShield: false,
     ignoresArmour: false,
+    attackSound: 'sfx/attack_knight.wav',
   },
 ];
 
@@ -88,6 +93,7 @@ export const monsterWeapons: Weapon[] = [
     value: 0,
     ignoresShield: false,
     ignoresArmour: false,
+    attackSound: 'sfx/attack_monster.wav',
   },
   {
     id: 'orc_bow',
@@ -102,6 +108,7 @@ export const monsterWeapons: Weapon[] = [
     value: 0,
     ignoresShield: true,
     ignoresArmour: false,
+    attackSound: 'sfx/arrow.mp3',
   },
   {
     id: 'troll_club',
@@ -116,6 +123,7 @@ export const monsterWeapons: Weapon[] = [
     value: 0,
     ignoresShield: false,
     ignoresArmour: false,
+    attackSound: 'sfx/attack_monster.wav',
   },
   {
     id: 'dark_lord_sword',
@@ -130,6 +138,7 @@ export const monsterWeapons: Weapon[] = [
     value: 0,
     ignoresShield: false,
     ignoresArmour: false,
+    attackSound: 'sfx/attack_monster.wav',
   },
   {
     id: 'green_dark_lord_sword',
@@ -144,5 +153,6 @@ export const monsterWeapons: Weapon[] = [
     value: 0,
     ignoresShield: false,
     ignoresArmour: false,
+    attackSound: 'sfx/attack_monster.wav',
   },
 ];

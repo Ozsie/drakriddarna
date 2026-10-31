@@ -1,14 +1,24 @@
 import type {
+  CellAlignment,
   Corner,
   Door,
   Dungeon,
+  InteractableCell,
   Item,
+  ItemLight,
   ItemLocation,
   Layout,
+  LightEffect,
+  LightSource,
   Monster,
   Note,
   Position,
+  RoomFogOptions,
   Secret,
+  TerrainCell,
+  TerrainOptions,
+  TerrainType,
+  WallEdge,
   WinCondition,
 } from '../types';
 import { Colour, MonsterType, SecretType, Side } from '../types';
@@ -16,6 +26,7 @@ import {
   createDoor,
   createEquipment,
   createHiddenDoor,
+  createLight,
   createLockedDoor,
   createMonster,
   createMonsterWithInventory,
@@ -27,6 +38,7 @@ import {
   createTrappedLockedDoor,
 } from './DungeonLogic';
 import { assertValidDungeon } from './dungeonValidator';
+import { findRoomCells } from '../core';
 import { autoDetectCorners } from './cornerDetection';
 
 export type PositionTuple = [x: number, y: number];
@@ -53,6 +65,7 @@ export type DeclarativeDoorTuple = [
     trapped?: boolean | number;
     hidden?: boolean;
     open?: boolean;
+    reinforced?: boolean;
     id?: string;
   },
 ];
@@ -61,6 +74,30 @@ export type DeclarativeDoor =
   | Door
   | DeclarativeDoorObject
   | DeclarativeDoorTuple;
+
+export type DeclarativeWallTuple = [
+  side: Side,
+  x: number,
+  y: number,
+  options?: {
+    colour?: string;
+  },
+];
+
+export type DeclarativeWall = WallEdge | DeclarativeWallTuple;
+
+export const parseWall = (wallDef: DeclarativeWall): WallEdge => {
+  if (Array.isArray(wallDef)) {
+    const [side, x, y, options] = wallDef;
+    return {
+      side,
+      x,
+      y,
+      ...(options?.colour !== undefined ? { colour: options.colour } : {}),
+    };
+  }
+  return { ...wallDef };
+};
 
 export type DeclarativeMonsterObject = {
   type: MonsterType;
@@ -141,6 +178,113 @@ export type DeclarativeItem =
   | DeclarativeItemObject
   | DeclarativeItemTuple;
 
+export type DeclarativeInteractableObject = {
+  x: number;
+  y: number;
+  effect: string;
+  id?: string;
+  name?: string;
+  nameTranslationKey?: string;
+  description?: string;
+  descriptionTranslationKey?: string;
+  interacted?: boolean;
+  oneTime?: boolean;
+  args?: Record<string, unknown>;
+  icon?: string;
+  triggerOn?: 'interact' | 'step' | 'both';
+  secret?: boolean;
+  interactSound?: string;
+  light?: ItemLight;
+};
+
+export type DeclarativeInteractableTuple =
+  | [x: number, y: number, effect: string]
+  | [
+      x: number,
+      y: number,
+      effect: string,
+      argsOrOptions?:
+        | Record<string, unknown>
+        | {
+            id?: string;
+            name?: string;
+            nameTranslationKey?: string;
+            description?: string;
+            descriptionTranslationKey?: string;
+            oneTime?: boolean;
+            interacted?: boolean;
+            args?: Record<string, unknown>;
+            icon?: string;
+            triggerOn?: 'interact' | 'step' | 'both';
+            secret?: boolean;
+            interactSound?: string;
+            light?: ItemLight;
+            [key: string]: unknown;
+          },
+      id?: string,
+    ];
+
+export type DeclarativeInteractable =
+  | InteractableCell
+  | DeclarativeInteractableObject
+  | DeclarativeInteractableTuple;
+
+export type DeclarativeLightOptions = {
+  color?: string;
+  radius?: number;
+  intensity?: number;
+  softness?: number;
+  effect?: LightEffect;
+  rate?: number;
+  enabled?: boolean;
+  id?: string;
+};
+
+export type DeclarativeLightObject = DeclarativeLightOptions & {
+  x: number;
+  y: number;
+  alignment?: CellAlignment;
+};
+
+export type DeclarativeLightTuple =
+  | [x: number, y: number]
+  | [x: number, y: number, alignment: CellAlignment]
+  | [x: number, y: number, options: DeclarativeLightOptions]
+  | [
+      x: number,
+      y: number,
+      alignment: CellAlignment,
+      options: DeclarativeLightOptions,
+    ];
+
+export type DeclarativeLight =
+  | LightSource
+  | DeclarativeLightObject
+  | DeclarativeLightTuple;
+
+export type DeclarativeTerrainObject = TerrainOptions & {
+  x: number;
+  y: number;
+};
+
+export type DeclarativeTerrainTuple =
+  | [x: number, y: number, type: TerrainType]
+  | [
+      x: number,
+      y: number,
+      type: TerrainType,
+      options: Omit<TerrainOptions, 'type'>,
+    ];
+
+export type DeclarativeTerrain =
+  | TerrainCell
+  | DeclarativeTerrainObject
+  | DeclarativeTerrainTuple;
+
+// Fog can be declared as a plain list of room/corridor letters using the
+// default styling, or keyed by letter with per-room options.
+export type DeclarativeRoomFog = string[] | Record<string, RoomFogOptions>;
+
 export type DeclarativeLayout = {
   grid: string[];
   doors?: DeclarativeDoor[];
@@ -148,14 +292,22 @@ export type DeclarativeLayout = {
   secrets?: DeclarativeSecret[];
   notes?: DeclarativeNote[];
   items?: DeclarativeItem[];
+  interactables?: DeclarativeInteractable[];
+  lights?: DeclarativeLight[];
+  terrain?: DeclarativeTerrain[];
+  roomFog?: DeclarativeRoomFog;
   corridors?: string[];
+  corridorCells?: DeclarativePosition[];
   pillars?: DeclarativePosition[];
   pits?: DeclarativePosition[];
+  walls?: DeclarativeWall[];
+  wallColour?: string;
   corners?: Corner[];
 };
 
 export type DeclarativeDungeon = {
   name: string;
+  intro: string;
   nameTranslationKey?: string;
   beaten?: boolean;
   winConditions: WinCondition[];
@@ -166,6 +318,10 @@ export type DeclarativeDungeon = {
   killCount?: number;
   events?: number[];
   collapsedCorridor?: string;
+  onRoomDiscovered?: Record<string, string>;
+  music?: string;
+  tileset?: string;
+  ambientLight?: number;
 };
 
 export interface DefineDungeonOptions {
@@ -197,6 +353,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
   let trapAttacks = 0;
   let hidden = false;
   let open = false;
+  let reinforced = false;
   let id: string | undefined;
 
   if (Array.isArray(doorDef)) {
@@ -208,6 +365,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       locked = !!opts.locked;
       hidden = !!opts.hidden;
       open = !!opts.open;
+      reinforced = !!opts.reinforced;
       id = opts.id;
       if (typeof opts.trapped === 'number') {
         trapped = opts.trapped > 0;
@@ -239,6 +397,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       ...createTrappedLockedDoor(side, x, y, trapAttacks),
       open,
       hidden,
+      reinforced,
       ...(id ? { id } : {}),
     };
   }
@@ -247,6 +406,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       ...createTrappedHiddenDoor(side, x, y, trapAttacks),
       open,
       locked,
+      reinforced,
       ...(id ? { id } : {}),
     };
   }
@@ -256,6 +416,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       open,
       locked,
       hidden,
+      reinforced,
       ...(id ? { id } : {}),
     };
   }
@@ -264,6 +425,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       ...createLockedDoor(side, x, y),
       open,
       hidden,
+      reinforced,
       ...(id ? { id } : {}),
     };
   }
@@ -272,6 +434,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       ...createHiddenDoor(side, x, y),
       open,
       locked,
+      reinforced,
       ...(id ? { id } : {}),
     };
   }
@@ -279,6 +442,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
   return {
     ...createDoor(side, x, y),
     open,
+    reinforced,
     ...(id ? { id } : {}),
   };
 };
@@ -392,6 +556,230 @@ export const parseItem = (itemDef: DeclarativeItem): ItemLocation => {
   return createEquipment(itemDef.x, itemDef.y, itemDef.item);
 };
 
+export const parseInteractable = (
+  interactableDef: DeclarativeInteractable,
+): InteractableCell => {
+  if ('position' in interactableDef && 'effect' in interactableDef) {
+    return interactableDef;
+  }
+
+  if (Array.isArray(interactableDef)) {
+    const [x, y, effect, argsOrOptions, id] = interactableDef;
+    let name: string | undefined;
+    let nameTranslationKey: string | undefined;
+    let description: string | undefined;
+    let descriptionTranslationKey: string | undefined;
+    let oneTime = true;
+    let interacted = false;
+    let args: Record<string, unknown> | undefined;
+    let icon: string | undefined;
+    let triggerOn: 'interact' | 'step' | 'both' = 'interact';
+    let secret: boolean | undefined;
+    let interactableId = id;
+    let interactSound: string | undefined;
+    let light: ItemLight | undefined;
+
+    if (argsOrOptions && typeof argsOrOptions === 'object') {
+      const opts = argsOrOptions as Record<string, unknown>;
+      if (
+        'oneTime' in opts ||
+        'interacted' in opts ||
+        'triggerOn' in opts ||
+        'icon' in opts ||
+        'name' in opts ||
+        'description' in opts ||
+        'id' in opts ||
+        'args' in opts ||
+        'secret' in opts ||
+        'light' in opts ||
+        'interactSound' in opts
+      ) {
+        if (opts.id && typeof opts.id === 'string') interactableId = opts.id;
+        if (opts.name && typeof opts.name === 'string') name = opts.name;
+        if (
+          opts.nameTranslationKey &&
+          typeof opts.nameTranslationKey === 'string'
+        )
+          nameTranslationKey = opts.nameTranslationKey;
+        if (opts.description && typeof opts.description === 'string')
+          description = opts.description;
+        if (
+          opts.descriptionTranslationKey &&
+          typeof opts.descriptionTranslationKey === 'string'
+        )
+          descriptionTranslationKey = opts.descriptionTranslationKey;
+        if (typeof opts.oneTime === 'boolean') oneTime = opts.oneTime;
+        if (typeof opts.interacted === 'boolean') interacted = opts.interacted;
+        if (opts.icon && typeof opts.icon === 'string') icon = opts.icon;
+        if (typeof opts.secret === 'boolean') secret = opts.secret;
+        if (
+          opts.triggerOn === 'interact' ||
+          opts.triggerOn === 'step' ||
+          opts.triggerOn === 'both'
+        ) {
+          triggerOn = opts.triggerOn;
+        }
+        if (opts.args && typeof opts.args === 'object') {
+          args = opts.args as Record<string, unknown>;
+        }
+        if (typeof opts.interactSound === 'string')
+          interactSound = opts.interactSound;
+        if (opts.light && typeof opts.light === 'object') {
+          light = opts.light as ItemLight;
+        }
+      } else {
+        args = opts;
+      }
+    }
+
+    return {
+      position: { x, y },
+      effect,
+      ...(interactableId ? { id: interactableId } : {}),
+      ...(name ? { name, nameTranslationKey: nameTranslationKey ?? name } : {}),
+      ...(description
+        ? {
+            description,
+            descriptionTranslationKey: descriptionTranslationKey ?? description,
+          }
+        : {}),
+      oneTime,
+      interacted,
+      ...(secret !== undefined ? { secret } : {}),
+      ...(args ? { args } : {}),
+      ...(icon ? { icon } : {}),
+      triggerOn,
+      interactSound,
+      ...(light ? { light } : {}),
+    };
+  }
+
+  const {
+    x,
+    y,
+    effect,
+    id,
+    name,
+    nameTranslationKey,
+    description,
+    descriptionTranslationKey,
+    oneTime = true,
+    interacted = false,
+    args,
+    icon,
+    triggerOn = 'interact',
+    secret,
+    interactSound,
+    light,
+  } = interactableDef;
+
+  return {
+    position: { x, y },
+    effect,
+    ...(id ? { id } : {}),
+    ...(name ? { name, nameTranslationKey: nameTranslationKey ?? name } : {}),
+    ...(description
+      ? {
+          description,
+          descriptionTranslationKey: descriptionTranslationKey ?? description,
+        }
+      : {}),
+    oneTime,
+    interacted,
+    ...(secret !== undefined ? { secret } : {}),
+    ...(args ? { args } : {}),
+    ...(icon ? { icon } : {}),
+    triggerOn,
+    interactSound,
+    ...(light ? { light } : {}),
+  };
+};
+
+export const parseLight = (lightDef: DeclarativeLight): LightSource => {
+  if ('position' in lightDef) {
+    return lightDef;
+  }
+
+  if (Array.isArray(lightDef)) {
+    const [x, y, alignmentOrOptions, options] = lightDef;
+    if (typeof alignmentOrOptions === 'string') {
+      return createLight(x, y, alignmentOrOptions, options);
+    }
+    return createLight(x, y, undefined, alignmentOrOptions);
+  }
+
+  const {
+    x,
+    y,
+    alignment,
+    color,
+    radius,
+    intensity,
+    softness,
+    effect,
+    rate,
+    enabled,
+    id,
+  } = lightDef;
+  return createLight(x, y, alignment, {
+    ...(color !== undefined ? { color } : {}),
+    ...(radius !== undefined ? { radius } : {}),
+    ...(intensity !== undefined ? { intensity } : {}),
+    ...(softness !== undefined ? { softness } : {}),
+    ...(effect !== undefined ? { effect } : {}),
+    ...(rate !== undefined ? { rate } : {}),
+    ...(enabled !== undefined ? { enabled } : {}),
+    ...(id !== undefined ? { id } : {}),
+  });
+};
+
+export const parseTerrain = (terrainDef: DeclarativeTerrain): TerrainCell => {
+  if ('position' in terrainDef) {
+    return terrainDef;
+  }
+
+  const definedOptions = (options: Partial<TerrainOptions>) => ({
+    ...(options.color !== undefined ? { color: options.color } : {}),
+    ...(options.opacity !== undefined ? { opacity: options.opacity } : {}),
+    ...(options.damageOnEnter !== undefined
+      ? { damageOnEnter: options.damageOnEnter }
+      : {}),
+    ...(options.damageOnTurnEnd !== undefined
+      ? { damageOnTurnEnd: options.damageOnTurnEnd }
+      : {}),
+    ...(options.movementCost !== undefined
+      ? { movementCost: options.movementCost }
+      : {}),
+    ...(options.rate !== undefined ? { rate: options.rate } : {}),
+    ...(options.light ? { light: options.light } : {}),
+  });
+
+  if (Array.isArray(terrainDef)) {
+    const [x, y, type, options] = terrainDef;
+    return {
+      position: parsePosition({ x, y }),
+      type,
+      ...definedOptions(options ?? {}),
+    };
+  }
+
+  const { x, y, type, ...options } = terrainDef;
+  return {
+    position: parsePosition({ x, y }),
+    type,
+    ...definedOptions(options),
+  };
+};
+
+export const parseRoomFog = (
+  fogDef: DeclarativeRoomFog,
+): Record<string, RoomFogOptions> => {
+  if (Array.isArray(fogDef)) {
+    return Object.fromEntries(fogDef.map((room) => [room, {}]));
+  }
+  return { ...fogDef };
+};
+
 export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
   grid: layoutDef.grid,
   doors: (layoutDef.doors ?? []).map(parseDoor),
@@ -399,9 +787,16 @@ export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
   secrets: (layoutDef.secrets ?? []).map(parseSecret),
   notes: (layoutDef.notes ?? []).map(parseNote),
   items: (layoutDef.items ?? []).map(parseItem),
+  interactables: (layoutDef.interactables ?? []).map(parseInteractable),
+  lights: (layoutDef.lights ?? []).map(parseLight),
+  terrain: (layoutDef.terrain ?? []).map(parseTerrain),
+  roomFog: parseRoomFog(layoutDef.roomFog ?? {}),
   corridors: layoutDef.corridors ?? [],
+  corridorCells: (layoutDef.corridorCells ?? []).map(parsePosition),
   pillars: (layoutDef.pillars ?? []).map(parsePosition),
   pits: (layoutDef.pits ?? []).map(parsePosition),
+  walls: (layoutDef.walls ?? []).map(parseWall),
+  ...(layoutDef.wallColour ? { wallColour: layoutDef.wallColour } : {}),
   corners: autoDetectCorners(layoutDef.grid),
 });
 
@@ -409,20 +804,35 @@ export const defineDungeon = (
   dungeonDef: DeclarativeDungeon,
   options: DefineDungeonOptions = { validate: true },
 ): Dungeon => {
+  const layout = defineLayout(dungeonDef.layout);
   const dungeon: Dungeon = {
     name: dungeonDef.name,
+    intro: dungeonDef.intro,
     nameTranslationKey: dungeonDef.nameTranslationKey ?? dungeonDef.name,
     beaten: dungeonDef.beaten ?? false,
     winConditions: dungeonDef.winConditions,
     nextDungeon: dungeonDef.nextDungeon,
     startingPositions: dungeonDef.startingPositions.map(parsePosition),
     discoveredRooms: dungeonDef.discoveredRooms ?? ['A'],
-    layout: defineLayout(dungeonDef.layout),
+    layout,
     killCount: dungeonDef.killCount ?? 0,
     ...(dungeonDef.events ? { events: dungeonDef.events } : {}),
     ...(dungeonDef.collapsedCorridor
-      ? { collapsedCorridor: dungeonDef.collapsedCorridor }
+      ? {
+          collapsedCorridors: [
+            {
+              letter: dungeonDef.collapsedCorridor,
+              cells: findRoomCells(layout.grid, dungeonDef.collapsedCorridor),
+            },
+          ],
+        }
       : {}),
+    ...(dungeonDef.onRoomDiscovered
+      ? { onRoomDiscovered: dungeonDef.onRoomDiscovered }
+      : {}),
+    music: dungeonDef.music,
+    tileset: dungeonDef.tileset,
+    ambientLight: dungeonDef.ambientLight ?? 1,
   };
 
   if (options.validate) {
@@ -439,6 +849,19 @@ export interface TileMapLegend {
     secret?: { type: SecretType; name?: string; item?: Item };
     item?: Item;
     note?: string;
+    interactable?: {
+      effect: string;
+      name?: string;
+      nameTranslationKey?: string;
+      description?: string;
+      descriptionTranslationKey?: string;
+      id?: string;
+      args?: Record<string, unknown>;
+      oneTime?: boolean;
+      icon?: string;
+      triggerOn?: 'interact' | 'step' | 'both';
+      secret?: boolean;
+    };
     pit?: boolean;
     pillar?: boolean;
     startingPosition?: boolean;
@@ -461,6 +884,7 @@ export const parseTileMap = (
   secrets: Secret[];
   notes: Note[];
   items: ItemLocation[];
+  interactables: InteractableCell[];
   pits: Position[];
   pillars: Position[];
   startingPositions: Position[];
@@ -470,6 +894,7 @@ export const parseTileMap = (
   const secrets: Secret[] = [];
   const notes: Note[] = [];
   const items: ItemLocation[] = [];
+  const interactables: InteractableCell[] = [];
   const pits: Position[] = [];
   const pillars: Position[] = [];
   const startingPositions: Position[] = [];
@@ -518,6 +943,26 @@ export const parseTileMap = (
         if (mapping.note) {
           notes.push(parseNote({ x, y, message: mapping.note }));
         }
+        if (mapping.interactable) {
+          interactables.push(
+            parseInteractable({
+              x,
+              y,
+              effect: mapping.interactable.effect,
+              name: mapping.interactable.name,
+              nameTranslationKey: mapping.interactable.nameTranslationKey,
+              description: mapping.interactable.description,
+              descriptionTranslationKey:
+                mapping.interactable.descriptionTranslationKey,
+              id: mapping.interactable.id,
+              args: mapping.interactable.args,
+              oneTime: mapping.interactable.oneTime,
+              icon: mapping.interactable.icon,
+              triggerOn: mapping.interactable.triggerOn,
+              secret: mapping.interactable.secret,
+            }),
+          );
+        }
         if (mapping.door) {
           doors.push(
             parseDoor({
@@ -544,6 +989,7 @@ export const parseTileMap = (
     secrets,
     notes,
     items,
+    interactables,
     pits,
     pillars,
     startingPositions,

@@ -9,6 +9,8 @@
   "failedToReset": "Misslyckades med att återställa nivån. Vänligen ladda om.",
   "allConditionsFulfilled": "Alla mål har uppfyllts.",
   "clearedDungeon": "Du har klarat {{name}}.",
+  "scenarioScore": "Scenariopoäng: {{score}} (kampanjens totalpoäng: {{total}}).",
+  "partyWipeRestartedDungeon": "Hjältarna försökte om nivån och börjar om på 0 XP och lärlingsnivå.",
   "moveToNext": "Tryck på 'Nästa' för att gå vidare till nästa nivå: {{name}}.",
   "playingCampaign": "Spelar {{name}}.",
   "gameInitialized": "Spelet initialiserat.",
@@ -25,6 +27,11 @@
     "attackedWith": "{{actor}} attackerade {{target}} med {{weapon}} för {{damage}}.",
     "killed": "{{actor}} dödade {{target}}.",
     "paralyzed": "{{target}} blir förlamad av {{weapon}} och står över resten av rundan."
+  },
+  "terrain": {
+    "enterDamage": "{{actor}} tar {{damage}} skada av {{terrain}}.",
+    "turnEndDamage": "{{actor}} tar {{damage}} skada av att stå i {{terrain}}.",
+    "killed": "{{actor}} omkom i {{terrain}}."
   },
   "events": {
     "sunStone": "{{monster}} dödades av Solstenen.",
@@ -53,7 +60,9 @@
     "leveledUp": "{{hero}} gick upp i nivå till {{level}}.",
     "notNearFriend": "{{hero}} kunde inte använda {{weapon}} nära en vän.",
     "locked": "Dörren är låst.",
+    "reinforced": "Dörren är förstärkt och kan bara öppnas med Jättehandsken.",
     "monsterOutOfRange": "Monstret är utom räckhåll.",
+    "blockedNearMonster": "{{hero}} kan inte göra det medan hen står bredvid ett monster.",
     "walkedByMonster": "{{hero}} gick förbi ett monster och blev stoppad.",
     "searchBonus": "{{hero}} använde effekten av {{item}} när hen sökte.",
     "searchFoundNothing": "{{hero}} letade men hittade ingenting.",
@@ -61,6 +70,12 @@
     "foundDoor": "{{hero}} letade ({{result}}) och hittade en dold dörr.",
     "foundTrapInDoor": "{{hero}} letade ({{result}}) och hittade en fälla i en dörr.",
     "foundSecret": "{{hero}} letade ({{result}}) och hittade {{secret}}.",
+    "revealedSecretWithItem": "{{hero}} klev in i rummet med {{item}} och avslöjade {{secret}}.",
+    "interact": "{{hero}} interagerade med {{interactable}}.",
+    "heroJoined": "{{newHero}} anslöt sig till sällskapet!",
+    "trapsRemoved": "Alla fällor i rum {{room}} desarmerades.",
+    "fogFilled": "{{hero}} släppte ut ett moln av dimma som fyller rum {{room}}.",
+    "lavaErupted": "Lava sprutar ur golvet där {{hero}} labbade och ger {{damage}} skada åt alla som står i den.",
     "turnFailed": "Misslyckades med att gå vidare till nästa tur."
   },
   "item": {

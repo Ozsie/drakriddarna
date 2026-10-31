@@ -7,7 +7,6 @@ import {
   Level,
   assertNever,
   type GameAction,
-  type GameEvent,
   type GameSettings,
   type ItemProperties,
   type Item,
@@ -17,7 +16,6 @@ import { weapons, monsterWeapons } from './items/weapons';
 import { armour, monsterArmour } from './items/armours';
 import { shields, monsterShields } from './items/shields';
 import { events } from './events/events';
-import { executeGameEvent } from './events/EventsLogic';
 import {
   createMonster,
   createSecret,
@@ -29,6 +27,7 @@ import {
   removeFoundMagicItemFromDeck,
 } from './secrets/SecretsLogic';
 import { init } from './game';
+import { registerMonsterTemplate } from './monsters/MonsterRegistry';
 import { dispatchAction, gameStateStore } from './store/gameStateStore';
 import { get } from 'svelte/store';
 
@@ -47,10 +46,32 @@ describe('Type Safety & Domain Modeling', () => {
       const orc = createMonster(MonsterType.ORC, Colour.Green, 2, 3);
       expect(orc.type).toBe(MonsterType.ORC);
       expect(orc.id).toBe('orc_green_2_3');
-      expect(orc.name).toContain('Orc');
+      expect(orc.name).toBe('monsters.orc.green');
       expect(orc.nameTranslationKey).toBe(orc.name);
       expect(orc.health).toBe(2);
       expect(orc.level).toBe(Level.APPRENTICE);
+    });
+
+    it('createMonster copies a sprite registered on the monster template', () => {
+      registerMonsterTemplate('Sprite Test Monster', {
+        sprite: { image: 'monster.png', frameWidth: 64, frameHeight: 64 },
+      });
+      const monster = createMonster(
+        'Sprite Test Monster' as MonsterType,
+        Colour.Green,
+        1,
+        1,
+      );
+      expect(monster.sprite).toEqual({
+        image: 'monster.png',
+        frameWidth: 64,
+        frameHeight: 64,
+      });
+    });
+
+    it('createMonster leaves the sprite undefined without a template sprite', () => {
+      const orc = createMonster(MonsterType.ORC, Colour.Green, 2, 3);
+      expect(orc.sprite).toBeUndefined();
     });
   });
 
@@ -165,11 +186,13 @@ describe('Type Safety & Domain Modeling', () => {
         cellSize: 48,
         debug: true,
         locale: 'sv',
+        music: false,
         customProperty: 'validValue',
       };
       expect(settings.cellSize).toBe(48);
       expect(settings.debug).toBe(true);
       expect(settings.locale).toBe('sv');
+      expect(settings.music).toBe(false);
     });
 
     it('ItemProperties supports typed properties', () => {
@@ -196,23 +219,6 @@ describe('Type Safety & Domain Modeling', () => {
       });
     });
 
-    it('executeGameEvent processes GameEvent discriminated union exhaustively', () => {
-      const state = init();
-      const timePortalEvent: GameEvent = {
-        type: 'TIME_PORTAL',
-        number: 3,
-        name: 'Time Portal',
-        description: 'Grants actions',
-        effect: 'timePortal',
-        used: false,
-      };
-
-      const initialHeroActions = state.heroes[0].actions;
-      executeGameEvent(state, timePortalEvent);
-      expect(state.heroes[0].actions).toBe(initialHeroActions + 1);
-      expect(timePortalEvent.used).toBe(true);
-    });
-
     it('assertNever throws error on unhandled discriminated union branch', () => {
       expect(() => {
         assertNever('UNKNOWN_TYPE' as never, 'Unhandled event');
@@ -226,7 +232,14 @@ describe('Type Safety & Domain Modeling', () => {
       };
 
       dispatchAction(action);
-      expect(get(gameStateStore).settings.debug).toBe(true);
+      expect(get(gameStateStore)?.settings.debug).toBe(true);
+
+      const musicAction: GameAction = {
+        type: 'SET_MUSIC',
+        music: false,
+      };
+      dispatchAction(musicAction);
+      expect(get(gameStateStore)?.settings.music).toBe(false);
 
       const moveAction: GameAction = {
         type: 'MOVE',

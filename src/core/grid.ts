@@ -5,11 +5,17 @@ import type {
   Hero,
   Layout,
   Position,
+  WallEdge,
 } from '../types';
 import { Side } from '../types';
 
 export const EMPTY = ' ';
 export const COLLAPSED = '?';
+// Marker for the sealed far side of a closed door with an undiscovered far
+// side. It renders as wall, but unlike real rock it is a doorway — corner
+// classification treats it as wall for closed sides yet never as the
+// protruding stem of a junction.
+export const SEALED_DOOR = '+';
 export const WALL = '#';
 
 export const toArray = (row: string): string[] => {
@@ -41,6 +47,21 @@ export const isNeighbouring = (
   (position.x === x && position.y === y + 1) ||
   (position.x === x - 1 && position.y === y + 1);
 
+// Grid offset of the cell a door/wall side points at, e.g. side RIGHT on
+// (x, y) targets (x + 1, y).
+export const sideOffset = (side: Side): [number, number] => {
+  switch (side) {
+    case Side.RIGHT:
+      return [1, 0];
+    case Side.LEFT:
+      return [-1, 0];
+    case Side.DOWN:
+      return [0, 1];
+    default:
+      return [0, -1];
+  }
+};
+
 export const isDoorEdge = (
   layout: Layout,
   fromX: number,
@@ -49,14 +70,7 @@ export const isDoorEdge = (
   toY: number,
 ) =>
   layout.doors?.find((door) => {
-    const [dx, dy] =
-      door.side === Side.RIGHT
-        ? [1, 0]
-        : door.side === Side.LEFT
-        ? [-1, 0]
-        : door.side === Side.DOWN
-        ? [0, 1]
-        : [0, -1];
+    const [dx, dy] = sideOffset(door.side);
     return (
       (door.x === fromX &&
         door.y === fromY &&
@@ -68,6 +82,62 @@ export const isDoorEdge = (
         door.y + dy === fromY)
     );
   });
+
+export const isWallEdge = (
+  layout: Layout,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+): WallEdge | undefined =>
+  layout.walls?.find((wall) => {
+    const [dx, dy] = sideOffset(wall.side);
+    return (
+      (wall.x === fromX &&
+        wall.y === fromY &&
+        wall.x + dx === toX &&
+        wall.y + dy === toY) ||
+      (wall.x === toX &&
+        wall.y === toY &&
+        wall.x + dx === fromX &&
+        wall.y + dy === fromY)
+    );
+  });
+
+// Whether a step between two adjacent cells crosses an edge wall. Orthogonal
+// steps cross one edge. Diagonal steps pass the pinch point of four cells
+// and are blocked only when both routes around the pinch cross a wall.
+export const crossesWallEdge = (
+  layout: Layout,
+  from: Position,
+  to: Position,
+): boolean => {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (dx === 0 && dy === 0) return false;
+  if (Math.abs(dx) > 1 || Math.abs(dy) > 1) return false;
+  if (dx !== 0 && dy !== 0) {
+    const via1: Position = { x: from.x + dx, y: from.y };
+    const via2: Position = { x: from.x, y: from.y + dy };
+    const route1 =
+      crossesWallEdge(layout, from, via1) || crossesWallEdge(layout, via1, to);
+    const route2 =
+      crossesWallEdge(layout, from, via2) || crossesWallEdge(layout, via2, to);
+    return route1 && route2;
+  }
+  return Boolean(isWallEdge(layout, from.x, from.y, to.x, to.y));
+};
+
+// Any closed door or edge wall standing between two adjacent cells blocks
+// sight, searching and movement beyond it.
+export const isEdgeBlocked = (
+  layout: Layout,
+  from: Position,
+  to: Position,
+): boolean => {
+  const door = isDoorEdge(layout, from.x, from.y, to.x, to.y);
+  return Boolean((door && !door.open) || crossesWallEdge(layout, from, to));
+};
 
 export const canSearchThrough = (
   layout: Layout,
@@ -88,18 +158,60 @@ export const canSearchThrough = (
     }
   }
 
-  // Any closed door standing on this edge blocks searching beyond it
-  const door = isDoorEdge(layout, from.x, from.y, to.x, to.y);
-  if (door && !door.open) return false;
-
-  return true;
+  // Any closed door or edge wall standing on this route blocks searching
+  // beyond it
+  return !isEdgeBlocked(layout, from, to);
 };
 
 export const getDist = (a: Position, b: Position): number =>
   Math.sqrt(Math.pow(a.x - b?.x, 2) + Math.pow(a.y - b?.y, 2));
 
+export const distanceInGrid = (a: Position, b: Position): number => {
+  const dx = Math.abs(b.x - a.x);
+  const dy = Math.abs(b.y - a.y);
+
+  const min = Math.min(dx, dy);
+  const max = Math.max(dx, dy);
+
+  const diagonalSteps = min;
+  const straightSteps = max - min;
+  let factor = Math.sqrt(2);
+  if (straightSteps === 0) {
+    factor = 1;
+  }
+
+  return Math.floor(factor * diagonalSteps + straightSteps);
+};
+
 export const isRoomDiscovered = (dungeon: Dungeon, cell: string): boolean =>
   dungeon.discoveredRooms.includes(cell);
+
+export const findRoomCells = (grid: string[], room: string): Position[] => {
+  const cells: Position[] = [];
+  grid.forEach((row, y) => {
+    toArray(row).forEach((cell, x) => {
+      if (cell === room) cells.push({ x, y });
+    });
+  });
+  return cells;
+};
+
+// Whether a grid cell belongs to a corridor: either its room letter is
+// listed in `layout.corridors` (the whole letter is one corridor) or it is
+// one of the `layout.corridorCells` — cells of a room letter that are
+// corridors without a door separating them from the room.
+export const isCorridorCell = (
+  layout: Layout,
+  x: number,
+  y: number,
+): boolean => {
+  const cell = findCell(layout.grid, x, y);
+  if (!cell) return false;
+  if (layout.corridors.includes(cell)) return true;
+  return Boolean(
+    layout.corridorCells?.some((pos) => isSamePosition(pos, { x, y })),
+  );
+};
 
 export const isDiscovered = (
   dungeon: Dungeon,
@@ -152,6 +264,7 @@ export const stepAlongLine = (
   state: GameState,
   walking: boolean,
   seenCells: Position[],
+  lastCell: Position = source,
 ): boolean => {
   if (isNaN(startPixelPos.x) || isNaN(startPixelPos.y)) {
     return false;
@@ -184,13 +297,37 @@ export const stepAlongLine = (
   const pillar = state.dungeon.layout.pillars?.some((pit) =>
     isSamePosition(pit, nextCellPosition),
   );
-  const monster = state.dungeon.layout.monsters.some((monster) =>
-    isSamePosition(monster.position, nextCellPosition),
-  );
+  const monster = state.dungeon.layout.monsters
+    .filter((monster) => !isSamePosition(monster.position, source))
+    .some((monster) => isSamePosition(monster.position, nextCellPosition));
   const hero = state.heroes
     .filter((hero) => hero.health > 0)
     .filter((hero) => !isSamePosition(hero.position, source))
     .some((hero) => isSamePosition(hero.position, nextCellPosition));
+
+  // Diagonal step between grid cells: block cutting through a corner
+  // formed by two walls (no squeezing through a diagonal wall pinch point)
+  const cornerDx = nextCellPosition.x - lastCell.x;
+  const cornerDy = nextCellPosition.y - lastCell.y;
+  if (cornerDx !== 0 && cornerDy !== 0) {
+    const flank1: Position = { x: lastCell.x + cornerDx, y: lastCell.y };
+    const flank2: Position = { x: lastCell.x, y: lastCell.y + cornerDy };
+    const flank1Blocked = isBlockingCell(state, flank1);
+    const flank2Blocked = isBlockingCell(state, flank2);
+    const flank1Walled =
+      isEdgeBlocked(state.dungeon.layout, lastCell, flank1) ||
+      isEdgeBlocked(state.dungeon.layout, flank1, nextCellPosition);
+    const flank2Walled =
+      isEdgeBlocked(state.dungeon.layout, lastCell, flank2) ||
+      isEdgeBlocked(state.dungeon.layout, flank2, nextCellPosition);
+    if ((flank1Blocked || flank1Walled) && (flank2Blocked || flank2Walled)) {
+      return false;
+    }
+  } else if (isEdgeBlocked(state.dungeon.layout, lastCell, nextCellPosition)) {
+    // Orthogonal step across an edge wall or closed door
+    return false;
+  }
+
   if (nextCellPosition.x === target.x && nextCellPosition.y === target.y) {
     seenCells.push(nextCellPosition);
     return true;
@@ -204,6 +341,7 @@ export const stepAlongLine = (
   ) {
     return false;
   } else {
+    let nextLastCell = lastCell;
     if (!(nextCellPosition.x === source.x && nextCellPosition.y === source.y)) {
       if (
         !seenCells.some(
@@ -212,6 +350,7 @@ export const stepAlongLine = (
       ) {
         seenCells.push(nextCellPosition);
       }
+      nextLastCell = nextCellPosition;
     }
     return stepAlongLine(
       nextPixelPosition,
@@ -222,6 +361,7 @@ export const stepAlongLine = (
       state,
       walking,
       seenCells,
+      nextLastCell,
     );
   }
 };
@@ -285,7 +425,54 @@ export const hasLineOfSight = (
 ): boolean => {
   if (walking) {
     const cells = cellsAlongLine(startPosition, targetPosition);
-    return cells.slice(0, -1).every((cell) => !isBlockingCell(state, cell));
+    let prev = startPosition;
+    for (const cell of cells) {
+      const dx = cell.x - prev.x;
+      const dy = cell.y - prev.y;
+      if (dx !== 0 && dy !== 0) {
+        // Diagonal step: block cutting through a corner formed by two walls
+        // or two edge walls at the pinch point
+        const flank1: Position = { x: prev.x + dx, y: prev.y };
+        const flank2: Position = { x: prev.x, y: prev.y + dy };
+        const flank1Blocked = isBlockingCell(state, flank1);
+        const flank2Blocked = isBlockingCell(state, flank2);
+        const flank1Walled =
+          isEdgeBlocked(state.dungeon.layout, prev, flank1) ||
+          isEdgeBlocked(state.dungeon.layout, flank1, cell);
+        const flank2Walled =
+          isEdgeBlocked(state.dungeon.layout, prev, flank2) ||
+          isEdgeBlocked(state.dungeon.layout, flank2, cell);
+        if (
+          (flank1Blocked || flank1Walled) &&
+          (flank2Blocked || flank2Walled)
+        ) {
+          return false;
+        }
+      } else if (isEdgeBlocked(state.dungeon.layout, prev, cell)) {
+        // Orthogonal step across an edge wall or closed door
+        return false;
+      }
+      if (
+        !isSamePosition(cell, targetPosition) &&
+        isBlockingCell(state, cell)
+      ) {
+        return false;
+      }
+      prev = cell;
+    }
+    return true;
+  }
+  // Adjacent figures always have combat line of sight to each other unless
+  // an edge wall or closed door separates them. In particular a diagonally
+  // adjacent figure across a wall corner is reachable: their squares touch
+  // at the corner point and the game treats them as adjacent (the same
+  // isNeighbouring + edge rule as melee engagement), so the pixel
+  // walk must not lose them to the corner-point rounding artifact.
+  if (
+    isNeighbouring(startPosition, targetPosition.x, targetPosition.y) &&
+    !isEdgeBlocked(state.dungeon.layout, startPosition, targetPosition)
+  ) {
+    return true;
   }
   const startPixelPos = {
     x: startPosition.x * resolution - Math.floor(resolution / 2),
@@ -307,12 +494,17 @@ export const hasLineOfSight = (
   );
 };
 
+// Gameplay adjacency: a hero counts as neighbouring only when no edge wall
+// stands between them — adjacency drives attack targeting and the
+// movement-stopping "walked by a monster" check, which a wall must gate.
 export const findNeighbouringHeroes = (
   state: GameState,
   actor: Actor,
 ): Hero[] =>
   state.heroes
     .filter((hero) => hero.health > 0)
-    .filter((hero: Actor) =>
-      isNeighbouring(actor.position, hero.position.x, hero.position.y),
+    .filter(
+      (hero: Actor) =>
+        isNeighbouring(actor.position, hero.position.x, hero.position.y) &&
+        !crossesWallEdge(state.dungeon.layout, actor.position, hero.position),
     ) as Hero[];

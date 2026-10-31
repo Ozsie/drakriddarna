@@ -9,6 +9,8 @@
   "failedToReset": "Failed to reset level. Please reload.",
   "allConditionsFulfilled": "All win conditions have been fulfilled.",
   "clearedDungeon": "You have cleared {{name}}.",
+  "scenarioScore": "Scenario score: {{score}} (campaign total: {{total}}).",
+  "partyWipeRestartedDungeon": "The party retried the dungeon, starting over at 0 XP and Apprentice level.",
   "moveToNext": "Press 'Next' to move on to the next level: {{name}}.",
   "playingCampaign": "Playing {{name}}.",
   "gameInitialized": "Game initialized.",
@@ -25,6 +27,11 @@
     "attackedWith": "{{actor}} attacked {{target}} with {{weapon}} for {{damage}}.",
     "killed": "{{actor}} killed {{target}}.",
     "paralyzed": "{{target}} is paralyzed by {{weapon}} and loses the rest of the turn."
+  },
+  "terrain": {
+    "enterDamage": "{{actor}} takes {{damage}} damage from the {{terrain}}.",
+    "turnEndDamage": "{{actor}} takes {{damage}} damage from standing in the {{terrain}}.",
+    "killed": "{{actor}} perished in the {{terrain}}."
   },
   "events": {
     "sunStone": "{{monster}} was killed by the Sun Stone.",
@@ -53,7 +60,9 @@
     "leveledUp": "{{hero}} leveled up to {{level}}.",
     "notNearFriend": "{{hero}} could not use {{weapon}} near a friend.",
     "locked": "Door is locked.",
+    "reinforced": "The door is reinforced and can only be opened with the Giant's Glove.",
     "monsterOutOfRange": "Monster is out of range.",
+    "blockedNearMonster": "{{hero}} cannot do that while standing next to a monster.",
     "walkedByMonster": "{{hero}} walked by a monster and lost the momentum.",
     "searchBonus": "{{hero}} used the effect of {{item}} when searching.",
     "searchFoundNothing": "{{hero}} searched but found nothing.",
@@ -61,6 +70,12 @@
     "foundDoor": "{{hero}} searched ({{result}}) and found a hidden door.",
     "foundTrapInDoor": "{{hero}} searched ({{result}}) and found a trap in a door.",
     "foundSecret": "{{hero}} searched ({{result}}) and found {{secret}}.",
+    "revealedSecretWithItem": "{{hero}} entered the room carrying {{item}}, revealing {{secret}}.",
+    "interact": "{{hero}} interacted with {{interactable}}.",
+    "heroJoined": "{{newHero}} joined the party!",
+    "trapsRemoved": "All traps in room {{room}} were disabled.",
+    "fogFilled": "{{hero}} released a cloud of fog that fills room {{room}}.",
+    "lavaErupted": "Lava erupts from the floor where {{hero}} meddled, dealing {{damage}} damage to anyone standing in it.",
     "turnFailed": "Failed to advance to the next turn."
   },
   "item": {

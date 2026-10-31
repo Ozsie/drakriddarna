@@ -1,0 +1,72 @@
+{
+  "brogue": {
+    "name": "The Forgotten Caverns",
+    "secrets": {
+      "randomEquipment": "Random Equipment",
+      "trapDoor": "Trap Door"
+    },
+    "weapons": {
+      "magicMissile": "Magic missile"
+    },
+    "armour": {
+      "sorcererArmour": "Robes"
+    },
+    "shields": {
+      "sorcererShield": "Magic protection"
+    },
+    "monsters": {
+      "darkKnight": {
+        "red": "Dark Knight (Red)",
+        "blue": "Dark Knight (Blue)",
+        "green": "Dark Knight (Green)",
+        "yellow": "Dark Knight (Yellow)"
+      },
+      "sorcerer": {
+        "red": "Sorcerer (Red)",
+        "blue": "Sorcerer (Blue)",
+        "green": "Sorcerer (Green)",
+        "yellow": "Sorcerer (Yellow)"
+      }
+    },
+    "floor1": {
+      "name": "The Old Mine",
+      "intro": "An old, long abandoned mine opens up before you as you step down into the Forgotten Caverns."
+    },
+    "floor2": {
+      "name": "The Ore Tunnels",
+      "intro": "Rusty rails lead deeper into narrow tunnels where the miners once searched for silver. Heavy wooden supports groan above your heads, and somewhere further away a rustling sound can be heard."
+    },
+    "floor3": {
+      "name": "The Sunken Shaft",
+      "intro": "The floor has given way and the mine shaft stretches deep into the darkness. The ropes hang in tatters, and cold air rises from the depths below."
+    },
+    "floor4": {
+      "name": "The Mushroom Grotto",
+      "intro": "The mine's human traces thin out and nature takes over. Pale mushrooms glow faintly along the walls, and the air is heavy with damp and mold."
+    },
+    "floor5": {
+      "name": "The Black Lake",
+      "intro": "You reach a colossal cavern with a long since dried-up lake. No sound can be heard except drops falling from the ceiling, but something is moving in the dark."
+    },
+    "floor6": {
+      "name": "The Crystal Chamber",
+      "intro": "The walls glitter with crystals that break the light of your torches in a thousand directions. The beauty is deceptive, for the shadows between the pillars seem to move of their own accord."
+    },
+    "floor7": {
+      "name": "The Forgotten Graves",
+      "intro": "Down here rest those who once dug into the mountain. Stone coffins stand lined along the walls, and not all of them are as still as they should be."
+    },
+    "floor8": {
+      "name": "The Lost City",
+      "intro": "Beyond the graves opens up an entire underground city of crumbling stone houses and ruined squares. Those who built it left in haste, and something has taken up residence in their place."
+    },
+    "floor9": {
+      "name": "The Abyss of Fate",
+      "intro": "The path narrows to a fragile bridge over a bottomless chasm. From the depths rises a hot, stifling wind, and far below a faint, golden light can be glimpsed."
+    },
+    "floor10": {
+      "name": "Temple of the Dead God",
+      "intro": "An ancient temple to a long dead god meets you as you reach the deepest part of the caves."
+    }
+  }
+}

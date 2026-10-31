@@ -1,6 +1,12 @@
 import type { Item, Weapon } from '../types';
-import { ItemType } from '../types';
-import { NEXT_DUNGEON, NEXT_TURN, TRADE } from './ItemLogic';
+import { CellAlignment, ItemType, LightEffect } from '../types';
+import {
+  NEXT_DUNGEON,
+  NEXT_TURN,
+  TARGET,
+  TARGET_ANY_HERO,
+  TARGET_SELF,
+} from './ItemLogic';
 
 export const magicItems: Item[] = [
   {
@@ -8,16 +14,20 @@ export const magicItems: Item[] = [
     name: 'items.magicItems.healingHerbs.name',
     nameTranslationKey: 'items.magicItems.healingHerbs.name',
     type: ItemType.MAGIC,
+    icon: '🌿',
     value: 0,
     amountInDeck: 1,
     properties: {
       USED: false,
+      USED_ON: [],
       ACTIVE: true,
+      [TARGET]: TARGET_ANY_HERO,
       DESCRIPTION: 'items.magicItems.healingHerbs.description',
-      RESET_ON: [TRADE, NEXT_DUNGEON],
+      RESET_ON: [NEXT_DUNGEON],
     },
     effect: 'magicHerbsOnUse',
     reset: 'magicHerbsOnReset',
+    useSound: 'sfx/buff.mp3',
   },
   {
     id: 'boots_of_speed',
@@ -32,6 +42,16 @@ export const magicItems: Item[] = [
     },
     pickup: 'movementBonusOnPickup',
     drop: 'movementBonusOnDrop',
+    light: {
+      alignment: CellAlignment.CENTER,
+      color: '#87CEEB',
+      radius: 1,
+      intensity: 0.35,
+      softness: 0.3,
+      effect: LightEffect.AURA,
+      rate: 0.4,
+      enabled: true,
+    },
   },
   {
     id: 'giants_glove',
@@ -45,6 +65,16 @@ export const magicItems: Item[] = [
       BREAK_DOOR: true,
       ATTACK_BONUS: 1,
     },
+    light: {
+      alignment: CellAlignment.CENTER,
+      color: '#E67E22',
+      radius: 1,
+      intensity: 0.35,
+      softness: 0.3,
+      effect: LightEffect.AURA,
+      rate: 0.3,
+      enabled: true,
+    },
   },
   {
     id: 'ring_of_precision',
@@ -56,6 +86,19 @@ export const magicItems: Item[] = [
     properties: {
       DESCRIPTION: 'items.magicItems.ringOfPrecision.description',
       RE_ROLL_ATTACK: true,
+      USED: false,
+      RESET_ON: [NEXT_TURN],
+    },
+    reset: 'ringOfPrecisionOnReset',
+    light: {
+      alignment: CellAlignment.CENTER,
+      color: '#FFD700',
+      radius: 1,
+      intensity: 0.3,
+      softness: 0.3,
+      effect: LightEffect.AURA,
+      rate: 0.5,
+      enabled: true,
     },
   },
   {
@@ -68,6 +111,16 @@ export const magicItems: Item[] = [
     properties: {
       DESCRIPTION: 'items.magicItems.crownOfWisdom.description',
       SEARCH_BONUS: 1,
+    },
+    light: {
+      alignment: CellAlignment.CENTER,
+      color: '#9B59B6',
+      radius: 1,
+      intensity: 0.35,
+      softness: 0.3,
+      effect: LightEffect.AURA,
+      rate: 0.35,
+      enabled: true,
     },
   },
   {
@@ -94,6 +147,7 @@ export const magicItems: Item[] = [
     name: 'items.magicItems.potionOfSpeed.name',
     nameTranslationKey: 'items.magicItems.potionOfSpeed.name',
     type: ItemType.MAGIC,
+    icon: '⚡',
     value: 0,
     amountInDeck: 1,
     properties: {
@@ -101,23 +155,28 @@ export const magicItems: Item[] = [
       USED: false,
       ACTIONS_BONUS: 2,
       ACTIVE: true,
+      [TARGET]: TARGET_SELF,
     },
     effect: 'potionOfSpeedOnUse',
+    useSound: 'sfx/buff.mp3',
   },
   {
     id: 'necklace_of_light',
     name: 'items.magicItems.necklaceOfLight.name',
     nameTranslationKey: 'items.magicItems.necklaceOfLight.name',
     type: ItemType.MAGIC,
+    icon: '📿',
     value: 0,
     amountInDeck: 1,
     properties: {
       USED: false,
       RESET_ON: [NEXT_TURN],
       ACTIVE: true,
+      [TARGET]: TARGET_SELF,
       DESCRIPTION: 'items.magicItems.necklaceOfLight.description',
     },
     effect: 'necklaceOfLightOnUse',
     reset: 'necklaceOfLightOnReset',
+    useSound: 'sfx/buff.mp3',
   },
 ];

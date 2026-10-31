@@ -1,20 +1,39 @@
-import type { GameState, Hero, Door, ItemLocation } from '../types';
-import { isSamePosition } from '../core';
-import { canAct } from '../core';
-import { canOpenDoor } from './HeroLogic';
-import { BREAK_LOCK } from '../items/ItemLogic';
+import type {
+  GameState,
+  Hero,
+  Door,
+  Item,
+  ItemLocation,
+  InteractableCell,
+} from '../types';
+import { isDoorEdge, isSamePosition, canAct, distanceInGrid } from '../core';
+import { canOpenDoor, liveHeroes } from './HeroLogic';
+import {
+  ACTIVE,
+  BREAK_LOCK,
+  USED,
+  USED_HEROES,
+  USED_ON,
+  isTargetAnyHero,
+} from '../items/ItemLogic';
+import { findInteractableAtHero } from '../interactables/InteractableLogic';
 
 export enum RadialAction {
   SEARCH = 'SEARCH',
   PICK_LOCK = 'PICK_LOCK',
   OPEN_DOOR = 'OPEN_DOOR',
   PICK_UP_ITEM = 'PICK_UP_ITEM',
+  INTERACT = 'INTERACT',
+  USE_ITEM = 'USE_ITEM',
   NEXT = 'NEXT',
 }
 
 export type RadialMenuEntry = {
   action: RadialAction;
   door?: Door;
+  interactable?: InteractableCell;
+  item?: Item;
+  targetHero?: Hero;
 };
 
 export const findDoorAtHero = (
@@ -22,12 +41,28 @@ export const findDoorAtHero = (
   hero: Hero,
 ): Door | undefined =>
   state.dungeon.layout.doors.find(
-    (door) => door.x === hero.position.x && door.y === hero.position.y,
+    (door) =>
+      (door.x === hero.position.x && door.y === hero.position.y) ||
+      isDoorEdge(
+        state.dungeon.layout,
+        hero.position.x,
+        hero.position.y,
+        door.x,
+        door.y,
+      ),
   );
 
 export const findDoorsAtHero = (state: GameState, hero: Hero): Door[] =>
   state.dungeon.layout.doors.filter(
-    (door) => door.x === hero.position.x && door.y === hero.position.y,
+    (door) =>
+      (door.x === hero.position.x && door.y === hero.position.y) ||
+      isDoorEdge(
+        state.dungeon.layout,
+        hero.position.x,
+        hero.position.y,
+        door.x,
+        door.y,
+      ),
   );
 
 export const findItemAtHero = (
@@ -37,6 +72,54 @@ export const findItemAtHero = (
   state.dungeon.layout.items.find((item) =>
     isSamePosition(item.position, hero.position),
   );
+
+export const getAvailableRadialActionsForTarget = (
+  state: GameState,
+  hero: Hero,
+  targetHero: Hero,
+): RadialMenuEntry[] => {
+  const entries: RadialMenuEntry[] = [];
+  const isNeighbor = distanceInGrid(hero.position, targetHero.position) <= 1;
+
+  if (!isNeighbor) {
+    return entries;
+  }
+
+  const activeItems = (hero.inventory ?? []).filter(
+    (item) =>
+      item &&
+      item.properties?.[ACTIVE] &&
+      !item.properties?.[USED] &&
+      !item.disabled,
+  );
+
+  for (const item of activeItems) {
+    if (isTargetAnyHero(item)) {
+      const rawUsedOn =
+        (item.properties?.[USED_ON] as string[]) ??
+        (item.properties?.USED_ON as string[]) ??
+        (item.properties?.[USED_HEROES] as string[]) ??
+        (item.properties?.USED_HEROES as string[]) ??
+        [];
+      const usedOn = Array.isArray(rawUsedOn) ? rawUsedOn : [];
+      if (!usedOn.includes(targetHero.name)) {
+        entries.push({
+          action: RadialAction.USE_ITEM,
+          item,
+          targetHero,
+        });
+      }
+    } else if (targetHero === hero || targetHero.name === hero.name) {
+      entries.push({
+        action: RadialAction.USE_ITEM,
+        item,
+        targetHero: hero,
+      });
+    }
+  }
+
+  return entries;
+};
 
 export const getAvailableRadialActions = (
   state: GameState,
@@ -50,6 +133,50 @@ export const getAvailableRadialActions = (
 
   if (findItemAtHero(state, hero)) {
     entries.push({ action: RadialAction.PICK_UP_ITEM });
+  }
+
+  const interactable = findInteractableAtHero(state, hero);
+  if (interactable && canAct(hero)) {
+    entries.push({ action: RadialAction.INTERACT, interactable });
+  }
+
+  const activeItems = (hero.inventory ?? []).filter(
+    (item) =>
+      item &&
+      item.properties?.[ACTIVE] &&
+      !item.properties?.[USED] &&
+      !item.disabled,
+  );
+
+  for (const item of activeItems) {
+    if (isTargetAnyHero(item)) {
+      const rawUsedOn =
+        (item.properties?.[USED_ON] as string[]) ??
+        (item.properties?.USED_ON as string[]) ??
+        (item.properties?.[USED_HEROES] as string[]) ??
+        (item.properties?.USED_HEROES as string[]) ??
+        [];
+      const usedOn = Array.isArray(rawUsedOn) ? rawUsedOn : [];
+      const alive = liveHeroes(state);
+      const targetHeroes = (alive.length > 0 ? alive : [hero]).filter(
+        (targetHero) =>
+          !usedOn.includes(targetHero.name) &&
+          distanceInGrid(hero.position, targetHero.position) <= 1,
+      );
+      for (const targetHero of targetHeroes) {
+        entries.push({
+          action: RadialAction.USE_ITEM,
+          item,
+          targetHero,
+        });
+      }
+    } else {
+      entries.push({
+        action: RadialAction.USE_ITEM,
+        item,
+        targetHero: hero,
+      });
+    }
   }
 
   for (const door of doors) {

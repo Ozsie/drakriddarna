@@ -4,19 +4,26 @@ import {
   defineLayout,
   parseDoor,
   parseItem,
+  parseLight,
   parseMonster,
   parseNote,
   parsePosition,
+  parseWall,
   parseSecret,
+  parseRoomFog,
+  parseTerrain,
   parseTileMap,
 } from './dungeonParser';
 import {
+  CellAlignment,
   Colour,
   ConditionType,
   Level,
+  LightEffect,
   MonsterType,
   SecretType,
   Side,
+  TerrainType,
 } from '../types';
 import { weapons } from '../items/weapons';
 import { magicItems } from '../items/magicItems';
@@ -80,6 +87,31 @@ describe('dungeonParser', () => {
         trapped: true,
         trapAttacks: 1,
       });
+    });
+  });
+
+  describe('parseWall', () => {
+    it('parses tuple format', () => {
+      expect(parseWall([Side.RIGHT, 2, 3])).toEqual({
+        side: Side.RIGHT,
+        x: 2,
+        y: 3,
+      });
+    });
+
+    it('parses tuple format with colour option', () => {
+      expect(parseWall([Side.DOWN, 4, 5, { colour: '#123456' }])).toEqual({
+        side: Side.DOWN,
+        x: 4,
+        y: 5,
+        colour: '#123456',
+      });
+    });
+
+    it('parses object format', () => {
+      expect(
+        parseWall({ side: Side.LEFT, x: 1, y: 2, colour: '#654321' }),
+      ).toEqual({ side: Side.LEFT, x: 1, y: 2, colour: '#654321' });
     });
   });
 
@@ -158,6 +190,149 @@ describe('dungeonParser', () => {
     });
   });
 
+  describe('parseLight', () => {
+    it('parses tuple [x, y] with all defaults', () => {
+      expect(parseLight([3, 4])).toEqual({
+        id: 'light_3_4',
+        position: { x: 3, y: 4 },
+        alignment: CellAlignment.CENTER,
+        color: '#FFB85C',
+        radius: 4,
+        intensity: 0.35,
+        softness: 0.25,
+        effect: 'static',
+        rate: 1,
+        enabled: true,
+      });
+    });
+
+    it('parses tuple [x, y, alignment] and [x, y, alignment, options]', () => {
+      expect(parseLight([1, 2, CellAlignment.TOP_LEFT]).alignment).toBe(
+        CellAlignment.TOP_LEFT,
+      );
+      const light = parseLight([
+        1,
+        2,
+        CellAlignment.BOTTOM_RIGHT,
+        {
+          color: '#87CEEB',
+          radius: 2,
+          intensity: 0.8,
+          softness: 0.6,
+          effect: LightEffect.FLICKER,
+          rate: 2,
+          enabled: false,
+        },
+      ]);
+      expect(light.alignment).toBe(CellAlignment.BOTTOM_RIGHT);
+      expect(light.color).toBe('#87CEEB');
+      expect(light.radius).toBe(2);
+      expect(light.intensity).toBe(0.8);
+      expect(light.softness).toBe(0.6);
+      expect(light.effect).toBe('flicker');
+      expect(light.rate).toBe(2);
+      expect(light.enabled).toBe(false);
+    });
+
+    it('parses tuple [x, y, options]', () => {
+      const light = parseLight([5, 6, { radius: 6, id: 'brazier' }]);
+      expect(light.alignment).toBe(CellAlignment.CENTER);
+      expect(light.radius).toBe(6);
+      expect(light.id).toBe('brazier');
+    });
+
+    it('parses object format', () => {
+      const light = parseLight({
+        x: 2,
+        y: 3,
+        alignment: CellAlignment.TOP_RIGHT,
+        color: '#FF4F4F',
+        radius: 3,
+      });
+      expect(light.position).toEqual({ x: 2, y: 3 });
+      expect(light.alignment).toBe(CellAlignment.TOP_RIGHT);
+      expect(light.color).toBe('#FF4F4F');
+      expect(light.radius).toBe(3);
+      expect(light.intensity).toBe(0.35);
+    });
+
+    it('passes through an already parsed LightSource', () => {
+      const light = {
+        position: { x: 7, y: 8 },
+        alignment: CellAlignment.CENTER,
+        color: '#FFFFFF',
+        radius: 1,
+        intensity: 0.5,
+        enabled: true,
+      };
+      expect(parseLight(light)).toBe(light);
+    });
+  });
+
+  describe('parseTerrain', () => {
+    it('parses tuple [x, y, type]', () => {
+      expect(parseTerrain([3, 4, TerrainType.LAVA])).toEqual({
+        position: { x: 3, y: 4 },
+        type: 'lava',
+      });
+    });
+
+    it('parses tuple [x, y, type, options]', () => {
+      const terrain = parseTerrain([
+        2,
+        3,
+        TerrainType.WATER,
+        { color: '#2e6f9e', movementCost: 2, damageOnEnter: 1 },
+      ]);
+      expect(terrain).toEqual({
+        position: { x: 2, y: 3 },
+        type: 'water',
+        color: '#2e6f9e',
+        movementCost: 2,
+        damageOnEnter: 1,
+      });
+    });
+
+    it('parses object format', () => {
+      const terrain = parseTerrain({
+        x: 1,
+        y: 2,
+        type: TerrainType.LAVA,
+        opacity: 0.9,
+        damageOnTurnEnd: 2,
+        light: { color: '#FF6A00', radius: 2 },
+      });
+      expect(terrain.position).toEqual({ x: 1, y: 2 });
+      expect(terrain.type).toBe('lava');
+      expect(terrain.opacity).toBe(0.9);
+      expect(terrain.damageOnTurnEnd).toBe(2);
+      expect(terrain.light?.color).toBe('#FF6A00');
+    });
+
+    it('passes through an already parsed TerrainCell', () => {
+      const cell = {
+        position: { x: 7, y: 8 },
+        type: TerrainType.WATER,
+      };
+      expect(parseTerrain(cell)).toBe(cell);
+    });
+  });
+
+  describe('parseRoomFog', () => {
+    it('turns a list of room letters into default fog options', () => {
+      expect(parseRoomFog(['A', 'G'])).toEqual({ A: {}, G: {} });
+    });
+
+    it('keeps keyed fog options as declared', () => {
+      const fog = parseRoomFog({
+        J: { color: '#9ccc9c', opacity: 0.4, rate: 0.6, damageOnEnter: 1 },
+      });
+      expect(fog).toEqual({
+        J: { color: '#9ccc9c', opacity: 0.4, rate: 0.6, damageOnEnter: 1 },
+      });
+    });
+  });
+
   describe('defineLayout and defineDungeon', () => {
     it('fills default properties when defining layout and dungeon', () => {
       const layout = defineLayout({
@@ -168,9 +343,48 @@ describe('dungeonParser', () => {
       expect(layout.secrets).toEqual([]);
       expect(layout.notes).toEqual([]);
       expect(layout.items).toEqual([]);
+      expect(layout.lights).toEqual([]);
+      expect(layout.terrain).toEqual([]);
+      expect(layout.roomFog).toEqual({});
+      expect(layout.walls).toEqual([]);
+
+      const layoutWithLights = defineLayout({
+        grid: ['####', '#AA#', '####'],
+        lights: [
+          [1, 1],
+          [2, 1, CellAlignment.TOP_RIGHT, { color: '#87CEEB' }],
+        ],
+      });
+      expect(layoutWithLights.lights).toEqual([
+        {
+          id: 'light_1_1',
+          position: { x: 1, y: 1 },
+          alignment: CellAlignment.CENTER,
+          color: '#FFB85C',
+          radius: 4,
+          intensity: 0.35,
+          softness: 0.25,
+          effect: 'static',
+          rate: 1,
+          enabled: true,
+        },
+        {
+          id: 'light_2_1',
+          position: { x: 2, y: 1 },
+          alignment: CellAlignment.TOP_RIGHT,
+          color: '#87CEEB',
+          radius: 4,
+          intensity: 0.35,
+          softness: 0.25,
+          effect: 'static',
+          rate: 1,
+          enabled: true,
+        },
+      ]);
 
       const dungeon = defineDungeon({
         name: 'test.dungeon',
+        intro: 'test-dungeon',
         winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
         startingPositions: [[1, 1]],
         layout: {
@@ -182,17 +396,62 @@ describe('dungeonParser', () => {
       expect(dungeon.beaten).toBe(false);
       expect(dungeon.killCount).toBe(0);
       expect(dungeon.discoveredRooms).toEqual(['A']);
+      expect(dungeon.ambientLight).toBe(1);
       expect(dungeon.layout.doors).toEqual([]);
       expect(dungeon.layout.monsters).toEqual([]);
       expect(dungeon.layout.secrets).toEqual([]);
       expect(dungeon.layout.notes).toEqual([]);
       expect(dungeon.layout.items).toEqual([]);
       expect(dungeon.layout.corridors).toEqual([]);
+      expect(dungeon.layout.corridorCells).toEqual([]);
       expect(dungeon.layout.pits).toEqual([]);
       expect(dungeon.layout.pillars).toEqual([]);
       expect(dungeon.layout.corners).toEqual(
         autoDetectCorners(dungeon.layout.grid),
       );
+    });
+
+    it('parses corridor cells declared as tuples or position objects', () => {
+      const layout = defineLayout({
+        grid: ['#####', '#AMM#', '#####'],
+        corridorCells: [[1, 1], { x: 2, y: 1 }],
+      });
+      expect(layout.corridorCells).toEqual([
+        { x: 1, y: 1 },
+        { x: 2, y: 1 },
+      ]);
+    });
+
+    it('parses walls declared as tuples or objects and the layout wall colour', () => {
+      const layout = defineLayout({
+        grid: ['#####', '#AAB#', '#AAB#', '#####'],
+        walls: [
+          [Side.RIGHT, 2, 1],
+          [Side.RIGHT, 2, 2, { colour: '#123456' }],
+          { side: Side.DOWN, x: 1, y: 1 },
+        ],
+        wallColour: '#654321',
+      });
+      expect(layout.walls).toEqual([
+        { side: Side.RIGHT, x: 2, y: 1 },
+        { side: Side.RIGHT, x: 2, y: 2, colour: '#123456' },
+        { side: Side.DOWN, x: 1, y: 1 },
+      ]);
+      expect(layout.wallColour).toBe('#654321');
+    });
+
+    it('passes the ambient light level through to the dungeon', () => {
+      const dungeon = defineDungeon({
+        name: 'dark.dungeon',
+        intro: 'test-dungeon',
+        ambientLight: 0.2,
+        winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
+        startingPositions: [[1, 1]],
+        layout: {
+          grid: ['###', '#A#', '###'],
+        },
+      });
+      expect(dungeon.ambientLight).toBe(0.2);
     });
   });
 

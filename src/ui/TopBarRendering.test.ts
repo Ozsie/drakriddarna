@@ -1,0 +1,486 @@
+/* eslint-disable @typescript-eslint/unbound-method */
+import { describe, expect, it, vi } from 'vitest';
+import {
+  formatLatestLog,
+  formatScoreCounter,
+  formatTurnCounter,
+  getTopBarHit,
+  getTopBarLayout,
+  isPointInBounds,
+  measureTextWidth,
+  renderTopBar,
+  truncateText,
+} from './TopBarRendering';
+import { renderUI } from './UIRendering';
+import type { GameState } from '../types';
+
+const createMockCtx = () =>
+  ({
+    save: vi.fn(),
+    restore: vi.fn(),
+    beginPath: vi.fn(),
+    arc: vi.fn(),
+    fill: vi.fn(),
+    stroke: vi.fn(),
+    fillText: vi.fn(),
+    fillRect: vi.fn(),
+    rect: vi.fn(),
+    roundRect: vi.fn(),
+    clip: vi.fn(),
+    measureText: vi.fn((text: string) => ({ width: text.length * 8 })),
+    fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 0,
+    font: '',
+    textAlign: '',
+    textBaseline: '',
+  }) as unknown as CanvasRenderingContext2D;
+
+const createMockState = (overrides?: Partial<GameState>): GameState =>
+  ({
+    actionLog: [
+      { key: 'logs.gameSaved', turn: 3 },
+      { key: 'logs.endedTurn', turn: 2 },
+    ],
+    turnCount: 3,
+    heroes: [],
+    dungeon: {
+      name: 'Test Dungeon',
+      discoveredRooms: [],
+      layout: { grid: [] },
+      startingPositions: [{ x: 0, y: 0 }],
+    },
+    ...overrides,
+  }) as unknown as GameState;
+
+describe('TopBarRendering', () => {
+  describe('formatting helpers', () => {
+    it('formats turn counter text', () => {
+      expect(formatTurnCounter(0)).toBe('Turn 0');
+      expect(formatTurnCounter(5)).toBe('Turn 5');
+      expect(formatTurnCounter(undefined)).toBe('Turn 0');
+      expect(formatTurnCounter(null)).toBe('Turn 0');
+    });
+
+    it('formats score counter text', () => {
+      expect(formatScoreCounter(0)).toBe('Score 0');
+      expect(formatScoreCounter(450)).toBe('Score 450');
+      expect(formatScoreCounter(undefined)).toBe('Score 0');
+      expect(formatScoreCounter(null)).toBe('Score 0');
+    });
+
+    it('formats compact counters as emoji plus number', () => {
+      expect(formatTurnCounter(3, true)).toBe('🔄 3');
+      expect(formatTurnCounter(undefined, true)).toBe('🔄 0');
+      expect(formatScoreCounter(450, true)).toBe('🏆 450');
+      expect(formatScoreCounter(undefined, true)).toBe('🏆 0');
+    });
+
+    it('formats latest log event with turn number', () => {
+      expect(formatLatestLog({ key: 'logs.gameSaved', turn: 4 })).toBe(
+        '(4) logs.gameSaved',
+      );
+    });
+
+    it('returns empty string for null or undefined log event', () => {
+      expect(formatLatestLog(null)).toBe('');
+      expect(formatLatestLog(undefined)).toBe('');
+    });
+  });
+
+  describe('truncateText', () => {
+    it('returns original text if it fits within maxWidth', () => {
+      const ctx = createMockCtx();
+      const text = 'Short text';
+      const width = measureTextWidth(ctx, text);
+      expect(truncateText(ctx, text, width + 20)).toBe('Short text');
+    });
+
+    it('truncates text with ellipsis if it exceeds maxWidth', () => {
+      const ctx = createMockCtx();
+      const text = 'A very long log event description that should not fit';
+      const truncated = truncateText(ctx, text, 80);
+      expect(truncated.endsWith('...')).toBe(true);
+      expect(measureTextWidth(ctx, truncated)).toBeLessThanOrEqual(80);
+    });
+
+    it('handles empty string and non-positive maxWidth', () => {
+      const ctx = createMockCtx();
+      expect(truncateText(ctx, '', 100)).toBe('');
+      expect(truncateText(ctx, 'Some text', 0)).toBe('');
+    });
+  });
+
+  describe('getTopBarLayout', () => {
+    it('creates layout ordered as <menu> <latest log event> <turn counter>', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+      const viewWidth = 600;
+      const layout = getTopBarLayout(viewWidth, state, ctx);
+
+      // Check left-to-right order: menu -> log -> turn
+      expect(layout.menuButton.x).toBeLessThan(layout.logSection.x);
+      expect(layout.logSection.x + layout.logSection.width).toBeLessThanOrEqual(
+        layout.turnCounter.x,
+      );
+      expect(
+        layout.turnCounter.x + layout.turnCounter.width,
+      ).toBeLessThanOrEqual(viewWidth);
+      expect(layout.debugButton).toBeUndefined();
+    });
+
+    it('creates layout with debug button between menu and log when debugMode is true', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+      const viewWidth = 600;
+      const layout = getTopBarLayout(viewWidth, state, ctx, {
+        debugMode: true,
+      });
+
+      expect(layout.debugButton).toBeDefined();
+      if (layout.debugButton) {
+        // Order: menu -> debug -> log -> turn
+        expect(
+          layout.menuButton.x + layout.menuButton.width,
+        ).toBeLessThanOrEqual(layout.debugButton.x);
+        expect(
+          layout.debugButton.x + layout.debugButton.width,
+        ).toBeLessThanOrEqual(layout.logSection.x);
+        expect(
+          layout.logSection.x + layout.logSection.width,
+        ).toBeLessThanOrEqual(layout.turnCounter.x);
+      }
+    });
+
+    it('allocates required width for menu button and at least 10 characters for turn counter', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+      const viewWidth = 700;
+      const layout = getTopBarLayout(viewWidth, state, ctx);
+
+      // Menu width accommodates label
+      expect(layout.menuButton.width).toBeGreaterThanOrEqual(48);
+
+      // Turn counter width accommodates at least 10 characters
+      const tenCharWidth = measureTextWidth(ctx, '0123456789');
+      expect(layout.turnCounter.width).toBeGreaterThanOrEqual(tenCharWidth);
+    });
+
+    it('gives maximum remaining space to latest log event section', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+      const viewWidth = 800;
+      const layout = getTopBarLayout(viewWidth, state, ctx);
+
+      const margin = 8;
+      const gap = 8;
+      const expectedLogWidth =
+        viewWidth -
+        margin * 2 -
+        layout.menuButton.width -
+        layout.scoreCounter.width -
+        layout.turnCounter.width -
+        gap * 3;
+
+      expect(layout.logSection.width).toBe(expectedLogWidth);
+    });
+
+    it('places the score counter between the log section and the turn counter', () => {
+      const state = createMockState({ score: 450 });
+      const ctx = createMockCtx();
+      const viewWidth = 800;
+      const layout = getTopBarLayout(viewWidth, state, ctx);
+
+      expect(layout.scoreCounter.text).toBe('Score 450');
+      expect(layout.logSection.x + layout.logSection.width).toBeLessThanOrEqual(
+        layout.scoreCounter.x,
+      );
+      expect(
+        layout.scoreCounter.x + layout.scoreCounter.width,
+      ).toBeLessThanOrEqual(layout.turnCounter.x);
+    });
+
+    it('omits the timer chip in a normal run', () => {
+      const state = createMockState();
+      const layout = getTopBarLayout(800, state, createMockCtx());
+      expect(layout.timerCounter).toBeUndefined();
+    });
+
+    it('places the live timer chip left of the score counter in speedrunner mode', () => {
+      const state = createMockState({
+        speedrunSeed: 42,
+        timer: {
+          dungeonElapsedMs: 65000,
+          campaignElapsedMs: 0,
+        },
+      });
+      const ctx = createMockCtx();
+      const layout = getTopBarLayout(800, state, ctx);
+
+      expect(layout.timerCounter).toBeDefined();
+      expect(layout.timerCounter?.text).toBe('1:05.00');
+      expect(layout.logSection.x + layout.logSection.width).toBeLessThanOrEqual(
+        layout.timerCounter!.x,
+      );
+      expect(
+        layout.timerCounter!.x + layout.timerCounter!.width,
+      ).toBeLessThanOrEqual(layout.scoreCounter.x);
+    });
+  });
+
+  it('shrinks the counters to emoji plus digits on compact screens', () => {
+    const state = createMockState({ score: 450, turnCount: 3 });
+    const ctx = createMockCtx();
+    // 375x667: iPhone SE-sized screen
+    const layout = getTopBarLayout(375, state, ctx);
+
+    expect(layout.turnCounter.text).toBe('🔄 3');
+    expect(layout.scoreCounter.text).toBe('🏆 450');
+    // Roomy enough for the icon plus 2 round digits / 5 score digits,
+    // but far smaller than the wide-screen chips.
+    expect(layout.turnCounter.width).toBeLessThanOrEqual(60);
+    expect(layout.scoreCounter.width).toBeLessThanOrEqual(80);
+    // The counters still stack log -> score -> turn against the right edge.
+    expect(layout.logSection.x + layout.logSection.width).toBeLessThanOrEqual(
+      layout.scoreCounter.x,
+    );
+    expect(
+      layout.scoreCounter.x + layout.scoreCounter.width,
+    ).toBeLessThanOrEqual(layout.turnCounter.x);
+    expect(layout.turnCounter.x + layout.turnCounter.width).toBeLessThanOrEqual(
+      375 - 8,
+    );
+    // The freed width goes to the log section.
+    const wideLayout = getTopBarLayout(800, state, ctx);
+    expect(layout.logSection.width).toBeGreaterThan(0);
+    expect(wideLayout.turnCounter.width).toBeGreaterThan(
+      layout.turnCounter.width,
+    );
+    expect(wideLayout.scoreCounter.width).toBeGreaterThan(
+      layout.scoreCounter.width,
+    );
+  });
+
+  describe('hit testing and bounds', () => {
+    it('determines if point is inside bounds', () => {
+      const bounds = { x: 10, y: 10, width: 50, height: 30 };
+      expect(isPointInBounds(20, 20, bounds)).toBe(true);
+      expect(isPointInBounds(5, 20, bounds)).toBe(false);
+      expect(isPointInBounds(70, 20, bounds)).toBe(false);
+      expect(isPointInBounds(20, 5, bounds)).toBe(false);
+      expect(isPointInBounds(20, 45, bounds)).toBe(false);
+    });
+
+    it('detects hits on menu, log, and turn counter elements', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+      const viewWidth = 600;
+      const layout = getTopBarLayout(viewWidth, state, ctx);
+
+      // Menu button hit
+      const menuHit = getTopBarHit(
+        viewWidth,
+        state,
+        layout.menuButton.x + 5,
+        layout.menuButton.y + 5,
+        ctx,
+      );
+      expect(menuHit).toBe('menu');
+
+      // Log section hit
+      const logHit = getTopBarHit(
+        viewWidth,
+        state,
+        layout.logSection.x + 5,
+        layout.logSection.y + 5,
+        ctx,
+      );
+      expect(logHit).toBe('log');
+
+      // Turn counter hit
+      const turnHit = getTopBarHit(
+        viewWidth,
+        state,
+        layout.turnCounter.x + 5,
+        layout.turnCounter.y + 5,
+        ctx,
+      );
+      expect(turnHit).toBe('turn');
+
+      // Debug button hit when debugMode is true
+      const debugLayout = getTopBarLayout(viewWidth, state, ctx, {
+        debugMode: true,
+      });
+      if (debugLayout.debugButton) {
+        const debugHit = getTopBarHit(
+          viewWidth,
+          state,
+          debugLayout.debugButton.x + 5,
+          debugLayout.debugButton.y + 5,
+          ctx,
+          { debugMode: true },
+        );
+        expect(debugHit).toBe('debug');
+      }
+
+      // Miss outside top bar
+      const missHit = getTopBarHit(viewWidth, state, 100, 200, ctx);
+      expect(missHit).toBeNull();
+    });
+
+    it('detects hit on logDropdown when isLogOpen is true', () => {
+      const state = createMockState({
+        actionLog: [
+          { key: 'logs.1', turn: 1 },
+          { key: 'logs.2', turn: 2 },
+        ],
+      });
+      const ctx = createMockCtx();
+      const viewWidth = 600;
+      const layout = getTopBarLayout(viewWidth, state, ctx);
+
+      // When isLogOpen is false, hit inside dropdown area returns null
+      const closedHit = getTopBarHit(
+        viewWidth,
+        state,
+        layout.logDropdown.x + 5,
+        layout.logDropdown.y + 5,
+        ctx,
+        { isLogOpen: false },
+      );
+      expect(closedHit).toBeNull();
+
+      // When isLogOpen is true, hit inside dropdown area returns 'logDropdown'
+      const openHit = getTopBarHit(
+        viewWidth,
+        state,
+        layout.logDropdown.x + 5,
+        layout.logDropdown.y + 5,
+        ctx,
+        { isLogOpen: true },
+      );
+      expect(openHit).toBe('logDropdown');
+    });
+  });
+
+  describe('log dropdown layout', () => {
+    it('limits dropdown entries to the last 8 log events', () => {
+      const logItems = Array.from({ length: 15 }, (_, i) => ({
+        key: `logs.event${i}`,
+        turn: i,
+      }));
+      const state = createMockState({ actionLog: logItems });
+      const ctx = createMockCtx();
+      const layout = getTopBarLayout(600, state, ctx);
+
+      expect(layout.logDropdown.entries.length).toBe(8);
+      expect(layout.logDropdown.entries[0]).toBe('(0) logs.event0');
+      expect(layout.logDropdown.entries[7]).toBe('(7) logs.event7');
+      expect(layout.logDropdown.height).toBe(6 * 2 + 8 * 20);
+    });
+
+    it('has zero height when actionLog is empty', () => {
+      const state = createMockState({ actionLog: [] });
+      const ctx = createMockCtx();
+      const layout = getTopBarLayout(600, state, ctx);
+
+      expect(layout.logDropdown.entries.length).toBe(0);
+      expect(layout.logDropdown.height).toBe(0);
+    });
+  });
+
+  describe('renderTopBar', () => {
+    it('renders top bar elements to canvas context', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+
+      renderTopBar(ctx, 600, state);
+
+      expect(ctx.save).toHaveBeenCalled();
+      expect(ctx.beginPath).toHaveBeenCalled();
+      expect(ctx.fill).toHaveBeenCalled();
+      expect(ctx.stroke).toHaveBeenCalled();
+      expect(ctx.fillText).toHaveBeenCalled();
+      expect(ctx.restore).toHaveBeenCalled();
+    });
+
+    it('renders hovered menu button styling when isMenuHovered is true', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+
+      renderTopBar(ctx, 600, state, { isMenuHovered: true });
+
+      expect(ctx.fillStyle).toBeDefined();
+      expect(ctx.fill).toHaveBeenCalled();
+    });
+
+    it('renders debug button and hovered styling when debugMode is true', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+
+      renderTopBar(ctx, 600, state, { debugMode: true, isDebugHovered: true });
+
+      expect(ctx.fillStyle).toBeDefined();
+      expect(ctx.fill).toHaveBeenCalled();
+    });
+
+    it('renders hovered log section styling when isLogHovered is true', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+
+      renderTopBar(ctx, 600, state, { isLogHovered: true });
+
+      expect(ctx.fillStyle).toBeDefined();
+      expect(ctx.fill).toHaveBeenCalled();
+    });
+
+    it('renders log dropdown when isLogOpen is true and logs exist', () => {
+      const logItems = Array.from({ length: 10 }, (_, i) => ({
+        key: `logs.event${i}`,
+        turn: i,
+      }));
+      const state = createMockState({ actionLog: logItems });
+      const ctx = createMockCtx();
+
+      renderTopBar(ctx, 600, state, { isLogOpen: true });
+
+      // Check that fillText was called for menu, latest log, score counter,
+      // turn counter, and dropdown entries (8 entries)
+      // Total at least 1 + 1 + 1 + 1 + 8 = 12 calls
+      expect(ctx.fillText).toHaveBeenCalledTimes(12);
+    });
+
+    it('does not render log dropdown when isLogOpen is false', () => {
+      const logItems = Array.from({ length: 10 }, (_, i) => ({
+        key: `logs.event${i}`,
+        turn: i,
+      }));
+      const state = createMockState({ actionLog: logItems });
+      const ctx = createMockCtx();
+
+      renderTopBar(ctx, 600, state, { isLogOpen: false });
+
+      // Menu, latest log, score counter, turn counter = 4 calls
+      expect(ctx.fillText).toHaveBeenCalledTimes(4);
+    });
+
+    it('does not crash when viewWidth is 0 or ctx is null', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+
+      expect(() => renderTopBar(ctx, 0, state)).not.toThrow();
+      expect(() =>
+        renderTopBar(null as unknown as CanvasRenderingContext2D, 600, state),
+      ).not.toThrow();
+    });
+
+    it('renderUI calls renderTopBar when state and viewWidth are provided', () => {
+      const state = createMockState();
+      const ctx = createMockCtx();
+
+      renderUI(ctx, 48, null, null, state, 600);
+
+      expect(ctx.fillText).toHaveBeenCalled();
+    });
+  });
+});

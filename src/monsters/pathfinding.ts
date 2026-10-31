@@ -1,13 +1,20 @@
 import type { GameState, Hero, Monster, Position } from '../types';
-import { Side } from '../types';
-import { getDist, isDiscovered, isNeighbouring, isWalkable } from '../core';
+import {
+  getDist,
+  isDiscovered,
+  isNeighbouring,
+  isWalkable,
+  sideOffset,
+} from '../core';
 import { liveHeroes } from '../hero/HeroLogic';
+import { scoreHero, type ScoredHero } from './behavior';
+import { logMonsterTargetSelection } from './behavior';
 
 export interface PassableGrid {
   width: number;
   height: number;
   isWalkableTile: (x: number, y: number) => boolean;
-  isDoorBlocked: (
+  isEdgeBlocked: (
     fromX: number,
     fromY: number,
     toX: number,
@@ -40,37 +47,32 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
     return walkableGrid[y]?.[x] ?? false;
   };
 
-  const closedDoorEdges = new Set<string>();
+  // Edges a monster cannot cross: closed doors and edge walls alike. Both
+  // block the shared edge between two cells in exactly the same way.
+  const blockedEdges = new Set<string>();
   const addEdge = (x1: number, y1: number, x2: number, y2: number) => {
-    closedDoorEdges.add(`${x1},${y1}->${x2},${y2}`);
-    closedDoorEdges.add(`${x2},${y2}->${x1},${y1}`);
+    blockedEdges.add(`${x1},${y1}->${x2},${y2}`);
+    blockedEdges.add(`${x2},${y2}->${x1},${y1}`);
   };
 
   layout.doors?.forEach((door) => {
     if (!door.open) {
-      switch (door.side) {
-        case Side.RIGHT:
-          addEdge(door.x, door.y, door.x + 1, door.y);
-          break;
-        case Side.LEFT:
-          addEdge(door.x, door.y, door.x - 1, door.y);
-          break;
-        case Side.UP:
-          addEdge(door.x, door.y, door.x, door.y - 1);
-          break;
-        case Side.DOWN:
-          addEdge(door.x, door.y, door.x, door.y + 1);
-          break;
-      }
+      const [dx, dy] = sideOffset(door.side);
+      addEdge(door.x, door.y, door.x + dx, door.y + dy);
     }
   });
 
-  const isDoorBlocked = (
+  layout.walls?.forEach((wall) => {
+    const [dx, dy] = sideOffset(wall.side);
+    addEdge(wall.x, wall.y, wall.x + dx, wall.y + dy);
+  });
+
+  const isEdgeBlocked = (
     fromX: number,
     fromY: number,
     toX: number,
     toY: number,
-  ): boolean => closedDoorEdges.has(`${fromX},${fromY}->${toX},${toY}`);
+  ): boolean => blockedEdges.has(`${fromX},${fromY}->${toX},${toY}`);
 
   const isPassableStep = (
     fromX: number,
@@ -87,7 +89,7 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
 
     // Orthogonal step
     if (dx === 0 || dy === 0) {
-      return !isDoorBlocked(fromX, fromY, toX, toY);
+      return !isEdgeBlocked(fromX, fromY, toX, toY);
     }
 
     // Diagonal step
@@ -95,15 +97,15 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
     const i1Y = fromY;
     const path1Clear =
       isWalkableTile(i1X, i1Y) &&
-      !isDoorBlocked(fromX, fromY, i1X, i1Y) &&
-      !isDoorBlocked(i1X, i1Y, toX, toY);
+      !isEdgeBlocked(fromX, fromY, i1X, i1Y) &&
+      !isEdgeBlocked(i1X, i1Y, toX, toY);
 
     const i2X = fromX;
     const i2Y = fromY + dy;
     const path2Clear =
       isWalkableTile(i2X, i2Y) &&
-      !isDoorBlocked(fromX, fromY, i2X, i2Y) &&
-      !isDoorBlocked(i2X, i2Y, toX, toY);
+      !isEdgeBlocked(fromX, fromY, i2X, i2Y) &&
+      !isEdgeBlocked(i2X, i2Y, toX, toY);
 
     return path1Clear || path2Clear;
   };
@@ -112,7 +114,7 @@ export const createPassableGrid = (state: GameState): PassableGrid => {
     width,
     height,
     isWalkableTile,
-    isDoorBlocked,
+    isEdgeBlocked,
     isPassableStep,
   };
 };
@@ -239,7 +241,8 @@ export const findBestPathToHeroes = (
   state: GameState,
   monster: Monster,
   passableGrid: PassableGrid,
-): { hero: Hero; path: Position[] } | null => {
+  rng?: () => number,
+): { hero: Hero; path: Position[]; score?: number } | null => {
   const heroes = liveHeroes(state).filter((hero) => !hero.ignoredByMonsters);
   if (heroes.length === 0) return null;
 
@@ -261,6 +264,8 @@ export const findBestPathToHeroes = (
     hero: Hero;
     path: Position[];
     dist: number;
+    score: number;
+    scored: ScoredHero;
   };
 
   const candidates: Candidate[] = [];
@@ -273,31 +278,37 @@ export const findBestPathToHeroes = (
       occupiedPositions,
     );
     if (path && path.length > 0) {
+      const scored = scoreHero(hero, {
+        state,
+        monster,
+        stepsNeeded: path.length,
+        rng,
+      });
       candidates.push({
         hero,
         path,
         dist: getDist(monster.position, hero.position),
+        score: scored.score,
+        scored,
       });
     }
   }
 
   if (candidates.length === 0) return null;
 
-  candidates.sort((a, b) => {
-    // Shorter path first
-    if (a.path.length !== b.path.length) {
-      return a.path.length - b.path.length;
-    }
-    // Lower health hero on tie
-    if (a.hero.health !== b.hero.health) {
-      return a.hero.health - b.hero.health;
-    }
-    // Euclidean distance
-    return a.dist - b.dist;
+  candidates.sort((a, b) => b.score - a.score);
+
+  logMonsterTargetSelection({
+    monster,
+    candidates: candidates.map((c) => c.scored),
+    selectedHero: candidates[0].hero,
+    actionType: 'pathfinding',
+    state,
   });
 
   return {
     hero: candidates[0].hero,
     path: candidates[0].path,
+    score: candidates[0].score,
   };
 };

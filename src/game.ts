@@ -1,19 +1,22 @@
-import type { GameState, Hero, Position } from './types';
-import { ConditionType } from './types';
+import type { Dungeon, GameState, Hero, Position } from './types';
+import { ConditionType, Level } from './types';
 import { onCheckFulfilled } from './dungeon/DungeonLogic';
-import { campaignIceDragonTreasure } from './campaigns/campaignIceDragonTreasure';
+import { CURRENT_SAVE_VERSION, migrateSaveState } from './saveMigration';
+import { writeSave } from './saves/SavesLogic';
+import { getCampaign, isKnownCampaign, DEFAULT_CAMPAIGN_ID } from './campaigns';
 import {
   monsterActions,
   type MonsterTurnOptions,
 } from './monsters/MonsterLogic';
 import {
-  levelUp,
+  applyStartingEquipment,
   liveHeroes,
   replaceDeadHeroes,
   resetLiveHeroes,
-  rewardLiveHeroes,
 } from './hero/HeroLogic';
 import { resetOnNext, resetOnNextDungeon } from './items/ItemLogic';
+import { applyRoomFogTurnEndEffects } from './dungeon/RoomFogLogic';
+import { applyTerrainTurnEndEffects } from './dungeon/TerrainLogic';
 import {
   drawNextEvent,
   eventEffects,
@@ -23,71 +26,28 @@ import {
 import { browser } from '$app/environment';
 import { addLog, doReRender, i18n } from './core';
 import { shuffle } from './core';
-import { getEffectiveMaxMovement } from './core';
-import { clearActorAnimations } from './core';
-
-// Re-export core modules for backwards compatibility and ease of access
-export {
-  i18n,
-  doReRender,
-  addLog,
-  saveReloadGuard,
-  debouncedSaveReloadGuard,
-} from './core/logger';
-export { roll, shuffle, setRng, resetRng, createSeededRng } from './core/dice';
-export {
-  COLLAPSED,
-  EMPTY,
-  WALL,
-  findCell,
-  findNeighbouringHeroes,
-  getDist,
-  hasLineOfSight,
-  isDiscovered,
-  isNeighbouring,
-  isRoomDiscovered,
-  isSamePosition,
-  isWalkable,
-  normaliseVector,
-  stepAlongLine,
-  toArray,
-} from './core/grid';
-export {
-  ATTACK_BONUS,
-  RE_ROLL_ATTACK,
-  canAct,
-  createDamageIndicator,
-  doorAsActor,
-  getDamageString,
+import { awardScenarioScore, beginDungeonTiming } from './core';
+import { createSeededRng, resetRng, setRng } from './core';
+import { checkpointDungeonTimer, resumeDungeonTimer } from './core';
+import {
   getEffectiveMaxMovement,
-  removeDamageIndicator,
-  takeDamage,
-} from './core/combat';
-export {
-  recordActorStep,
-  getActorVisualPosition,
-  isActorAnimating,
-  hasActiveActorAnimations,
-  getActorRemainingAnimationDuration,
-  sleep,
-  snapActorPosition,
-  clearActorAnimations,
-  setActorMovementDuration,
-  getActorMovementDuration,
-  resetActorMovementDuration,
-  DEFAULT_ACTOR_MOVEMENT_DURATION_MS,
-} from './core/ActorAnimation';
-export {
-  monsterActions,
-  DEFAULT_MONSTER_TURN_OPTIONS,
-  type MonsterTurnOptions,
-} from './monsters/MonsterLogic';
+  getDifficulty,
+  getGameMaster,
+  DEFAULT_GAME_MASTER_ID,
+} from './core';
+import { clearActorAnimations } from './core';
+import { setNextDungeonTransitionProvider } from './interactables/InteractableLogic';
+import { soundEffectManager } from './audio';
 
-export const save = (state: GameState) => {
+// Re-exported because gameStateStore consumes it through the game module.
+export { removeDamageIndicator } from './core/combat';
+
+export const save = (state: GameState, name?: string) => {
+  // The saved snapshot carries the full elapsed dungeon time under a
+  // fresh segment base, so loading it does not count the offline gap.
+  checkpointDungeonTimer(state);
   doReRender(state);
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('state', JSON.stringify(state));
-  }
+  writeSave(state, name ?? '');
   addLog(state, 'logs.gameSaved');
 };
 
@@ -96,26 +56,91 @@ export const loadState = (newState: GameState) => {
   newState.currentActor = newState.heroes.find(
     (hero) => hero.name === newState.currentActor?.name,
   ) as Hero | undefined;
+  migrateSaveState(newState);
+  // Resume the run's timer without counting the time between saving and
+  // loading (the accumulated time from the save is kept).
+  resumeDungeonTimer(newState);
+  // A speedrunner save keeps its fixed seed; a normal save returns the
+  // rng to true randomness (e.g. after a seeded run in the same
+  // session).
+  if (newState.speedrunSeed !== undefined) {
+    setRng(createSeededRng(newState.speedrunSeed));
+  } else {
+    resetRng();
+  }
+  // Older saves may not have a campaignId at all, and any save could in
+  // theory reference a campaign that no longer exists (e.g. removed
+  // during development). Fall back to the default campaign rather than
+  // letting later `getCampaign(state.campaignId)` calls (e.g. in
+  // `hasWon()`) throw for an unresolvable id.
+  if (!newState.campaignId || !isKnownCampaign(newState.campaignId)) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `Unknown or missing campaignId "${
+        newState.campaignId ?? ''
+      }" in loaded save, falling back to "${DEFAULT_CAMPAIGN_ID}".`,
+    );
+    newState.campaignId = DEFAULT_CAMPAIGN_ID;
+  }
   addLog(newState, 'logs.gameLoaded');
   doReRender(newState);
   return newState;
 };
 
-export const load = (currentState: GameState): GameState => {
-  if (typeof localStorage !== 'undefined') {
-    const stateString = localStorage.getItem('state');
-    if (stateString) {
-      const state: GameState = JSON.parse(stateString) as GameState;
-      return loadState(state);
-    }
-  }
-  addLog(currentState, 'logs.loadFailed');
-  return currentState;
-};
+// Whether a dungeon shows an intro screen the timer waits for (mirrors
+// `shouldShowDungeonIntro` in src/ui/DungeonIntroRendering.ts).
+const hasDungeonIntro = (dungeon: Dungeon): boolean =>
+  typeof dungeon.intro === 'string' && dungeon.intro.trim().length > 0;
 
-export const init = (): GameState => {
-  const campaign = structuredClone(campaignIceDragonTreasure);
+// The seed a speedrunner run is seeded with when the player leaves the
+// seed input at its default (see the new-game dialog).
+export const DEFAULT_SPEEDRUN_SEED = 42;
+
+export const init = (
+  campaignId: string = DEFAULT_CAMPAIGN_ID,
+  gameMasterId: string = DEFAULT_GAME_MASTER_ID,
+  speedrunSeed?: number,
+  heroes?: Hero[],
+): GameState => {
+  // Seed the rng before anything shuffles or rolls: with a seed the
+  // whole run is reproducible; without one the rng is truly random.
+  if (speedrunSeed !== undefined) {
+    setRng(createSeededRng(speedrunSeed));
+  } else {
+    resetRng();
+  }
+  const campaign = structuredClone(getCampaign(campaignId));
+  // The hero selection screen's override replaces the roster inside the
+  // cloned campaign (the registered campaign object is never mutated);
+  // the override heroes are already deep clones of the roster heroes
+  // with the player's names applied.
+  if (heroes && heroes.length > 0) {
+    campaign.heroes = heroes;
+  }
+  const selectedGameMaster = getGameMaster(gameMasterId);
+
+  let dungeonEvents = getEventsForDungeon(
+    campaign.dungeons[0],
+    campaign.eventDeck,
+  );
+  if (selectedGameMaster?.events?.modifyEventDeck) {
+    // Temp partial state for modifier hook if needed
+    const partialState = {
+      campaignId: campaign.id,
+      gameMaster: selectedGameMaster,
+      heroes: campaign.heroes,
+      dungeon: campaign.dungeons[0],
+    } as GameState;
+    dungeonEvents = selectedGameMaster.events.modifyEventDeck(
+      dungeonEvents,
+      partialState,
+    );
+  }
+
   const state: GameState = {
+    campaignId: campaign.id,
+    saveVersion: CURRENT_SAVE_VERSION,
+    gameMaster: selectedGameMaster,
     heroes: campaign.heroes,
     dungeon: campaign.dungeons[0],
     currentActor: campaign.heroes[0] as Hero | undefined,
@@ -152,10 +177,23 @@ export const init = (): GameState => {
       cellSize: 48,
       debug: false,
     },
-    eventDeck: getEventsForDungeon(campaign.dungeons[0]),
+    eventDeck: dungeonEvents,
     reRender: true,
+    drawEvents: true,
+    speedrunSeed,
   };
+  if (selectedGameMaster?.initialState) {
+    state.gameMasterState = selectedGameMaster.initialState();
+  }
+  applyStartingEquipment(state.heroes as Hero[], selectedGameMaster);
   resetLiveHeroes(state);
+  // The run's timer starts when the first dungeon's intro is closed, or
+  // immediately when that dungeon has no intro.
+  beginDungeonTiming(state, hasDungeonIntro(campaign.dungeons[0]));
+  selectedGameMaster?.onGameInit?.(state);
+  if (state.currentActor) {
+    selectedGameMaster?.onHeroTurnStart?.(state.currentActor, state);
+  }
   if (browser) {
     localStorage.setItem('autosave', JSON.stringify(state));
   }
@@ -175,21 +213,52 @@ export const next = async (
   if (state.settings['debug']) console.log(state);
   doReRender(state);
   checkWinConditions(state);
+  if (state.dungeon.beaten) {
+    hasWon(state);
+    if (state.betweenDungeons) return state;
+  }
   if (state.currentActor === undefined) return state;
   else {
+    // Terrain the hero ends its turn on (e.g. standing in lava) or fog
+    // of the room it stands in (e.g. poison gas) takes its toll before
+    // the turn passes on. The toll can down the acting hero, so the
+    // live-heroes index is captured while they are still alive: a
+    // survivor advances by one, a downed hero keeps the captured index —
+    // which then points at the next live hero, and still triggers the
+    // normal round-end processing when they were last in the round.
+    const turnEndActor = state.currentActor;
+    const currentIndex = liveHeroes(state).indexOf(turnEndActor);
+    applyTerrainTurnEndEffects(state, turnEndActor);
+    applyRoomFogTurnEndEffects(state, turnEndActor);
     addLog(state, 'logs.endedTurn', {
-      name: i18n(state.currentActor.name),
+      name: i18n(turnEndActor.name),
     });
-    const currentIndex = liveHeroes(state).indexOf(state.currentActor);
-    let nextIndex = currentIndex + 1;
+    turnEndActor.actions = 0;
+    turnEndActor.movement = 0;
+    let nextIndex =
+      currentIndex === -1
+        ? 0
+        : turnEndActor.health > 0
+        ? currentIndex + 1
+        : currentIndex;
+    // Whether the round wrapped around — distinct from `nextIndex`
+    // being 0, which also happens when the first hero of the round was
+    // downed by their turn-end toll: only a wrap starts a new round.
+    let roundEnded = false;
     if (nextIndex >= liveHeroes(state).length) {
       state.currentActor = undefined;
+      const gm = getDifficulty(state);
+      gm.onHeroPhaseEnd?.(state);
       await monsterActions(state, monsterOptions);
+      gm.onMonsterPhaseEnd?.(state);
       nextIndex = 0;
+      roundEnded = true;
       resetOnNext(state);
     }
     if (liveHeroes(state).length === 0) {
-      return resetLevel(state);
+      state.currentActor = undefined;
+      openPartyWipe(state);
+      return state;
     }
     let guard = 0;
     while (
@@ -201,33 +270,64 @@ export const next = async (
         name: i18n(liveHeroes(state)[nextIndex].name),
       });
       liveHeroes(state)[nextIndex].incapacitated = false;
+      liveHeroes(state)[nextIndex].actions = 0;
+      liveHeroes(state)[nextIndex].movement = 0;
       nextIndex++;
       if (nextIndex >= liveHeroes(state).length) {
         state.currentActor = undefined;
+        const gm = getDifficulty(state);
+        gm.onHeroPhaseEnd?.(state);
         await monsterActions(state, monsterOptions);
+        gm.onMonsterPhaseEnd?.(state);
         nextIndex = 0;
+        roundEnded = true;
         resetOnNext(state);
       }
       guard++;
     }
+    if (liveHeroes(state).length === 0 || !liveHeroes(state)[nextIndex]) {
+      state.currentActor = undefined;
+      openPartyWipe(state);
+      return state;
+    }
     state.currentActor = liveHeroes(state)[nextIndex];
     state.currentActor.actions = 2;
-    state.currentActor.movement = getEffectiveMaxMovement(state.currentActor);
+    state.currentActor.movement = getEffectiveMaxMovement(
+      state.currentActor,
+      getDifficulty(state).modifiers.movement,
+    );
+    if (roundEnded) {
+      state.turnCount = (state.turnCount ?? 0) + 1;
+      const gm = getDifficulty(state);
+      gm.onRoundStart?.(state.turnCount, state);
+    }
     const hasKilledAll = killAllMonstersAchieved(state);
-    if (nextIndex === 0 && !hasKilledAll) {
+    if (roundEnded && !hasKilledAll) {
       resetEventEffects(state);
-      const event = drawNextEvent(state);
-      state.currentEvent = event;
-      eventEffects[event.effect](state, event);
+      if (state.drawEvents) {
+        state.previousEvent = state.currentEvent;
+        const event = drawNextEvent(state);
+        state.currentEvent = event;
+        soundEffectManager.playEventSound(event);
+        const effect = eventEffects[event.effect];
+        if (effect) {
+          effect(state, event);
+        } else {
+          // eslint-disable-next-line no-console
+          console.warn(`Unknown event effect: ${event.effect}`);
+        }
+      } else {
+        state.previousEvent = state.currentEvent;
+        state.currentEvent = undefined;
+      }
     } else if (state.roundActionsDelta) {
       state.currentActor.actions = Math.max(
         1,
         state.currentActor.actions + state.roundActionsDelta,
       );
     }
-    if (nextIndex === 0) {
-      state.turnCount = (state.turnCount ?? 0) + 1;
-    }
+    const gm = getDifficulty(state);
+    gm.onHeroTurnStart?.(state.currentActor, state);
     addLog(state, 'logs.startedTurn', { name: i18n(state.currentActor.name) });
     doReRender(state);
   }
@@ -241,8 +341,15 @@ export const endAction = async (
   doReRender(state);
   const hero = state.currentActor;
   if (!hero) return;
-  hero.actions--;
-  hero.movement = getEffectiveMaxMovement(hero);
+  hero.actions = Math.max(0, hero.actions - 1);
+  if (hero.actions > 0) {
+    hero.movement = getEffectiveMaxMovement(
+      hero,
+      getDifficulty(state).modifiers.movement,
+    );
+  } else {
+    hero.movement = 0;
+  }
   if (hero.actions === 0) {
     await next(state, monsterOptions);
   }
@@ -250,10 +357,31 @@ export const endAction = async (
 
 export const resetLevel = (currentState: GameState): GameState => {
   clearActorAnimations();
+  const gm = getDifficulty(currentState);
+  gm.onPartyDefeat?.(currentState);
   if (typeof localStorage !== 'undefined') {
     const loadedRawState = localStorage.getItem('autosave');
     if (loadedRawState) {
       const state: GameState = JSON.parse(loadedRawState) as GameState;
+      if (!state.campaignId || !isKnownCampaign(state.campaignId)) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `Unknown or missing campaignId "${
+            state.campaignId ?? ''
+          }" in autosave, falling back to "${DEFAULT_CAMPAIGN_ID}".`,
+        );
+        state.campaignId = DEFAULT_CAMPAIGN_ID;
+      }
+      // Resuming a retry from the autosave: the timer continues from the
+      // saved elapsed time, without counting the time since the save.
+      resumeDungeonTimer(state);
+      // The retried run keeps its rng: seeded for a speedrunner save,
+      // random otherwise.
+      if (state.speedrunSeed !== undefined) {
+        setRng(createSeededRng(state.speedrunSeed));
+      } else {
+        resetRng();
+      }
       doReRender(state);
 
       replaceDeadHeroes(state);
@@ -270,12 +398,39 @@ export const resetLevel = (currentState: GameState): GameState => {
       state.currentActor = state.heroes.find(
         (hero) => hero.name === state.currentActor?.name,
       ) as Hero | undefined;
+      state.drawEvents = true;
       addLog(state, 'logs.allHeroesDead');
       return state;
     }
   }
   addLog(currentState, 'logs.failedToReset');
   return currentState;
+};
+
+/**
+ * The party-wipe "retry this dungeon" option: rewinds to the last autosave
+ * (the dungeon's start, or an in-dungeon checkpoint) via `resetLevel` and
+ * applies the wipe penalty — the whole party restarts from 0 XP and
+ * Apprentice level, matching the official "revived heroes start over"
+ * defeat rules. Falls back to reviving the heroes on the current state
+ * when no autosave exists, so the game always stays playable.
+ */
+export const restartDungeonAfterWipe = (currentState: GameState): GameState => {
+  const state = resetLevel(currentState);
+  if (liveHeroes(state).length === 0) {
+    // resetLevel returned the unchanged, wiped state (no autosave
+    // available): revive the heroes here instead.
+    replaceDeadHeroes(state);
+    resetLiveHeroes(state);
+  }
+  state.heroes.forEach((hero) => {
+    hero.experience = 0;
+    hero.level = Level.APPRENTICE;
+  });
+  state.currentActor = liveHeroes(state)[0] ?? (state.heroes[0] as Hero);
+  state.betweenDungeons = undefined;
+  addLog(state, 'logs.partyWipeRestartedDungeon');
+  return state;
 };
 
 const checkWinConditions = (state: GameState) => {
@@ -297,7 +452,7 @@ const checkWinConditions = (state: GameState) => {
         break;
       }
       case ConditionType.KILL_ALL_OF_TYPE: {
-        condition.fulfilled = state.dungeon.layout.monsters
+        condition.fulfilled = !state.dungeon.layout.monsters
           .filter((monster) => monster.type === condition.targetMonsterType)
           .some((monster) => monster.health > 0);
         break;
@@ -317,6 +472,13 @@ const checkWinConditions = (state: GameState) => {
           state.dungeon.killCount;
         break;
       }
+      case ConditionType.SECRET_FOUND: {
+        condition.fulfilled =
+          state.dungeon.layout.secrets.find(
+            (secret) => secret.id === condition.targetSecretId,
+          )?.found ?? false;
+        break;
+      }
     }
     if (condition.checkFulfilled) {
       condition.fulfilled = onCheckFulfilled[condition.checkFulfilled](
@@ -325,10 +487,20 @@ const checkWinConditions = (state: GameState) => {
       );
     }
   });
+  const previouslyBeaten = state.dungeon.beaten;
   state.dungeon.beaten = state.dungeon.winConditions
     .map((condition) => condition.fulfilled)
     .reduce((partial, fulfilled) => partial && fulfilled, true);
   if (state.dungeon.beaten) {
+    if (!previouslyBeaten) {
+      const gm = getDifficulty(state);
+      gm.onDungeonComplete?.(state);
+      const score = awardScenarioScore(state);
+      addLog(state, 'logs.scenarioScore', {
+        score: String(score.total),
+        total: String(state.score ?? 0),
+      });
+    }
     addLog(state, 'logs.allConditionsFulfilled');
     addLog(state, 'logs.clearedDungeon', { name: i18n(state.dungeon.name) });
     if (state.dungeon.nextDungeon?.name) {
@@ -340,6 +512,7 @@ const checkWinConditions = (state: GameState) => {
 };
 
 const scrollTo = (pos: Position, cellSize: number) => {
+  if (typeof document === 'undefined') return;
   const container = document.getElementById('gameBoardContainer');
   const canvas = document.getElementById('gameBoard');
   if (container && canvas) {
@@ -352,33 +525,18 @@ const scrollTo = (pos: Position, cellSize: number) => {
   }
 };
 
+import {
+  openBetweenDungeons,
+  openCampaignComplete,
+  openPartyWipe,
+} from './dungeon/BetweenDungeonsLogic';
+
 export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {
-    clearActorAnimations();
-    state.dungeon = state.dungeon.nextDungeon;
-    state.actionLog = [
-      {
-        key: 'logs.youHaveReached',
-        properties: { name: i18n(state.dungeon.name) },
-        turn: 0,
-      },
-    ];
-    state.eventDeck = getEventsForDungeon(state.dungeon);
-    doReRender(state);
-    rewardLiveHeroes(state);
-    levelUp(state);
-    replaceDeadHeroes(state);
-    resetLiveHeroes(state);
-    resetOnNextDungeon(state);
-    scrollTo(
-      {
-        x: state.dungeon.startingPositions[0].x,
-        y: state.dungeon.startingPositions[0].y,
-      },
-      state.settings['cellSize'] as number,
-    );
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('autosave', JSON.stringify(state));
-    }
+    openBetweenDungeons(state);
+  } else if (state.dungeon.beaten && !state.betweenDungeons) {
+    openCampaignComplete(state);
   }
 };
+
+setNextDungeonTransitionProvider(hasWon);

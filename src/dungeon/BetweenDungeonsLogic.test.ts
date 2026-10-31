@@ -1,0 +1,461 @@
+import { describe, it, expect } from 'vitest';
+import {
+  calculateLevel,
+  getNextLevelInfo,
+  getLevelMeaning,
+  openBetweenDungeons,
+  openCampaignComplete,
+  openPartyWipe,
+  setBetweenDungeonsStep,
+  selectTradeItem,
+  tradeItem,
+  completeBetweenDungeonsAndStartNext,
+  goToNextDungeon,
+} from './BetweenDungeonsLogic';
+import { Level, Colour, ItemType, type Hero, type Item } from '../types';
+import { init } from '../game';
+
+const createMockHero = (
+  name: string,
+  xp = 0,
+  level = Level.APPRENTICE,
+): Hero => ({
+  name,
+  actions: 2,
+  movement: 3,
+  maxMovement: 3,
+  defense: 0,
+  health: 7,
+  maxHealth: 7,
+  colour: Colour.Red,
+  experience: xp,
+  position: { x: 0, y: 0 },
+  level,
+  weapon: {
+    name: 'Sword',
+    dice: 2,
+    amountInDeck: 0,
+    type: ItemType.WEAPON,
+    value: 1,
+    range: 1,
+    twoHanded: false,
+    useHearHeroes: true,
+    ignoresArmour: false,
+    ignoresShield: false,
+  },
+  inventory: [],
+  isInventoryOpen: false,
+});
+
+describe('BetweenDungeonsLogic', () => {
+  describe('calculateLevel', () => {
+    it('returns APPRENTICE for xp < 4', () => {
+      expect(calculateLevel(0)).toBe(Level.APPRENTICE);
+      expect(calculateLevel(3)).toBe(Level.APPRENTICE);
+    });
+
+    it('returns KNIGHT for 4 <= xp < 10', () => {
+      expect(calculateLevel(4)).toBe(Level.KNIGHT);
+      expect(calculateLevel(9)).toBe(Level.KNIGHT);
+    });
+
+    it('returns HERO for 10 <= xp < 18', () => {
+      expect(calculateLevel(10)).toBe(Level.HERO);
+      expect(calculateLevel(17)).toBe(Level.HERO);
+    });
+
+    it('returns LORD for 18 <= xp < 28', () => {
+      expect(calculateLevel(18)).toBe(Level.LORD);
+      expect(calculateLevel(27)).toBe(Level.LORD);
+    });
+
+    it('returns MASTER for xp >= 28', () => {
+      expect(calculateLevel(28)).toBe(Level.MASTER);
+      expect(calculateLevel(50)).toBe(Level.MASTER);
+    });
+  });
+
+  describe('getNextLevelInfo', () => {
+    it('returns next level and remaining xp needed', () => {
+      expect(getNextLevelInfo(2)).toEqual({
+        nextLevel: Level.KNIGHT,
+        xpNeeded: 2,
+      });
+      expect(getNextLevelInfo(4)).toEqual({
+        nextLevel: Level.HERO,
+        xpNeeded: 6,
+      });
+      expect(getNextLevelInfo(28)).toEqual({});
+    });
+  });
+
+  describe('getLevelMeaning', () => {
+    it('returns meaning string for each level', () => {
+      expect(getLevelMeaning(Level.APPRENTICE)).toBeDefined();
+      expect(getLevelMeaning(Level.KNIGHT)).toBeDefined();
+      expect(getLevelMeaning(Level.HERO)).toBeDefined();
+      expect(getLevelMeaning(Level.LORD)).toBeDefined();
+      expect(getLevelMeaning(Level.MASTER)).toBeDefined();
+    });
+  });
+
+  describe('openBetweenDungeons', () => {
+    it('rewards live heroes with +1 XP and records level progression', () => {
+      const state = init();
+      state.heroes = [
+        createMockHero('Hero1', 3, Level.APPRENTICE),
+        createMockHero('Hero2', 0, Level.APPRENTICE),
+      ];
+
+      const bd = openBetweenDungeons(state);
+
+      expect(bd.step).toBe('levelUp');
+      expect(bd.levelUps).toHaveLength(2);
+
+      // Hero1: 3 XP -> 4 XP (Leveled up to KNIGHT)
+      expect(bd.levelUps[0].heroName).toBe('Hero1');
+      expect(bd.levelUps[0].previousExperience).toBe(3);
+      expect(bd.levelUps[0].newExperience).toBe(4);
+      expect(bd.levelUps[0].previousLevel).toBe(Level.APPRENTICE);
+      expect(bd.levelUps[0].newLevel).toBe(Level.KNIGHT);
+      expect(bd.levelUps[0].leveledUp).toBe(true);
+
+      // Hero2: 0 XP -> 1 XP (Still APPRENTICE)
+      expect(bd.levelUps[1].heroName).toBe('Hero2');
+      expect(bd.levelUps[1].previousExperience).toBe(0);
+      expect(bd.levelUps[1].newExperience).toBe(1);
+      expect(bd.levelUps[1].previousLevel).toBe(Level.APPRENTICE);
+      expect(bd.levelUps[1].newLevel).toBe(Level.APPRENTICE);
+      expect(bd.levelUps[1].leveledUp).toBe(false);
+    });
+  });
+
+  describe('setBetweenDungeonsStep', () => {
+    it('switches between levelUp and trade steps', () => {
+      const state = init();
+      openBetweenDungeons(state);
+
+      expect(state.betweenDungeons?.step).toBe('levelUp');
+      setBetweenDungeonsStep(state, 'trade');
+      expect(state.betweenDungeons?.step).toBe('trade');
+      setBetweenDungeonsStep(state, 'levelUp');
+      expect(state.betweenDungeons?.step).toBe('levelUp');
+    });
+  });
+
+  describe('selectTradeItem and tradeItem', () => {
+    it('selects and deselects trade items', () => {
+      const state = init();
+      openBetweenDungeons(state);
+
+      selectTradeItem(state, 0, 1);
+      expect(state.betweenDungeons?.selectedTradeItem).toEqual({
+        heroIndex: 0,
+        slot: 1,
+        itemIndex: 1,
+      });
+
+      // Selecting the same item deselects it
+      selectTradeItem(state, 0, 1);
+      expect(state.betweenDungeons?.selectedTradeItem).toBeNull();
+
+      // Selecting equipment slot
+      selectTradeItem(state, 0, 'weapon');
+      expect(state.betweenDungeons?.selectedTradeItem).toEqual({
+        heroIndex: 0,
+        slot: 'weapon',
+        itemIndex: undefined,
+      });
+    });
+
+    it('transfers an inventory item from one hero to another', () => {
+      const state = init();
+      const item1: Item = {
+        id: 'torch',
+        name: 'Torch',
+        reset: undefined,
+        amountInDeck: 1,
+        type: ItemType.MAGIC,
+        value: 1,
+      };
+      const hero0 = createMockHero('Hero0');
+      const hero1 = createMockHero('Hero1');
+      hero0.inventory = [item1];
+      hero1.inventory = [];
+      state.heroes = [hero0, hero1];
+
+      openBetweenDungeons(state);
+      setBetweenDungeonsStep(state, 'trade');
+      selectTradeItem(state, 0, 0);
+
+      const success = tradeItem(state, 0, 1, 0);
+      expect(success).toBe(true);
+      expect(hero0.inventory).toHaveLength(0);
+      expect(hero1.inventory).toEqual([item1]);
+      expect(state.betweenDungeons?.selectedTradeItem).toBeNull();
+    });
+
+    it('transfers weapons, armour, and shields between heroes', () => {
+      const state = init();
+      const hero0 = createMockHero('Hero0');
+      const hero1 = createMockHero('Hero1');
+      hero0.weapon = {
+        id: 'two_handed_sword',
+        name: 'Two-Handed Sword',
+        dice: 4,
+        type: ItemType.WEAPON,
+        range: 1,
+        twoHanded: true,
+        useHearHeroes: false,
+        amountInDeck: 1,
+        value: 3,
+        ignoresShield: false,
+        ignoresArmour: false,
+      };
+      hero0.armour = {
+        id: 'chainmail',
+        name: 'Chainmail',
+        defense: 2,
+        type: ItemType.ARMOUR,
+        amountInDeck: 1,
+        value: 2,
+        magicProtection: true,
+        movementReduction: 0,
+      };
+      hero0.shield = {
+        id: 'wooden_shield',
+        name: 'Wooden Shield',
+        dice: 1,
+        type: ItemType.SHIELD,
+        amountInDeck: 1,
+        value: 1,
+      };
+
+      hero1.weapon = {
+        id: 'sword',
+        name: 'Sword',
+        dice: 3,
+        type: ItemType.WEAPON,
+        range: 1,
+        twoHanded: false,
+        useHearHeroes: true,
+        amountInDeck: 0,
+        value: 0,
+        ignoresShield: false,
+        ignoresArmour: false,
+      };
+      state.heroes = [hero0, hero1];
+
+      openBetweenDungeons(state);
+      setBetweenDungeonsStep(state, 'trade');
+
+      // Trade weapon: hero0 weapon -> hero1
+      tradeItem(state, 0, 1, 'weapon');
+      expect(hero1.weapon.id).toBe('two_handed_sword');
+      expect(hero0.weapon.id).toBe('sword'); // resets to starter sword
+
+      // Trade armour: hero0 armour -> hero1 (empty slot, equips)
+      tradeItem(state, 0, 1, 'armour');
+      expect(hero0.armour).toBeUndefined();
+      expect(hero1.armour?.id).toBe('chainmail');
+
+      // Trade shield: hero0 shield -> hero1 (empty slot, equips)
+      tradeItem(state, 0, 1, 'shield');
+      expect(hero0.shield).toBeUndefined();
+      expect(hero1.shield?.id).toBe('wooden_shield');
+    });
+
+    it('does not allow trading to the same hero', () => {
+      const state = init();
+      const item1: Item = {
+        id: 'torch',
+        name: 'Torch',
+        amountInDeck: 1,
+        type: ItemType.MAGIC,
+        value: 1,
+      };
+      const hero0 = createMockHero('Hero0');
+      hero0.inventory = [item1];
+      state.heroes = [hero0];
+
+      openBetweenDungeons(state);
+      const success = tradeItem(state, 0, 0, 0);
+      expect(success).toBe(false);
+      expect(hero0.inventory).toHaveLength(1);
+    });
+
+    it('triggers drop and pickup effects when trading items with passive bonuses', () => {
+      const state = init();
+      const boots: Item = {
+        id: 'boots_of_speed',
+        name: 'Boots',
+        type: ItemType.MAGIC,
+        value: 0,
+        amountInDeck: 1,
+        properties: {
+          MOVEMENT_BONUS: 1,
+        },
+        pickup: 'movementBonusOnPickup',
+        drop: 'movementBonusOnDrop',
+      };
+
+      const hero0 = createMockHero('Hero0');
+      hero0.maxMovement = 4;
+      hero0.movement = 4;
+      hero0.inventory = [boots];
+
+      const hero1 = createMockHero('Hero1');
+      hero1.maxMovement = 3;
+      hero1.movement = 3;
+      hero1.inventory = [];
+
+      state.heroes = [hero0, hero1];
+
+      openBetweenDungeons(state);
+      const success = tradeItem(state, 0, 1, 0);
+      expect(success).toBe(true);
+
+      expect(hero0.maxMovement).toBe(3);
+      expect(hero0.movement).toBe(3);
+      expect(hero1.maxMovement).toBe(4);
+      expect(hero1.movement).toBe(4);
+    });
+  });
+
+  describe('completeBetweenDungeonsAndStartNext', () => {
+    it('transitions to the next dungeon when completed', () => {
+      const state = init();
+      state.dungeon.nextDungeon = {
+        ...state.dungeon,
+        name: 'Next Dungeon',
+        startingPositions: [{ x: 2, y: 3 }],
+      };
+
+      openBetweenDungeons(state);
+      expect(state.betweenDungeons).toBeDefined();
+
+      completeBetweenDungeonsAndStartNext(state);
+      expect(state.betweenDungeons).toBeUndefined();
+      expect(state.dungeon.name).toBe('Next Dungeon');
+      expect(state.turnCount).toBe(0);
+      expect(state.currentActor).toBeDefined();
+    });
+  });
+
+  describe('goToNextDungeon', () => {
+    it('jumps directly to the next dungeon without between-dungeons progression', () => {
+      const state = init();
+      state.dungeon.nextDungeon = {
+        ...state.dungeon,
+        name: 'Next Dungeon',
+        startingPositions: [{ x: 2, y: 3 }],
+      };
+
+      const result = goToNextDungeon(state);
+
+      expect(result).toBe(true);
+      expect(state.betweenDungeons).toBeUndefined();
+      expect(state.dungeon.name).toBe('Next Dungeon');
+      expect(state.turnCount).toBe(0);
+      expect(state.currentActor).toBeDefined();
+      const totalXp = state.heroes.reduce(
+        (sum, hero) => sum + hero.experience,
+        0,
+      );
+      expect(totalXp).toBe(0);
+    });
+
+    it('returns false and keeps the current dungeon when there is no next dungeon', () => {
+      const state = init();
+      state.dungeon.nextDungeon = undefined;
+      const dungeonName = state.dungeon.name;
+
+      expect(goToNextDungeon(state)).toBe(false);
+      expect(state.dungeon.name).toBe(dungeonName);
+    });
+  });
+
+  describe('dungeon timer', () => {
+    it('stopping between dungeons records the final dungeon time and adds it to the campaign total', () => {
+      const state = init();
+      state.timer = {
+        runningFrom: Date.now() - 60_000,
+        dungeonElapsedMs: 0,
+        campaignElapsedMs: 30_000,
+      };
+
+      const bd = openBetweenDungeons(state);
+
+      expect(state.timer?.runningFrom).toBeUndefined();
+      expect(bd.dungeonTimeMs).toBeDefined();
+      expect(bd.dungeonTimeMs ?? 0).toBeGreaterThanOrEqual(59_000);
+      expect(bd.dungeonTimeMs ?? 0).toBeLessThanOrEqual(61_000);
+      expect(state.timer?.campaignElapsedMs).toBe(
+        30_000 + (bd.dungeonTimeMs ?? 0),
+      );
+    });
+
+    it('the campaign-complete screen records the campaign total time', () => {
+      const state = init();
+      state.timer = {
+        dungeonElapsedMs: 60_000,
+        campaignElapsedMs: 120_000,
+      };
+
+      const bd = openCampaignComplete(state);
+
+      expect(bd.dungeonTimeMs).toBe(60_000);
+      expect(bd.campaignTimeMs).toBe(180_000);
+    });
+
+    it('the party-wipe screen stops the timer without adding to the campaign total', () => {
+      const state = init();
+      state.timer = {
+        runningFrom: Date.now() - 10_000,
+        dungeonElapsedMs: 0,
+        campaignElapsedMs: 30_000,
+      };
+
+      openPartyWipe(state);
+
+      expect(state.timer?.runningFrom).toBeUndefined();
+      expect(state.timer?.campaignElapsedMs).toBe(30_000);
+    });
+
+    it('starting the next dungeon resets the segment and waits for its intro', () => {
+      const state = init();
+      state.dungeon.nextDungeon = {
+        ...state.dungeon,
+        name: 'Next Dungeon',
+        startingPositions: [{ x: 2, y: 3 }],
+      };
+      state.timer = {
+        dungeonElapsedMs: 60_000,
+        campaignElapsedMs: 60_000,
+      };
+
+      openBetweenDungeons(state);
+      completeBetweenDungeonsAndStartNext(state);
+
+      expect(state.timer?.dungeonElapsedMs).toBe(0);
+      expect(state.timer?.runningFrom).toBeUndefined();
+      expect(state.timer?.campaignElapsedMs).toBe(120_000);
+    });
+
+    it('starting a next dungeon without an intro runs the timer immediately', () => {
+      const state = init();
+      state.dungeon.nextDungeon = {
+        ...state.dungeon,
+        name: 'Next Dungeon',
+        intro: '',
+        startingPositions: [{ x: 2, y: 3 }],
+      };
+
+      openBetweenDungeons(state);
+      completeBetweenDungeonsAndStartNext(state);
+
+      expect(state.timer?.dungeonElapsedMs).toBe(0);
+      expect(state.timer?.runningFrom).toBeDefined();
+    });
+  });
+});

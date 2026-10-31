@@ -1,23 +1,96 @@
 import type {
   Door,
   GameState,
+  InteractableCell,
   Item,
   ItemLocation,
+  LightEffect,
+  LightSource,
   Monster,
   Secret,
   WinCondition,
 } from '../types';
-import { Colour, Level, MonsterType, SecretType, Side } from '../types';
+import {
+  CellAlignment,
+  Colour,
+  Level,
+  LightEffect as LightEffectValue,
+  MonsterType,
+  SecretType,
+  Side,
+} from '../types';
 import { monsterWeapons } from '../items/weapons';
 import { monsterArmour } from '../items/armours';
 import { monsterShields } from '../items/shields';
 import { liveHeroes } from '../hero/HeroLogic';
-import { addLog } from '../core';
+import { addLog, nextRandom } from '../core';
 import { COLLAPSED, EMPTY, WALL } from '../core';
+import {
+  getMonsterTemplate,
+  registerMonsterTemplate,
+} from '../monsters/MonsterRegistry';
+
+// Built-in monster templates, registered here so campaign-defined monster
+// types can register their own stat templates the same way via
+// `registerMonsterTemplate` (see src/monsters/MonsterRegistry.ts).
+registerMonsterTemplate(MonsterType.ORC, {
+  nameTranslationKey: 'monsters.orc',
+  level: Level.APPRENTICE,
+  defense: 0,
+  health: 2,
+  maxHealth: 2,
+  experience: 1,
+  weapon: monsterWeapons[0],
+  rangedWeapon: monsterWeapons[1],
+  armour: monsterArmour[0],
+  walkSound: 'sfx/walk_boss.wav',
+  hurtSound: 'sfx/hurt_monster.wav',
+  deathSound: 'sfx/die_monster.wav',
+});
+registerMonsterTemplate(MonsterType.TROLL, {
+  nameTranslationKey: 'monsters.troll',
+  level: Level.KNIGHT,
+  defense: 1,
+  health: 3,
+  maxHealth: 3,
+  experience: 2,
+  weapon: monsterWeapons[2],
+  armour: monsterArmour[1],
+  walkSound: 'sfx/walk_boss.wav',
+  hurtSound: 'sfx/hurt2_monster.wav',
+  deathSound: 'sfx/die2_monster.wav',
+});
+registerMonsterTemplate(MonsterType.YELLOW_DARK_LORD, {
+  nameTranslationKey: 'monsters.darkLord',
+  actions: 3,
+  walkSound: 'sfx/walk_boss.wav',
+  hurtSound: 'sfx/hurt3_monster.wav',
+  deathSound: 'sfx/die_boss.wav',
+});
+registerMonsterTemplate(MonsterType.GREEN_DARK_LORD, {
+  nameTranslationKey: 'monsters.darkLord',
+  weapon: monsterWeapons[4],
+  walkSound: 'sfx/walk_boss.wav',
+  hurtSound: 'sfx/hurt3_monster.wav',
+  deathSound: 'sfx/die_boss.wav',
+});
+registerMonsterTemplate(MonsterType.BLUE_DARK_LORD, {
+  nameTranslationKey: 'monsters.darkLord',
+  shield: monsterShields[0],
+  walkSound: 'sfx/walk_boss.wav',
+  hurtSound: 'sfx/hurt3_monster.wav',
+  deathSound: 'sfx/die_boss.wav',
+});
+// The Red Dark Lord keeps the default "master" stat block (no overrides),
+// but still needs the shared translation key for its display name.
+registerMonsterTemplate(MonsterType.RED_DARK_LORD, {
+  nameTranslationKey: 'monsters.darkLord',
+});
 
 export { COLLAPSED, EMPTY, WALL };
 export * from './dungeonParser';
 export * from './dungeonValidator';
+export * from '../interactables/InteractableLogic';
 
 export const onCheckFulfilled: {
   [index: string]: (state: GameState, self: WinCondition) => boolean;
@@ -53,6 +126,39 @@ export const createRandomItem = (x: number, y: number): ItemLocation => ({
   position: { x, y },
 });
 
+// Default light source values, shared by `createLight` and rendering.
+export const DEFAULT_LIGHT_COLOR = '#FFB85C';
+export const DEFAULT_LIGHT_RADIUS = 4;
+export const DEFAULT_LIGHT_INTENSITY = 0.35;
+export const DEFAULT_LIGHT_SOFTNESS = 0.25;
+
+export const createLight = (
+  x: number,
+  y: number,
+  alignment: CellAlignment = CellAlignment.CENTER,
+  options?: {
+    color?: string;
+    radius?: number;
+    intensity?: number;
+    softness?: number;
+    effect?: LightEffect;
+    rate?: number;
+    enabled?: boolean;
+    id?: string;
+  },
+): LightSource => ({
+  id: options?.id ?? `light_${x}_${y}`,
+  position: { x, y },
+  alignment,
+  color: options?.color ?? DEFAULT_LIGHT_COLOR,
+  radius: options?.radius ?? DEFAULT_LIGHT_RADIUS,
+  intensity: options?.intensity ?? DEFAULT_LIGHT_INTENSITY,
+  softness: options?.softness ?? DEFAULT_LIGHT_SOFTNESS,
+  effect: options?.effect ?? LightEffectValue.STATIC,
+  rate: options?.rate ?? 1,
+  enabled: options?.enabled ?? true,
+});
+
 export const createSecret = (
   type: SecretType,
   name: string,
@@ -66,6 +172,46 @@ export const createSecret = (
   nameTranslationKey: name,
   position: { x, y },
   found: false,
+});
+
+export const createInteractable = (
+  x: number,
+  y: number,
+  effect: string,
+  options?: {
+    id?: string;
+    name?: string;
+    nameTranslationKey?: string;
+    description?: string;
+    descriptionTranslationKey?: string;
+    interacted?: boolean;
+    oneTime?: boolean;
+    args?: Record<string, unknown>;
+    icon?: string;
+    triggerOn?: 'interact' | 'step' | 'both';
+  },
+): InteractableCell => ({
+  id: options?.id ?? `interactable_${x}_${y}`,
+  position: { x, y },
+  effect,
+  ...(options?.name
+    ? {
+        name: options.name,
+        nameTranslationKey: options.nameTranslationKey ?? options.name,
+      }
+    : {}),
+  ...(options?.description
+    ? {
+        description: options.description,
+        descriptionTranslationKey:
+          options.descriptionTranslationKey ?? options.description,
+      }
+    : {}),
+  interacted: options?.interacted ?? false,
+  oneTime: options?.oneTime ?? true,
+  ...(options?.args ? { args: options.args } : {}),
+  ...(options?.icon ? { icon: options.icon } : {}),
+  triggerOn: options?.triggerOn ?? 'interact',
 });
 
 export const createSecretWithItem = (
@@ -97,6 +243,7 @@ export const createDoor = (side: Side, x: number, y: number): Door => ({
   trapped: false,
   open: false,
   hidden: false,
+  reinforced: false,
   trapAttacks: 0,
 });
 
@@ -178,32 +325,37 @@ export const createMonster = (
   let armour = monsterArmour[2];
   let rangedWeapon = undefined;
   let shield = undefined;
-  if (type === MonsterType.ORC) {
-    level = Level.APPRENTICE;
-    defense = 0;
-    health = 2;
-    maxHealth = 2;
-    experience = 1;
-    weapon = monsterWeapons[0];
-    rangedWeapon = monsterWeapons[1];
-    armour = monsterArmour[0];
-  } else if (type === MonsterType.TROLL) {
-    level = Level.KNIGHT;
-    defense = 1;
-    health = 3;
-    maxHealth = 3;
-    experience = 2;
-    weapon = monsterWeapons[2];
-    armour = monsterArmour[1];
-  } else if (type === MonsterType.YELLOW_DARK_LORD) {
-    actions = 3;
-  } else if (type === MonsterType.GREEN_DARK_LORD) {
-    weapon = monsterWeapons[4];
-  } else if (type === MonsterType.BLUE_DARK_LORD) {
-    shield = monsterShields[0];
+  let sprite = undefined;
+  let walkSound: string | undefined = undefined;
+  let hurtSound: string | undefined = undefined;
+  let deathSound: string | undefined = undefined;
+
+  const template = getMonsterTemplate(type);
+  if (template) {
+    level = template.level ?? level;
+    actions = template.actions ?? actions;
+    defense = template.defense ?? defense;
+    health = template.health ?? health;
+    maxHealth = template.maxHealth ?? maxHealth;
+    experience = template.experience ?? experience;
+    weapon = template.weapon ?? weapon;
+    armour = template.armour ?? armour;
+    rangedWeapon = template.rangedWeapon ?? rangedWeapon;
+    shield = template.shield ?? shield;
+    sprite = template.sprite ?? sprite;
+    walkSound = template.walkSound ?? template.walk;
+    hurtSound = template.hurtSound ?? template.hurt;
+    deathSound = template.deathSound ?? template.death;
   }
 
-  const monsterName = type + ' (' + colourName + ')';
+  // The display name is the translation key (the same convention as items,
+  // campaigns and dungeons): `createMonster` appends the instance's colour
+  // to the type's base key from the template registry, e.g.
+  // 'monsters.orc' + '.green' -> 'monsters.orc.green'. Types without a
+  // registered key fall back to the raw '<Type> (<Colour>)' string.
+  const monsterName = template?.nameTranslationKey
+    ? `${template.nameTranslationKey}.${colourName.toLowerCase()}`
+    : type + ' (' + colourName + ')';
 
   return {
     id:
@@ -230,5 +382,11 @@ export const createMonster = (
     position: { x, y },
     incapacitated: false,
     inventory: [],
+    temperament: nextRandom() < 0.5 ? 'bold' : 'wary',
+    passiveStreak: 0,
+    ...(walkSound ? { walkSound, walk: walkSound } : {}),
+    ...(hurtSound ? { hurtSound, hurt: hurtSound } : {}),
+    ...(deathSound ? { deathSound, death: deathSound } : {}),
+    ...(sprite ? { sprite } : {}),
   };
 };

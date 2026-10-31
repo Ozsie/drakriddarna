@@ -9,6 +9,14 @@ import {
   setActorMovementDuration,
   getActorMovementDuration,
   resetActorMovementDuration,
+  flashActor,
+  playActorAttack,
+  playActorDeath,
+  isActorDeathAnimating,
+  isActorSpriteAnimationActive,
+  getActorAnimationName,
+  getActorAnimationFrameIndex,
+  getDyingActors,
   DEFAULT_ACTOR_MOVEMENT_DURATION_MS,
 } from './ActorAnimation';
 import type { Actor } from '../types';
@@ -157,5 +165,137 @@ describe('ActorAnimation Module', () => {
     expect(isActorAnimating(actor, 1050)).toBe(true);
     expect(visual.x).toBeGreaterThan(1);
     expect(visual.x).toBeLessThan(2);
+  });
+});
+
+describe('Actor Sprite Animations', () => {
+  beforeEach(() => {
+    clearActorAnimations();
+    resetActorMovementDuration();
+  });
+
+  const createSpriteActor = (
+    frameDurationMs?: number,
+    animations?: Record<string, number>,
+  ): Actor => {
+    const actor = createMockActor('SpriteHero', 1, 1);
+    actor.sprite = {
+      image: 'hero-sprite.png',
+      frameWidth: 32,
+      frameHeight: 32,
+      ...(frameDurationMs !== undefined ? { frameDurationMs } : {}),
+      ...(animations !== undefined ? { animations } : {}),
+    };
+    return actor;
+  };
+
+  it('is idle when nothing is happening', () => {
+    const actor = createSpriteActor();
+    expect(getActorAnimationName(actor, 1000)).toBe('idle');
+  });
+
+  it('uses walk while movement waypoints are active', () => {
+    const actor = createSpriteActor();
+    recordActorStep(actor, { x: 2, y: 1 }, 200, 1000);
+    expect(getActorAnimationName(actor, 1100)).toBe('walk');
+    expect(getActorAnimationName(actor, 1200)).toBe('idle');
+  });
+
+  it('uses hurt while the actor is flashing', () => {
+    const actor = createSpriteActor();
+    flashActor(actor, 200, 1000);
+    expect(getActorAnimationName(actor, 1100)).toBe('hurt');
+    expect(getActorAnimationName(actor, 1300)).toBe('idle');
+  });
+
+  it('uses attack during the attack window', () => {
+    const actor = createSpriteActor();
+    playActorAttack(actor, 300, 1000);
+    expect(getActorAnimationName(actor, 1000)).toBe('attack');
+    expect(getActorAnimationName(actor, 1299)).toBe('attack');
+    expect(getActorAnimationName(actor, 1300)).toBe('idle');
+  });
+
+  it('uses death from trigger until the death window ends', () => {
+    const actor = createSpriteActor();
+    playActorDeath(actor, 600, 1000);
+    expect(isActorDeathAnimating(actor, 1000)).toBe(true);
+    expect(getActorAnimationName(actor, 1599)).toBe('death');
+    expect(isActorDeathAnimating(actor, 1600)).toBe(false);
+    expect(getActorAnimationName(actor, 1600)).toBe('idle');
+  });
+
+  it('prioritizes death over attack and hurt', () => {
+    const actor = createSpriteActor();
+    playActorAttack(actor, 300, 1000);
+    flashActor(actor, 200, 1000);
+    playActorDeath(actor, 600, 1000);
+    expect(getActorAnimationName(actor, 1100)).toBe('death');
+  });
+
+  it('prioritizes attack over hurt and walk', () => {
+    const actor = createSpriteActor();
+    recordActorStep(actor, { x: 2, y: 1 }, 200, 1000);
+    flashActor(actor, 200, 1000);
+    playActorAttack(actor, 300, 1000);
+    expect(getActorAnimationName(actor, 1100)).toBe('attack');
+  });
+
+  it('prioritizes hurt over walk', () => {
+    const actor = createSpriteActor();
+    recordActorStep(actor, { x: 2, y: 1 }, 200, 1000);
+    flashActor(actor, 200, 1000);
+    expect(getActorAnimationName(actor, 1100)).toBe('hurt');
+  });
+
+  it('loops idle and walk frames', () => {
+    const actor = createSpriteActor(150);
+    const idleIndex = getActorAnimationFrameIndex(actor, 'idle', 4, 1500);
+    expect(idleIndex).toBe(Math.floor(1500 / 150) % 4);
+
+    recordActorStep(actor, { x: 2, y: 1 }, 200, 1000);
+    const walkIndex = getActorAnimationFrameIndex(actor, 'walk', 3, 1400);
+    expect(walkIndex).toBe(Math.floor(1400 / 150) % 3);
+  });
+
+  it('clips one-shot animations to the last frame', () => {
+    const actor = createSpriteActor(100);
+    playActorAttack(actor, 300, 1000);
+    expect(getActorAnimationFrameIndex(actor, 'attack', 4, 1000)).toBe(0);
+    expect(getActorAnimationFrameIndex(actor, 'attack', 4, 1250)).toBe(2);
+    expect(getActorAnimationFrameIndex(actor, 'attack', 4, 9999)).toBe(3);
+  });
+
+  it('clamps elapsed time for future animation starts', () => {
+    const actor = createSpriteActor(100);
+    flashActor(actor, 200, 1500);
+    expect(getActorAnimationFrameIndex(actor, 'hurt', 2, 1000)).toBe(0);
+  });
+
+  it('reports sprite animations active only for actors with a sprite', () => {
+    const withSprite = createSpriteActor();
+    const withoutSprite = createMockActor('PlainHero', 1, 1);
+    expect(isActorSpriteAnimationActive(withSprite, 1000)).toBe(true);
+    expect(isActorSpriteAnimationActive(withoutSprite, 1000)).toBe(false);
+  });
+
+  it('tracks dying actors until their death animation expires', () => {
+    const actor = createSpriteActor();
+    playActorDeath(actor, 600, 1000);
+    expect(getDyingActors(1100)).toContain(actor);
+
+    clearActorAnimations();
+    expect(getDyingActors(1100)).not.toContain(actor);
+
+    playActorDeath(actor, 600, 1000);
+    expect(getDyingActors(1599)).toContain(actor);
+    expect(getDyingActors(1600)).not.toContain(actor);
+  });
+
+  it('does not list an actor as dying twice', () => {
+    const actor = createSpriteActor();
+    playActorDeath(actor, 600, 1000);
+    playActorDeath(actor, 600, 1100);
+    expect(getDyingActors(1200).length).toBe(1);
   });
 });

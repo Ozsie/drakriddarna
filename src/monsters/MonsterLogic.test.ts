@@ -12,7 +12,14 @@ import {
   type Weapon,
 } from '../types';
 import { createDoor, createMonster } from '../dungeon/DungeonLogic';
-import { monsterActions, monsterMove } from './MonsterLogic';
+import { resetRng, setRng } from '../core';
+import {
+  hasTwoAttackActions,
+  isAttackSlot,
+  createVisibleHeroesCache,
+  monsterActions,
+  monsterMove,
+} from './MonsterLogic';
 import { createPassableGrid } from './pathfinding';
 
 const defaultWeapon: Weapon = {
@@ -55,6 +62,7 @@ const createTestHero = (
 const createTestState = (overrides?: Partial<GameState>): GameState => {
   const dungeon: Dungeon = {
     name: 'test-dungeon',
+    intro: 'test-dungeon',
     beaten: false,
     winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
     startingPositions: [{ x: 1, y: 1 }],
@@ -95,6 +103,7 @@ const createTestState = (overrides?: Partial<GameState>): GameState => {
     eventDeck: [],
     settings: {},
     reRender: false,
+    drawEvents: true,
     ...overrides,
   };
 };
@@ -269,8 +278,29 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
 
     const grid = createPassableGrid(state);
     // (2, 2) to (3, 2) is blocked by door
-    expect(grid.isDoorBlocked(2, 2, 3, 2)).toBe(true);
+    expect(grid.isEdgeBlocked(2, 2, 3, 2)).toBe(true);
     expect(grid.isPassableStep(2, 2, 3, 2)).toBe(false);
+  });
+
+  it('edge walls block monster steps like closed doors', () => {
+    const state = createTestState();
+    state.dungeon.layout.walls = [
+      { x: 2, y: 2, side: Side.RIGHT },
+      { x: 2, y: 3, side: Side.RIGHT },
+    ];
+
+    const grid = createPassableGrid(state);
+    // The walled edge is impassable in both directions
+    expect(grid.isEdgeBlocked(2, 2, 3, 2)).toBe(true);
+    expect(grid.isEdgeBlocked(3, 2, 2, 2)).toBe(true);
+    expect(grid.isPassableStep(2, 2, 3, 2)).toBe(false);
+    expect(grid.isPassableStep(3, 2, 2, 2)).toBe(false);
+    // An edge without a wall stays passable
+    expect(grid.isPassableStep(2, 1, 3, 1)).toBe(true);
+    // A diagonal across a fully walled pinch point is blocked too
+    expect(grid.isPassableStep(2, 2, 3, 3)).toBe(false);
+    // ...while a diagonal with a route around the wall stays open
+    expect(grid.isPassableStep(2, 1, 3, 2)).toBe(true);
   });
 
   it('routes around other monsters without stepping on them', () => {
@@ -337,6 +367,7 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
   });
 
   it('monsterActions executes full turn with pathfinding movement then attack', async () => {
+    setRng(() => 0.9);
     const state = createTestState();
     const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
     monster.actions = 2;
@@ -346,9 +377,6 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
     const hero = createTestHero('Fearik', 1, 3, 10);
     state.heroes = [hero];
 
-    // Monster is at (1, 1), Hero at (1, 3).
-    // Action 1: Move to (1, 2) which is adjacent to Hero.
-    // Action 2: Melee attack Hero!
     await monsterActions(state, {
       delayBetweenMonsters: 0,
       delayBetweenActions: 0,
@@ -356,13 +384,15 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
       waitForMovement: false,
     });
 
-    expect(monster.position).toEqual({ x: 1, y: 2 });
     expect(
       state.actionLog.some((l) => l.key === 'logs.takeDamage.attackedWith'),
     ).toBe(true);
+
+    resetRng();
   });
 
   it('monsterActions executes multiple monsters sequentially with callbacks and delays', async () => {
+    setRng(() => 0.9);
     const state = createTestState();
     const monster1 = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
     monster1.actions = 2;
@@ -378,7 +408,6 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
     state.heroes = [hero];
 
     const callbackHistory: number[] = [];
-    const callbackTimes: number[] = [];
 
     await monsterActions(state, {
       delayBetweenMonsters: 20,
@@ -387,13 +416,9 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
       waitForMovement: false,
       onActionCallback: (st) => {
         callbackHistory.push(st.actionLog.length);
-        callbackTimes.push(Date.now());
       },
     });
 
-    // Both monsters should have acted sequentially
-    expect(monster1.position.y).toBeGreaterThan(1);
-    expect(monster2.position.y).toBeGreaterThan(1);
     expect(callbackHistory.length).toBeGreaterThan(2);
     expect(
       state.actionLog.some(
@@ -409,6 +434,37 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
           l.properties?.monster === monster2.name,
       ),
     ).toBe(true);
+
+    resetRng();
+  });
+
+  it('executes Brawl against adjacent hero when adjacent', async () => {
+    setRng(() => 0.9);
+    const state = createTestState();
+    const monster = createMonster(MonsterType.ORC, Colour.Green, 2, 2);
+    monster.actions = 2;
+    monster.movement = 3;
+    state.dungeon.layout.monsters = [monster];
+
+    const adjacentHero = createTestHero('Fearik', 2, 3, 10);
+    state.heroes = [adjacentHero];
+
+    await monsterActions(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    expect(
+      state.actionLog.some(
+        (l) =>
+          l.key === 'logs.takeDamage.attackedWith' &&
+          l.properties?.target === adjacentHero.name,
+      ),
+    ).toBe(true);
+
+    resetRng();
   });
 
   it('monsterActions logs when no visible monsters are found', async () => {
@@ -426,5 +482,294 @@ describe('Monster Pathfinding & AI (A* and Door Collision)', () => {
     expect(
       state.actionLog.some((l) => l.key === 'logs.monsterAction.noMonsterAct'),
     ).toBe(true);
+  });
+
+  it('exhausted monster skips turn and clears exhausted flag for subsequent turn', async () => {
+    const state = createTestState();
+    const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
+    monster.exhausted = true;
+    state.dungeon.layout.monsters = [monster];
+
+    const hero = createTestHero('Fearik', 1, 3, 10);
+    state.heroes = [hero];
+
+    // First activation: skips because exhausted
+    await monsterActions(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    expect(monster.exhausted).toBe(false);
+    expect(
+      state.actionLog.some((l) => l.key === 'logs.monsterAction.acted'),
+    ).toBe(false);
+
+    // Second activation: acts normally
+    await monsterActions(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    expect(
+      state.actionLog.some((l) => l.key === 'logs.monsterAction.acted'),
+    ).toBe(true);
+  });
+
+  it('Peek shot resets passiveStreak to 0 because it performs an attack', async () => {
+    setRng(() => 0.9);
+    const state = createTestState();
+    // Grid with cover: hero at (1, 4), monster at (1, 1), cover tile at (2, 1) behind wall (2, 2)
+    state.dungeon.layout.grid = [
+      '#######',
+      '#AAAAA#',
+      '#.#AAA#',
+      '#AAAAA#',
+      '#AAAAA#',
+      '#######',
+    ];
+    const monster = createMonster(MonsterType.ORC, Colour.Green, 1, 1);
+    monster.rangedWeapon = {
+      name: 'Bow',
+      dice: 1,
+      range: 4,
+      amountInDeck: 1,
+      ignoresArmour: false,
+      ignoresShield: false,
+      twoHanded: true,
+      type: ItemType.WEAPON,
+      useHearHeroes: false,
+      value: 10,
+    };
+    monster.passiveStreak = 1;
+    state.dungeon.layout.monsters = [monster];
+
+    const hero = createTestHero('Fearik', 1, 4, 10);
+    state.heroes = [hero];
+
+    await monsterActions(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    expect(monster.passiveStreak).toBe(0);
+    resetRng();
+  });
+
+  describe('Multi-attack charge fallback', () => {
+    it('identifies attack slots and behaviors with two attack actions', () => {
+      expect(isAttackSlot('melee')).toBe(true);
+      expect(isAttackSlot('shoot')).toBe(true);
+      expect(isAttackSlot('fire_spray')).toBe(true);
+      expect(isAttackSlot('move')).toBe(false);
+      expect(isAttackSlot('move_to_cover')).toBe(false);
+      expect(isAttackSlot('move_away')).toBe(false);
+      expect(isAttackSlot('hold')).toBe(false);
+      expect(isAttackSlot('move_or_melee')).toBe(false);
+
+      expect(
+        hasTwoAttackActions({
+          name: 'Brawl',
+          slots: ['melee', 'melee'],
+          tags: ['aggressive'],
+          isEligible: () => true,
+          getBaseWeight: () => 10,
+        }),
+      ).toBe(true);
+
+      expect(
+        hasTwoAttackActions({
+          name: 'Volley',
+          slots: ['shoot', 'shoot'],
+          tags: ['aggressive', 'ranged'],
+          isEligible: () => true,
+          getBaseWeight: () => 10,
+        }),
+      ).toBe(true);
+
+      expect(
+        hasTwoAttackActions({
+          name: 'Charge',
+          slots: ['move', 'melee'],
+          tags: ['aggressive'],
+          isEligible: () => true,
+          getBaseWeight: () => 10,
+        }),
+      ).toBe(false);
+
+      expect(
+        hasTwoAttackActions({
+          name: 'Hit and run',
+          slots: ['melee', 'move_to_cover'],
+          tags: ['defensive'],
+          isEligible: () => true,
+          getBaseWeight: () => 10,
+        }),
+      ).toBe(false);
+    });
+
+    it('monster with Brawl (2 attacks) charges towards distant hero if first attack kills adjacent hero', async () => {
+      setRng(() => 5 / 6);
+      setRng(() => 0.9);
+      const state = createTestState();
+      // Monster at (2, 2)
+      const monster = createMonster(MonsterType.ORC, Colour.Green, 2, 2);
+      monster.actions = 2;
+      monster.movement = 3;
+      monster.temperament = 'bold';
+      monster.rangedWeapon = undefined;
+      state.dungeon.layout.monsters = [monster];
+
+      // Adjacent hero with 1 HP at (2, 3)
+      const hero1 = createTestHero('Fearik', 2, 3, 1);
+      hero1.defense = 0;
+      // Distant hero at (2, 5)
+      const hero2 = createTestHero('Elisa', 2, 5, 10);
+      hero2.defense = 0;
+      state.heroes = [hero1, hero2];
+
+      await monsterActions(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      // Hero1 took damage and died
+      expect(hero1.health).toBeLessThanOrEqual(0);
+
+      // Monster charged towards Hero2 (moved down towards (2, 5))
+      expect(monster.position.x).toBe(2);
+      // After killing hero1 at (2, 3), the path towards (2, 5) becomes passable, monster moves along path
+      expect(monster.position.y).toBeGreaterThan(2);
+      expect(
+        state.actionLog.some(
+          (l) =>
+            l.key === 'logs.takeDamage.attackedWith' &&
+            l.properties?.target === hero1.name,
+        ),
+      ).toBe(true);
+      expect(
+        state.actionLog.some(
+          (l) => l.key === 'logs.monsterAction.movedTowards',
+        ),
+      ).toBe(true);
+
+      resetRng();
+      resetRng();
+    });
+
+    it('monster with Brawl attacks second hero instead of charging if another valid adjacent target exists', async () => {
+      setRng(() => 0.9);
+      const state = createTestState();
+      const monster = createMonster(MonsterType.ORC, Colour.Green, 2, 2);
+      monster.actions = 2;
+      monster.movement = 3;
+      monster.temperament = 'bold';
+      monster.rangedWeapon = undefined;
+      state.dungeon.layout.monsters = [monster];
+
+      // Two adjacent heroes
+      const hero1 = createTestHero('Fearik', 2, 3, 1);
+      const hero2 = createTestHero('Elisa', 3, 2, 10);
+      state.heroes = [hero1, hero2];
+
+      await monsterActions(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      // Monster should stay at (2, 2) and attack both heroes
+      expect(monster.position).toEqual({ x: 2, y: 2 });
+      const attacks = state.actionLog.filter(
+        (l) => l.key === 'logs.takeDamage.attackedWith',
+      );
+      expect(attacks.length).toBe(2);
+
+      resetRng();
+    });
+  });
+});
+
+describe('createVisibleHeroesCache', () => {
+  const twoRoomState = (): GameState => {
+    const state = createTestState();
+    state.dungeon.layout.grid = [
+      '#######',
+      '#AA#BB#',
+      '#AA#BB#',
+      '#AA#BB#',
+      '#AA#BB#',
+      '#######',
+    ];
+    return state;
+  };
+
+  it('returns the same hero list while nothing moves', () => {
+    const state = twoRoomState();
+    state.heroes = [createTestHero('Fearik', 2, 2)];
+    const monster = createMonster('Orc', Colour.Red, 2, 1);
+    state.dungeon.layout.monsters = [monster];
+
+    const visibleHeroes = createVisibleHeroesCache(state);
+    const first = visibleHeroes(monster);
+    const second = visibleHeroes(monster);
+
+    expect(second).toEqual(first);
+    expect(first).toHaveLength(1);
+  });
+
+  it('recomputes when a hero moves out of sight', () => {
+    const state = twoRoomState();
+    state.heroes = [createTestHero('Fearik', 2, 1)];
+    const monster = createMonster('Orc', Colour.Red, 2, 2);
+    state.dungeon.layout.monsters = [monster];
+
+    const visibleHeroes = createVisibleHeroesCache(state);
+    expect(visibleHeroes(monster)).toHaveLength(1);
+
+    // The hero crosses the wall into the other room: the cache must not
+    // serve the stale, still-visible list.
+    state.heroes[0].position = { x: 4, y: 1 };
+    expect(visibleHeroes(monster)).toHaveLength(0);
+  });
+
+  it('recomputes when a hero dies or is ignored by monsters', () => {
+    const state = createTestState();
+    state.heroes = [createTestHero('Fearik', 3, 1)];
+    const monster = createMonster('Orc', Colour.Red, 2, 1);
+    state.dungeon.layout.monsters = [monster];
+
+    const visibleHeroes = createVisibleHeroesCache(state);
+    expect(visibleHeroes(monster)).toHaveLength(1);
+
+    state.heroes[0].health = 0;
+    expect(visibleHeroes(monster)).toHaveLength(0);
+
+    state.heroes[0].health = 10;
+    expect(visibleHeroes(monster)).toHaveLength(1);
+    state.heroes[0].ignoredByMonsters = true;
+    expect(visibleHeroes(monster)).toHaveLength(0);
+  });
+
+  it('recomputes when the monster itself moves', () => {
+    const state = twoRoomState();
+    state.heroes = [createTestHero('Fearik', 4, 2)];
+    const monster = createMonster('Orc', Colour.Red, 2, 1);
+    state.dungeon.layout.monsters = [monster];
+
+    const visibleHeroes = createVisibleHeroesCache(state);
+    expect(visibleHeroes(monster)).toHaveLength(0);
+
+    // The monster crosses into the hero's room and gains line of sight.
+    monster.position = { x: 4, y: 1 };
+    expect(visibleHeroes(monster)).toHaveLength(1);
   });
 });

@@ -1,4 +1,5 @@
 module.exports = {
+  ignorePatterns: ['scripts/export-editor-catalog.ts'],
   env: {
     browser: true,
     es2021: true,

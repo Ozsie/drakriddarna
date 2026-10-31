@@ -1,27 +1,72 @@
-import type { Actor, GameState, Item } from '../types';
+import type { Actor, GameState, Hero, Item } from '../types';
 import { Level } from '../types';
-import { addLog, i18n } from '../core';
+import {
+  addLog,
+  createDamageIndicator,
+  createIndicator,
+  flashActor,
+  i18n,
+} from '../core';
+import { createBloodSplatter } from '../combat';
+import { soundEffectManager } from '../audio';
 import { roll } from '../core';
 import {
   canAct,
   ATTACK_BONUS,
   RE_ROLL_ATTACK,
-  getEffectiveMaxMovement,
+  getDifficulty,
+  getEffectiveMaxHealth,
+  settleMovementAfterAction,
+  spendStandardAction,
 } from '../core';
+import { killMonster } from '../hero/HeroLogic';
 
 export const USED = 'USED';
+export const USED_ON = 'USED_ON';
+export const USED_HEROES = 'USED_HEROES';
 export { ATTACK_BONUS };
 export const SEARCH_BONUS = 'SEARCH_BONUS';
 export const BREAK_LOCK = 'BREAK_LOCK';
 export { RE_ROLL_ATTACK };
 export const DESCRIPTION = 'DESCRIPTION';
 export const ACTIVE = 'ACTIVE';
+export const TARGET = 'TARGET';
+export const TARGET_SELF = 'TARGET_SELF';
+export const TARGET_ANY_HERO = 'TARGET_ANY_HERO';
+export const TARGET_ALL_HEROES = 'TARGET_ALL_HEROES';
 export const MOVEMENT_BONUS = 'MOVEMENT_BONUS';
 export const ACTIONS_BONUS = 'ACTIONS_BONUS';
 export const RESET_ON = 'RESET_ON';
 export const NEXT_TURN = 'NEXT_TURN';
 export const TRADE = 'TRADE';
 export const NEXT_DUNGEON = 'NEXT_SCENARIO';
+
+export const isTargetAnyHero = (item?: Item | null): boolean => {
+  if (!item || !item.properties) return false;
+  if (item.properties.TARGET_ANY_HERO || item.properties.target_any_hero)
+    return true;
+  const targetType =
+    item.properties[TARGET] ??
+    item.properties.TARGET ??
+    item.properties.TARGET_TYPE ??
+    item.properties.target ??
+    item.properties.target_type;
+  if (typeof targetType === 'string') {
+    const norm = targetType.trim().toUpperCase();
+    return (
+      norm === 'TARGET_ANY_HERO' ||
+      norm === 'ANY_HERO' ||
+      norm === 'TARGET_ALL_HEROES' ||
+      norm === 'ALL_HEROES' ||
+      norm === 'HERO' ||
+      norm === 'HEROES' ||
+      norm === TARGET_ANY_HERO ||
+      norm === TARGET_ALL_HEROES
+    );
+  }
+  return false;
+};
+
 export const onPickup: {
   [index: string]: (state: GameState, self: Item, user: Actor) => void;
 } = {
@@ -42,23 +87,68 @@ export const onDrop: {
       user.movement -= self.properties?.[MOVEMENT_BONUS] as number;
   },
 };
+
+// Registration API allowing campaigns (or any external module) to define
+// brand-new item behaviours without editing this shared file. A campaign's
+// own item definitions can reference a unique effect/reset/pickup/drop key
+// and register the corresponding handler by calling these functions once on
+// module load (e.g. from the campaign's items/*.ts file).
+export const registerItemEffect = (
+  key: string,
+  handler: (state: GameState, self: Item, user: Actor, target?: Actor) => void,
+): void => {
+  onUse[key] = handler;
+};
+
+export const registerItemReset = (
+  key: string,
+  handler: (state: GameState, self: Item) => void,
+): void => {
+  onReset[key] = handler;
+};
+
+export const registerItemPickup = (
+  key: string,
+  handler: (state: GameState, self: Item, user: Actor) => void,
+): void => {
+  onPickup[key] = handler;
+};
+
+export const registerItemDrop = (
+  key: string,
+  handler: (state: GameState, self: Item, user: Actor) => void,
+): void => {
+  onDrop[key] = handler;
+};
 export const resolveChaosSwordAttack = (
   state: GameState,
   user: Actor,
   target: Actor,
 ): void => {
-  const hits = roll(user.level, 4);
+  soundEffectManager.playWeaponAttack(user.weapon);
+  const isHeroSource = state.heroes.includes(user);
+  const isHeroTarget = state.heroes.includes(target);
+  if (isHeroSource && !isHeroTarget) {
+    target.lastAttackedBy = user.id ?? user.name;
+    target.lastAttackedByHero = user;
+  }
+  const attackDifficultyModifier = getDifficulty(state).modifiers.attack;
+  const hits = roll(user.level, 4 + attackDifficultyModifier);
 
-  const killTarget = () => {
+  const killTarget = (damageAmount: number = target.health) => {
+    if (!state.damageIndicators) {
+      state.damageIndicators = [];
+    }
+    state.damageIndicators.push(
+      createIndicator(damageAmount, target.position, { effect: 'crit' }),
+    );
+    soundEffectManager.playCriticalHit();
     target.health = 0;
     target.level = Level.APPRENTICE;
+    soundEffectManager.playActorDeath(target);
     const monster = state.dungeon.layout.monsters.find((m) => m === target);
     if (monster) {
-      state.dungeon.layout.monsters = state.dungeon.layout.monsters.filter(
-        (m) => m !== monster,
-      );
-      state.dungeon.killCount++;
-      user.experience += monster.experience;
+      killMonster(state, monster, user as Hero);
     }
   };
 
@@ -68,18 +158,43 @@ export const resolveChaosSwordAttack = (
         user: i18n(user.name),
         target: i18n(target.name),
       });
-      killTarget();
+      flashActor(target);
+      if (target.position) {
+        if (!state.bloodSplatters) {
+          state.bloodSplatters = [];
+        }
+        state.bloodSplatters.push(
+          createBloodSplatter(target.position, { damage: target.health }),
+        );
+      }
+      killTarget(target.health);
       break;
     case 1:
       addLog(state, 'logs.item.chaosSwordStumble', { user: i18n(user.name) });
       user.movement = 0;
       user.actions = 0;
       user.incapacitated = true;
+      soundEffectManager.playParalyze();
       break;
     case 2:
     case 3: {
       const damage = hits === 2 ? 2 : 1;
       target.health -= damage;
+      flashActor(target);
+      if (target.position) {
+        if (!state.bloodSplatters) {
+          state.bloodSplatters = [];
+        }
+        state.bloodSplatters.push(
+          createBloodSplatter(target.position, { damage }),
+        );
+        if (!state.damageIndicators) {
+          state.damageIndicators = [];
+        }
+        state.damageIndicators.push(
+          createDamageIndicator(damage, target.position),
+        );
+      }
       addLog(state, 'logs.item.chaosSwordHit', {
         user: i18n(user.name),
         target: i18n(target.name),
@@ -90,12 +205,15 @@ export const resolveChaosSwordAttack = (
           actor: i18n(user.name),
           target: i18n(target.name),
         });
-        killTarget();
+        killTarget(damage);
+      } else {
+        soundEffectManager.playActorHurt(target);
       }
       break;
     }
     default:
       addLog(state, 'logs.item.chaosSwordMiss', { user: i18n(user.name) });
+      soundEffectManager.playMiss();
       break;
   }
 };
@@ -122,7 +240,7 @@ export const onUse: {
       addLog(state, 'logs.item.noTarget');
       return;
     }
-    if (!canAct(user)) {
+    if (!canAct(user, getDifficulty(state).modifiers.movement)) {
       addLog(state, 'logs.heroAction.noActions', { hero: i18n(user.name) });
       return;
     }
@@ -131,20 +249,58 @@ export const onUse: {
         addLog(state, 'logs.item.noUsesLeft', { item: i18n(self.name) });
         return;
       }
-      self.properties[USED] = true;
+      const rawUsedOn =
+        (self.properties[USED_ON] as string[]) ??
+        (self.properties.USED_ON as string[]) ??
+        (self.properties[USED_HEROES] as string[]) ??
+        (self.properties.USED_HEROES as string[]) ??
+        [];
+      const usedOn = Array.isArray(rawUsedOn) ? [...rawUsedOn] : [];
+
+      if (usedOn.includes(target.name)) {
+        addLog(state, 'logs.item.noUsesLeft', { item: i18n(self.name) });
+        return;
+      }
+
+      usedOn.push(target.name);
+      self.properties[USED_ON] = usedOn;
+      self.properties[USED_HEROES] = usedOn;
+
+      if (
+        state.heroes.length > 0 &&
+        state.heroes.every((h) => usedOn.includes(h.name))
+      ) {
+        self.properties[USED] = true;
+      }
+
+      const healthModifier = getDifficulty(state).modifiers.health;
+      const effectiveMaxHealth = getEffectiveMaxHealth(target, healthModifier);
       const addedHealth = Math.min(
         roll(user.level, 3),
-        target.maxHealth - target.health,
+        effectiveMaxHealth - target.health,
       );
       target.health += addedHealth;
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(addedHealth, target.position, {
+          color: '#0ab44e',
+          effect: 'fade',
+        }),
+      );
       addLog(state, 'logs.item.magicHerbs', {
         user: i18n(user.name),
         item: i18n(self.name),
         target: i18n(target.name),
         addedHealth: `${addedHealth}`,
       });
-      user.actions--;
-      user.movement = user.maxMovement;
+      user.actions = Math.max(0, user.actions - 1);
+      settleMovementAfterAction(
+        user,
+        getDifficulty(state).modifiers.movement,
+        true,
+      );
     }
   },
   chaosSwordOnUse: (
@@ -161,22 +317,18 @@ export const onUse: {
       addLog(state, 'logs.item.noTarget');
       return;
     }
-    if (!canAct(user)) {
+    const movementModifier = getDifficulty(state).modifiers.movement;
+    if (!canAct(user, movementModifier)) {
       addLog(state, 'logs.heroAction.noActions', { hero: i18n(user.name) });
       return;
     }
     resolveChaosSwordAttack(state, user, target);
-    if (user.actions === 0) {
+    if (user.actions <= 0) {
+      user.actions = 0;
+      user.movement = 0;
       return;
     }
-    if (user.actions > 1 && user.movement < getEffectiveMaxMovement(user)) {
-      user.actions -= 2;
-    } else {
-      user.actions--;
-    }
-    if (user.actions === 0) {
-      user.movement = 0;
-    }
+    spendStandardAction(user, movementModifier);
   },
   potionOfSpeedOnUse: (state: GameState, self: Item, user: Actor) => {
     if (self.disabled) {
@@ -191,6 +343,21 @@ export const onUse: {
         item: i18n(self.name),
         actions: String(self.properties?.[ACTIONS_BONUS] ?? ''),
       });
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      const actionsBonus = self.properties?.[ACTIONS_BONUS] ?? 1;
+      const key =
+        actionsBonus === 1
+          ? 'content.indicators.plusAction'
+          : 'content.indicators.plusActions';
+      state.damageIndicators.push(
+        createIndicator(
+          i18n(key, { actions: `${actionsBonus}` }),
+          user.position,
+          { color: '#7373ec', effect: 'float' },
+        ),
+      );
     } else {
       addLog(state, 'logs.item.consumed', { item: i18n(self.name) });
     }
@@ -209,14 +376,26 @@ export const onUse: {
       addLog(state, 'logs.item.noTarget');
       return;
     }
-    if (!canAct(user)) {
+    if (!canAct(user, getDifficulty(state).modifiers.movement)) {
       addLog(state, 'logs.heroAction.noActions', { hero: i18n(user.name) });
       return;
     }
     if (self.properties && !self.properties?.[USED]) {
       self.properties[USED] = true;
       target.ignoredByMonsters = true;
-      user.actions--;
+      if (!state.damageIndicators) {
+        state.damageIndicators = [];
+      }
+      state.damageIndicators.push(
+        createIndicator(i18n('content.indicators.invisible'), target.position, {
+          color: '#ffff99',
+          effect: 'fade',
+        }),
+      );
+      user.actions = Math.max(0, user.actions - 1);
+      if (user.actions === 0) {
+        user.movement = 0;
+      }
     }
   },
 };
@@ -224,11 +403,18 @@ export const onReset: {
   [index: string]: (state: GameState, self: Item) => void;
 } = {
   magicHerbsOnReset: (state: GameState, self: Item) => {
-    if (self.properties) self.properties[USED] = false;
+    if (self.properties) {
+      self.properties[USED] = false;
+      self.properties[USED_ON] = [];
+      self.properties[USED_HEROES] = [];
+    }
   },
   necklaceOfLightOnReset: (state: GameState, self: Item) => {
     if (self.properties) self.properties[USED] = false;
     state.heroes.forEach((hero) => (hero.ignoredByMonsters = false));
+  },
+  ringOfPrecisionOnReset: (state: GameState, self: Item) => {
+    if (self.properties) self.properties[USED] = false;
   },
   // Backward compatibility alias
   necklaceOfLightOnUse: (state: GameState, self: Item) => {
@@ -239,49 +425,39 @@ export const onReset: {
 export const useItem = (state: GameState, item: Item) => {
   if (item && item.effect && state.currentActor) {
     const use = onUse[item.effect];
+    if (!use) {
+      addLog(state, 'logs.item.cannotUse', { item: i18n(item.name) });
+      return;
+    }
     use(state, item, state.currentActor, state.targetActor);
+    soundEffectManager.playItemUse(item);
     state.targetActor = undefined;
   }
 };
 
-export const resetOnNextDungeon = (state: GameState) => {
+const resetsOnTrigger = (item: Item, trigger: string) => {
+  if (item && item.properties) {
+    const resetOn: string[] = (item.properties[RESET_ON] as string[]) ?? [];
+    return resetOn.includes(trigger);
+  }
+  return false;
+};
+
+const resetItemsOnTrigger = (state: GameState, trigger: string) => {
   state.heroes.forEach((hero) => {
     hero.inventory
-      .filter((item) => resetsOnNextDungeon(item))
+      .filter((item) => resetsOnTrigger(item, trigger))
       .forEach((item) => {
         if (item && item.reset) {
           const reset = onReset[item.reset];
-          reset(state, item);
+          if (reset) reset(state, item);
         }
       });
   });
 };
 
-export const resetOnNext = (state: GameState) => {
-  state.heroes.forEach((hero) => {
-    hero.inventory
-      .filter((item) => resetsOnNext(item))
-      .forEach((item) => {
-        if (item && item.reset) {
-          const reset = onReset[item.reset];
-          reset(state, item);
-        }
-      });
-  });
-};
+export const resetOnNextDungeon = (state: GameState) =>
+  resetItemsOnTrigger(state, NEXT_DUNGEON);
 
-const resetsOnNext = (item: Item) => {
-  if (item && item.properties) {
-    const resetOn: string[] = (item.properties[RESET_ON] as string[]) ?? [];
-    return resetOn.some((resetOn: string) => resetOn === NEXT_TURN);
-  }
-  return false;
-};
-
-const resetsOnNextDungeon = (item: Item) => {
-  if (item && item.properties) {
-    const resetOn: string[] = (item.properties[RESET_ON] as string[]) ?? [];
-    return resetOn.some((resetOn: string) => resetOn === NEXT_DUNGEON);
-  }
-  return false;
-};
+export const resetOnNext = (state: GameState) =>
+  resetItemsOnTrigger(state, NEXT_TURN);

@@ -1,16 +1,48 @@
 import type { Actor, GameState, Hero, Item, Position, Secret } from '../types';
-import { Colour, ItemType, Level, SecretType } from '../types';
+import { ItemType, SecretType } from '../types';
 import { addLog, i18n } from '../core';
+import { getDifficulty } from '../core';
 import {
   canSearchThrough,
+  findCell,
   isDoorEdge,
   isNeighbouring,
   isSamePosition,
 } from '../core';
-import { roll } from '../core';
-import { takeDamage } from '../core';
+import { randomInt, roll } from '../core';
+import { createHazardActor, takeDamage } from '../core';
 import { pickupItem } from '../hero/HeroLogic';
 import { onPickup, SEARCH_BONUS } from '../items/ItemLogic';
+import { soundEffectManager } from '../audio';
+
+export const checkForItemRevealedSecret = (state: GameState, hero: Hero) => {
+  const heroRoom = findCell(
+    state.dungeon.layout.grid,
+    hero.position.x,
+    hero.position.y,
+  );
+  state.dungeon.layout.secrets
+    .filter((secret) => !secret.found && secret.revealedBy)
+    .forEach((secret) => {
+      const secretRoom = findCell(
+        state.dungeon.layout.grid,
+        secret.position.x,
+        secret.position.y,
+      );
+      if (secretRoom !== heroRoom) return;
+      const item = hero.inventory.find(
+        (item) => item && item.id === secret.revealedBy,
+      );
+      if (item) {
+        secret.found = true;
+        addLog(state, 'logs.heroAction.revealedSecretWithItem', {
+          hero: i18n(hero.name),
+          item: i18n(item.name),
+          secret: i18n(secret.name),
+        });
+      }
+    });
+};
 
 export const searchForSecret = (state: GameState) => {
   const hero = state.currentActor as Hero;
@@ -28,8 +60,15 @@ export const searchForSecret = (state: GameState) => {
       return item.properties?.[SEARCH_BONUS] as number;
     })
     .reduce((partial, bonus) => partial + bonus, 0);
-  const result = roll(hero.level, 1 + searchBonus);
-  let trapDoor, hiddenDoor, trap, secret;
+  const gm = getDifficulty(state);
+  const searchDifficultyModifier = gm.modifiers.search;
+  let result = roll(hero.level, 1 + searchBonus + searchDifficultyModifier);
+  const modifySearch = gm.rules?.modifySearchRoll ?? gm.modifySearchRoll;
+  if (modifySearch) {
+    result = modifySearch(result, hero, state);
+  }
+  soundEffectManager.playSearch(result);
+  let trapDoor, hiddenDoor, trap, secret, interactable;
   if (result >= 1) {
     trapDoor = lookForTrapDoor(state, hero, result);
     if (!trapDoor) {
@@ -42,11 +81,18 @@ export const searchForSecret = (state: GameState) => {
       secret = lookForSecret(state, hero, result);
     }
     if (!trapDoor && !hiddenDoor && !trap && !secret) {
+      interactable = lookForSecretInteractable(state, hero, result);
+    }
+    if (!trapDoor && !hiddenDoor && !trap && !secret && !interactable) {
+      const onSearchFailed = gm.rules?.onSearchFailed ?? gm.onSearchFailed;
+      onSearchFailed?.(hero, state);
       addLog(state, 'logs.heroAction.searchFoundNothing', {
         hero: i18n(hero.name),
       });
     }
   } else {
+    const onSearchFailed = gm.rules?.onSearchFailed ?? gm.onSearchFailed;
+    onSearchFailed?.(hero, state);
     addLog(state, 'logs.heroAction.searchFoundNothing', {
       hero: i18n(hero.name),
     });
@@ -94,37 +140,27 @@ export const removeFoundMagicItemFromDeck = (state: GameState, item: Item) => {
   }
 };
 
-const secretAsActor = (secret: Secret): Actor => ({
-  id: secret.id ?? 'trap_door_actor',
-  health: 0,
-  position: secret.position,
-  defense: 0,
-  experience: 0,
-  actions: 0,
-  movement: 0,
-  maxMovement: 0,
-  colour: Colour.Red,
-  maxHealth: 0,
-  name: 'Trap Door',
-  nameTranslationKey: 'Trap Door',
-  level: Level.APPRENTICE,
-  incapacitated: false,
-  weapon: {
-    id: 'falling_trap',
-    name: 'Falling',
-    nameTranslationKey: 'Falling',
-    amountInDeck: 0,
-    dice: 3,
-    useHearHeroes: true,
-    twoHanded: false,
-    range: 1,
-    type: ItemType.WEAPON,
-    value: 0,
-    ignoresShield: true,
-    ignoresArmour: true,
-  },
-  inventory: [],
-});
+const secretAsActor = (secret: Secret): Actor =>
+  createHazardActor(
+    secret.id ?? 'trap_door_actor',
+    'Trap Door',
+    secret.position,
+    {
+      id: 'falling_trap',
+      name: 'Falling',
+      nameTranslationKey: 'Falling',
+      amountInDeck: 0,
+      dice: 3,
+      useHearHeroes: true,
+      twoHanded: false,
+      range: 1,
+      type: ItemType.WEAPON,
+      value: 0,
+      ignoresShield: true,
+      ignoresArmour: true,
+      attackSound: 'sfx/trap_fall.mp3',
+    },
+  );
 
 const findHiddenDoor = (state: GameState, pos: Position) =>
   state.dungeon.layout.doors
@@ -142,9 +178,14 @@ const findTrap = (state: GameState, pos: Position) =>
     .filter((door) => door.trapped)
     .find((door) => door.x === pos.x && door.y === pos.y);
 
-const findSecret = (state: GameState, pos: Position) =>
+const findSecret = (state: GameState, pos: Position, hero: Hero) =>
   state.dungeon.layout.secrets
     .filter((secret) => !secret.found)
+    .filter(
+      (secret) =>
+        !secret.revealedBy ||
+        hero.inventory.some((item) => item && item.id === secret.revealedBy),
+    )
     .find(
       (secret) =>
         isNeighbouring(secret.position, pos.x, pos.y) &&
@@ -188,7 +229,7 @@ const lookForTrap = (state: GameState, hero: Hero, result: number) => {
 };
 
 const lookForSecret = (state: GameState, hero: Hero, result: number) => {
-  const secret = findSecret(state, hero.position);
+  const secret = findSecret(state, hero.position, hero);
   if (secret) {
     addLog(state, 'logs.heroAction.foundSecret', {
       hero: i18n(hero.name),
@@ -199,7 +240,7 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
     switch (secret.type) {
       case SecretType.EQUIPMENT: {
         const item = secret.item ?? randomItem(state);
-        if (item.amountInDeck > 0) {
+        if (item && item.amountInDeck > 0) {
           removeFoundItemFromDeck(state, item);
           addLog(state, 'logs.heroAction.equipped', {
             hero: i18n(hero.name),
@@ -211,14 +252,17 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
       }
       case SecretType.MAGIC_ITEM: {
         const item = secret.item ?? randomMagicItem(state);
-        if (item.amountInDeck > 0) {
+        if (item && item.amountInDeck > 0) {
           removeFoundMagicItemFromDeck(state, item);
           addLog(state, 'logs.heroAction.found', {
             hero: i18n(hero.name),
             item: i18n(item.name),
           });
           hero.inventory.push(item);
-          if (item && item.pickup) onPickup[item.pickup](state, item, hero);
+          if (item && item.pickup) {
+            const pickup = onPickup[item.pickup];
+            if (pickup) pickup(state, item, hero);
+          }
         }
         break;
       }
@@ -228,15 +272,17 @@ const lookForSecret = (state: GameState, hero: Hero, result: number) => {
   return false;
 };
 
-export const randomItem = (state: GameState): Item => {
+export const randomItem = (state: GameState): Item | undefined => {
   const itemCount = state.itemDeck.length;
-  const index = Math.floor(Math.random() * itemCount);
+  if (itemCount === 0) return undefined;
+  const index = randomInt(itemCount);
   return state.itemDeck[index];
 };
 
-const randomMagicItem = (state: GameState): Item => {
+const randomMagicItem = (state: GameState): Item | undefined => {
   const itemCount = state.magicItemDeck.length;
-  const index = Math.floor(Math.random() * itemCount);
+  if (itemCount === 0) return undefined;
+  const index = randomInt(itemCount);
   return state.magicItemDeck[index];
 };
 
@@ -249,6 +295,37 @@ const lookForTrapDoor = (state: GameState, hero: Hero, result: number) => {
       secret: i18n(trapDoor.name),
     });
     trapDoor.found = true;
+    return true;
+  }
+  return false;
+};
+
+const findSecretInteractable = (state: GameState, pos: Position) =>
+  (state.dungeon.layout.interactables ?? [])
+    .filter((interactable) => interactable.secret)
+    .find(
+      (interactable) =>
+        isNeighbouring(interactable.position, pos.x, pos.y) &&
+        canSearchThrough(state.dungeon.layout, pos, interactable.position),
+    );
+
+const lookForSecretInteractable = (
+  state: GameState,
+  hero: Hero,
+  result: number,
+) => {
+  const interactable = findSecretInteractable(state, hero.position);
+  if (interactable) {
+    interactable.secret = false;
+    addLog(state, 'logs.heroAction.foundSecret', {
+      hero: i18n(hero.name),
+      result: `${result}`,
+      secret: i18n(
+        interactable.nameTranslationKey ??
+          interactable.name ??
+          interactable.effect,
+      ),
+    });
     return true;
   }
   return false;

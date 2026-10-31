@@ -1,5 +1,20 @@
-import type { Actor, GameState, Hero, Monster } from '../types';
+import {
+  type Actor,
+  type GameState,
+  type Hero,
+  Level,
+  type Monster,
+  type Position,
+  type Weapon,
+} from '../types';
 import { MonsterType } from '../types';
+import {
+  getMonsterAbilities,
+  getMonsterAbilityHandler,
+  hasMonsterAbility,
+  isDarkLord,
+  registerMonsterAbility,
+} from './MonsterRegistry';
 import {
   addLog,
   doReRender,
@@ -11,28 +26,47 @@ import {
 import {
   findCell,
   findNeighbouringHeroes,
-  getDist,
   hasLineOfSight,
   isNeighbouring,
   isRoomDiscovered,
 } from '../core';
 import { getEffectiveMaxMovement, takeDamage } from '../core';
 import { liveHeroes } from '../hero/HeroLogic';
-import { distanceInGrid } from '../hero/ClickInputLogic';
+import { distanceInGrid, nextRandom } from '../core';
 import {
   createPassableGrid,
   findBestPathToHeroes,
   type PassableGrid,
 } from './pathfinding';
+import type { BehaviorContext, MonsterBehavior, SlotAction } from './behavior';
+import {
+  findCoverPositions,
+  findKitePosition,
+  findOverwatchPositions,
+  findRepositionRangedPosition,
+  findRetreatPosition,
+  findSprayAlignPosition,
+  getBehaviorsForMonsterType,
+  getDirectorContext,
+  getDirectorState,
+  logMonsterBehaviorDecision,
+  resetRoundTargetCounters,
+  rollBowForgotten,
+  selectBehavior,
+  selectScoredTarget,
+} from './behavior';
+import { createFlameEffect } from '../combat';
+import {
+  applyRoomFogEnterEffects,
+  applyRoomFogTurnEndEffects,
+} from '../dungeon/RoomFogLogic';
+import {
+  applyTerrainEnterEffects,
+  applyTerrainTurnEndEffects,
+} from '../dungeon/TerrainLogic';
+import { soundEffectManager } from '../audio';
 
-enum MonsterAction {
-  RANGED_ATTACK = 'RANGED_ATTACK',
-  MELEE_ATTACK = 'MELEE_ATTACK',
-  MOVE = 'MOVE',
-  DIAGONAL_FIRE_ATTACK = 'DIAGONAL_FIRE_ATTACK',
-  ORTHOGONAL_FIRE_ATTACK = 'ORTHOGONAL_FIRE_ATTACK',
-  SAME_ROOM_FIRE_ATTACK = 'SAME_ROOM_FIRE_ATTACK',
-}
+export { resetRoundTargetCounters } from './behavior';
 
 export interface MonsterTurnOptions {
   delayBetweenMonsters?: number;
@@ -49,15 +83,51 @@ export const DEFAULT_MONSTER_TURN_OPTIONS: MonsterTurnOptions = {
   waitForMovement: true,
 };
 
+// Built-in dark lord abilities, registered here so campaign-defined monster
+// types can register their own abilities the same way via
+// `registerMonsterAbility` (see src/monsters/MonsterRegistry.ts).
+registerMonsterAbility(MonsterType.YELLOW_DARK_LORD, 'diagonalFireAttack');
+registerMonsterAbility(MonsterType.BLUE_DARK_LORD, 'diagonalFireAttack');
+registerMonsterAbility(MonsterType.RED_DARK_LORD, 'orthogonalFireAttack');
+registerMonsterAbility(MonsterType.BLUE_DARK_LORD, 'orthogonalFireAttack');
+registerMonsterAbility(MonsterType.GREEN_DARK_LORD, 'sameRoomFireAttack');
+registerMonsterAbility(MonsterType.BLUE_DARK_LORD, 'sameRoomFireAttack');
+
 const getNonDarkLordMonsters = (state: GameState) =>
-  state.dungeon.layout.monsters.filter((monster) =>
-    [MonsterType.ORC, MonsterType.TROLL].includes(monster.type),
+  state.dungeon.layout.monsters.filter((monster) => !isDarkLord(monster.type));
+
+// Built-in ability keys handled directly by the default action-selection
+// logic below; any other ability registered on a monster type is treated
+// as a fully custom ability and dispatched through a campaign-registered
+// handler instead (see `registerMonsterAbilityHandler` in MonsterRegistry.ts).
+const BUILTIN_ABILITIES = new Set([
+  'diagonalFireAttack',
+  'orthogonalFireAttack',
+  'sameRoomFireAttack',
+]);
+
+const tryCustomMonsterAbility = async (
+  state: GameState,
+  monster: Monster,
+): Promise<boolean> => {
+  const customAbilities = getMonsterAbilities(monster.type).filter(
+    (ability) => !BUILTIN_ABILITIES.has(ability),
   );
+  for (const ability of customAbilities) {
+    const handler = getMonsterAbilityHandler(ability);
+    if (handler) {
+      const handled = await handler(state, monster);
+      if (handled) return true;
+    }
+  }
+  return false;
+};
 
 export const monsterActions = async (
   state: GameState,
   options?: MonsterTurnOptions,
 ): Promise<void> => {
+  resetRoundTargetCounters(state);
   const opts = { ...DEFAULT_MONSTER_TURN_OPTIONS, ...options };
   const visibleMonsters = findVisibleMonsters(state);
   if (visibleMonsters.length === 0) {
@@ -71,103 +141,109 @@ export const monsterActions = async (
     const monster = visibleMonsters[mIdx];
     if (monster.health <= 0) continue;
 
+    if (monster.exhausted) {
+      monster.exhausted = false;
+      continue;
+    }
+
     const maxActions = monster.actions;
     addLog(state, 'logs.monsterAction.acted', { monster: i18n(monster.name) });
     doReRender(state);
     opts.onActionCallback?.(state);
 
-    while (monster.actions > 0 && monster.health > 0) {
-      const passableGrid = createPassableGrid(state);
-      const neighbouringHeroes: Hero[] = findNeighbouringHeroes(
+    // Initialize turn state
+    if (!monster.temperament) {
+      monster.temperament = nextRandom() < 0.5 ? 'bold' : 'wary';
+    }
+    monster.forgotBowThisTurn = rollBowForgotten(state);
+
+    // Compute director context
+    const { hasDeadHero, partyHpPercentage, aliveMonsterCount } =
+      getDirectorContext(state);
+    const directorState = getDirectorState(
+      hasDeadHero,
+      partyHpPercentage,
+      aliveMonsterCount,
+      state,
+    );
+
+    const passableGrid = createPassableGrid(state);
+    const visibleHeroesCache = createVisibleHeroesCache(state);
+    const neighbouringHeroes: Hero[] = findNeighbouringHeroes(
+      state,
+      monster,
+    ).filter((hero: Hero) => !hero.ignoredByMonsters);
+    const visibleHeroes: Hero[] = visibleHeroesCache(monster);
+
+    const context: BehaviorContext = {
+      state,
+      monster,
+      passableGrid,
+      neighbouringHeroes,
+      visibleHeroes,
+      partyHpPercentage,
+      hasDeadHero,
+      aliveMonsterCount,
+      directorState,
+    };
+
+    const behaviors = getBehaviorsForMonsterType(monster.type);
+    const { chosenBehavior, evaluatedBehaviors } = selectBehavior(
+      behaviors,
+      context,
+    );
+
+    logMonsterBehaviorDecision(
+      {
+        monster,
+        temperament: monster.temperament,
+        directorState,
+        passiveStreak: monster.passiveStreak ?? 0,
+        forgotBowThisTurn: monster.forgotBowThisTurn,
+        evaluatedBehaviors,
+        chosenBehavior,
+      },
+      Boolean(state.settings?.['debug']),
+    );
+
+    let performedAttack = false;
+
+    // Execute slots
+    for (const slot of chosenBehavior.slots) {
+      if (monster.actions <= 0 || monster.health <= 0) break;
+
+      const customAbilityHandled = await tryCustomMonsterAbility(
         state,
         monster,
-      ).filter((hero: Hero) => !hero.ignoredByMonsters);
-      const visibleHeroes: Hero[] = findVisibleHeroes(state, monster);
-      const diagonalTargets = findDiagonalTargets(
-        [...visibleHeroes, ...getNonDarkLordMonsters(state)],
-        monster,
       );
-      const orthogonalTargets = findOrthogonalTargets(
-        [...visibleHeroes, ...getNonDarkLordMonsters(state)],
-        monster,
-      );
-      const sameRoomTargets = findSameRoomTargets(
-        [...liveHeroes(state), ...getNonDarkLordMonsters(state)],
-        monster,
-        state,
-      );
-      const action = selectAction(
-        state,
-        monster,
-        neighbouringHeroes,
-        visibleHeroes,
-        diagonalTargets,
-        orthogonalTargets,
-        sameRoomTargets,
-      );
-      switch (action) {
-        case MonsterAction.MELEE_ATTACK: {
-          const target: Hero = selectMeleeTarget(neighbouringHeroes);
-          monsterAttack(state, monster, target, false);
-          doReRender(state);
-          opts.onActionCallback?.(state);
-          if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
-            await sleep(opts.delayAfterAttack);
-          }
-          break;
+      if (customAbilityHandled) {
+        monster.actions--;
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        monster.movement = getEffectiveMaxMovement(monster);
+        if (
+          monster.actions > 0 &&
+          opts.delayBetweenActions &&
+          opts.delayBetweenActions > 0
+        ) {
+          await sleep(opts.delayBetweenActions);
         }
-        case MonsterAction.RANGED_ATTACK: {
-          const target: Hero = selectRangedTarget(visibleHeroes, monster);
-          monsterAttack(state, monster, target, true);
-          doReRender(state);
-          opts.onActionCallback?.(state);
-          if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
-            await sleep(opts.delayAfterAttack);
-          }
-          break;
-        }
-        case MonsterAction.MOVE: {
-          monsterMove(state, monster, passableGrid);
-          doReRender(state);
-          opts.onActionCallback?.(state);
-          if (opts.waitForMovement !== false) {
-            const animRemaining = getActorRemainingAnimationDuration(monster);
-            const moveWait =
-              animRemaining > 0 ? animRemaining : opts.delayBetweenActions ?? 0;
-            if (moveWait > 0) {
-              await sleep(moveWait);
-            }
-          }
-          break;
-        }
-        case MonsterAction.DIAGONAL_FIRE_ATTACK: {
-          performFireAttack(state, monster, diagonalTargets);
-          doReRender(state);
-          opts.onActionCallback?.(state);
-          if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
-            await sleep(opts.delayAfterAttack);
-          }
-          break;
-        }
-        case MonsterAction.ORTHOGONAL_FIRE_ATTACK: {
-          performFireAttack(state, monster, orthogonalTargets);
-          doReRender(state);
-          opts.onActionCallback?.(state);
-          if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
-            await sleep(opts.delayAfterAttack);
-          }
-          break;
-        }
-        case MonsterAction.SAME_ROOM_FIRE_ATTACK: {
-          performFireAttack(state, monster, sameRoomTargets);
-          doReRender(state);
-          opts.onActionCallback?.(state);
-          if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
-            await sleep(opts.delayAfterAttack);
-          }
-          break;
-        }
+        continue;
       }
+
+      await executeSlotAction(
+        slot,
+        state,
+        monster,
+        passableGrid,
+        visibleHeroesCache,
+        opts,
+        () => {
+          performedAttack = true;
+        },
+        chosenBehavior,
+      );
+
       monster.movement = getEffectiveMaxMovement(monster);
 
       if (
@@ -178,6 +254,93 @@ export const monsterActions = async (
         await sleep(opts.delayBetweenActions);
       }
     }
+
+    // If extra actions remain (e.g. 3-action monsters)
+    while (monster.actions > 0 && monster.health > 0) {
+      const customAbilityHandled = await tryCustomMonsterAbility(
+        state,
+        monster,
+      );
+      if (customAbilityHandled) {
+        monster.actions--;
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        monster.movement = getEffectiveMaxMovement(monster);
+        if (
+          monster.actions > 0 &&
+          opts.delayBetweenActions &&
+          opts.delayBetweenActions > 0
+        ) {
+          await sleep(opts.delayBetweenActions);
+        }
+        continue;
+      }
+
+      const neighbours = findNeighbouringHeroes(state, monster).filter(
+        (h) => !h.ignoredByMonsters,
+      );
+      const visible = visibleHeroesCache(monster);
+
+      if (neighbours.length > 0) {
+        const target = selectMeleeTarget(neighbours, monster, state);
+        monsterAttack(state, monster, target, false);
+        performedAttack = true;
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+          await sleep(opts.delayAfterAttack);
+        }
+      } else if (
+        visible.length > 0 &&
+        monster.rangedWeapon &&
+        !monster.forgotBowThisTurn
+      ) {
+        const target = selectRangedTarget(visible, monster, state);
+        monsterAttack(state, monster, target, true);
+        performedAttack = true;
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+          await sleep(opts.delayAfterAttack);
+        }
+      } else {
+        monsterMove(state, monster, passableGrid);
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.waitForMovement !== false) {
+          const animRemaining = getActorRemainingAnimationDuration(monster);
+          const moveWait =
+            animRemaining > 0 ? animRemaining : opts.delayBetweenActions ?? 0;
+          if (moveWait > 0) {
+            await sleep(moveWait);
+          }
+        }
+      }
+
+      monster.movement = getEffectiveMaxMovement(monster);
+
+      if (
+        monster.actions > 0 &&
+        opts.delayBetweenActions &&
+        opts.delayBetweenActions > 0
+      ) {
+        await sleep(opts.delayBetweenActions);
+      }
+    }
+
+    // End of turn updates
+    if (!performedAttack) {
+      monster.passiveStreak = (monster.passiveStreak ?? 0) + 1;
+    } else {
+      monster.passiveStreak = 0;
+    }
+    monster.forgotBowThisTurn = false;
+
+    // Terrain the monster ends its turn on (e.g. standing in lava) or fog
+    // of the room it stands in takes its toll.
+    applyTerrainTurnEndEffects(state, monster);
+    applyRoomFogTurnEndEffects(state, monster);
+
     monster.actions = maxActions;
     monster.movement = getEffectiveMaxMovement(monster);
 
@@ -191,71 +354,361 @@ export const monsterActions = async (
   }
 };
 
-const selectAction = (
+export const isAttackSlot = (slot: SlotAction): boolean =>
+  slot === 'melee' || slot === 'shoot' || slot === 'fire_spray';
+
+export const hasTwoAttackActions = (behavior?: MonsterBehavior): boolean => {
+  if (!behavior) return false;
+  return behavior.slots.filter(isAttackSlot).length >= 2;
+};
+
+const executeSlotAction = async (
+  slot: SlotAction,
   state: GameState,
   monster: Monster,
-  neighbouringHeroes: Hero[],
-  visibleHeroes: Hero[],
-  diagonalTargets: Actor[],
-  orthogonalTargets: Actor[],
-  sameRoomTargets: Actor[],
-): MonsterAction => {
-  if (neighbouringHeroes.length > 0) {
-    return MonsterAction.MELEE_ATTACK;
-  } else if (!monster.rangedWeapon && diagonalTargets.length === 0) {
-    return MonsterAction.MOVE;
-  } else {
-    if (visibleHeroes.length > 0 && monster.rangedWeapon) {
-      if (Math.random() < 0.1) {
-        addLog(state, 'logs.monsterAction.moveDespiteTarget', {
-          monster: i18n(monster.name),
-        });
-        return MonsterAction.MOVE;
+  passableGrid: PassableGrid,
+  visibleHeroes: (monster: Monster) => Hero[],
+  opts: MonsterTurnOptions,
+  onAttack: () => void,
+  chosenBehavior?: MonsterBehavior,
+): Promise<void> => {
+  switch (slot) {
+    case 'melee': {
+      const neighbours = findNeighbouringHeroes(state, monster).filter(
+        (h) => !h.ignoredByMonsters,
+      );
+      if (neighbours.length > 0) {
+        const target = selectMeleeTarget(neighbours, monster, state);
+        monsterAttack(state, monster, target, false);
+        onAttack();
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+          await sleep(opts.delayAfterAttack);
+        }
+      } else if (hasTwoAttackActions(chosenBehavior)) {
+        await executeSlotAction(
+          'move',
+          state,
+          monster,
+          passableGrid,
+          visibleHeroes,
+          opts,
+          onAttack,
+          chosenBehavior,
+        );
+      } else {
+        monster.actions--;
       }
-      return MonsterAction.RANGED_ATTACK;
-    } else if (sameRoomTargets.length > 0) {
-      if (Math.random() < 0.1) {
-        addLog(state, 'logs.monsterAction.moveDespiteTarget', {
-          monster: i18n(monster.name),
-        });
-        return MonsterAction.MOVE;
+      break;
+    }
+    case 'shoot': {
+      const visible = visibleHeroes(monster);
+      if (
+        visible.length > 0 &&
+        monster.rangedWeapon &&
+        !monster.forgotBowThisTurn
+      ) {
+        const target = selectRangedTarget(visible, monster, state);
+        monsterAttack(state, monster, target, true);
+        onAttack();
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+          await sleep(opts.delayAfterAttack);
+        }
+      } else if (hasTwoAttackActions(chosenBehavior)) {
+        await executeSlotAction(
+          'move',
+          state,
+          monster,
+          passableGrid,
+          visibleHeroes,
+          opts,
+          onAttack,
+          chosenBehavior,
+        );
+      } else {
+        monster.actions--;
       }
-      return MonsterAction.SAME_ROOM_FIRE_ATTACK;
-    } else if (visibleHeroes.length > 0 && orthogonalTargets.length > 0) {
-      if (Math.random() < 0.1) {
-        addLog(state, 'logs.monsterAction.moveDespiteTarget', {
-          monster: i18n(monster.name),
-        });
-        return MonsterAction.MOVE;
+      break;
+    }
+    case 'move': {
+      if (chosenBehavior?.name === 'Reposition and shoot') {
+        const repo = findRepositionRangedPosition(
+          state,
+          monster,
+          passableGrid,
+          monster.movement,
+        );
+        if (repo && repo.path.length > 0) {
+          monsterMoveToPosition(state, monster, repo.path);
+        } else {
+          monsterMove(state, monster, passableGrid);
+        }
+      } else if (chosenBehavior?.name === 'Line up') {
+        const align = findSprayAlignPosition(
+          state,
+          monster,
+          passableGrid,
+          monster.movement,
+        );
+        if (align && align.path.length > 0) {
+          monsterMoveToPosition(state, monster, align.path);
+        } else {
+          monsterMove(state, monster, passableGrid);
+        }
+      } else {
+        monsterMove(state, monster, passableGrid);
       }
-      return MonsterAction.ORTHOGONAL_FIRE_ATTACK;
-    } else if (visibleHeroes.length > 0 && diagonalTargets.length > 0) {
-      if (Math.random() < 0.1) {
-        addLog(state, 'logs.monsterAction.moveDespiteTarget', {
-          monster: i18n(monster.name),
-        });
-        return MonsterAction.MOVE;
+      doReRender(state);
+      opts.onActionCallback?.(state);
+      if (opts.waitForMovement !== false) {
+        const animRemaining = getActorRemainingAnimationDuration(monster);
+        const moveWait =
+          animRemaining > 0 ? animRemaining : opts.delayBetweenActions ?? 0;
+        if (moveWait > 0) {
+          await sleep(moveWait);
+        }
       }
-      return MonsterAction.DIAGONAL_FIRE_ATTACK;
-    } else {
-      return MonsterAction.MOVE;
+      break;
+    }
+    case 'move_away': {
+      if (chosenBehavior?.name === 'Kite') {
+        const kite = findKitePosition(
+          state,
+          monster,
+          passableGrid,
+          monster.movement,
+        );
+        if (kite && kite.path.length > 0) {
+          monsterMoveToPosition(state, monster, kite.path);
+        } else {
+          monsterMoveAway(state, monster, passableGrid);
+        }
+      } else {
+        monsterMoveAway(state, monster, passableGrid);
+      }
+      doReRender(state);
+      opts.onActionCallback?.(state);
+      if (opts.waitForMovement !== false) {
+        const animRemaining = getActorRemainingAnimationDuration(monster);
+        const moveWait =
+          animRemaining > 0 ? animRemaining : opts.delayBetweenActions ?? 0;
+        if (moveWait > 0) {
+          await sleep(moveWait);
+        }
+      }
+      break;
+    }
+    case 'move_to_cover': {
+      monsterMoveToCover(state, monster, passableGrid);
+      doReRender(state);
+      opts.onActionCallback?.(state);
+      if (opts.waitForMovement !== false) {
+        const animRemaining = getActorRemainingAnimationDuration(monster);
+        const moveWait =
+          animRemaining > 0 ? animRemaining : opts.delayBetweenActions ?? 0;
+        if (moveWait > 0) {
+          await sleep(moveWait);
+        }
+      }
+      break;
+    }
+    case 'hold': {
+      monster.actions--;
+      break;
+    }
+    case 'fire_spray': {
+      const visible = visibleHeroes(monster);
+      const diag = findDiagonalTargets(
+        [...visible, ...getNonDarkLordMonsters(state)],
+        monster,
+      );
+      const orth = findOrthogonalTargets(
+        [...visible, ...getNonDarkLordMonsters(state)],
+        monster,
+      );
+      const sameRoom = findSameRoomTargets(
+        [...liveHeroes(state), ...getNonDarkLordMonsters(state)],
+        monster,
+        state,
+      );
+
+      if (sameRoom.length > 0) {
+        performFireAttack(state, monster, sameRoom);
+        onAttack();
+        monster.actions--;
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+          await sleep(opts.delayAfterAttack);
+        }
+      } else if (orth.length > 0) {
+        performFireAttack(state, monster, orth);
+        onAttack();
+        monster.actions--;
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+          await sleep(opts.delayAfterAttack);
+        }
+      } else if (diag.length > 0) {
+        performFireAttack(state, monster, diag);
+        onAttack();
+        monster.actions--;
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+          await sleep(opts.delayAfterAttack);
+        }
+      } else if (hasTwoAttackActions(chosenBehavior)) {
+        await executeSlotAction(
+          'move',
+          state,
+          monster,
+          passableGrid,
+          visibleHeroes,
+          opts,
+          onAttack,
+          chosenBehavior,
+        );
+      } else {
+        monster.actions--;
+      }
+      break;
+    }
+    case 'move_or_melee': {
+      const neighbours = findNeighbouringHeroes(state, monster).filter(
+        (h) => !h.ignoredByMonsters,
+      );
+      if (neighbours.length > 0) {
+        const target = selectMeleeTarget(neighbours, monster, state);
+        monsterAttack(state, monster, target, false);
+        onAttack();
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+          await sleep(opts.delayAfterAttack);
+        }
+      } else {
+        monsterMove(state, monster, passableGrid);
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.waitForMovement !== false) {
+          const animRemaining = getActorRemainingAnimationDuration(monster);
+          const moveWait =
+            animRemaining > 0 ? animRemaining : opts.delayBetweenActions ?? 0;
+          if (moveWait > 0) {
+            await sleep(moveWait);
+          }
+        }
+      }
+      break;
     }
   }
 };
 
-const selectRangedTarget = (possibleTargets: Hero[], monster: Monster): Hero =>
-  possibleTargets
-    .filter((hero) => !hero.shield)
-    .sort((hero) => getDist(monster.position, hero.position))
-    .sort(
-      (a, b) =>
-        b.health - a.health ||
-        getDist(monster.position, a.position) -
-          getDist(monster.position, b.position),
-    )[0];
+export const selectRangedTarget = (
+  possibleTargets: Hero[],
+  monster: Monster,
+  state?: GameState,
+  rng?: () => number,
+): Hero => {
+  if (possibleTargets.length === 0) return possibleTargets[0];
+  const unshielded = possibleTargets.filter((hero) => !hero.shield);
+  const targets = unshielded.length > 0 ? unshielded : possibleTargets;
+  if (targets.length === 1) return targets[0];
 
-const selectMeleeTarget = (possibleTargets: Hero[]): Hero =>
-  possibleTargets.sort((a, b) => b.health - a.health)[0];
+  return selectScoredTarget(targets, {
+    state,
+    monster,
+    ranged: true,
+    stepsByHero: () => 0,
+    rng,
+  });
+};
+
+export const selectMeleeTarget = (
+  possibleTargets: Hero[],
+  monsterOrState?: Monster | GameState,
+  stateOrMonster?: GameState | Monster,
+  rng?: () => number,
+): Hero => {
+  if (possibleTargets.length === 0) return possibleTargets[0];
+  if (possibleTargets.length === 1) return possibleTargets[0];
+
+  let monster: Monster | undefined;
+  let state: GameState | undefined;
+  if (monsterOrState && 'type' in monsterOrState) {
+    monster = monsterOrState;
+    state = stateOrMonster as GameState | undefined;
+  } else if (monsterOrState && 'dungeon' in monsterOrState) {
+    state = monsterOrState;
+    monster = stateOrMonster as Monster | undefined;
+  }
+
+  if (!monster) {
+    monster = {
+      level: Level.MASTER,
+      weapon: { dice: 3 } as Weapon,
+    } as Monster;
+  }
+
+  return selectScoredTarget(possibleTargets, {
+    state,
+    monster,
+    ranged: false,
+    stepsByHero: () => 0,
+    rng,
+  });
+};
+
+/**
+ * A per-monster-turn cache for `findVisibleHeroes`. Visibility only changes
+ * when the actors move, die or change their ignored flag, so the
+ * resolution-48 line-of-sight sweep per hero is only re-run when one of
+ * those changes — the cache key captures all of them.
+ */
+export const createVisibleHeroesCache = (
+  state: GameState,
+): ((monster: Monster) => Hero[]) => {
+  const cache = new Map<Monster, { signature: string; heroes: Hero[] }>();
+  return (monster: Monster): Hero[] => {
+    const signature = [
+      String(monster.position.x) + ',' + String(monster.position.y),
+      ...state.heroes.map(
+        (hero) =>
+          hero.name +
+          ':' +
+          String(hero.position.x) +
+          ',' +
+          String(hero.position.y) +
+          ':' +
+          String(hero.health) +
+          ':' +
+          (hero.ignoredByMonsters ? '1' : '0'),
+      ),
+      ...state.dungeon.layout.monsters.map(
+        (m) =>
+          m.name +
+          '@' +
+          String(m.position.x) +
+          ',' +
+          String(m.position.y) +
+          ':' +
+          (m.health > 0 ? '1' : '0'),
+      ),
+    ].join('|');
+    const cached = cache.get(monster);
+    if (cached && cached.signature === signature) {
+      return cached.heroes;
+    }
+    const heroes = findVisibleHeroes(state, monster);
+    cache.set(monster, { signature, heroes });
+    return heroes;
+  };
+};
 
 const findVisibleHeroes = (state: GameState, monster: Monster): Hero[] =>
   liveHeroes(state)
@@ -274,18 +727,109 @@ export const findVisibleMonsters = (state: GameState) =>
     return cell && isRoomDiscovered(state.dungeon, cell) && monster.health > 0;
   });
 
-const monsterAttack = (
+export const monsterAttack = (
   state: GameState,
   monster: Monster,
   hero: Hero,
   ranged: boolean,
 ) => {
-  takeDamage(state, monster, hero, ranged);
-  if (monster?.actions > 1 && monster?.movement < 3) {
-    monster.actions -= 2;
-  } else {
-    monster.actions--;
+  hero.roundTargetCount = (hero.roundTargetCount ?? 0) + 1;
+  if (!state.roundTargetCounts) {
+    state.roundTargetCounts = {};
   }
+  const heroKey = hero.id ?? hero.name;
+  state.roundTargetCounts[heroKey] =
+    (state.roundTargetCounts[heroKey] ?? 0) + 1;
+  takeDamage(state, monster, hero, ranged);
+  monster.actions--;
+};
+
+export const monsterMoveToPosition = (
+  state: GameState,
+  monster: Monster,
+  path: Position[],
+) => {
+  const steps = [...path];
+  while (monster.movement > 0 && steps.length > 0) {
+    const nextPos = steps.shift()!;
+    const isOccupied =
+      state.dungeon.layout.monsters.some(
+        (m) =>
+          m !== monster &&
+          m.health > 0 &&
+          m.position.x === nextPos.x &&
+          m.position.y === nextPos.y,
+      ) ||
+      liveHeroes(state).some(
+        (h) => h.position.x === nextPos.x && h.position.y === nextPos.y,
+      );
+
+    if (isOccupied) break;
+
+    const previousPosition = {
+      x: monster.position.x,
+      y: monster.position.y,
+    };
+    recordActorStep(monster, nextPos);
+    monster.position = nextPos;
+    addLog(state, 'logs.monsterAction.movedTowards', {
+      monster: i18n(monster.name),
+      hero: '',
+      x: `${nextPos.x}`,
+      y: `${nextPos.y}`,
+    });
+    monster.movement--;
+    applyTerrainEnterEffects(state, monster);
+    applyRoomFogEnterEffects(state, monster, previousPosition);
+    if (monster.health <= 0) break;
+  }
+  monster.actions--;
+};
+
+export const monsterMoveToCover = (
+  state: GameState,
+  monster: Monster,
+  passableGrid?: PassableGrid,
+) => {
+  const coverTiles = findCoverPositions(
+    state,
+    monster,
+    passableGrid,
+    monster.movement,
+  );
+  if (coverTiles.length > 0 && coverTiles[0].path.length > 0) {
+    monsterMoveToPosition(state, monster, coverTiles[0].path);
+    return;
+  }
+  const overwatchTiles = findOverwatchPositions(
+    state,
+    monster,
+    passableGrid,
+    monster.movement,
+  );
+  if (overwatchTiles.length > 0 && overwatchTiles[0].path.length > 0) {
+    monsterMoveToPosition(state, monster, overwatchTiles[0].path);
+    return;
+  }
+  monsterMove(state, monster, passableGrid);
+};
+
+export const monsterMoveAway = (
+  state: GameState,
+  monster: Monster,
+  passableGrid?: PassableGrid,
+) => {
+  const retreatTile = findRetreatPosition(
+    state,
+    monster,
+    passableGrid,
+    monster.movement,
+  );
+  if (retreatTile && retreatTile.path.length > 0) {
+    monsterMoveToPosition(state, monster, retreatTile.path);
+    return;
+  }
+  monsterMove(state, monster, passableGrid);
 };
 
 export const monsterMove = (
@@ -329,6 +873,10 @@ export const monsterMove = (
       continue;
     }
 
+    const previousPosition = {
+      x: monster.position.x,
+      y: monster.position.y,
+    };
     recordActorStep(monster, nextPos);
     monster.position = nextPos;
     addLog(state, 'logs.monsterAction.movedTowards', {
@@ -338,6 +886,9 @@ export const monsterMove = (
       y: `${nextPos.y}`,
     });
     monster.movement--;
+    applyTerrainEnterEffects(state, monster);
+    applyRoomFogEnterEffects(state, monster, previousPosition);
+    if (monster.health <= 0) break;
 
     if (
       isNeighbouring(
@@ -356,9 +907,7 @@ export const monsterMove = (
 const findDiagonalTargets = (possibleTargets: Actor[], source: Monster) =>
   possibleTargets.filter(
     (target) =>
-      [MonsterType.YELLOW_DARK_LORD, MonsterType.BLUE_DARK_LORD].includes(
-        source.type,
-      ) &&
+      hasMonsterAbility(source.type, 'diagonalFireAttack') &&
       Math.abs(source.position.x - target.position.x) ===
         Math.abs(source.position.y - target.position.y) &&
       distanceInGrid(source.position, target.position) > 1,
@@ -367,9 +916,7 @@ const findDiagonalTargets = (possibleTargets: Actor[], source: Monster) =>
 const findOrthogonalTargets = (possibleTargets: Actor[], source: Monster) =>
   possibleTargets.filter(
     (target) =>
-      [MonsterType.RED_DARK_LORD, MonsterType.BLUE_DARK_LORD].includes(
-        source.type,
-      ) &&
+      hasMonsterAbility(source.type, 'orthogonalFireAttack') &&
       (source.position.x === target.position.x ||
         source.position.y === target.position.y) &&
       distanceInGrid(source.position, target.position) > 1,
@@ -382,9 +929,7 @@ const findSameRoomTargets = (
 ) =>
   possibleTargets.filter(
     (target) =>
-      [MonsterType.GREEN_DARK_LORD, MonsterType.BLUE_DARK_LORD].includes(
-        source.type,
-      ) &&
+      hasMonsterAbility(source.type, 'sameRoomFireAttack') &&
       findCell(
         state.dungeon.layout.grid,
         source.position.x,
@@ -403,6 +948,22 @@ const performFireAttack = (
   targets: Actor[],
 ) => {
   targets.forEach((target) => {
+    soundEffectManager.playFireBall();
+    if (target.position) {
+      if (!state.flameEffects) {
+        state.flameEffects = [];
+      }
+      state.flameEffects.push(createFlameEffect(target.position));
+    }
+    if (state.heroes.includes(target as Hero)) {
+      target.roundTargetCount = (target.roundTargetCount ?? 0) + 1;
+      if (!state.roundTargetCounts) {
+        state.roundTargetCounts = {};
+      }
+      const heroKey = target.id ?? target.name;
+      state.roundTargetCounts[heroKey] =
+        (state.roundTargetCounts[heroKey] ?? 0) + 1;
+    }
     if (target.armour?.magicProtection) {
       addLog(state, 'logs.monsterAction.fireAttackDeflected', {
         monster: i18n(source.name),

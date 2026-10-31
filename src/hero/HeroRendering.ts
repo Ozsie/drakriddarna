@@ -1,13 +1,20 @@
-import type { GameState, Hero } from '../types';
+import type { Difficulty, GameState, Hero } from '../types';
 import {
   getActorVisualPosition,
   hasLineOfSight,
   isActorAnimating,
+  isActorDeathAnimating,
+  isActorSpriteAnimationActive,
   isDiscovered,
   isWalkable,
 } from '../core';
 import { isBlockedByHero, isBlockedByMonster, liveHeroes } from './HeroLogic';
 import { drawCachedTile } from '../dungeon/TileTextureCache';
+import { renderActorFlash } from '../combat';
+import {
+  getReadyActorSpriteImage,
+  renderActorSprite,
+} from '../core/ActorSpriteRendering';
 
 export const renderHeroes = (
   ctx: CanvasRenderingContext2D,
@@ -17,7 +24,17 @@ export const renderHeroes = (
   debugMode: boolean,
   currentTime: number = Date.now(),
 ): boolean => {
-  const heroes = liveHeroes(state);
+  const heroes: Hero[] = [
+    ...liveHeroes(state),
+    // Dead heroes stay visible only while their death animation plays
+    // (sprite-less heroes vanish immediately, as before).
+    ...state.heroes.filter(
+      (hero): hero is Hero =>
+        hero.health <= 0 &&
+        Boolean(hero.sprite) &&
+        isActorDeathAnimating(hero, currentTime),
+    ),
+  ];
   let hasActiveAnimation = false;
   heroes.forEach((hero) => {
     const isAnim = renderHero(
@@ -30,9 +47,34 @@ export const renderHeroes = (
     );
     if (isAnim) hasActiveAnimation = true;
   });
-  renderWalkableArea(ctx, state, cellSize);
-  renderCurrentActor(ctx, state, cellSize, currentTime);
   return hasActiveAnimation;
+};
+
+// Draws the hero turn UI — the walkable area outline, action and step
+// markers, the hero colour bar, health bars and the current actor
+// reticule. Called by the renderer after the light mask and the ambient
+// darkness veil, so these stay fully visible even on unlit cells.
+export const renderHeroOverlays = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  state: GameState,
+  currentTime: number = Date.now(),
+) => {
+  renderWalkableArea(ctx, state, cellSize);
+  liveHeroes(state).forEach((hero) => {
+    const visualPos = getActorVisualPosition(hero, currentTime);
+    renderActionOnActor(ctx, hero, visualPos.x, visualPos.y, cellSize);
+    renderActorBar(ctx, hero, visualPos.x, visualPos.y, cellSize);
+    renderHealthBar(
+      ctx,
+      hero,
+      visualPos.x,
+      visualPos.y,
+      cellSize,
+      state.gameMaster,
+    );
+  });
+  renderCurrentActor(ctx, state, cellSize, currentTime);
 };
 
 const renderHero = (
@@ -46,28 +88,34 @@ const renderHero = (
   const visualPos = getActorVisualPosition(hero, currentTime);
   const x = visualPos.x;
   const y = visualPos.y;
-  drawCachedTile(
-    ctx,
-    actors,
-    0,
-    2 * 32,
-    32,
-    32,
-    x * cellSize,
-    y * cellSize,
-    32,
-    32,
-  );
-  renderActionOnActor(ctx, hero, x, y, cellSize);
-  renderActorBar(ctx, hero, x, y, cellSize);
-  renderHealthBar(ctx, hero, x, y, cellSize);
+  const spriteImage = getReadyActorSpriteImage(hero);
+  if (spriteImage) {
+    renderActorSprite(ctx, hero, spriteImage, x, y, cellSize, currentTime);
+  } else {
+    drawCachedTile(
+      ctx,
+      actors,
+      0,
+      2 * 32,
+      32,
+      32,
+      x * cellSize,
+      y * cellSize,
+      32,
+      32,
+    );
+  }
+  renderActorFlash(ctx, hero, x, y, cellSize, currentTime);
   if (debugMode) {
     const debugText = `(${hero.position.x},${hero.position.y})`;
     ctx.fillStyle = 'black';
     ctx.font = '8px Arial';
     ctx.fillText(debugText, x * cellSize + 3, y * cellSize + 10);
   }
-  return isActorAnimating(hero, currentTime);
+  return (
+    isActorAnimating(hero, currentTime) ||
+    isActorSpriteAnimationActive(hero, currentTime)
+  );
 };
 
 const renderActionOnActor = (
@@ -120,7 +168,12 @@ const renderHealthBar = (
   x: number,
   y: number,
   cellSize: number,
+  difficulty?: Difficulty,
 ) => {
+  const effectiveMaxHealth = Math.max(
+    1,
+    hero.maxHealth + (difficulty?.modifiers.health ?? 0),
+  );
   ctx.beginPath();
   ctx.strokeStyle = 'black';
   ctx.fillStyle = 'red';
@@ -129,7 +182,7 @@ const renderHealthBar = (
   ctx.fillRect(
     x * cellSize + 4,
     y * cellSize,
-    (cellSize - 8) * (hero.health / hero.maxHealth),
+    (cellSize - 8) * (hero.health / effectiveMaxHealth),
     4,
   );
   ctx.rect(x * cellSize + 4, y * cellSize, cellSize - 8, 4);
@@ -188,9 +241,11 @@ const renderWalkableArea = (
             true,
           );
           if (!blockedByHeroes && !blockedByMonster && walkable && los) {
-            ctx.fillStyle = 'rgba(50, 50, 255, 0.08)';
-            ctx.fillRect(pX * cellSize, pY * cellSize, cellSize, cellSize);
-            ctx.stroke();
+            // An outline rather than a tint: it marks the cell without
+            // covering the floor and lighting beneath it.
+            ctx.strokeStyle = 'rgb(10 115 69 / 0.65)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(pX * cellSize, pY * cellSize, cellSize, cellSize);
           }
         }
       }

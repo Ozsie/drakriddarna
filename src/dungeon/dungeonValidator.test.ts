@@ -5,13 +5,20 @@ import {
   validateLayout,
 } from './dungeonValidator';
 import { Colour, ConditionType, MonsterType, SecretType, Side } from '../types';
+import { CellAlignment } from '../types';
 import { defineDungeon } from './dungeonParser';
-import { createDoor, createMonster, createSecret } from './DungeonLogic';
+import {
+  createDoor,
+  createLight,
+  createMonster,
+  createSecret,
+} from './DungeonLogic';
 
 describe('dungeonValidator', () => {
   it('passes validation for valid layouts', () => {
     const dungeon = defineDungeon({
       name: 'valid.dungeon',
+      intro: 'test-dungeon',
       winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
       startingPositions: [[1, 1]],
       discoveredRooms: ['A'],
@@ -150,9 +157,95 @@ describe('dungeonValidator', () => {
     expect(roomErrors.length).toBe(2);
   });
 
+  it('accepts corridor cells inside a room and rejects misplaced, duplicate or redundant ones', () => {
+    const valid = validateLayout({
+      grid: ['#####', '#AMM#', '#####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corridorCells: [
+        { x: 1, y: 1 },
+        { x: 2, y: 1 },
+      ],
+      corners: [],
+    });
+    expect(valid.valid).toBe(true);
+    expect(valid.errors).toEqual([]);
+
+    const invalid = validateLayout({
+      grid: ['#####', '#AMM#', '#####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corridorCells: [
+        { x: 9, y: 9 },
+        { x: 1, y: 1 },
+        { x: 1, y: 1 },
+      ],
+      corners: [],
+    });
+
+    expect(invalid.valid).toBe(false);
+    expect(
+      invalid.errors.some(
+        (e) => e.type === 'boundary' && e.message.includes('(9, 9)'),
+      ),
+    ).toBe(true);
+    expect(invalid.errors.some((e) => e.type === 'duplicate_id')).toBe(true);
+
+    const redundant = validateLayout({
+      grid: ['#####', '#AMM#', '#####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: ['M'],
+      corridorCells: [{ x: 2, y: 1 }],
+      corners: [],
+    });
+
+    expect(redundant.valid).toBe(false);
+    expect(
+      redundant.errors.some(
+        (e) => e.type === 'room' && e.message.includes("inside corridor 'M'"),
+      ),
+    ).toBe(true);
+  });
+
+  it('rejects corridor cells on walls and empty cells', () => {
+    const result = validateLayout({
+      grid: ['## #', '#A# ', '## #'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corridorCells: [
+        { x: 1, y: 0 },
+        { x: 2, y: 1 },
+      ],
+      corners: [],
+    });
+
+    expect(result.valid).toBe(false);
+    const overlapErrors = result.errors.filter(
+      (e) => e.type === 'overlap' && e.entity === 'Corridor cell',
+    );
+    expect(overlapErrors.length).toBe(2);
+  });
+
   it('assertValidDungeon throws formatted descriptive error on invalid dungeon', () => {
     const invalidDungeon = {
       name: 'broken.dungeon',
+      intro: 'test-dungeon',
       winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
       startingPositions: [{ x: 99, y: 99 }],
       discoveredRooms: ['A'],
@@ -172,6 +265,98 @@ describe('dungeonValidator', () => {
 
     expect(() => assertValidDungeon(invalidDungeon)).toThrow(
       /Dungeon 'broken.dungeon' layout validation failed/,
+    );
+  });
+
+  it('accepts valid lights and detects misplaced or duplicate ones', () => {
+    const valid = validateLayout({
+      grid: ['####', '#AA#', '####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corners: [],
+      lights: [createLight(1, 1)],
+    });
+    expect(valid.valid).toBe(true);
+
+    const invalid = validateLayout({
+      grid: ['####', '#AA#', '####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corners: [],
+      lights: [
+        createLight(9, 9),
+        createLight(0, 1),
+        createLight(1, 1, CellAlignment.CENTER, { id: 'light_dup' }),
+        createLight(2, 1, CellAlignment.CENTER, { id: 'light_dup' }),
+      ],
+    });
+    expect(invalid.valid).toBe(false);
+    expect(invalid.errors.filter((e) => e.type === 'boundary').length).toBe(1);
+    expect(invalid.errors.filter((e) => e.type === 'overlap').length).toBe(1);
+    expect(invalid.errors.filter((e) => e.type === 'duplicate_id').length).toBe(
+      1,
+    );
+  });
+
+  it('accepts valid edge walls and detects out-of-bounds, door conflicts and duplicates', () => {
+    const valid = validateLayout({
+      grid: ['#####', '#AAB#', '#AAB#', '#####'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corners: [],
+      walls: [
+        { x: 2, y: 1, side: Side.RIGHT },
+        { x: 1, y: 1, side: Side.DOWN },
+      ],
+    });
+    expect(valid.valid).toBe(true);
+    expect(valid.errors).toEqual([]);
+
+    const invalid = validateLayout({
+      grid: ['#####', '#AAB#', '#AAB#', '#####'],
+      doors: [createDoor(Side.DOWN, 1, 1)],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corners: [],
+      walls: [
+        { x: 9, y: 9, side: Side.RIGHT },
+        { x: 4, y: 1, side: Side.RIGHT },
+        { x: 2, y: 1, side: Side.RIGHT },
+        { x: 3, y: 1, side: Side.LEFT },
+        { x: 1, y: 1, side: Side.DOWN },
+      ],
+    });
+    expect(invalid.valid).toBe(false);
+    // (9, 9) outside bounds; (4, 1) RIGHT extends past the grid edge
+    expect(
+      invalid.errors.filter(
+        (e) => e.type === 'wall' && e.message.includes('outside grid bounds'),
+      ).length,
+    ).toBe(2);
+    // (1, 1) DOWN sits on the same edge as the door
+    expect(
+      invalid.errors.filter(
+        (e) => e.type === 'wall' && e.message.includes('same edge as a door'),
+      ).length,
+    ).toBe(1);
+    // (2, 1) RIGHT and (3, 1) LEFT are the same edge
+    expect(invalid.errors.filter((e) => e.type === 'duplicate_id').length).toBe(
+      1,
     );
   });
 });
