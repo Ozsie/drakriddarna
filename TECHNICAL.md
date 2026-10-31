@@ -56,6 +56,7 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/saves/         named-save storage (index + blobs in localStorage)
 ├── src/store/         Svelte stores wrapping the game state and the app phase
 ├── src/settings/      app-level audio settings (persistence + live application)
+├── src/uikit/         game-agnostic canvas UI kit: test harness now, theme and kit components as the migration proceeds
 ├── src/ui/            pure functions that draw UI panels onto canvases
 ├── src/components/    Dungeon.svelte (thin shell) + DungeonBoardController
 └── src/audio/         sound effect and music managers
@@ -626,6 +627,27 @@ Three layers of verification:
    XP earlier floors would have yielded before levelling them, so the
    generated campaign's 10 floors can each be benchmarked as floor N of a
    run rather than as a first dungeon.
+
+The in-project canvas UI kit (see `docs/ui-kit-spec/` and the M1 inventory
+`docs/ui-kit-inventory.md`) is being extracted from `src/ui/` into
+`src/uikit/` with its own verification net, built before any renderer is
+touched:
+
+- a **recording context** (`src/uikit/testing/recordingContext.ts`), a stub
+  `CanvasRenderingContext2D` that logs every method call and style property
+  write with a deterministic `measureText`, replacing the per-test mock
+  contexts;
+- **parity snapshots** (`src/ui/parity/`), which render every chrome
+  renderer against real seeded `init()` game states — injured parties,
+  compact widths, both locales, overlays open — and snapshot the recorded
+  call log, so a refactor that only moves a color into a theme token must
+  leave the log byte-identical;
+- a **style-literal budget** (`src/ui/literalBudget.test.ts`), ratcheting
+  the count of color and font literals in `src/ui` (341 colors / 71 fonts at
+  the start of the migration) so it can only go down;
+- a **boundary test** (`src/uikit/boundary.test.ts`) that walks the import
+  graph of `src/uikit/**` and fails on any import from outside the kit,
+  keeping the kit game-agnostic as modules move in.
 
 ## Build, CI and deployment
 
