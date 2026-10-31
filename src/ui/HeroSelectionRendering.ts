@@ -9,7 +9,9 @@ import {
 
 // The hero selection step of the New Game flow: after the new-game dialog
 // the player picks 1..maxHeroes heroes from the campaign roster, renames
-// them if desired, and starts the run with that party. Same centered
+// them if desired, and starts the run with that party. The name inputs
+// behave like text inputs prefilled with the roster name: erasing and
+// appending both edit the value shown in the field. Same centered
 // panel style as the welcome screen and the save/load dialog; the layout/
 // hit/render split keeps it testable without a real canvas.
 
@@ -22,7 +24,11 @@ export const MIN_PARTY_SIZE = 1;
 export interface HeroSelectionOptions {
   /** Roster-order ids of the selected heroes. */
   selectedHeroIds: string[];
-  /** Player-typed names by hero id (missing = default name). */
+  /**
+   * Player-typed names by hero id. A hero without an entry shows (and
+   * edits) the roster default; once edited, the raw typed value shows,
+   * empty included.
+   */
   names: Record<string, string>;
   focusedHeroId?: string | null;
   hoveredHeroId?: string | null;
@@ -117,6 +123,38 @@ export const toggleHeroSelection = (
 /** Names are user content: length-clamped, never corrected or generated. */
 export const clampHeroName = (name: string): string =>
   name.slice(0, MAX_HERO_NAME_LENGTH);
+
+/** The roster default a name input is prefilled with. */
+export const getHeroDefaultName = (
+  campaign: Campaign,
+  heroId: string,
+): string => {
+  const hero = campaign.heroes.find((h) => h.id === heroId);
+  return hero ? i18n(hero.nameTranslationKey ?? hero.name) : '';
+};
+
+/**
+ * The value the rename editor edits: the typed name once the hero has
+ * one, otherwise the prefilled roster default — so erasing and appending
+ * both start from the name shown in the input.
+ */
+export const getHeroRenameValue = (
+  campaign: Campaign,
+  heroId: string,
+  names: Record<string, string>,
+): string => names[heroId] ?? getHeroDefaultName(campaign, heroId);
+
+/**
+ * Applies one rename keystroke: Backspace erases the last character,
+ * a printable character appends (length-clamped), anything else is a
+ * no-op.
+ */
+export const applyHeroRenameKey = (value: string, key: string): string =>
+  key === 'Backspace'
+    ? value.slice(0, -1)
+    : key.length === 1
+    ? clampHeroName(value + key)
+    : value;
 
 /** Start needs at least one selected hero (empty names fall back). */
 export const isHeroSelectionStartEnabled = (selectedIds: string[]): boolean =>
@@ -234,13 +272,13 @@ export const getHeroSelectionLayout = (
         height: 30,
       };
       const selected = selectedIds.includes(heroId);
-      const typed = names[heroId] ?? '';
+      const typed = names[heroId];
       return {
         heroId,
+        // Edited names show raw (empty included); unedited rows
+        // prefill with the roster default.
         label:
-          typed.trim() !== ''
-            ? typed
-            : i18n(hero.nameTranslationKey ?? hero.name),
+          typed !== undefined ? typed : getHeroDefaultName(campaign, heroId),
         colour: hero.colour,
         selected,
         dimmed: !selected && selectedIds.length >= maxHeroes,

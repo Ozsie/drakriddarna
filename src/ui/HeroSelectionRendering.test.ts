@@ -1,8 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
+  applyHeroRenameKey,
   buildSelectedHeroes,
   clampHeroName,
   getDefaultSelectedHeroIds,
+  getHeroDefaultName,
+  getHeroRenameValue,
   getHeroSelectionHit,
   getHeroSelectionLayout,
   getMaxHeroes,
@@ -124,6 +127,33 @@ describe('HeroSelectionRendering', () => {
         campaign.heroes[0]?.nameTranslationKey,
       );
     });
+
+    it('prefills the rename editor with the roster default', () => {
+      expect(getHeroDefaultName(campaign, rosterIds[0])).toBe(
+        campaign.heroes[0]?.name,
+      );
+      expect(getHeroDefaultName(campaign, 'unknown-hero')).toBe('');
+      // Erasing and appending both start from the shown name.
+      expect(getHeroRenameValue(campaign, rosterIds[0], {})).toBe(
+        campaign.heroes[0]?.name,
+      );
+      expect(
+        getHeroRenameValue(campaign, rosterIds[0], {
+          [rosterIds[0]]: '',
+        }),
+      ).toBe('');
+    });
+
+    it('erases, appends and ignores non-character rename keys', () => {
+      expect(applyHeroRenameKey('Fearik', 'Backspace')).toBe('Feari');
+      expect(applyHeroRenameKey('Fearik', 'Z')).toBe('FearikZ');
+      // Escape/Enter/arrows are handled by the caller or ignored.
+      expect(applyHeroRenameKey('Fearik', 'Enter')).toBe('Fearik');
+      expect(applyHeroRenameKey('Fearik', 'ArrowLeft')).toBe('Fearik');
+      // Appending respects the same clamp as the final name.
+      const full = 'a'.repeat(MAX_HERO_NAME_LENGTH);
+      expect(applyHeroRenameKey(full, 'b')).toBe(full);
+    });
   });
 
   describe('layout', () => {
@@ -146,6 +176,22 @@ describe('HeroSelectionRendering', () => {
       expect(
         Math.abs(panelBounds.y * 2 + panelBounds.height - 600),
       ).toBeLessThanOrEqual(1);
+    });
+
+    it('prefills labels with the roster names, raw once edited', () => {
+      const prefilled = getHeroSelectionLayout(800, 600, 'iceDragonTreasure', {
+        selectedHeroIds: rosterIds,
+        names: {},
+      });
+      expect(prefilled.rows[0]?.label).toBe(campaign.heroes[0]?.name);
+      // An edited name shows raw, empty included: the field does not
+      // snap back to the default mid-edit.
+      const edited = getHeroSelectionLayout(800, 600, 'iceDragonTreasure', {
+        selectedHeroIds: rosterIds,
+        names: { [rosterIds[0]]: '' },
+      });
+      expect(edited.rows[0]?.label).toBe('');
+      expect(edited.rows[1]?.label).toBe(campaign.heroes[1]?.name);
     });
 
     it('starts disabled below one selected hero and counts the party', () => {

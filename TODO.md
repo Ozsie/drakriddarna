@@ -151,10 +151,10 @@
 
 ## Bugs
 
-- [ ] It's not possible to edit hero names in hero selection
 - [ ] The volume sliders are not draggable correctly
 - [ ] Lights do not reset positions when a new dungeon is loaded
 - [ ] Pillars can be generated in a way that blocks paths
+- [x] It's not possible to edit hero names in hero selection — the inputs now behave like text inputs prefilled with the roster name: Backspace erases the shown name and typing appends to it (previously the prefilled name could not be erased and typing silently replaced it)
 - [X] Win screen text is offset outside of box
 - [x] RULES.md XP wording is wrong: the official rules (and the code) award the killer monster-specific points (orc 1, troll 2, dark lord 4) plus +1 per surviving rider per adventure — replace "every surviving hero earns +1 per kill"
 - [x] Halberd (range-2) attacks ignore line of sight — require `hasLineOfSight` in the attack branch of `onTargetCell` and the sword cursor in `getCursorType`

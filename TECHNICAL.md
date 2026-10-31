@@ -132,9 +132,11 @@ save/load dialogs open on top, unchanged.
 The New Game flow gains a **hero-selection step**: after the dialog's
 Begin, the player picks 1–`Campaign.maxHeroes` heroes from the campaign
 roster (the `maxHeroes` field is optional and defaults to the roster
-size; the minimum is always 1) and can rename them — player-typed names
-are clamped to 20 characters, never generated or corrected, and an empty
-name falls back to the roster default on Start. Renamed heroes keep the
+size; the minimum is always 1) and can rename them — the name inputs
+behave like text inputs prefilled with the roster name (erasing and
+appending both edit the shown value), names are clamped to 20
+characters, never generated or corrected, and an empty name falls back
+to the roster default on Start. Renamed heroes keep the
 roster `id` (so saves keep resolving) and display the literal typed name.
 The selection reaches `init()` as an optional `heroes` override that
 replaces the roster inside the normal `structuredClone`-based state

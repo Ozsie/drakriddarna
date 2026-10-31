@@ -93,9 +93,9 @@ import {
   getDefaultSelectedHeroIds,
   getMaxHeroes,
   toggleHeroSelection,
-  clampHeroName,
+  getHeroRenameValue,
+  applyHeroRenameKey,
   isHeroSelectionStartEnabled,
-  MAX_HERO_NAME_LENGTH,
   renderSettings,
   renderCredits,
   getSettingsHit,
@@ -2772,36 +2772,37 @@ export class DungeonBoardController {
 
   /**
    * While a rename input is focused the hero selection screen captures
-   * every key: characters and Backspace edit the name, Escape and Enter
-   * defocus it.
+   * every key: characters and Backspace edit the prefilled name (the
+   * typed name, or the roster default while none is typed), Escape and
+   * Enter defocus it.
    */
   private handleHeroRenameKeyDown(event: KeyboardEvent): void {
     const heroId = this.heroSelectionFocusedId;
-    if (!heroId) return;
+    const campaignId = this.heroSelectionCampaignId;
+    if (!heroId || !campaignId) return;
     if (event.key === 'Escape' || event.key === 'Enter') {
       event.preventDefault();
       this.heroSelectionFocusedId = null;
       this.renderUiLayer(true);
       return;
     }
-    const current = this.heroSelectionNames[heroId] ?? '';
-    if (event.key === 'Backspace') {
-      event.preventDefault();
-      this.heroSelectionNames[heroId] = current.slice(0, -1);
-      this.renderUiLayer(true);
-      return;
-    }
-    if (
-      event.key.length === 1 &&
-      !event.ctrlKey &&
-      !event.metaKey &&
-      !event.altKey &&
-      current.length < MAX_HERO_NAME_LENGTH
-    ) {
-      event.preventDefault();
-      this.heroSelectionNames[heroId] = clampHeroName(current + event.key);
-      this.renderUiLayer(true);
-    }
+    const isRenameKey =
+      event.key === 'Backspace' ||
+      (event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey);
+    if (!isRenameKey) return;
+    event.preventDefault();
+    this.heroSelectionNames[heroId] = applyHeroRenameKey(
+      getHeroRenameValue(
+        getCampaign(campaignId),
+        heroId,
+        this.heroSelectionNames,
+      ),
+      event.key,
+    );
+    this.renderUiLayer(true);
   }
 
   /** Dispatches a hero selection click (welcome phase only). */
