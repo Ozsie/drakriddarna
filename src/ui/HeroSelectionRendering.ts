@@ -1,33 +1,39 @@
-import { getCampaign } from '../campaigns';
-import type { Campaign, Hero } from '../types';
+// Game-side facade for the hero selection step. The component (layout,
+// hit test, render over the view model) lives in the kit; the adapter in
+// ./viewmodels/heroSelection owns the campaign roster rules and the
+// rename/party helpers the controller drives. This module keeps the
+// historical entry points so the board controller and the hit cascade
+// work unchanged, with the exact same pixels: parity snapshots cover
+// the whole chain.
+
+import type { UiEnv, UiContext } from '../uikit/env';
 import {
-  drawRoundedRect,
-  isPointInBounds,
-  type CardBounds,
-} from './HeroCardRendering';
-import { composeFont } from '../uikit/primitives/text';
-import { drawModalFrame, drawModalHeader } from '../uikit/kit/modalFrame';
-import { drawButton } from '../uikit/kit/button';
-import { drawListRow, listRowStyles } from '../uikit/kit/listRow';
-import { drawTextInput } from '../uikit/kit/textInput';
-import { applyTextInputKey, clampTextInput } from '../uikit/kit/textInput';
-import type { Translator, UiEnv } from '../uikit/env';
-import { defaultUiEnv } from './env';
+  hitTestHeroSelection,
+  layoutHeroSelection,
+  renderHeroSelection as renderHeroSelectionComponent,
+  type HeroSelectionHit as KitHit,
+  type HeroSelectionLayout,
+  type HeroSelectionLayout as KitLayout,
+  type HeroSelectionRowLayout,
+} from '../uikit/components/heroSelection';
+import { toHeroSelectionViewModel } from './viewmodels/heroSelection';
+import { defaultTheme } from '../uikit/theme';
 import { i18nTranslator } from './i18nAdapter';
+import { uiAssetProvider } from './assets';
 
-// The hero selection step of the New Game flow: after the new-game dialog
-// the player picks 1..maxHeroes heroes from the campaign roster, renames
-// them if desired, and starts the run with that party. The name inputs
-// behave like text inputs prefilled with the roster name: erasing and
-// appending both edit the value shown in the field. Same centered
-// panel style as the welcome screen and the save/load dialog; the layout/
-// hit/render split keeps it testable without a real canvas.
-
-/** Player-typed names are clamped but never corrected or generated. */
-export const MAX_HERO_NAME_LENGTH = 20;
-
-/** The party always has at least one hero, regardless of the campaign. */
-export const MIN_PARTY_SIZE = 1;
+export {
+  MAX_HERO_NAME_LENGTH,
+  MIN_PARTY_SIZE,
+  applyHeroRenameKey,
+  buildSelectedHeroes,
+  clampHeroName,
+  getDefaultSelectedHeroIds,
+  getHeroDefaultName,
+  getHeroRenameValue,
+  getMaxHeroes,
+  isHeroSelectionStartEnabled,
+  toggleHeroSelection,
+} from './viewmodels/heroSelection';
 
 export interface HeroSelectionOptions {
   /** Roster-order ids of the selected heroes. */
@@ -45,34 +51,6 @@ export interface HeroSelectionOptions {
   env?: UiEnv;
 }
 
-export interface HeroSelectionRowLayout {
-  heroId: string;
-  /** The name to display: the typed name or the roster default. */
-  label: string;
-  colour: string;
-  selected: boolean;
-  /** Unselected while the party is full: drawn dimmed, click is a no-op. */
-  dimmed: boolean;
-  focused: boolean;
-  rowBounds: CardBounds;
-  checkboxBounds: CardBounds;
-  swatchBounds: CardBounds;
-  nameInputBounds: CardBounds;
-}
-
-export interface HeroSelectionLayout {
-  hasContent: boolean;
-  panelBounds: CardBounds;
-  headerText: string;
-  countText: string;
-  rows: HeroSelectionRowLayout[];
-  startButtonBounds: CardBounds;
-  startButtonLabel: string;
-  startEnabled: boolean;
-  backButtonBounds: CardBounds;
-  backButtonLabel: string;
-}
-
 export type HeroSelectionHitResult =
   | { type: 'checkbox'; heroId: string }
   | { type: 'nameInput'; heroId: string }
@@ -82,255 +60,42 @@ export type HeroSelectionHitResult =
   | { type: 'panel' }
   | { type: 'backdrop' };
 
-const ROW_RADIUS = 6;
-const ROW_HEIGHT = 48;
-const ROW_GAP = 8;
-const BTN_HEIGHT = 36;
-const CHECKBOX_SIZE = 20;
-const SWATCH_SIZE = 14;
-const HEADER_HEIGHT = 48;
-const PADDING_X = 18;
-const PADDING_Y = 16;
+export type { HeroSelectionLayout, HeroSelectionRowLayout };
 
-/** The campaign's maximum party size (its roster size unless capped). */
-export const getMaxHeroes = (campaign: Campaign): number =>
-  Math.max(MIN_PARTY_SIZE, campaign.maxHeroes ?? campaign.heroes.length);
+const legacyEnv = (env: UiEnv | undefined): UiEnv => ({
+  theme: env?.theme ?? defaultTheme,
+  mode: env?.mode ?? 'regular',
+  t: env?.t ?? i18nTranslator,
+  measure: env?.measure ?? { width: (text) => text.length * 6.5 },
+});
 
-/** All roster heroes selected, up to the campaign maximum, in roster order. */
-export const getDefaultSelectedHeroIds = (campaign: Campaign): string[] =>
-  campaign.heroes
-    .map((hero) => hero.id ?? '')
-    .filter((id) => id !== '')
-    .slice(0, getMaxHeroes(campaign));
-
-/**
- * Toggles a hero's selection. Deselection is always allowed (Start is
- * disabled below the minimum); selection is capped at the campaign
- * maximum. The result keeps the roster order.
- */
-export const toggleHeroSelection = (
-  rosterIds: string[],
-  selectedIds: string[],
-  heroId: string,
-  maxHeroes: number,
-): string[] => {
-  if (selectedIds.includes(heroId)) {
-    return selectedIds.filter((id) => id !== heroId);
-  }
-  if (selectedIds.length >= maxHeroes) {
-    return selectedIds;
-  }
-  return rosterIds.filter((id) => selectedIds.includes(id) || id === heroId);
+const kitLayoutFor = (
+  viewWidth: number,
+  viewHeight: number,
+  campaignId: string,
+  options: HeroSelectionOptions | undefined,
+): KitLayout => {
+  const env = legacyEnv(options?.env);
+  const vm = toHeroSelectionViewModel(campaignId, env.t);
+  return layoutHeroSelection(
+    vm,
+    { x: 0, y: 0, width: viewWidth, height: viewHeight },
+    env,
+    {
+      selectedHeroIds: options?.selectedHeroIds,
+      names: options?.names,
+      focusedHeroId: options?.focusedHeroId ?? null,
+    },
+  );
 };
-
-/** Names are user content: length-clamped, never corrected or generated. */
-export const clampHeroName = (name: string): string =>
-  clampTextInput(name, MAX_HERO_NAME_LENGTH);
-
-/** The roster default a name input is prefilled with. */
-export const getHeroDefaultName = (
-  campaign: Campaign,
-  heroId: string,
-  t: Translator = i18nTranslator,
-): string => {
-  const hero = campaign.heroes.find((h) => h.id === heroId);
-  return hero ? t(hero.nameTranslationKey ?? hero.name) : '';
-};
-
-/**
- * The value the rename editor edits: the typed name once the hero has
- * one, otherwise the prefilled roster default — so erasing and appending
- * both start from the name shown in the input.
- */
-export const getHeroRenameValue = (
-  campaign: Campaign,
-  heroId: string,
-  names: Record<string, string>,
-  t: Translator = i18nTranslator,
-): string => names[heroId] ?? getHeroDefaultName(campaign, heroId, t);
-
-/**
- * Applies one rename keystroke: Backspace erases the last character,
- * a printable character appends (length-clamped), anything else is a
- * no-op.
- */
-export const applyHeroRenameKey = (value: string, key: string): string =>
-  applyTextInputKey(value, key, MAX_HERO_NAME_LENGTH);
-
-/** Start needs at least one selected hero (empty names fall back). */
-export const isHeroSelectionStartEnabled = (selectedIds: string[]): boolean =>
-  selectedIds.length >= MIN_PARTY_SIZE;
-
-/**
- * The override heroes for `init()`: deep clones of the selected roster
- * heroes in roster order, with the typed names applied. Renamed heroes
- * keep the roster id and get the typed name as their translation key, so
- * unrenamed heroes keep their translations and renamed ones display the
- * literal typed name. The campaign's registered roster is never touched.
- */
-export const buildSelectedHeroes = (
-  campaign: Campaign,
-  selectedIds: string[],
-  names: Record<string, string>,
-): Hero[] =>
-  campaign.heroes
-    .filter((hero) => hero.id !== undefined && selectedIds.includes(hero.id))
-    .map((hero) => {
-      const clone = structuredClone(hero) as Hero;
-      const typed = names[hero.id ?? ''] ?? '';
-      const trimmed = typed.trim();
-      if (trimmed) {
-        clone.name = clampHeroName(trimmed);
-        clone.nameTranslationKey = clone.name;
-      }
-      return clone;
-    });
 
 export const getHeroSelectionLayout = (
   viewWidth: number,
   viewHeight: number,
   campaignId: string,
   options?: HeroSelectionOptions,
-): HeroSelectionLayout => {
-  const emptyLayout: HeroSelectionLayout = {
-    hasContent: false,
-    panelBounds: { x: 0, y: 0, width: 0, height: 0 },
-    headerText: '',
-    countText: '',
-    rows: [],
-    startButtonBounds: { x: 0, y: 0, width: 0, height: 0 },
-    startButtonLabel: '',
-    startEnabled: false,
-    backButtonBounds: { x: 0, y: 0, width: 0, height: 0 },
-    backButtonLabel: '',
-  };
-  if (viewWidth <= 0 || viewHeight <= 0) return emptyLayout;
-  const t = options?.env?.t ?? i18nTranslator;
-  const campaign = getCampaign(campaignId);
-  const maxHeroes = getMaxHeroes(campaign);
-  const selectedIds = options?.selectedHeroIds ?? [];
-  const names = options?.names ?? {};
-
-  const marginX = Math.max(12, Math.floor(viewWidth * 0.05));
-  const marginY = Math.max(12, Math.floor(viewHeight * 0.05));
-  const panelWidth = Math.min(560, Math.max(340, viewWidth - marginX * 2));
-  const contentWidth = panelWidth - PADDING_X * 2;
-  const maxPanelHeight = Math.min(600, Math.max(220, viewHeight - marginY * 2));
-
-  const rowsTop = PADDING_Y + HEADER_HEIGHT;
-  const rowsHeight =
-    campaign.heroes.length * ROW_HEIGHT +
-    (campaign.heroes.length - 1) * ROW_GAP;
-  const panelHeight = Math.max(
-    220,
-    Math.min(
-      maxPanelHeight,
-      PADDING_Y * 2 + HEADER_HEIGHT + rowsHeight + BTN_HEIGHT + 12 + 12,
-    ),
-  );
-  const panelX = Math.floor((viewWidth - panelWidth) / 2);
-  const panelY = Math.floor((viewHeight - panelHeight) / 2);
-  const btnY = panelY + panelHeight - PADDING_Y - BTN_HEIGHT;
-
-  // When the roster does not fit, the newest stay visible.
-  const visibleRowCount = Math.max(
-    1,
-    Math.min(
-      campaign.heroes.length,
-      Math.floor(
-        (panelHeight -
-          PADDING_Y * 2 -
-          HEADER_HEIGHT -
-          BTN_HEIGHT -
-          24 +
-          ROW_GAP) /
-          (ROW_HEIGHT + ROW_GAP),
-      ),
-    ),
-  );
-
-  const rows: HeroSelectionRowLayout[] = campaign.heroes
-    .slice(0, visibleRowCount)
-    .map((hero, index) => {
-      const heroId = hero.id ?? '';
-      const rowY = panelY + rowsTop + index * (ROW_HEIGHT + ROW_GAP);
-      const checkboxBounds: CardBounds = {
-        x: panelX + PADDING_X,
-        y: rowY + (ROW_HEIGHT - CHECKBOX_SIZE) / 2,
-        width: CHECKBOX_SIZE,
-        height: CHECKBOX_SIZE,
-      };
-      const swatchBounds: CardBounds = {
-        x: checkboxBounds.x + CHECKBOX_SIZE + 10,
-        y: rowY + (ROW_HEIGHT - SWATCH_SIZE) / 2,
-        width: SWATCH_SIZE,
-        height: SWATCH_SIZE,
-      };
-      const nameInputBounds: CardBounds = {
-        x: swatchBounds.x + SWATCH_SIZE + 10,
-        y: rowY + (ROW_HEIGHT - 30) / 2,
-        width:
-          panelX + panelWidth - PADDING_X - (swatchBounds.x + SWATCH_SIZE + 10),
-        height: 30,
-      };
-      const selected = selectedIds.includes(heroId);
-      const typed = names[heroId];
-      return {
-        heroId,
-        // Edited names show raw (empty included); unedited rows
-        // prefill with the roster default.
-        label:
-          typed !== undefined ? typed : getHeroDefaultName(campaign, heroId, t),
-        colour: hero.colour,
-        selected,
-        dimmed: !selected && selectedIds.length >= maxHeroes,
-        focused: options?.focusedHeroId === heroId,
-        rowBounds: {
-          x: panelX + PADDING_X,
-          y: rowY,
-          width: contentWidth,
-          height: ROW_HEIGHT,
-        },
-        checkboxBounds,
-        swatchBounds,
-        nameInputBounds,
-      };
-    });
-
-  const startWidth = 120;
-  const backWidth = 100;
-
-  return {
-    hasContent: true,
-    panelBounds: {
-      x: panelX,
-      y: panelY,
-      width: panelWidth,
-      height: panelHeight,
-    },
-    headerText: t('content.menu.heroSelection.header'),
-    countText: t('content.menu.heroSelection.count', {
-      selected: String(selectedIds.length),
-      max: String(maxHeroes),
-    }),
-    rows,
-    startButtonBounds: {
-      x: panelX + panelWidth - PADDING_X - startWidth,
-      y: btnY,
-      width: startWidth,
-      height: BTN_HEIGHT,
-    },
-    startButtonLabel: t('content.menu.heroSelection.buttons.start'),
-    startEnabled: isHeroSelectionStartEnabled(selectedIds),
-    backButtonBounds: {
-      x: panelX + PADDING_X,
-      y: btnY,
-      width: backWidth,
-      height: BTN_HEIGHT,
-    },
-    backButtonLabel: t('content.menu.loadGame.buttons.back'),
-  };
-};
+): HeroSelectionLayout =>
+  kitLayoutFor(viewWidth, viewHeight, campaignId, options);
 
 export const getHeroSelectionHit = (
   viewWidth: number,
@@ -340,35 +105,27 @@ export const getHeroSelectionHit = (
   y: number,
   options?: HeroSelectionOptions,
 ): HeroSelectionHitResult | null => {
-  const layout = getHeroSelectionLayout(
-    viewWidth,
-    viewHeight,
-    campaignId,
-    options,
-  );
-  if (!layout.hasContent) return null;
+  const layout = kitLayoutFor(viewWidth, viewHeight, campaignId, options);
+  const hit: KitHit = hitTestHeroSelection(layout, { x, y });
+  if (!hit) return null;
 
-  for (const row of layout.rows) {
-    if (isPointInBounds(x, y, row.checkboxBounds)) {
-      return { type: 'checkbox', heroId: row.heroId };
-    }
-    if (isPointInBounds(x, y, row.nameInputBounds)) {
-      return { type: 'nameInput', heroId: row.heroId };
-    }
-    if (isPointInBounds(x, y, row.rowBounds)) {
-      return { type: 'row', heroId: row.heroId };
-    }
+  switch (hit.kind) {
+    case 'checkbox':
+      return { type: 'checkbox', heroId: hit.heroId };
+    case 'nameInput':
+      return { type: 'nameInput', heroId: hit.heroId };
+    case 'row':
+      return { type: 'row', heroId: hit.heroId };
+    case 'start':
+      return { type: 'start' };
+    case 'back':
+      return { type: 'back' };
+    case 'panel':
+      return { type: 'panel' };
+    case 'backdrop':
+      return { type: 'backdrop' };
   }
-  if (isPointInBounds(x, y, layout.startButtonBounds)) {
-    return { type: 'start' };
-  }
-  if (isPointInBounds(x, y, layout.backButtonBounds)) {
-    return { type: 'back' };
-  }
-  if (isPointInBounds(x, y, layout.panelBounds)) {
-    return { type: 'panel' };
-  }
-  return { type: 'backdrop' };
+  return null;
 };
 
 export const renderHeroSelection = (
@@ -378,92 +135,17 @@ export const renderHeroSelection = (
   campaignId: string,
   options?: HeroSelectionOptions,
 ): void => {
-  const layout = getHeroSelectionLayout(
-    viewWidth,
-    viewHeight,
-    campaignId,
-    options,
-  );
+  const layout = kitLayoutFor(viewWidth, viewHeight, campaignId, options);
   if (!layout.hasContent) return;
 
-  const theme = options?.env?.theme ?? defaultUiEnv.theme;
-
-  ctx.save();
-
-  // Centered modal panel, welcome/dialog style.
-  const p = layout.panelBounds;
-  drawModalFrame(ctx, p, theme);
-
-  // Header + selected counter.
-  drawModalHeader(ctx, p, layout.headerText, theme);
-
-  ctx.fillStyle = theme.palette.text.secondary;
-  ctx.font = composeFont(theme, theme.typography.sizes.lg);
-  ctx.textAlign = 'right';
-  ctx.fillText(layout.countText, p.x + p.width - 18, p.y + 20);
-
-  // Hero rows.
-  for (const row of layout.rows) {
-    const isHovered = options?.hoveredHeroId === row.heroId;
-    const rb = row.rowBounds;
-    drawListRow(
-      ctx,
-      rb,
-      listRowStyles(theme, isHovered ? 'hover' : 'rest'),
-      ROW_RADIUS,
-    );
-
-    // Selection checkbox, speedrunner-checkbox style.
-    const cb = row.checkboxBounds;
-    ctx.fillStyle = row.selected
-      ? theme.palette.surface.checkboxSelected
-      : theme.palette.surface.checkbox;
-    drawRoundedRect(ctx, cb.x, cb.y, cb.width, cb.height, 4);
-    ctx.fill();
-    ctx.strokeStyle = row.selected
-      ? theme.palette.border.checkboxSelected
-      : theme.palette.border.input;
-    ctx.lineWidth = theme.shape.strokeWidth.thin;
-    drawRoundedRect(ctx, cb.x, cb.y, cb.width, cb.height, 4);
-    ctx.stroke();
-    if (row.selected) {
-      ctx.strokeStyle = theme.palette.text.bright;
-      ctx.lineWidth = theme.shape.strokeWidth.regular;
-      ctx.beginPath();
-      ctx.moveTo(cb.x + 5, cb.y + cb.height / 2);
-      ctx.lineTo(cb.x + cb.width / 2 - 1, cb.y + cb.height - 5);
-      ctx.lineTo(cb.x + cb.width - 4, cb.y + 4);
-      ctx.stroke();
-    }
-
-    // Colour swatch.
-    const sw = row.swatchBounds;
-    ctx.fillStyle = row.colour;
-    drawRoundedRect(ctx, sw.x, sw.y, sw.width, sw.height, 3);
-    ctx.fill();
-
-    // Name field, save-dialog input style; dimmed when the row is.
-    drawTextInput(ctx, row.nameInputBounds, row.label, theme, {
-      focused: row.focused,
-      textColor: row.dimmed
-        ? theme.palette.text.dimmed
-        : theme.palette.text.strong,
-    });
-  }
-
-  // Back button (secondary style, bottom-left).
-  drawButton(ctx, layout.backButtonBounds, layout.backButtonLabel, theme, {
-    variant: 'secondary',
-    hovered: Boolean(options?.hoveredSecondary),
+  const ui: UiContext = {
+    ...legacyEnv(options?.env),
+    ctx,
+    assets: uiAssetProvider,
+  };
+  renderHeroSelectionComponent(layout, ui, {
+    hoveredHeroId: options?.hoveredHeroId ?? null,
+    hoveredAction: options?.hoveredAction,
+    hoveredSecondary: options?.hoveredSecondary,
   });
-
-  // Start button (primary style, bottom-right); dimmed when disabled.
-  ctx.globalAlpha = layout.startEnabled ? 1 : theme.alpha.dimmed;
-  drawButton(ctx, layout.startButtonBounds, layout.startButtonLabel, theme, {
-    variant: 'primary',
-    hovered: Boolean(options?.hoveredAction),
-  });
-  ctx.globalAlpha = 1;
-
-  ctx.restore();
 };
