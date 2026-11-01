@@ -27,6 +27,6 @@ export const getAssetUrl = (id: AssetId): string => ASSET_URLS[id];
 export const uiAssetProvider: AssetProvider = {
   get: (id) => {
     const url = ASSET_URLS[id as AssetId];
-    return url ? getReadyImage(url) : undefined;
+    return url ? getReadyImage(url) ?? undefined : undefined;
   },
 };
