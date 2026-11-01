@@ -23,10 +23,14 @@ export const getAssetUrl = (id: AssetId): string => ASSET_URLS[id];
 /**
  * The UI asset port: resolves loaded images by id, undefined until the
  * cache has them (components draw their themed fallbacks meanwhile).
+ * Registry ids resolve through the table above; ids that are not in the
+ * registry are the image URL itself — the item sprite sheets referenced
+ * by item content arrive that way, so the id-to-image mapping stays here
+ * and no renderer knows a URL.
  */
 export const uiAssetProvider: AssetProvider = {
   get: (id) => {
-    const url = ASSET_URLS[id as AssetId];
-    return url ? getReadyImage(url) ?? undefined : undefined;
+    const url = ASSET_URLS[id as AssetId] ?? id;
+    return getReadyImage(url) ?? undefined;
   },
 };
