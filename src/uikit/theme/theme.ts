@@ -36,6 +36,10 @@ export interface UiTheme {
       readonly diaryHeader: string;
       /** Amber event title. */
       readonly eventTitle: string;
+      /** Gold score-chip text. */
+      readonly hudScore: string;
+      /** Green log-entry text in the open dropdown. */
+      readonly hudLogEntry: string;
       /** Warm gold dungeon-intro title. */
       readonly introTitle: string;
       /** Dungeon-intro body text. */
@@ -46,6 +50,10 @@ export interface UiTheme {
       readonly cardStat: string;
       /** Detail text on colored actor cards. */
       readonly cardDetail: string;
+      /** Gold header on centered dialog panels. */
+      readonly headerDialog: string;
+      /** Value/label text on dialog rows and inputs. */
+      readonly dialogValue: string;
     };
     readonly border: {
       /** Hairline panel and item borders. */
@@ -72,6 +80,28 @@ export interface UiTheme {
       readonly buttonIntroHover: string;
       /** Resting outline of a colored actor card. */
       readonly card: string;
+      /** Gold border of a centered dialog panel. */
+      readonly panelDialog: string;
+      /** Resting dialog row outline. */
+      readonly row: string;
+      /** Hovered dialog row outline. */
+      readonly rowHover: string;
+      /** Input/track outline on dialogs. */
+      readonly input: string;
+      /** Secondary (neutral) button outline. */
+      readonly buttonSecondary: string;
+      /** Slider handle outline. */
+      readonly sliderHandle: string;
+      /** Resting green HUD chip outline (log chip, dropdown). */
+      readonly hudLog: string;
+      /** Opened log-chip outline. */
+      readonly hudLogOpen: string;
+      /** Hovered log-chip outline. */
+      readonly hudLogHover: string;
+      /** Gold score-chip outline. */
+      readonly hudScore: string;
+      /** Green timer-chip outline. */
+      readonly hudTimer: string;
     };
     readonly surface: {
       /** The translucent menu modal panel. */
@@ -96,6 +126,32 @@ export interface UiTheme {
       readonly toggleHover: string;
       /** Fallback fill when an actor card has no colour. */
       readonly cardFallback: string;
+      /** Solid centered dialog panel. */
+      readonly panelDialog: string;
+      /** Resting dialog row fill. */
+      readonly row: string;
+      /** Hovered/selected dialog row fill. */
+      readonly rowHover: string;
+      /** Input field and slider track fill. */
+      readonly input: string;
+      /** Slider track fill. */
+      readonly sliderFill: string;
+      /** Slider handle fill. */
+      readonly sliderHandle: string;
+      /** Neutral secondary button fill. */
+      readonly buttonSecondary: string;
+      /** Hovered neutral secondary button fill. */
+      readonly buttonSecondaryHover: string;
+      /** Welcome screen backdrop while the art is missing. */
+      readonly welcome: string;
+      /** Opened log chip (top bar HUD). */
+      readonly hudLogOpen: string;
+      /** Hovered log chip. */
+      readonly hudLogHover: string;
+      /** Resting log chip. */
+      readonly hudLog: string;
+      /** Open log-dropdown panel. */
+      readonly hudDropdown: string;
     };
     readonly overlay: {
       /** Backdrop behind the corner menu modal. */
@@ -104,6 +160,10 @@ export interface UiTheme {
       readonly scrimStrong: string;
       /** Tooltip fill on top of the board. */
       readonly tooltip: string;
+      /** Vignette start over the welcome backdrop. */
+      readonly vignetteStart: string;
+      /** Vignette end over the welcome backdrop. */
+      readonly vignetteEnd: string;
     };
     readonly hover: {
       /** Hover fill over a dark circular button (radial menu). */
@@ -128,6 +188,8 @@ export interface UiTheme {
       readonly compact: string;
       /** Debug printout family. */
       readonly debug: string;
+      /** Monospace family for log text. */
+      readonly mono: string;
     };
     readonly sizes: {
       readonly xxs: number;
@@ -154,5 +216,9 @@ export interface UiTheme {
       readonly regular: number;
       readonly heavy: number;
     };
+  };
+  readonly alpha: {
+    /** Dimming applied to disabled rows. */
+    readonly dimmed: number;
   };
 }

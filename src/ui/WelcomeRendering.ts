@@ -6,6 +6,8 @@ import {
   isPointInBounds,
   type CardBounds,
 } from './HeroCardRendering';
+import { composeFont } from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 // The welcome (title) screen: a full-canvas background image (cover-fit,
 // with a flat fallback colour while the art is missing), a centered panel
@@ -17,7 +19,7 @@ import {
 export const WELCOME_BACKGROUND_IMAGE = `${base}/images/welcome.png`;
 
 /** The dungeon-view background colour, the fallback while art is missing. */
-export const WELCOME_FALLBACK_COLOR = '#121418';
+export const WELCOME_FALLBACK_COLOR = defaultTheme.palette.surface.welcome;
 
 export type WelcomeButtonId = 'newGame' | 'loadGame' | 'settings';
 
@@ -45,13 +47,10 @@ export interface RenderWelcomeOptions {
    * asked for the welcome art (tests run without the asset).
    */
   backgroundImage?: HTMLImageElement | null;
+  theme?: UiTheme;
 }
 
 export type WelcomeHitResult = WelcomeButtonId | null;
-
-const TITLE_FONT = 'bold 18px Arial, Helvetica, sans-serif';
-const BUTTON_FONT = 'bold 13px Arial, Helvetica, sans-serif';
-const FOOTER_FONT = '10px Arial, Helvetica, sans-serif';
 
 const PANEL_RADIUS = 10;
 const BUTTON_RADIUS = 6;
@@ -214,6 +213,7 @@ export const renderWelcomeBackground = (
     options?.backgroundImage !== undefined
       ? options.backgroundImage
       : getReadyImage(WELCOME_BACKGROUND_IMAGE);
+  const theme = options?.theme ?? defaultTheme;
   if (image) {
     const fit = getCoverFitBounds(
       image.naturalWidth,
@@ -223,7 +223,7 @@ export const renderWelcomeBackground = (
     );
     ctx.drawImage(image, fit.x, fit.y, fit.width, fit.height);
   } else {
-    ctx.fillStyle = WELCOME_FALLBACK_COLOR;
+    ctx.fillStyle = theme.palette.surface.welcome;
     ctx.fillRect(0, 0, viewWidth, viewHeight);
     const gradient = ctx.createRadialGradient(
       viewWidth / 2,
@@ -233,8 +233,8 @@ export const renderWelcomeBackground = (
       viewHeight / 2,
       Math.max(viewWidth, viewHeight) / 1.5,
     );
-    gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
+    gradient.addColorStop(0, theme.palette.overlay.vignetteStart);
+    gradient.addColorStop(1, theme.palette.overlay.vignetteEnd);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, viewWidth, viewHeight);
   }
@@ -248,10 +248,11 @@ export const renderWelcomeFooter = (
   viewWidth: number,
   viewHeight: number,
   buildInfo?: { date: string; hash: string } | null,
+  theme: UiTheme = defaultTheme,
 ): void => {
   if (!buildInfo) return;
-  ctx.fillStyle = 'rgba(226, 232, 240, 0.5)';
-  ctx.font = FOOTER_FONT;
+  ctx.fillStyle = theme.palette.text.faint;
+  ctx.font = composeFont(theme, theme.typography.sizes.xxs);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
   // The baseline sits 12px above the canvas bottom edge.
@@ -271,24 +272,30 @@ export const renderWelcome = (
   const layout = getWelcomeLayout(viewWidth, viewHeight, options);
   if (!layout.hasContent) return;
 
+  const theme = options?.theme ?? defaultTheme;
+
   ctx.save();
 
   renderWelcomeBackground(ctx, viewWidth, viewHeight, options);
 
   // Centered modal panel, save/load dialog style.
   const p = layout.panelBounds;
-  ctx.fillStyle = '#181b22';
+  ctx.fillStyle = theme.palette.surface.panelDialog;
   drawRoundedRect(ctx, p.x, p.y, p.width, p.height, PANEL_RADIUS);
   ctx.fill();
 
-  ctx.strokeStyle = '#d4af37';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = theme.palette.border.panelDialog;
+  ctx.lineWidth = theme.shape.strokeWidth.regular;
   drawRoundedRect(ctx, p.x, p.y, p.width, p.height, PANEL_RADIUS);
   ctx.stroke();
 
   // Header line.
-  ctx.fillStyle = '#fce28a';
-  ctx.font = TITLE_FONT;
+  ctx.fillStyle = theme.palette.text.headerDialog;
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.title,
+    theme.typography.weights.bold,
+  );
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText(layout.headerText, p.x + 18, p.y + 14);
@@ -297,23 +304,33 @@ export const renderWelcome = (
   for (const button of layout.buttons) {
     const isHovered = options?.hoveredButton === button.id;
     const b = button.bounds;
-    ctx.fillStyle = isHovered ? '#334155' : 'rgba(255, 255, 255, 0.04)';
+    ctx.fillStyle = isHovered
+      ? theme.palette.surface.rowHover
+      : theme.palette.surface.row;
     drawRoundedRect(ctx, b.x, b.y, b.width, b.height, BUTTON_RADIUS);
     ctx.fill();
 
-    ctx.strokeStyle = isHovered ? '#94a3b8' : '#334155';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = isHovered
+      ? theme.palette.border.rowHover
+      : theme.palette.border.row;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     drawRoundedRect(ctx, b.x, b.y, b.width, b.height, BUTTON_RADIUS);
     ctx.stroke();
 
-    ctx.font = BUTTON_FONT;
-    ctx.fillStyle = isHovered ? '#ffffff' : '#f1f5f9';
+    ctx.font = composeFont(
+      theme,
+      theme.typography.sizes.lg,
+      theme.typography.weights.bold,
+    );
+    ctx.fillStyle = isHovered
+      ? theme.palette.text.bright
+      : theme.palette.text.dialogValue;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillText(button.label, b.x + 12, b.y + b.height / 2);
   }
 
-  renderWelcomeFooter(ctx, viewWidth, viewHeight, options?.buildInfo);
+  renderWelcomeFooter(ctx, viewWidth, viewHeight, options?.buildInfo, theme);
 
   ctx.restore();
 };

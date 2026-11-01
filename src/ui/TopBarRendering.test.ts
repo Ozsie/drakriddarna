@@ -92,22 +92,33 @@ describe('TopBarRendering', () => {
     it('returns original text if it fits within maxWidth', () => {
       const ctx = createMockCtx();
       const text = 'Short text';
-      const width = measureTextWidth(ctx, text);
-      expect(truncateText(ctx, text, width + 20)).toBe('Short text');
+      const width = measureTextWidth(ctx, text, '13px sans-serif');
+      expect(
+        truncateText(ctx, text, width + 20, '12px monospace, sans-serif'),
+      ).toBe('Short text');
     });
 
     it('truncates text with ellipsis if it exceeds maxWidth', () => {
       const ctx = createMockCtx();
       const text = 'A very long log event description that should not fit';
-      const truncated = truncateText(ctx, text, 80);
+      const truncated = truncateText(
+        ctx,
+        text,
+        80,
+        '12px monospace, sans-serif',
+      );
       expect(truncated.endsWith('...')).toBe(true);
-      expect(measureTextWidth(ctx, truncated)).toBeLessThanOrEqual(80);
+      expect(
+        measureTextWidth(ctx, truncated, '12px monospace, sans-serif'),
+      ).toBeLessThanOrEqual(80);
     });
 
     it('handles empty string and non-positive maxWidth', () => {
       const ctx = createMockCtx();
-      expect(truncateText(ctx, '', 100)).toBe('');
-      expect(truncateText(ctx, 'Some text', 0)).toBe('');
+      expect(truncateText(ctx, '', 100, '12px monospace, sans-serif')).toBe('');
+      expect(
+        truncateText(ctx, 'Some text', 0, '12px monospace, sans-serif'),
+      ).toBe('');
     });
   });
 
@@ -162,7 +173,11 @@ describe('TopBarRendering', () => {
       expect(layout.menuButton.width).toBeGreaterThanOrEqual(48);
 
       // Turn counter width accommodates at least 10 characters
-      const tenCharWidth = measureTextWidth(ctx, '0123456789');
+      const tenCharWidth = measureTextWidth(
+        ctx,
+        '0123456789',
+        '13px sans-serif',
+      );
       expect(layout.turnCounter.width).toBeGreaterThanOrEqual(tenCharWidth);
     });
 

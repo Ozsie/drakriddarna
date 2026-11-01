@@ -1,6 +1,12 @@
 import type { GameState, LogEvent } from '../types';
 import { i18n, formatDuration, getCurrentDungeonTimeMs } from '../core';
 import { isCompactUi } from './UiMode';
+import {
+  composeFont,
+  measureTextWidth as kitMeasureTextWidth,
+  truncateText as kitTruncateText,
+} from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 export interface TopBarElementBounds {
   x: number;
@@ -27,6 +33,7 @@ export interface RenderTopBarOptions {
   isLogHovered?: boolean;
   isLogOpen?: boolean;
   debugMode?: boolean;
+  theme?: UiTheme;
 }
 
 export type TopBarHitElement =
@@ -37,30 +44,19 @@ export type TopBarHitElement =
   | 'logDropdown'
   | null;
 
-const DEFAULT_FONT = '13px sans-serif';
-const LOG_FONT = '12px monospace, sans-serif';
-
 // Compact (narrow screen) counter labels: an emoji instead of the localized
 // word, so each chip only needs room for the icon plus its digits.
 const COMPACT_TURN_LABEL = '🔄';
 const COMPACT_SCORE_LABEL = '🏆';
 
+// Fallback approximation (avg ~8px per char for monospace/standard).
+const FALLBACK_PER_CHAR = 8;
+
 export const measureTextWidth = (
   ctx: CanvasRenderingContext2D | null | undefined,
   text: string,
-  font: string = DEFAULT_FONT,
-): number => {
-  if (!text) return 0;
-  if (ctx && typeof ctx.measureText === 'function') {
-    ctx.save();
-    ctx.font = font;
-    const width = ctx.measureText(text).width;
-    ctx.restore();
-    return width;
-  }
-  // Fallback approximation (avg ~8px per char for monospace/standard)
-  return text.length * 8;
-};
+  font: string,
+): number => kitMeasureTextWidth(ctx, text, font, FALLBACK_PER_CHAR);
 
 export const formatLatestLog = (log?: LogEvent | null): string => {
   if (!log) return '';
@@ -100,36 +96,12 @@ export const truncateText = (
   ctx: CanvasRenderingContext2D | null | undefined,
   text: string,
   maxWidth: number,
-  font: string = LOG_FONT,
-): string => {
-  if (!text || maxWidth <= 0) return '';
-  const currentWidth = measureTextWidth(ctx, text, font);
-  if (currentWidth <= maxWidth) return text;
-
-  const ellipsis = '...';
-  const ellipsisWidth = measureTextWidth(ctx, ellipsis, font);
-  if (ellipsisWidth >= maxWidth) return '';
-
-  let low = 0;
-  let high = text.length;
-  let best = '';
-
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    const candidate = text.slice(0, mid) + ellipsis;
-    if (measureTextWidth(ctx, candidate, font) <= maxWidth) {
-      best = candidate;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-
-  return best;
-};
+  font: string,
+): string => kitTruncateText(ctx, text, maxWidth, font, FALLBACK_PER_CHAR);
 
 export interface TopBarLayoutOptions {
   debugMode?: boolean;
+  theme?: UiTheme;
 }
 
 export const getTopBarLayout = (
@@ -138,6 +110,14 @@ export const getTopBarLayout = (
   ctx?: CanvasRenderingContext2D | null,
   options?: TopBarLayoutOptions,
 ): TopBarLayout => {
+  const theme = options?.theme ?? defaultTheme;
+  const chipFont = composeFont(
+    theme,
+    theme.typography.sizes.lg,
+    theme.typography.weights.regular,
+    theme.typography.families.plain,
+  );
+
   const margin = 8;
   const top = 8;
   const height = 32;
@@ -154,7 +134,7 @@ export const getTopBarLayout = (
     rawMenuLabel === 'content.menu.menuButton'
       ? 'Menu'
       : rawMenuLabel || 'Menu';
-  const menuTextWidth = measureTextWidth(ctx, menuLabel, DEFAULT_FONT);
+  const menuTextWidth = measureTextWidth(ctx, menuLabel, chipFont);
   const menuWidth = Math.max(48, Math.round(menuTextWidth + paddingX * 2));
 
   const rawDebugLabel = i18n('content.menu.mainMenu.buttons.debug');
@@ -162,7 +142,7 @@ export const getTopBarLayout = (
     rawDebugLabel === 'content.menu.mainMenu.buttons.debug'
       ? 'Debug'
       : rawDebugLabel || 'Debug';
-  const debugTextWidth = measureTextWidth(ctx, debugLabel, DEFAULT_FONT);
+  const debugTextWidth = measureTextWidth(ctx, debugLabel, chipFont);
   const debugWidth = isDebug
     ? Math.max(48, Math.round(debugTextWidth + paddingX * 2))
     : 0;
@@ -182,30 +162,24 @@ export const getTopBarLayout = (
     const turnTemplateWidth = measureTextWidth(
       ctx,
       `${COMPACT_TURN_LABEL} 99`,
-      DEFAULT_FONT,
+      chipFont,
     );
     const scoreTemplateWidth = measureTextWidth(
       ctx,
       `${COMPACT_SCORE_LABEL} 99999`,
-      DEFAULT_FONT,
+      chipFont,
     );
     turnCounterWidth = Math.round(
-      Math.max(
-        turnTemplateWidth,
-        measureTextWidth(ctx, turnText, DEFAULT_FONT),
-      ) +
+      Math.max(turnTemplateWidth, measureTextWidth(ctx, turnText, chipFont)) +
         counterPaddingX * 2,
     );
     scoreCounterWidth = Math.round(
-      Math.max(
-        scoreTemplateWidth,
-        measureTextWidth(ctx, scoreText, DEFAULT_FONT),
-      ) +
+      Math.max(scoreTemplateWidth, measureTextWidth(ctx, scoreText, chipFont)) +
         counterPaddingX * 2,
     );
   } else {
-    const tenCharsWidth = measureTextWidth(ctx, '0123456789', DEFAULT_FONT);
-    const turnTextWidth = measureTextWidth(ctx, turnText, DEFAULT_FONT);
+    const tenCharsWidth = measureTextWidth(ctx, '0123456789', chipFont);
+    const turnTextWidth = measureTextWidth(ctx, turnText, chipFont);
     // Ensure enough space for at least 10 characters
     turnCounterWidth = Math.max(
       Math.round(tenCharsWidth + paddingX * 2),
@@ -213,7 +187,7 @@ export const getTopBarLayout = (
       80,
     );
     scoreCounterWidth = Math.max(
-      Math.round(measureTextWidth(ctx, scoreText, DEFAULT_FONT) + paddingX * 2),
+      Math.round(measureTextWidth(ctx, scoreText, chipFont) + paddingX * 2),
       70,
     );
   }
@@ -232,7 +206,7 @@ export const getTopBarLayout = (
           measureTextWidth(
             ctx,
             formatDuration(3600000, { hundredths: true }),
-            DEFAULT_FONT,
+            chipFont,
           ) +
             paddingX * 2,
         ),
@@ -396,8 +370,23 @@ export const renderTopBar = (
 ) => {
   if (!ctx || viewWidth <= 0) return;
 
+  const theme = options?.theme ?? defaultTheme;
+  const chipFont = composeFont(
+    theme,
+    theme.typography.sizes.lg,
+    theme.typography.weights.regular,
+    theme.typography.families.plain,
+  );
+  const logFont = composeFont(
+    theme,
+    theme.typography.sizes.md,
+    theme.typography.weights.regular,
+    theme.typography.families.mono,
+  );
+
   const layout = getTopBarLayout(viewWidth, state, ctx, {
     debugMode: options?.debugMode,
+    theme,
   });
   const isMenuHovered = options?.isMenuHovered ?? false;
   const isDebugHovered = options?.isDebugHovered ?? false;
@@ -411,17 +400,17 @@ export const renderTopBar = (
   if (menu.width > 0) {
     drawRoundedRect(ctx, menu.x, menu.y, menu.width, menu.height, 4);
     ctx.fillStyle = isMenuHovered
-      ? 'rgba(71, 85, 105, 0.95)'
-      : 'rgba(37, 41, 50, 0.9)';
+      ? theme.palette.surface.itemHover
+      : theme.palette.surface.item;
     ctx.fill();
     ctx.strokeStyle = isMenuHovered
-      ? 'rgba(255, 255, 255, 0.6)'
-      : 'rgba(255, 255, 255, 0.2)';
-    ctx.lineWidth = 1;
+      ? theme.palette.border.soft
+      : theme.palette.border.subtle;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     ctx.stroke();
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = DEFAULT_FONT;
+    ctx.fillStyle = theme.palette.text.bright;
+    ctx.font = chipFont;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(menu.label, menu.x + menu.width / 2, menu.y + menu.height / 2);
@@ -432,17 +421,17 @@ export const renderTopBar = (
   if (debug && debug.width > 0) {
     drawRoundedRect(ctx, debug.x, debug.y, debug.width, debug.height, 4);
     ctx.fillStyle = isDebugHovered
-      ? 'rgba(71, 85, 105, 0.95)'
-      : 'rgba(37, 41, 50, 0.9)';
+      ? theme.palette.surface.itemHover
+      : theme.palette.surface.item;
     ctx.fill();
     ctx.strokeStyle = isDebugHovered
-      ? 'rgba(255, 255, 255, 0.6)'
-      : 'rgba(255, 255, 255, 0.2)';
-    ctx.lineWidth = 1;
+      ? theme.palette.border.soft
+      : theme.palette.border.subtle;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     ctx.stroke();
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = DEFAULT_FONT;
+    ctx.fillStyle = theme.palette.text.bright;
+    ctx.font = chipFont;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -457,31 +446,31 @@ export const renderTopBar = (
   if (log.width > 0) {
     drawRoundedRect(ctx, log.x, log.y, log.width, log.height, 4);
     ctx.fillStyle = isLogOpen
-      ? 'rgba(28, 56, 40, 0.95)'
+      ? theme.palette.surface.hudLogOpen
       : isLogHovered
-      ? 'rgba(28, 56, 40, 0.9)'
-      : 'rgba(20, 40, 29, 0.85)';
+      ? theme.palette.surface.hudLogHover
+      : theme.palette.surface.hudLog;
     ctx.fill();
     ctx.strokeStyle = isLogOpen
-      ? 'rgba(74, 222, 128, 0.6)'
+      ? theme.palette.border.hudLogOpen
       : isLogHovered
-      ? 'rgba(74, 222, 128, 0.5)'
-      : 'rgba(30, 71, 50, 0.8)';
-    ctx.lineWidth = 1;
+      ? theme.palette.border.hudLogHover
+      : theme.palette.border.hudLog;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     ctx.stroke();
 
     if (log.text) {
       const paddingInside = 8;
       const maxTextWidth = log.width - paddingInside * 2;
-      const displayText = truncateText(ctx, log.text, maxTextWidth, LOG_FONT);
+      const displayText = truncateText(ctx, log.text, maxTextWidth, logFont);
 
       ctx.save();
       ctx.beginPath();
       ctx.rect(log.x + 2, log.y, log.width - 4, log.height);
       ctx.clip();
 
-      ctx.fillStyle = '#86efac';
-      ctx.font = LOG_FONT;
+      ctx.fillStyle = theme.palette.text.success;
+      ctx.font = logFont;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillText(displayText, log.x + paddingInside, log.y + log.height / 2);
@@ -493,14 +482,14 @@ export const renderTopBar = (
   const score = layout.scoreCounter;
   if (score.width > 0) {
     drawRoundedRect(ctx, score.x, score.y, score.width, score.height, 4);
-    ctx.fillStyle = 'rgba(37, 41, 50, 0.9)';
+    ctx.fillStyle = theme.palette.surface.item;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.45)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = theme.palette.border.hudScore;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     ctx.stroke();
 
-    ctx.fillStyle = '#fcd34d';
-    ctx.font = DEFAULT_FONT;
+    ctx.fillStyle = theme.palette.text.hudScore;
+    ctx.font = chipFont;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -514,14 +503,14 @@ export const renderTopBar = (
   const timer = layout.timerCounter;
   if (timer && timer.width > 0) {
     drawRoundedRect(ctx, timer.x, timer.y, timer.width, timer.height, 4);
-    ctx.fillStyle = 'rgba(37, 41, 50, 0.9)';
+    ctx.fillStyle = theme.palette.surface.item;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(74, 222, 128, 0.45)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = theme.palette.border.hudTimer;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     ctx.stroke();
 
-    ctx.fillStyle = '#86efac';
-    ctx.font = DEFAULT_FONT;
+    ctx.fillStyle = theme.palette.text.success;
+    ctx.font = chipFont;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -535,14 +524,14 @@ export const renderTopBar = (
   const turn = layout.turnCounter;
   if (turn.width > 0) {
     drawRoundedRect(ctx, turn.x, turn.y, turn.width, turn.height, 4);
-    ctx.fillStyle = 'rgba(37, 41, 50, 0.9)';
+    ctx.fillStyle = theme.palette.surface.item;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = theme.palette.border.subtle;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     ctx.stroke();
 
-    ctx.fillStyle = '#e2e8f0';
-    ctx.font = DEFAULT_FONT;
+    ctx.fillStyle = theme.palette.text.body;
+    ctx.font = chipFont;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(turn.text, turn.x + turn.width / 2, turn.y + turn.height / 2);
@@ -559,10 +548,10 @@ export const renderTopBar = (
       dropdown.height,
       4,
     );
-    ctx.fillStyle = 'rgba(20, 40, 29, 0.92)';
+    ctx.fillStyle = theme.palette.surface.hudDropdown;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(30, 71, 50, 0.85)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = theme.palette.border.hudLog;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     ctx.stroke();
 
     const paddingInside = 8;
@@ -572,15 +561,18 @@ export const renderTopBar = (
 
     dropdown.entries.forEach((entry, index) => {
       const itemY = dropdown.y + paddingY + index * itemHeight;
-      const text = truncateText(ctx, entry, maxTextWidth, LOG_FONT);
+      const text = truncateText(ctx, entry, maxTextWidth, logFont);
 
       ctx.save();
       ctx.beginPath();
       ctx.rect(dropdown.x + 2, itemY, dropdown.width - 4, itemHeight);
       ctx.clip();
 
-      ctx.fillStyle = index === 0 ? '#86efac' : '#4ade80';
-      ctx.font = LOG_FONT;
+      ctx.fillStyle =
+        index === 0
+          ? theme.palette.text.success
+          : theme.palette.text.hudLogEntry;
+      ctx.font = logFont;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillText(text, dropdown.x + paddingInside, itemY + itemHeight / 2);

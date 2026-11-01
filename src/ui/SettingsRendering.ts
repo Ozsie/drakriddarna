@@ -5,6 +5,8 @@ import {
   isPointInBounds,
   type CardBounds,
 } from './HeroCardRendering';
+import { composeFont } from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 // The welcome screen's Settings sub view (music/audio toggles, volume
 // sliders, credits) and its Credits sub screen (the rights rows the
@@ -51,6 +53,7 @@ export interface RenderSettingsOptions {
   appSettings?: AppSettings;
   hoveredRowId?: SettingsRowId | null;
   hoveredBack?: boolean;
+  theme?: UiTheme;
 }
 
 export type SettingsHitResult =
@@ -110,6 +113,7 @@ export interface CreditsLayout {
 export interface RenderCreditsOptions {
   hoveredRowId?: string | null;
   hoveredBack?: boolean;
+  theme?: UiTheme;
 }
 
 export type CreditsHitResult =
@@ -117,10 +121,6 @@ export type CreditsHitResult =
   | { type: 'back' }
   | { type: 'panel' }
   | { type: 'backdrop' };
-
-const TITLE_FONT = 'bold 18px Arial, Helvetica, sans-serif';
-const ROW_FONT = 'bold 13px Arial, Helvetica, sans-serif';
-const BUTTON_FONT = 'bold 14px Arial, Helvetica, sans-serif';
 
 const PANEL_RADIUS = 10;
 const ROW_RADIUS = 6;
@@ -415,9 +415,12 @@ const renderRowShell = (
   bounds: CardBounds,
   isHovered: boolean,
   dimmed: boolean,
+  theme: UiTheme,
 ): void => {
-  ctx.globalAlpha = dimmed ? 0.5 : 1;
-  ctx.fillStyle = isHovered ? '#334155' : 'rgba(255, 255, 255, 0.04)';
+  ctx.globalAlpha = dimmed ? theme.alpha.dimmed : 1;
+  ctx.fillStyle = isHovered
+    ? theme.palette.surface.rowHover
+    : theme.palette.surface.row;
   drawRoundedRect(
     ctx,
     bounds.x,
@@ -427,8 +430,10 @@ const renderRowShell = (
     ROW_RADIUS,
   );
   ctx.fill();
-  ctx.strokeStyle = isHovered ? '#94a3b8' : '#334155';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = isHovered
+    ? theme.palette.border.rowHover
+    : theme.palette.border.row;
+  ctx.lineWidth = theme.shape.strokeWidth.thin;
   drawRoundedRect(
     ctx,
     bounds.x,
@@ -445,9 +450,16 @@ const renderRowLabel = (
   bounds: CardBounds,
   label: string,
   dimmed: boolean,
+  theme: UiTheme,
 ): void => {
-  ctx.font = ROW_FONT;
-  ctx.fillStyle = dimmed ? '#94a3b8' : '#f1f5f9';
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.lg,
+    theme.typography.weights.bold,
+  );
+  ctx.fillStyle = dimmed
+    ? theme.palette.text.muted
+    : theme.palette.text.dialogValue;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText(label, bounds.x + 12, bounds.y + bounds.height / 2);
@@ -458,16 +470,23 @@ const renderBackButton = (
   bounds: CardBounds,
   label: string,
   isHovered: boolean,
+  theme: UiTheme,
 ): void => {
-  ctx.fillStyle = isHovered ? '#475569' : '#334155';
+  ctx.fillStyle = isHovered
+    ? theme.palette.surface.buttonSecondaryHover
+    : theme.palette.surface.buttonSecondary;
   drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
   ctx.fill();
-  ctx.strokeStyle = '#64748b';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = theme.palette.border.buttonSecondary;
+  ctx.lineWidth = theme.shape.strokeWidth.thin;
   drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
   ctx.stroke();
-  ctx.fillStyle = '#e2e8f0';
-  ctx.font = BUTTON_FONT;
+  ctx.fillStyle = theme.palette.text.body;
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.xl,
+    theme.typography.weights.bold,
+  );
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(
@@ -481,8 +500,9 @@ const renderPanel = (
   ctx: CanvasRenderingContext2D,
   panel: CardBounds,
   headerText: string,
+  theme: UiTheme,
 ): void => {
-  ctx.fillStyle = '#181b22';
+  ctx.fillStyle = theme.palette.surface.panelDialog;
   drawRoundedRect(
     ctx,
     panel.x,
@@ -492,8 +512,8 @@ const renderPanel = (
     PANEL_RADIUS,
   );
   ctx.fill();
-  ctx.strokeStyle = '#d4af37';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = theme.palette.border.panelDialog;
+  ctx.lineWidth = theme.shape.strokeWidth.regular;
   drawRoundedRect(
     ctx,
     panel.x,
@@ -503,8 +523,12 @@ const renderPanel = (
     PANEL_RADIUS,
   );
   ctx.stroke();
-  ctx.fillStyle = '#fce28a';
-  ctx.font = TITLE_FONT;
+  ctx.fillStyle = theme.palette.text.headerDialog;
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.title,
+    theme.typography.weights.bold,
+  );
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText(headerText, panel.x + 18, panel.y + 14);
@@ -520,17 +544,19 @@ export const renderSettings = (
   const layout = getSettingsLayout(viewWidth, viewHeight, appSettings);
   if (!layout.hasContent) return;
 
+  const theme = options?.theme ?? defaultTheme;
+
   ctx.save();
-  renderPanel(ctx, layout.panelBounds, layout.headerText);
+  renderPanel(ctx, layout.panelBounds, layout.headerText, theme);
 
   for (const row of layout.rows) {
     const isHovered = options?.hoveredRowId === row.id;
-    renderRowShell(ctx, row.bounds, isHovered, row.dimmed);
-    renderRowLabel(ctx, row.bounds, row.label, row.dimmed);
+    renderRowShell(ctx, row.bounds, isHovered, row.dimmed, theme);
+    renderRowLabel(ctx, row.bounds, row.label, row.dimmed, theme);
 
     if (row.kind === 'slider' && row.slider) {
       const { trackBounds, fillBounds, handleBounds, valueText } = row.slider;
-      ctx.fillStyle = '#0f1217';
+      ctx.fillStyle = theme.palette.surface.input;
       drawRoundedRect(
         ctx,
         trackBounds.x,
@@ -540,8 +566,8 @@ export const renderSettings = (
         4,
       );
       ctx.fill();
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = theme.palette.border.input;
+      ctx.lineWidth = theme.shape.strokeWidth.thin;
       drawRoundedRect(
         ctx,
         trackBounds.x,
@@ -551,7 +577,7 @@ export const renderSettings = (
         4,
       );
       ctx.stroke();
-      ctx.fillStyle = '#d4af37';
+      ctx.fillStyle = theme.palette.surface.sliderFill;
       drawRoundedRect(
         ctx,
         fillBounds.x,
@@ -561,7 +587,7 @@ export const renderSettings = (
         4,
       );
       ctx.fill();
-      ctx.fillStyle = '#fde047';
+      ctx.fillStyle = theme.palette.surface.sliderHandle;
       drawRoundedRect(
         ctx,
         handleBounds.x,
@@ -571,8 +597,8 @@ export const renderSettings = (
         4,
       );
       ctx.fill();
-      ctx.strokeStyle = '#94a3b8';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = theme.palette.border.sliderHandle;
+      ctx.lineWidth = theme.shape.strokeWidth.thin;
       drawRoundedRect(
         ctx,
         handleBounds.x,
@@ -583,8 +609,14 @@ export const renderSettings = (
       );
       ctx.stroke();
 
-      ctx.font = ROW_FONT;
-      ctx.fillStyle = row.dimmed ? '#94a3b8' : '#f1f5f9';
+      ctx.font = composeFont(
+        theme,
+        theme.typography.sizes.lg,
+        theme.typography.weights.bold,
+      );
+      ctx.fillStyle = row.dimmed
+        ? theme.palette.text.muted
+        : theme.palette.text.dialogValue;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
       ctx.fillText(
@@ -601,6 +633,7 @@ export const renderSettings = (
     layout.backButtonBounds,
     layout.backButtonLabel,
     Boolean(options?.hoveredBack),
+    theme,
   );
   ctx.restore();
 };
@@ -614,13 +647,15 @@ export const renderCredits = (
   const layout = getCreditsLayout(viewWidth, viewHeight);
   if (!layout.hasContent) return;
 
+  const theme = options?.theme ?? defaultTheme;
+
   ctx.save();
-  renderPanel(ctx, layout.panelBounds, layout.headerText);
+  renderPanel(ctx, layout.panelBounds, layout.headerText, theme);
 
   for (const row of layout.rows) {
     const isHovered = options?.hoveredRowId === row.id;
-    renderRowShell(ctx, row.bounds, isHovered, false);
-    renderRowLabel(ctx, row.bounds, row.label, false);
+    renderRowShell(ctx, row.bounds, isHovered, false, theme);
+    renderRowLabel(ctx, row.bounds, row.label, false, theme);
   }
 
   renderBackButton(
@@ -628,6 +663,7 @@ export const renderCredits = (
     layout.backButtonBounds,
     layout.backButtonLabel,
     Boolean(options?.hoveredBack),
+    theme,
   );
   ctx.restore();
 };
