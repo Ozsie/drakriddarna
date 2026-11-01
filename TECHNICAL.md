@@ -670,24 +670,31 @@ update with its identity in the UI-layer render signature, so locale or
 theme changes repaint. No renderer imports i18n or asset URLs
 directly.
 
-M5 (view-model conversion) is under way, Tiers A and B done plus the
-Tier C event card and diary: the top bar, monster cards, hero cards,
-dungeon intro, canvas menu, welcome screen, save/load dialog, new-game
-dialog, hero selection, settings, event card and the diary panel now follow the kit component contract — the component in
-`src/uikit/components/` does layout (canvas-free, measuring through
-`env.measure`), hit testing (semantic ids) and rendering over a plain
-view model; the adapter in `src/ui/viewmodels/` is the only
-GameState/AppSettings/campaign reader; a game-side facade keeps the
-historical entry points so the controller and hit cascade work
-unchanged. Parity snapshots still pin the pixels: the harness builds
-its env with `textMeasureFromCtx`, so the committed call logs are
-reproduced byte-identically through the whole chain. Item sprites in the
-hero-card inventories and the welcome background reach their components
-through the asset port: adapters map content to asset ids,
-`src/ui/assets.ts` resolves ids to loaded images, and the components
-draw their themed fallbacks meanwhile. The one side-effecting chrome
-action — dismissing the dungeon intro — lives in `src/ui/actions/`,
-keeping the renderer layer free of game-state mutation.
+M5 (view-model conversion) is complete — every in-scope chrome module
+follows the kit component contract: the top bar, monster cards, hero
+cards, dungeon intro, canvas menu, welcome screen, save/load dialog,
+new-game dialog, hero selection, settings, event card, diary panel and
+between-dungeons. The component in `src/uikit/components/` does layout
+(canvas-free, measuring through `env.measure`), hit testing (semantic
+ids) and rendering over a plain view model; the adapter in
+`src/ui/viewmodels/` is the only GameState/AppSettings/campaign
+reader; a game-side facade keeps the historical entry points so the
+controller and hit cascade work unchanged. Parity snapshots still pin
+the pixels: the harness builds its env with `textMeasureFromCtx`, so
+the committed call logs are reproduced byte-identically through the
+whole chain. Item sprites in the hero-card inventories and the welcome
+background reach their components through the asset port: adapters map
+content to asset ids, `src/ui/assets.ts` resolves ids to loaded
+images, and the components draw their themed fallbacks meanwhile. The
+one side-effecting chrome action — dismissing the dungeon intro —
+lives in `src/ui/actions/`, keeping the renderer layer free of
+game-state mutation. Between-dungeons, the most rule-heavy module,
+carries its rules in the adapter with tests (score texts, level-up XP
+lines, tradable-item selection, the party-wipe high-score merge), and
+hero colours travel as semantic actor-dot keys mapped from the Colour
+enum in `src/ui/theme.ts`. Render signatures stay keyed on GameState
+plus env identity — now equivalent to keying on view models, since
+every view model is a pure function of exactly those inputs.
 
 M4 (component kit) is complete for the primitives with real consumers:
 `src/uikit/kit/` holds `modalFrame` (scrim, centered panel, header —

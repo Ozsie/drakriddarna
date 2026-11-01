@@ -74,31 +74,30 @@ component primitives — `modalFrame`, `button`, `listRow`, `textInput` —
 each with kit-level tests; the two-consumer rule was applied (a
 primitive was only extracted once a second consumer existed).
 
-**M5 status: Tier A and Tier B complete.** All three in-board card
-modules and all seven menu/dialog modules follow the kit component
-contract: `src/uikit/components/` holds `topBar`, `monsterCards`,
-`heroCards`, `dungeonIntro`, `menu`, `welcome`, `saveLoadDialog`,
-`newGameDialog`, `heroSelection` and `settings` — layout (canvas-free,
-measuring through `env.measure` or fixed geometry), hit testing
-(semantic ids) and rendering over a plain view model. The adapters in
-`src/ui/viewmodels/` are the only GameState/AppSettings/campaign
-readers, and the one side-effecting chrome action (dismissing the
-dungeon intro) lives in `src/ui/actions/`. The game-side facades keep
-the historical entry points (including the shared helper re-exports the
-sibling chrome modules still import) so the controller and hit cascade
-work unchanged. The hero-card inventory sprites and the welcome
-background travel through the asset port (registry ids first, raw URLs
-for content sprite sheets, resolved in `src/ui/assets.ts`). Parity
-snapshots stayed byte-identical through the chain.
-
-Remaining for M5: Tier C — between-dungeons (the rule-heavy union of
-steps with the high-score list). The event card and the diary panel are
-done: `src/uikit/components/eventCard.ts` / `diary.ts` follow the same
-contract (semantic toggle/card and panel/toggle hits, wrapping through
-`env.measure`, adapters in `src/ui/viewmodels/`), the shared
-`COMPACT_TOGGLE_SIZE` moved into `src/uikit/env.ts`, and the diary's
-text formatters (`formatWinCondition` and friends) live in the adapter
-now, re-exported under their historical names.
+**M5 status: complete — every in-scope chrome module converted.** All
+fifteen modules follow the kit component contract: `src/uikit/components/`
+holds `topBar`, `monsterCards`, `heroCards`, `dungeonIntro`, `menu`,
+`welcome`, `saveLoadDialog`, `newGameDialog`, `heroSelection`,
+`settings`, `eventCard`, `diary` and `betweenDungeons` — layout
+(canvas-free, measuring through `env.measure` or fixed geometry), hit
+testing (semantic ids) and rendering over a plain view model. The
+adapters in `src/ui/viewmodels/` are the only GameState/AppSettings/
+campaign readers; the one side-effecting chrome action (dismissing the
+dungeon intro) lives in `src/ui/actions/`; the game-side facades keep
+the historical entry points (including the shared helper re-exports
+BetweenDungeonsRendering and the sibling modules still import) so the
+controller and hit cascade work unchanged. Between-dungeons, the most
+rule-heavy module, carries its rules in the adapter with tests — the
+score texts, the level-up XP lines, the tradable-item selection and
+the party-wipe high-score merge (`rankedHighScores`). Hero colours
+travel as semantic actor-dot keys, with the Colour-enum mapping in
+`src/ui/theme.ts`. The asset port carries the hero-card inventory
+sprites and the welcome background (registry ids first, raw URLs for
+content sprite sheets, resolved in `src/ui/assets.ts`), and the
+style-literal budget stays 0/0. Render signatures stay keyed on
+GameState + env identity — now equivalent to view models, since every
+VM is a pure function of exactly those inputs. Parity snapshots
+stayed byte-identical through the whole chain.
 
 ### World — out of scope
 
