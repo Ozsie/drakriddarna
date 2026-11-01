@@ -44,6 +44,8 @@ Per the [AI Policy in README.md](./README.md):
 
 ## UI kit boundary
 
+- When changing or adding canvas UI, reuse or extend the kit — do not hand-roll new drawing in `src/ui/` or `src/components/`. Compose from the existing primitives and kit widgets first; new or changed chrome goes in a kit component following the module recipe: view model + semantic hits + layout/render in `src/uikit/components/`, the GameState adapter in `src/ui/viewmodels/`, historical entry points kept by a facade in `src/ui/`. A new component is added to `src/uikit/index.ts` in the same change (the completeness test enforces it) and to the view-model table in [docs/ui-kit.md](./docs/ui-kit.md).
+- New kit primitives follow the two-consumer rule: extract a shared widget only once a second consumer exists; no speculative options or theme slots.
 - `src/uikit/` is the game-agnostic canvas UI kit (theme tokens, primitives, kit widgets, components). It imports no game code, no Svelte and no i18n package — enforced by lint errors plus `src/uikit/boundary.test.ts`.
 - The reverse direction holds too: game-logic modules (`src/game.ts`, `src/core/`, `src/monsters/`, ...) must not import `src/uikit/**`, so headless benchmarks stay canvas-free. Only `src/ui/` and `src/components/` cross the boundary.
 - Consume the kit through `src/uikit/index.ts` (the public surface; a completeness test fails if a consumed module is missing from it). Components are driven by plain view models; `src/ui/viewmodels/` adapters are the only GameState readers, `src/ui/*Rendering.ts` facades keep the historical entry points.
