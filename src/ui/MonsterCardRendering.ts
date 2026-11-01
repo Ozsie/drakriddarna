@@ -1,16 +1,27 @@
-import type { CardBounds } from './HeroCardRendering';
+// Game-side facade for the monster cards. The component (layout, hit
+// test, render over the view model) lives in the kit; the adapter in
+// ./viewmodels/monsterCards is the only place that reads GameState.
+// This module keeps the historical entry points — including the
+// Monster-carrying hit for the cascade — so callers work unchanged.
+
 import type { GameState, Monster } from '../types';
-import { findVisibleMonsters } from '../monsters/MonsterLogic';
+import type { UiEnv, UiContext } from '../uikit/env';
+import type { CardBounds } from './HeroCardRendering';
+import { truncateText as kitTruncateText } from '../uikit/primitives/text';
 import {
-  drawRoundedRect,
-  isPointInBounds,
-  truncateText,
-} from './HeroCardRendering';
-import { composeFont } from '../uikit/primitives/text';
-import type { Translator, UiEnv } from '../uikit/env';
-import { defaultUiEnv, resolveLayoutMode } from './env';
+  hitTestMonsterCards,
+  layoutMonsterCards,
+  renderMonsterCards as renderMonsterCardsComponent,
+  type MonsterCardsLayout as KitLayout,
+  type MonsterCardsViewModel,
+} from '../uikit/components/monsterCards';
+import { toMonsterCardsViewModel } from './viewmodels/monsterCards';
+import { defaultTheme } from '../uikit/theme';
+import { layoutModeForWidth } from './env';
+import { uiAssetProvider } from './assets';
 import { i18nTranslator } from './i18nAdapter';
 
+// Legacy layout item shape: the cascade's hit result carries the Monster.
 export interface MonsterCardLayoutItem {
   monster: Monster;
   isCurrent: boolean;
@@ -41,13 +52,26 @@ export type MonsterCardsHitResult = {
   monster: Monster;
 };
 
-const translateOrFallback = (
-  key: string,
-  fallback: string,
-  t: Translator,
-): string => {
-  const res = t(key);
-  return res === key ? fallback : res || fallback;
+const legacyEnv = (env?: UiEnv): UiEnv => ({
+  theme: env?.theme ?? defaultTheme,
+  mode: env?.mode ?? 'regular',
+  t: env?.t ?? i18nTranslator,
+  measure: env?.measure ?? { width: (text) => text.length * 6.5 },
+});
+
+/** The visible monsters in view-model order, for resolving hit ids. */
+const visibleMonstersFor = (
+  state: GameState | null | undefined,
+  vm: MonsterCardsViewModel,
+): Monster[] => {
+  if (!state) return [];
+  const monsters = state.dungeon?.layout?.monsters ?? [];
+  return vm.cards.map(
+    (card) =>
+      monsters.find(
+        (m) => (m.id ?? m.name) === card.id || m.name === card.id,
+      ) ?? monsters[0],
+  );
 };
 
 export const getMonsterCardsLayout = (
@@ -56,152 +80,36 @@ export const getMonsterCardsLayout = (
   state?: GameState | null,
   env?: UiEnv,
 ): MonsterCardsLayout => {
-  const emptyLayout: MonsterCardsLayout = {
-    containerBounds: { x: 0, y: 0, width: 0, height: 0 },
-    cards: [],
-  };
-
-  if (!state || viewWidth <= 0 || viewHeight <= 0) {
-    return emptyLayout;
-  }
-
-  const monsters = findVisibleMonsters(state);
-  if (!monsters || monsters.length === 0) {
-    return emptyLayout;
-  }
-
-  const marginX = 8;
-  const marginY = 8;
-  const cardGap = 6;
-  const rowGap = 6;
-  const cardHeight = 85;
-
-  const currentActor = state.currentActor;
-  const targetActor = state.targetActor;
-
-  const isMonsterCurrent = (monster: Monster): boolean =>
-    Boolean(currentActor && currentActor === (monster as unknown));
-  const isMonsterTarget = (monster: Monster): boolean =>
-    Boolean(
-      targetActor &&
-        (targetActor === (monster as unknown) ||
-          (targetActor.name === monster.name &&
-            targetActor.position?.x === monster.position?.x &&
-            targetActor.position?.y === monster.position?.y)),
-    );
-
-  const t = env?.t ?? i18nTranslator;
-  // On narrow screens only the active monster's card is drawn, mirroring
-  // the hero cards, so the cards never cover the whole board.
-  const compact = resolveLayoutMode(env, viewWidth) === 'compact';
-  const visibleMonsters = compact
-    ? monsters.filter((m) => isMonsterCurrent(m) || isMonsterTarget(m))
-    : monsters;
-
-  if (visibleMonsters.length === 0) {
-    return emptyLayout;
-  }
-
-  const numMonsters = visibleMonsters.length;
-  const maxTotalWidth = viewWidth * 0.5;
-  const availableWidth = Math.max(0, maxTotalWidth - marginX);
-
-  const colsInRow = numMonsters <= 6 ? numMonsters : Math.min(6, numMonsters);
-  const calculatedCardWidth = Math.max(
-    70,
-    Math.floor((availableWidth - (colsInRow - 1) * cardGap) / colsInRow),
-  );
-  const cardWidth = Math.min(140, calculatedCardWidth);
-
-  const cards: MonsterCardLayoutItem[] = [];
-
-  let minX = viewWidth;
-  let minY = viewHeight;
-  let maxX = 0;
-  let maxY = 0;
-
-  visibleMonsters.forEach((monster, index) => {
-    const row = Math.floor(index / 6);
-    const col = index % 6;
-
-    const x = viewWidth - marginX - (col + 1) * cardWidth - col * cardGap;
-    const y = viewHeight - marginY - (row + 1) * cardHeight - row * rowGap;
-
-    const bounds: CardBounds = {
-      x,
-      y,
-      width: cardWidth,
-      height: cardHeight,
-    };
-
-    minX = Math.min(minX, bounds.x);
-    minY = Math.min(minY, bounds.y);
-    maxX = Math.max(maxX, bounds.x + bounds.width);
-    maxY = Math.max(maxY, bounds.y + bounds.height);
-
-    const isCurrent = isMonsterCurrent(monster);
-    const isTarget = isMonsterTarget(monster);
-
-    const monsterNameTranslated = t(monster.nameTranslationKey ?? monster.name);
-    const title = `${isTarget ? '*' : ''}${monsterNameTranslated}`;
-    const hpLabel = translateOrFallback('content.hero.hp', 'HP', t);
-    const hpText = `${hpLabel}: ${monster.health}`;
-
-    const noneLabel = translateOrFallback('content.hero.none', 'None', t);
-
-    const weaponName = monster.weapon
-      ? t(monster.weapon.nameTranslationKey ?? monster.weapon.name)
-      : noneLabel;
-    const weaponDice = monster.weapon?.dice ?? 0;
-    const weaponText = `🗡 ${weaponName} (${weaponDice})`;
-
-    const rangedWeaponName = monster.rangedWeapon
-      ? t(monster.rangedWeapon.nameTranslationKey ?? monster.rangedWeapon.name)
-      : noneLabel;
-    const rangedWeaponDice = monster.rangedWeapon?.dice ?? 0;
-    const rangedWeaponText = `🏹 ${rangedWeaponName} (${rangedWeaponDice})`;
-
-    const armourName = monster.armour
-      ? t(monster.armour.nameTranslationKey ?? monster.armour.name)
-      : noneLabel;
-    const armourDef = monster.armour?.defense ?? 0;
-    const armourText = `🥋 ${armourName} (${armourDef})`;
-
-    const shieldName = monster.shield
-      ? t(monster.shield.nameTranslationKey ?? monster.shield.name)
-      : noneLabel;
-    const shieldDice = monster.shield?.dice ?? 0;
-    const shieldText = `🛡 ${shieldName} (${shieldDice})`;
-
-    cards.push({
-      monster,
-      isCurrent,
-      isTarget,
-      bounds,
-      title,
-      hpText,
-      weaponText,
-      rangedWeaponText,
-      armourText,
-      shieldText,
-      row,
-      col,
-    });
+  const resolvedEnv = legacyEnv(env);
+  // Without an env, the historical width-derived compact rule applies.
+  const compact =
+    env?.mode !== undefined
+      ? env.mode === 'compact'
+      : layoutModeForWidth(viewWidth) === 'compact';
+  const vm = toMonsterCardsViewModel(state, resolvedEnv.t, compact);
+  const kitLayout: KitLayout = layoutMonsterCards(vm, {
+    x: 0,
+    y: 0,
+    width: viewWidth,
+    height: viewHeight,
   });
-
-  const containerBounds: CardBounds =
-    cards.length > 0
-      ? {
-          x: minX,
-          y: minY,
-          width: maxX - minX,
-          height: maxY - minY,
-        }
-      : { x: 0, y: 0, width: 0, height: 0 };
-
+  const monsters = visibleMonstersFor(state, vm);
   return {
-    containerBounds,
-    cards,
+    containerBounds: kitLayout.containerBounds,
+    cards: kitLayout.cards.map((item, index) => ({
+      monster: monsters[index],
+      isCurrent: item.card.isCurrent,
+      isTarget: item.card.isTarget,
+      bounds: item.bounds,
+      title: item.card.title,
+      hpText: item.card.hpText,
+      weaponText: item.card.weaponText,
+      rangedWeaponText: item.card.rangedWeaponText,
+      armourText: item.card.armourText,
+      shieldText: item.card.shieldText,
+      row: item.row,
+      col: item.col,
+    })),
   };
 };
 
@@ -214,132 +122,31 @@ export const renderMonsterCards = (
 ): void => {
   if (!state || viewWidth <= 0 || viewHeight <= 0) return;
 
-  const env = options?.env ?? defaultUiEnv;
-  // The raw options.env (possibly undefined) flows into the layout so its
-  // width-derived mode fallback keeps working for legacy callers.
-  const layout = getMonsterCardsLayout(
-    viewWidth,
-    viewHeight,
-    state,
-    options?.env,
-  );
-  if (!layout.cards || layout.cards.length === 0) return;
-
-  const hoveredMonsterId = options?.hoveredMonsterId ?? null;
-
-  const theme = env.theme;
-  const titleFont = composeFont(
-    theme,
-    theme.typography.sizes.sm,
-    theme.typography.weights.bold,
-  );
-  const statFont = composeFont(theme, theme.typography.sizes.xxs);
-  const statBoldFont = composeFont(
-    theme,
-    theme.typography.sizes.xxs,
-    theme.typography.weights.bold,
-  );
-
-  ctx.save();
-
-  layout.cards.forEach((item) => {
-    const { bounds, monster, isCurrent, isTarget } = item;
-    const isHovered =
-      hoveredMonsterId &&
-      (monster.id === hoveredMonsterId || monster.name === hoveredMonsterId);
-
-    // Card background
-    drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 4);
-    ctx.fillStyle = monster.colour || theme.palette.surface.cardFallback;
-    ctx.fill();
-
-    // Border
-    if (isCurrent) {
-      ctx.lineWidth = theme.shape.strokeWidth.heavy;
-      ctx.strokeStyle = theme.palette.status.monsterCurrent;
-      ctx.stroke();
-    } else if (isTarget) {
-      ctx.lineWidth = theme.shape.strokeWidth.regular;
-      ctx.strokeStyle = theme.palette.status.monsterTarget;
-      ctx.stroke();
-    } else if (isHovered) {
-      ctx.lineWidth = theme.shape.strokeWidth.regular;
-      ctx.strokeStyle = theme.palette.status.hoverCard;
-      ctx.stroke();
-    } else {
-      ctx.lineWidth = theme.shape.strokeWidth.thin;
-      ctx.strokeStyle = theme.palette.border.card;
-      ctx.stroke();
-    }
-
-    const textMaxWidth = bounds.width - 8;
-
-    // Title / Monster Name
-    ctx.fillStyle = theme.palette.text.cardTitle;
-    ctx.font = titleFont;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    const displayTitle = truncateText(ctx, item.title, textMaxWidth, titleFont);
-    ctx.fillText(displayTitle, bounds.x + 4, bounds.y + 11);
-
-    // HP
-    ctx.font = statBoldFont;
-    ctx.fillStyle = theme.palette.text.cardStat;
-    const displayHp = truncateText(
-      ctx,
-      item.hpText,
-      textMaxWidth,
-      statBoldFont,
-    );
-    ctx.fillText(displayHp, bounds.x + 4, bounds.y + 24);
-
-    // Weapon
-    ctx.font = statFont;
-    ctx.fillStyle = theme.palette.text.cardDetail;
-    const displayWeapon = truncateText(
-      ctx,
-      item.weaponText,
-      textMaxWidth,
-      statFont,
-    );
-    ctx.fillText(displayWeapon, bounds.x + 4, bounds.y + 37);
-
-    let armourYOffset = 50;
-    let shieldYOffset = 63;
-    if (monster.rangedWeapon) {
-      ctx.font = statFont;
-      ctx.fillStyle = theme.palette.text.cardDetail;
-      const displayWeapon = truncateText(
-        ctx,
-        item.rangedWeaponText,
-        textMaxWidth,
-        statFont,
-      );
-      ctx.fillText(displayWeapon, bounds.x + 4, bounds.y + 50);
-      armourYOffset = 63;
-      shieldYOffset = 76;
-    }
-
-    // Armour
-    const displayArmour = truncateText(
-      ctx,
-      item.armourText,
-      textMaxWidth,
-      statFont,
-    );
-    ctx.fillText(displayArmour, bounds.x + 4, bounds.y + armourYOffset);
-
-    // Shield
-    const displayShield = truncateText(
-      ctx,
-      item.shieldText,
-      textMaxWidth,
-      statFont,
-    );
-    ctx.fillText(displayShield, bounds.x + 4, bounds.y + shieldYOffset);
+  const env = options?.env ?? legacyEnv();
+  const compact =
+    options?.env?.mode !== undefined
+      ? options.env.mode === 'compact'
+      : layoutModeForWidth(viewWidth) === 'compact';
+  const vm = toMonsterCardsViewModel(state, env.t, compact);
+  const layout = layoutMonsterCards(vm, {
+    x: 0,
+    y: 0,
+    width: viewWidth,
+    height: viewHeight,
   });
+  if (layout.cards.length === 0) return;
 
-  ctx.restore();
+  const ui: UiContext = {
+    theme: env.theme,
+    mode: env.mode,
+    t: env.t,
+    measure: env.measure,
+    ctx,
+    assets: uiAssetProvider,
+  };
+  renderMonsterCardsComponent(layout, vm, ui, {
+    hoveredCardId: options?.hoveredMonsterId ?? null,
+  });
 };
 
 export const getMonsterCardsHit = (
@@ -351,18 +158,33 @@ export const getMonsterCardsHit = (
 ): MonsterCardsHitResult | null => {
   if (!state || viewWidth <= 0 || viewHeight <= 0) return null;
 
-  const layout = getMonsterCardsLayout(viewWidth, viewHeight, state);
-  if (!layout.cards || layout.cards.length === 0) return null;
+  const vm = toMonsterCardsViewModel(
+    state,
+    i18nTranslator,
+    layoutModeForWidth(viewWidth) === 'compact',
+  );
+  const layout = layoutMonsterCards(vm, {
+    x: 0,
+    y: 0,
+    width: viewWidth,
+    height: viewHeight,
+  });
+  if (layout.cards.length === 0) return null;
 
-  if (!isPointInBounds(screenX, screenY, layout.containerBounds)) {
-    return null;
-  }
+  const hit = hitTestMonsterCards(layout, { x: screenX, y: screenY });
+  if (!hit) return null;
 
-  for (const card of layout.cards) {
-    if (isPointInBounds(screenX, screenY, card.bounds)) {
-      return { type: 'card', monster: card.monster };
-    }
-  }
-
-  return null;
+  const monsters = state.dungeon?.layout?.monsters ?? [];
+  const monster = monsters.find(
+    (m) => (m.id ?? m.name) === hit.cardId || m.name === hit.cardId,
+  );
+  return monster ? { type: 'card', monster } : null;
 };
+
+// Historical helper re-export (used by sibling modules' tests).
+export const truncateText = (
+  ctx: CanvasRenderingContext2D | null | undefined,
+  text: string,
+  maxWidth: number,
+  font: string,
+): string => kitTruncateText(ctx, text, maxWidth, font, 6.5);
