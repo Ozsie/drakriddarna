@@ -670,20 +670,24 @@ update with its identity in the UI-layer render signature, so locale or
 theme changes repaint. No renderer imports i18n or asset URLs
 directly.
 
-M5 (view-model conversion) is under way, Tier A first: the top bar,
-monster cards and hero cards now follow the kit component contract — the
-component in `src/uikit/components/` does layout (canvas-free, measuring
-through `env.measure`), hit testing (semantic ids) and rendering over a
-plain view model; the adapter in `src/ui/viewmodels/` is the only
-GameState reader; a game-side facade keeps the historical entry points so
-the controller and hit cascade work unchanged. Parity snapshots still pin
-the pixels: the harness builds its env with `textMeasureFromCtx`, so the
-committed call logs are reproduced byte-identically through the whole
-chain. Item sprites in the hero-card inventories reach the component
-through the asset port: the adapter maps an item's sprite sheet to an
-asset id, `src/ui/assets.ts` resolves ids to loaded images, and the
-component draws the frame (falling back to the item icon while the sheet
-loads).
+M5 (view-model conversion) is under way, Tiers A and B done: the top
+bar, monster cards, hero cards, dungeon intro, canvas menu, welcome
+screen, save/load dialog, new-game dialog, hero selection and settings
+now follow the kit component contract — the component in
+`src/uikit/components/` does layout (canvas-free, measuring through
+`env.measure`), hit testing (semantic ids) and rendering over a plain
+view model; the adapter in `src/ui/viewmodels/` is the only
+GameState/AppSettings/campaign reader; a game-side facade keeps the
+historical entry points so the controller and hit cascade work
+unchanged. Parity snapshots still pin the pixels: the harness builds
+its env with `textMeasureFromCtx`, so the committed call logs are
+reproduced byte-identically through the whole chain. Item sprites in the
+hero-card inventories and the welcome background reach their components
+through the asset port: adapters map content to asset ids,
+`src/ui/assets.ts` resolves ids to loaded images, and the components
+draw their themed fallbacks meanwhile. The one side-effecting chrome
+action — dismissing the dungeon intro — lives in `src/ui/actions/`,
+keeping the renderer layer free of game-state mutation.
 
 M4 (component kit) is complete for the primitives with real consumers:
 `src/uikit/kit/` holds `modalFrame` (scrim, centered panel, header —

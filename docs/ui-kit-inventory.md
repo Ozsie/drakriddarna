@@ -74,21 +74,26 @@ component primitives — `modalFrame`, `button`, `listRow`, `textInput` —
 each with kit-level tests; the two-consumer rule was applied (a
 primitive was only extracted once a second consumer existed).
 
-**M5 status: Tier A complete (top bar, monster cards, hero cards).** All
-three in-board card modules follow the kit component contract:
-`src/uikit/components/{topBar,monsterCards,heroCards}.ts` do layout
-(canvas-free, measuring through `env.measure`), hit testing (semantic
-ids — top bar actions as strings, monster cards as card ids, hero cards
-as hero ids with item indices for the inventory popover) and rendering
-over a plain view model; the adapters in `src/ui/viewmodels/` are the
-only GameState readers; the game-side facades keep the historical entry
-points (including the shared `drawRoundedRect` / text helper re-exports
-the sibling chrome modules still import) so the controller and hit
-cascade work unchanged. The hero-card inventory sprites travel through
-the asset port: the adapter maps the item's sheet to an asset id and
-`src/ui/assets.ts` resolves ids to loaded images (registry ids first,
-raw URLs for content sprite sheets). Parity snapshots stayed
-byte-identical through the chain.
+**M5 status: Tier A and Tier B complete.** All three in-board card
+modules and all seven menu/dialog modules follow the kit component
+contract: `src/uikit/components/` holds `topBar`, `monsterCards`,
+`heroCards`, `dungeonIntro`, `menu`, `welcome`, `saveLoadDialog`,
+`newGameDialog`, `heroSelection` and `settings` — layout (canvas-free,
+measuring through `env.measure` or fixed geometry), hit testing
+(semantic ids) and rendering over a plain view model. The adapters in
+`src/ui/viewmodels/` are the only GameState/AppSettings/campaign
+readers, and the one side-effecting chrome action (dismissing the
+dungeon intro) lives in `src/ui/actions/`. The game-side facades keep
+the historical entry points (including the shared helper re-exports the
+sibling chrome modules still import) so the controller and hit cascade
+work unchanged. The hero-card inventory sprites and the welcome
+background travel through the asset port (registry ids first, raw URLs
+for content sprite sheets, resolved in `src/ui/assets.ts`). Parity
+snapshots stayed byte-identical through the chain.
+
+Remaining for M5: Tier C — the event card, the diary/win-condition
+panel and between-dungeons (the rule-heavy union of steps with the
+high-score list).
 
 ### World — out of scope
 
