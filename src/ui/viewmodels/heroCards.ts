@@ -67,7 +67,8 @@ const heroCardVm = (
   };
 };
 
-const itemSpriteRef = (item: Item): HeroCardSpriteRef | undefined =>
+/** Maps an item's sprite sheet to a sprite ref for the asset port. */
+export const itemSpriteRef = (item: Item): HeroCardSpriteRef | undefined =>
   item.sprite
     ? {
         assetId: item.sprite.image,

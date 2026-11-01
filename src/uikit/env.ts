@@ -29,6 +29,17 @@ export type Translator = (
 /** Opaque, stable identifier for an image the game provides. */
 export type AssetId = string;
 
+/**
+ * A sprite frame on a sheet asset: row-major square frames of `size`,
+ * picked by zero-based index. The asset id resolves through the asset
+ * port (the game side maps ids to loaded images).
+ */
+export interface SpriteRef {
+  readonly assetId: string;
+  readonly index: number;
+  readonly size: number;
+}
+
 /** Measures text width for a font; canvas-free so layouts stay pure. */
 export interface TextMeasure {
   width(text: string, font: string): number;

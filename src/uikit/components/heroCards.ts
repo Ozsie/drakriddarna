@@ -8,16 +8,12 @@
 import { drawRoundedRect } from '../primitives/roundedRect';
 import { isPointInRect, type Rect } from '../primitives/geometry';
 import { composeFont, truncateText } from '../primitives/text';
-import type { UiContext } from '../env';
+import { drawSpriteFrame } from '../kit/spriteFrame';
+import type { SpriteRef, UiContext } from '../env';
 import type { UiTheme } from '../theme';
 
-/** A sprite frame on a sheet asset: row-major square frames of `size`. */
-export interface HeroCardSpriteRef {
-  /** The sheet asset id; resolved through the asset port. */
-  readonly assetId: string;
-  readonly index: number;
-  readonly size: number;
-}
+/** A sprite frame reference (the shared SpriteRef, under its old name). */
+export type HeroCardSpriteRef = SpriteRef;
 
 export interface HeroInventoryItemVm {
   /** Hit-test identity: the item's index in the hero's inventory. */
@@ -335,29 +331,6 @@ const FALLBACK_PER_CHAR = 6.5;
 // row-major, columns derived from the sheet width divided by `size`, so both
 // single-row strips and rectangular grids work. The index is clamped to the
 // last available frame.
-const spriteSourceRect = (
-  image: CanvasImageSource,
-  index: number,
-  size: number,
-): { sx: number; sy: number } => {
-  const dims = image as {
-    naturalWidth?: number;
-    naturalHeight?: number;
-    width?: number;
-    height?: number;
-  };
-  const imageWidth = dims.naturalWidth || dims.width || 0;
-  const imageHeight = dims.naturalHeight || dims.height || 0;
-  const frameSize = Math.max(1, size);
-  const columns = Math.max(1, Math.floor(imageWidth / frameSize));
-  const rows = Math.max(1, Math.floor(imageHeight / frameSize));
-  const clamped = Math.min(Math.max(0, index), columns * rows - 1);
-  return {
-    sx: (clamped % columns) * frameSize,
-    sy: Math.floor(clamped / columns) * frameSize,
-  };
-};
-
 export const renderHeroCards = (
   layout: HeroCardsLayout,
   vm: HeroCardsViewModel,
@@ -616,29 +589,16 @@ export const renderHeroCards = (
         if (hasIconColumn) {
           const iconX = itemB.x + 2;
           const iconY = itemB.y + Math.floor((itemB.height - iconSize) / 2);
-          let drawn = false;
-          if (item.sprite) {
-            const image = ui.assets.get(item.sprite.assetId);
-            if (image) {
-              const { sx, sy } = spriteSourceRect(
-                image,
-                item.sprite.index,
-                item.sprite.size,
-              );
-              ctx.drawImage(
-                image,
-                sx,
-                sy,
-                Math.max(1, item.sprite.size),
-                Math.max(1, item.sprite.size),
+          const drawn = item.sprite
+            ? drawSpriteFrame(
+                ctx,
+                ui.assets,
+                item.sprite,
                 iconX,
                 iconY,
                 iconSize,
-                iconSize,
-              );
-              drawn = true;
-            }
-          }
+              )
+            : false;
           if (!drawn && item.icon) {
             ctx.fillStyle = theme.palette.text.inventoryItem;
             ctx.font = composeFont(
