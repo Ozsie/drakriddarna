@@ -670,6 +670,22 @@ update with its identity in the UI-layer render signature, so locale or
 theme changes repaint. No renderer imports i18n or asset URLs
 directly.
 
+M4 (component kit) is complete for the primitives with real consumers:
+`src/uikit/kit/` holds `modalFrame` (scrim, centered panel, header —
+shared by six dialogs), `button` (primary/secondary with hover states),
+`listRow` (the selectable-row shell with rest/hover/selected styles,
+plus explicit styles for surfaces like the party-wipe buttons and trade
+items that use their own tokens) and `textInput` (box, value, static
+caret, and the pure keystroke reducer the hero-rename editor delegates
+to). Each extraction is call-log preserving, verified against the
+committed parity snapshots: only one line changed across all of M4 — a
+`textBaseline` the seed input used to inherit from ambient state is now
+written explicitly with the same value. Primitives with no second
+consumer yet (scroll, bar, chip, table) were deliberately not built per
+the kit's two-consumer rule; two genuinely non-conforming sites (the
+SaveLoad hybrid action button and its clip-to-field name input) stay
+inline with comments saying why.
+
 ## Build, CI and deployment
 
 - `npm run build` produces a fully static site via SvelteKit's static adapter
