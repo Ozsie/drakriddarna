@@ -5,6 +5,8 @@
 // tokens; everything else inherits the default.
 
 import { resolveTheme } from '../uikit/theme';
+import { Colour } from '../types';
+import type { ActorColourKey } from '../uikit/components/betweenDungeons';
 
 export const highContrastTheme = resolveTheme({
   palette: {
@@ -41,3 +43,27 @@ export const highContrastTheme = resolveTheme({
     },
   },
 });
+
+// The game's actor colours map onto the theme's actor-dot tokens. These
+// two mappings are the game-side glue between the Colour enum and the
+// kit's semantic colour keys.
+
+/** Maps a hero's game colour onto its theme actor-dot key. */
+export const actorColourKey = (colour: Colour): ActorColourKey =>
+  colour === Colour.Red
+    ? 'red'
+    : colour === Colour.Blue
+    ? 'blue'
+    : colour === Colour.Yellow
+    ? 'yellow'
+    : 'green';
+
+/** The reverse mapping, for the facades' historical Colour-carrying shapes. */
+export const actorColour = (key: ActorColourKey): Colour =>
+  key === 'red'
+    ? Colour.Red
+    : key === 'blue'
+    ? Colour.Blue
+    : key === 'yellow'
+    ? Colour.Yellow
+    : Colour.Green;
