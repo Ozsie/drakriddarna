@@ -10,6 +10,13 @@ import type { UiTheme } from './theme';
 export type LayoutMode = 'regular' | 'compact';
 
 /**
+ * Size of the square a collapsed compact panel collapses into (the
+ * events and diary corner panels). Lives here so the kit components and
+ * the game-side `UiMode` share one value.
+ */
+export const COMPACT_TOGGLE_SIZE = 40;
+
+/**
  * Translates a message key with optional parameters. Built game-side from
  * the i18n store; its behavior changes with the locale, so render
  * signatures must include the locale.

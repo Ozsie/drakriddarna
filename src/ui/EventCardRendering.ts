@@ -1,11 +1,31 @@
+// Game-side facade for the event card. The component (layout, hit test,
+// render over the view model) lives in the kit; the adapter in
+// ./viewmodels/eventCard is the only place that reads GameState. This
+// module keeps the historical entry points — including the
+// TurnEvent-carrying layout items — so the controller, the hit cascade
+// and existing tests work unchanged, with the exact same pixels: parity
+// snapshots cover the whole chain.
+
 import type { GameState, TurnEvent } from '../types';
-import { drawRoundedRect, type CardBounds } from './HeroCardRendering';
-import { wrapText } from './DiaryAndWinConditionRendering';
-import { COMPACT_TOGGLE_SIZE } from './UiMode';
-import { composeFont } from '../uikit/primitives/text';
-import type { Translator, UiEnv } from '../uikit/env';
-import { defaultUiEnv, resolveLayoutMode } from './env';
+import type { UiEnv, UiContext } from '../uikit/env';
+import type { Rect } from '../uikit/primitives/geometry';
+import {
+  hitTestEventCard,
+  layoutEventCard,
+  renderEventCard as renderEventCardComponent,
+  type EventCardHit,
+  type EventCardLayout as KitLayout,
+} from '../uikit/components/eventCard';
+import { toEventCardViewModel } from './viewmodels/eventCard';
+import { defaultTheme } from '../uikit/theme';
+import { layoutModeForWidth, textMeasureFromCtx } from './env';
 import { i18nTranslator } from './i18nAdapter';
+import { uiAssetProvider } from './assets';
+
+export {
+  formatEventDescription,
+  formatEventTitle,
+} from './viewmodels/eventCard';
 
 export interface DrawnEventItem {
   event: TurnEvent;
@@ -27,8 +47,8 @@ export interface ActiveEventLayout {
 }
 
 export interface EventCardLayout {
-  bounds: CardBounds;
-  toggleButtonBounds: CardBounds;
+  bounds: Rect;
+  toggleButtonBounds: Rect;
   isCollapsed: boolean;
   isCompact: boolean;
   headerText: string;
@@ -54,24 +74,43 @@ export interface EventCardHitResult {
   type: 'toggle' | 'card';
 }
 
-export const formatEventTitle = (
-  event: TurnEvent,
-  t: Translator = i18nTranslator,
-): string => {
-  const name = t(event.nameTranslationKey ?? event.name);
-  const resolvedName =
-    name === (event.nameTranslationKey ?? event.name) ? event.name : name;
-  return `${event.number}. ${resolvedName}`;
-};
+// Per-character approximation when neither a context nor an env measure
+// is available (the historical fallback of this module's wrap).
+const perCharMeasure = () => ({
+  width: (text: string) => text.length * 6.5,
+});
 
-export const formatEventDescription = (
-  event: TurnEvent,
-  t: Translator = i18nTranslator,
-): string => {
-  const desc = t(event.descriptionTranslationKey ?? event.description);
-  return desc === (event.descriptionTranslationKey ?? event.description)
-    ? event.description
-    : desc;
+/** The env a legacy call implies: overrides or the width-derived defaults. */
+const legacyEnv = (
+  viewWidth: number,
+  env: UiEnv | undefined,
+  ctx: CanvasRenderingContext2D | null | undefined,
+): UiEnv => ({
+  theme: env?.theme ?? defaultTheme,
+  mode:
+    env?.mode ??
+    (viewWidth > 0 && layoutModeForWidth(viewWidth) === 'compact'
+      ? 'compact'
+      : 'regular'),
+  t: env?.t ?? i18nTranslator,
+  measure: ctx ? textMeasureFromCtx(ctx) : env?.measure ?? perCharMeasure(),
+});
+
+const kitLayoutFor = (
+  viewWidth: number,
+  viewHeight: number,
+  state: GameState | null | undefined,
+  options: RenderEventCardOptions | undefined,
+  ctx: CanvasRenderingContext2D | null | undefined,
+): KitLayout => {
+  const env = legacyEnv(viewWidth, options?.env, ctx);
+  const vm = toEventCardViewModel(state, env.t);
+  return layoutEventCard(
+    vm,
+    { x: 0, y: 0, width: viewWidth, height: viewHeight },
+    env,
+    { isCollapsed: options?.isCollapsed },
+  );
 };
 
 export const getEventCardLayout = (
@@ -81,198 +120,51 @@ export const getEventCardLayout = (
   options?: RenderEventCardOptions,
   ctx?: CanvasRenderingContext2D | null,
 ): EventCardLayout => {
-  const emptyLayout: EventCardLayout = {
-    bounds: { x: 0, y: 0, width: 0, height: 0 },
-    toggleButtonBounds: { x: 0, y: 0, width: 0, height: 0 },
-    isCollapsed: Boolean(options?.isCollapsed),
-    isCompact: false,
-    headerText: '',
-    deckSummary: { remaining: 0, total: 0, drawn: 0 },
-    drawnEvents: [],
-    hasContent: false,
-  };
-
-  if (!state || viewWidth <= 0 || viewHeight <= 0) {
-    return emptyLayout;
-  }
-
-  const eventDeck = state.eventDeck ?? [];
-  const activeEvent = state.currentEvent;
-  const isCollapsed = Boolean(options?.isCollapsed);
-
-  const remaining = eventDeck.filter((e) => !e.used).length;
-  const total = eventDeck.length;
-  const drawn = eventDeck.filter((e) => e.used).length;
-
-  if (total === 0 && !activeEvent) {
-    return emptyLayout;
-  }
-
-  const marginX = 8;
-  const topY = 46; // Directly under top bar (y: 8, height: 32 + 6px gap)
-  const paddingX = 8;
-  const paddingY = 6;
-  const lineHeight = 13;
-
-  const panelWidth = Math.min(
-    240,
-    Math.max(180, Math.min(220, viewWidth - marginX * 2)),
+  const kitLayout = kitLayoutFor(
+    viewWidth,
+    viewHeight,
+    state,
+    options,
+    ctx ?? null,
   );
-  const contentWidth = Math.max(0, panelWidth - paddingX * 2);
-  const panelX = marginX;
-
-  const toggleSize = 18;
-  const toggleButtonBounds: CardBounds = {
-    x: panelX + panelWidth - paddingX - toggleSize,
-    y: topY + 4,
-    width: toggleSize,
-    height: toggleSize,
-  };
-
-  const t = options?.env?.t ?? i18nTranslator;
-  const isCompact = resolveLayoutMode(options?.env, viewWidth) === 'compact';
-
-  const rawEventCount = t('content.event.count');
-  const eventWord =
-    rawEventCount && rawEventCount !== 'content.event.count'
-      ? rawEventCount
-      : 'Events';
-  const headerText = `🎴 ${eventWord} (${remaining}/${total})`;
-
-  if (isCollapsed) {
-    // On narrow screens the collapsed card is a square button in the
-    // top-left corner; the bar layout would still cover too much board.
-    if (isCompact) {
-      const squareBounds: CardBounds = {
-        x: marginX,
-        y: topY,
-        width: COMPACT_TOGGLE_SIZE,
-        height: COMPACT_TOGGLE_SIZE,
-      };
-      return {
-        bounds: squareBounds,
-        toggleButtonBounds: squareBounds,
-        isCollapsed: true,
-        isCompact: true,
-        headerText,
-        deckSummary: { remaining, total, drawn },
-        drawnEvents: [],
-        hasContent: true,
-      };
-    }
-
-    const collapsedHeight = 28;
+  if (!state || !kitLayout.hasContent) {
     return {
-      bounds: {
-        x: panelX,
-        y: topY,
-        width: panelWidth,
-        height: collapsedHeight,
-      },
-      toggleButtonBounds,
-      isCollapsed: true,
-      isCompact: false,
-      headerText,
-      deckSummary: { remaining, total, drawn },
+      bounds: kitLayout.bounds,
+      toggleButtonBounds: kitLayout.toggleButtonBounds,
+      isCollapsed: kitLayout.isCollapsed,
+      isCompact: kitLayout.isCompact,
+      headerText: kitLayout.headerText,
+      deckSummary: kitLayout.deckSummary,
+      activeEvent: undefined,
       drawnEvents: [],
-      hasContent: true,
+      hasContent: kitLayout.hasContent,
     };
   }
 
-  let currentY = topY + paddingY + 16; // Header space
-
-  const theme = options?.env?.theme ?? defaultUiEnv.theme;
-  const bodyFont = composeFont(theme, theme.typography.sizes.xxs);
-
-  let activeEventLayout: ActiveEventLayout | undefined;
-  if (activeEvent) {
-    const rawHeader = t('content.event.current');
-    const header =
-      rawHeader === 'content.event.current'
-        ? 'Current event'
-        : rawHeader || 'Current event';
-    const title = formatEventTitle(activeEvent, t);
-    const description = formatEventDescription(activeEvent, t);
-    const descriptionLines = wrapText(ctx, description, contentWidth, bodyFont);
-
-    const activeHeight = 14 + 14 + descriptionLines.length * lineHeight;
-    activeEventLayout = {
-      event: activeEvent,
-      header,
-      title,
-      description,
-      descriptionLines,
-      y: currentY,
-      height: activeHeight,
-    };
-
-    currentY += activeHeight + 8;
-  }
-
-  const rawDrawn = t('content.event.drawn');
-  const drawnWord =
-    rawDrawn && rawDrawn !== 'content.event.drawn' ? rawDrawn : 'Drawn';
-  const drawnEventsHeader = `${drawnWord} (${drawn}):`;
-  const drawnEventsHeaderY = currentY;
-  currentY += 15;
-
-  const drawnList = eventDeck.filter((e) => e.used);
-  const drawnEventsLayout: DrawnEventItem[] = [];
-
-  if (drawnList.length === 0) {
-    const rawNone = 'content.event.none';
-    const translatedNone = t(rawNone);
-    const noneText =
-      translatedNone && translatedNone !== rawNone
-        ? translatedNone
-        : '(None drawn yet)';
-    drawnEventsLayout.push({
-      event: {} as TurnEvent,
-      number: 0,
-      title: noneText,
-      lines: [noneText],
-      y: currentY,
-      height: lineHeight,
-    });
-    currentY += lineHeight + 4;
-  } else {
-    for (const event of drawnList) {
-      const title = `• ${formatEventTitle(event, t)}`;
-      const lines = wrapText(ctx, title, contentWidth, bodyFont);
-      const itemHeight = lines.length * lineHeight;
-      drawnEventsLayout.push({
-        event,
-        number: event.number,
-        title,
-        lines,
-        y: currentY,
-        height: itemHeight,
-      });
-      currentY += itemHeight + 2;
-    }
-  }
-
-  const totalHeight = currentY - topY + paddingY;
-  const maxHeight = Math.max(40, viewHeight - topY - marginX);
-  const panelHeight = Math.min(maxHeight, totalHeight);
+  const activeTurnEvent = state.currentEvent;
+  const drawnList = (state.eventDeck ?? []).filter((event) => event.used);
 
   return {
-    bounds: {
-      x: panelX,
-      y: topY,
-      width: panelWidth,
-      height: panelHeight,
-    },
-    toggleButtonBounds,
-    isCollapsed: false,
-    isCompact,
-    headerText,
-    deckSummary: { remaining, total, drawn },
-    activeEvent: activeEventLayout,
-    drawnEventsHeader,
-    drawnEventsHeaderY,
-    drawnEvents: drawnEventsLayout,
-    hasContent: true,
+    ...kitLayout,
+    activeEvent: kitLayout.activeEvent
+      ? {
+          event: activeTurnEvent ?? ({} as TurnEvent),
+          header: kitLayout.activeEvent.event.header,
+          title: kitLayout.activeEvent.title,
+          description: kitLayout.activeEvent.description,
+          descriptionLines: kitLayout.activeEvent.descriptionLines,
+          y: kitLayout.activeEvent.y,
+          height: kitLayout.activeEvent.height,
+        }
+      : undefined,
+    drawnEvents: kitLayout.drawnEvents.map((item, index) => ({
+      event: drawnList[index] ?? ({} as TurnEvent),
+      number: item.number,
+      title: item.title,
+      lines: item.lines,
+      y: item.y,
+      height: item.height,
+    })),
   };
 };
 
@@ -284,36 +176,16 @@ export const getEventCardHit = (
   x: number,
   y: number,
 ): EventCardHitResult | null => {
-  const layout = getEventCardLayout(viewWidth, viewHeight, state, {
-    isCollapsed,
-  });
-  if (!layout.hasContent) return null;
-
-  const inToggle =
-    x >= layout.toggleButtonBounds.x &&
-    x <= layout.toggleButtonBounds.x + layout.toggleButtonBounds.width &&
-    y >= layout.toggleButtonBounds.y &&
-    y <= layout.toggleButtonBounds.y + layout.toggleButtonBounds.height;
-
-  if (inToggle) {
-    return { type: 'toggle' };
-  }
-
-  const inCard =
-    x >= layout.bounds.x &&
-    x <= layout.bounds.x + layout.bounds.width &&
-    y >= layout.bounds.y &&
-    y <= layout.bounds.y + layout.bounds.height;
-
-  if (inCard) {
-    // If collapsed, clicking anywhere on the header card also toggles it open
-    if (layout.isCollapsed || y <= layout.bounds.y + 26) {
-      return { type: 'toggle' };
-    }
-    return { type: 'card' };
-  }
-
-  return null;
+  const kitLayout = kitLayoutFor(
+    viewWidth,
+    viewHeight,
+    state,
+    { isCollapsed },
+    null,
+  );
+  const hit: EventCardHit = hitTestEventCard(kitLayout, { x, y });
+  if (!hit) return null;
+  return hit.kind === 'toggle' ? { type: 'toggle' } : { type: 'card' };
 };
 
 export const renderEventCard = (
@@ -325,195 +197,21 @@ export const renderEventCard = (
 ): void => {
   if (!state || viewWidth <= 0 || viewHeight <= 0) return;
 
-  const layout = getEventCardLayout(viewWidth, viewHeight, state, options, ctx);
+  const kitLayout = kitLayoutFor(viewWidth, viewHeight, state, options, ctx);
   if (
-    !layout.hasContent ||
-    layout.bounds.width <= 0 ||
-    layout.bounds.height <= 0
+    !kitLayout.hasContent ||
+    kitLayout.bounds.width <= 0 ||
+    kitLayout.bounds.height <= 0
   ) {
     return;
   }
 
-  const {
-    bounds,
-    toggleButtonBounds,
-    isCollapsed,
-    isCompact,
-    headerText,
-    activeEvent,
-    drawnEventsHeader,
-    drawnEventsHeaderY,
-    drawnEvents,
-  } = layout;
-
-  const theme = options?.env?.theme ?? defaultUiEnv.theme;
-  const bodyFont = composeFont(theme, theme.typography.sizes.xxs);
-  const headerFont = composeFont(
-    theme,
-    theme.typography.sizes.sm,
-    theme.typography.weights.bold,
-  );
-  const subheaderFont = composeFont(
-    theme,
-    theme.typography.sizes.xxs,
-    theme.typography.weights.bold,
-  );
-  const eventTitleFont = composeFont(
-    theme,
-    theme.typography.sizes.xs,
-    theme.typography.weights.bold,
-  );
-
-  ctx.save();
-
-  // Collapsed compact mode: a square button with the event icon and the
-  // remaining card count; pressing it opens the full panel.
-  if (isCollapsed && isCompact) {
-    ctx.fillStyle = options?.isToggleHovered
-      ? theme.palette.surface.panelCornerHover
-      : theme.palette.surface.panelCorner;
-    ctx.strokeStyle = options?.isToggleHovered
-      ? theme.palette.border.panelCornerHover
-      : theme.palette.border.hairline;
-    ctx.lineWidth = theme.shape.strokeWidth.thin;
-    drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = theme.palette.text.panelHeader;
-    ctx.font = composeFont(
-      theme,
-      theme.typography.sizes.xxxl,
-      theme.typography.weights.regular,
-      theme.typography.families.plain,
-    );
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🎴', bounds.x + bounds.width / 2, bounds.y + 14);
-
-    ctx.font = subheaderFont;
-    ctx.fillStyle = theme.palette.text.secondary;
-    ctx.fillText(
-      `${layout.deckSummary.remaining}`,
-      bounds.x + bounds.width / 2,
-      bounds.y + 30,
-    );
-
-    ctx.restore();
-    return;
-  }
-
-  // Background panel
-  ctx.fillStyle = theme.palette.surface.panelCorner;
-  ctx.strokeStyle = theme.palette.border.hairline;
-  ctx.lineWidth = theme.shape.strokeWidth.thin;
-  drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
-  ctx.fill();
-  ctx.stroke();
-
-  // Header Title
-  ctx.font = headerFont;
-  ctx.fillStyle = theme.palette.text.panelHeader;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText(headerText, bounds.x + 8, bounds.y + 7);
-
-  // Toggle button [ − ] or [ + ]
-  ctx.fillStyle = options?.isToggleHovered
-    ? theme.palette.surface.toggleHover
-    : theme.palette.surface.toggle;
-  ctx.strokeStyle = options?.isToggleHovered
-    ? theme.palette.border.panelCornerHover
-    : theme.palette.border.toggle;
-  ctx.lineWidth = theme.shape.strokeWidth.thin;
-  drawRoundedRect(
+  const ui: UiContext = {
+    ...legacyEnv(viewWidth, options?.env, ctx),
     ctx,
-    toggleButtonBounds.x,
-    toggleButtonBounds.y,
-    toggleButtonBounds.width,
-    toggleButtonBounds.height,
-    3,
-  );
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.font = headerFont;
-  ctx.fillStyle = options?.isToggleHovered
-    ? theme.palette.text.bright
-    : theme.palette.text.secondary;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const toggleSymbol = isCollapsed ? '+' : '−';
-  ctx.fillText(
-    toggleSymbol,
-    toggleButtonBounds.x + toggleButtonBounds.width / 2,
-    toggleButtonBounds.y + toggleButtonBounds.height / 2,
-  );
-
-  if (isCollapsed) {
-    ctx.restore();
-    return;
-  }
-
-  // Divider under header
-  ctx.strokeStyle = theme.palette.border.separator;
-  ctx.beginPath();
-  ctx.moveTo(bounds.x + 6, bounds.y + 26);
-  ctx.lineTo(bounds.x + bounds.width - 6, bounds.y + 26);
-  ctx.stroke();
-
-  // Active event section
-  if (activeEvent) {
-    // Current event badge / subheader
-    ctx.font = subheaderFont;
-    ctx.fillStyle = theme.palette.text.muted;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(activeEvent.header, bounds.x + 8, activeEvent.y);
-
-    // Event title in amber / gold
-    ctx.font = eventTitleFont;
-    ctx.fillStyle = theme.palette.text.eventTitle;
-    ctx.fillText(activeEvent.title, bounds.x + 8, activeEvent.y + 13);
-
-    // Description
-    ctx.font = bodyFont;
-    ctx.fillStyle = theme.palette.text.body;
-    let lineY = activeEvent.y + 27;
-    for (const line of activeEvent.descriptionLines) {
-      ctx.fillText(line, bounds.x + 8, lineY);
-      lineY += 13;
-    }
-
-    // Divider after active event
-    ctx.strokeStyle = theme.palette.border.separator;
-    ctx.beginPath();
-    ctx.moveTo(bounds.x + 6, activeEvent.y + activeEvent.height + 4);
-    ctx.lineTo(
-      bounds.x + bounds.width - 6,
-      activeEvent.y + activeEvent.height + 4,
-    );
-    ctx.stroke();
-  }
-
-  // Drawn Events Section
-  if (drawnEventsHeader && drawnEventsHeaderY) {
-    ctx.font = subheaderFont;
-    ctx.fillStyle = theme.palette.text.muted;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(drawnEventsHeader, bounds.x + 8, drawnEventsHeaderY);
-  }
-
-  ctx.font = bodyFont;
-  ctx.fillStyle = theme.palette.text.muted;
-  for (const item of drawnEvents) {
-    let lineY = item.y;
-    for (const line of item.lines) {
-      ctx.fillText(line, bounds.x + 8, lineY);
-      lineY += 13;
-    }
-  }
-
-  ctx.restore();
+    assets: uiAssetProvider,
+  };
+  renderEventCardComponent(kitLayout, ui, {
+    isToggleHovered: options?.isToggleHovered,
+  });
 };
