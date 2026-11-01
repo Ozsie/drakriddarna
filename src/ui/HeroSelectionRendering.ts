@@ -17,8 +17,7 @@ import {
   type HeroSelectionRowLayout,
 } from '../uikit/components/heroSelection';
 import { toHeroSelectionViewModel } from './viewmodels/heroSelection';
-import { defaultTheme } from '../uikit/theme';
-import { i18nTranslator } from './i18nAdapter';
+import { legacyUiEnv } from './env';
 import { uiAssetProvider } from './assets';
 
 export {
@@ -62,20 +61,13 @@ export type HeroSelectionHitResult =
 
 export type { HeroSelectionLayout, HeroSelectionRowLayout };
 
-const legacyEnv = (env: UiEnv | undefined): UiEnv => ({
-  theme: env?.theme ?? defaultTheme,
-  mode: env?.mode ?? 'regular',
-  t: env?.t ?? i18nTranslator,
-  measure: env?.measure ?? { width: (text) => text.length * 6.5 },
-});
-
 const kitLayoutFor = (
   viewWidth: number,
   viewHeight: number,
   campaignId: string,
   options: HeroSelectionOptions | undefined,
 ): KitLayout => {
-  const env = legacyEnv(options?.env);
+  const env = legacyUiEnv(options?.env);
   const vm = toHeroSelectionViewModel(campaignId, env.t);
   return layoutHeroSelection(
     vm,
@@ -139,7 +131,7 @@ export const renderHeroSelection = (
   if (!layout.hasContent) return;
 
   const ui: UiContext = {
-    ...legacyEnv(options?.env),
+    ...legacyUiEnv(options?.env),
     ctx,
     assets: uiAssetProvider,
   };

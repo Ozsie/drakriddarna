@@ -6,10 +6,11 @@
 // and width-derived compact mode.
 
 import { defaultTheme } from '../uikit/theme';
-import type { LayoutMode, TextMeasure, UiEnv } from '../uikit/env';
+import type { LayoutMode, TextMeasure, UiContext, UiEnv } from '../uikit/env';
 import { measureTextWidth as kitMeasureTextWidth } from '../uikit/primitives/text';
 import { isCompactUi } from './UiMode';
 import { i18nTranslator } from './i18nAdapter';
+import { uiAssetProvider } from './assets';
 
 // Per-character approximation used before the kit's cached measure lands
 // (M5); layouts still measure through a canvas context today.
@@ -70,3 +71,55 @@ export const createUiEnv = (
 /** Identity string for render signatures: changes when a repaint is due. */
 export const envIdentity = (env: UiEnv, locale: string): string =>
   `${locale}:${env.mode}:${env.theme === defaultTheme ? 'default' : 'custom'}`;
+
+/**
+ * The env a legacy (pre-kit) call implies: the caller's overrides, else
+ * the historical defaults — the default theme, the shared translator,
+ * the width-derived compact rule when the module used one, and a
+ * context-backed measure when the pre-kit layout measured through a
+ * context, else the module's per-character fallback. One shared builder
+ * for all game-side facades (the top bar keeps its own variant: its
+ * fallback predates env.measure and ignores it without a context).
+ */
+export interface LegacyEnvOptions {
+  /** The view width, for the width-derived compact fallback. */
+  readonly viewWidth?: number;
+  /** A context to measure through, as the pre-kit layouts did. */
+  readonly ctx?: CanvasRenderingContext2D | null;
+  /** The module's historical per-character fallback width. */
+  readonly fallbackPerChar?: number;
+}
+
+export const legacyUiEnv = (
+  env: UiEnv | undefined,
+  options: LegacyEnvOptions = {},
+): UiEnv => ({
+  theme: env?.theme ?? defaultTheme,
+  mode:
+    env?.mode ??
+    (options.viewWidth !== undefined &&
+    options.viewWidth > 0 &&
+    isCompactUi(options.viewWidth)
+      ? 'compact'
+      : 'regular'),
+  t: env?.t ?? i18nTranslator,
+  measure: options.ctx
+    ? textMeasureFromCtx(options.ctx)
+    : env?.measure ?? {
+        width: (text) => text.length * (options.fallbackPerChar ?? 6.5),
+      },
+});
+
+/**
+ * The UiContext a legacy render call implies: the legacy env plus the
+ * canvas context and the UI asset port. Shared by the game-side facades.
+ */
+export const legacyUiContext = (
+  ctx: CanvasRenderingContext2D,
+  env: UiEnv | undefined,
+  options: LegacyEnvOptions = {},
+): UiContext => ({
+  ...legacyUiEnv(env, options),
+  ctx,
+  assets: uiAssetProvider,
+});

@@ -9,7 +9,7 @@
 import type { ItemSprite } from '../types';
 import type { RadialMenuEntry } from '../hero/RadialMenuLogic';
 import type { RadialMenuState } from '../store/radialMenuStore';
-import type { SpriteRef, Translator, UiEnv, UiContext } from '../uikit/env';
+import type { SpriteRef, Translator, UiEnv } from '../uikit/env';
 import {
   hitTestRadialMenu,
   layoutRadialMenu,
@@ -18,10 +18,8 @@ import {
   type RadialMenuLayout as KitLayout,
 } from '../uikit/components/radialMenu';
 import { toRadialMenuViewModel } from './viewmodels/radialMenu';
-import { defaultTheme } from '../uikit/theme';
-import { defaultUiEnv } from './env';
+import { legacyUiContext, defaultUiEnv } from './env';
 import { i18nTranslator } from './i18nAdapter';
-import { uiAssetProvider } from './assets';
 
 export { RADIAL_MENU_ICONS, RADIAL_MENU_LABELS } from './viewmodels/radialMenu';
 
@@ -35,18 +33,6 @@ export interface RadialButtonPosition {
   icon: string;
   sprite?: ItemSprite;
 }
-
-const legacyUi = (
-  ctx: CanvasRenderingContext2D,
-  env: UiEnv | undefined,
-): UiContext => ({
-  theme: env?.theme ?? defaultTheme,
-  mode: env?.mode ?? 'regular',
-  t: env?.t ?? i18nTranslator,
-  measure: env?.measure ?? { width: (text) => text.length * 6.5 },
-  ctx,
-  assets: uiAssetProvider,
-});
 
 const entriesFor = (menu: RadialMenuState | null | undefined) =>
   menu?.entries ?? [];
@@ -127,7 +113,7 @@ export const renderRadialMenu = (
   if (!vm) return;
   const kitLayout = layoutRadialMenu(vm, cellSize);
 
-  renderRadialMenuComponent(kitLayout, legacyUi(ctx, env), {
+  renderRadialMenuComponent(kitLayout, legacyUiContext(ctx, env), {
     hoveredId: hoveredIndex ?? null,
   });
 };

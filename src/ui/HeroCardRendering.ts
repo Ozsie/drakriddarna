@@ -24,8 +24,7 @@ import {
   type HeroCardsViewModel,
 } from '../uikit/components/heroCards';
 import { toHeroCardsViewModel } from './viewmodels/heroCards';
-import { defaultTheme } from '../uikit/theme';
-import { layoutModeForWidth } from './env';
+import { legacyUiEnv, layoutModeForWidth } from './env';
 import { uiAssetProvider } from './assets';
 import { i18nTranslator } from './i18nAdapter';
 
@@ -113,14 +112,6 @@ export const truncateText = (
   maxWidth: number,
   font: string,
 ): string => kitTruncateText(ctx, text, maxWidth, font, FALLBACK_PER_CHAR);
-
-/** The env a legacy call implies: given overrides or the width-derived defaults. */
-const legacyEnv = (env?: UiEnv): UiEnv => ({
-  theme: env?.theme ?? defaultTheme,
-  mode: env?.mode ?? 'regular',
-  t: env?.t ?? i18nTranslator,
-  measure: env?.measure ?? { width: (text) => text.length * 6.5 },
-});
 
 /** The compact rule a legacy call implies: the env's mode, else width-derived. */
 const legacyCompact = (env: UiEnv | undefined, viewWidth: number): boolean =>
@@ -233,7 +224,7 @@ export const renderHeroCards = (
 ): void => {
   if (!state || viewWidth <= 0 || viewHeight <= 0) return;
 
-  const env = legacyEnv(options?.env);
+  const env = legacyUiEnv(options?.env);
   const vm = viewModel(viewWidth, viewHeight, state, options?.env);
   if (!vm || vm.cards.length === 0) return;
   const layout = layoutHeroCards(vm, {

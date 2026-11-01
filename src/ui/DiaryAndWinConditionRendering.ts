@@ -26,9 +26,7 @@ import {
   sortedWinConditions,
   toDiaryViewModel,
 } from './viewmodels/diary';
-import { defaultTheme } from '../uikit/theme';
-import { layoutModeForWidth, textMeasureFromCtx } from './env';
-import { i18nTranslator } from './i18nAdapter';
+import { legacyUiEnv } from './env';
 import { uiAssetProvider } from './assets';
 
 export {
@@ -96,26 +94,6 @@ export const wrapText = (
   font: string,
 ): string[] => kitWrapText(ctx, text, maxWidth, font, FALLBACK_PER_CHAR);
 
-/** The env a legacy call implies: overrides or the width-derived defaults. */
-const legacyEnv = (
-  viewWidth: number,
-  env: UiEnv | undefined,
-  ctx: CanvasRenderingContext2D | null | undefined,
-): UiEnv => ({
-  theme: env?.theme ?? defaultTheme,
-  mode:
-    env?.mode ??
-    (viewWidth > 0 && layoutModeForWidth(viewWidth) === 'compact'
-      ? 'compact'
-      : 'regular'),
-  t: env?.t ?? i18nTranslator,
-  measure: ctx
-    ? textMeasureFromCtx(ctx)
-    : env?.measure ?? {
-        width: (text: string) => text.length * FALLBACK_PER_CHAR,
-      },
-});
-
 const kitLayoutFor = (
   viewWidth: number,
   viewHeight: number,
@@ -123,7 +101,7 @@ const kitLayoutFor = (
   options: RenderDiaryAndWinConditionsOptions | undefined,
   ctx: CanvasRenderingContext2D | null | undefined,
 ): KitLayout => {
-  const env = legacyEnv(viewWidth, options?.env, ctx);
+  const env = legacyUiEnv(options?.env, { viewWidth, ctx });
   const vm = toDiaryViewModel(state, env.t);
   return layoutDiary(
     vm,
@@ -228,7 +206,7 @@ export const renderDiaryAndWinConditions = (
   }
 
   const ui: UiContext = {
-    ...legacyEnv(viewWidth, options?.env, ctx),
+    ...legacyUiEnv(options?.env, { viewWidth, ctx }),
     ctx,
     assets: uiAssetProvider,
   };

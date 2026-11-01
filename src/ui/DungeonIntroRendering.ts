@@ -7,7 +7,7 @@
 // pixels: parity snapshots cover the whole chain.
 
 import type { GameState } from '../types';
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv } from '../uikit/env';
 import type { Rect } from '../uikit/primitives/geometry';
 import {
   hitTestDungeonIntro,
@@ -19,10 +19,7 @@ import {
   shouldShowDungeonIntro as shouldShow,
   toDungeonIntroViewModel,
 } from './viewmodels/dungeonIntro';
-import { defaultTheme } from '../uikit/theme';
-import { textMeasureFromCtx } from './env';
-import { i18nTranslator } from './i18nAdapter';
-import { uiAssetProvider } from './assets';
+import { legacyUiContext, legacyUiEnv } from './env';
 
 export { shouldShowDungeonIntro } from './viewmodels/dungeonIntro';
 export { dismissDungeonIntro } from './actions/dismissDungeonIntro';
@@ -45,23 +42,6 @@ export interface DungeonIntroHitResult {
   type: 'close' | 'panel' | 'backdrop';
 }
 
-// Per-character approximation when neither a context nor an env measure
-// is available (the historical fallback of this module's wrap).
-const perCharMeasure = (perChar: number) => ({
-  width: (text: string) => text.length * perChar,
-});
-
-const legacyEnv = (
-  viewWidth: number,
-  env: UiEnv | undefined,
-  ctx: CanvasRenderingContext2D | null | undefined,
-): UiEnv => ({
-  theme: env?.theme ?? defaultTheme,
-  mode: env?.mode ?? (viewWidth > 0 && viewWidth < 700 ? 'compact' : 'regular'),
-  t: env?.t ?? i18nTranslator,
-  measure: ctx ? textMeasureFromCtx(ctx) : env?.measure ?? perCharMeasure(6.5),
-});
-
 const kitLayoutFor = (
   viewWidth: number,
   viewHeight: number,
@@ -77,10 +57,10 @@ const kitLayoutFor = (
     return layoutDungeonIntro(
       null,
       { x: 0, y: 0, width: 0, height: 0 },
-      legacyEnv(viewWidth, options?.env, ctx),
+      legacyUiEnv(options?.env, { viewWidth, ctx }),
     );
   }
-  const env = legacyEnv(viewWidth, options?.env, ctx);
+  const env = legacyUiEnv(options?.env, { viewWidth, ctx });
   const vm = toDungeonIntroViewModel(state, env.t);
   return layoutDungeonIntro(
     vm,
@@ -128,15 +108,11 @@ export const renderDungeonIntro = (
   const layout = kitLayoutFor(viewWidth, viewHeight, state, options, ctx);
   if (!layout.hasContent) return;
 
-  const ui: UiContext = {
-    theme: options?.env?.theme ?? defaultTheme,
-    mode: options?.env?.mode ?? 'regular',
-    t: options?.env?.t ?? i18nTranslator,
-    measure: textMeasureFromCtx(ctx),
-    ctx,
-    assets: uiAssetProvider,
-  };
-  renderDungeonIntroComponent(layout, ui, {
-    isCloseHovered: options?.isCloseHovered,
-  });
+  renderDungeonIntroComponent(
+    layout,
+    legacyUiContext(ctx, options?.env, { ctx }),
+    {
+      isCloseHovered: options?.isCloseHovered,
+    },
+  );
 };

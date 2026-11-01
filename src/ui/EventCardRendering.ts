@@ -17,9 +17,7 @@ import {
   type EventCardLayout as KitLayout,
 } from '../uikit/components/eventCard';
 import { toEventCardViewModel } from './viewmodels/eventCard';
-import { defaultTheme } from '../uikit/theme';
-import { layoutModeForWidth, textMeasureFromCtx } from './env';
-import { i18nTranslator } from './i18nAdapter';
+import { legacyUiEnv } from './env';
 import { uiAssetProvider } from './assets';
 
 export {
@@ -74,28 +72,6 @@ export interface EventCardHitResult {
   type: 'toggle' | 'card';
 }
 
-// Per-character approximation when neither a context nor an env measure
-// is available (the historical fallback of this module's wrap).
-const perCharMeasure = () => ({
-  width: (text: string) => text.length * 6.5,
-});
-
-/** The env a legacy call implies: overrides or the width-derived defaults. */
-const legacyEnv = (
-  viewWidth: number,
-  env: UiEnv | undefined,
-  ctx: CanvasRenderingContext2D | null | undefined,
-): UiEnv => ({
-  theme: env?.theme ?? defaultTheme,
-  mode:
-    env?.mode ??
-    (viewWidth > 0 && layoutModeForWidth(viewWidth) === 'compact'
-      ? 'compact'
-      : 'regular'),
-  t: env?.t ?? i18nTranslator,
-  measure: ctx ? textMeasureFromCtx(ctx) : env?.measure ?? perCharMeasure(),
-});
-
 const kitLayoutFor = (
   viewWidth: number,
   viewHeight: number,
@@ -103,7 +79,7 @@ const kitLayoutFor = (
   options: RenderEventCardOptions | undefined,
   ctx: CanvasRenderingContext2D | null | undefined,
 ): KitLayout => {
-  const env = legacyEnv(viewWidth, options?.env, ctx);
+  const env = legacyUiEnv(options?.env, { viewWidth, ctx });
   const vm = toEventCardViewModel(state, env.t);
   return layoutEventCard(
     vm,
@@ -207,7 +183,7 @@ export const renderEventCard = (
   }
 
   const ui: UiContext = {
-    ...legacyEnv(viewWidth, options?.env, ctx),
+    ...legacyUiEnv(options?.env, { viewWidth, ctx }),
     ctx,
     assets: uiAssetProvider,
   };

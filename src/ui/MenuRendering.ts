@@ -13,7 +13,7 @@ import {
   type MenuView,
   getMenuItemsForView,
 } from '../menu/MenuLogic';
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv } from '../uikit/env';
 import type { Rect } from '../uikit/primitives/geometry';
 import { isPointInRect } from '../uikit/primitives/geometry';
 import {
@@ -24,9 +24,7 @@ import {
   type MenuLayout as KitLayout,
 } from '../uikit/components/menu';
 import { toMenuViewModel } from './viewmodels/menu';
-import { defaultTheme } from '../uikit/theme';
-import { i18nTranslator } from './i18nAdapter';
-import { uiAssetProvider } from './assets';
+import { legacyUiContext } from './env';
 
 export interface MenuItemLayout {
   item: CanvasMenuItem;
@@ -153,15 +151,7 @@ export const renderMenuModal = (
   const kitLayout = kitLayoutFor(viewWidth, viewHeight, state, options);
   if (!kitLayout || kitLayout.panelBounds.width === 0) return;
 
-  const ui: UiContext = {
-    theme: options?.env?.theme ?? defaultTheme,
-    mode: options?.env?.mode ?? 'regular',
-    t: options?.env?.t ?? i18nTranslator,
-    measure: options?.env?.measure ?? { width: (text) => text.length * 6.5 },
-    ctx,
-    assets: uiAssetProvider,
-  };
-  renderMenuComponent(kitLayout, ui, {
+  renderMenuComponent(kitLayout, legacyUiContext(ctx, options?.env), {
     hoveredItemId: options?.hoveredItemId ?? null,
   });
 };

@@ -7,7 +7,7 @@
 // cover the whole chain.
 
 import type { AppSettings } from '../settings/AppSettings';
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv } from '../uikit/env';
 import {
   hitTestCredits,
   hitTestSettings,
@@ -27,10 +27,8 @@ import {
   toSettingsViewModel,
   type SettingsRowId,
 } from './viewmodels/settings';
-import { defaultTheme } from '../uikit/theme';
-import { defaultUiEnv } from './env';
+import { legacyUiContext, defaultUiEnv } from './env';
 import { i18nTranslator } from './i18nAdapter';
-import { uiAssetProvider } from './assets';
 
 export type { SettingsRowId } from './viewmodels/settings';
 export type { CreditsRowDefinition } from './viewmodels/settings';
@@ -72,18 +70,6 @@ export type CreditsHitResult =
   | { type: 'back' }
   | { type: 'panel' }
   | { type: 'backdrop' };
-
-const legacyUi = (
-  ctx: CanvasRenderingContext2D,
-  env: UiEnv | undefined,
-): UiContext => ({
-  theme: env?.theme ?? defaultTheme,
-  mode: env?.mode ?? 'regular',
-  t: env?.t ?? i18nTranslator,
-  measure: env?.measure ?? { width: (text) => text.length * 6.5 },
-  ctx,
-  assets: uiAssetProvider,
-});
 
 const settingsLayoutFor = (
   viewWidth: number,
@@ -188,7 +174,7 @@ export const renderSettings = (
   const layout = settingsLayoutFor(viewWidth, viewHeight, appSettings, env);
   if (!layout.hasContent) return;
 
-  renderSettingsComponent(layout, legacyUi(ctx, env), {
+  renderSettingsComponent(layout, legacyUiContext(ctx, env), {
     hoveredRowId: options?.hoveredRowId ?? null,
     hoveredBack: options?.hoveredBack,
   });
@@ -204,7 +190,7 @@ export const renderCredits = (
   const layout = creditsLayoutFor(viewWidth, viewHeight, env);
   if (!layout.hasContent) return;
 
-  renderCreditsComponent(layout, legacyUi(ctx, env), {
+  renderCreditsComponent(layout, legacyUiContext(ctx, env), {
     hoveredRowId: options?.hoveredRowId ?? null,
     hoveredBack: options?.hoveredBack,
   });

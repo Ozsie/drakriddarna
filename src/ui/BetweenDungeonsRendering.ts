@@ -26,10 +26,8 @@ import {
 } from '../uikit/components/betweenDungeons';
 import { toBetweenDungeonsViewModel } from './viewmodels/betweenDungeons';
 import { getHeroTradableItems } from '../dungeon/BetweenDungeonsLogic';
-import { defaultTheme } from '../uikit/theme';
 import { actorColour } from './theme';
-import { defaultUiEnv } from './env';
-import { i18nTranslator } from './i18nAdapter';
+import { legacyUiEnv, defaultUiEnv } from './env';
 import { uiAssetProvider } from './assets';
 
 export interface BetweenDungeonsLayout {
@@ -103,20 +101,13 @@ export type BetweenDungeonsHitResult =
   | { type: 'panel' }
   | { type: 'backdrop' };
 
-const legacyEnv = (env: UiEnv | undefined): UiEnv => ({
-  theme: env?.theme ?? defaultTheme,
-  mode: env?.mode ?? 'regular',
-  t: env?.t ?? i18nTranslator,
-  measure: env?.measure ?? { width: (text) => text.length * 6.5 },
-});
-
 const kitLayoutFor = (
   viewWidth: number,
   viewHeight: number,
   state: GameState | null | undefined,
   env: UiEnv | undefined,
 ): KitLayout => {
-  const resolved = legacyEnv(env);
+  const resolved = legacyUiEnv(env);
   const vm = toBetweenDungeonsViewModel(state, resolved.t);
   return layoutBetweenDungeons(
     vm,
@@ -252,7 +243,7 @@ export const renderBetweenDungeons = (
   }
 
   const env = options?.env ?? defaultUiEnv;
-  const resolved = legacyEnv(env);
+  const resolved = legacyUiEnv(env);
   const vm = toBetweenDungeonsViewModel(state, resolved.t);
   if (!vm) return;
   const kitLayout = layoutBetweenDungeons(

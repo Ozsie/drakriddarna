@@ -22,8 +22,7 @@ import {
   savedGameItems,
   toSaveLoadDialogViewModel,
 } from './viewmodels/saveLoadDialog';
-import { defaultTheme } from '../uikit/theme';
-import { i18nTranslator } from './i18nAdapter';
+import { legacyUiEnv } from './env';
 import { uiAssetProvider } from './assets';
 
 export type { SaveLoadDialogMode } from '../uikit/components/saveLoadDialog';
@@ -74,13 +73,6 @@ export type SaveLoadDialogOptions = {
   callbacks?: MenuCallbacks;
 } & RenderSaveLoadDialogOptions;
 
-const legacyEnv = (env: UiEnv | undefined): UiEnv => ({
-  theme: env?.theme ?? defaultTheme,
-  mode: env?.mode ?? 'regular',
-  t: env?.t ?? i18nTranslator,
-  measure: env?.measure ?? { width: (text) => text.length * 6.5 },
-});
-
 const kitLayoutFor = (
   viewWidth: number,
   viewHeight: number,
@@ -92,10 +84,10 @@ const kitLayoutFor = (
     return layoutSaveLoadDialog(
       null,
       { x: 0, y: 0, width: 0, height: 0 },
-      legacyEnv(options?.env),
+      legacyUiEnv(options?.env),
     );
   }
-  const env = legacyEnv(options?.env);
+  const env = legacyUiEnv(options?.env);
   const vm = toSaveLoadDialogViewModel(state, mode, env.t);
   return layoutSaveLoadDialog(
     vm,
@@ -166,7 +158,7 @@ export const renderSaveLoadDialog = (
   if (!kitLayout.hasContent) return;
 
   const ui: UiContext = {
-    ...legacyEnv(options?.env),
+    ...legacyUiEnv(options?.env),
     ctx,
     assets: uiAssetProvider,
   };

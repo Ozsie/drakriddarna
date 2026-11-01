@@ -7,7 +7,7 @@
 // work unchanged, with the exact same pixels: parity snapshots cover
 // the whole chain.
 
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv } from '../uikit/env';
 import type { Rect } from '../uikit/primitives/geometry';
 import {
   hitTestWelcome,
@@ -19,9 +19,8 @@ import {
 } from '../uikit/components/welcome';
 import { toWelcomeViewModel, type WelcomeButtonId } from './viewmodels/welcome';
 import { defaultTheme } from '../uikit/theme';
-import { defaultUiEnv } from './env';
-import { i18nTranslator } from './i18nAdapter';
-import { AssetId, getAssetUrl, uiAssetProvider } from './assets';
+import { legacyUiContext, defaultUiEnv } from './env';
+import { AssetId, getAssetUrl } from './assets';
 
 export type { WelcomeButtonId } from './viewmodels/welcome';
 export { getCoverFitBounds } from '../uikit/components/welcome';
@@ -60,18 +59,6 @@ export interface RenderWelcomeOptions {
 }
 
 export type WelcomeHitResult = WelcomeButtonId | null;
-
-const legacyUi = (
-  ctx: CanvasRenderingContext2D,
-  env: UiEnv | undefined,
-): UiContext => ({
-  theme: env?.theme ?? defaultTheme,
-  mode: env?.mode ?? 'regular',
-  t: env?.t ?? i18nTranslator,
-  measure: env?.measure ?? { width: (text) => text.length * 6.5 },
-  ctx,
-  assets: uiAssetProvider,
-});
 
 const kitLayoutFor = (
   viewWidth: number,
@@ -131,7 +118,7 @@ export const renderWelcomeBackground = (
 ): void => {
   const vm = toWelcomeViewModel(options?.env?.t);
   renderWelcomeBackgroundComponent(
-    legacyUi(ctx, options?.env),
+    legacyUiContext(ctx, options?.env),
     vm,
     { x: 0, y: 0, width: viewWidth, height: viewHeight },
     {
@@ -158,7 +145,7 @@ export const renderWelcomeFooter = (
     width: viewWidth,
     height: viewHeight,
   });
-  renderWelcomeFooterComponent(legacyUi(ctx, env), kitLayout);
+  renderWelcomeFooterComponent(legacyUiContext(ctx, env), kitLayout);
 };
 
 export const renderWelcome = (
@@ -170,7 +157,7 @@ export const renderWelcome = (
   const vm = toWelcomeViewModel(options?.env?.t, options?.buildInfo);
   const kitLayout = kitLayoutFor(viewWidth, viewHeight, options);
   if (!kitLayout.hasContent) return;
-  renderWelcomeComponent(kitLayout, vm, legacyUi(ctx, options?.env), {
+  renderWelcomeComponent(kitLayout, vm, legacyUiContext(ctx, options?.env), {
     hoveredButtonId: options?.hoveredButton ?? null,
     backgroundImage: options?.backgroundImage,
   });

@@ -16,8 +16,7 @@ import {
   type MonsterCardsViewModel,
 } from '../uikit/components/monsterCards';
 import { toMonsterCardsViewModel } from './viewmodels/monsterCards';
-import { defaultTheme } from '../uikit/theme';
-import { layoutModeForWidth } from './env';
+import { legacyUiEnv, layoutModeForWidth } from './env';
 import { uiAssetProvider } from './assets';
 import { i18nTranslator } from './i18nAdapter';
 
@@ -52,13 +51,6 @@ export type MonsterCardsHitResult = {
   monster: Monster;
 };
 
-const legacyEnv = (env?: UiEnv): UiEnv => ({
-  theme: env?.theme ?? defaultTheme,
-  mode: env?.mode ?? 'regular',
-  t: env?.t ?? i18nTranslator,
-  measure: env?.measure ?? { width: (text) => text.length * 6.5 },
-});
-
 /** The visible monsters in view-model order, for resolving hit ids. */
 const visibleMonstersFor = (
   state: GameState | null | undefined,
@@ -80,7 +72,7 @@ export const getMonsterCardsLayout = (
   state?: GameState | null,
   env?: UiEnv,
 ): MonsterCardsLayout => {
-  const resolvedEnv = legacyEnv(env);
+  const resolvedEnv = legacyUiEnv(env);
   // Without an env, the historical width-derived compact rule applies.
   const compact =
     env?.mode !== undefined
@@ -122,7 +114,7 @@ export const renderMonsterCards = (
 ): void => {
   if (!state || viewWidth <= 0 || viewHeight <= 0) return;
 
-  const env = options?.env ?? legacyEnv();
+  const env = options?.env ?? legacyUiEnv(undefined);
   const compact =
     options?.env?.mode !== undefined
       ? options.env.mode === 'compact'

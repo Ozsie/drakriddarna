@@ -17,8 +17,7 @@ import {
   type NewGameDialogLayoutOptions,
 } from '../uikit/components/newGameDialog';
 import { toNewGameDialogViewModel } from './viewmodels/newGameDialog';
-import { defaultTheme } from '../uikit/theme';
-import { i18nTranslator } from './i18nAdapter';
+import { legacyUiEnv } from './env';
 import { uiAssetProvider } from './assets';
 
 export { getCampaignRows, getGameMasterRows } from './viewmodels/newGameDialog';
@@ -74,13 +73,6 @@ export type NewGameDialogHitResult =
   | { type: 'panel' }
   | { type: 'backdrop' };
 
-const legacyEnv = (env: UiEnv | undefined): UiEnv => ({
-  theme: env?.theme ?? defaultTheme,
-  mode: env?.mode ?? 'regular',
-  t: env?.t ?? i18nTranslator,
-  measure: env?.measure ?? { width: (text) => text.length * 6.5 },
-});
-
 const layoutOptions = (
   options: NewGameDialogOptions | undefined,
 ): NewGameDialogLayoutOptions => ({
@@ -94,7 +86,7 @@ const kitLayoutFor = (
   viewHeight: number,
   options: NewGameDialogOptions | undefined,
 ): KitLayout => {
-  const env = legacyEnv(options?.env);
+  const env = legacyUiEnv(options?.env);
   const vm = toNewGameDialogViewModel(env.t);
   return layoutNewGameDialog(
     vm,
@@ -151,7 +143,7 @@ export const renderNewGameDialog = (
   if (!layout.hasContent) return;
 
   const ui: UiContext = {
-    ...legacyEnv(options?.env),
+    ...legacyUiEnv(options?.env),
     ctx,
     assets: uiAssetProvider,
   };
