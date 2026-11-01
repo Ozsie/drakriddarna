@@ -670,10 +670,10 @@ update with its identity in the UI-layer render signature, so locale or
 theme changes repaint. No renderer imports i18n or asset URLs
 directly.
 
-M5 (view-model conversion) is under way, Tiers A and B done: the top
-bar, monster cards, hero cards, dungeon intro, canvas menu, welcome
-screen, save/load dialog, new-game dialog, hero selection and settings
-now follow the kit component contract — the component in
+M5 (view-model conversion) is under way, Tiers A and B done plus the
+Tier C event card and diary: the top bar, monster cards, hero cards,
+dungeon intro, canvas menu, welcome screen, save/load dialog, new-game
+dialog, hero selection, settings, event card and the diary panel now follow the kit component contract — the component in
 `src/uikit/components/` does layout (canvas-free, measuring through
 `env.measure`), hit testing (semantic ids) and rendering over a plain
 view model; the adapter in `src/ui/viewmodels/` is the only

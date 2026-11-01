@@ -91,9 +91,14 @@ background travel through the asset port (registry ids first, raw URLs
 for content sprite sheets, resolved in `src/ui/assets.ts`). Parity
 snapshots stayed byte-identical through the chain.
 
-Remaining for M5: Tier C — the event card, the diary/win-condition
-panel and between-dungeons (the rule-heavy union of steps with the
-high-score list).
+Remaining for M5: Tier C — between-dungeons (the rule-heavy union of
+steps with the high-score list). The event card and the diary panel are
+done: `src/uikit/components/eventCard.ts` / `diary.ts` follow the same
+contract (semantic toggle/card and panel/toggle hits, wrapping through
+`env.measure`, adapters in `src/ui/viewmodels/`), the shared
+`COMPACT_TOGGLE_SIZE` moved into `src/uikit/env.ts`, and the diary's
+text formatters (`formatWinCondition` and friends) live in the adapter
+now, re-exported under their historical names.
 
 ### World — out of scope
 
