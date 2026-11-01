@@ -13,6 +13,8 @@ import {
 } from './TopBarRendering';
 import { renderUI } from './UIRendering';
 import type { GameState } from '../types';
+import { toTopBarViewModel } from './viewmodels/topBar';
+import { i18nTranslator } from './i18nAdapter';
 
 const createMockCtx = () =>
   ({
@@ -205,8 +207,9 @@ describe('TopBarRendering', () => {
       const ctx = createMockCtx();
       const viewWidth = 800;
       const layout = getTopBarLayout(viewWidth, state, ctx);
+      const vm = toTopBarViewModel(state, i18nTranslator, false);
 
-      expect(layout.scoreCounter.text).toBe('Score 450');
+      expect(vm.scoreText).toBe('Score 450');
       expect(layout.logSection.x + layout.logSection.width).toBeLessThanOrEqual(
         layout.scoreCounter.x,
       );
@@ -231,9 +234,10 @@ describe('TopBarRendering', () => {
       });
       const ctx = createMockCtx();
       const layout = getTopBarLayout(800, state, ctx);
+      const vm = toTopBarViewModel(state, i18nTranslator, false);
 
       expect(layout.timerCounter).toBeDefined();
-      expect(layout.timerCounter?.text).toBe('1:05.00');
+      expect(vm.timerText).toBe('1:05.00');
       expect(layout.logSection.x + layout.logSection.width).toBeLessThanOrEqual(
         layout.timerCounter!.x,
       );
@@ -248,9 +252,10 @@ describe('TopBarRendering', () => {
     const ctx = createMockCtx();
     // 375x667: iPhone SE-sized screen
     const layout = getTopBarLayout(375, state, ctx);
+    const vm = toTopBarViewModel(state, i18nTranslator, true);
 
-    expect(layout.turnCounter.text).toBe('🔄 3');
-    expect(layout.scoreCounter.text).toBe('🏆 450');
+    expect(vm.turnText).toBe('🔄 3');
+    expect(vm.scoreText).toBe('🏆 450');
     // Roomy enough for the icon plus 2 round digits / 5 score digits,
     // but far smaller than the wide-screen chips.
     expect(layout.turnCounter.width).toBeLessThanOrEqual(60);
@@ -388,9 +393,10 @@ describe('TopBarRendering', () => {
       const ctx = createMockCtx();
       const layout = getTopBarLayout(600, state, ctx);
 
-      expect(layout.logDropdown.entries.length).toBe(8);
-      expect(layout.logDropdown.entries[0]).toBe('(0) logs.event0');
-      expect(layout.logDropdown.entries[7]).toBe('(7) logs.event7');
+      const vm = toTopBarViewModel(state, i18nTranslator, false);
+      expect(vm.logEntries.length).toBe(8);
+      expect(vm.logEntries[0]).toBe('(0) logs.event0');
+      expect(vm.logEntries[7]).toBe('(7) logs.event7');
       expect(layout.logDropdown.height).toBe(6 * 2 + 8 * 20);
     });
 
@@ -398,8 +404,9 @@ describe('TopBarRendering', () => {
       const state = createMockState({ actionLog: [] });
       const ctx = createMockCtx();
       const layout = getTopBarLayout(600, state, ctx);
+      const vm = toTopBarViewModel(state, i18nTranslator, false);
 
-      expect(layout.logDropdown.entries.length).toBe(0);
+      expect(vm.logEntries.length).toBe(0);
       expect(layout.logDropdown.height).toBe(0);
     });
   });

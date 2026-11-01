@@ -22,3 +22,24 @@ export const drawRoundedRect = (
   ctx.quadraticCurveTo(x, y, x + r, y);
   ctx.closePath();
 };
+
+// Traces a rounded rectangle using the platform's native roundRect when
+// available (the browser corners), falling back to a plain rect. Used
+// by surfaces whose pre-kit drawing went through ctx.roundRect - the
+// top bar chips and the menu panel - where the quadratic approximation
+// above would change pixels.
+export const roundRectPath = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+): void => {
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, width, height, radius);
+  } else {
+    ctx.rect(x, y, width, height);
+  }
+};

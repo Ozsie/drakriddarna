@@ -7,16 +7,29 @@
 
 import { defaultTheme } from '../uikit/theme';
 import type { LayoutMode, TextMeasure, UiEnv } from '../uikit/env';
+import { measureTextWidth as kitMeasureTextWidth } from '../uikit/primitives/text';
 import { isCompactUi } from './UiMode';
 import { i18nTranslator } from './i18nAdapter';
 
 // Per-character approximation used before the kit's cached measure lands
 // (M5); layouts still measure through a canvas context today.
-// A per-character estimate; the cached, ctx-backed measure lands with the
-// canvas-free layouts in M5.
+// A per-character estimate, used when no context is available (headless
+// helper calls without a canvas).
 const approximateMeasure: TextMeasure = {
   width: (text) => text.length * 7,
 };
+
+/**
+ * A measure backed by a real 2D context: the same
+ * save / font / measureText / restore sequence the kit text primitive
+ * performs, so kit layouts measure exactly as the pre-kit code did and
+ * recorded logs stay identical when tests pass their recording context.
+ */
+export const textMeasureFromCtx = (
+  ctx: CanvasRenderingContext2D,
+): TextMeasure => ({
+  width: (text, font) => kitMeasureTextWidth(ctx, text, font, 7),
+});
 
 /** The env used when a renderer is called without one. */
 export const defaultUiEnv: UiEnv = {
@@ -46,12 +59,12 @@ export const resolveLayoutMode = (
 export const createUiEnv = (
   viewWidth: number,
   locale: string,
-  mode?: LayoutMode,
+  measure?: TextMeasure,
 ): UiEnv => ({
   theme: defaultTheme,
-  mode: mode ?? layoutModeForWidth(viewWidth),
+  mode: layoutModeForWidth(viewWidth),
   t: i18nTranslator,
-  measure: approximateMeasure,
+  measure: measure ?? approximateMeasure,
 });
 
 /** Identity string for render signatures: changes when a repaint is due. */
