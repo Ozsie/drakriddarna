@@ -1,11 +1,8 @@
 import { getReadyImage } from '../core/ImageCache';
-import {
-  drawRoundedRect,
-  isPointInBounds,
-  type CardBounds,
-} from './HeroCardRendering';
+import { isPointInBounds, type CardBounds } from './HeroCardRendering';
 import { composeFont } from '../uikit/primitives/text';
 import { drawModalFrame, drawModalHeader } from '../uikit/kit/modalFrame';
+import { drawListRow, listRowStyles } from '../uikit/kit/listRow';
 import { defaultTheme } from '../uikit/theme';
 import type { UiEnv, Translator } from '../uikit/env';
 import { defaultUiEnv } from './env';
@@ -295,18 +292,12 @@ export const renderWelcome = (
   for (const button of layout.buttons) {
     const isHovered = options?.hoveredButton === button.id;
     const b = button.bounds;
-    ctx.fillStyle = isHovered
-      ? theme.palette.surface.rowHover
-      : theme.palette.surface.row;
-    drawRoundedRect(ctx, b.x, b.y, b.width, b.height, BUTTON_RADIUS);
-    ctx.fill();
-
-    ctx.strokeStyle = isHovered
-      ? theme.palette.border.rowHover
-      : theme.palette.border.row;
-    ctx.lineWidth = theme.shape.strokeWidth.thin;
-    drawRoundedRect(ctx, b.x, b.y, b.width, b.height, BUTTON_RADIUS);
-    ctx.stroke();
+    drawListRow(
+      ctx,
+      b,
+      listRowStyles(theme, isHovered ? 'hover' : 'rest'),
+      BUTTON_RADIUS,
+    );
 
     ctx.font = composeFont(
       theme,

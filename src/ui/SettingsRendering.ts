@@ -7,6 +7,7 @@ import {
 import { composeFont } from '../uikit/primitives/text';
 import { drawModalFrame, drawModalHeader } from '../uikit/kit/modalFrame';
 import { drawButton } from '../uikit/kit/button';
+import { drawListRow, listRowStyles } from '../uikit/kit/listRow';
 import type { UiEnv } from '../uikit/env';
 import type { UiTheme } from '../uikit/theme';
 import { defaultUiEnv } from './env';
@@ -425,31 +426,12 @@ const renderRowShell = (
   theme: UiTheme,
 ): void => {
   ctx.globalAlpha = dimmed ? theme.alpha.dimmed : 1;
-  ctx.fillStyle = isHovered
-    ? theme.palette.surface.rowHover
-    : theme.palette.surface.row;
-  drawRoundedRect(
+  drawListRow(
     ctx,
-    bounds.x,
-    bounds.y,
-    bounds.width,
-    bounds.height,
+    bounds,
+    listRowStyles(theme, isHovered ? 'hover' : 'rest'),
     ROW_RADIUS,
   );
-  ctx.fill();
-  ctx.strokeStyle = isHovered
-    ? theme.palette.border.rowHover
-    : theme.palette.border.row;
-  ctx.lineWidth = theme.shape.strokeWidth.thin;
-  drawRoundedRect(
-    ctx,
-    bounds.x,
-    bounds.y,
-    bounds.width,
-    bounds.height,
-    ROW_RADIUS,
-  );
-  ctx.stroke();
 };
 
 const renderRowLabel = (

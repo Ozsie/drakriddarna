@@ -27,6 +27,11 @@ import {
   drawModalHeader,
 } from '../uikit/kit/modalFrame';
 import { drawButton } from '../uikit/kit/button';
+import {
+  drawListRow,
+  listRowStyles,
+  type ListRowStyles,
+} from '../uikit/kit/listRow';
 import type { UiEnv } from '../uikit/env';
 import { defaultTheme, type UiTheme } from '../uikit/theme';
 import { defaultUiEnv } from './env';
@@ -963,33 +968,18 @@ export const renderBetweenDungeons = (
   if (layout.step === 'partyWipe' && layout.wipeButtons) {
     for (const wb of layout.wipeButtons) {
       const isHovered = options?.hoveredWipeAction === wb.action;
-      ctx.fillStyle = isHovered
-        ? theme.palette.surface.wipeButtonHover
-        : theme.palette.surface.wipeButton;
-      drawRoundedRect(
-        ctx,
-        wb.bounds.x,
-        wb.bounds.y,
-        wb.bounds.width,
-        wb.bounds.height,
-        8,
-      );
-      ctx.fill();
-      ctx.strokeStyle = isHovered
-        ? theme.palette.border.wipeButtonHover
-        : theme.palette.border.wipeButton;
-      ctx.lineWidth = isHovered
-        ? theme.shape.strokeWidth.regular
-        : theme.shape.strokeWidth.thin;
-      drawRoundedRect(
-        ctx,
-        wb.bounds.x,
-        wb.bounds.y,
-        wb.bounds.width,
-        wb.bounds.height,
-        8,
-      );
-      ctx.stroke();
+      const wipeStyles: ListRowStyles = isHovered
+        ? {
+            fill: theme.palette.surface.wipeButtonHover,
+            border: theme.palette.border.wipeButtonHover,
+            lineWidth: theme.shape.strokeWidth.regular,
+          }
+        : {
+            fill: theme.palette.surface.wipeButton,
+            border: theme.palette.border.wipeButton,
+            lineWidth: theme.shape.strokeWidth.thin,
+          };
+      drawListRow(ctx, wb.bounds, wipeStyles, 8);
 
       ctx.fillStyle = theme.palette.text.strong;
       ctx.font = buttonFont;
@@ -1013,27 +1003,7 @@ export const renderBetweenDungeons = (
 
     const hs = layout.wipeHighScores;
     if (hs) {
-      ctx.fillStyle = theme.palette.surface.row;
-      drawRoundedRect(
-        ctx,
-        hs.bounds.x,
-        hs.bounds.y,
-        hs.bounds.width,
-        hs.bounds.height,
-        6,
-      );
-      ctx.fill();
-      ctx.strokeStyle = theme.palette.border.row;
-      ctx.lineWidth = theme.shape.strokeWidth.thin;
-      drawRoundedRect(
-        ctx,
-        hs.bounds.x,
-        hs.bounds.y,
-        hs.bounds.width,
-        hs.bounds.height,
-        6,
-      );
-      ctx.stroke();
+      drawListRow(ctx, hs.bounds, listRowStyles(theme, 'rest'));
 
       ctx.textBaseline = 'top';
       ctx.textAlign = 'left';
@@ -1062,20 +1032,14 @@ export const renderBetweenDungeons = (
   } else if (layout.step === 'levelUp') {
     for (const h of layout.heroes) {
       const hb = h.bounds;
-      ctx.fillStyle = h.isLeveledUp
-        ? theme.palette.surface.leveledRow
-        : theme.palette.surface.row;
-      drawRoundedRect(ctx, hb.x, hb.y, hb.width, hb.height, 6);
-      ctx.fill();
-
-      ctx.strokeStyle = h.isLeveledUp
-        ? theme.palette.border.rowSelected
-        : theme.palette.border.row;
-      ctx.lineWidth = h.isLeveledUp
-        ? theme.shape.strokeWidth.medium
-        : theme.shape.strokeWidth.thin;
-      drawRoundedRect(ctx, hb.x, hb.y, hb.width, hb.height, 6);
-      ctx.stroke();
+      const heroStyles: ListRowStyles = h.isLeveledUp
+        ? {
+            fill: theme.palette.surface.leveledRow,
+            border: theme.palette.border.rowSelected,
+            lineWidth: theme.shape.strokeWidth.medium,
+          }
+        : listRowStyles(theme, 'rest');
+      drawListRow(ctx, hb, heroStyles);
 
       // Hero name & color dot
       ctx.fillStyle = heroColourHex(theme, h.hero.colour);
@@ -1128,14 +1092,7 @@ export const renderBetweenDungeons = (
     // Trading step
     for (const h of layout.heroes) {
       const hb = h.bounds;
-      ctx.fillStyle = theme.palette.surface.row;
-      drawRoundedRect(ctx, hb.x, hb.y, hb.width, hb.height, 6);
-      ctx.fill();
-
-      ctx.strokeStyle = theme.palette.border.row;
-      ctx.lineWidth = theme.shape.strokeWidth.thin;
-      drawRoundedRect(ctx, hb.x, hb.y, hb.width, hb.height, 6);
-      ctx.stroke();
+      drawListRow(ctx, hb, listRowStyles(theme, 'rest'));
 
       // Hero header
       ctx.fillStyle = heroColourHex(theme, h.hero.colour);
@@ -1166,22 +1123,24 @@ export const renderBetweenDungeons = (
           options?.hoveredItem?.heroIndex === it.heroIndex &&
           options?.hoveredItem?.itemIndex === it.itemIndex;
 
-        ctx.fillStyle = it.isSelected
-          ? theme.palette.surface.tradeItemSelected
+        const itemStyles: ListRowStyles = it.isSelected
+          ? {
+              fill: theme.palette.surface.tradeItemSelected,
+              border: theme.palette.border.tradeItemSelected,
+              lineWidth: theme.shape.strokeWidth.medium,
+            }
           : isHovered
-          ? theme.palette.surface.rowHover
-          : theme.palette.surface.tradeItem;
-        drawRoundedRect(ctx, ib.x, ib.y, ib.width, ib.height, 4);
-        ctx.fill();
-
-        ctx.strokeStyle = it.isSelected
-          ? theme.palette.border.tradeItemSelected
-          : theme.palette.border.input;
-        ctx.lineWidth = it.isSelected
-          ? theme.shape.strokeWidth.medium
-          : theme.shape.strokeWidth.thin;
-        drawRoundedRect(ctx, ib.x, ib.y, ib.width, ib.height, 4);
-        ctx.stroke();
+          ? {
+              fill: theme.palette.surface.rowHover,
+              border: theme.palette.border.rowHover,
+              lineWidth: theme.shape.strokeWidth.thin,
+            }
+          : {
+              fill: theme.palette.surface.tradeItem,
+              border: theme.palette.border.input,
+              lineWidth: theme.shape.strokeWidth.thin,
+            };
+        drawListRow(ctx, ib, itemStyles, 4);
 
         ctx.fillStyle = it.isSelected
           ? theme.palette.text.rowSelected

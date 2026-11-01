@@ -16,6 +16,7 @@ import {
   drawModalHeader,
 } from '../uikit/kit/modalFrame';
 import { drawButton } from '../uikit/kit/button';
+import { drawListRow, listRowStyles } from '../uikit/kit/listRow';
 import type { UiEnv } from '../uikit/env';
 import { defaultUiEnv } from './env';
 import { i18nTranslator } from './i18nAdapter';
@@ -387,18 +388,7 @@ export const renderSaveLoadDialog = (
   for (const row of layout.rows) {
     const rb = row.bounds;
     const isHovered = options?.hoveredItemId === row.item.id;
-    ctx.fillStyle = isHovered
-      ? theme.palette.surface.rowHover
-      : theme.palette.surface.row;
-    drawRoundedRect(ctx, rb.x, rb.y, rb.width, rb.height, 6);
-    ctx.fill();
-
-    ctx.strokeStyle = isHovered
-      ? theme.palette.border.rowHover
-      : theme.palette.border.row;
-    ctx.lineWidth = theme.shape.strokeWidth.thin;
-    drawRoundedRect(ctx, rb.x, rb.y, rb.width, rb.height, 6);
-    ctx.stroke();
+    drawListRow(ctx, rb, listRowStyles(theme, isHovered ? 'hover' : 'rest'));
 
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';

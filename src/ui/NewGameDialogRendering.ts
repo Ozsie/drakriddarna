@@ -12,6 +12,7 @@ import {
   drawModalHeader,
 } from '../uikit/kit/modalFrame';
 import { drawButton } from '../uikit/kit/button';
+import { drawListRow, listRowStyles, rowState } from '../uikit/kit/listRow';
 import type { Translator, UiEnv } from '../uikit/env';
 import type { UiTheme } from '../uikit/theme';
 import { defaultUiEnv } from './env';
@@ -299,24 +300,7 @@ const renderRow = (
   theme: UiTheme,
 ): void => {
   const rb = row.bounds;
-  ctx.fillStyle = row.selected
-    ? theme.palette.surface.rowSelected
-    : isHovered
-    ? theme.palette.surface.rowHover
-    : theme.palette.surface.row;
-  drawRoundedRect(ctx, rb.x, rb.y, rb.width, rb.height, 6);
-  ctx.fill();
-
-  ctx.strokeStyle = row.selected
-    ? theme.palette.border.rowSelected
-    : isHovered
-    ? theme.palette.border.rowHover
-    : theme.palette.border.row;
-  ctx.lineWidth = row.selected
-    ? theme.shape.strokeWidth.medium
-    : theme.shape.strokeWidth.thin;
-  drawRoundedRect(ctx, rb.x, rb.y, rb.width, rb.height, 6);
-  ctx.stroke();
+  drawListRow(ctx, rb, listRowStyles(theme, rowState(row.selected, isHovered)));
 
   ctx.font = composeFont(theme, theme.typography.sizes.lg);
   ctx.fillStyle = row.selected

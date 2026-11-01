@@ -8,6 +8,7 @@ import {
 import { composeFont } from '../uikit/primitives/text';
 import { drawModalFrame, drawModalHeader } from '../uikit/kit/modalFrame';
 import { drawButton } from '../uikit/kit/button';
+import { drawListRow, listRowStyles } from '../uikit/kit/listRow';
 import type { Translator, UiEnv } from '../uikit/env';
 import { defaultUiEnv } from './env';
 import { i18nTranslator } from './i18nAdapter';
@@ -407,17 +408,12 @@ export const renderHeroSelection = (
   for (const row of layout.rows) {
     const isHovered = options?.hoveredHeroId === row.heroId;
     const rb = row.rowBounds;
-    ctx.fillStyle = isHovered
-      ? theme.palette.surface.rowHover
-      : theme.palette.surface.row;
-    drawRoundedRect(ctx, rb.x, rb.y, rb.width, rb.height, ROW_RADIUS);
-    ctx.fill();
-    ctx.strokeStyle = isHovered
-      ? theme.palette.border.rowHover
-      : theme.palette.border.row;
-    ctx.lineWidth = theme.shape.strokeWidth.thin;
-    drawRoundedRect(ctx, rb.x, rb.y, rb.width, rb.height, ROW_RADIUS);
-    ctx.stroke();
+    drawListRow(
+      ctx,
+      rb,
+      listRowStyles(theme, isHovered ? 'hover' : 'rest'),
+      ROW_RADIUS,
+    );
 
     // Selection checkbox, speedrunner-checkbox style.
     const cb = row.checkboxBounds;
