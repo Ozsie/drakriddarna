@@ -95,3 +95,37 @@ export const wrapText = (
   }
   return lines.length > 0 ? lines : [text];
 };
+
+/**
+ * Canvas-free variant of `wrapText` for kit layouts: the same greedy
+ * word-wrap, measuring through a `TextMeasure` (env.measure) instead of a
+ * context, so layout stays pure and replayable.
+ */
+export const wrapTextMeasured = (
+  measure: { width: (text: string, font: string) => number },
+  text: string,
+  maxWidth: number,
+  font: string,
+): string[] => {
+  if (!text || maxWidth <= 0) return [];
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    const candidate = currentLine ? `${currentLine} ${word}` : word;
+    const width = measure.width(candidate, font);
+    if (width <= maxWidth) {
+      currentLine = candidate;
+    } else {
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+      currentLine = word;
+    }
+  }
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  return lines.length > 0 ? lines : [text];
+};
