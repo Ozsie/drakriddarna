@@ -13,6 +13,7 @@ import {
 } from '../uikit/kit/modalFrame';
 import { drawButton } from '../uikit/kit/button';
 import { drawListRow, listRowStyles, rowState } from '../uikit/kit/listRow';
+import { drawTextInput } from '../uikit/kit/textInput';
 import type { Translator, UiEnv } from '../uikit/env';
 import type { UiTheme } from '../uikit/theme';
 import { defaultUiEnv } from './env';
@@ -418,26 +419,8 @@ export const renderNewGameDialog = (
       input.y + input.height / 2,
     );
 
-    ctx.fillStyle = theme.palette.surface.input;
-    drawRoundedRect(ctx, input.x, input.y, input.width, input.height, 4);
-    ctx.fill();
-    ctx.strokeStyle = theme.palette.border.inputFocus;
-    ctx.lineWidth = theme.shape.strokeWidth.medium;
-    drawRoundedRect(ctx, input.x, input.y, input.width, input.height, 4);
-    ctx.stroke();
-
-    const text = options?.seedInput ?? '';
-    ctx.font = composeFont(theme, theme.typography.sizes.xl);
-    ctx.fillStyle = theme.palette.text.strong;
-    ctx.textAlign = 'left';
-    ctx.fillText(text, input.x + 10, input.y + input.height / 2);
-    // Static caret after the text; the input is focused whenever shown.
-    ctx.fillRect(
-      input.x + 10 + ctx.measureText(text).width + 2,
-      input.y + input.height / 2 - 9,
-      1,
-      18,
-    );
+    // The input is focused whenever shown.
+    drawTextInput(ctx, input, options?.seedInput ?? '', theme);
   }
 
   // Secondary button (Cancel)

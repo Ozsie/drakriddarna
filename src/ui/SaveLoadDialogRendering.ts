@@ -357,7 +357,10 @@ export const renderSaveLoadDialog = (
   ctx.font = composeFont(theme, theme.typography.sizes.lg);
   ctx.fillText(layout.subtitleText, p.x + 18, p.y + 38);
 
-  // Name input (save mode)
+  // Name input (save mode). Deliberately not the kit text input: the
+  // displayed name is clipped to the field between the box and the label
+  // draw, an ordering the primitive does not own. The input is focused
+  // whenever shown.
   if (layout.inputBounds) {
     const input = layout.inputBounds;
     ctx.fillStyle = theme.palette.surface.input;

@@ -3581,6 +3581,7 @@ exports[`parity snapshots > snapshots the new-game dialog > newgamedialog 1`] = 
   "font=\\"14px Arial, Helvetica, sans-serif\\"",
   "fillStyle=\\"#f8fafc\\"",
   "textAlign=\\"left\\"",
+  "textBaseline=\\"middle\\"",
   "fillText(\\"20261031\\", 832, 484)",
   "measureText(\\"20261031\\")",
   "fillRect(898, 475, 1, 18)",

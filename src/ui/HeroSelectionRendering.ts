@@ -9,6 +9,8 @@ import { composeFont } from '../uikit/primitives/text';
 import { drawModalFrame, drawModalHeader } from '../uikit/kit/modalFrame';
 import { drawButton } from '../uikit/kit/button';
 import { drawListRow, listRowStyles } from '../uikit/kit/listRow';
+import { drawTextInput } from '../uikit/kit/textInput';
+import { applyTextInputKey, clampTextInput } from '../uikit/kit/textInput';
 import type { Translator, UiEnv } from '../uikit/env';
 import { defaultUiEnv } from './env';
 import { i18nTranslator } from './i18nAdapter';
@@ -123,7 +125,7 @@ export const toggleHeroSelection = (
 
 /** Names are user content: length-clamped, never corrected or generated. */
 export const clampHeroName = (name: string): string =>
-  name.slice(0, MAX_HERO_NAME_LENGTH);
+  clampTextInput(name, MAX_HERO_NAME_LENGTH);
 
 /** The roster default a name input is prefilled with. */
 export const getHeroDefaultName = (
@@ -153,11 +155,7 @@ export const getHeroRenameValue = (
  * no-op.
  */
 export const applyHeroRenameKey = (value: string, key: string): string =>
-  key === 'Backspace'
-    ? value.slice(0, -1)
-    : key.length === 1
-    ? clampHeroName(value + key)
-    : value;
+  applyTextInputKey(value, key, MAX_HERO_NAME_LENGTH);
 
 /** Start needs at least one selected hero (empty names fall back). */
 export const isHeroSelectionStartEnabled = (selectedIds: string[]): boolean =>
@@ -445,35 +443,12 @@ export const renderHeroSelection = (
     ctx.fill();
 
     // Name field, save-dialog input style; dimmed when the row is.
-    const input = row.nameInputBounds;
-    ctx.fillStyle = theme.palette.surface.input;
-    drawRoundedRect(ctx, input.x, input.y, input.width, input.height, 4);
-    ctx.fill();
-    ctx.strokeStyle = row.focused
-      ? theme.palette.border.inputFocus
-      : theme.palette.border.input;
-    ctx.lineWidth = row.focused
-      ? theme.shape.strokeWidth.medium
-      : theme.shape.strokeWidth.thin;
-    drawRoundedRect(ctx, input.x, input.y, input.width, input.height, 4);
-    ctx.stroke();
-
-    ctx.font = composeFont(theme, theme.typography.sizes.xl);
-    ctx.fillStyle = row.dimmed
-      ? theme.palette.text.dimmed
-      : theme.palette.text.strong;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(row.label, input.x + 10, input.y + input.height / 2);
-    if (row.focused) {
-      // Static caret after the text.
-      ctx.fillRect(
-        input.x + 10 + ctx.measureText(row.label).width + 2,
-        input.y + input.height / 2 - 9,
-        1,
-        18,
-      );
-    }
+    drawTextInput(ctx, row.nameInputBounds, row.label, theme, {
+      focused: row.focused,
+      textColor: row.dimmed
+        ? theme.palette.text.dimmed
+        : theme.palette.text.strong,
+    });
   }
 
   // Back button (secondary style, bottom-left).
