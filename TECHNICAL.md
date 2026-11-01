@@ -56,7 +56,7 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/saves/         named-save storage (index + blobs in localStorage)
 ├── src/store/         Svelte stores wrapping the game state and the app phase
 ├── src/settings/      app-level audio settings (persistence + live application)
-├── src/uikit/         game-agnostic canvas UI kit: test harness now, theme and kit components as the migration proceeds
+├── src/uikit/         game-agnostic canvas UI kit (theme tokens, primitives, kit widgets, components; publishes through index.ts)
 ├── src/ui/            pure functions that draw UI panels onto canvases
 ├── src/components/    Dungeon.svelte (thin shell) + DungeonBoardController
 └── src/audio/         sound effect and music managers
@@ -698,6 +698,23 @@ hero colours travel as semantic actor-dot keys mapped from the Colour
 enum in `src/ui/theme.ts`. Render signatures stay keyed on GameState
 plus env identity — now equivalent to keying on view models, since
 every view model is a pure function of exactly those inputs.
+
+M6 (hardening) closed the package-readiness gate. The boundary is
+lint-enforced in both directions — `src/uikit/**` errors on any import
+of game code, Svelte, SvelteKit aliases or i18n packages, and on style
+literals outside the theme, while game-logic modules may not import the
+kit at all — on top of the import-graph boundary test.
+`src/uikit/index.ts` is the deliberate public surface, with a
+completeness test asserting every kit module the game consumes is
+exported through it. Every component is proven usable standalone: an
+independence test drives all of them with hand-built view models, and
+the sentinel translator asserts every drawn string is translated or a
+documented allowance (the one game-side gap it exposed — MenuLogic's
+untranslated `Music: On`-style toggle labels — is recorded i18n debt,
+fixable only with human-authored source text). The kit's reference for
+consumers is `docs/ui-kit.md`; what remains to publish is configuration
+only: the export map, a build config, peer-dependency decisions and a
+separate test setup.
 
 M4 (component kit) is complete for the primitives with real consumers:
 `src/uikit/kit/` holds `modalFrame` (scrim, centered panel, header —

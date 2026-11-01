@@ -174,3 +174,20 @@ living in `src/ui/assets.ts`.
   of `src/uikit/**` and fails on any import from outside the kit. Trivially
   green today; the lint override that makes it an authoring-time error
   lands in M6.
+  **M6 status: complete — the package-readiness gate is closed.** The
+  boundary is lint-enforced in both directions (kit errors on game/Svelte/
+  i18n imports and on style literals outside the theme; logic modules
+  cannot import the kit), `src/uikit/index.ts` is the deliberate public
+  surface with a completeness test, every component passes the
+  independence test (hand-built view models only) and the sentinel theme
+  and translator suites, and the consumer reference is
+  [docs/ui-kit.md](./ui-kit.md). What remains to publish is configuration
+  only: the export map, build config, peer-dependency decisions and a
+  separate test setup.
+
+**Known game-side i18n debt (outside the kit).** The canvas menu's
+music/debug/audio toggle labels ("Music: On", "Debug: Off") are
+hardcoded English in `src/menu/MenuLogic.ts` (`formatToggleLabel`) and
+predate the kit; the sentinel translator allowlists them. Fixing them
+needs new human-authored source text in both languages (per the AI
+policy), then routing MenuLogic's labels through the env translator.
