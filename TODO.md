@@ -19,7 +19,6 @@
 
 # Features
 
-- [ ] UI Kit
 - [ ] Leaving campaign end screen should return user to main menu
 - [ ] Hide debug menu option when deploying
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc
@@ -30,6 +29,7 @@
 - [ ] Alvkonungens Borg - [Official Dungeon and Heroes](<https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg>)
   - [x] Edge based walls
 - [ ] Level editor
+- [X] UI Kit
 - [x] Welcome to the game screen, not just straight into a campaign
 - [x] Hero selector, campaign specifies max starting heroes
 - [x] Monster name translations
