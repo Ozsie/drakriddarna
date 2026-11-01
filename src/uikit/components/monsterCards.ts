@@ -5,7 +5,11 @@
 
 import { drawRoundedRect } from '../primitives/roundedRect';
 import { isPointInRect, type Rect } from '../primitives/geometry';
-import { composeFont, truncateText } from '../primitives/text';
+import {
+  PER_CHAR_WIDTH_FALLBACK,
+  composeFont,
+  truncateText,
+} from '../primitives/text';
 import type { UiContext } from '../env';
 import type { UiTheme } from '../theme';
 
@@ -127,9 +131,6 @@ export interface RenderMonsterCardsOptions {
   readonly hoveredCardId?: string | null;
 }
 
-// Per-character fallback used when no context is available for measuring.
-const FALLBACK_PER_CHAR = 6.5;
-
 export const renderMonsterCards = (
   layout: MonsterCardsLayout,
   vm: MonsterCardsViewModel,
@@ -196,7 +197,7 @@ export const renderMonsterCards = (
       card.title,
       textMaxWidth,
       titleFont,
-      FALLBACK_PER_CHAR,
+      PER_CHAR_WIDTH_FALLBACK,
     );
     ctx.fillText(displayTitle, bounds.x + 4, bounds.y + 11);
 
@@ -208,7 +209,7 @@ export const renderMonsterCards = (
       card.hpText,
       textMaxWidth,
       statBoldFont,
-      FALLBACK_PER_CHAR,
+      PER_CHAR_WIDTH_FALLBACK,
     );
     ctx.fillText(displayHp, bounds.x + 4, bounds.y + 24);
 
@@ -220,7 +221,7 @@ export const renderMonsterCards = (
       card.weaponText,
       textMaxWidth,
       statFont,
-      FALLBACK_PER_CHAR,
+      PER_CHAR_WIDTH_FALLBACK,
     );
     ctx.fillText(displayWeapon, bounds.x + 4, bounds.y + 37);
 
@@ -234,7 +235,7 @@ export const renderMonsterCards = (
         card.rangedWeaponText,
         textMaxWidth,
         statFont,
-        FALLBACK_PER_CHAR,
+        PER_CHAR_WIDTH_FALLBACK,
       );
       ctx.fillText(displayWeapon, bounds.x + 4, bounds.y + 50);
       armourYOffset = 63;
@@ -247,7 +248,7 @@ export const renderMonsterCards = (
       card.armourText,
       textMaxWidth,
       statFont,
-      FALLBACK_PER_CHAR,
+      PER_CHAR_WIDTH_FALLBACK,
     );
     ctx.fillText(displayArmour, bounds.x + 4, bounds.y + armourYOffset);
 
@@ -257,7 +258,7 @@ export const renderMonsterCards = (
       card.shieldText,
       textMaxWidth,
       statFont,
-      FALLBACK_PER_CHAR,
+      PER_CHAR_WIDTH_FALLBACK,
     );
     ctx.fillText(displayShield, bounds.x + 4, bounds.y + shieldYOffset);
   });

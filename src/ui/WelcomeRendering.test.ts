@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
-  getCoverFitBounds,
   getWelcomeHit,
   getWelcomeLayout,
   renderWelcome,
   WELCOME_FALLBACK_COLOR,
 } from './WelcomeRendering';
+import { getCoverFitBounds } from '../uikit/components/welcome';
 import { loadTranslations } from '$lib/translations';
 
 const createMockCtx = (): CanvasRenderingContext2D => {

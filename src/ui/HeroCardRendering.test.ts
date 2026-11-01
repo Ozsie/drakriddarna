@@ -4,11 +4,10 @@ import {
   getHeroCardsLayout,
   renderHeroCards,
   getHeroCardsHit,
-  measureTextWidth,
-  truncateText,
-  isPointInBounds,
-  drawRoundedRect,
 } from './HeroCardRendering';
+import { measureTextWidth, truncateText } from '../uikit/primitives/text';
+import { isPointInRect as isPointInBounds } from '../uikit/primitives/geometry';
+import { drawRoundedRect } from '../uikit/primitives/roundedRect';
 import {
   Colour,
   Level,
@@ -120,6 +119,7 @@ describe('HeroCardRendering', () => {
         ctx,
         'Fearik',
         '10px Arial, Helvetica, sans-serif',
+        6.5,
       );
       expect(w).toBe(6 * 8);
     });
@@ -129,16 +129,23 @@ describe('HeroCardRendering', () => {
         null,
         'Fearik',
         '10px Arial, Helvetica, sans-serif',
+        6.5,
       );
       expect(w).toBeGreaterThan(0);
     });
 
     it('returns empty string for empty text or zero maxWidth', () => {
       expect(
-        truncateText(null, '', 100, '10px Arial, Helvetica, sans-serif'),
+        truncateText(null, '', 100, '10px Arial, Helvetica, sans-serif', 6.5),
       ).toBe('');
       expect(
-        truncateText(null, 'Fearik', 0, '10px Arial, Helvetica, sans-serif'),
+        truncateText(
+          null,
+          'Fearik',
+          0,
+          '10px Arial, Helvetica, sans-serif',
+          6.5,
+        ),
       ).toBe('');
     });
 
@@ -149,6 +156,7 @@ describe('HeroCardRendering', () => {
         'Very Long Hero Title That Exceeds Width',
         50,
         '10px Arial, Helvetica, sans-serif',
+        6.5,
       );
       expect(result.endsWith('...')).toBe(true);
     });

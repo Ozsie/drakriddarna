@@ -6,8 +6,7 @@
 
 import type { GameState, Monster } from '../types';
 import type { UiEnv, UiContext } from '../uikit/env';
-import type { CardBounds } from './HeroCardRendering';
-import { truncateText as kitTruncateText } from '../uikit/primitives/text';
+import type { Rect } from '../uikit/primitives/geometry';
 import {
   hitTestMonsterCards,
   layoutMonsterCards,
@@ -25,7 +24,7 @@ export interface MonsterCardLayoutItem {
   monster: Monster;
   isCurrent: boolean;
   isTarget: boolean;
-  bounds: CardBounds;
+  bounds: Rect;
   title: string;
   hpText: string;
   weaponText: string;
@@ -37,7 +36,7 @@ export interface MonsterCardLayoutItem {
 }
 
 export interface MonsterCardsLayout {
-  containerBounds: CardBounds;
+  containerBounds: Rect;
   cards: MonsterCardLayoutItem[];
 }
 
@@ -172,11 +171,3 @@ export const getMonsterCardsHit = (
   );
   return monster ? { type: 'card', monster } : null;
 };
-
-// Historical helper re-export (used by sibling modules' tests).
-export const truncateText = (
-  ctx: CanvasRenderingContext2D | null | undefined,
-  text: string,
-  maxWidth: number,
-  font: string,
-): string => kitTruncateText(ctx, text, maxWidth, font, 6.5);

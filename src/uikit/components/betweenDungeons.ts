@@ -9,7 +9,11 @@
 
 import { drawRoundedRect } from '../primitives/roundedRect';
 import { isPointInRect, type Rect } from '../primitives/geometry';
-import { composeFont, wrapTextMeasured } from '../primitives/text';
+import {
+  PER_CHAR_WIDTH_FALLBACK,
+  composeFont,
+  wrapTextMeasured,
+} from '../primitives/text';
 import {
   drawDialogScrim,
   drawModalFrame,
@@ -425,7 +429,7 @@ export const layoutBetweenDungeons = (
       },
       labelText: choice.labelText,
       descriptionLines: wrapTextMeasured(
-        perCharMeasure(6.5),
+        perCharMeasure(PER_CHAR_WIDTH_FALLBACK),
         choice.descriptionText,
         buttonColWidth - 32,
         composeFont(theme, theme.typography.sizes.md),

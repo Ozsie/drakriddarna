@@ -1,11 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { describe, expect, it, vi } from 'vitest';
-import {
-  getMenuHit,
-  getMenuLayout,
-  isPointInBounds,
-  renderMenuModal,
-} from './MenuRendering';
+import { getMenuHit, getMenuLayout, renderMenuModal } from './MenuRendering';
+import { isPointInRect as isPointInBounds } from '../uikit/primitives/geometry';
 import { Colour, type GameState, type Hero, ItemType, Level } from '../types';
 
 const createMockHero = (name = 'Hero1'): Hero => ({

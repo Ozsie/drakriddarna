@@ -11,12 +11,6 @@ import type { GameState, Hero, Item } from '../types';
 import { liveHeroes } from '../hero/HeroLogic';
 import type { UiEnv, UiContext } from '../uikit/env';
 import {
-  measureTextWidth as kitMeasureTextWidth,
-  truncateText as kitTruncateText,
-} from '../uikit/primitives/text';
-import { isPointInRect } from '../uikit/primitives/geometry';
-import { drawRoundedRect as kitDrawRoundedRect } from '../uikit/primitives/roundedRect';
-import {
   hitTestHeroCards,
   layoutHeroCards,
   renderHeroCards as renderHeroCardsComponent,
@@ -27,10 +21,6 @@ import { toHeroCardsViewModel } from './viewmodels/heroCards';
 import { legacyUiEnv, layoutModeForWidth } from './env';
 import { uiAssetProvider } from './assets';
 import { i18nTranslator } from './i18nAdapter';
-
-// Shared draw helpers now live in the kit; re-exported so existing
-// importers keep working until each module is converted.
-export const drawRoundedRect = kitDrawRoundedRect;
 
 export interface CardBounds {
   x: number;
@@ -93,25 +83,6 @@ export type HeroCardsHitResult =
   | { type: 'inventoryUseItem'; hero: Hero; item: Item; itemIndex: number }
   | { type: 'inventory'; hero: Hero }
   | { type: 'card'; hero: Hero };
-
-export const isPointInBounds = isPointInRect;
-
-// Per-character width used when no context is available for measuring
-// (the historical behavior of this module's helpers).
-const FALLBACK_PER_CHAR = 6.5;
-
-export const measureTextWidth = (
-  ctx: CanvasRenderingContext2D | null | undefined,
-  text: string,
-  font: string,
-): number => kitMeasureTextWidth(ctx, text, font, FALLBACK_PER_CHAR);
-
-export const truncateText = (
-  ctx: CanvasRenderingContext2D | null | undefined,
-  text: string,
-  maxWidth: number,
-  font: string,
-): string => kitTruncateText(ctx, text, maxWidth, font, FALLBACK_PER_CHAR);
 
 /** The compact rule a legacy call implies: the env's mode, else width-derived. */
 const legacyCompact = (env: UiEnv | undefined, viewWidth: number): boolean =>

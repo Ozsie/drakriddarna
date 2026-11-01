@@ -7,7 +7,11 @@
 
 import { drawRoundedRect } from '../primitives/roundedRect';
 import { isPointInRect, type Rect } from '../primitives/geometry';
-import { composeFont, truncateText } from '../primitives/text';
+import {
+  PER_CHAR_WIDTH_FALLBACK,
+  composeFont,
+  truncateText,
+} from '../primitives/text';
 import { drawSpriteFrame } from '../kit/spriteFrame';
 import type { SpriteRef, UiContext } from '../env';
 import type { UiTheme } from '../theme';
@@ -324,9 +328,6 @@ export interface RenderHeroCardsOptions {
   readonly hoveredUseItem?: { heroId: string; itemIndex: number } | null;
 }
 
-// Per-character fallback used when no context is available for measuring.
-const FALLBACK_PER_CHAR = 6.5;
-
 // Where in the sheet the frame at `index` sits: square frames laid out
 // row-major, columns derived from the sheet width divided by `size`, so both
 // single-row strips and rectangular grids work. The index is clamped to the
@@ -407,7 +408,7 @@ export const renderHeroCards = (
       card.title,
       maxTitleWidth,
       titleFont,
-      FALLBACK_PER_CHAR,
+      PER_CHAR_WIDTH_FALLBACK,
     );
     ctx.fillText(displayTitle, bounds.x + 5, bounds.y + 12);
 
@@ -472,7 +473,7 @@ export const renderHeroCards = (
           card.weaponText,
           maxItemWidth,
           statFont,
-          FALLBACK_PER_CHAR,
+          PER_CHAR_WIDTH_FALLBACK,
         );
         ctx.fillText(wTxt, bounds.x + 5, bounds.y + 75);
       }
@@ -482,7 +483,7 @@ export const renderHeroCards = (
           card.armourText,
           maxItemWidth,
           statFont,
-          FALLBACK_PER_CHAR,
+          PER_CHAR_WIDTH_FALLBACK,
         );
         ctx.fillText(aTxt, bounds.x + 5, bounds.y + 88);
       }
@@ -492,7 +493,7 @@ export const renderHeroCards = (
           card.shieldText,
           maxItemWidth,
           statFont,
-          FALLBACK_PER_CHAR,
+          PER_CHAR_WIDTH_FALLBACK,
         );
         ctx.fillText(sTxt, bounds.x + 5, bounds.y + 101);
       }
@@ -522,7 +523,7 @@ export const renderHeroCards = (
       titleText,
       maxTitleW,
       invTitleFont,
-      FALLBACK_PER_CHAR,
+      PER_CHAR_WIDTH_FALLBACK,
     );
     ctx.fillText(displayTitle, bounds.x + 8, bounds.y + 12);
 
@@ -636,7 +637,7 @@ export const renderHeroCards = (
           item.nameText,
           maxTextW,
           invItemFont,
-          FALLBACK_PER_CHAR,
+          PER_CHAR_WIDTH_FALLBACK,
         );
         ctx.fillText(displayName, textLeft, itemB.y + 2);
 
@@ -649,7 +650,7 @@ export const renderHeroCards = (
             item.descriptionText,
             maxTextW,
             invDescFont,
-            FALLBACK_PER_CHAR,
+            PER_CHAR_WIDTH_FALLBACK,
           );
           ctx.fillText(displayDesc, textLeft, itemB.y + 16);
         }

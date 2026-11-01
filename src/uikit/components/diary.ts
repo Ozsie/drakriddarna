@@ -8,6 +8,7 @@
 import { drawRoundedRect } from '../primitives/roundedRect';
 import { isPointInRect, type Rect } from '../primitives/geometry';
 import {
+  PER_CHAR_WIDTH_FALLBACK,
   composeFont,
   measureTextWidth,
   wrapTextMeasured,
@@ -257,9 +258,6 @@ export interface RenderDiaryOptions {
   readonly isToggleHovered?: boolean;
 }
 
-// Per-character fallback used when no context is available for measuring.
-const FALLBACK_PER_CHAR = 6.5;
-
 export const renderDiary = (
   layout: DiaryLayout,
   ui: UiContext,
@@ -401,7 +399,12 @@ export const renderDiary = (
       ctx.fillText(line, contentX, lineY);
 
       if (item.condition.fulfilled) {
-        const textW = measureTextWidth(ctx, line, bodyFont, FALLBACK_PER_CHAR);
+        const textW = measureTextWidth(
+          ctx,
+          line,
+          bodyFont,
+          PER_CHAR_WIDTH_FALLBACK,
+        );
         ctx.strokeStyle = theme.palette.text.success;
         ctx.lineWidth = theme.shape.strokeWidth.thin;
         ctx.beginPath();

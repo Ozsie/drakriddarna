@@ -5,12 +5,11 @@ import {
   formatDiaryHeader,
   formatNoteHeader,
   formatNoteMessage,
-  measureTextWidth,
-  wrapText,
   getDiaryAndWinConditionsLayout,
   getDiaryAndWinConditionsHit,
   renderDiaryAndWinConditions,
 } from './DiaryAndWinConditionRendering';
+import { measureTextWidth, wrapText } from '../uikit/primitives/text';
 import {
   ConditionType,
   MonsterType,
@@ -211,6 +210,7 @@ describe('DiaryAndWinConditionRendering', () => {
         ctx,
         'Hello World',
         '10px Arial, Helvetica, sans-serif',
+        6.5,
       );
       expect(width).toBe(11 * 8);
     });
@@ -222,6 +222,7 @@ describe('DiaryAndWinConditionRendering', () => {
         'One two three four five six',
         60,
         '10px Arial, Helvetica, sans-serif',
+        6.5,
       );
       expect(lines.length).toBeGreaterThan(1);
     });
@@ -233,6 +234,7 @@ describe('DiaryAndWinConditionRendering', () => {
         'Short',
         100,
         '10px Arial, Helvetica, sans-serif',
+        6.5,
       );
       expect(lines).toEqual(['Short']);
     });

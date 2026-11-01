@@ -9,6 +9,10 @@ import type { UiTheme } from '../theme';
  * Composes a canvas font string from theme tokens:
  * `font(theme, sizes.sm, weights.bold)` → `'bold 11px Arial, Helvetica, sans-serif'`.
  */
+/** The per-character width approximation the card and panel components
+ * have always used when no context or measure is available. */
+export const PER_CHAR_WIDTH_FALLBACK = 6.5;
+
 export const composeFont = (
   theme: UiTheme,
   size: number,

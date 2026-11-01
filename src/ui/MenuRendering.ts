@@ -15,7 +15,6 @@ import {
 } from '../menu/MenuLogic';
 import type { UiEnv } from '../uikit/env';
 import type { Rect } from '../uikit/primitives/geometry';
-import { isPointInRect } from '../uikit/primitives/geometry';
 import {
   hitTestMenu,
   layoutMenu,
@@ -52,8 +51,6 @@ export interface MenuHitResult {
   type: 'backdrop' | 'panel' | 'item';
   item?: CanvasMenuItem;
 }
-
-export const isPointInBounds = isPointInRect;
 
 const emptyLayout = (view: MenuView): MenuLayout => ({
   view,

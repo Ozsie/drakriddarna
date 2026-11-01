@@ -9,10 +9,6 @@ import type { GameState } from '../types';
 import type { UiEnv, UiContext } from '../uikit/env';
 import type { Rect } from '../uikit/primitives/geometry';
 import {
-  measureTextWidth as kitMeasureTextWidth,
-  truncateText as kitTruncateText,
-} from '../uikit/primitives/text';
-import {
   hitTestTopBar,
   layoutTopBar,
   renderTopBar as renderTopBarComponent,
@@ -36,7 +32,6 @@ export {
   formatTurnCounter,
   formatScoreCounter,
 } from './viewmodels/topBar';
-export { isPointInRect as isPointInBounds } from '../uikit/primitives/geometry';
 
 export interface TopBarLayoutOptions {
   debugMode?: boolean;
@@ -55,19 +50,6 @@ export interface RenderTopBarOptions {
 // Fallback approximation (avg ~8px per char for monospace/standard), as
 // this module's helpers have always used without a context.
 const FALLBACK_PER_CHAR = 8;
-
-export const measureTextWidth = (
-  ctx: CanvasRenderingContext2D | null | undefined,
-  text: string,
-  font: string,
-): number => kitMeasureTextWidth(ctx, text, font, FALLBACK_PER_CHAR);
-
-export const truncateText = (
-  ctx: CanvasRenderingContext2D | null | undefined,
-  text: string,
-  maxWidth: number,
-  font: string,
-): string => kitTruncateText(ctx, text, maxWidth, font, FALLBACK_PER_CHAR);
 
 /** The env a legacy call implies: given overrides or the width-derived defaults. */
 const legacyEnv = (

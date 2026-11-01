@@ -11,10 +11,6 @@ import type { GameState, Note, WinCondition } from '../types';
 import type { UiEnv, UiContext } from '../uikit/env';
 import type { Rect } from '../uikit/primitives/geometry';
 import {
-  measureTextWidth as kitMeasureTextWidth,
-  wrapText as kitWrapText,
-} from '../uikit/primitives/text';
-import {
   hitTestDiary,
   layoutDiary,
   renderDiary as renderDiaryComponent,
@@ -76,23 +72,6 @@ export interface RenderDiaryAndWinConditionsOptions {
 export interface DiaryAndWinConditionsHitResult {
   type: 'panel' | 'toggle';
 }
-
-// Per-character width used when no context is available for measuring
-// (the historical behavior of this module's helpers).
-const FALLBACK_PER_CHAR = 6.5;
-
-export const measureTextWidth = (
-  ctx: CanvasRenderingContext2D | null | undefined,
-  text: string,
-  font: string,
-): number => kitMeasureTextWidth(ctx, text, font, FALLBACK_PER_CHAR);
-
-export const wrapText = (
-  ctx: CanvasRenderingContext2D | null | undefined,
-  text: string,
-  maxWidth: number,
-  font: string,
-): string[] => kitWrapText(ctx, text, maxWidth, font, FALLBACK_PER_CHAR);
 
 const kitLayoutFor = (
   viewWidth: number,

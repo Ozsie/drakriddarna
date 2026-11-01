@@ -6,11 +6,10 @@ import {
   formatTurnCounter,
   getTopBarHit,
   getTopBarLayout,
-  isPointInBounds,
-  measureTextWidth,
   renderTopBar,
-  truncateText,
 } from './TopBarRendering';
+import { measureTextWidth, truncateText } from '../uikit/primitives/text';
+import { isPointInRect as isPointInBounds } from '../uikit/primitives/geometry';
 import { renderUI } from './UIRendering';
 import type { GameState } from '../types';
 import { toTopBarViewModel } from './viewmodels/topBar';
@@ -94,9 +93,9 @@ describe('TopBarRendering', () => {
     it('returns original text if it fits within maxWidth', () => {
       const ctx = createMockCtx();
       const text = 'Short text';
-      const width = measureTextWidth(ctx, text, '13px sans-serif');
+      const width = measureTextWidth(ctx, text, '13px sans-serif', 8);
       expect(
-        truncateText(ctx, text, width + 20, '12px monospace, sans-serif'),
+        truncateText(ctx, text, width + 20, '12px monospace, sans-serif', 8),
       ).toBe('Short text');
     });
 
@@ -108,18 +107,21 @@ describe('TopBarRendering', () => {
         text,
         80,
         '12px monospace, sans-serif',
+        8,
       );
       expect(truncated.endsWith('...')).toBe(true);
       expect(
-        measureTextWidth(ctx, truncated, '12px monospace, sans-serif'),
+        measureTextWidth(ctx, truncated, '12px monospace, sans-serif', 8),
       ).toBeLessThanOrEqual(80);
     });
 
     it('handles empty string and non-positive maxWidth', () => {
       const ctx = createMockCtx();
-      expect(truncateText(ctx, '', 100, '12px monospace, sans-serif')).toBe('');
+      expect(truncateText(ctx, '', 100, '12px monospace, sans-serif', 8)).toBe(
+        '',
+      );
       expect(
-        truncateText(ctx, 'Some text', 0, '12px monospace, sans-serif'),
+        truncateText(ctx, 'Some text', 0, '12px monospace, sans-serif', 8),
       ).toBe('');
     });
   });
@@ -179,6 +181,7 @@ describe('TopBarRendering', () => {
         ctx,
         '0123456789',
         '13px sans-serif',
+        8,
       );
       expect(layout.turnCounter.width).toBeGreaterThanOrEqual(tenCharWidth);
     });

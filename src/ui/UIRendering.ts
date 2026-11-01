@@ -223,7 +223,6 @@ export {
   renderWelcomeFooter,
   getWelcomeLayout,
   getWelcomeHit,
-  getCoverFitBounds,
   WELCOME_BACKGROUND_IMAGE,
   WELCOME_FALLBACK_COLOR,
   type WelcomeButtonId,
