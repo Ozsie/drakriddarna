@@ -649,6 +649,16 @@ touched:
   graph of `src/uikit/**` and fails on any import from outside the kit,
   keeping the kit game-agnostic as modules move in.
 
+M2 (theme) is complete: every chrome renderer in `src/ui` takes an
+optional `theme` parameter (defaulting to `defaultTheme`) and holds zero
+style literals of its own — the ratchet test now pins the budget at
+0/0. Fonts compose from theme tokens (`composeFont`) instead of font
+strings, and the shared text/geometry helpers live in
+`src/uikit/primitives/`. A **sentinel theme** test renders each module
+with a marker-valued theme and fails if any color or font written to the
+context is not a token; the **high-contrast theme** in `src/ui/theme.ts`
+proves a second theme drops in without component changes.
+
 ## Build, CI and deployment
 
 - `npm run build` produces a fully static site via SvelteKit's static adapter

@@ -44,6 +44,18 @@ panels, menus, dialogs and full-screen flows. These move into
 Total budget at M1: **341 color literals, 71 font literals** (stored in
 `src/ui/literalBudget.test.ts`; may only go down).
 
+**M2 status: budget 0/0.** Every renderer above now takes its colors,
+fonts, stroke widths and dimming from `src/uikit/theme` (`UiTheme` +
+`defaultTheme` with the values copied verbatim), arriving as an
+optional `theme` parameter that defaults to `defaultTheme`; the parity
+snapshots stayed byte-identical throughout. A second theme
+(`src/ui/theme.ts`, `highContrastTheme`) renders without touching a
+component, proven by the sentinel theme test
+(`src/ui/sentinelTheme.test.ts` + `src/uikit/testing/sentinelTheme.ts`)
+which fails on any style write that is not a theme token (the only
+allowed exceptions: gradients and the actor's own `Colour` fill, which
+is game data, not a style).
+
 ### World — out of scope
 
 Board-space rendering stays where it is (scope decision in the spec README):

@@ -25,7 +25,13 @@ const collect = (dir: string): { file: string; count: StyleLiteralCount }[] => {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
       entries.push(...collect(path));
-    } else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) {
+    } else if (
+      entry.name.endsWith('.ts') &&
+      !entry.name.endsWith('.test.ts') &&
+      // src/ui/theme.ts is the game-side theme definition — the one place
+      // under src/ui where style literals belong.
+      path !== 'src/ui/theme.ts'
+    ) {
       entries.push({
         file: path,
         count: countStyleLiterals(readFileSync(path, 'utf8')),
