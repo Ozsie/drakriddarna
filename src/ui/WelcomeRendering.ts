@@ -1,19 +1,30 @@
-import { getReadyImage } from '../core/ImageCache';
-import { isPointInBounds, type CardBounds } from './HeroCardRendering';
-import { composeFont } from '../uikit/primitives/text';
-import { drawModalFrame, drawModalHeader } from '../uikit/kit/modalFrame';
-import { drawListRow, listRowStyles } from '../uikit/kit/listRow';
-import { defaultTheme } from '../uikit/theme';
-import type { UiEnv, Translator } from '../uikit/env';
-import { defaultUiEnv } from './env';
-import { AssetId, getAssetUrl } from './assets';
-import { i18nTranslator } from './i18nAdapter';
+// Game-side facade for the welcome (title) screen. The component
+// (layout, hit test, render over the view model) lives in the kit; the
+// adapter in ./viewmodels/welcome builds the labels and the build-info
+// footer, and the background art travels through the asset port. This
+// module keeps the historical entry points — including the separate
+// background/footer renders the board controller layers — so callers
+// work unchanged, with the exact same pixels: parity snapshots cover
+// the whole chain.
 
-// The welcome (title) screen: a full-canvas background image (cover-fit,
-// with a flat fallback colour while the art is missing), a centered panel
-// in the save/load dialog style with three buttons, and a build footer at
-// the bottom. Follows the layout/hit/render split of the other UI
-// modules so it is testable without a real canvas.
+import type { UiEnv, UiContext } from '../uikit/env';
+import type { Rect } from '../uikit/primitives/geometry';
+import {
+  hitTestWelcome,
+  layoutWelcome,
+  renderWelcome as renderWelcomeComponent,
+  renderWelcomeBackground as renderWelcomeBackgroundComponent,
+  renderWelcomeFooter as renderWelcomeFooterComponent,
+  type WelcomeLayout as KitLayout,
+} from '../uikit/components/welcome';
+import { toWelcomeViewModel, type WelcomeButtonId } from './viewmodels/welcome';
+import { defaultTheme } from '../uikit/theme';
+import { defaultUiEnv } from './env';
+import { i18nTranslator } from './i18nAdapter';
+import { AssetId, getAssetUrl, uiAssetProvider } from './assets';
+
+export type { WelcomeButtonId } from './viewmodels/welcome';
+export { getCoverFitBounds } from '../uikit/components/welcome';
 
 /** The human-authored welcome background, served like other static assets. */
 export const WELCOME_BACKGROUND_IMAGE = getAssetUrl(AssetId.welcomeBackground);
@@ -21,20 +32,18 @@ export const WELCOME_BACKGROUND_IMAGE = getAssetUrl(AssetId.welcomeBackground);
 /** The dungeon-view background colour, the fallback while art is missing. */
 export const WELCOME_FALLBACK_COLOR = defaultTheme.palette.surface.welcome;
 
-export type WelcomeButtonId = 'newGame' | 'loadGame' | 'settings';
-
 export interface WelcomeButtonLayout {
   id: WelcomeButtonId;
   label: string;
-  bounds: CardBounds;
+  bounds: Rect;
 }
 
 export interface WelcomeLayout {
   hasContent: boolean;
-  panelBounds: CardBounds;
+  panelBounds: Rect;
   headerText: string;
   buttons: WelcomeButtonLayout[];
-  footerBounds: CardBounds;
+  footerBounds: Rect;
   footerText: string;
 }
 
@@ -43,8 +52,8 @@ export interface RenderWelcomeOptions {
   /** Hovered main-view button, for the row highlight. */
   hoveredButton?: WelcomeButtonId | null;
   /**
-   * Background image override; when omitted the shared image cache is
-   * asked for the welcome art (tests run without the asset).
+   * Background image override; when omitted the asset port is asked for
+   * the welcome art (tests run without the asset).
    */
   backgroundImage?: HTMLImageElement | null;
   env?: UiEnv;
@@ -52,57 +61,30 @@ export interface RenderWelcomeOptions {
 
 export type WelcomeHitResult = WelcomeButtonId | null;
 
-const BUTTON_RADIUS = 6;
-const ROW_HEIGHT = 48;
-const ROW_GAP = 8;
-// Rows never shrink below this, even on very short views.
-const MIN_ROW_HEIGHT = 28;
-const HEADER_HEIGHT = 48;
-const PADDING_X = 18;
-const PADDING_Y = 16;
+const legacyUi = (
+  ctx: CanvasRenderingContext2D,
+  env: UiEnv | undefined,
+): UiContext => ({
+  theme: env?.theme ?? defaultTheme,
+  mode: env?.mode ?? 'regular',
+  t: env?.t ?? i18nTranslator,
+  measure: env?.measure ?? { width: (text) => text.length * 6.5 },
+  ctx,
+  assets: uiAssetProvider,
+});
 
-const BUTTON_ORDER: WelcomeButtonId[] = ['newGame', 'loadGame', 'settings'];
-
-const getButtonLabel = (id: WelcomeButtonId, t: Translator): string => {
-  switch (id) {
-    case 'newGame':
-      // Same wording as the canvas menu's New Game item.
-      return t('content.menu.mainMenu.buttons.newGame');
-    case 'loadGame':
-      return t('content.menu.welcome.buttons.loadGame');
-    case 'settings':
-      return t('content.menu.welcome.buttons.settings');
-  }
-};
-
-/**
- * Cover-fit bounds: the image scaled uniformly so it covers the whole
- * view, centered, overflowing edges cropped (CSS `background-size:
- * cover` semantics).
- */
-export const getCoverFitBounds = (
-  imageWidth: number,
-  imageHeight: number,
+const kitLayoutFor = (
   viewWidth: number,
   viewHeight: number,
-): { x: number; y: number; width: number; height: number } => {
-  if (
-    imageWidth <= 0 ||
-    imageHeight <= 0 ||
-    viewWidth <= 0 ||
-    viewHeight <= 0
-  ) {
-    return { x: 0, y: 0, width: viewWidth, height: viewHeight };
-  }
-  const scale = Math.max(viewWidth / imageWidth, viewHeight / imageHeight);
-  const width = imageWidth * scale;
-  const height = imageHeight * scale;
-  return {
-    x: (viewWidth - width) / 2,
-    y: (viewHeight - height) / 2,
-    width,
-    height,
-  };
+  options: RenderWelcomeOptions | undefined,
+): KitLayout => {
+  const vm = toWelcomeViewModel(options?.env?.t, options?.buildInfo);
+  return layoutWelcome(vm, {
+    x: 0,
+    y: 0,
+    width: viewWidth,
+    height: viewHeight,
+  });
 };
 
 export const getWelcomeLayout = (
@@ -110,75 +92,18 @@ export const getWelcomeLayout = (
   viewHeight: number,
   options?: RenderWelcomeOptions,
 ): WelcomeLayout => {
-  const emptyLayout: WelcomeLayout = {
-    hasContent: false,
-    panelBounds: { x: 0, y: 0, width: 0, height: 0 },
-    headerText: '',
-    buttons: [],
-    footerBounds: { x: 0, y: 0, width: 0, height: 0 },
-    footerText: '',
-  };
-  if (viewWidth <= 0 || viewHeight <= 0) return emptyLayout;
-
-  const t = options?.env?.t ?? i18nTranslator;
-  const marginX = Math.max(12, Math.floor(viewWidth * 0.05));
-  const marginY = Math.max(12, Math.floor(viewHeight * 0.05));
-  // Same centered sizing rule as the save/load dialog.
-  const panelWidth = Math.min(560, Math.max(340, viewWidth - marginX * 2));
-  const contentWidth = panelWidth - PADDING_X * 2;
-
-  // Rows shrink when the view is short so the panel always fits.
-  const availableHeight = viewHeight - marginY * 2;
-  const fixedHeight =
-    PADDING_Y * 2 + HEADER_HEIGHT + (BUTTON_ORDER.length - 1) * ROW_GAP;
-  const rowHeight = Math.max(
-    MIN_ROW_HEIGHT,
-    Math.min(
-      ROW_HEIGHT,
-      Math.floor((availableHeight - fixedHeight) / BUTTON_ORDER.length),
-    ),
-  );
-
-  const panelHeight =
-    PADDING_Y * 2 +
-    HEADER_HEIGHT +
-    BUTTON_ORDER.length * rowHeight +
-    (BUTTON_ORDER.length - 1) * ROW_GAP;
-  const panelX = Math.floor((viewWidth - panelWidth) / 2);
-  const panelY = Math.floor((viewHeight - panelHeight) / 2);
-
-  const buttons: WelcomeButtonLayout[] = BUTTON_ORDER.map((id, index) => ({
-    id,
-    label: getButtonLabel(id, t),
-    bounds: {
-      x: panelX + PADDING_X,
-      y: panelY + PADDING_Y + HEADER_HEIGHT + index * (rowHeight + ROW_GAP),
-      width: contentWidth,
-      height: rowHeight,
-    },
-  }));
-
-  const footerText = options?.buildInfo
-    ? `${options.buildInfo.date} - ${options.buildInfo.hash}`
-    : '';
-
+  const kitLayout = kitLayoutFor(viewWidth, viewHeight, options);
   return {
-    hasContent: true,
-    panelBounds: {
-      x: panelX,
-      y: panelY,
-      width: panelWidth,
-      height: panelHeight,
-    },
-    headerText: t('content.menu.welcome.header'),
-    buttons,
-    footerBounds: {
-      x: 0,
-      y: viewHeight - 22,
-      width: viewWidth,
-      height: 10,
-    },
-    footerText,
+    hasContent: kitLayout.hasContent,
+    panelBounds: kitLayout.panelBounds,
+    headerText: kitLayout.headerText,
+    buttons: kitLayout.buttons.map((button) => ({
+      id: button.id as WelcomeButtonId,
+      label: button.label,
+      bounds: button.bounds,
+    })),
+    footerBounds: kitLayout.footerBounds,
+    footerText: kitLayout.footerText,
   };
 };
 
@@ -188,14 +113,9 @@ export const getWelcomeHit = (
   x: number,
   y: number,
 ): WelcomeHitResult => {
-  const layout = getWelcomeLayout(viewWidth, viewHeight);
-  if (!layout.hasContent) return null;
-  for (const button of layout.buttons) {
-    if (isPointInBounds(x, y, button.bounds)) {
-      return button.id;
-    }
-  }
-  return null;
+  const layout = kitLayoutFor(viewWidth, viewHeight, undefined);
+  const hit = hitTestWelcome(layout, { x, y });
+  return (hit as WelcomeButtonId | null) ?? null;
 };
 
 /**
@@ -209,36 +129,16 @@ export const renderWelcomeBackground = (
   viewHeight: number,
   options?: RenderWelcomeOptions,
 ): void => {
-  const image =
-    options?.backgroundImage !== undefined
-      ? options.backgroundImage
-      : getReadyImage(WELCOME_BACKGROUND_IMAGE);
-  const env = options?.env ?? defaultUiEnv;
-  const theme = env.theme;
-  if (image) {
-    const fit = getCoverFitBounds(
-      image.naturalWidth,
-      image.naturalHeight,
-      viewWidth,
-      viewHeight,
-    );
-    ctx.drawImage(image, fit.x, fit.y, fit.width, fit.height);
-  } else {
-    ctx.fillStyle = theme.palette.surface.welcome;
-    ctx.fillRect(0, 0, viewWidth, viewHeight);
-    const gradient = ctx.createRadialGradient(
-      viewWidth / 2,
-      viewHeight / 2,
-      Math.min(viewWidth, viewHeight) / 3,
-      viewWidth / 2,
-      viewHeight / 2,
-      Math.max(viewWidth, viewHeight) / 1.5,
-    );
-    gradient.addColorStop(0, theme.palette.overlay.vignetteStart);
-    gradient.addColorStop(1, theme.palette.overlay.vignetteEnd);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, viewWidth, viewHeight);
-  }
+  const vm = toWelcomeViewModel(options?.env?.t);
+  renderWelcomeBackgroundComponent(
+    legacyUi(ctx, options?.env),
+    vm,
+    { x: 0, y: 0, width: viewWidth, height: viewHeight },
+    {
+      hoveredButtonId: options?.hoveredButton ?? null,
+      backgroundImage: options?.backgroundImage,
+    },
+  );
 };
 
 /**
@@ -252,17 +152,13 @@ export const renderWelcomeFooter = (
   env: UiEnv = defaultUiEnv,
 ): void => {
   if (!buildInfo) return;
-  const theme = env.theme;
-  ctx.fillStyle = theme.palette.text.faint;
-  ctx.font = composeFont(theme, theme.typography.sizes.xxs);
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
-  // The baseline sits 12px above the canvas bottom edge.
-  ctx.fillText(
-    `${buildInfo.date} - ${buildInfo.hash}`,
-    viewWidth / 2,
-    viewHeight - 12,
-  );
+  const kitLayout = layoutWelcome(toWelcomeViewModel(env.t, buildInfo), {
+    x: 0,
+    y: 0,
+    width: viewWidth,
+    height: viewHeight,
+  });
+  renderWelcomeFooterComponent(legacyUi(ctx, env), kitLayout);
 };
 
 export const renderWelcome = (
@@ -271,48 +167,11 @@ export const renderWelcome = (
   viewHeight: number,
   options?: RenderWelcomeOptions,
 ): void => {
-  const env = options?.env ?? defaultUiEnv;
-  const layout = getWelcomeLayout(viewWidth, viewHeight, options);
-  if (!layout.hasContent) return;
-
-  const theme = env.theme;
-
-  ctx.save();
-
-  renderWelcomeBackground(ctx, viewWidth, viewHeight, options);
-
-  // Centered modal panel, save/load dialog style.
-  const p = layout.panelBounds;
-  drawModalFrame(ctx, p, theme);
-
-  // Header line.
-  drawModalHeader(ctx, p, layout.headerText, theme);
-
-  // Button rows, dialog row style.
-  for (const button of layout.buttons) {
-    const isHovered = options?.hoveredButton === button.id;
-    const b = button.bounds;
-    drawListRow(
-      ctx,
-      b,
-      listRowStyles(theme, isHovered ? 'hover' : 'rest'),
-      BUTTON_RADIUS,
-    );
-
-    ctx.font = composeFont(
-      theme,
-      theme.typography.sizes.lg,
-      theme.typography.weights.bold,
-    );
-    ctx.fillStyle = isHovered
-      ? theme.palette.text.bright
-      : theme.palette.text.dialogValue;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(button.label, b.x + 12, b.y + b.height / 2);
-  }
-
-  renderWelcomeFooter(ctx, viewWidth, viewHeight, options?.buildInfo, env);
-
-  ctx.restore();
+  const vm = toWelcomeViewModel(options?.env?.t, options?.buildInfo);
+  const kitLayout = kitLayoutFor(viewWidth, viewHeight, options);
+  if (!kitLayout.hasContent) return;
+  renderWelcomeComponent(kitLayout, vm, legacyUi(ctx, options?.env), {
+    hoveredButtonId: options?.hoveredButton ?? null,
+    backgroundImage: options?.backgroundImage,
+  });
 };
