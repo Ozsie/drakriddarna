@@ -1,0 +1,119 @@
+// Settings view model adapter: the only place that reads AppSettings for
+// the settings view, and the owner of the credits row definitions (with
+// their external links). Labels, toggle states, slider values and
+// dimmed flags are prebuilt here.
+
+import type { AppSettings } from '../../settings/AppSettings';
+import type { Translator } from '../../uikit/env';
+import type {
+  CreditsViewModel,
+  SettingsRowVm,
+  SettingsViewModel,
+} from '../../uikit/components/settings';
+import { i18nTranslator } from '../i18nAdapter';
+
+export type SettingsRowId =
+  | 'music'
+  | 'audio'
+  | 'musicVolume'
+  | 'audioVolume'
+  | 'credits';
+
+// The credits rows: the same content the canvas menu's Rights view shows,
+// with the external links next to the row definitions (the renderer only
+// draws; the click handler opens the url).
+export interface CreditsRowDefinition {
+  id: string;
+  labelKey: string;
+  url?: string;
+}
+
+export const CREDITS_ROWS: CreditsRowDefinition[] = [
+  {
+    id: 'implementation',
+    labelKey: 'content.menu.rights.implementation',
+  },
+  {
+    id: 'music',
+    labelKey: 'content.menu.rights.musicLicense',
+    url: 'https://lostintheforest.bandcamp.com/',
+  },
+  {
+    id: 'sfx',
+    labelKey: 'content.menu.rights.sfx',
+    url: 'https://rgbin.itch.io/knight-monsters-sounds-pack',
+  },
+  {
+    id: 'graphics',
+    labelKey: 'content.menu.rights.graphics',
+  },
+];
+
+// The On/Off suffix follows the existing menu label pattern
+// (getMusicMenuLabel in src/menu/MenuLogic.ts).
+const formatToggleLabel = (label: string, on: boolean): string =>
+  `${label}: ${on ? 'On' : 'Off'}`;
+
+export const toSettingsViewModel = (
+  appSettings: AppSettings,
+  t: Translator = i18nTranslator,
+): SettingsViewModel => {
+  const rows: SettingsRowVm[] = [
+    {
+      id: 'music',
+      kind: 'toggle',
+      label: formatToggleLabel(
+        t('content.menu.settings.music'),
+        appSettings.musicOn,
+      ),
+      dimmed: false,
+    },
+    {
+      id: 'audio',
+      kind: 'toggle',
+      label: formatToggleLabel(
+        t('content.menu.settings.audio'),
+        appSettings.sfxOn,
+      ),
+      dimmed: false,
+    },
+    {
+      id: 'musicVolume',
+      kind: 'slider',
+      label: t('content.menu.settings.musicVolume'),
+      dimmed: !appSettings.musicOn,
+      value: appSettings.musicVolume,
+    },
+    {
+      id: 'audioVolume',
+      kind: 'slider',
+      label: t('content.menu.settings.audioVolume'),
+      dimmed: !appSettings.sfxOn,
+      value: appSettings.sfxVolume,
+    },
+    {
+      id: 'credits',
+      kind: 'button',
+      label: t('content.menu.settings.credits'),
+      dimmed: false,
+    },
+  ];
+
+  return {
+    headerText: t('content.menu.settings.header'),
+    backButtonLabel: t('content.menu.loadGame.buttons.back'),
+    rows,
+  };
+};
+
+export const toCreditsViewModel = (
+  t: Translator = i18nTranslator,
+): CreditsViewModel => ({
+  headerText: t('content.menu.rights.header'),
+  backButtonLabel: t('content.menu.loadGame.buttons.back'),
+  rows: CREDITS_ROWS.map((definition) => ({
+    id: definition.id,
+    label: t(definition.labelKey),
+    url: definition.url,
+  })),
+});
