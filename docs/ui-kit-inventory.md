@@ -69,6 +69,22 @@ through `env.theme`. The board controller builds one env per update and
 the UI-layer render signature includes env identity, so a locale or
 theme change repaints.
 
+**M4 status: primitives with real consumers.** `src/uikit/kit/` holds the
+component primitives — `modalFrame`, `button`, `listRow`, `textInput` —
+each with kit-level tests; the two-consumer rule was applied (a
+primitive was only extracted once a second consumer existed).
+
+**M5 status: Tier A under way (top bar, monster cards done).** The
+top bar and monster cards now follow the kit component contract:
+`src/uikit/components/topBar.ts` / `monsterCards.ts` do layout
+(canvas-free, measuring through `env.measure`), hit testing (semantic
+ids — top bar actions as strings, monster cards as card ids) and
+rendering over a plain view model; `src/ui/viewmodels/topBar.ts` /
+`monsterCards.ts` are the only GameState readers; the game-side facades
+`src/ui/TopBarRendering.ts` / `MonsterCardRendering.ts` keep the
+historical entry points so the controller and hit cascade work
+unchanged. Parity snapshots stayed byte-identical through the chain.
+
 ### World — out of scope
 
 Board-space rendering stays where it is (scope decision in the spec README):

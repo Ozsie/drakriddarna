@@ -670,6 +670,17 @@ update with its identity in the UI-layer render signature, so locale or
 theme changes repaint. No renderer imports i18n or asset URLs
 directly.
 
+M5 (view-model conversion) is under way, Tier A first: the top bar and
+monster cards now follow the kit component contract — the component in
+`src/uikit/components/` does layout (canvas-free, measuring through
+`env.measure`), hit testing (semantic ids) and rendering over a plain
+view model; the adapter in `src/ui/viewmodels/` is the only GameState
+reader; a game-side facade keeps the historical entry points so the
+controller and hit cascade work unchanged. Parity snapshots still pin
+the pixels: the harness builds its env with `textMeasureFromCtx`, so
+the committed call logs are reproduced byte-identically through the
+whole chain.
+
 M4 (component kit) is complete for the primitives with real consumers:
 `src/uikit/kit/` holds `modalFrame` (scrim, centered panel, header —
 shared by six dialogs), `button` (primary/secondary with hover states),
