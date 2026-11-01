@@ -75,12 +75,31 @@ each with kit-level tests; the two-consumer rule was applied (a
 primitive was only extracted once a second consumer existed).
 
 **M5 status: complete — every in-scope chrome module converted.** All
-fifteen modules follow the kit component contract: `src/uikit/components/`
+sixteen modules follow the kit component contract: `src/uikit/components/`
 holds `topBar`, `monsterCards`, `heroCards`, `dungeonIntro`, `menu`,
 `welcome`, `saveLoadDialog`, `newGameDialog`, `heroSelection`,
-`settings`, `eventCard`, `diary` and `betweenDungeons` — layout
+`settings`, `eventCard`, `diary`, `betweenDungeons` and `radialMenu`
+(the radial menu was in-scope chrome no milestone tier had listed; the
+post-M5 cleanup pass converted it too) — layout
 (canvas-free, measuring through `env.measure` or fixed geometry), hit
-testing (semantic ids) and rendering over a plain view model. The
+testing (semantic ids) and rendering over a plain view model.
+
+**Debug overlay — explicit game-side exception.**
+`src/ui/DebugOverlayRendering.ts` is deliberately NOT in the kit: it is
+a dev-only diagnostic overlay, excluded from the parity snapshots, that
+reads GameState (director state, wall-clock timer) directly and draws
+freeform debug text. It is the one renderer allowed to stay game-side.
+
+**Post-M5 cleanup pass.** The temporary facade helper re-exports
+(`drawRoundedRect`, `measureTextWidth`, `truncateText`, `isPointInBounds`,
+`wrapText`, `getCoverFitBounds`) are retired — the tests exercise the
+kit primitives directly. Item sprite frames are one shared kit helper
+(`src/uikit/kit/spriteFrame.ts`, `SpriteRef` in `src/uikit/env.ts`),
+consumed by the hero-card inventories and the radial menu. The legacy
+env builders collapsed into one `legacyUiEnv`/`legacyUiContext` in
+`src/ui/env.ts` (the top bar keeps its own variant — its fallback
+predates `env.measure`), and the kit's historical per-character width
+fallback is one exported constant in the kit text primitives. The
 adapters in `src/ui/viewmodels/` are the only GameState/AppSettings/
 campaign readers; the one side-effecting chrome action (dismissing the
 dungeon intro) lives in `src/ui/actions/`; the game-side facades keep

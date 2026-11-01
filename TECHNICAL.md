@@ -673,8 +673,11 @@ directly.
 M5 (view-model conversion) is complete — every in-scope chrome module
 follows the kit component contract: the top bar, monster cards, hero
 cards, dungeon intro, canvas menu, welcome screen, save/load dialog,
-new-game dialog, hero selection, settings, event card, diary panel and
-between-dungeons. The component in `src/uikit/components/` does layout
+new-game dialog, hero selection, settings, event card, diary panel,
+between-dungeons and the radial menu (the post-M5 cleanup pass
+converted it, plus shared kit helpers: one sprite-frame helper for
+item art and one legacy env builder for the facades — the debug
+overlay stays game-side as a deliberate dev-only exception). The component in `src/uikit/components/` does layout
 (canvas-free, measuring through `env.measure`), hit testing (semantic
 ids) and rendering over a plain view model; the adapter in
 `src/ui/viewmodels/` is the only GameState/AppSettings/campaign
