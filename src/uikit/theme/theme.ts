@@ -52,6 +52,10 @@ export interface UiTheme {
       readonly inventoryEmpty: string;
       /** 'Used' label on a spent inventory item. */
       readonly inventoryUsed: string;
+      /** Gold score numbers in tables. */
+      readonly scoreGold: string;
+      /** Party-wipe button description text. */
+      readonly wipeDescription: string;
       /** Green log-entry text in the open dropdown. */
       readonly hudLogEntry: string;
       /** Warm gold dungeon-intro title. */
@@ -136,6 +140,17 @@ export interface UiTheme {
       readonly useButton: string;
       /** Used-item button outline. */
       readonly useButtonDisabled: string;
+      /** Scenario score-box outline. */
+      readonly scoreBox: string;
+      /** Resting party-wipe button outline. */
+      readonly wipeButton: string;
+      /** Hovered party-wipe button outline. */
+      readonly wipeButtonHover: string;
+      /** Selected trade-item outline. */
+      readonly tradeItemSelected: string;
+      /** Give-to-hero button outline. */
+      readonly giveButton: string;
+    };
     readonly surface: {
       /** The translucent menu modal panel. */
       readonly panelMenu: string;
@@ -211,6 +226,22 @@ export interface UiTheme {
       readonly useButtonHover: string;
       /** Used-item button fill. */
       readonly useButtonDisabled: string;
+      /** Scenario score-box fill. */
+      readonly scoreBox: string;
+      /** Leveled-up hero row fill. */
+      readonly leveledRow: string;
+      /** Resting party-wipe button fill. */
+      readonly wipeButton: string;
+      /** Hovered party-wipe button fill. */
+      readonly wipeButtonHover: string;
+      /** Resting trade-item fill. */
+      readonly tradeItem: string;
+      /** Selected trade-item fill. */
+      readonly tradeItemSelected: string;
+      /** Give-to-hero button fill. */
+      readonly giveButton: string;
+      /** Hovered give-to-hero button fill. */
+      readonly giveButtonHover: string;
     };
     readonly overlay: {
       /** Backdrop behind the corner menu modal. */
@@ -229,6 +260,16 @@ export interface UiTheme {
     readonly hover: {
       /** Hover fill over a dark circular button (radial menu). */
       readonly radialFill: string;
+    };
+    readonly actorDot: {
+      /** Party dot for a red hero. */
+      readonly red: string;
+      /** Party dot for a blue hero. */
+      readonly blue: string;
+      /** Party dot for a yellow hero. */
+      readonly yellow: string;
+      /** Party dot for a green hero. */
+      readonly green: string;
     };
     readonly status: {
       /** Outline of the acting monster's card. */

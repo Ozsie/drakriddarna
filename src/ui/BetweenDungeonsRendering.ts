@@ -20,6 +20,8 @@ import {
   type CardBounds,
 } from './HeroCardRendering';
 import { wrapText } from './DiaryAndWinConditionRendering';
+import { composeFont } from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 export interface BetweenDungeonsLayout {
   hasContent: boolean;
@@ -148,6 +150,7 @@ export interface GiveButtonLayoutItem {
 }
 
 export interface RenderBetweenDungeonsOptions {
+  theme?: UiTheme;
   hoveredAction?: boolean;
   hoveredSecondary?: boolean;
   hoveredItem?: {
@@ -168,26 +171,14 @@ export type BetweenDungeonsHitResult =
   | { type: 'panel' }
   | { type: 'backdrop' };
 
-const TITLE_FONT = 'bold 18px Arial, Helvetica, sans-serif';
-const SUBTITLE_FONT = '13px Arial, Helvetica, sans-serif';
-const HERO_NAME_FONT = 'bold 14px Arial, Helvetica, sans-serif';
-const BADGE_FONT = 'bold 11px Arial, Helvetica, sans-serif';
-const DESC_FONT = '12px Arial, Helvetica, sans-serif';
-const BUTTON_FONT = 'bold 14px Arial, Helvetica, sans-serif';
-const ITEM_FONT = '11px Arial, Helvetica, sans-serif';
-const SMALL_BTN_FONT = 'bold 11px Arial, Helvetica, sans-serif';
-const CAMPAIGN_SCORE_FONT = 'bold 20px Arial, Helvetica, sans-serif';
-const TABLE_HEADER_FONT = 'bold 11px Arial, Helvetica, sans-serif';
-const TABLE_FONT = '11px Arial, Helvetica, sans-serif';
-
-const heroColourHex = (colour: Colour): string =>
+const heroColourHex = (theme: UiTheme, colour: Colour): string =>
   colour === Colour.Red
-    ? '#ef4444'
+    ? theme.palette.actorDot.red
     : colour === Colour.Blue
-    ? '#3b82f6'
+    ? theme.palette.actorDot.blue
     : colour === Colour.Yellow
-    ? '#eab308'
-    : '#10b981';
+    ? theme.palette.actorDot.yellow
+    : theme.palette.actorDot.green;
 
 /**
  * Draws the campaign-complete statistics: score headline, campaign
@@ -197,35 +188,48 @@ const renderCampaignCompleteSection = (
   ctx: CanvasRenderingContext2D,
   panel: CardBounds,
   cc: CampaignCompleteLayout,
+  theme: UiTheme,
 ): void => {
   const x = panel.x + 18;
   const right = panel.x + panel.width - 18;
 
+  const descFont = composeFont(theme, theme.typography.sizes.md);
+  const tableHeaderFont = composeFont(
+    theme,
+    theme.typography.sizes.sm,
+    theme.typography.weights.bold,
+  );
+  const tableFont = composeFont(theme, theme.typography.sizes.sm);
+
   ctx.textBaseline = 'top';
 
   // Score headline
-  ctx.fillStyle = '#fce28a';
-  ctx.font = CAMPAIGN_SCORE_FONT;
+  ctx.fillStyle = theme.palette.text.headerDialog;
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.display,
+    theme.typography.weights.bold,
+  );
   ctx.textAlign = 'left';
   ctx.fillText(cc.scoreText, x, cc.scoreY);
 
   // Campaign total time, right of the score headline
   if (cc.timeText) {
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = DESC_FONT;
+    ctx.fillStyle = theme.palette.text.muted;
+    ctx.font = descFont;
     ctx.textAlign = 'right';
     ctx.fillText(cc.timeText, right, cc.scoreY);
   }
 
   // Campaign summary
-  ctx.fillStyle = '#94a3b8';
-  ctx.font = DESC_FONT;
+  ctx.fillStyle = theme.palette.text.muted;
+  ctx.font = descFont;
   ctx.textAlign = 'left';
   ctx.fillText(cc.summaryText, x, cc.summaryY);
 
   // Per-scenario table
-  ctx.font = TABLE_HEADER_FONT;
-  ctx.fillStyle = '#cbd5e1';
+  ctx.font = tableHeaderFont;
+  ctx.fillStyle = theme.palette.text.secondary;
   ctx.fillText(cc.scenarioHeader.name, x, cc.scenarioHeaderY);
   ctx.textAlign = 'right';
   ctx.fillText(cc.scenarioHeader.rounds, right - 260, cc.scenarioHeaderY);
@@ -233,20 +237,20 @@ const renderCampaignCompleteSection = (
   ctx.fillText(cc.scenarioHeader.score, right, cc.scenarioHeaderY);
 
   for (const row of cc.scenarioRows) {
-    ctx.font = TABLE_FONT;
-    ctx.fillStyle = '#e2e8f0';
+    ctx.font = tableFont;
+    ctx.fillStyle = theme.palette.text.body;
     ctx.textAlign = 'left';
     ctx.fillText(row.nameText, x, row.y);
     ctx.textAlign = 'right';
     ctx.fillText(row.roundsText, right - 260, row.y);
     ctx.fillText(row.killsText, right - 180, row.y);
-    ctx.fillStyle = '#fcd34d';
+    ctx.fillStyle = theme.palette.text.scoreGold;
     ctx.fillText(row.scoreText, right, row.y);
   }
 
   // Per-hero table
-  ctx.font = TABLE_HEADER_FONT;
-  ctx.fillStyle = '#cbd5e1';
+  ctx.font = tableHeaderFont;
+  ctx.fillStyle = theme.palette.text.secondary;
   ctx.textAlign = 'left';
   ctx.fillText(cc.heroHeader.name, x, cc.heroHeaderY);
   ctx.textAlign = 'right';
@@ -257,19 +261,23 @@ const renderCampaignCompleteSection = (
   ctx.fillText(cc.heroHeader.items, right, cc.heroHeaderY);
 
   for (const row of cc.heroRows) {
-    ctx.font = TABLE_FONT;
-    ctx.fillStyle = row.alive ? '#e2e8f0' : '#64748b';
+    ctx.font = tableFont;
+    ctx.fillStyle = row.alive
+      ? theme.palette.text.body
+      : theme.palette.text.dimmed;
     if (row.alive) {
       ctx.beginPath();
       ctx.arc(x + 5, row.y + 6, 5, 0, Math.PI * 2);
-      ctx.fillStyle = heroColourHex(row.colour);
+      ctx.fillStyle = heroColourHex(theme, row.colour);
       ctx.fill();
     }
     ctx.textAlign = 'left';
     ctx.fillText(row.title, x + 16, row.y);
     ctx.textAlign = 'right';
     ctx.fillText(row.levelText, right - 360, row.y);
-    ctx.fillStyle = row.alive ? '#e2e8f0' : '#64748b';
+    ctx.fillStyle = row.alive
+      ? theme.palette.text.body
+      : theme.palette.text.dimmed;
     ctx.fillText(row.xpText, right - 290, row.y);
     ctx.fillText(row.hpText, right - 200, row.y);
     ctx.fillText(row.killsText, right - 120, row.y);
@@ -281,6 +289,7 @@ export const getBetweenDungeonsLayout = (
   viewWidth: number,
   viewHeight: number,
   state: GameState | null | undefined,
+  theme: UiTheme = defaultTheme,
 ): BetweenDungeonsLayout => {
   const emptyLayout: BetweenDungeonsLayout = {
     hasContent: false,
@@ -551,7 +560,7 @@ export const getBetweenDungeonsLayout = (
         null,
         i18n(choice.descriptionKey, { name: completedName }),
         buttonColWidth - 32,
-        DESC_FONT,
+        composeFont(theme, theme.typography.sizes.md),
       ),
     }));
 
@@ -871,13 +880,32 @@ export const renderBetweenDungeons = (
     return;
   }
 
-  const layout = getBetweenDungeonsLayout(viewWidth, viewHeight, state);
+  const theme = options?.theme ?? defaultTheme;
+  const descFont = composeFont(theme, theme.typography.sizes.md);
+  const buttonFont = composeFont(
+    theme,
+    theme.typography.sizes.xl,
+    theme.typography.weights.bold,
+  );
+  const badgeFont = composeFont(
+    theme,
+    theme.typography.sizes.sm,
+    theme.typography.weights.bold,
+  );
+  const heroNameFont = composeFont(
+    theme,
+    theme.typography.sizes.xl,
+    theme.typography.weights.bold,
+  );
+  const itemFont = composeFont(theme, theme.typography.sizes.sm);
+
+  const layout = getBetweenDungeonsLayout(viewWidth, viewHeight, state, theme);
   if (!layout.hasContent) return;
 
   ctx.save();
 
   // Dark backdrop
-  ctx.fillStyle = 'rgba(10, 12, 16, 0.85)';
+  ctx.fillStyle = theme.palette.overlay.scrimDialog;
   ctx.fillRect(
     layout.backdropBounds.x,
     layout.backdropBounds.y,
@@ -887,49 +915,53 @@ export const renderBetweenDungeons = (
 
   // Main modal panel
   const p = layout.panelBounds;
-  ctx.fillStyle = '#181b22';
+  ctx.fillStyle = theme.palette.surface.panelDialog;
   drawRoundedRect(ctx, p.x, p.y, p.width, p.height, 10);
   ctx.fill();
 
-  ctx.strokeStyle = '#d4af37';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = theme.palette.border.panelDialog;
+  ctx.lineWidth = theme.shape.strokeWidth.regular;
   drawRoundedRect(ctx, p.x, p.y, p.width, p.height, 10);
   ctx.stroke();
 
   // Header Title
-  ctx.fillStyle = '#fce28a';
-  ctx.font = TITLE_FONT;
+  ctx.fillStyle = theme.palette.text.headerDialog;
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.title,
+    theme.typography.weights.bold,
+  );
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText(layout.titleText, p.x + 18, p.y + 14);
 
   // Subtitle
-  ctx.fillStyle = '#cbd5e1';
-  ctx.font = SUBTITLE_FONT;
+  ctx.fillStyle = theme.palette.text.secondary;
+  ctx.font = composeFont(theme, theme.typography.sizes.lg);
   ctx.fillText(layout.subtitleText, p.x + 18, p.y + 38);
 
   // Scenario score breakdown
   const score = layout.scoreSection;
   if (score && layout.step === 'levelUp') {
     const sb = score.bounds;
-    ctx.fillStyle = 'rgba(212, 175, 55, 0.08)';
+    ctx.fillStyle = theme.palette.surface.scoreBox;
     drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
     ctx.fill();
-    ctx.strokeStyle = '#574f2a';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = theme.palette.border.scoreBox;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
     ctx.stroke();
 
-    ctx.font = HERO_NAME_FONT;
+    ctx.font = heroNameFont;
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#fce28a';
+    ctx.fillStyle = theme.palette.text.headerDialog;
     ctx.fillText(score.totalText, sb.x + 10, sb.y + 8);
     ctx.textAlign = 'right';
     ctx.fillText(score.campaignText, sb.x + sb.width - 10, sb.y + 8);
 
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = DESC_FONT;
+    ctx.fillStyle = theme.palette.text.muted;
+    ctx.font = descFont;
     ctx.textAlign = 'left';
     ctx.fillText(score.breakdownTexts.join('  ·  '), sb.x + 10, sb.y + 30);
     if (score.timeText) {
@@ -944,8 +976,8 @@ export const renderBetweenDungeons = (
     for (const wb of layout.wipeButtons) {
       const isHovered = options?.hoveredWipeAction === wb.action;
       ctx.fillStyle = isHovered
-        ? 'rgba(153, 27, 27, 0.6)'
-        : 'rgba(127, 29, 29, 0.35)';
+        ? theme.palette.surface.wipeButtonHover
+        : theme.palette.surface.wipeButton;
       drawRoundedRect(
         ctx,
         wb.bounds.x,
@@ -955,8 +987,12 @@ export const renderBetweenDungeons = (
         8,
       );
       ctx.fill();
-      ctx.strokeStyle = isHovered ? '#f87171' : '#b91c1c';
-      ctx.lineWidth = isHovered ? 2 : 1;
+      ctx.strokeStyle = isHovered
+        ? theme.palette.border.wipeButtonHover
+        : theme.palette.border.wipeButton;
+      ctx.lineWidth = isHovered
+        ? theme.shape.strokeWidth.regular
+        : theme.shape.strokeWidth.thin;
       drawRoundedRect(
         ctx,
         wb.bounds.x,
@@ -967,8 +1003,8 @@ export const renderBetweenDungeons = (
       );
       ctx.stroke();
 
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = BUTTON_FONT;
+      ctx.fillStyle = theme.palette.text.strong;
+      ctx.font = buttonFont;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(
@@ -976,8 +1012,8 @@ export const renderBetweenDungeons = (
         wb.bounds.x + wb.bounds.width / 2,
         wb.bounds.y + 16,
       );
-      ctx.fillStyle = '#fca5a5';
-      ctx.font = DESC_FONT;
+      ctx.fillStyle = theme.palette.text.wipeDescription;
+      ctx.font = descFont;
       wb.descriptionLines.forEach((line, lineIndex) => {
         ctx.fillText(
           line,
@@ -989,7 +1025,7 @@ export const renderBetweenDungeons = (
 
     const hs = layout.wipeHighScores;
     if (hs) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.fillStyle = theme.palette.surface.row;
       drawRoundedRect(
         ctx,
         hs.bounds.x,
@@ -999,8 +1035,8 @@ export const renderBetweenDungeons = (
         6,
       );
       ctx.fill();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = theme.palette.border.row;
+      ctx.lineWidth = theme.shape.strokeWidth.thin;
       drawRoundedRect(
         ctx,
         hs.bounds.x,
@@ -1013,13 +1049,15 @@ export const renderBetweenDungeons = (
 
       ctx.textBaseline = 'top';
       ctx.textAlign = 'left';
-      ctx.fillStyle = '#fce28a';
-      ctx.font = BADGE_FONT;
+      ctx.fillStyle = theme.palette.text.headerDialog;
+      ctx.font = badgeFont;
       ctx.fillText(hs.headerText, hs.bounds.x + 10, hs.bounds.y + 8);
 
       for (const row of hs.rows) {
-        ctx.fillStyle = row.isCurrent ? '#fcd34d' : '#cbd5e1';
-        ctx.font = TABLE_FONT;
+        ctx.fillStyle = row.isCurrent
+          ? theme.palette.text.scoreGold
+          : theme.palette.text.secondary;
+        ctx.font = itemFont;
         ctx.fillText(row.rankText, hs.bounds.x + 10, row.y);
         ctx.textAlign = 'right';
         const suffix = row.isCurrent ? ` ${hs.currentLabelText}` : '';
@@ -1032,64 +1070,69 @@ export const renderBetweenDungeons = (
       }
     }
   } else if (layout.campaignComplete && layout.step === 'campaignComplete') {
-    renderCampaignCompleteSection(ctx, p, layout.campaignComplete);
+    renderCampaignCompleteSection(ctx, p, layout.campaignComplete, theme);
   } else if (layout.step === 'levelUp') {
     for (const h of layout.heroes) {
       const hb = h.bounds;
       ctx.fillStyle = h.isLeveledUp
-        ? 'rgba(212, 175, 55, 0.12)'
-        : 'rgba(255, 255, 255, 0.04)';
+        ? theme.palette.surface.leveledRow
+        : theme.palette.surface.row;
       drawRoundedRect(ctx, hb.x, hb.y, hb.width, hb.height, 6);
       ctx.fill();
 
-      ctx.strokeStyle = h.isLeveledUp ? '#eab308' : '#334155';
-      ctx.lineWidth = h.isLeveledUp ? 1.5 : 1;
+      ctx.strokeStyle = h.isLeveledUp
+        ? theme.palette.border.rowSelected
+        : theme.palette.border.row;
+      ctx.lineWidth = h.isLeveledUp
+        ? theme.shape.strokeWidth.medium
+        : theme.shape.strokeWidth.thin;
       drawRoundedRect(ctx, hb.x, hb.y, hb.width, hb.height, 6);
       ctx.stroke();
 
       // Hero name & color dot
-      ctx.fillStyle =
-        h.hero.colour === Colour.Red
-          ? '#ef4444'
-          : h.hero.colour === Colour.Blue
-          ? '#3b82f6'
-          : h.hero.colour === Colour.Yellow
-          ? '#eab308'
-          : '#10b981';
+      ctx.fillStyle = heroColourHex(theme, h.hero.colour);
       ctx.beginPath();
       ctx.arc(hb.x + 14, hb.y + 16, 5, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = HERO_NAME_FONT;
+      ctx.fillStyle = theme.palette.text.strong;
+      ctx.font = heroNameFont;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillText(h.title, hb.x + 26, hb.y + 16);
 
       // XP info
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = DESC_FONT;
+      ctx.fillStyle = theme.palette.text.muted;
+      ctx.font = descFont;
       ctx.fillText(h.xpText, hb.x + 140, hb.y + 16);
 
       // Level badge
       const badgeX = hb.x + hb.width - 110;
       const badgeY = hb.y + 6;
-      ctx.fillStyle = h.isLeveledUp ? '#ca8a04' : '#1e293b';
+      ctx.fillStyle = h.isLeveledUp
+        ? theme.palette.surface.checkboxSelected
+        : theme.palette.surface.checkbox;
       drawRoundedRect(ctx, badgeX, badgeY, 100, 20, 4);
       ctx.fill();
-      ctx.strokeStyle = h.isLeveledUp ? '#fde047' : '#475569';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = h.isLeveledUp
+        ? theme.palette.border.checkboxSelected
+        : theme.palette.border.input;
+      ctx.lineWidth = theme.shape.strokeWidth.thin;
       drawRoundedRect(ctx, badgeX, badgeY, 100, 20, 4);
       ctx.stroke();
 
-      ctx.fillStyle = h.isLeveledUp ? '#ffffff' : '#e2e8f0';
-      ctx.font = BADGE_FONT;
+      ctx.fillStyle = h.isLeveledUp
+        ? theme.palette.text.bright
+        : theme.palette.text.body;
+      ctx.font = badgeFont;
       ctx.textAlign = 'center';
       ctx.fillText(h.levelBadge, badgeX + 50, badgeY + 10);
 
       // Level Meaning explanation
-      ctx.fillStyle = h.isLeveledUp ? '#fef08a' : '#cbd5e1';
-      ctx.font = DESC_FONT;
+      ctx.fillStyle = h.isLeveledUp
+        ? theme.palette.text.rowSelected
+        : theme.palette.text.secondary;
+      ctx.font = descFont;
       ctx.textAlign = 'left';
       ctx.fillText(h.levelMeaningText, hb.x + 26, hb.y + 36);
     }
@@ -1097,37 +1140,30 @@ export const renderBetweenDungeons = (
     // Trading step
     for (const h of layout.heroes) {
       const hb = h.bounds;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.fillStyle = theme.palette.surface.row;
       drawRoundedRect(ctx, hb.x, hb.y, hb.width, hb.height, 6);
       ctx.fill();
 
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = theme.palette.border.row;
+      ctx.lineWidth = theme.shape.strokeWidth.thin;
       drawRoundedRect(ctx, hb.x, hb.y, hb.width, hb.height, 6);
       ctx.stroke();
 
       // Hero header
-      ctx.fillStyle =
-        h.hero.colour === Colour.Red
-          ? '#ef4444'
-          : h.hero.colour === Colour.Blue
-          ? '#3b82f6'
-          : h.hero.colour === Colour.Yellow
-          ? '#eab308'
-          : '#10b981';
+      ctx.fillStyle = heroColourHex(theme, h.hero.colour);
       ctx.beginPath();
       ctx.arc(hb.x + 12, hb.y + 14, 4, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = HERO_NAME_FONT;
+      ctx.fillStyle = theme.palette.text.strong;
+      ctx.font = heroNameFont;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillText(h.title, hb.x + 22, hb.y + 14);
 
       if (h.items.length === 0) {
-        ctx.fillStyle = '#64748b';
-        ctx.font = ITEM_FONT;
+        ctx.fillStyle = theme.palette.text.dimmed;
+        ctx.font = itemFont;
         ctx.fillText(
           i18n('content.betweenDungeons.noItems'),
           hb.x + 10,
@@ -1143,20 +1179,26 @@ export const renderBetweenDungeons = (
           options?.hoveredItem?.itemIndex === it.itemIndex;
 
         ctx.fillStyle = it.isSelected
-          ? '#854d0e'
+          ? theme.palette.surface.tradeItemSelected
           : isHovered
-          ? '#334155'
-          : '#1e293b';
+          ? theme.palette.surface.rowHover
+          : theme.palette.surface.tradeItem;
         drawRoundedRect(ctx, ib.x, ib.y, ib.width, ib.height, 4);
         ctx.fill();
 
-        ctx.strokeStyle = it.isSelected ? '#facc15' : '#475569';
-        ctx.lineWidth = it.isSelected ? 1.5 : 1;
+        ctx.strokeStyle = it.isSelected
+          ? theme.palette.border.tradeItemSelected
+          : theme.palette.border.input;
+        ctx.lineWidth = it.isSelected
+          ? theme.shape.strokeWidth.medium
+          : theme.shape.strokeWidth.thin;
         drawRoundedRect(ctx, ib.x, ib.y, ib.width, ib.height, 4);
         ctx.stroke();
 
-        ctx.fillStyle = it.isSelected ? '#fef08a' : '#f1f5f9';
-        ctx.font = ITEM_FONT;
+        ctx.fillStyle = it.isSelected
+          ? theme.palette.text.rowSelected
+          : theme.palette.text.dialogValue;
+        ctx.font = itemFont;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillText(it.nameText, ib.x + 6, ib.y + ib.height / 2);
@@ -1167,17 +1209,19 @@ export const renderBetweenDungeons = (
     for (const gb of layout.giveButtons) {
       const gbb = gb.bounds;
       const isHovered = options?.hoveredGiveHeroIndex === gb.targetHeroIndex;
-      ctx.fillStyle = isHovered ? '#15803d' : '#166534';
+      ctx.fillStyle = isHovered
+        ? theme.palette.surface.giveButtonHover
+        : theme.palette.surface.giveButton;
       drawRoundedRect(ctx, gbb.x, gbb.y, gbb.width, gbb.height, 4);
       ctx.fill();
 
-      ctx.strokeStyle = '#4ade80';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = theme.palette.border.giveButton;
+      ctx.lineWidth = theme.shape.strokeWidth.thin;
       drawRoundedRect(ctx, gbb.x, gbb.y, gbb.width, gbb.height, 4);
       ctx.stroke();
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = SMALL_BTN_FONT;
+      ctx.fillStyle = theme.palette.text.bright;
+      ctx.font = badgeFont;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(gb.label, gbb.x + gbb.width / 2, gbb.y + gbb.height / 2);
@@ -1188,17 +1232,19 @@ export const renderBetweenDungeons = (
   if (layout.secondaryButtonBounds && layout.secondaryButtonLabel) {
     const sb = layout.secondaryButtonBounds;
     const isHovered = Boolean(options?.hoveredSecondary);
-    ctx.fillStyle = isHovered ? '#475569' : '#334155';
+    ctx.fillStyle = isHovered
+      ? theme.palette.surface.buttonSecondaryHover
+      : theme.palette.surface.buttonSecondary;
     drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
     ctx.fill();
 
-    ctx.strokeStyle = '#64748b';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = theme.palette.border.buttonSecondary;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
     ctx.stroke();
 
-    ctx.fillStyle = '#e2e8f0';
-    ctx.font = BUTTON_FONT;
+    ctx.fillStyle = theme.palette.text.body;
+    ctx.font = buttonFont;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -1212,17 +1258,19 @@ export const renderBetweenDungeons = (
   const ab = layout.actionButtonBounds;
   const isHovered = Boolean(options?.hoveredAction);
   if (ab.width > 0) {
-    ctx.fillStyle = isHovered ? '#b45309' : '#92400e';
+    ctx.fillStyle = isHovered
+      ? theme.palette.surface.buttonPrimaryHover
+      : theme.palette.surface.buttonPrimary;
     drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
     ctx.fill();
 
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = theme.palette.border.buttonPrimary;
+    ctx.lineWidth = theme.shape.strokeWidth.medium;
     drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
     ctx.stroke();
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = BUTTON_FONT;
+    ctx.fillStyle = theme.palette.text.bright;
+    ctx.font = buttonFont;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(

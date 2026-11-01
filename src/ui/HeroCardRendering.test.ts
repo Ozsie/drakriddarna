@@ -116,18 +116,30 @@ describe('HeroCardRendering', () => {
   describe('measureTextWidth and truncateText', () => {
     it('measures text width using canvas context', () => {
       const ctx = createMockCtx();
-      const w = measureTextWidth(ctx, 'Fearik');
+      const w = measureTextWidth(
+        ctx,
+        'Fearik',
+        '10px Arial, Helvetica, sans-serif',
+      );
       expect(w).toBe(6 * 8);
     });
 
     it('falls back to approximation when ctx is not provided', () => {
-      const w = measureTextWidth(null, 'Fearik');
+      const w = measureTextWidth(
+        null,
+        'Fearik',
+        '10px Arial, Helvetica, sans-serif',
+      );
       expect(w).toBeGreaterThan(0);
     });
 
     it('returns empty string for empty text or zero maxWidth', () => {
-      expect(truncateText(null, '', 100)).toBe('');
-      expect(truncateText(null, 'Fearik', 0)).toBe('');
+      expect(
+        truncateText(null, '', 100, '10px Arial, Helvetica, sans-serif'),
+      ).toBe('');
+      expect(
+        truncateText(null, 'Fearik', 0, '10px Arial, Helvetica, sans-serif'),
+      ).toBe('');
     });
 
     it('truncates text with ellipsis when width exceeds maxWidth', () => {
@@ -136,6 +148,7 @@ describe('HeroCardRendering', () => {
         ctx,
         'Very Long Hero Title That Exceeds Width',
         50,
+        '10px Arial, Helvetica, sans-serif',
       );
       expect(result.endsWith('...')).toBe(true);
     });

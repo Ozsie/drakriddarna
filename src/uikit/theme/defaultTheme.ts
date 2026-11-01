@@ -27,6 +27,8 @@ export const defaultTheme: UiTheme = {
       inventoryDescription: '#4E342E',
       inventoryEmpty: '#6D4C41',
       inventoryUsed: '#5C4033',
+      scoreGold: '#fcd34d',
+      wipeDescription: '#fca5a5',
       hudLogEntry: '#4ade80',
       introTitle: '#f6ad55',
       introBody: 'rgba(235, 240, 245, 0.95)',
@@ -70,6 +72,11 @@ export const defaultTheme: UiTheme = {
       inventoryDivider: 'rgba(92, 64, 51, 0.3)',
       useButton: '#14532d',
       useButtonDisabled: 'rgba(92, 64, 51, 0.4)',
+      scoreBox: '#574f2a',
+      wipeButton: '#b91c1c',
+      wipeButtonHover: '#f87171',
+      tradeItemSelected: '#facc15',
+      giveButton: '#4ade80',
     },
     surface: {
       panelMenu: 'rgba(28, 33, 40, 0.96)',
@@ -109,6 +116,14 @@ export const defaultTheme: UiTheme = {
       useButton: '#15803d',
       useButtonHover: '#16a34a',
       useButtonDisabled: 'rgba(120, 100, 90, 0.4)',
+      scoreBox: 'rgba(212, 175, 55, 0.08)',
+      leveledRow: 'rgba(212, 175, 55, 0.12)',
+      wipeButton: 'rgba(127, 29, 29, 0.35)',
+      wipeButtonHover: 'rgba(153, 27, 27, 0.6)',
+      tradeItem: '#1e293b',
+      tradeItemSelected: '#854d0e',
+      giveButton: '#166534',
+      giveButtonHover: '#15803d',
     },
     overlay: {
       scrim: 'rgba(0, 0, 0, 0.45)',
@@ -120,6 +135,12 @@ export const defaultTheme: UiTheme = {
     },
     hover: {
       radialFill: 'rgba(255, 255, 255, 0.35)',
+    },
+    actorDot: {
+      red: '#ef4444',
+      blue: '#3b82f6',
+      yellow: '#eab308',
+      green: '#10b981',
     },
     status: {
       monsterCurrent: '#ef4444',

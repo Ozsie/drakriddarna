@@ -15,9 +15,9 @@ import {
 //
 // When a module's literals are moved into the theme, update these two
 // numbers to the new totals (see docs/ui-kit-spec/05-boundary-and-verification.md).
-// M2 progress: everything except BetweenDungeons converted.
-const COLOR_BUDGET = 80;
-const FONT_BUDGET = 11;
+// M2 complete: every renderer takes its colors and fonts from the theme.
+const COLOR_BUDGET = 0;
+const FONT_BUDGET = 0;
 
 const collect = (dir: string): { file: string; count: StyleLiteralCount }[] => {
   const entries: { file: string; count: StyleLiteralCount }[] = [];
