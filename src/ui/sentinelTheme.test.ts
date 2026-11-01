@@ -246,3 +246,89 @@ describe('sentinel theme', () => {
     ).toBe(true);
   });
 });
+
+// The sentinel translator: every string a component draws must either
+// carry the «key» marker from the test translator or be a deliberate
+// non-translation — the icon glyphs the kit draws itself, data-derived
+// fragments (durations, counts, HP), player-typed names, save names,
+// and the labels MenuLogic produces through the global store
+// translator (rendered keys under the sentinel). A hardcoded label in a
+// kit component fails this test.
+const TEXT_MARKER = /«/;
+
+// Icon glyphs and symbols the kit or the game-side tables draw as-is.
+const GLYPH_ALLOWLIST = new Set([
+  '🎒',
+  '✕',
+  '−',
+  '+',
+  '🎴',
+  '📖',
+  '❇️',
+  '✓',
+  '🔍',
+  '🗝️',
+  '🚪',
+  '⚡',
+  '✨',
+  '→',
+  '(Empty)',
+]);
+
+// User-typed or save-content names from the fixtures.
+const USER_CONTENT_ALLOWLIST = new Set(['Sir Sten', 'Before the gates']);
+
+// Pre-existing untranslated toggle labels in MenuLogic (game-side i18n
+// debt — fixing them needs human-authored source text, see the AI
+// policy; recorded in docs/ui-kit-inventory.md).
+const TOGGLE_LABEL = /^(Music|Debug|Sound|Audio): (On|Off)$/;
+
+// Durations (mm:ss, h:mm:ss, with centiseconds) and bare counts.
+const DATA_SHAPE = /^-?\d+(:\d{2})+(\.\d+)?$|^-?\d+([./]\d+)* ?(%|XP)?$/;
+
+// A translation key handed over verbatim by game-side code that
+// translates through the global store (MenuLogic) or was translated at
+// state-write time (level meanings).
+const KEY_SHAPE = /^([a-z][a-zA-Z0-9]*\.)+[a-zA-Z0-9.]+$/;
+
+const isAllowed = (text: string): boolean =>
+  TEXT_MARKER.test(text) ||
+  GLYPH_ALLOWLIST.has(text) ||
+  USER_CONTENT_ALLOWLIST.has(text) ||
+  TOGGLE_LABEL.test(text) ||
+  DATA_SHAPE.test(text) ||
+  // Multi-token labels (e.g. a menu item with an appended game-master
+  // key) pass when every token is a key, glyph or data fragment.
+  text
+    .split(' ')
+    .every(
+      (token) =>
+        KEY_SHAPE.test(token) || GLYPH_ALLOWLIST.has(token) || token === '-',
+    );
+
+const drawnTexts = (log: readonly string[]): string[] =>
+  log.flatMap((entry) => {
+    const match =
+      /^fillText\((.*), (-?\d+(?:\.\d+)?), (-?\d+(?:\.\d+)?)\)$/.exec(entry);
+    if (!match) return [];
+    return [match[1].replace(/^"|"$/g, '')];
+  });
+
+describe('sentinel translator', () => {
+  it.each(runs)(
+    '%s draws only translated or allowlisted strings',
+    (name, draw) => {
+      const sentinelTranslatorEnv: UiEnv = {
+        ...defaultUiEnv,
+        t: (key: string) => `«${key}»`,
+      };
+      const rec = createRecordingContext();
+      draw(rec.ctx, sentinelTranslatorEnv);
+      const leaked = drawnTexts(rec.log).filter((text) => !isAllowed(text));
+      expect(
+        leaked.length === 0,
+        `${name} drew unmarked strings: ${[...new Set(leaked)].join(', ')}`,
+      ).toBe(true);
+    },
+  );
+});
