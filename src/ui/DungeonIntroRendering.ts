@@ -1,5 +1,5 @@
 import type { GameState } from '../types';
-import { addLog, i18n } from '../core';
+import { addLog } from '../core';
 import { startDungeonTimer } from '../core';
 import {
   drawRoundedRect,
@@ -8,7 +8,9 @@ import {
 } from './HeroCardRendering';
 import { wrapText } from './DiaryAndWinConditionRendering';
 import { composeFont } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { UiEnv } from '../uikit/env';
+import { defaultUiEnv } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
 export interface DungeonIntroLayout {
   hasContent: boolean;
@@ -26,7 +28,7 @@ export interface DungeonIntroLayout {
 export interface RenderDungeonIntroOptions {
   dismissed?: boolean;
   isCloseHovered?: boolean;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export interface DungeonIntroHitResult {
@@ -113,23 +115,24 @@ export const getDungeonIntroLayout = (
     return emptyLayout;
   }
 
+  const t = options?.env?.t ?? i18nTranslator;
   const rawIntro = state.dungeon?.intro ?? '';
-  const translatedIntro = i18n(rawIntro);
+  const translatedIntro = t(rawIntro);
   const introText =
     translatedIntro && translatedIntro !== rawIntro
       ? translatedIntro
       : rawIntro;
 
   const rawTitle = state.dungeon?.name ?? 'Dungeon Intro';
-  const translatedTitle = i18n(rawTitle);
+  const translatedTitle = t(rawTitle);
   const titleText =
     translatedTitle && translatedTitle !== rawTitle
       ? translatedTitle
       : rawTitle;
 
-  const closeButtonLabel = i18n('content.winConditions.buttonClose') || 'Close';
+  const closeButtonLabel = t('content.winConditions.buttonClose') || 'Close';
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = options?.env?.theme ?? defaultUiEnv.theme;
   const textFont = composeFont(theme, theme.typography.sizes.lg);
 
   const padding = 20;
@@ -241,7 +244,7 @@ export const renderDungeonIntro = (
   );
   if (!layout.hasContent) return;
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = options?.env?.theme ?? defaultUiEnv.theme;
 
   ctx.save();
 

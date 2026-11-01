@@ -1,4 +1,4 @@
-import { DifficultLevels, i18n } from '../core';
+import { DifficultLevels } from '../core';
 import { campaigns } from '../campaigns';
 import {
   drawRoundedRect,
@@ -6,7 +6,10 @@ import {
   type CardBounds,
 } from './HeroCardRendering';
 import { composeFont } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { Translator, UiEnv } from '../uikit/env';
+import type { UiTheme } from '../uikit/theme';
+import { defaultUiEnv } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
 // Centered full-screen modal for starting a new game, a sibling of the
 // save/load dialog: two columns — campaigns on the left, game masters on
@@ -54,7 +57,7 @@ export interface NewGameDialogOptions {
   isCheckboxHovered?: boolean;
   hoveredAction?: boolean;
   hoveredSecondary?: boolean;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export type NewGameDialogHitResult =
@@ -76,16 +79,20 @@ const SEED_INPUT_HEIGHT = 30;
 // Height reserved for a column header above its rows.
 const COLUMN_HEADER_HEIGHT = 22;
 
-export const getCampaignRows = (): { id: string; label: string }[] =>
+export const getCampaignRows = (
+  t: Translator = i18nTranslator,
+): { id: string; label: string }[] =>
   Object.values(campaigns).map((campaign) => ({
     id: campaign.id,
-    label: i18n(campaign.nameTranslationKey ?? campaign.name),
+    label: t(campaign.nameTranslationKey ?? campaign.name),
   }));
 
-export const getGameMasterRows = (): { id: string; label: string }[] =>
+export const getGameMasterRows = (
+  t: Translator = i18nTranslator,
+): { id: string; label: string }[] =>
   DifficultLevels.map((gm) => ({
     id: gm.id,
-    label: i18n(gm.nameTranslationKey ?? gm.id),
+    label: t(gm.nameTranslationKey ?? gm.id),
   }));
 
 export const getNewGameDialogLayout = (
@@ -112,6 +119,8 @@ export const getNewGameDialogLayout = (
   };
   if (viewWidth <= 0 || viewHeight <= 0) return emptyLayout;
 
+  const t = options?.env?.t ?? i18nTranslator;
+
   const marginX = Math.max(12, Math.floor(viewWidth * 0.05));
   const marginY = Math.max(12, Math.floor(viewHeight * 0.05));
   const panelWidth = Math.min(680, Math.max(420, viewWidth - marginX * 2));
@@ -123,8 +132,8 @@ export const getNewGameDialogLayout = (
   const optionsRowHeight = 36;
   const buttonGap = 12;
 
-  const campaignData = getCampaignRows();
-  const gameMasterData = getGameMasterRows();
+  const campaignData = getCampaignRows(t);
+  const gameMasterData = getGameMasterRows(t);
   const rowCount = Math.max(campaignData.length, gameMasterData.length);
   const columnsHeight =
     COLUMN_HEADER_HEIGHT + rowCount * (ROW_HEIGHT + ROW_GAP);
@@ -190,7 +199,7 @@ export const getNewGameDialogLayout = (
   let seedLabelText: string | undefined;
   let seedInputBounds: CardBounds | undefined;
   if (options?.speedrunMode) {
-    seedLabelText = i18n('content.menu.newGame.rngSeed');
+    seedLabelText = t('content.menu.newGame.rngSeed');
     seedInputBounds = {
       x: panelX + panelWidth - paddingX - SEED_INPUT_WIDTH,
       y: optionsRowY + (optionsRowHeight - SEED_INPUT_HEIGHT) / 2,
@@ -212,13 +221,13 @@ export const getNewGameDialogLayout = (
       width: panelWidth,
       height: panelHeight,
     },
-    titleText: i18n('content.menu.mainMenu.buttons.newGame'),
-    campaignHeaderText: i18n('content.menu.selectCampaign.header'),
-    gameMasterHeaderText: i18n('content.menu.selectGameMaster.header'),
+    titleText: t('content.menu.mainMenu.buttons.newGame'),
+    campaignHeaderText: t('content.menu.selectCampaign.header'),
+    gameMasterHeaderText: t('content.menu.selectGameMaster.header'),
     campaignRows,
     gameMasterRows,
     checkboxBounds,
-    checkboxLabelText: i18n('content.menu.newGame.speedrunnerMode'),
+    checkboxLabelText: t('content.menu.newGame.speedrunnerMode'),
     speedrunMode: Boolean(options?.speedrunMode),
     seedLabelText,
     seedInputBounds,
@@ -228,14 +237,14 @@ export const getNewGameDialogLayout = (
       width: actionWidth,
       height: BTN_HEIGHT,
     },
-    actionButtonLabel: i18n('content.menu.newGame.buttons.begin'),
+    actionButtonLabel: t('content.menu.newGame.buttons.begin'),
     secondaryButtonBounds: {
       x: panelX + paddingX,
       y: btnY,
       width: secondaryWidth,
       height: BTN_HEIGHT,
     },
-    secondaryButtonLabel: i18n('content.menu.saveGame.buttons.cancel'),
+    secondaryButtonLabel: t('content.menu.saveGame.buttons.cancel'),
   };
 };
 
@@ -323,7 +332,7 @@ export const renderNewGameDialog = (
   const layout = getNewGameDialogLayout(viewWidth, viewHeight, options);
   if (!layout.hasContent) return;
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = options?.env?.theme ?? defaultUiEnv.theme;
 
   ctx.save();
 

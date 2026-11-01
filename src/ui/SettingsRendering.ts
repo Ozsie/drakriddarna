@@ -1,4 +1,3 @@
-import { i18n } from '../core';
 import type { AppSettings } from '../settings/AppSettings';
 import {
   drawRoundedRect,
@@ -6,7 +5,10 @@ import {
   type CardBounds,
 } from './HeroCardRendering';
 import { composeFont } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { UiEnv } from '../uikit/env';
+import type { UiTheme } from '../uikit/theme';
+import { defaultUiEnv } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
 // The welcome screen's Settings sub view (music/audio toggles, volume
 // sliders, credits) and its Credits sub screen (the rights rows the
@@ -53,7 +55,7 @@ export interface RenderSettingsOptions {
   appSettings?: AppSettings;
   hoveredRowId?: SettingsRowId | null;
   hoveredBack?: boolean;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export type SettingsHitResult =
@@ -113,7 +115,7 @@ export interface CreditsLayout {
 export interface RenderCreditsOptions {
   hoveredRowId?: string | null;
   hoveredBack?: boolean;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export type CreditsHitResult =
@@ -189,7 +191,9 @@ export const getSettingsLayout = (
   viewWidth: number,
   viewHeight: number,
   appSettings: AppSettings,
+  env?: UiEnv,
 ): SettingsLayout => {
+  const t = env?.t ?? i18nTranslator;
   const emptyLayout: SettingsLayout = {
     hasContent: false,
     panelBounds: { x: 0, y: 0, width: 0, height: 0 },
@@ -243,7 +247,7 @@ export const getSettingsLayout = (
       id: 'music',
       kind: 'toggle',
       label: formatToggleLabel(
-        i18n('content.menu.settings.music'),
+        t('content.menu.settings.music'),
         appSettings.musicOn,
       ),
       bounds: rowBounds(0),
@@ -253,7 +257,7 @@ export const getSettingsLayout = (
       id: 'audio',
       kind: 'toggle',
       label: formatToggleLabel(
-        i18n('content.menu.settings.audio'),
+        t('content.menu.settings.audio'),
         appSettings.sfxOn,
       ),
       bounds: rowBounds(1),
@@ -262,7 +266,7 @@ export const getSettingsLayout = (
     {
       id: 'musicVolume',
       kind: 'slider',
-      label: i18n('content.menu.settings.musicVolume'),
+      label: t('content.menu.settings.musicVolume'),
       bounds: rowBounds(2),
       dimmed: !appSettings.musicOn,
       slider: sliderFor(2, appSettings.musicVolume),
@@ -270,7 +274,7 @@ export const getSettingsLayout = (
     {
       id: 'audioVolume',
       kind: 'slider',
-      label: i18n('content.menu.settings.audioVolume'),
+      label: t('content.menu.settings.audioVolume'),
       bounds: rowBounds(3),
       dimmed: !appSettings.sfxOn,
       slider: sliderFor(3, appSettings.sfxVolume),
@@ -278,7 +282,7 @@ export const getSettingsLayout = (
     {
       id: 'credits',
       kind: 'button',
-      label: i18n('content.menu.settings.credits'),
+      label: t('content.menu.settings.credits'),
       bounds: rowBounds(4),
       dimmed: false,
     },
@@ -288,7 +292,7 @@ export const getSettingsLayout = (
   return {
     hasContent: true,
     panelBounds: panel,
-    headerText: i18n('content.menu.settings.header'),
+    headerText: t('content.menu.settings.header'),
     rows,
     backButtonBounds: {
       x: panel.x + panel.width - PADDING_X - backWidth,
@@ -296,7 +300,7 @@ export const getSettingsLayout = (
       width: backWidth,
       height: BTN_HEIGHT,
     },
-    backButtonLabel: i18n('content.menu.loadGame.buttons.back'),
+    backButtonLabel: t('content.menu.loadGame.buttons.back'),
   };
 };
 
@@ -345,7 +349,9 @@ export const getSettingsHit = (
 export const getCreditsLayout = (
   viewWidth: number,
   viewHeight: number,
+  env?: UiEnv,
 ): CreditsLayout => {
+  const t = env?.t ?? i18nTranslator;
   const emptyLayout: CreditsLayout = {
     hasContent: false,
     panelBounds: { x: 0, y: 0, width: 0, height: 0 },
@@ -361,7 +367,7 @@ export const getCreditsLayout = (
 
   const rows: CreditsRowLayout[] = CREDITS_ROWS.map((definition, index) => ({
     id: definition.id,
-    label: i18n(definition.labelKey),
+    label: t(definition.labelKey),
     url: definition.url,
     bounds: {
       x: panel.x + PADDING_X,
@@ -375,7 +381,7 @@ export const getCreditsLayout = (
   return {
     hasContent: true,
     panelBounds: panel,
-    headerText: i18n('content.menu.rights.header'),
+    headerText: t('content.menu.rights.header'),
     rows,
     backButtonBounds: {
       x: panel.x + panel.width - PADDING_X - backWidth,
@@ -383,7 +389,7 @@ export const getCreditsLayout = (
       width: backWidth,
       height: BTN_HEIGHT,
     },
-    backButtonLabel: i18n('content.menu.loadGame.buttons.back'),
+    backButtonLabel: t('content.menu.loadGame.buttons.back'),
   };
 };
 
@@ -541,10 +547,11 @@ export const renderSettings = (
   appSettings: AppSettings,
   options?: RenderSettingsOptions,
 ): void => {
-  const layout = getSettingsLayout(viewWidth, viewHeight, appSettings);
+  const env = options?.env ?? defaultUiEnv;
+  const layout = getSettingsLayout(viewWidth, viewHeight, appSettings, env);
   if (!layout.hasContent) return;
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = env.theme;
 
   ctx.save();
   renderPanel(ctx, layout.panelBounds, layout.headerText, theme);
@@ -644,10 +651,11 @@ export const renderCredits = (
   viewHeight: number,
   options?: RenderCreditsOptions,
 ): void => {
-  const layout = getCreditsLayout(viewWidth, viewHeight);
+  const env = options?.env ?? defaultUiEnv;
+  const layout = getCreditsLayout(viewWidth, viewHeight, env);
   if (!layout.hasContent) return;
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = env.theme;
 
   ctx.save();
   renderPanel(ctx, layout.panelBounds, layout.headerText, theme);

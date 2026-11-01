@@ -1,9 +1,7 @@
 import type { GameState, Hero, Item } from '../types';
 import { liveHeroes } from '../hero/HeroLogic';
-import { i18n } from '../core';
 import { ACTIVE, DESCRIPTION, USED } from '../items/ItemLogic';
 import { drawItemSprite } from '../items/ItemSpriteRendering';
-import { isCompactUi } from './UiMode';
 import {
   composeFont,
   measureTextWidth as kitMeasureTextWidth,
@@ -11,7 +9,9 @@ import {
 } from '../uikit/primitives/text';
 import { isPointInRect } from '../uikit/primitives/geometry';
 import { drawRoundedRect as kitDrawRoundedRect } from '../uikit/primitives/roundedRect';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { UiEnv } from '../uikit/env';
+import { defaultUiEnv, resolveLayoutMode } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
 // Shared draw helpers now live in the kit; re-exported so existing
 // importers keep working until each module is converted.
@@ -69,7 +69,7 @@ export interface RenderHeroCardsOptions {
   hoveredInventoryHeroName?: string | null;
   hoveredCloseHeroName?: string | null;
   hoveredUseItem?: { heroName: string; itemIndex: number } | null;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export type HeroCardsHitResult =
@@ -102,6 +102,7 @@ export const getHeroCardsLayout = (
   viewWidth: number,
   viewHeight: number,
   state?: GameState | null,
+  env?: UiEnv,
 ): HeroCardsLayout => {
   const emptyLayout: HeroCardsLayout = {
     containerBounds: { x: 0, y: 0, width: 0, height: 0 },
@@ -127,9 +128,10 @@ export const getHeroCardsLayout = (
   const currentActorName = state.currentActor?.name;
   const targetActorName = state.targetActor?.name;
 
+  const t = env?.t ?? i18nTranslator;
   // On narrow screens only the active hero's card is drawn; the other
   // cards would cover the board and overlap the monster cards.
-  const compact = isCompactUi(viewWidth);
+  const compact = resolveLayoutMode(env, viewWidth) === 'compact';
   const visibleHeroes = compact
     ? heroes.filter(
         (hero) =>
@@ -159,13 +161,13 @@ export const getHeroCardsLayout = (
     const isCurrent = currentActorName === hero.name;
     const isTarget = targetActorName === hero.name;
 
-    const heroNameTranslated = i18n(hero.name);
+    const heroNameTranslated = t(hero.name);
     const levelKey = `content.level.${hero.level}`;
-    const levelTranslated = i18n(levelKey);
+    const levelTranslated = t(levelKey);
     const title = `${
       isTarget ? '*' : ''
     }${heroNameTranslated} - ${levelTranslated} (${hero.experience})`;
-    const hpText = `${i18n('content.hero.hp')}: ${hero.health}`;
+    const hpText = `${t('content.hero.hp')}: ${hero.health}`;
 
     let actionsText: string | undefined;
     let movesText: string | undefined;
@@ -177,19 +179,19 @@ export const getHeroCardsLayout = (
     let cardHeight = 44; // Compact inactive card: Title (20px) + HP (16px) + padding (8px)
 
     if (isCurrent) {
-      actionsText = `${i18n('content.hero.actions')}: ${hero.actions}`;
-      movesText = `${i18n('content.hero.moves')}: ${hero.movement}`;
-      equipmentText = `${i18n('content.hero.equipment')}:`;
-      weaponText = `🗡️ ${i18n(hero.weapon.name)} (${hero.weapon.dice})`;
+      actionsText = `${t('content.hero.actions')}: ${hero.actions}`;
+      movesText = `${t('content.hero.moves')}: ${hero.movement}`;
+      equipmentText = `${t('content.hero.equipment')}:`;
+      weaponText = `🗡️ ${t(hero.weapon.name)} (${hero.weapon.dice})`;
       armourText = `🥋 ${
         hero.armour
-          ? `${i18n(hero.armour.name)} (${hero.armour.defense})`
-          : `${i18n('content.hero.none')} (0)`
+          ? `${t(hero.armour.name)} (${hero.armour.defense})`
+          : `${t('content.hero.none')} (0)`
       }`;
       shieldText = `🛡️ ${
         hero.shield
-          ? `${i18n(hero.shield.name)} (${hero.shield.dice})`
-          : `${i18n('content.hero.none')} (0)`
+          ? `${t(hero.shield.name)} (${hero.shield.dice})`
+          : `${t('content.hero.none')} (0)`
       }`;
       // Inactive 44 + Actions/Moves (16px) + Equipment header (14px) + 3 items (3 * 13px = 39px)
       cardHeight = 112;
@@ -233,7 +235,7 @@ export const getHeroCardsLayout = (
 
     // Check if inventory is open for this hero
     if (hero.isInventoryOpen) {
-      const invTitle = i18n('content.inventory.label', {
+      const invTitle = t('content.inventory.label', {
         hero: heroNameTranslated,
       });
 
@@ -292,9 +294,9 @@ export const getHeroCardsLayout = (
           height: itemRowHeight - 4,
         };
 
-        const itemName = i18n(item.nameTranslationKey ?? item.name);
+        const itemName = t(item.nameTranslationKey ?? item.name);
         const itemDesc = item.properties?.[DESCRIPTION]
-          ? i18n(String(item.properties[DESCRIPTION]))
+          ? t(String(item.properties[DESCRIPTION]))
           : '';
 
         const isUsable = Boolean(
@@ -366,14 +368,18 @@ export const renderHeroCards = (
 ): void => {
   if (!state || viewWidth <= 0 || viewHeight <= 0) return;
 
-  const layout = getHeroCardsLayout(viewWidth, viewHeight, state);
+  const env = options?.env ?? defaultUiEnv;
+  // The raw options.env (possibly undefined) flows into the layout so its
+  // width-derived mode fallback keeps working for legacy callers.
+  const layout = getHeroCardsLayout(viewWidth, viewHeight, state, options?.env);
   if (!layout.cards || layout.cards.length === 0) return;
 
   const hoveredInvHeroName = options?.hoveredInventoryHeroName ?? null;
   const hoveredCloseHeroName = options?.hoveredCloseHeroName ?? null;
   const hoveredUseItem = options?.hoveredUseItem ?? null;
 
-  const theme = options?.theme ?? defaultTheme;
+  const t = env.t;
+  const theme = env.theme;
   const titleFont = composeFont(
     theme,
     theme.typography.sizes.sm,
@@ -679,7 +685,7 @@ export const renderHeroCards = (
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(
-              i18n('content.inventory.use') || 'Use',
+              t('content.inventory.use') || 'Use',
               btnB.x + btnB.width / 2,
               btnB.y + btnB.height / 2,
             );
@@ -696,7 +702,7 @@ export const renderHeroCards = (
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(
-              i18n('content.inventory.used') || 'Used',
+              t('content.inventory.used') || 'Used',
               btnB.x + btnB.width / 2,
               btnB.y + btnB.height / 2,
             );

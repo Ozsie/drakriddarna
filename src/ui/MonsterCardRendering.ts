@@ -1,15 +1,15 @@
 import type { CardBounds } from './HeroCardRendering';
 import type { GameState, Monster } from '../types';
 import { findVisibleMonsters } from '../monsters/MonsterLogic';
-import { i18n } from '../core';
 import {
   drawRoundedRect,
   isPointInBounds,
   truncateText,
 } from './HeroCardRendering';
-import { isCompactUi } from './UiMode';
 import { composeFont } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { Translator, UiEnv } from '../uikit/env';
+import { defaultUiEnv, resolveLayoutMode } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
 export interface MonsterCardLayoutItem {
   monster: Monster;
@@ -33,7 +33,7 @@ export interface MonsterCardsLayout {
 
 export interface RenderMonsterCardsOptions {
   hoveredMonsterId?: string | null;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export type MonsterCardsHitResult = {
@@ -41,8 +41,12 @@ export type MonsterCardsHitResult = {
   monster: Monster;
 };
 
-const translateOrFallback = (key: string, fallback: string): string => {
-  const res = i18n(key);
+const translateOrFallback = (
+  key: string,
+  fallback: string,
+  t: Translator,
+): string => {
+  const res = t(key);
   return res === key ? fallback : res || fallback;
 };
 
@@ -50,6 +54,7 @@ export const getMonsterCardsLayout = (
   viewWidth: number,
   viewHeight: number,
   state?: GameState | null,
+  env?: UiEnv,
 ): MonsterCardsLayout => {
   const emptyLayout: MonsterCardsLayout = {
     containerBounds: { x: 0, y: 0, width: 0, height: 0 },
@@ -85,9 +90,10 @@ export const getMonsterCardsLayout = (
             targetActor.position?.y === monster.position?.y)),
     );
 
+  const t = env?.t ?? i18nTranslator;
   // On narrow screens only the active monster's card is drawn, mirroring
   // the hero cards, so the cards never cover the whole board.
-  const compact = isCompactUi(viewWidth);
+  const compact = resolveLayoutMode(env, viewWidth) === 'compact';
   const visibleMonsters = compact
     ? monsters.filter((m) => isMonsterCurrent(m) || isMonsterTarget(m))
     : monsters;
@@ -136,37 +142,33 @@ export const getMonsterCardsLayout = (
     const isCurrent = isMonsterCurrent(monster);
     const isTarget = isMonsterTarget(monster);
 
-    const monsterNameTranslated = i18n(
-      monster.nameTranslationKey ?? monster.name,
-    );
+    const monsterNameTranslated = t(monster.nameTranslationKey ?? monster.name);
     const title = `${isTarget ? '*' : ''}${monsterNameTranslated}`;
-    const hpLabel = translateOrFallback('content.hero.hp', 'HP');
+    const hpLabel = translateOrFallback('content.hero.hp', 'HP', t);
     const hpText = `${hpLabel}: ${monster.health}`;
 
-    const noneLabel = translateOrFallback('content.hero.none', 'None');
+    const noneLabel = translateOrFallback('content.hero.none', 'None', t);
 
     const weaponName = monster.weapon
-      ? i18n(monster.weapon.nameTranslationKey ?? monster.weapon.name)
+      ? t(monster.weapon.nameTranslationKey ?? monster.weapon.name)
       : noneLabel;
     const weaponDice = monster.weapon?.dice ?? 0;
     const weaponText = `🗡 ${weaponName} (${weaponDice})`;
 
     const rangedWeaponName = monster.rangedWeapon
-      ? i18n(
-          monster.rangedWeapon.nameTranslationKey ?? monster.rangedWeapon.name,
-        )
+      ? t(monster.rangedWeapon.nameTranslationKey ?? monster.rangedWeapon.name)
       : noneLabel;
     const rangedWeaponDice = monster.rangedWeapon?.dice ?? 0;
     const rangedWeaponText = `🏹 ${rangedWeaponName} (${rangedWeaponDice})`;
 
     const armourName = monster.armour
-      ? i18n(monster.armour.nameTranslationKey ?? monster.armour.name)
+      ? t(monster.armour.nameTranslationKey ?? monster.armour.name)
       : noneLabel;
     const armourDef = monster.armour?.defense ?? 0;
     const armourText = `🥋 ${armourName} (${armourDef})`;
 
     const shieldName = monster.shield
-      ? i18n(monster.shield.nameTranslationKey ?? monster.shield.name)
+      ? t(monster.shield.nameTranslationKey ?? monster.shield.name)
       : noneLabel;
     const shieldDice = monster.shield?.dice ?? 0;
     const shieldText = `🛡 ${shieldName} (${shieldDice})`;
@@ -212,12 +214,20 @@ export const renderMonsterCards = (
 ): void => {
   if (!state || viewWidth <= 0 || viewHeight <= 0) return;
 
-  const layout = getMonsterCardsLayout(viewWidth, viewHeight, state);
+  const env = options?.env ?? defaultUiEnv;
+  // The raw options.env (possibly undefined) flows into the layout so its
+  // width-derived mode fallback keeps working for legacy callers.
+  const layout = getMonsterCardsLayout(
+    viewWidth,
+    viewHeight,
+    state,
+    options?.env,
+  );
   if (!layout.cards || layout.cards.length === 0) return;
 
   const hoveredMonsterId = options?.hoveredMonsterId ?? null;
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = env.theme;
   const titleFont = composeFont(
     theme,
     theme.typography.sizes.sm,

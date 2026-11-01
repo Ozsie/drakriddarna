@@ -7,7 +7,8 @@ import {
   getMenuItemsForView,
 } from '../menu/MenuLogic';
 import { composeFont } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { UiEnv } from '../uikit/env';
+import { defaultUiEnv } from './env';
 
 export interface MenuItemLayout {
   item: CanvasMenuItem;
@@ -50,7 +51,7 @@ export interface RenderMenuOptions {
   buildInfo?: { date: string; hash: string } | null;
   debugMode?: boolean;
   callbacks?: MenuCallbacks;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export interface MenuHitResult {
@@ -249,7 +250,7 @@ export const renderMenuModal = (
 ) => {
   if (!ctx || !state || viewWidth <= 0 || viewHeight <= 0) return;
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = options?.env?.theme ?? defaultUiEnv.theme;
 
   const layout = getMenuLayout(viewWidth, viewHeight, state, options);
   if (layout.panelBounds.width === 0 || layout.panelBounds.height === 0) return;

@@ -1,14 +1,16 @@
 import type { GameState, Note, WinCondition } from '../types';
 import { ConditionType } from '../types';
-import { i18n } from '../core';
 import { drawRoundedRect, type CardBounds } from './HeroCardRendering';
-import { COMPACT_TOGGLE_SIZE, isCompactUi } from './UiMode';
+import { COMPACT_TOGGLE_SIZE } from './UiMode';
 import {
   composeFont,
   measureTextWidth as kitMeasureTextWidth,
   wrapText as kitWrapText,
 } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { Translator, UiEnv } from '../uikit/env';
+import { defaultTheme } from '../uikit/theme';
+import { resolveLayoutMode } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
 export interface WinConditionLayoutItem {
   condition: WinCondition;
@@ -44,7 +46,7 @@ export interface DiaryAndWinConditionsLayout {
 export interface RenderDiaryAndWinConditionsOptions {
   isCollapsed?: boolean;
   isToggleHovered?: boolean;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 // Per-character width used when no context is available for measuring
@@ -67,10 +69,11 @@ export const wrapText = (
 export const formatWinCondition = (
   cond: WinCondition,
   killCount = 0,
+  t: Translator = i18nTranslator,
 ): string => {
   let additionalDescription = '';
   if (cond.additionalDescription) {
-    const raw = i18n(cond.additionalDescription);
+    const raw = t(cond.additionalDescription);
     const translated =
       raw === cond.additionalDescription ? cond.additionalDescription : raw;
     additionalDescription = ` ${translated}`;
@@ -79,7 +82,7 @@ export const formatWinCondition = (
   let text = '';
   switch (cond.type) {
     case ConditionType.KILL_ALL: {
-      const raw = i18n('content.winConditions.killAll');
+      const raw = t('content.winConditions.killAll');
       text =
         raw === 'content.winConditions.killAll'
           ? 'Kill all monsters.'
@@ -91,7 +94,7 @@ export const formatWinCondition = (
         cond.targetMonsterType !== undefined
           ? String(cond.targetMonsterType)
           : '';
-      const raw = i18n('content.winConditions.killAllOfType', {
+      const raw = t('content.winConditions.killAllOfType', {
         type: typeStr,
       });
       if (raw && raw !== 'content.winConditions.killAllOfType') {
@@ -109,7 +112,7 @@ export const formatWinCondition = (
     }
     case ConditionType.KILL_AT_LEAST: {
       const min = cond.killMinCount ?? 0;
-      const raw = i18n('content.winConditions.killAtLeast', {
+      const raw = t('content.winConditions.killAtLeast', {
         minKills: `${min}`,
       });
       const prefix =
@@ -120,7 +123,7 @@ export const formatWinCondition = (
       break;
     }
     case ConditionType.OPEN_DOOR: {
-      const raw = i18n('content.winConditions.openDoor');
+      const raw = t('content.winConditions.openDoor');
       text =
         raw === 'content.winConditions.openDoor'
           ? 'Open a certain door.'
@@ -128,7 +131,7 @@ export const formatWinCondition = (
       break;
     }
     case ConditionType.REACH_CELL: {
-      const raw = i18n('content.winConditions.reachCell');
+      const raw = t('content.winConditions.reachCell');
       text =
         raw === 'content.winConditions.reachCell'
           ? 'Reach a certain cell.'
@@ -136,7 +139,7 @@ export const formatWinCondition = (
       break;
     }
     case ConditionType.SECRET_FOUND: {
-      const raw = i18n('content.winConditions.secretFound');
+      const raw = t('content.winConditions.secretFound');
       text =
         raw === 'content.winConditions.secretFound'
           ? 'Find a certain secret.'
@@ -151,24 +154,33 @@ export const formatWinCondition = (
   return text + additionalDescription;
 };
 
-export const formatDiaryHeader = (turnCount = 0): string => {
-  const raw = i18n('content.diary.label', { turn: `${turnCount}` });
+export const formatDiaryHeader = (
+  turnCount = 0,
+  t: Translator = i18nTranslator,
+): string => {
+  const raw = t('content.diary.label', { turn: `${turnCount}` });
   return raw === 'content.diary.label'
     ? `Diary (turn ${turnCount})`
     : raw || `Diary (turn ${turnCount})`;
 };
 
-export const formatNoteHeader = (note: Note): string => {
+export const formatNoteHeader = (
+  note: Note,
+  t: Translator = i18nTranslator,
+): string => {
   const round = `${note.foundOn ?? ''}`;
-  const raw = i18n('content.diary.foundOn', { round });
+  const raw = t('content.diary.foundOn', { round });
   return raw === 'content.diary.foundOn'
     ? `On ${round})`
     : raw || `On ${round})`;
 };
 
-export const formatNoteMessage = (note: Note): string => {
+export const formatNoteMessage = (
+  note: Note,
+  t: Translator = i18nTranslator,
+): string => {
   if (!note.message) return '';
-  const raw = i18n(note.message);
+  const raw = t(note.message);
   return raw === note.message ? note.message : raw || note.message;
 };
 
@@ -208,7 +220,7 @@ export const getDiaryAndWinConditionsLayout = (
   const marginX = 8;
   const topY = 46; // Just under top bar (y: 8, height: 32 + 6px gap)
 
-  const isCompact = isCompactUi(viewWidth);
+  const isCompact = resolveLayoutMode(options?.env, viewWidth) === 'compact';
 
   // On narrow screens the panel collapses into a square button in the
   // top-right corner; pressing it opens the full panel.
@@ -237,7 +249,8 @@ export const getDiaryAndWinConditionsLayout = (
   const lineHeight = 13;
   const condLineHeight = 14;
 
-  const theme = options?.theme ?? defaultTheme;
+  const t = options?.env?.t ?? i18nTranslator;
+  const theme = options?.env?.theme ?? defaultTheme;
   const bodyFont = composeFont(theme, theme.typography.sizes.xxs);
 
   const panelWidth = Math.min(
@@ -268,7 +281,7 @@ export const getDiaryAndWinConditionsLayout = (
 
   const winConditionsLayout: WinConditionLayoutItem[] = [];
   for (const cond of sortedConditions) {
-    const text = formatWinCondition(cond, state.dungeon?.killCount ?? 0);
+    const text = formatWinCondition(cond, state.dungeon?.killCount ?? 0, t);
     const bullet = cond.fulfilled ? '✓ ' : '❇️ ';
     const fullText = `${bullet}${text}`;
     const lines = wrapText(ctx, fullText, contentWidth, bodyFont);
@@ -291,7 +304,7 @@ export const getDiaryAndWinConditionsLayout = (
   const diaryNotesLayout: DiaryNoteLayoutItem[] = [];
 
   // Show diary header and notes
-  diaryHeader = formatDiaryHeader(state.turnCount ?? 0);
+  diaryHeader = formatDiaryHeader(state.turnCount ?? 0, t);
   if (winConditionsLayout.length > 0) {
     currentY += 4; // Space / separator gap before diary
   }
@@ -299,8 +312,8 @@ export const getDiaryAndWinConditionsLayout = (
   currentY += 16; // Diary header height
 
   for (const note of foundNotes) {
-    const header = formatNoteHeader(note);
-    const message = formatNoteMessage(note);
+    const header = formatNoteHeader(note, t);
+    const message = formatNoteMessage(note, t);
     const messageLines = wrapText(ctx, message, contentWidth, bodyFont);
     const itemHeight = 14 + messageLines.length * lineHeight;
 
@@ -430,7 +443,7 @@ export const renderDiaryAndWinConditions = (
     diaryNotes,
   } = layout;
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = options?.env?.theme ?? defaultTheme;
   const bodyFont = composeFont(theme, theme.typography.sizes.xxs);
   const headerFont = composeFont(
     theme,

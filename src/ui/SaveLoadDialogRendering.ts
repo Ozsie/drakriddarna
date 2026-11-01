@@ -1,4 +1,3 @@
-import { i18n } from '../core';
 import type { GameState } from '../types';
 import {
   type CanvasMenuItem,
@@ -11,7 +10,9 @@ import {
   type CardBounds,
 } from './HeroCardRendering';
 import { composeFont } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { UiEnv } from '../uikit/env';
+import { defaultUiEnv } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
 // Centered full-screen modal for saving (name input) and loading (list of
 // saves with campaign/dungeon hints). Visually a sibling of the
@@ -52,7 +53,7 @@ export interface RenderSaveLoadDialogOptions {
   hoveredItemId?: string | null;
   hoveredAction?: boolean;
   hoveredSecondary?: boolean;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export type SaveLoadDialogHitResult =
@@ -89,7 +90,10 @@ export const getSaveLoadDialogLayout = (
   viewWidth: number,
   viewHeight: number,
   state: GameState | null | undefined,
-  options?: { mode?: SaveLoadDialogMode; callbacks?: MenuCallbacks },
+  options?: {
+    mode?: SaveLoadDialogMode;
+    callbacks?: MenuCallbacks;
+  } & RenderSaveLoadDialogOptions,
 ): SaveLoadDialogLayout => {
   const mode: SaveLoadDialogMode = options?.mode ?? 'save';
   const emptyLayout: SaveLoadDialogLayout = {
@@ -109,6 +113,8 @@ export const getSaveLoadDialogLayout = (
     return emptyLayout;
   }
 
+  const t = options?.env?.t ?? i18nTranslator;
+
   const marginX = Math.max(12, Math.floor(viewWidth * 0.05));
   const marginY = Math.max(12, Math.floor(viewHeight * 0.05));
   const panelWidth = Math.min(560, Math.max(340, viewWidth - marginX * 2));
@@ -118,11 +124,11 @@ export const getSaveLoadDialogLayout = (
 
   const isSave = mode === 'save';
   const titleText = isSave
-    ? i18n('content.menu.saveGame.header')
-    : i18n('content.menu.loadGame.header');
+    ? t('content.menu.saveGame.header')
+    : t('content.menu.loadGame.header');
   const subtitleText = isSave
-    ? i18n('content.menu.saveGame.subtitle')
-    : i18n('content.menu.loadGame.subtitle');
+    ? t('content.menu.saveGame.subtitle')
+    : t('content.menu.loadGame.subtitle');
 
   const headerHeight = 64;
   const inputHeight = 38;
@@ -157,7 +163,7 @@ export const getSaveLoadDialogLayout = (
       ) {
         rowCount -= 1;
       }
-      footerText = i18n('content.menu.loadGame.moreSaves', {
+      footerText = t('content.menu.loadGame.moreSaves', {
         count: String(allItems.length - rowCount),
       });
     } else {
@@ -233,7 +239,7 @@ export const getSaveLoadDialogLayout = (
       width: actionWidth,
       height: BTN_HEIGHT,
     };
-    actionButtonLabel = i18n('content.menu.saveGame.buttons.save');
+    actionButtonLabel = t('content.menu.saveGame.buttons.save');
     const secondaryWidth = 100;
     secondaryButtonBounds = {
       x: panelX + paddingX,
@@ -241,7 +247,7 @@ export const getSaveLoadDialogLayout = (
       width: secondaryWidth,
       height: BTN_HEIGHT,
     };
-    secondaryButtonLabel = i18n('content.menu.saveGame.buttons.cancel');
+    secondaryButtonLabel = t('content.menu.saveGame.buttons.cancel');
   } else {
     const backWidth = 100;
     actionButtonBounds = {
@@ -250,7 +256,7 @@ export const getSaveLoadDialogLayout = (
       width: backWidth,
       height: BTN_HEIGHT,
     };
-    actionButtonLabel = i18n('content.menu.loadGame.buttons.back');
+    actionButtonLabel = t('content.menu.loadGame.buttons.back');
   }
 
   return {
@@ -326,7 +332,7 @@ export const renderSaveLoadDialog = (
   const layout = getSaveLoadDialogLayout(viewWidth, viewHeight, state, options);
   if (!layout.hasContent) return;
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = options?.env?.theme ?? defaultUiEnv.theme;
 
   ctx.save();
 

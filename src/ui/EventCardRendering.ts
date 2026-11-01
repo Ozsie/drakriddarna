@@ -1,10 +1,11 @@
 import type { GameState, TurnEvent } from '../types';
-import { i18n } from '../core';
 import { drawRoundedRect, type CardBounds } from './HeroCardRendering';
 import { wrapText } from './DiaryAndWinConditionRendering';
-import { COMPACT_TOGGLE_SIZE, isCompactUi } from './UiMode';
+import { COMPACT_TOGGLE_SIZE } from './UiMode';
 import { composeFont } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { Translator, UiEnv } from '../uikit/env';
+import { defaultUiEnv, resolveLayoutMode } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
 export interface DrawnEventItem {
   event: TurnEvent;
@@ -46,22 +47,28 @@ export interface EventCardLayout {
 export interface RenderEventCardOptions {
   isCollapsed?: boolean;
   isToggleHovered?: boolean;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export interface EventCardHitResult {
   type: 'toggle' | 'card';
 }
 
-export const formatEventTitle = (event: TurnEvent): string => {
-  const name = i18n(event.nameTranslationKey ?? event.name);
+export const formatEventTitle = (
+  event: TurnEvent,
+  t: Translator = i18nTranslator,
+): string => {
+  const name = t(event.nameTranslationKey ?? event.name);
   const resolvedName =
     name === (event.nameTranslationKey ?? event.name) ? event.name : name;
   return `${event.number}. ${resolvedName}`;
 };
 
-export const formatEventDescription = (event: TurnEvent): string => {
-  const desc = i18n(event.descriptionTranslationKey ?? event.description);
+export const formatEventDescription = (
+  event: TurnEvent,
+  t: Translator = i18nTranslator,
+): string => {
+  const desc = t(event.descriptionTranslationKey ?? event.description);
   return desc === (event.descriptionTranslationKey ?? event.description)
     ? event.description
     : desc;
@@ -122,14 +129,15 @@ export const getEventCardLayout = (
     height: toggleSize,
   };
 
-  const rawEventCount = i18n('content.event.count');
+  const t = options?.env?.t ?? i18nTranslator;
+  const isCompact = resolveLayoutMode(options?.env, viewWidth) === 'compact';
+
+  const rawEventCount = t('content.event.count');
   const eventWord =
     rawEventCount && rawEventCount !== 'content.event.count'
       ? rawEventCount
       : 'Events';
   const headerText = `🎴 ${eventWord} (${remaining}/${total})`;
-
-  const isCompact = isCompactUi(viewWidth);
 
   if (isCollapsed) {
     // On narrow screens the collapsed card is a square button in the
@@ -173,18 +181,18 @@ export const getEventCardLayout = (
 
   let currentY = topY + paddingY + 16; // Header space
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = options?.env?.theme ?? defaultUiEnv.theme;
   const bodyFont = composeFont(theme, theme.typography.sizes.xxs);
 
   let activeEventLayout: ActiveEventLayout | undefined;
   if (activeEvent) {
-    const rawHeader = i18n('content.event.current');
+    const rawHeader = t('content.event.current');
     const header =
       rawHeader === 'content.event.current'
         ? 'Current event'
         : rawHeader || 'Current event';
-    const title = formatEventTitle(activeEvent);
-    const description = formatEventDescription(activeEvent);
+    const title = formatEventTitle(activeEvent, t);
+    const description = formatEventDescription(activeEvent, t);
     const descriptionLines = wrapText(ctx, description, contentWidth, bodyFont);
 
     const activeHeight = 14 + 14 + descriptionLines.length * lineHeight;
@@ -201,7 +209,7 @@ export const getEventCardLayout = (
     currentY += activeHeight + 8;
   }
 
-  const rawDrawn = i18n('content.event.drawn');
+  const rawDrawn = t('content.event.drawn');
   const drawnWord =
     rawDrawn && rawDrawn !== 'content.event.drawn' ? rawDrawn : 'Drawn';
   const drawnEventsHeader = `${drawnWord} (${drawn}):`;
@@ -213,7 +221,7 @@ export const getEventCardLayout = (
 
   if (drawnList.length === 0) {
     const rawNone = 'content.event.none';
-    const translatedNone = i18n(rawNone);
+    const translatedNone = t(rawNone);
     const noneText =
       translatedNone && translatedNone !== rawNone
         ? translatedNone
@@ -229,7 +237,7 @@ export const getEventCardLayout = (
     currentY += lineHeight + 4;
   } else {
     for (const event of drawnList) {
-      const title = `• ${formatEventTitle(event)}`;
+      const title = `• ${formatEventTitle(event, t)}`;
       const lines = wrapText(ctx, title, contentWidth, bodyFont);
       const itemHeight = lines.length * lineHeight;
       drawnEventsLayout.push({
@@ -338,7 +346,7 @@ export const renderEventCard = (
     drawnEvents,
   } = layout;
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = options?.env?.theme ?? defaultUiEnv.theme;
   const bodyFont = composeFont(theme, theme.typography.sizes.xxs);
   const headerFont = composeFont(
     theme,

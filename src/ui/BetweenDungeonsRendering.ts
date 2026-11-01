@@ -10,7 +10,7 @@ import {
   Colour,
 } from '../types';
 import { ItemType } from '../types';
-import { i18n, SCORE_POINTS_PER_SECRET } from '../core';
+import { SCORE_POINTS_PER_SECRET } from '../core';
 import { formatDuration } from '../core';
 import { MAX_HIGH_SCORES } from '../saves/HighScoresLogic';
 import { getHeroTradableItems } from '../dungeon/BetweenDungeonsLogic';
@@ -21,7 +21,10 @@ import {
 } from './HeroCardRendering';
 import { wrapText } from './DiaryAndWinConditionRendering';
 import { composeFont } from '../uikit/primitives/text';
+import type { UiEnv } from '../uikit/env';
 import { defaultTheme, type UiTheme } from '../uikit/theme';
+import { defaultUiEnv } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
 export interface BetweenDungeonsLayout {
   hasContent: boolean;
@@ -150,7 +153,7 @@ export interface GiveButtonLayoutItem {
 }
 
 export interface RenderBetweenDungeonsOptions {
-  theme?: UiTheme;
+  env?: UiEnv;
   hoveredAction?: boolean;
   hoveredSecondary?: boolean;
   hoveredItem?: {
@@ -289,8 +292,10 @@ export const getBetweenDungeonsLayout = (
   viewWidth: number,
   viewHeight: number,
   state: GameState | null | undefined,
-  theme: UiTheme = defaultTheme,
+  env?: UiEnv,
 ): BetweenDungeonsLayout => {
+  const theme = env?.theme ?? defaultTheme;
+  const t = env?.t ?? i18nTranslator;
   const emptyLayout: BetweenDungeonsLayout = {
     hasContent: false,
     step: 'levelUp',
@@ -324,28 +329,28 @@ export const getBetweenDungeonsLayout = (
   const paddingY = 16;
   const contentWidth = panelWidth - paddingX * 2;
 
-  const nextDungeonName = bd.nextDungeon?.name ? i18n(bd.nextDungeon.name) : '';
+  const nextDungeonName = bd.nextDungeon?.name ? t(bd.nextDungeon.name) : '';
   const completedName = bd.completedDungeonName
-    ? i18n(bd.completedDungeonName)
+    ? t(bd.completedDungeonName)
     : '';
 
   const titleText = isCampaignComplete
-    ? i18n('content.campaignComplete.title', {
-        name: i18n(bd.completedCampaignName ?? bd.completedDungeonName),
+    ? t('content.campaignComplete.title', {
+        name: t(bd.completedCampaignName ?? bd.completedDungeonName),
       })
     : isPartyWipe
-    ? i18n('content.partyWipe.title')
+    ? t('content.partyWipe.title')
     : isLevelUp
-    ? i18n('content.betweenDungeons.titleLevelUp', { name: completedName })
-    : i18n('content.betweenDungeons.titleTrade');
+    ? t('content.betweenDungeons.titleLevelUp', { name: completedName })
+    : t('content.betweenDungeons.titleTrade');
 
   const subtitleText = isCampaignComplete
-    ? i18n('content.campaignComplete.subtitle')
+    ? t('content.campaignComplete.subtitle')
     : isPartyWipe
-    ? i18n('content.partyWipe.subtitle', { name: completedName })
+    ? t('content.partyWipe.subtitle', { name: completedName })
     : isLevelUp
-    ? i18n('content.betweenDungeons.subtitleLevelUp')
-    : i18n('content.betweenDungeons.subtitleTrade', {
+    ? t('content.betweenDungeons.subtitleLevelUp')
+    : t('content.betweenDungeons.subtitleTrade', {
         nextDungeon: nextDungeonName || completedName,
       });
 
@@ -366,12 +371,12 @@ export const getBetweenDungeonsLayout = (
       };
 
   const actionButtonLabel = isCampaignComplete
-    ? i18n('content.betweenDungeons.buttons.finishCampaign')
+    ? t('content.betweenDungeons.buttons.finishCampaign')
     : isLevelUp
-    ? i18n('content.betweenDungeons.buttons.tradeItems')
+    ? t('content.betweenDungeons.buttons.tradeItems')
     : bd.nextDungeon
-    ? i18n('content.betweenDungeons.buttons.startNextDungeon')
-    : i18n('content.betweenDungeons.buttons.finishCampaign');
+    ? t('content.betweenDungeons.buttons.startNextDungeon')
+    : t('content.betweenDungeons.buttons.finishCampaign');
 
   let secondaryButtonBounds: CardBounds | undefined = undefined;
   let secondaryButtonLabel: string | undefined = undefined;
@@ -384,9 +389,7 @@ export const getBetweenDungeonsLayout = (
       width: secWidth,
       height: btnHeight,
     };
-    secondaryButtonLabel = i18n(
-      'content.betweenDungeons.buttons.backToLevelUp',
-    );
+    secondaryButtonLabel = t('content.betweenDungeons.buttons.backToLevelUp');
   }
 
   // Score breakdown of the completed scenario, shown on the level-up step
@@ -401,22 +404,22 @@ export const getBetweenDungeonsLayout = (
         width: contentWidth,
         height: 46,
       },
-      totalText: i18n('content.scoring.scenarioScore', {
+      totalText: t('content.scoring.scenarioScore', {
         score: String(s.total),
       }),
-      campaignText: i18n('content.scoring.campaignTotal', {
+      campaignText: t('content.scoring.campaignTotal', {
         score: String(bd.campaignScore ?? 0),
       }),
       breakdownTexts: [
-        i18n('content.scoring.health', { points: String(s.healthPoints) }),
-        i18n('content.scoring.monsters', { points: String(s.killPoints) }),
-        i18n('content.scoring.loot', { points: String(s.itemPoints) }),
-        i18n('content.scoring.secrets', { points: String(s.secretPoints) }),
-        i18n('content.scoring.rounds', { points: String(s.roundPenalty) }),
+        t('content.scoring.health', { points: String(s.healthPoints) }),
+        t('content.scoring.monsters', { points: String(s.killPoints) }),
+        t('content.scoring.loot', { points: String(s.itemPoints) }),
+        t('content.scoring.secrets', { points: String(s.secretPoints) }),
+        t('content.scoring.rounds', { points: String(s.roundPenalty) }),
       ],
       timeText:
         bd.dungeonTimeMs !== undefined
-          ? i18n('content.scoring.time', {
+          ? t('content.scoring.time', {
               time: formatDuration(bd.dungeonTimeMs),
             })
           : undefined,
@@ -444,17 +447,17 @@ export const getBetweenDungeonsLayout = (
     const heroRowHeight = 20;
 
     campaignComplete = {
-      scoreText: i18n('content.scoring.campaignTotal', {
+      scoreText: t('content.scoring.campaignTotal', {
         score: String(bd.campaignScore ?? 0),
       }),
       timeText:
         bd.campaignTimeMs !== undefined
-          ? i18n('content.campaignComplete.campaignTime', {
+          ? t('content.campaignComplete.campaignTime', {
               time: formatDuration(bd.campaignTimeMs),
             })
           : undefined,
       scoreY,
-      summaryText: i18n('content.campaignComplete.summary', {
+      summaryText: t('content.campaignComplete.summary', {
         scenarios: String(records.length),
         rounds: String(totalRounds),
         kills: String(totalKills),
@@ -462,26 +465,26 @@ export const getBetweenDungeonsLayout = (
       }),
       summaryY,
       scenarioHeader: {
-        name: i18n('content.campaignComplete.scenarioHeader'),
-        rounds: i18n('content.campaignComplete.roundsHeader'),
-        kills: i18n('content.campaignComplete.killsHeader'),
-        score: i18n('content.campaignComplete.scoreHeader'),
+        name: t('content.campaignComplete.scenarioHeader'),
+        rounds: t('content.campaignComplete.roundsHeader'),
+        kills: t('content.campaignComplete.killsHeader'),
+        score: t('content.campaignComplete.scoreHeader'),
       },
       scenarioHeaderY,
       scenarioRows: records.map((record, index) => ({
-        nameText: i18n(record.dungeonName),
+        nameText: t(record.dungeonName),
         roundsText: String(record.rounds),
         killsText: String(record.kills),
         scoreText: String(record.score.total),
         y: scenarioHeaderY + 18 + index * scenarioRowHeight,
       })),
       heroHeader: {
-        name: i18n('content.campaignComplete.heroHeader'),
-        level: i18n('content.campaignComplete.levelHeader'),
+        name: t('content.campaignComplete.heroHeader'),
+        level: t('content.campaignComplete.levelHeader'),
         xp: 'XP',
-        health: i18n('content.campaignComplete.healthHeader'),
-        kills: i18n('content.campaignComplete.killsHeader'),
-        items: i18n('content.campaignComplete.itemsHeader'),
+        health: t('content.campaignComplete.healthHeader'),
+        kills: t('content.campaignComplete.killsHeader'),
+        items: t('content.campaignComplete.itemsHeader'),
       },
       heroHeaderY,
       heroRows: (state.heroes as Hero[]).map((hero, index) => {
@@ -492,13 +495,13 @@ export const getBetweenDungeonsLayout = (
           (hero.armour ? 1 : 0) +
           (hero.shield ? 1 : 0);
         return {
-          title: i18n(hero.name),
+          title: t(hero.name),
           colour: hero.colour,
-          levelText: i18n(`content.level.${hero.level}`),
+          levelText: t(`content.level.${hero.level}`),
           xpText: String(hero.experience),
           hpText: alive
             ? `${hero.health}/${hero.maxHealth}`
-            : i18n('content.campaignComplete.fallen'),
+            : t('content.campaignComplete.fallen'),
           killsText: String(hero.kills ?? 0),
           itemsText: String(itemsCarried),
           alive,
@@ -555,10 +558,10 @@ export const getBetweenDungeonsLayout = (
         width: buttonColWidth,
         height: wipeBtnHeight,
       },
-      labelText: i18n(choice.labelKey),
+      labelText: t(choice.labelKey),
       descriptionLines: wrapText(
         null,
-        i18n(choice.descriptionKey, { name: completedName }),
+        t(choice.descriptionKey, { name: completedName }),
         buttonColWidth - 32,
         composeFont(theme, theme.typography.sizes.md),
       ),
@@ -599,8 +602,8 @@ export const getBetweenDungeonsLayout = (
         width: scoreColWidth,
         height: 22 + displayRows.length * scoreRowHeight,
       },
-      headerText: i18n('content.partyWipe.highScores'),
-      currentLabelText: i18n('content.partyWipe.thisRun'),
+      headerText: t('content.partyWipe.highScores'),
+      currentLabelText: t('content.partyWipe.thisRun'),
       rows: displayRows.map((row, index) => ({
         rankText: `${String(row.rank)}.`,
         scoreText: String(row.score),
@@ -648,18 +651,18 @@ export const getBetweenDungeonsLayout = (
 
       const info = bd.levelUps[index];
       const isLeveledUp = info?.leveledUp ?? false;
-      const levelName = i18n(`content.level.${hero.level}`);
+      const levelName = t(`content.level.${hero.level}`);
       const xpText = info
         ? info.xpToNextLevel
-          ? `${i18n('content.betweenDungeons.xpProgress', {
+          ? `${t('content.betweenDungeons.xpProgress', {
               xp: String(hero.experience),
-            })} ${i18n('content.betweenDungeons.nextLevelXp', {
+            })} ${t('content.betweenDungeons.nextLevelXp', {
               needed: String(info.xpToNextLevel),
-              nextLevel: i18n(`content.level.${info.nextLevel ?? 'max'}`),
+              nextLevel: t(`content.level.${info.nextLevel ?? 'max'}`),
             })}`
-          : `${i18n('content.betweenDungeons.xpProgress', {
+          : `${t('content.betweenDungeons.xpProgress', {
               xp: String(hero.experience),
-            })} ${i18n('content.betweenDungeons.maxLevel')}`
+            })} ${t('content.betweenDungeons.maxLevel')}`
         : `${hero.experience} XP`;
 
       const levelMeaning = info?.levelMeaning || '';
@@ -668,9 +671,9 @@ export const getBetweenDungeonsLayout = (
         heroIndex: index,
         hero,
         bounds: cardBounds,
-        title: i18n(hero.name),
+        title: t(hero.name),
         levelBadge: isLeveledUp
-          ? i18n('content.betweenDungeons.leveledUpBadge')
+          ? t('content.betweenDungeons.leveledUpBadge')
           : levelName,
         isLeveledUp,
         xpText,
@@ -716,7 +719,7 @@ export const getBetweenDungeonsLayout = (
             (typeof entry.slot === 'number' &&
               bd.selectedTradeItem?.itemIndex === entry.slot));
 
-        let nameText = i18n(entry.item.nameTranslationKey ?? entry.item.name);
+        let nameText = t(entry.item.nameTranslationKey ?? entry.item.name);
         if (entry.category === 'weapon') {
           nameText = `🗡️ ${nameText} (${(entry.item as Weapon).dice})`;
         } else if (entry.category === 'armour') {
@@ -762,7 +765,7 @@ export const getBetweenDungeonsLayout = (
         giveButtonsLayout.push({
           targetHeroIndex: hIndex,
           bounds: giveBtnBounds,
-          label: i18n('content.betweenDungeons.buttons.giveItem'),
+          label: t('content.betweenDungeons.buttons.giveItem'),
         });
       }
 
@@ -770,8 +773,8 @@ export const getBetweenDungeonsLayout = (
         heroIndex: hIndex,
         hero,
         bounds: colBounds,
-        title: i18n(hero.name),
-        levelBadge: i18n(`content.level.${hero.level}`),
+        title: t(hero.name),
+        levelBadge: t(`content.level.${hero.level}`),
         isLeveledUp: false,
         xpText: `${hero.experience} XP`,
         levelMeaningText: '',
@@ -880,7 +883,9 @@ export const renderBetweenDungeons = (
     return;
   }
 
-  const theme = options?.theme ?? defaultTheme;
+  const env = options?.env ?? defaultUiEnv;
+  const theme = env.theme;
+  const t = env.t;
   const descFont = composeFont(theme, theme.typography.sizes.md);
   const buttonFont = composeFont(
     theme,
@@ -899,7 +904,7 @@ export const renderBetweenDungeons = (
   );
   const itemFont = composeFont(theme, theme.typography.sizes.sm);
 
-  const layout = getBetweenDungeonsLayout(viewWidth, viewHeight, state, theme);
+  const layout = getBetweenDungeonsLayout(viewWidth, viewHeight, state, env);
   if (!layout.hasContent) return;
 
   ctx.save();
@@ -1165,7 +1170,7 @@ export const renderBetweenDungeons = (
         ctx.fillStyle = theme.palette.text.dimmed;
         ctx.font = itemFont;
         ctx.fillText(
-          i18n('content.betweenDungeons.noItems'),
+          t('content.betweenDungeons.noItems'),
           hb.x + 10,
           hb.y + 42,
         );

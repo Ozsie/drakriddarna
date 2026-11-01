@@ -111,6 +111,8 @@ import {
   type SettingsRowId,
   type WelcomeButtonId,
 } from '../ui/UIRendering';
+import { createUiEnv, defaultUiEnv, envIdentity } from '../ui/env';
+import type { UiEnv } from '../uikit/env';
 import { getCampaign } from '../campaigns';
 import {
   appSettingsStore,
@@ -288,6 +290,22 @@ export class DungeonBoardController {
   private lastAmbientSignature = '';
   private lastOverlaySignature = '';
   private lastUiSignature = '';
+
+  // The UI env (theme, layout mode, translator) is rebuilt only when the
+  // locale or the width-derived layout mode changes, then reused by every
+  // renderer call in a paint.
+  private uiEnv: UiEnv = defaultUiEnv;
+  private uiEnvKey = '';
+
+  private ensureUiEnv = (): UiEnv => {
+    const currentLocale = String(get(locale));
+    const key = `${currentLocale}:${this.containerWidth}`;
+    if (key !== this.uiEnvKey) {
+      this.uiEnv = createUiEnv(this.containerWidth, currentLocale);
+      this.uiEnvKey = key;
+    }
+    return this.uiEnv;
+  };
   private overlayAnimationId: number | null = null;
   private overlayTimerId: ReturnType<typeof setTimeout> | null = null;
   private dynamicAnimationId: number | null = null;
@@ -1393,6 +1411,7 @@ export class DungeonBoardController {
           dynamicFps: this.dynamicFpsTracker.fps,
           overlayFps: this.overlayFpsTracker.fps,
         },
+        this.uiEnv.theme,
       );
     }
 
@@ -1451,14 +1470,17 @@ export class DungeonBoardController {
   // top. The dialogs capture all input while open, exactly as they do
   // from the canvas menu.
   private renderWelcomeLayer = (ctx: CanvasRenderingContext2D): void => {
-    renderWelcomeBackground(ctx, this.containerWidth, this.containerHeight);
+    const env = this.ensureUiEnv();
+    renderWelcomeBackground(ctx, this.containerWidth, this.containerHeight, {
+      env,
+    });
     if (this.welcomeView === 'heroSelection' && this.heroSelectionCampaignId) {
       renderHeroSelection(
         ctx,
         this.containerWidth,
         this.containerHeight,
         this.heroSelectionCampaignId,
-        this.heroSelectionOptions(),
+        { ...this.heroSelectionOptions(), env },
       );
     } else if (this.welcomeView === 'settings') {
       renderSettings(
@@ -1469,18 +1491,21 @@ export class DungeonBoardController {
         {
           hoveredRowId: this.hoveredSettingsRowId,
           hoveredBack: this.isSettingsBackHovered,
+          env,
         },
       );
     } else if (this.welcomeView === 'credits') {
       renderCredits(ctx, this.containerWidth, this.containerHeight, {
         hoveredRowId: this.hoveredCreditsRowId,
         hoveredBack: this.isCreditsBackHovered,
+        env,
       });
     } else {
       renderWelcome(ctx, this.containerWidth, this.containerHeight, {
         buildInfo,
         hoveredButton:
           this.welcomeView === 'main' ? this.hoveredWelcomeButton : null,
+        env,
       });
     }
     renderWelcomeFooter(
@@ -1488,14 +1513,13 @@ export class DungeonBoardController {
       this.containerWidth,
       this.containerHeight,
       buildInfo,
+      env,
     );
     if (this.isNewGameDialogOpen) {
-      renderNewGameDialog(
-        ctx,
-        this.containerWidth,
-        this.containerHeight,
-        this.newGameDialogOptions(),
-      );
+      renderNewGameDialog(ctx, this.containerWidth, this.containerHeight, {
+        ...this.newGameDialogOptions(),
+        env,
+      });
     }
     if (this.saveLoadDialogMode) {
       renderSaveLoadDialog(
@@ -1510,6 +1534,7 @@ export class DungeonBoardController {
           hoveredItemId: this.hover.hoveredMenuItemId,
           hoveredAction: this.hover.isSdActionHovered,
           hoveredSecondary: this.hover.isSdSecondaryHovered,
+          env,
         },
       );
     }
@@ -1517,6 +1542,7 @@ export class DungeonBoardController {
 
   private renderUiLayer = (force = false) => {
     if (!browser || !this.uiCanvas) return;
+    const uiEnv = this.ensureUiEnv();
     const eventCardCollapsed = this.effectiveEventCardCollapsed;
     const diaryCollapsed = this.effectiveDiaryCollapsed;
     const menu = get(radialMenuStore);
@@ -1619,7 +1645,10 @@ export class DungeonBoardController {
       this.hover.hoveredNgGameMasterId,
     )}:${String(this.hover.isNgCheckboxHovered)}:${String(
       this.hover.isNgActionHovered,
-    )}:${String(this.hover.isNgSecondaryHovered)}`;
+    )}:${String(this.hover.isNgSecondaryHovered)}:${envIdentity(
+      uiEnv,
+      String(get(locale)),
+    )}`;
     const sig = `${String(String(String(menu?.x)))},${String(
       String(String(menu?.y)),
     )},${String(menu?.entries?.length ?? 0)},${String(
@@ -1679,6 +1708,7 @@ export class DungeonBoardController {
         isLogHovered: this.hover.isLogHovered,
         isLogOpen: this.isLogOpen,
         debugMode: currentDebug,
+        env: uiEnv,
       });
       renderHeroCards(
         ctx,
@@ -1689,6 +1719,7 @@ export class DungeonBoardController {
           hoveredInventoryHeroName: this.hover.hoveredInventoryHeroName,
           hoveredCloseHeroName: this.hover.hoveredCloseHeroName,
           hoveredUseItem: this.hover.hoveredUseItem,
+          env: uiEnv,
         },
       );
       renderMonsterCards(
@@ -1696,6 +1727,9 @@ export class DungeonBoardController {
         this.containerWidth,
         this.containerHeight,
         this.activeState,
+        {
+          env: uiEnv,
+        },
       );
       renderDiaryAndWinConditions(
         ctx,
@@ -1705,6 +1739,7 @@ export class DungeonBoardController {
         {
           isCollapsed: diaryCollapsed,
           isToggleHovered: this.hover.isDiaryToggleHovered,
+          env: uiEnv,
         },
       );
       renderEventCard(
@@ -1715,6 +1750,7 @@ export class DungeonBoardController {
         {
           isCollapsed: eventCardCollapsed,
           isToggleHovered: this.hover.isEventCardToggleHovered,
+          env: uiEnv,
         },
       );
       if (this.isCanvasMenuOpen) {
@@ -1729,6 +1765,7 @@ export class DungeonBoardController {
             buildInfo,
             debugMode: currentDebug,
             callbacks: this.menuCallbacks,
+            env: uiEnv,
           },
         );
       }
@@ -1745,16 +1782,15 @@ export class DungeonBoardController {
             hoveredItemId: this.hover.hoveredMenuItemId,
             hoveredAction: this.hover.isSdActionHovered,
             hoveredSecondary: this.hover.isSdSecondaryHovered,
+            env: uiEnv,
           },
         );
       }
       if (this.isNewGameDialogOpen) {
-        renderNewGameDialog(
-          ctx,
-          this.containerWidth,
-          this.containerHeight,
-          this.newGameDialogOptions(),
-        );
+        renderNewGameDialog(ctx, this.containerWidth, this.containerHeight, {
+          ...this.newGameDialogOptions(),
+          env: uiEnv,
+        });
       }
       if (this.showDungeonIntro) {
         renderDungeonIntro(
@@ -1765,6 +1801,7 @@ export class DungeonBoardController {
           {
             dismissed: this.isDungeonIntroDismissed,
             isCloseHovered: this.hover.isDungeonIntroCloseHovered,
+            env: uiEnv,
           },
         );
       }
@@ -1780,6 +1817,7 @@ export class DungeonBoardController {
             hoveredItem: this.hover.hoveredBdItem,
             hoveredGiveHeroIndex: this.hover.hoveredBdGiveHeroIndex,
             hoveredWipeAction: this.hover.hoveredBdWipeAction,
+            env: uiEnv,
           },
         );
       }
@@ -1787,7 +1825,13 @@ export class DungeonBoardController {
     }
 
     if (menu) {
-      renderRadialMenu(ctx, this.cellSize, menu, this.hover.hoveredRadialIndex);
+      renderRadialMenu(
+        ctx,
+        this.cellSize,
+        menu,
+        this.hover.hoveredRadialIndex,
+        uiEnv,
+      );
     }
 
     // The speedrun timer chip in the top bar ticks in hundredths of a

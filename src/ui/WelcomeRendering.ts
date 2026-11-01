@@ -1,5 +1,3 @@
-import { base } from '$app/paths';
-import { i18n } from '../core';
 import { getReadyImage } from '../core/ImageCache';
 import {
   drawRoundedRect,
@@ -7,7 +5,11 @@ import {
   type CardBounds,
 } from './HeroCardRendering';
 import { composeFont } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import { defaultTheme } from '../uikit/theme';
+import type { UiEnv, Translator } from '../uikit/env';
+import { defaultUiEnv } from './env';
+import { AssetId, getAssetUrl } from './assets';
+import { i18nTranslator } from './i18nAdapter';
 
 // The welcome (title) screen: a full-canvas background image (cover-fit,
 // with a flat fallback colour while the art is missing), a centered panel
@@ -16,7 +18,7 @@ import { defaultTheme, type UiTheme } from '../uikit/theme';
 // modules so it is testable without a real canvas.
 
 /** The human-authored welcome background, served like other static assets. */
-export const WELCOME_BACKGROUND_IMAGE = `${base}/images/welcome.png`;
+export const WELCOME_BACKGROUND_IMAGE = getAssetUrl(AssetId.welcomeBackground);
 
 /** The dungeon-view background colour, the fallback while art is missing. */
 export const WELCOME_FALLBACK_COLOR = defaultTheme.palette.surface.welcome;
@@ -47,7 +49,7 @@ export interface RenderWelcomeOptions {
    * asked for the welcome art (tests run without the asset).
    */
   backgroundImage?: HTMLImageElement | null;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export type WelcomeHitResult = WelcomeButtonId | null;
@@ -64,15 +66,15 @@ const PADDING_Y = 16;
 
 const BUTTON_ORDER: WelcomeButtonId[] = ['newGame', 'loadGame', 'settings'];
 
-const getButtonLabel = (id: WelcomeButtonId): string => {
+const getButtonLabel = (id: WelcomeButtonId, t: Translator): string => {
   switch (id) {
     case 'newGame':
       // Same wording as the canvas menu's New Game item.
-      return i18n('content.menu.mainMenu.buttons.newGame');
+      return t('content.menu.mainMenu.buttons.newGame');
     case 'loadGame':
-      return i18n('content.menu.welcome.buttons.loadGame');
+      return t('content.menu.welcome.buttons.loadGame');
     case 'settings':
-      return i18n('content.menu.welcome.buttons.settings');
+      return t('content.menu.welcome.buttons.settings');
   }
 };
 
@@ -121,6 +123,7 @@ export const getWelcomeLayout = (
   };
   if (viewWidth <= 0 || viewHeight <= 0) return emptyLayout;
 
+  const t = options?.env?.t ?? i18nTranslator;
   const marginX = Math.max(12, Math.floor(viewWidth * 0.05));
   const marginY = Math.max(12, Math.floor(viewHeight * 0.05));
   // Same centered sizing rule as the save/load dialog.
@@ -149,7 +152,7 @@ export const getWelcomeLayout = (
 
   const buttons: WelcomeButtonLayout[] = BUTTON_ORDER.map((id, index) => ({
     id,
-    label: getButtonLabel(id),
+    label: getButtonLabel(id, t),
     bounds: {
       x: panelX + PADDING_X,
       y: panelY + PADDING_Y + HEADER_HEIGHT + index * (rowHeight + ROW_GAP),
@@ -170,7 +173,7 @@ export const getWelcomeLayout = (
       width: panelWidth,
       height: panelHeight,
     },
-    headerText: i18n('content.menu.welcome.header'),
+    headerText: t('content.menu.welcome.header'),
     buttons,
     footerBounds: {
       x: 0,
@@ -213,7 +216,8 @@ export const renderWelcomeBackground = (
     options?.backgroundImage !== undefined
       ? options.backgroundImage
       : getReadyImage(WELCOME_BACKGROUND_IMAGE);
-  const theme = options?.theme ?? defaultTheme;
+  const env = options?.env ?? defaultUiEnv;
+  const theme = env.theme;
   if (image) {
     const fit = getCoverFitBounds(
       image.naturalWidth,
@@ -248,9 +252,10 @@ export const renderWelcomeFooter = (
   viewWidth: number,
   viewHeight: number,
   buildInfo?: { date: string; hash: string } | null,
-  theme: UiTheme = defaultTheme,
+  env: UiEnv = defaultUiEnv,
 ): void => {
   if (!buildInfo) return;
+  const theme = env.theme;
   ctx.fillStyle = theme.palette.text.faint;
   ctx.font = composeFont(theme, theme.typography.sizes.xxs);
   ctx.textAlign = 'center';
@@ -269,10 +274,11 @@ export const renderWelcome = (
   viewHeight: number,
   options?: RenderWelcomeOptions,
 ): void => {
+  const env = options?.env ?? defaultUiEnv;
   const layout = getWelcomeLayout(viewWidth, viewHeight, options);
   if (!layout.hasContent) return;
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = env.theme;
 
   ctx.save();
 
@@ -330,7 +336,7 @@ export const renderWelcome = (
     ctx.fillText(button.label, b.x + 12, b.y + b.height / 2);
   }
 
-  renderWelcomeFooter(ctx, viewWidth, viewHeight, options?.buildInfo, theme);
+  renderWelcomeFooter(ctx, viewWidth, viewHeight, options?.buildInfo, env);
 
   ctx.restore();
 };

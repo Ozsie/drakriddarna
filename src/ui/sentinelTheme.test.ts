@@ -8,7 +8,9 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { Colour } from '../types';
 import { createRecordingContext } from '../uikit/testing/recordingContext';
 import { createSentinelTheme } from '../uikit/testing/sentinelTheme';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { UiEnv } from '../uikit/env';
+import { defaultTheme } from '../uikit/theme';
+import { defaultUiEnv } from './env';
 import {
   COMPACT_WIDTH,
   REGULAR_HEIGHT,
@@ -55,6 +57,7 @@ beforeAll(() => {
 });
 
 const sentinelTheme = createSentinelTheme(defaultTheme);
+const sentinelEnv: UiEnv = { ...defaultUiEnv, theme: sentinelTheme };
 
 // Allowed non-token writes: gradients log as `gradient`, composed fonts
 // embed a family marker inside a size-prefixed string, and actor cards
@@ -76,80 +79,76 @@ const leakedStyles = (log: readonly string[]): string[] =>
     return [`${property}=${value}`];
   });
 
-const runs: [
-  string,
-  (ctx: CanvasRenderingContext2D, theme: UiTheme) => void,
-][] = [
+const runs: [string, (ctx: CanvasRenderingContext2D, env: UiEnv) => void][] = [
   [
     'topBar',
-    (ctx, theme) =>
-      renderTopBar(ctx, REGULAR_WIDTH, midCampaignState(), { theme }),
+    (ctx, env) => renderTopBar(ctx, REGULAR_WIDTH, midCampaignState(), { env }),
   ],
   [
     'heroCards',
-    (ctx, theme) =>
+    (ctx, env) =>
       renderHeroCards(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, midCampaignState(), {
-        theme,
+        env,
       }),
   ],
   [
     'monsterCards',
-    (ctx, theme) =>
+    (ctx, env) =>
       renderMonsterCards(
         ctx,
         REGULAR_WIDTH,
         REGULAR_HEIGHT,
         midCampaignState(),
-        { theme },
+        { env },
       ),
   ],
   [
     'diary',
-    (ctx, theme) =>
+    (ctx, env) =>
       renderDiaryAndWinConditions(
         ctx,
         REGULAR_WIDTH,
         REGULAR_HEIGHT,
         midCampaignState(),
-        { theme },
+        { env },
       ),
   ],
   [
     'eventCard',
-    (ctx, theme) =>
+    (ctx, env) =>
       renderEventCard(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, midCampaignState(), {
-        theme,
+        env,
       }),
   ],
   [
     'betweenDungeons',
-    (ctx, theme) =>
+    (ctx, env) =>
       renderBetweenDungeons(
         ctx,
         REGULAR_WIDTH,
         REGULAR_HEIGHT,
         betweenDungeonsState(),
-        { theme },
+        { env },
       ),
   ],
   [
     'dungeonIntro',
-    (ctx, theme) =>
+    (ctx, env) =>
       renderDungeonIntro(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, earlyGameState(), {
-        theme,
+        env,
       }),
   ],
   [
     'menuModal',
-    (ctx, theme) =>
+    (ctx, env) =>
       renderMenuModal(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, midCampaignState(), {
-        theme,
+        env,
         view: 'main',
       }),
   ],
   [
     'radialMenu',
-    (ctx, theme) => {
+    (ctx, env) => {
       const state = midCampaignState();
       renderRadialMenu(
         ctx,
@@ -163,45 +162,44 @@ const runs: [
           ],
         },
         0,
-        theme,
+        env,
       );
     },
   ],
   [
     'saveLoadDialog',
-    (ctx, theme) => {
+    (ctx, env) => {
       const state = midCampaignState();
       localStorage.setItem('saves', saveIndexFixture(state));
       localStorage.setItem('save_save-alpha', JSON.stringify(state));
       renderSaveLoadDialog(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, state, {
         mode: 'load',
-        theme,
+        env,
       });
     },
   ],
   [
     'newGameDialog',
-    (ctx, theme) =>
+    (ctx, env) =>
       renderNewGameDialog(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, {
         selectedCampaignId: 'iceDragonTreasure',
-        theme,
+        env,
       }),
   ],
   [
     'settings',
-    (ctx, theme) =>
+    (ctx, env) =>
       renderSettings(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, DEFAULT_APP_SETTINGS, {
-        theme,
+        env,
       }),
   ],
   [
     'credits',
-    (ctx, theme) =>
-      renderCredits(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, { theme }),
+    (ctx, env) => renderCredits(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, { env }),
   ],
   [
     'heroSelection',
-    (ctx, theme) => {
+    (ctx, env) => {
       const campaign = getCampaign('iceDragonTreasure');
       const selectedHeroIds = getDefaultSelectedHeroIds(campaign);
       const firstHeroId = selectedHeroIds[0];
@@ -213,27 +211,25 @@ const runs: [
         {
           selectedHeroIds,
           names: firstHeroId ? { [firstHeroId]: 'Sir Sten' } : {},
-          theme,
+          env,
         },
       );
     },
   ],
   [
     'welcome',
-    (ctx, theme) =>
-      renderWelcome(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, { theme }),
+    (ctx, env) => renderWelcome(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, { env }),
   ],
   [
     'compactTopBar',
-    (ctx, theme) =>
-      renderTopBar(ctx, COMPACT_WIDTH, midCampaignState(), { theme }),
+    (ctx, env) => renderTopBar(ctx, COMPACT_WIDTH, midCampaignState(), { env }),
   ],
   [
     'heroCardsWithInventory',
-    (ctx, theme) => {
+    (ctx, env) => {
       const state = midCampaignState();
       (state.heroes as Hero[])[0].isInventoryOpen = true;
-      renderHeroCards(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, state, { theme });
+      renderHeroCards(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, state, { env });
     },
   ],
 ];
@@ -241,7 +237,7 @@ const runs: [
 describe('sentinel theme', () => {
   it.each(runs)('%s writes only sentinel styles', (name, draw) => {
     const rec = createRecordingContext();
-    draw(rec.ctx, sentinelTheme);
+    draw(rec.ctx, sentinelEnv);
     expect(rec.log.length, `${name} rendered nothing`).toBeGreaterThan(0);
     const leaked = leakedStyles(rec.log);
     expect(

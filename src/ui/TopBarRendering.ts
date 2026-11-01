@@ -1,12 +1,14 @@
 import type { GameState, LogEvent } from '../types';
-import { i18n, formatDuration, getCurrentDungeonTimeMs } from '../core';
-import { isCompactUi } from './UiMode';
+import { formatDuration, getCurrentDungeonTimeMs } from '../core';
 import {
   composeFont,
   measureTextWidth as kitMeasureTextWidth,
   truncateText as kitTruncateText,
 } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { Translator, UiEnv } from '../uikit/env';
+import { defaultTheme } from '../uikit/theme';
+import { defaultUiEnv, resolveLayoutMode } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
 export interface TopBarElementBounds {
   x: number;
@@ -33,7 +35,7 @@ export interface RenderTopBarOptions {
   isLogHovered?: boolean;
   isLogOpen?: boolean;
   debugMode?: boolean;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export type TopBarHitElement =
@@ -58,9 +60,12 @@ export const measureTextWidth = (
   font: string,
 ): number => kitMeasureTextWidth(ctx, text, font, FALLBACK_PER_CHAR);
 
-export const formatLatestLog = (log?: LogEvent | null): string => {
+export const formatLatestLog = (
+  log?: LogEvent | null,
+  t: Translator = i18nTranslator,
+): string => {
   if (!log) return '';
-  const translated = i18n(log.key, log.properties);
+  const translated = t(log.key, log.properties);
   if (log.turn !== undefined && log.turn !== null) {
     return `(${log.turn}) ${translated}`;
   }
@@ -70,11 +75,12 @@ export const formatLatestLog = (log?: LogEvent | null): string => {
 export const formatTurnCounter = (
   turnCount?: number | null,
   compact = false,
+  t: Translator = i18nTranslator,
 ): string => {
   if (compact) {
     return `${COMPACT_TURN_LABEL} ${turnCount ?? 0}`;
   }
-  const turnLabel = i18n('content.turn');
+  const turnLabel = t('content.turn');
   const label = turnLabel === 'content.turn' ? 'Turn' : turnLabel || 'Turn';
   return `${label} ${turnCount ?? 0}`;
 };
@@ -82,11 +88,12 @@ export const formatTurnCounter = (
 export const formatScoreCounter = (
   score?: number | null,
   compact = false,
+  t: Translator = i18nTranslator,
 ): string => {
   if (compact) {
     return `${COMPACT_SCORE_LABEL} ${score ?? 0}`;
   }
-  const scoreLabel = i18n('content.scoring.topBar');
+  const scoreLabel = t('content.scoring.topBar');
   const label =
     scoreLabel === 'content.scoring.topBar' ? 'Score' : scoreLabel || 'Score';
   return `${label} ${score ?? 0}`;
@@ -101,7 +108,7 @@ export const truncateText = (
 
 export interface TopBarLayoutOptions {
   debugMode?: boolean;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export const getTopBarLayout = (
@@ -110,7 +117,8 @@ export const getTopBarLayout = (
   ctx?: CanvasRenderingContext2D | null,
   options?: TopBarLayoutOptions,
 ): TopBarLayout => {
-  const theme = options?.theme ?? defaultTheme;
+  const theme = options?.env?.theme ?? defaultTheme;
+  const t = options?.env?.t ?? i18nTranslator;
   const chipFont = composeFont(
     theme,
     theme.typography.sizes.lg,
@@ -129,7 +137,7 @@ export const getTopBarLayout = (
       ? options.debugMode
       : Boolean(state?.settings?.['debug']);
 
-  const rawMenuLabel = i18n('content.menu.menuButton');
+  const rawMenuLabel = t('content.menu.menuButton');
   const menuLabel =
     rawMenuLabel === 'content.menu.menuButton'
       ? 'Menu'
@@ -137,7 +145,7 @@ export const getTopBarLayout = (
   const menuTextWidth = measureTextWidth(ctx, menuLabel, chipFont);
   const menuWidth = Math.max(48, Math.round(menuTextWidth + paddingX * 2));
 
-  const rawDebugLabel = i18n('content.menu.mainMenu.buttons.debug');
+  const rawDebugLabel = t('content.menu.mainMenu.buttons.debug');
   const debugLabel =
     rawDebugLabel === 'content.menu.mainMenu.buttons.debug'
       ? 'Debug'
@@ -149,10 +157,10 @@ export const getTopBarLayout = (
 
   // On narrow screens the counters shrink to an emoji plus the number, so
   // the log section keeps most of the bar width.
-  const compact = isCompactUi(viewWidth);
+  const compact = resolveLayoutMode(options?.env, viewWidth) === 'compact';
   const counterPaddingX = compact ? 6 : paddingX;
-  const turnText = formatTurnCounter(state?.turnCount, compact);
-  const scoreText = formatScoreCounter(state?.score, compact);
+  const turnText = formatTurnCounter(state?.turnCount, compact, t);
+  const scoreText = formatScoreCounter(state?.score, compact, t);
 
   let turnCounterWidth: number;
   let scoreCounterWidth: number;
@@ -225,10 +233,10 @@ export const getTopBarLayout = (
   const logWidth = Math.max(0, timerX - gap - logX);
 
   const latestLog = state?.actionLog?.[0];
-  const logText = formatLatestLog(latestLog);
+  const logText = formatLatestLog(latestLog, t);
 
   const logEntries = state?.actionLog
-    ? state.actionLog.slice(0, 8).map(formatLatestLog)
+    ? state.actionLog.slice(0, 8).map((log) => formatLatestLog(log, t))
     : [];
   const logItemHeight = 20;
   const logPaddingY = 6;
@@ -370,7 +378,7 @@ export const renderTopBar = (
 ) => {
   if (!ctx || viewWidth <= 0) return;
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = options?.env?.theme ?? defaultUiEnv.theme;
   const chipFont = composeFont(
     theme,
     theme.typography.sizes.lg,
@@ -386,7 +394,7 @@ export const renderTopBar = (
 
   const layout = getTopBarLayout(viewWidth, state, ctx, {
     debugMode: options?.debugMode,
-    theme,
+    env: options?.env,
   });
   const isMenuHovered = options?.isMenuHovered ?? false;
   const isDebugHovered = options?.isDebugHovered ?? false;

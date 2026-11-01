@@ -1,10 +1,12 @@
 import { RadialAction, type RadialMenuEntry } from '../hero/RadialMenuLogic';
 import type { RadialMenuState } from '../store/radialMenuStore';
 import type { ItemSprite } from '../types';
-import { i18n } from '../core';
 import { drawItemSprite } from '../items/ItemSpriteRendering';
 import { composeFont } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { Translator, UiEnv } from '../uikit/env';
+
+import { defaultUiEnv } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
 export const RADIAL_MENU_ICONS: Record<RadialAction, string> = {
   [RadialAction.SEARCH]: '🔍',
@@ -40,6 +42,7 @@ export interface RadialButtonPosition {
 export const getRadialButtonPositions = (
   menu: RadialMenuState,
   cellSize: number,
+  t: Translator = i18nTranslator,
 ): RadialButtonPosition[] => {
   if (!menu || !menu.entries || menu.entries.length === 0) return [];
 
@@ -61,12 +64,12 @@ export const getRadialButtonPositions = (
       const labelKey =
         entry.interactable.nameTranslationKey ??
         RADIAL_MENU_LABELS[entry.action];
-      label = i18n(labelKey);
+      label = t(labelKey);
       icon = entry.interactable.icon ?? RADIAL_MENU_ICONS[entry.action] ?? '';
     } else if (entry.item) {
-      const itemName = i18n(entry.item.nameTranslationKey ?? entry.item.name);
+      const itemName = t(entry.item.nameTranslationKey ?? entry.item.name);
       if (entry.targetHero) {
-        const targetName = i18n(entry.targetHero.name);
+        const targetName = t(entry.targetHero.name);
         label = `${itemName} (${targetName})`;
       } else {
         label = itemName;
@@ -79,7 +82,7 @@ export const getRadialButtonPositions = (
       sprite = entry.item.sprite;
     } else {
       const labelKey = RADIAL_MENU_LABELS[entry.action];
-      const baseLabel = i18n(labelKey);
+      const baseLabel = t(labelKey);
       label = baseLabel + (entry.door ? ` (${entry.door.side})` : '');
       icon = RADIAL_MENU_ICONS[entry.action] ?? '';
     }
@@ -113,8 +116,9 @@ export const findHoveredRadialButton = (
 export const renderRadialTooltip = (
   ctx: CanvasRenderingContext2D,
   button: RadialButtonPosition,
-  theme: UiTheme = defaultTheme,
+  env: UiEnv = defaultUiEnv,
 ) => {
+  const theme = env.theme;
   const text = button.label;
   if (!text) return;
 
@@ -161,10 +165,11 @@ export const renderRadialMenu = (
   cellSize: number,
   menu: RadialMenuState,
   hoveredIndex?: number | null,
-  theme: UiTheme = defaultTheme,
+  env: UiEnv = defaultUiEnv,
 ) => {
   if (!menu) return;
-  const buttons = getRadialButtonPositions(menu, cellSize);
+  const theme = env.theme;
+  const buttons = getRadialButtonPositions(menu, cellSize, env.t);
 
   ctx.save();
   for (const btn of buttons) {
@@ -212,7 +217,7 @@ export const renderRadialMenu = (
   ) {
     const hoveredBtn = buttons.find((b) => b.index === hoveredIndex);
     if (hoveredBtn) {
-      renderRadialTooltip(ctx, hoveredBtn, theme);
+      renderRadialTooltip(ctx, hoveredBtn, env);
     }
   }
   ctx.restore();

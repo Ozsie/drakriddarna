@@ -1,4 +1,3 @@
-import { i18n } from '../core';
 import { getCampaign } from '../campaigns';
 import type { Campaign, Hero } from '../types';
 import {
@@ -7,7 +6,9 @@ import {
   type CardBounds,
 } from './HeroCardRendering';
 import { composeFont } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { Translator, UiEnv } from '../uikit/env';
+import { defaultUiEnv } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
 // The hero selection step of the New Game flow: after the new-game dialog
 // the player picks 1..maxHeroes heroes from the campaign roster, renames
@@ -36,7 +37,7 @@ export interface HeroSelectionOptions {
   hoveredHeroId?: string | null;
   hoveredAction?: boolean;
   hoveredSecondary?: boolean;
-  theme?: UiTheme;
+  env?: UiEnv;
 }
 
 export interface HeroSelectionRowLayout {
@@ -126,9 +127,10 @@ export const clampHeroName = (name: string): string =>
 export const getHeroDefaultName = (
   campaign: Campaign,
   heroId: string,
+  t: Translator = i18nTranslator,
 ): string => {
   const hero = campaign.heroes.find((h) => h.id === heroId);
-  return hero ? i18n(hero.nameTranslationKey ?? hero.name) : '';
+  return hero ? t(hero.nameTranslationKey ?? hero.name) : '';
 };
 
 /**
@@ -140,7 +142,8 @@ export const getHeroRenameValue = (
   campaign: Campaign,
   heroId: string,
   names: Record<string, string>,
-): string => names[heroId] ?? getHeroDefaultName(campaign, heroId);
+  t: Translator = i18nTranslator,
+): string => names[heroId] ?? getHeroDefaultName(campaign, heroId, t);
 
 /**
  * Applies one rename keystroke: Backspace erases the last character,
@@ -202,6 +205,7 @@ export const getHeroSelectionLayout = (
     backButtonLabel: '',
   };
   if (viewWidth <= 0 || viewHeight <= 0) return emptyLayout;
+  const t = options?.env?.t ?? i18nTranslator;
   const campaign = getCampaign(campaignId);
   const maxHeroes = getMaxHeroes(campaign);
   const selectedIds = options?.selectedHeroIds ?? [];
@@ -276,7 +280,7 @@ export const getHeroSelectionLayout = (
         // Edited names show raw (empty included); unedited rows
         // prefill with the roster default.
         label:
-          typed !== undefined ? typed : getHeroDefaultName(campaign, heroId),
+          typed !== undefined ? typed : getHeroDefaultName(campaign, heroId, t),
         colour: hero.colour,
         selected,
         dimmed: !selected && selectedIds.length >= maxHeroes,
@@ -304,8 +308,8 @@ export const getHeroSelectionLayout = (
       width: panelWidth,
       height: panelHeight,
     },
-    headerText: i18n('content.menu.heroSelection.header'),
-    countText: i18n('content.menu.heroSelection.count', {
+    headerText: t('content.menu.heroSelection.header'),
+    countText: t('content.menu.heroSelection.count', {
       selected: String(selectedIds.length),
       max: String(maxHeroes),
     }),
@@ -316,7 +320,7 @@ export const getHeroSelectionLayout = (
       width: startWidth,
       height: BTN_HEIGHT,
     },
-    startButtonLabel: i18n('content.menu.heroSelection.buttons.start'),
+    startButtonLabel: t('content.menu.heroSelection.buttons.start'),
     startEnabled: isHeroSelectionStartEnabled(selectedIds),
     backButtonBounds: {
       x: panelX + PADDING_X,
@@ -324,7 +328,7 @@ export const getHeroSelectionLayout = (
       width: backWidth,
       height: BTN_HEIGHT,
     },
-    backButtonLabel: i18n('content.menu.loadGame.buttons.back'),
+    backButtonLabel: t('content.menu.loadGame.buttons.back'),
   };
 };
 
@@ -382,7 +386,7 @@ export const renderHeroSelection = (
   );
   if (!layout.hasContent) return;
 
-  const theme = options?.theme ?? defaultTheme;
+  const theme = options?.env?.theme ?? defaultUiEnv.theme;
 
   ctx.save();
 

@@ -5,7 +5,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { createRecordingContext } from '../uikit/testing/recordingContext';
+import type { UiEnv } from '../uikit/env';
 import { defaultTheme } from '../uikit/theme';
+import { defaultUiEnv } from './env';
 import {
   REGULAR_HEIGHT,
   REGULAR_WIDTH,
@@ -17,12 +19,17 @@ import { renderWelcome } from './WelcomeRendering';
 import { DEFAULT_APP_SETTINGS } from '../settings/AppSettings';
 import { highContrastTheme } from './theme';
 
+const withTheme = (theme: typeof defaultTheme): UiEnv => ({
+  ...defaultUiEnv,
+  theme,
+});
+
 const renderLog = (
-  draw: (ctx: CanvasRenderingContext2D, theme: typeof defaultTheme) => void,
-  theme: typeof defaultTheme,
+  draw: (ctx: CanvasRenderingContext2D, env: UiEnv) => void,
+  env: UiEnv,
 ): readonly string[] => {
   const rec = createRecordingContext();
-  draw(rec.ctx, theme);
+  draw(rec.ctx, env);
   return rec.log;
 };
 
@@ -50,25 +57,24 @@ describe('highContrastTheme', () => {
 
   it('renders the welcome screen with overridden values', () => {
     const log = renderLog(
-      (ctx, theme) =>
-        renderWelcome(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, { theme }),
-      highContrastTheme,
+      (ctx, env) => renderWelcome(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, { env }),
+      withTheme(highContrastTheme),
     );
     expect(log).toContain('fillStyle="#000000"');
     expect(log).toContain('strokeStyle="#ffffff"');
     expect(log.some((entry) => entry === 'fillStyle="#181b22"')).toBe(false);
   });
 
-  it('renders the top bar and hero cards differently from the default', () => {
+  it('renders the top bar and settings differently from the default', () => {
     const defaultTopBar = renderLog(
-      (ctx, theme) =>
-        renderTopBar(ctx, REGULAR_WIDTH, midCampaignState(), { theme }),
-      defaultTheme,
+      (ctx, env) =>
+        renderTopBar(ctx, REGULAR_WIDTH, midCampaignState(), { env }),
+      withTheme(defaultTheme),
     );
     const contrastTopBar = renderLog(
-      (ctx, theme) =>
-        renderTopBar(ctx, REGULAR_WIDTH, midCampaignState(), { theme }),
-      highContrastTheme,
+      (ctx, env) =>
+        renderTopBar(ctx, REGULAR_WIDTH, midCampaignState(), { env }),
+      withTheme(highContrastTheme),
     );
     expect(contrastTopBar).not.toEqual(defaultTopBar);
     expect(contrastTopBar.some((entry) => entry.includes('#ffffff'))).toBe(
@@ -76,30 +82,26 @@ describe('highContrastTheme', () => {
     );
 
     const defaultSettings = renderLog(
-      (ctx, theme) =>
+      (ctx, env) =>
         renderSettings(
           ctx,
           REGULAR_WIDTH,
           REGULAR_HEIGHT,
           DEFAULT_APP_SETTINGS,
-          {
-            theme,
-          },
+          { env },
         ),
-      defaultTheme,
+      withTheme(defaultTheme),
     );
     const contrastSettings = renderLog(
-      (ctx, theme) =>
+      (ctx, env) =>
         renderSettings(
           ctx,
           REGULAR_WIDTH,
           REGULAR_HEIGHT,
           DEFAULT_APP_SETTINGS,
-          {
-            theme,
-          },
+          { env },
         ),
-      highContrastTheme,
+      withTheme(highContrastTheme),
     );
     expect(contrastSettings).not.toEqual(defaultSettings);
     expect(contrastSettings).toContain('fillStyle="#000000"');
