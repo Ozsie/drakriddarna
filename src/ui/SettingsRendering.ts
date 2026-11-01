@@ -5,6 +5,7 @@ import {
   type CardBounds,
 } from './HeroCardRendering';
 import { composeFont } from '../uikit/primitives/text';
+import { drawModalFrame, drawModalHeader } from '../uikit/kit/modalFrame';
 import type { UiEnv } from '../uikit/env';
 import type { UiTheme } from '../uikit/theme';
 import { defaultUiEnv } from './env';
@@ -124,7 +125,6 @@ export type CreditsHitResult =
   | { type: 'panel' }
   | { type: 'backdrop' };
 
-const PANEL_RADIUS = 10;
 const ROW_RADIUS = 6;
 const ROW_HEIGHT = 48;
 const ROW_GAP = 8;
@@ -508,36 +508,8 @@ const renderPanel = (
   headerText: string,
   theme: UiTheme,
 ): void => {
-  ctx.fillStyle = theme.palette.surface.panelDialog;
-  drawRoundedRect(
-    ctx,
-    panel.x,
-    panel.y,
-    panel.width,
-    panel.height,
-    PANEL_RADIUS,
-  );
-  ctx.fill();
-  ctx.strokeStyle = theme.palette.border.panelDialog;
-  ctx.lineWidth = theme.shape.strokeWidth.regular;
-  drawRoundedRect(
-    ctx,
-    panel.x,
-    panel.y,
-    panel.width,
-    panel.height,
-    PANEL_RADIUS,
-  );
-  ctx.stroke();
-  ctx.fillStyle = theme.palette.text.headerDialog;
-  ctx.font = composeFont(
-    theme,
-    theme.typography.sizes.title,
-    theme.typography.weights.bold,
-  );
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText(headerText, panel.x + 18, panel.y + 14);
+  drawModalFrame(ctx, panel, theme);
+  drawModalHeader(ctx, panel, headerText, theme);
 };
 
 export const renderSettings = (

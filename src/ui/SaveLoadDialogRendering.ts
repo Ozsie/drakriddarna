@@ -10,6 +10,11 @@ import {
   type CardBounds,
 } from './HeroCardRendering';
 import { composeFont } from '../uikit/primitives/text';
+import {
+  drawDialogScrim,
+  drawModalFrame,
+  drawModalHeader,
+} from '../uikit/kit/modalFrame';
 import type { UiEnv } from '../uikit/env';
 import { defaultUiEnv } from './env';
 import { i18nTranslator } from './i18nAdapter';
@@ -337,35 +342,14 @@ export const renderSaveLoadDialog = (
   ctx.save();
 
   // Dark backdrop, same veil the between-dungeons dialog uses.
-  ctx.fillStyle = theme.palette.overlay.scrimDialog;
-  ctx.fillRect(
-    layout.backdropBounds.x,
-    layout.backdropBounds.y,
-    layout.backdropBounds.width,
-    layout.backdropBounds.height,
-  );
+  drawDialogScrim(ctx, viewWidth, viewHeight, theme);
 
   // Centered modal panel
   const p = layout.panelBounds;
-  ctx.fillStyle = theme.palette.surface.panelDialog;
-  drawRoundedRect(ctx, p.x, p.y, p.width, p.height, 10);
-  ctx.fill();
-
-  ctx.strokeStyle = theme.palette.border.panelDialog;
-  ctx.lineWidth = theme.shape.strokeWidth.regular;
-  drawRoundedRect(ctx, p.x, p.y, p.width, p.height, 10);
-  ctx.stroke();
+  drawModalFrame(ctx, p, theme);
 
   // Title + subtitle
-  ctx.fillStyle = theme.palette.text.headerDialog;
-  ctx.font = composeFont(
-    theme,
-    theme.typography.sizes.title,
-    theme.typography.weights.bold,
-  );
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText(layout.titleText, p.x + 18, p.y + 14);
+  drawModalHeader(ctx, p, layout.titleText, theme);
 
   ctx.fillStyle = theme.palette.text.secondary;
   ctx.font = composeFont(theme, theme.typography.sizes.lg);

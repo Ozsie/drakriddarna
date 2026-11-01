@@ -5,6 +5,7 @@ import {
   type CardBounds,
 } from './HeroCardRendering';
 import { composeFont } from '../uikit/primitives/text';
+import { drawModalFrame, drawModalHeader } from '../uikit/kit/modalFrame';
 import { defaultTheme } from '../uikit/theme';
 import type { UiEnv, Translator } from '../uikit/env';
 import { defaultUiEnv } from './env';
@@ -54,7 +55,6 @@ export interface RenderWelcomeOptions {
 
 export type WelcomeHitResult = WelcomeButtonId | null;
 
-const PANEL_RADIUS = 10;
 const BUTTON_RADIUS = 6;
 const ROW_HEIGHT = 48;
 const ROW_GAP = 8;
@@ -286,25 +286,10 @@ export const renderWelcome = (
 
   // Centered modal panel, save/load dialog style.
   const p = layout.panelBounds;
-  ctx.fillStyle = theme.palette.surface.panelDialog;
-  drawRoundedRect(ctx, p.x, p.y, p.width, p.height, PANEL_RADIUS);
-  ctx.fill();
-
-  ctx.strokeStyle = theme.palette.border.panelDialog;
-  ctx.lineWidth = theme.shape.strokeWidth.regular;
-  drawRoundedRect(ctx, p.x, p.y, p.width, p.height, PANEL_RADIUS);
-  ctx.stroke();
+  drawModalFrame(ctx, p, theme);
 
   // Header line.
-  ctx.fillStyle = theme.palette.text.headerDialog;
-  ctx.font = composeFont(
-    theme,
-    theme.typography.sizes.title,
-    theme.typography.weights.bold,
-  );
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText(layout.headerText, p.x + 18, p.y + 14);
+  drawModalHeader(ctx, p, layout.headerText, theme);
 
   // Button rows, dialog row style.
   for (const button of layout.buttons) {
