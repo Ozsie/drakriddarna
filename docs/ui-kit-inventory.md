@@ -56,6 +56,19 @@ which fails on any style write that is not a theme token (the only
 allowed exceptions: gradients and the actor's own `Colour` fill, which
 is game data, not a style).
 
+**M3 status: ports in place.** `src/uikit/env.ts` defines `UiEnv`
+(theme, layout mode, translator, measure) and `UiContext`; the game side
+provides the implementations — `src/ui/i18nAdapter.ts` (Translator over
+sveltekit-i18n), `src/ui/env.ts` (env construction and layout-mode
+resolution) and `src/ui/assets.ts` (the AssetId registry; the only
+`$app`/`$lib` import under `src/ui`). Every renderer now receives an
+optional `env` through its options: `i18n()` calls became `env.t`, the
+`isCompactUi` reads inside layouts became `env.mode` (width-derived
+only as a fallback for legacy test callers), and theme access flows
+through `env.theme`. The board controller builds one env per update and
+the UI-layer render signature includes env identity, so a locale or
+theme change repaints.
+
 ### World — out of scope
 
 Board-space rendering stays where it is (scope decision in the spec README):

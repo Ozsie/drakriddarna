@@ -649,8 +649,7 @@ touched:
   graph of `src/uikit/**` and fails on any import from outside the kit,
   keeping the kit game-agnostic as modules move in.
 
-M2 (theme) is complete: every chrome renderer in `src/ui` takes an
-optional `theme` parameter (defaulting to `defaultTheme`) and holds zero
+M2 (theme) is complete: every chrome renderer in `src/ui` holds zero
 style literals of its own — the ratchet test now pins the budget at
 0/0. Fonts compose from theme tokens (`composeFont`) instead of font
 strings, and the shared text/geometry helpers live in
@@ -658,6 +657,18 @@ strings, and the shared text/geometry helpers live in
 with a marker-valued theme and fails if any color or font written to the
 context is not a token; the **high-contrast theme** in `src/ui/theme.ts`
 proves a second theme drops in without component changes.
+
+M3 (context and ports) is complete: `src/uikit/env.ts` defines the
+`UiEnv`/`UiContext` contracts (theme, layout mode, translator, measure,
+assets), and the game side provides the implementations — the
+sveltekit-i18n adapter (`src/ui/i18nAdapter.ts`), env construction
+(`src/ui/env.ts`) and the asset-id registry (`src/ui/assets.ts`, the
+only `$app`/`$lib` import under `src/ui`). Renderers receive an env
+through their options: `i18n()` became `env.t`, compact detection inside
+layouts became `env.mode`, and the board controller builds one env per
+update with its identity in the UI-layer render signature, so locale or
+theme changes repaint. No renderer imports i18n or asset URLs
+directly.
 
 ## Build, CI and deployment
 
