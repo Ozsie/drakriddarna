@@ -55,6 +55,7 @@ usable in dirty-check render signatures.
 | [04-kit-components.md](./04-kit-components.md)                 | The primitive catalog with proving consumers, the two-consumer rule, input and hit testing     |
 | [05-boundary-and-verification.md](./05-boundary-and-verification.md) | Boundary lint rules, literal budget, boundary test, the verification harness                 |
 | [06-milestones.md](./06-milestones.md)                         | M1–M6 with deliverables and definitions of done, the conversion recipe, risks, open decisions |
+| [07-extraction.md](./07-extraction.md)                         | Lifting the finished kit into its own repository: scaffolding, test/doc split, decisions      |
 
 ## How to brief an agent
 

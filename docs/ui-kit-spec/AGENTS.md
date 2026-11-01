@@ -24,6 +24,7 @@ Read it in this order before writing any code:
 6. `05-boundary-and-verification.md` — lint rules, literal budget, the
    verification harness
 7. `06-milestones.md` — M1–M6 with definitions of done, conversion recipe
+8. `07-extraction.md` — the plan for lifting the finished kit into its own repository
 
 Where the spec and the game source disagree, **the game source wins**
 (`src/ui/` and `src/components/` for renderers, the board controller,

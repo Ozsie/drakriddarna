@@ -5,12 +5,11 @@ import {
   formatDiaryHeader,
   formatNoteHeader,
   formatNoteMessage,
-  measureTextWidth,
-  wrapText,
   getDiaryAndWinConditionsLayout,
   getDiaryAndWinConditionsHit,
   renderDiaryAndWinConditions,
 } from './DiaryAndWinConditionRendering';
+import { measureTextWidth, wrapText } from '../uikit/primitives/text';
 import {
   ConditionType,
   MonsterType,
@@ -207,19 +206,36 @@ describe('DiaryAndWinConditionRendering', () => {
   describe('measureTextWidth and wrapText', () => {
     it('measures text with canvas ctx', () => {
       const ctx = createMockCtx();
-      const width = measureTextWidth(ctx, 'Hello World');
+      const width = measureTextWidth(
+        ctx,
+        'Hello World',
+        '10px Arial, Helvetica, sans-serif',
+        6.5,
+      );
       expect(width).toBe(11 * 8);
     });
 
     it('wraps text when exceeding max width', () => {
       const ctx = createMockCtx();
-      const lines = wrapText(ctx, 'One two three four five six', 60);
+      const lines = wrapText(
+        ctx,
+        'One two three four five six',
+        60,
+        '10px Arial, Helvetica, sans-serif',
+        6.5,
+      );
       expect(lines.length).toBeGreaterThan(1);
     });
 
     it('keeps single line if within max width', () => {
       const ctx = createMockCtx();
-      const lines = wrapText(ctx, 'Short', 100);
+      const lines = wrapText(
+        ctx,
+        'Short',
+        100,
+        '10px Arial, Helvetica, sans-serif',
+        6.5,
+      );
       expect(lines).toEqual(['Short']);
     });
   });

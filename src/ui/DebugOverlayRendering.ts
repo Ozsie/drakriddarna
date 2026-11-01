@@ -6,6 +6,8 @@ import {
 } from '../monsters/behavior';
 import { getHeroCardsLayout } from './HeroCardRendering';
 import { formatDuration, getCurrentDungeonTimeMs } from '../core';
+import { composeFont } from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 export interface DebugPrintoutCounts {
   totalReRenders: number;
@@ -23,7 +25,6 @@ const MARGIN_X = 8;
 const GAP_ABOVE_CARDS = 6;
 const MIN_Y = 14;
 const LINE_HEIGHT = 12;
-const FONT = '10px Arial';
 
 // The director state the monster AI would currently act on, derived from the
 // same shared party-level inputs the AI turn uses.
@@ -67,6 +68,7 @@ export const renderDebugPrintout = (
   viewHeight: number,
   state: GameState | null | undefined,
   counts: DebugPrintoutCounts,
+  theme: UiTheme = defaultTheme,
 ): void => {
   const ratio = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
   const { x, y } = getDebugPrintoutPosition(viewWidth, viewHeight, state);
@@ -90,8 +92,13 @@ export const renderDebugPrintout = (
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(ratio, ratio);
-  ctx.fillStyle = 'white';
-  ctx.font = FONT;
+  ctx.fillStyle = theme.palette.text.debug;
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.xxs,
+    theme.typography.weights.regular,
+    theme.typography.families.debug,
+  );
   // The last line sits at the anchor; earlier lines stack above it so the
   // whole printout stays clear of the hero cards. Each line is clamped to
   // the top of the view so tiny views cannot clip the text away entirely.

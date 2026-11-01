@@ -1,28 +1,27 @@
-import { RadialAction, type RadialMenuEntry } from '../hero/RadialMenuLogic';
-import type { RadialMenuState } from '../store/radialMenuStore';
+// Game-side facade for the radial action menu. The component (layout,
+// hit test, render over the view model) lives in the kit; the adapter in
+// ./viewmodels/radialMenu is the only place that reads the radial-menu
+// store state. This module keeps the historical entry points — including
+// the RadialButtonPosition carrying the game entry, which the controller
+// dispatches — so callers work unchanged, with the exact same pixels:
+// parity snapshots cover the whole chain.
+
 import type { ItemSprite } from '../types';
-import { i18n } from '../core';
-import { drawItemSprite } from '../items/ItemSpriteRendering';
+import type { RadialMenuEntry } from '../hero/RadialMenuLogic';
+import type { RadialMenuState } from '../store/radialMenuStore';
+import type { SpriteRef, Translator, UiEnv } from '../uikit/env';
+import {
+  hitTestRadialMenu,
+  layoutRadialMenu,
+  renderRadialMenu as renderRadialMenuComponent,
+  renderRadialTooltip as renderRadialTooltipComponent,
+  type RadialMenuLayout as KitLayout,
+} from '../uikit/components/radialMenu';
+import { toRadialMenuViewModel } from './viewmodels/radialMenu';
+import { legacyUiContext, defaultUiEnv } from './env';
+import { i18nTranslator } from './i18nAdapter';
 
-export const RADIAL_MENU_ICONS: Record<RadialAction, string> = {
-  [RadialAction.SEARCH]: '🔍',
-  [RadialAction.PICK_LOCK]: '🗝️',
-  [RadialAction.OPEN_DOOR]: '🚪',
-  [RadialAction.PICK_UP_ITEM]: '🎒',
-  [RadialAction.INTERACT]: '⚡',
-  [RadialAction.USE_ITEM]: '✨',
-  [RadialAction.NEXT]: '→',
-};
-
-export const RADIAL_MENU_LABELS: Record<RadialAction, string> = {
-  [RadialAction.SEARCH]: 'content.radialMenu.search',
-  [RadialAction.PICK_LOCK]: 'content.radialMenu.pickLock',
-  [RadialAction.OPEN_DOOR]: 'content.radialMenu.openDoor',
-  [RadialAction.PICK_UP_ITEM]: 'content.radialMenu.pickUpItem',
-  [RadialAction.INTERACT]: 'content.radialMenu.interact',
-  [RadialAction.USE_ITEM]: 'content.radialMenu.useItem',
-  [RadialAction.NEXT]: 'content.radialMenu.next',
-};
+export { RADIAL_MENU_ICONS, RADIAL_MENU_LABELS } from './viewmodels/radialMenu';
 
 export interface RadialButtonPosition {
   index: number;
@@ -35,64 +34,43 @@ export interface RadialButtonPosition {
   sprite?: ItemSprite;
 }
 
+const entriesFor = (menu: RadialMenuState | null | undefined) =>
+  menu?.entries ?? [];
+
+const spriteOf = (
+  entry: RadialMenuEntry,
+  spriteRef: SpriteRef | undefined,
+): ItemSprite | undefined =>
+  entry.item?.sprite ??
+  (spriteRef
+    ? { image: spriteRef.assetId, index: spriteRef.index, size: spriteRef.size }
+    : undefined);
+
+/** Maps a kit layout onto the historical entry-carrying positions. */
+const toLegacyPositions = (
+  kitLayout: KitLayout,
+  entries: readonly RadialMenuEntry[],
+): RadialButtonPosition[] =>
+  kitLayout.items.map((item) => ({
+    index: item.button.id,
+    entry: entries[item.button.id],
+    x: item.x,
+    y: item.y,
+    radius: item.radius,
+    label: item.button.label,
+    icon: item.button.icon,
+    sprite: spriteOf(entries[item.button.id], item.button.sprite),
+  }));
+
 export const getRadialButtonPositions = (
   menu: RadialMenuState,
   cellSize: number,
+  t: Translator = i18nTranslator,
 ): RadialButtonPosition[] => {
-  if (!menu || !menu.entries || menu.entries.length === 0) return [];
-
-  const centerX = menu.x * cellSize + cellSize / 2;
-  const centerY = menu.y * cellSize + cellSize / 2;
-  const ringRadius = cellSize * 1.1;
-  const buttonRadius = Math.max(16, cellSize * (16 / 48));
-
-  return menu.entries.map((entry, i) => {
-    const angle = (i / menu.entries.length) * 2 * Math.PI - Math.PI / 2;
-    const x = centerX + ringRadius * Math.cos(angle);
-    const y = centerY + ringRadius * Math.sin(angle);
-
-    let label: string;
-    let icon: string;
-    let sprite: ItemSprite | undefined;
-
-    if (entry.interactable) {
-      const labelKey =
-        entry.interactable.nameTranslationKey ??
-        RADIAL_MENU_LABELS[entry.action];
-      label = i18n(labelKey);
-      icon = entry.interactable.icon ?? RADIAL_MENU_ICONS[entry.action] ?? '';
-    } else if (entry.item) {
-      const itemName = i18n(entry.item.nameTranslationKey ?? entry.item.name);
-      if (entry.targetHero) {
-        const targetName = i18n(entry.targetHero.name);
-        label = `${itemName} (${targetName})`;
-      } else {
-        label = itemName;
-      }
-      icon =
-        entry.item.icon ??
-        (entry.item.properties?.ICON as string) ??
-        RADIAL_MENU_ICONS[entry.action] ??
-        '✨';
-      sprite = entry.item.sprite;
-    } else {
-      const labelKey = RADIAL_MENU_LABELS[entry.action];
-      const baseLabel = i18n(labelKey);
-      label = baseLabel + (entry.door ? ` (${entry.door.side})` : '');
-      icon = RADIAL_MENU_ICONS[entry.action] ?? '';
-    }
-
-    return {
-      index: i,
-      entry,
-      x,
-      y,
-      radius: buttonRadius,
-      label,
-      icon,
-      sprite,
-    };
-  });
+  const vm = toRadialMenuViewModel(menu, t);
+  if (!vm) return [];
+  const kitLayout = layoutRadialMenu(vm, cellSize);
+  return toLegacyPositions(kitLayout, entriesFor(menu));
 };
 
 export const findHoveredRadialButton = (
@@ -100,52 +78,26 @@ export const findHoveredRadialButton = (
   cellSize: number,
   worldPos: { x: number; y: number },
 ): RadialButtonPosition | undefined => {
-  const buttons = getRadialButtonPositions(menu, cellSize);
-  return buttons.find((btn) => {
-    const dx = worldPos.x - btn.x;
-    const dy = worldPos.y - btn.y;
-    return Math.hypot(dx, dy) <= btn.radius;
-  });
+  const vm = toRadialMenuViewModel(menu);
+  if (!vm) return undefined;
+  const kitLayout = layoutRadialMenu(vm, cellSize);
+  const hit = hitTestRadialMenu(kitLayout, worldPos);
+  if (!hit) return undefined;
+  return toLegacyPositions(kitLayout, entriesFor(menu)).find(
+    (button) => button.index === hit.id,
+  );
 };
 
 export const renderRadialTooltip = (
   ctx: CanvasRenderingContext2D,
   button: RadialButtonPosition,
-) => {
-  const text = button.label;
-  if (!text) return;
-
-  ctx.save();
-  ctx.font = '12px Arial, sans-serif';
-  const textMetrics =
-    typeof ctx.measureText === 'function'
-      ? ctx.measureText(text)
-      : { width: text.length * 7 };
-  const paddingX = 8;
-  const paddingY = 4;
-  const boxWidth = textMetrics.width + paddingX * 2;
-  const boxHeight = 20;
-
-  const boxX = button.x - boxWidth / 2;
-  const boxY = button.y - button.radius - boxHeight - paddingY;
-
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  if (typeof ctx.roundRect === 'function') {
-    ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 4);
-  } else {
-    ctx.rect(boxX, boxY, boxWidth, boxHeight);
-  }
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, button.x, boxY + boxHeight / 2);
-  ctx.restore();
+  env: UiEnv = defaultUiEnv,
+): void => {
+  renderRadialTooltipComponent(
+    ctx,
+    { x: button.x, y: button.y, radius: button.radius, label: button.label },
+    env.theme,
+  );
 };
 
 export const renderRadialMenu = (
@@ -153,54 +105,15 @@ export const renderRadialMenu = (
   cellSize: number,
   menu: RadialMenuState,
   hoveredIndex?: number | null,
-) => {
+  env: UiEnv = defaultUiEnv,
+): void => {
   if (!menu) return;
-  const buttons = getRadialButtonPositions(menu, cellSize);
 
-  ctx.save();
-  for (const btn of buttons) {
-    const isHovered = hoveredIndex === btn.index;
+  const vm = toRadialMenuViewModel(menu, env.t);
+  if (!vm) return;
+  const kitLayout = layoutRadialMenu(vm, cellSize);
 
-    // Draw circular button background
-    ctx.beginPath();
-    ctx.arc(btn.x, btn.y, btn.radius, 0, Math.PI * 2);
-    ctx.fillStyle = isHovered
-      ? 'rgba(255, 255, 255, 0.35)'
-      : 'rgba(0, 0, 0, 0.75)';
-    ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.9)';
-    ctx.stroke();
-
-    // Draw button icon: item sprite if available, emoji icon otherwise
-    const spriteDrawn = btn.sprite
-      ? drawItemSprite(
-          ctx,
-          btn.sprite,
-          btn.x - Math.round(btn.radius * 0.75),
-          btn.y - Math.round(btn.radius * 0.75),
-          Math.round(btn.radius * 1.5),
-        )
-      : false;
-    if (!spriteDrawn) {
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `${Math.round(btn.radius)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(btn.icon, btn.x, btn.y);
-    }
-  }
-
-  // Draw tooltip for hovered button if present
-  if (
-    hoveredIndex !== undefined &&
-    hoveredIndex !== null &&
-    hoveredIndex >= 0
-  ) {
-    const hoveredBtn = buttons.find((b) => b.index === hoveredIndex);
-    if (hoveredBtn) {
-      renderRadialTooltip(ctx, hoveredBtn);
-    }
-  }
-  ctx.restore();
+  renderRadialMenuComponent(kitLayout, legacyUiContext(ctx, env), {
+    hoveredId: hoveredIndex ?? null,
+  });
 };

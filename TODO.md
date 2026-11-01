@@ -20,6 +20,7 @@
 # Features
 
 - [ ] Leaving campaign end screen should return user to main menu
+- [ ] Fold menu into welcome screen
 - [ ] Hide debug menu option when deploying
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc
 - [ ] Graphics
@@ -29,6 +30,7 @@
 - [ ] Alvkonungens Borg - [Official Dungeon and Heroes](<https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg>)
   - [x] Edge based walls
 - [ ] Level editor
+- [x] UI Kit
 - [x] Welcome to the game screen, not just straight into a campaign
 - [x] Hero selector, campaign specifies max starting heroes
 - [x] Monster name translations
@@ -151,7 +153,7 @@
 
 ## Bugs
 
-- [ ] Lights do not reset positions when a new dungeon is loaded
+- [x] Lights do not reset positions when a new dungeon is loaded
 - [x] Pillars can be generated in a way that blocks paths
 - [x] The volume sliders are not draggable correctly
 - [x] It's not possible to edit hero names in hero selection — the inputs now behave like text inputs prefilled with the roster name: Backspace erases the shown name and typing appends to it (previously the prefilled name could not be erased and typing silently replaced it)
