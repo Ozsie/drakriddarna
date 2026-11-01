@@ -6,6 +6,8 @@ import {
   isPointInBounds,
   type CardBounds,
 } from './HeroCardRendering';
+import { composeFont } from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 // The hero selection step of the New Game flow: after the new-game dialog
 // the player picks 1..maxHeroes heroes from the campaign roster, renames
@@ -34,6 +36,7 @@ export interface HeroSelectionOptions {
   hoveredHeroId?: string | null;
   hoveredAction?: boolean;
   hoveredSecondary?: boolean;
+  theme?: UiTheme;
 }
 
 export interface HeroSelectionRowLayout {
@@ -72,11 +75,6 @@ export type HeroSelectionHitResult =
   | { type: 'back' }
   | { type: 'panel' }
   | { type: 'backdrop' };
-
-const TITLE_FONT = 'bold 18px Arial, Helvetica, sans-serif';
-const COUNT_FONT = '13px Arial, Helvetica, sans-serif';
-const BUTTON_FONT = 'bold 14px Arial, Helvetica, sans-serif';
-const NAME_FONT = '14px Arial, Helvetica, sans-serif';
 
 const PANEL_RADIUS = 10;
 const ROW_RADIUS = 6;
@@ -384,28 +382,34 @@ export const renderHeroSelection = (
   );
   if (!layout.hasContent) return;
 
+  const theme = options?.theme ?? defaultTheme;
+
   ctx.save();
 
   // Centered modal panel, welcome/dialog style.
   const p = layout.panelBounds;
-  ctx.fillStyle = '#181b22';
+  ctx.fillStyle = theme.palette.surface.panelDialog;
   drawRoundedRect(ctx, p.x, p.y, p.width, p.height, PANEL_RADIUS);
   ctx.fill();
 
-  ctx.strokeStyle = '#d4af37';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = theme.palette.border.panelDialog;
+  ctx.lineWidth = theme.shape.strokeWidth.regular;
   drawRoundedRect(ctx, p.x, p.y, p.width, p.height, PANEL_RADIUS);
   ctx.stroke();
 
   // Header + selected counter.
-  ctx.fillStyle = '#fce28a';
-  ctx.font = TITLE_FONT;
+  ctx.fillStyle = theme.palette.text.headerDialog;
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.title,
+    theme.typography.weights.bold,
+  );
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText(layout.headerText, p.x + 18, p.y + 14);
 
-  ctx.fillStyle = '#cbd5e1';
-  ctx.font = COUNT_FONT;
+  ctx.fillStyle = theme.palette.text.secondary;
+  ctx.font = composeFont(theme, theme.typography.sizes.lg);
   ctx.textAlign = 'right';
   ctx.fillText(layout.countText, p.x + p.width - 18, p.y + 20);
 
@@ -413,26 +417,34 @@ export const renderHeroSelection = (
   for (const row of layout.rows) {
     const isHovered = options?.hoveredHeroId === row.heroId;
     const rb = row.rowBounds;
-    ctx.fillStyle = isHovered ? '#334155' : 'rgba(255, 255, 255, 0.04)';
+    ctx.fillStyle = isHovered
+      ? theme.palette.surface.rowHover
+      : theme.palette.surface.row;
     drawRoundedRect(ctx, rb.x, rb.y, rb.width, rb.height, ROW_RADIUS);
     ctx.fill();
-    ctx.strokeStyle = isHovered ? '#94a3b8' : '#334155';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = isHovered
+      ? theme.palette.border.rowHover
+      : theme.palette.border.row;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     drawRoundedRect(ctx, rb.x, rb.y, rb.width, rb.height, ROW_RADIUS);
     ctx.stroke();
 
     // Selection checkbox, speedrunner-checkbox style.
     const cb = row.checkboxBounds;
-    ctx.fillStyle = row.selected ? '#ca8a04' : '#1e293b';
+    ctx.fillStyle = row.selected
+      ? theme.palette.surface.checkboxSelected
+      : theme.palette.surface.checkbox;
     drawRoundedRect(ctx, cb.x, cb.y, cb.width, cb.height, 4);
     ctx.fill();
-    ctx.strokeStyle = row.selected ? '#fde047' : '#475569';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = row.selected
+      ? theme.palette.border.checkboxSelected
+      : theme.palette.border.input;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     drawRoundedRect(ctx, cb.x, cb.y, cb.width, cb.height, 4);
     ctx.stroke();
     if (row.selected) {
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = theme.palette.text.bright;
+      ctx.lineWidth = theme.shape.strokeWidth.regular;
       ctx.beginPath();
       ctx.moveTo(cb.x + 5, cb.y + cb.height / 2);
       ctx.lineTo(cb.x + cb.width / 2 - 1, cb.y + cb.height - 5);
@@ -448,16 +460,22 @@ export const renderHeroSelection = (
 
     // Name field, save-dialog input style; dimmed when the row is.
     const input = row.nameInputBounds;
-    ctx.fillStyle = '#0f1217';
+    ctx.fillStyle = theme.palette.surface.input;
     drawRoundedRect(ctx, input.x, input.y, input.width, input.height, 4);
     ctx.fill();
-    ctx.strokeStyle = row.focused ? '#fbbf24' : '#475569';
-    ctx.lineWidth = row.focused ? 1.5 : 1;
+    ctx.strokeStyle = row.focused
+      ? theme.palette.border.inputFocus
+      : theme.palette.border.input;
+    ctx.lineWidth = row.focused
+      ? theme.shape.strokeWidth.medium
+      : theme.shape.strokeWidth.thin;
     drawRoundedRect(ctx, input.x, input.y, input.width, input.height, 4);
     ctx.stroke();
 
-    ctx.font = NAME_FONT;
-    ctx.fillStyle = row.dimmed ? '#64748b' : '#f8fafc';
+    ctx.font = composeFont(theme, theme.typography.sizes.xl);
+    ctx.fillStyle = row.dimmed
+      ? theme.palette.text.dimmed
+      : theme.palette.text.strong;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillText(row.label, input.x + 10, input.y + input.height / 2);
@@ -475,15 +493,21 @@ export const renderHeroSelection = (
   // Back button (secondary style, bottom-left).
   const sb = layout.backButtonBounds;
   const isSecondaryHovered = Boolean(options?.hoveredSecondary);
-  ctx.fillStyle = isSecondaryHovered ? '#475569' : '#334155';
+  ctx.fillStyle = isSecondaryHovered
+    ? theme.palette.surface.buttonSecondaryHover
+    : theme.palette.surface.buttonSecondary;
   drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
   ctx.fill();
-  ctx.strokeStyle = '#64748b';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = theme.palette.border.buttonSecondary;
+  ctx.lineWidth = theme.shape.strokeWidth.thin;
   drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
   ctx.stroke();
-  ctx.fillStyle = '#e2e8f0';
-  ctx.font = BUTTON_FONT;
+  ctx.fillStyle = theme.palette.text.body;
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.xl,
+    theme.typography.weights.bold,
+  );
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(
@@ -495,16 +519,22 @@ export const renderHeroSelection = (
   // Start button (primary style, bottom-right); dimmed when disabled.
   const ab = layout.startButtonBounds;
   const isActionHovered = Boolean(options?.hoveredAction);
-  ctx.globalAlpha = layout.startEnabled ? 1 : 0.5;
-  ctx.fillStyle = isActionHovered ? '#b45309' : '#92400e';
+  ctx.globalAlpha = layout.startEnabled ? 1 : theme.alpha.dimmed;
+  ctx.fillStyle = isActionHovered
+    ? theme.palette.surface.buttonPrimaryHover
+    : theme.palette.surface.buttonPrimary;
   drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
   ctx.fill();
-  ctx.strokeStyle = '#fbbf24';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = theme.palette.border.buttonPrimary;
+  ctx.lineWidth = theme.shape.strokeWidth.medium;
   drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
   ctx.stroke();
-  ctx.fillStyle = '#ffffff';
-  ctx.font = BUTTON_FONT;
+  ctx.fillStyle = theme.palette.text.bright;
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.xl,
+    theme.typography.weights.bold,
+  );
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(

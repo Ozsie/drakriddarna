@@ -10,6 +10,8 @@ import {
   isPointInBounds,
   type CardBounds,
 } from './HeroCardRendering';
+import { composeFont } from '../uikit/primitives/text';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
 
 // Centered full-screen modal for saving (name input) and loading (list of
 // saves with campaign/dungeon hints). Visually a sibling of the
@@ -50,6 +52,7 @@ export interface RenderSaveLoadDialogOptions {
   hoveredItemId?: string | null;
   hoveredAction?: boolean;
   hoveredSecondary?: boolean;
+  theme?: UiTheme;
 }
 
 export type SaveLoadDialogHitResult =
@@ -59,14 +62,6 @@ export type SaveLoadDialogHitResult =
   | { type: 'input' }
   | { type: 'panel' }
   | { type: 'backdrop' };
-
-const TITLE_FONT = 'bold 18px Arial, Helvetica, sans-serif';
-const SUBTITLE_FONT = '13px Arial, Helvetica, sans-serif';
-const BUTTON_FONT = 'bold 14px Arial, Helvetica, sans-serif';
-const ROW_LABEL_FONT = 'bold 13px Arial, Helvetica, sans-serif';
-const ROW_HINT_FONT = '11px Arial, Helvetica, sans-serif';
-const INPUT_FONT = '14px Arial, Helvetica, sans-serif';
-const FOOTER_FONT = '11px Arial, Helvetica, sans-serif';
 
 const MAX_SAVE_NAME_WIDTH_FACTOR = 24;
 
@@ -331,10 +326,12 @@ export const renderSaveLoadDialog = (
   const layout = getSaveLoadDialogLayout(viewWidth, viewHeight, state, options);
   if (!layout.hasContent) return;
 
+  const theme = options?.theme ?? defaultTheme;
+
   ctx.save();
 
   // Dark backdrop, same veil the between-dungeons dialog uses.
-  ctx.fillStyle = 'rgba(10, 12, 16, 0.85)';
+  ctx.fillStyle = theme.palette.overlay.scrimDialog;
   ctx.fillRect(
     layout.backdropBounds.x,
     layout.backdropBounds.y,
@@ -344,40 +341,44 @@ export const renderSaveLoadDialog = (
 
   // Centered modal panel
   const p = layout.panelBounds;
-  ctx.fillStyle = '#181b22';
+  ctx.fillStyle = theme.palette.surface.panelDialog;
   drawRoundedRect(ctx, p.x, p.y, p.width, p.height, 10);
   ctx.fill();
 
-  ctx.strokeStyle = '#d4af37';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = theme.palette.border.panelDialog;
+  ctx.lineWidth = theme.shape.strokeWidth.regular;
   drawRoundedRect(ctx, p.x, p.y, p.width, p.height, 10);
   ctx.stroke();
 
   // Title + subtitle
-  ctx.fillStyle = '#fce28a';
-  ctx.font = TITLE_FONT;
+  ctx.fillStyle = theme.palette.text.headerDialog;
+  ctx.font = composeFont(
+    theme,
+    theme.typography.sizes.title,
+    theme.typography.weights.bold,
+  );
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText(layout.titleText, p.x + 18, p.y + 14);
 
-  ctx.fillStyle = '#cbd5e1';
-  ctx.font = SUBTITLE_FONT;
+  ctx.fillStyle = theme.palette.text.secondary;
+  ctx.font = composeFont(theme, theme.typography.sizes.lg);
   ctx.fillText(layout.subtitleText, p.x + 18, p.y + 38);
 
   // Name input (save mode)
   if (layout.inputBounds) {
     const input = layout.inputBounds;
-    ctx.fillStyle = '#0f1217';
+    ctx.fillStyle = theme.palette.surface.input;
     drawRoundedRect(ctx, input.x, input.y, input.width, input.height, 4);
     ctx.fill();
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = theme.palette.border.inputFocus;
+    ctx.lineWidth = theme.shape.strokeWidth.medium;
     drawRoundedRect(ctx, input.x, input.y, input.width, input.height, 4);
     ctx.stroke();
 
     const text = fitTextToWidth(ctx, options?.saveName ?? '', input.width - 20);
-    ctx.font = INPUT_FONT;
-    ctx.fillStyle = '#f8fafc';
+    ctx.font = composeFont(theme, theme.typography.sizes.xl);
+    ctx.fillStyle = theme.palette.text.strong;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, input.x + 10, input.y + input.height / 2);
@@ -395,19 +396,29 @@ export const renderSaveLoadDialog = (
   for (const row of layout.rows) {
     const rb = row.bounds;
     const isHovered = options?.hoveredItemId === row.item.id;
-    ctx.fillStyle = isHovered ? '#334155' : 'rgba(255, 255, 255, 0.04)';
+    ctx.fillStyle = isHovered
+      ? theme.palette.surface.rowHover
+      : theme.palette.surface.row;
     drawRoundedRect(ctx, rb.x, rb.y, rb.width, rb.height, 6);
     ctx.fill();
 
-    ctx.strokeStyle = isHovered ? '#94a3b8' : '#334155';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = isHovered
+      ? theme.palette.border.rowHover
+      : theme.palette.border.row;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     drawRoundedRect(ctx, rb.x, rb.y, rb.width, rb.height, 6);
     ctx.stroke();
 
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.font = ROW_LABEL_FONT;
-    ctx.fillStyle = isHovered ? '#ffffff' : '#f1f5f9';
+    ctx.font = composeFont(
+      theme,
+      theme.typography.sizes.lg,
+      theme.typography.weights.bold,
+    );
+    ctx.fillStyle = isHovered
+      ? theme.palette.text.bright
+      : theme.palette.text.dialogValue;
     ctx.fillText(
       fitTextToWidth(
         ctx,
@@ -419,8 +430,10 @@ export const renderSaveLoadDialog = (
     );
 
     if (row.item.hint) {
-      ctx.font = ROW_HINT_FONT;
-      ctx.fillStyle = isHovered ? '#cbd5e1' : '#94a3b8';
+      ctx.font = composeFont(theme, theme.typography.sizes.sm);
+      ctx.fillStyle = isHovered
+        ? theme.palette.text.secondary
+        : theme.palette.text.muted;
       ctx.fillText(
         fitTextToWidth(
           ctx,
@@ -434,8 +447,8 @@ export const renderSaveLoadDialog = (
   }
 
   if (layout.footerBounds && layout.footerText) {
-    ctx.font = FOOTER_FONT;
-    ctx.fillStyle = '#94a3b8';
+    ctx.font = composeFont(theme, theme.typography.sizes.sm);
+    ctx.fillStyle = theme.palette.text.muted;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -449,17 +462,23 @@ export const renderSaveLoadDialog = (
   if (layout.secondaryButtonBounds && layout.secondaryButtonLabel) {
     const sb = layout.secondaryButtonBounds;
     const isHovered = Boolean(options?.hoveredSecondary);
-    ctx.fillStyle = isHovered ? '#475569' : '#334155';
+    ctx.fillStyle = isHovered
+      ? theme.palette.surface.buttonSecondaryHover
+      : theme.palette.surface.buttonSecondary;
     drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
     ctx.fill();
 
-    ctx.strokeStyle = '#64748b';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = theme.palette.border.buttonSecondary;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
     ctx.stroke();
 
-    ctx.fillStyle = '#e2e8f0';
-    ctx.font = BUTTON_FONT;
+    ctx.fillStyle = theme.palette.text.body;
+    ctx.font = composeFont(
+      theme,
+      theme.typography.sizes.xl,
+      theme.typography.weights.bold,
+    );
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -476,21 +495,27 @@ export const renderSaveLoadDialog = (
     const isSave = layout.mode === 'save';
     ctx.fillStyle = isHovered
       ? isSave
-        ? '#b45309'
-        : '#475569'
+        ? theme.palette.surface.buttonPrimaryHover
+        : theme.palette.surface.buttonSecondaryHover
       : isSave
-      ? '#92400e'
-      : '#334155';
+      ? theme.palette.surface.buttonPrimary
+      : theme.palette.surface.buttonSecondary;
     drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
     ctx.fill();
 
-    ctx.strokeStyle = isSave ? '#fbbf24' : '#64748b';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = isSave
+      ? theme.palette.border.buttonPrimary
+      : theme.palette.border.buttonSecondary;
+    ctx.lineWidth = theme.shape.strokeWidth.medium;
     drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
     ctx.stroke();
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = BUTTON_FONT;
+    ctx.fillStyle = theme.palette.text.bright;
+    ctx.font = composeFont(
+      theme,
+      theme.typography.sizes.xl,
+      theme.typography.weights.bold,
+    );
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(

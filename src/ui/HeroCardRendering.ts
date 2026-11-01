@@ -4,6 +4,18 @@ import { i18n } from '../core';
 import { ACTIVE, DESCRIPTION, USED } from '../items/ItemLogic';
 import { drawItemSprite } from '../items/ItemSpriteRendering';
 import { isCompactUi } from './UiMode';
+import {
+  composeFont,
+  measureTextWidth as kitMeasureTextWidth,
+  truncateText as kitTruncateText,
+} from '../uikit/primitives/text';
+import { isPointInRect } from '../uikit/primitives/geometry';
+import { drawRoundedRect as kitDrawRoundedRect } from '../uikit/primitives/roundedRect';
+import { defaultTheme, type UiTheme } from '../uikit/theme';
+
+// Shared draw helpers now live in the kit; re-exported so existing
+// importers keep working until each module is converted.
+export const drawRoundedRect = kitDrawRoundedRect;
 
 export interface CardBounds {
   x: number;
@@ -57,6 +69,7 @@ export interface RenderHeroCardsOptions {
   hoveredInventoryHeroName?: string | null;
   hoveredCloseHeroName?: string | null;
   hoveredUseItem?: { heroName: string; itemIndex: number } | null;
+  theme?: UiTheme;
 }
 
 export type HeroCardsHitResult =
@@ -66,93 +79,24 @@ export type HeroCardsHitResult =
   | { type: 'inventory'; hero: Hero }
   | { type: 'card'; hero: Hero };
 
-const TITLE_FONT = 'bold 11px Arial, Helvetica, sans-serif';
-const STAT_FONT = '10px Arial, Helvetica, sans-serif';
-const STAT_BOLD_FONT = 'bold 10px Arial, Helvetica, sans-serif';
-const INV_TITLE_FONT = 'bold 12px Arial, Helvetica, sans-serif';
-const INV_ITEM_FONT = 'bold 11px Arial, Helvetica, sans-serif';
-const INV_DESC_FONT = '10px Arial, Helvetica, sans-serif';
-const INV_BTN_FONT = 'bold 10px Arial, Helvetica, sans-serif';
+export const isPointInBounds = isPointInRect;
 
-export const isPointInBounds = (
-  x: number,
-  y: number,
-  bounds: CardBounds,
-): boolean =>
-  x >= bounds.x &&
-  x <= bounds.x + bounds.width &&
-  y >= bounds.y &&
-  y <= bounds.y + bounds.height;
+// Per-character width used when no context is available for measuring
+// (the historical behavior of this module's helpers).
+const FALLBACK_PER_CHAR = 6.5;
 
 export const measureTextWidth = (
   ctx: CanvasRenderingContext2D | null | undefined,
   text: string,
-  font: string = STAT_FONT,
-): number => {
-  if (!text) return 0;
-  if (ctx && typeof ctx.measureText === 'function') {
-    ctx.save();
-    ctx.font = font;
-    const width = ctx.measureText(text).width;
-    ctx.restore();
-    return width;
-  }
-  return text.length * 6.5;
-};
+  font: string,
+): number => kitMeasureTextWidth(ctx, text, font, FALLBACK_PER_CHAR);
 
 export const truncateText = (
   ctx: CanvasRenderingContext2D | null | undefined,
   text: string,
   maxWidth: number,
-  font: string = STAT_FONT,
-): string => {
-  if (!text || maxWidth <= 0) return '';
-  const currentWidth = measureTextWidth(ctx, text, font);
-  if (currentWidth <= maxWidth) return text;
-
-  const ellipsis = '...';
-  const ellipsisWidth = measureTextWidth(ctx, ellipsis, font);
-  if (ellipsisWidth >= maxWidth) return '';
-
-  let low = 0;
-  let high = text.length;
-  let best = '';
-
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    const candidate = text.slice(0, mid) + ellipsis;
-    if (measureTextWidth(ctx, candidate, font) <= maxWidth) {
-      best = candidate;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-
-  return best;
-};
-
-export const drawRoundedRect = (
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-): void => {
-  const r = Math.min(radius, width / 2, height / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + width - r, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
-  ctx.lineTo(x + width, y + height - r);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
-  ctx.lineTo(x + r, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-};
+  font: string,
+): string => kitTruncateText(ctx, text, maxWidth, font, FALLBACK_PER_CHAR);
 
 export const getHeroCardsLayout = (
   viewWidth: number,
@@ -429,6 +373,35 @@ export const renderHeroCards = (
   const hoveredCloseHeroName = options?.hoveredCloseHeroName ?? null;
   const hoveredUseItem = options?.hoveredUseItem ?? null;
 
+  const theme = options?.theme ?? defaultTheme;
+  const titleFont = composeFont(
+    theme,
+    theme.typography.sizes.sm,
+    theme.typography.weights.bold,
+  );
+  const statFont = composeFont(theme, theme.typography.sizes.xxs);
+  const statBoldFont = composeFont(
+    theme,
+    theme.typography.sizes.xxs,
+    theme.typography.weights.bold,
+  );
+  const invTitleFont = composeFont(
+    theme,
+    theme.typography.sizes.md,
+    theme.typography.weights.bold,
+  );
+  const invItemFont = composeFont(
+    theme,
+    theme.typography.sizes.sm,
+    theme.typography.weights.bold,
+  );
+  const invDescFont = composeFont(theme, theme.typography.sizes.xxs);
+  const invBtnFont = composeFont(
+    theme,
+    theme.typography.sizes.xxs,
+    theme.typography.weights.bold,
+  );
+
   ctx.save();
 
   // 1. Render Hero Cards
@@ -437,23 +410,23 @@ export const renderHeroCards = (
 
     // Card background
     drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 5);
-    ctx.fillStyle = hero.colour || '#CD5C5C';
+    ctx.fillStyle = hero.colour || theme.palette.surface.cardFallback;
     ctx.fill();
 
     // Border (highlight active hero)
     if (isCurrent) {
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = theme.shape.strokeWidth.thick;
+      ctx.strokeStyle = theme.palette.border.heroCurrent;
       ctx.stroke();
     } else {
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.lineWidth = theme.shape.strokeWidth.thin;
+      ctx.strokeStyle = theme.palette.border.card;
       ctx.stroke();
     }
 
     // Header / Title
-    ctx.fillStyle = '#111827';
-    ctx.font = TITLE_FONT;
+    ctx.fillStyle = theme.palette.text.cardTitle;
+    ctx.font = titleFont;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
 
@@ -462,7 +435,7 @@ export const renderHeroCards = (
       ctx,
       item.title,
       maxTitleWidth,
-      TITLE_FONT,
+      titleFont,
     );
     ctx.fillText(displayTitle, bounds.x + 5, bounds.y + 12);
 
@@ -471,14 +444,19 @@ export const renderHeroCards = (
     const isInvHovered = hoveredInvHeroName === hero.name;
     drawRoundedRect(ctx, invBtn.x, invBtn.y, invBtn.width, invBtn.height, 3);
     ctx.fillStyle = isInvHovered
-      ? 'rgba(255, 255, 255, 0.5)'
-      : 'rgba(255, 255, 255, 0.25)';
+      ? theme.palette.surface.inventoryButtonHover
+      : theme.palette.surface.inventoryButton;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = theme.palette.border.inventoryButton;
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
     ctx.stroke();
 
-    ctx.font = '12px sans-serif';
+    ctx.font = composeFont(
+      theme,
+      theme.typography.sizes.md,
+      theme.typography.weights.regular,
+      theme.typography.families.plain,
+    );
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -488,15 +466,15 @@ export const renderHeroCards = (
     );
 
     // HP Text
-    ctx.font = STAT_BOLD_FONT;
+    ctx.font = statBoldFont;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#1f2937';
+    ctx.fillStyle = theme.palette.text.cardStat;
     ctx.fillText(item.hpText, bounds.x + 5, bounds.y + 30);
 
     // If Current Actor, render actions, movement and equipment
     if (isCurrent) {
-      ctx.font = STAT_FONT;
+      ctx.font = statFont;
 
       // Actions and Moves
       if (item.actionsText && item.movesText) {
@@ -509,38 +487,23 @@ export const renderHeroCards = (
 
       // Equipment header
       if (item.equipmentText) {
-        ctx.font = STAT_BOLD_FONT;
+        ctx.font = statBoldFont;
         ctx.fillText(item.equipmentText, bounds.x + 5, bounds.y + 61);
       }
 
       // Equipment items
-      ctx.font = STAT_FONT;
+      ctx.font = statFont;
       const maxItemWidth = bounds.width - 10;
       if (item.weaponText) {
-        const wTxt = truncateText(
-          ctx,
-          item.weaponText,
-          maxItemWidth,
-          STAT_FONT,
-        );
+        const wTxt = truncateText(ctx, item.weaponText, maxItemWidth, statFont);
         ctx.fillText(wTxt, bounds.x + 5, bounds.y + 75);
       }
       if (item.armourText) {
-        const aTxt = truncateText(
-          ctx,
-          item.armourText,
-          maxItemWidth,
-          STAT_FONT,
-        );
+        const aTxt = truncateText(ctx, item.armourText, maxItemWidth, statFont);
         ctx.fillText(aTxt, bounds.x + 5, bounds.y + 88);
       }
       if (item.shieldText) {
-        const sTxt = truncateText(
-          ctx,
-          item.shieldText,
-          maxItemWidth,
-          STAT_FONT,
-        );
+        const sTxt = truncateText(ctx, item.shieldText, maxItemWidth, statFont);
         ctx.fillText(sTxt, bounds.x + 5, bounds.y + 101);
       }
     }
@@ -552,24 +515,19 @@ export const renderHeroCards = (
 
     // Popover Box
     drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
-    ctx.fillStyle = 'rgba(222, 184, 135, 0.96)'; // Burlywood background
+    ctx.fillStyle = theme.palette.surface.popoverInventory; // Burlywood background
     ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#5C4033';
+    ctx.lineWidth = theme.shape.strokeWidth.regular;
+    ctx.strokeStyle = theme.palette.border.popoverInventory;
     ctx.stroke();
 
     // Popover Header Title
-    ctx.fillStyle = '#3E2723';
-    ctx.font = INV_TITLE_FONT;
+    ctx.fillStyle = theme.palette.text.inventoryTitle;
+    ctx.font = invTitleFont;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     const maxTitleW = bounds.width - closeButtonBounds.width - 16;
-    const displayTitle = truncateText(
-      ctx,
-      titleText,
-      maxTitleW,
-      INV_TITLE_FONT,
-    );
+    const displayTitle = truncateText(ctx, titleText, maxTitleW, invTitleFont);
     ctx.fillText(displayTitle, bounds.x + 8, bounds.y + 12);
 
     // Close Button (✕)
@@ -583,15 +541,20 @@ export const renderHeroCards = (
       3,
     );
     ctx.fillStyle = isCloseHovered
-      ? 'rgba(180, 50, 50, 0.3)'
-      : 'rgba(0, 0, 0, 0.1)';
+      ? theme.palette.surface.closeButtonHover
+      : theme.palette.surface.closeButton;
     ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = '#5C4033';
+    ctx.lineWidth = theme.shape.strokeWidth.thin;
+    ctx.strokeStyle = theme.palette.border.popoverInventory;
     ctx.stroke();
 
-    ctx.fillStyle = '#3E2723';
-    ctx.font = 'bold 11px sans-serif';
+    ctx.fillStyle = theme.palette.text.inventoryTitle;
+    ctx.font = composeFont(
+      theme,
+      theme.typography.sizes.sm,
+      theme.typography.weights.bold,
+      theme.typography.families.plain,
+    );
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -602,8 +565,13 @@ export const renderHeroCards = (
 
     // Items list
     if (items.length === 0) {
-      ctx.fillStyle = '#6D4C41';
-      ctx.font = 'italic 11px Arial, sans-serif';
+      ctx.fillStyle = theme.palette.text.inventoryEmpty;
+      ctx.font = composeFont(
+        theme,
+        theme.typography.sizes.sm,
+        theme.typography.weights.italic,
+        theme.typography.families.compact,
+      );
       ctx.textAlign = 'center';
       ctx.fillText('(Empty)', bounds.x + bounds.width / 2, bounds.y + 36);
     } else {
@@ -632,8 +600,13 @@ export const renderHeroCards = (
               )
             : false;
           if (!drawn && itemLayout.item.icon) {
-            ctx.fillStyle = '#271711';
-            ctx.font = '20px sans-serif';
+            ctx.fillStyle = theme.palette.text.inventoryItem;
+            ctx.font = composeFont(
+              theme,
+              theme.typography.sizes.display,
+              theme.typography.weights.regular,
+              theme.typography.families.plain,
+            );
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(
@@ -648,13 +621,13 @@ export const renderHeroCards = (
         ctx.beginPath();
         ctx.moveTo(itemB.x, itemB.y + itemB.height);
         ctx.lineTo(itemB.x + itemB.width, itemB.y + itemB.height);
-        ctx.strokeStyle = 'rgba(92, 64, 51, 0.3)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = theme.palette.border.inventoryDivider;
+        ctx.lineWidth = theme.shape.strokeWidth.thin;
         ctx.stroke();
 
         // Item Name
-        ctx.fillStyle = '#271711';
-        ctx.font = INV_ITEM_FONT;
+        ctx.fillStyle = theme.palette.text.inventoryItem;
+        ctx.font = invItemFont;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
 
@@ -666,19 +639,19 @@ export const renderHeroCards = (
           ctx,
           itemLayout.nameText,
           maxTextW,
-          INV_ITEM_FONT,
+          invItemFont,
         );
         ctx.fillText(displayName, textLeft, itemB.y + 2);
 
         // Item Description
         if (itemLayout.descriptionText) {
-          ctx.fillStyle = '#4E342E';
-          ctx.font = INV_DESC_FONT;
+          ctx.fillStyle = theme.palette.text.inventoryDescription;
+          ctx.font = invDescFont;
           const displayDesc = truncateText(
             ctx,
             itemLayout.descriptionText,
             maxTextW,
-            INV_DESC_FONT,
+            invDescFont,
           );
           ctx.fillText(displayDesc, textLeft, itemB.y + 16);
         }
@@ -693,14 +666,16 @@ export const renderHeroCards = (
           drawRoundedRect(ctx, btnB.x, btnB.y, btnB.width, btnB.height, 3);
 
           if (itemLayout.isUsable) {
-            ctx.fillStyle = isItemHovered ? '#16a34a' : '#15803d';
+            ctx.fillStyle = isItemHovered
+              ? theme.palette.surface.useButtonHover
+              : theme.palette.surface.useButton;
             ctx.fill();
-            ctx.strokeStyle = '#14532d';
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = theme.palette.border.useButton;
+            ctx.lineWidth = theme.shape.strokeWidth.thin;
             ctx.stroke();
 
-            ctx.fillStyle = '#ffffff';
-            ctx.font = INV_BTN_FONT;
+            ctx.fillStyle = theme.palette.text.bright;
+            ctx.font = invBtnFont;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(
@@ -710,14 +685,14 @@ export const renderHeroCards = (
             );
           } else {
             // Disabled / Used
-            ctx.fillStyle = 'rgba(120, 100, 90, 0.4)';
+            ctx.fillStyle = theme.palette.surface.useButtonDisabled;
             ctx.fill();
-            ctx.strokeStyle = 'rgba(92, 64, 51, 0.4)';
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = theme.palette.border.useButtonDisabled;
+            ctx.lineWidth = theme.shape.strokeWidth.thin;
             ctx.stroke();
 
-            ctx.fillStyle = '#5C4033';
-            ctx.font = INV_BTN_FONT;
+            ctx.fillStyle = theme.palette.text.inventoryUsed;
+            ctx.font = invBtnFont;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(

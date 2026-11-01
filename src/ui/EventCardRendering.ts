@@ -384,7 +384,7 @@ export const renderEventCard = (
     ctx.fillText('🎴', bounds.x + bounds.width / 2, bounds.y + 14);
 
     ctx.font = subheaderFont;
-    ctx.fillStyle = theme.palette.text.panelBody;
+    ctx.fillStyle = theme.palette.text.secondary;
     ctx.fillText(
       `${layout.deckSummary.remaining}`,
       bounds.x + bounds.width / 2,
@@ -432,7 +432,7 @@ export const renderEventCard = (
   ctx.font = headerFont;
   ctx.fillStyle = options?.isToggleHovered
     ? theme.palette.text.bright
-    : theme.palette.text.panelBody;
+    : theme.palette.text.secondary;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const toggleSymbol = isCollapsed ? '+' : '−';

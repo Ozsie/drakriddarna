@@ -28,8 +28,8 @@ export interface UiTheme {
       readonly muted: string;
       /** Corner-panel headers (diary, event card). */
       readonly panelHeader: string;
-      /** Corner-panel body text. */
-      readonly panelBody: string;
+      /** Secondary body text on panels and dialogs. */
+      readonly secondary: string;
       /** Success-tinted text on corner panels (fulfilled, notes). */
       readonly success: string;
       /** Parchment diary header. */
@@ -38,6 +38,20 @@ export interface UiTheme {
       readonly eventTitle: string;
       /** Gold score-chip text. */
       readonly hudScore: string;
+      /** Dimmed text (disabled inputs). */
+      readonly dimmed: string;
+      /** Selected row/list text (gold tint). */
+      readonly rowSelected: string;
+      /** Title text on the inventory popover. */
+      readonly inventoryTitle: string;
+      /** Item name text on the inventory popover. */
+      readonly inventoryItem: string;
+      /** Item description text on the inventory popover. */
+      readonly inventoryDescription: string;
+      /** Empty-inventory note text. */
+      readonly inventoryEmpty: string;
+      /** 'Used' label on a spent inventory item. */
+      readonly inventoryUsed: string;
       /** Green log-entry text in the open dropdown. */
       readonly hudLogEntry: string;
       /** Warm gold dungeon-intro title. */
@@ -86,6 +100,8 @@ export interface UiTheme {
       readonly row: string;
       /** Hovered dialog row outline. */
       readonly rowHover: string;
+      /** Selected dialog row outline. */
+      readonly rowSelected: string;
       /** Input/track outline on dialogs. */
       readonly input: string;
       /** Secondary (neutral) button outline. */
@@ -102,7 +118,24 @@ export interface UiTheme {
       readonly hudScore: string;
       /** Green timer-chip outline. */
       readonly hudTimer: string;
-    };
+      /** Selected checkbox outline. */
+      readonly checkboxSelected: string;
+      /** Focused input outline. */
+      readonly inputFocus: string;
+      /** Primary (accent) button outline. */
+      readonly buttonPrimary: string;
+      /** Highlight border of the acting hero's card. */
+      readonly heroCurrent: string;
+      /** Inventory popover outline (parchment). */
+      readonly popoverInventory: string;
+      /** Inventory button outline on a hero card. */
+      readonly inventoryButton: string;
+      /** Inventory item divider. */
+      readonly inventoryDivider: string;
+      /** Usable-item button outline. */
+      readonly useButton: string;
+      /** Used-item button outline. */
+      readonly useButtonDisabled: string;
     readonly surface: {
       /** The translucent menu modal panel. */
       readonly panelMenu: string;
@@ -130,8 +163,10 @@ export interface UiTheme {
       readonly panelDialog: string;
       /** Resting dialog row fill. */
       readonly row: string;
-      /** Hovered/selected dialog row fill. */
+      /** Hovered dialog row fill. */
       readonly rowHover: string;
+      /** Selected dialog row fill (gold tint). */
+      readonly rowSelected: string;
       /** Input field and slider track fill. */
       readonly input: string;
       /** Slider track fill. */
@@ -152,6 +187,30 @@ export interface UiTheme {
       readonly hudLog: string;
       /** Open log-dropdown panel. */
       readonly hudDropdown: string;
+      /** Resting checkbox fill. */
+      readonly checkbox: string;
+      /** Selected checkbox fill. */
+      readonly checkboxSelected: string;
+      /** Primary (accent) button fill. */
+      readonly buttonPrimary: string;
+      /** Hovered primary button fill. */
+      readonly buttonPrimaryHover: string;
+      /** Inventory popover fill (parchment). */
+      readonly popoverInventory: string;
+      /** Inventory button fill on a hero card. */
+      readonly inventoryButton: string;
+      /** Hovered inventory button fill. */
+      readonly inventoryButtonHover: string;
+      /** Close-button fill inside a popover. */
+      readonly closeButton: string;
+      /** Hovered close-button fill inside a popover. */
+      readonly closeButtonHover: string;
+      /** Usable-item button fill. */
+      readonly useButton: string;
+      /** Hovered usable-item button fill. */
+      readonly useButtonHover: string;
+      /** Used-item button fill. */
+      readonly useButtonDisabled: string;
     };
     readonly overlay: {
       /** Backdrop behind the corner menu modal. */
@@ -164,6 +223,8 @@ export interface UiTheme {
       readonly vignetteStart: string;
       /** Vignette end over the welcome backdrop. */
       readonly vignetteEnd: string;
+      /** Backdrop behind centered dialogs. */
+      readonly scrimDialog: string;
     };
     readonly hover: {
       /** Hover fill over a dark circular button (radial menu). */
@@ -215,6 +276,7 @@ export interface UiTheme {
       readonly medium: number;
       readonly regular: number;
       readonly heavy: number;
+      readonly thick: number;
     };
   };
   readonly alpha: {

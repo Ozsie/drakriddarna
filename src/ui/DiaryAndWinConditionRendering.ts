@@ -508,7 +508,7 @@ export const renderDiaryAndWinConditions = (
     ctx.font = headerFont;
     ctx.fillStyle = options?.isToggleHovered
       ? theme.palette.text.bright
-      : theme.palette.text.panelBody;
+      : theme.palette.text.secondary;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -602,7 +602,7 @@ export const renderDiaryAndWinConditions = (
 
     // Note message lines
     ctx.font = bodyFont;
-    ctx.fillStyle = theme.palette.text.panelBody;
+    ctx.fillStyle = theme.palette.text.secondary;
     let msgY = noteItem.y + 14;
     for (const msgLine of noteItem.messageLines) {
       ctx.fillText(msgLine, contentX, msgY);
