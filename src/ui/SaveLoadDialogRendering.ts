@@ -15,6 +15,7 @@ import {
   drawModalFrame,
   drawModalHeader,
 } from '../uikit/kit/modalFrame';
+import { drawButton } from '../uikit/kit/button';
 import type { UiEnv } from '../uikit/env';
 import { defaultUiEnv } from './env';
 import { i18nTranslator } from './i18nAdapter';
@@ -450,35 +451,18 @@ export const renderSaveLoadDialog = (
 
   // Secondary button (Cancel)
   if (layout.secondaryButtonBounds && layout.secondaryButtonLabel) {
-    const sb = layout.secondaryButtonBounds;
-    const isHovered = Boolean(options?.hoveredSecondary);
-    ctx.fillStyle = isHovered
-      ? theme.palette.surface.buttonSecondaryHover
-      : theme.palette.surface.buttonSecondary;
-    drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
-    ctx.fill();
-
-    ctx.strokeStyle = theme.palette.border.buttonSecondary;
-    ctx.lineWidth = theme.shape.strokeWidth.thin;
-    drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
-    ctx.stroke();
-
-    ctx.fillStyle = theme.palette.text.body;
-    ctx.font = composeFont(
-      theme,
-      theme.typography.sizes.xl,
-      theme.typography.weights.bold,
-    );
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(
+    drawButton(
+      ctx,
+      layout.secondaryButtonBounds,
       layout.secondaryButtonLabel,
-      sb.x + sb.width / 2,
-      sb.y + sb.height / 2,
+      theme,
+      { variant: 'secondary', hovered: Boolean(options?.hoveredSecondary) },
     );
   }
 
-  // Action button (Save / Back)
+  // Action button (Save / Back). Deliberately not the kit button: in load
+  // mode it is a hybrid - secondary surfaces, primary stroke weight and a
+  // bright label - and the parity snapshot pins that.
   if (layout.actionButtonBounds && layout.actionButtonLabel) {
     const ab = layout.actionButtonBounds;
     const isHovered = Boolean(options?.hoveredAction);

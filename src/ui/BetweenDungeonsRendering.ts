@@ -26,6 +26,7 @@ import {
   drawModalFrame,
   drawModalHeader,
 } from '../uikit/kit/modalFrame';
+import { drawButton } from '../uikit/kit/button';
 import type { UiEnv } from '../uikit/env';
 import { defaultTheme, type UiTheme } from '../uikit/theme';
 import { defaultUiEnv } from './env';
@@ -1217,54 +1218,22 @@ export const renderBetweenDungeons = (
 
   // Secondary Button (Back)
   if (layout.secondaryButtonBounds && layout.secondaryButtonLabel) {
-    const sb = layout.secondaryButtonBounds;
-    const isHovered = Boolean(options?.hoveredSecondary);
-    ctx.fillStyle = isHovered
-      ? theme.palette.surface.buttonSecondaryHover
-      : theme.palette.surface.buttonSecondary;
-    drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
-    ctx.fill();
-
-    ctx.strokeStyle = theme.palette.border.buttonSecondary;
-    ctx.lineWidth = theme.shape.strokeWidth.thin;
-    drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
-    ctx.stroke();
-
-    ctx.fillStyle = theme.palette.text.body;
-    ctx.font = buttonFont;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(
+    drawButton(
+      ctx,
+      layout.secondaryButtonBounds,
       layout.secondaryButtonLabel,
-      sb.x + sb.width / 2,
-      sb.y + sb.height / 2,
+      theme,
+      { variant: 'secondary', hovered: Boolean(options?.hoveredSecondary) },
     );
   }
 
   // Action Button
   const ab = layout.actionButtonBounds;
-  const isHovered = Boolean(options?.hoveredAction);
   if (ab.width > 0) {
-    ctx.fillStyle = isHovered
-      ? theme.palette.surface.buttonPrimaryHover
-      : theme.palette.surface.buttonPrimary;
-    drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
-    ctx.fill();
-
-    ctx.strokeStyle = theme.palette.border.buttonPrimary;
-    ctx.lineWidth = theme.shape.strokeWidth.medium;
-    drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
-    ctx.stroke();
-
-    ctx.fillStyle = theme.palette.text.bright;
-    ctx.font = buttonFont;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(
-      layout.actionButtonLabel,
-      ab.x + ab.width / 2,
-      ab.y + ab.height / 2,
-    );
+    drawButton(ctx, ab, layout.actionButtonLabel, theme, {
+      variant: 'primary',
+      hovered: Boolean(options?.hoveredAction),
+    });
   }
 
   ctx.restore();

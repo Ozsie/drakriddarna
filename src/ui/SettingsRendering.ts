@@ -6,6 +6,7 @@ import {
 } from './HeroCardRendering';
 import { composeFont } from '../uikit/primitives/text';
 import { drawModalFrame, drawModalHeader } from '../uikit/kit/modalFrame';
+import { drawButton } from '../uikit/kit/button';
 import type { UiEnv } from '../uikit/env';
 import type { UiTheme } from '../uikit/theme';
 import { defaultUiEnv } from './env';
@@ -478,28 +479,10 @@ const renderBackButton = (
   isHovered: boolean,
   theme: UiTheme,
 ): void => {
-  ctx.fillStyle = isHovered
-    ? theme.palette.surface.buttonSecondaryHover
-    : theme.palette.surface.buttonSecondary;
-  drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
-  ctx.fill();
-  ctx.strokeStyle = theme.palette.border.buttonSecondary;
-  ctx.lineWidth = theme.shape.strokeWidth.thin;
-  drawRoundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 6);
-  ctx.stroke();
-  ctx.fillStyle = theme.palette.text.body;
-  ctx.font = composeFont(
-    theme,
-    theme.typography.sizes.xl,
-    theme.typography.weights.bold,
-  );
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(
-    label,
-    bounds.x + bounds.width / 2,
-    bounds.y + bounds.height / 2,
-  );
+  drawButton(ctx, bounds, label, theme, {
+    variant: 'secondary',
+    hovered: isHovered,
+  });
 };
 
 const renderPanel = (

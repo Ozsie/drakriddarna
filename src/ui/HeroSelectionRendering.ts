@@ -7,6 +7,7 @@ import {
 } from './HeroCardRendering';
 import { composeFont } from '../uikit/primitives/text';
 import { drawModalFrame, drawModalHeader } from '../uikit/kit/modalFrame';
+import { drawButton } from '../uikit/kit/button';
 import type { Translator, UiEnv } from '../uikit/env';
 import { defaultUiEnv } from './env';
 import { i18nTranslator } from './i18nAdapter';
@@ -480,57 +481,17 @@ export const renderHeroSelection = (
   }
 
   // Back button (secondary style, bottom-left).
-  const sb = layout.backButtonBounds;
-  const isSecondaryHovered = Boolean(options?.hoveredSecondary);
-  ctx.fillStyle = isSecondaryHovered
-    ? theme.palette.surface.buttonSecondaryHover
-    : theme.palette.surface.buttonSecondary;
-  drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
-  ctx.fill();
-  ctx.strokeStyle = theme.palette.border.buttonSecondary;
-  ctx.lineWidth = theme.shape.strokeWidth.thin;
-  drawRoundedRect(ctx, sb.x, sb.y, sb.width, sb.height, 6);
-  ctx.stroke();
-  ctx.fillStyle = theme.palette.text.body;
-  ctx.font = composeFont(
-    theme,
-    theme.typography.sizes.xl,
-    theme.typography.weights.bold,
-  );
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(
-    layout.backButtonLabel,
-    sb.x + sb.width / 2,
-    sb.y + sb.height / 2,
-  );
+  drawButton(ctx, layout.backButtonBounds, layout.backButtonLabel, theme, {
+    variant: 'secondary',
+    hovered: Boolean(options?.hoveredSecondary),
+  });
 
   // Start button (primary style, bottom-right); dimmed when disabled.
-  const ab = layout.startButtonBounds;
-  const isActionHovered = Boolean(options?.hoveredAction);
   ctx.globalAlpha = layout.startEnabled ? 1 : theme.alpha.dimmed;
-  ctx.fillStyle = isActionHovered
-    ? theme.palette.surface.buttonPrimaryHover
-    : theme.palette.surface.buttonPrimary;
-  drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
-  ctx.fill();
-  ctx.strokeStyle = theme.palette.border.buttonPrimary;
-  ctx.lineWidth = theme.shape.strokeWidth.medium;
-  drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
-  ctx.stroke();
-  ctx.fillStyle = theme.palette.text.bright;
-  ctx.font = composeFont(
-    theme,
-    theme.typography.sizes.xl,
-    theme.typography.weights.bold,
-  );
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(
-    layout.startButtonLabel,
-    ab.x + ab.width / 2,
-    ab.y + ab.height / 2,
-  );
+  drawButton(ctx, layout.startButtonBounds, layout.startButtonLabel, theme, {
+    variant: 'primary',
+    hovered: Boolean(options?.hoveredAction),
+  });
   ctx.globalAlpha = 1;
 
   ctx.restore();
