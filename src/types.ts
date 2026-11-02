@@ -644,6 +644,9 @@ export enum CornerType {
 export type ItemLocation = {
   item?: Item;
   position: Position;
+  // A fallback floor item: kept at dungeon start only while no hero
+  // carries an item with the same id (see `applyFallbackItems`).
+  onlyIfNotCarried?: boolean;
 };
 
 export type Note = {

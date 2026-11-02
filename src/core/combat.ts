@@ -90,6 +90,28 @@ const dropDownedMonster = (state: GameState, monster: Monster): void => {
   monster.inventory = [];
 };
 
+// A downed hero keeps their equipment until the end-of-scenario revive,
+// but an item a still-hidden secret needs would be stuck on the corpse
+// and could softlock the scenario (e.g. e1m4's necklace-revealed stair).
+// Drop such items on the floor where the hero fell so the party can
+// pick them up and reveal the secret.
+const dropSecretRevealItems = (state: GameState, hero: Hero): void => {
+  const neededIds = new Set(
+    (state.dungeon?.layout?.secrets ?? [])
+      .filter((secret) => !secret.found && secret.revealedBy)
+      .map((secret) => secret.revealedBy as string),
+  );
+  if (neededIds.size === 0) return;
+  hero.inventory = hero.inventory.filter((item) => {
+    if (!item || !neededIds.has(item.id ?? '')) return true;
+    state.dungeon.layout.items.push({
+      item,
+      position: { x: hero.position.x, y: hero.position.y },
+    });
+    return false;
+  });
+};
+
 export const processActorDowned = (
   state: GameState,
   target: Actor,
@@ -99,6 +121,7 @@ export const processActorDowned = (
   target.level = Level.APPRENTICE;
   playActorDeath(target);
   if (state.heroes.includes(target)) {
+    dropSecretRevealItems(state, target as Hero);
     const gm = getDifficulty(state);
     const onHeroDowned = gm.rules?.onHeroDowned ?? gm.onHeroDowned;
     onHeroDowned?.(target as Hero, state);

@@ -163,14 +163,20 @@ export type DeclarativeNote =
   | DeclarativeNoteObject
   | DeclarativeNoteTuple;
 
+export type ItemLocationOptions = {
+  onlyIfNotCarried?: boolean;
+};
+
 export type DeclarativeItemObject = {
   x: number;
   y: number;
   item?: Item;
+  onlyIfNotCarried?: boolean;
 };
 
 export type DeclarativeItemTuple =
   | [x: number, y: number, item: Item]
+  | [x: number, y: number, item: Item, options?: ItemLocationOptions]
   | [x: number, y: number];
 
 export type DeclarativeItem =
@@ -547,13 +553,13 @@ export const parseItem = (itemDef: DeclarativeItem): ItemLocation => {
     if (itemDef.length === 2) {
       return createRandomItem(itemDef[0], itemDef[1]);
     }
-    return createEquipment(itemDef[0], itemDef[1], itemDef[2]);
+    return createEquipment(itemDef[0], itemDef[1], itemDef[2], itemDef[3]);
   }
 
   if (!itemDef.item) {
     return createRandomItem(itemDef.x, itemDef.y);
   }
-  return createEquipment(itemDef.x, itemDef.y, itemDef.item);
+  return createEquipment(itemDef.x, itemDef.y, itemDef.item, itemDef);
 };
 
 export const parseInteractable = (

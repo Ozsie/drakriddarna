@@ -8,6 +8,7 @@ import {
   Side,
 } from '../../../types';
 import { defineDungeon } from '../../../dungeon/dungeonParser';
+import { magicItems } from '../../../items/magicItems';
 import {
   brazier,
   chandelier,
@@ -105,6 +106,13 @@ export const e1m6: Dungeon = defineDungeon({
       [SecretType.TRAP_DOOR, 5, 13],
     ],
     notes: [],
+    // Every door out of the starting room is reinforced, so a party
+    // that missed the giant's glove earlier in the campaign (the e1m3
+    // secret or e1m5's optional room-K deck dump) would be locked out
+    // of the KILL_ALL win condition. The glove lies on the floor of the
+    // starting room as a guaranteed fallback — but only when no hero
+    // already carries one.
+    items: [[10, 1, magicItems[2], { onlyIfNotCarried: true }]],
   },
   onRoomDiscovered: {
     F: 'stopEvents',

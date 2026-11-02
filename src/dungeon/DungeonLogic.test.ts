@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { Colour, MonsterType } from '../types';
-import { createMonster } from './DungeonLogic';
+import { Colour, ItemType, MonsterType } from '../types';
+import type { GameState, Hero, Item } from '../types';
+import { applyFallbackItems, createMonster } from './DungeonLogic';
 import { getMonsterTemplate } from '../monsters/MonsterRegistry';
 import {
   MID_TIER_MONSTER_A,
@@ -91,4 +92,60 @@ describe('monster name translation coverage', () => {
       });
     },
   );
+});
+
+describe('applyFallbackItems', () => {
+  const glove: Item = {
+    id: 'giants_glove',
+    name: "Giant's Glove",
+    type: ItemType.MAGIC,
+    amountInDeck: 1,
+    value: 0,
+  };
+  const sword: Item = {
+    id: 'some_sword',
+    name: 'Sword',
+    type: ItemType.WEAPON,
+    amountInDeck: 1,
+    value: 0,
+  };
+
+  const createState = (hero: Hero): GameState =>
+    ({
+      heroes: [hero],
+      dungeon: {
+        name: 'test-dungeon',
+        layout: {
+          items: [
+            { item: glove, position: { x: 1, y: 1 }, onlyIfNotCarried: true },
+            { item: sword, position: { x: 2, y: 2 } },
+          ],
+        },
+      },
+    }) as unknown as GameState;
+
+  it('removes a fallback item when a hero already carries it', () => {
+    const hero = { inventory: [glove] } as unknown as Hero;
+    const state = createState(hero);
+
+    applyFallbackItems(state);
+
+    expect(state.dungeon.layout.items).toEqual([
+      { item: sword, position: { x: 2, y: 2 } },
+    ]);
+  });
+
+  it('keeps a fallback item when nobody carries it', () => {
+    const hero = { inventory: [sword] } as unknown as Hero;
+    const state = createState(hero);
+
+    applyFallbackItems(state);
+
+    expect(state.dungeon.layout.items).toHaveLength(2);
+    expect(state.dungeon.layout.items).toContainEqual({
+      item: glove,
+      position: { x: 1, y: 1 },
+      onlyIfNotCarried: true,
+    });
+  });
 });

@@ -6,6 +6,7 @@ import {
   getDamageString,
   getEffectiveMaxMovement,
   getEffectiveMaxHealth,
+  processActorDowned,
   removeDamageIndicator,
   takeDamage,
 } from './combat';
@@ -662,5 +663,116 @@ describe('Ring of Precision re-roll', () => {
     expect(
       state.actionLog.some((l) => l.key === 'logs.takeDamage.usedEffect'),
     ).toBe(false);
+  });
+});
+
+describe('secret-reveal items drop from downed heroes', () => {
+  const necklace: Item = {
+    id: 'necklace_of_light',
+    name: 'Necklace of Light',
+    type: ItemType.MAGIC,
+    amountInDeck: 1,
+    value: 0,
+  };
+  const sword: Item = {
+    id: 'some_sword',
+    name: 'Sword',
+    type: ItemType.WEAPON,
+    amountInDeck: 1,
+    value: 0,
+  };
+  const stairSecret = (found: boolean) =>
+    ({
+      id: 'secret_stair',
+      name: 'Stair',
+      type: 'Note',
+      position: { x: 16, y: 11 },
+      found,
+      revealedBy: 'necklace_of_light',
+    }) as never;
+
+  const createHero = (inventory: Item[]): Hero => ({
+    name: 'Fearik',
+    health: 5,
+    maxHealth: 10,
+    defense: 0,
+    actions: 2,
+    movement: 5,
+    maxMovement: 5,
+    colour: Colour.Yellow,
+    incapacitated: false,
+    position: { x: 2, y: 2 },
+    experience: 0,
+    level: Level.KNIGHT,
+    weapon: {
+      name: 'Dagger',
+      dice: 1,
+      amountInDeck: 1,
+      range: 1,
+      twoHanded: false,
+      useHearHeroes: true,
+      type: ItemType.WEAPON,
+      value: 0,
+      ignoresShield: false,
+      ignoresArmour: false,
+    },
+    inventory,
+    isInventoryOpen: false,
+    ignoredByMonsters: false,
+  });
+
+  const createState = (hero: Hero, secrets: never[]): GameState => ({
+    heroes: [hero],
+    dungeon: {
+      ...dummyDungeon,
+      killCount: 0,
+      layout: {
+        ...dummyDungeon.layout,
+        monsters: [],
+        items: [],
+        secrets,
+      },
+    },
+    actionLog: [],
+    itemDeck: [],
+    magicItemDeck: [],
+    settings: {},
+    eventDeck: [],
+    reRender: false,
+    drawEvents: true,
+  });
+
+  it('drops the item an unfound secret needs where the hero fell', () => {
+    const hero = createHero([necklace, sword]);
+    const state = createState(hero, [stairSecret(false)]);
+
+    processActorDowned(state, hero);
+
+    expect(hero.health).toBe(0);
+    // Only the necklace left the corpse; the sword waits for the revive
+    expect(hero.inventory).toEqual([sword]);
+    expect(state.dungeon.layout.items).toEqual([
+      { item: necklace, position: { x: 2, y: 2 } },
+    ]);
+  });
+
+  it('keeps the inventory once the needing secret has been found', () => {
+    const hero = createHero([necklace, sword]);
+    const state = createState(hero, [stairSecret(true)]);
+
+    processActorDowned(state, hero);
+
+    expect(hero.inventory).toEqual([necklace, sword]);
+    expect(state.dungeon.layout.items).toEqual([]);
+  });
+
+  it('keeps the inventory when no secret needs an item', () => {
+    const hero = createHero([necklace, sword]);
+    const state = createState(hero, []);
+
+    processActorDowned(state, hero);
+
+    expect(hero.inventory).toEqual([necklace, sword]);
+    expect(state.dungeon.layout.items).toEqual([]);
   });
 });

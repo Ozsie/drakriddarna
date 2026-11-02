@@ -27,6 +27,7 @@ import {
   TRADE,
   RESET_ON,
 } from '../items/ItemLogic';
+import { applyFallbackItems } from './DungeonLogic';
 import { soundEffectManager } from '../audio';
 import { addLog, i18n, clearActorAnimations, doReRender } from '../core';
 import {
@@ -426,6 +427,8 @@ export const goToNextDungeon = (state: GameState): boolean => {
 
 const startDungeon = (state: GameState, nextDungeon: Dungeon): void => {
   state.dungeon = nextDungeon;
+  // Drop fallback items a hero already carries before the dungeon begins
+  applyFallbackItems(state);
   state.actionLog = [
     {
       key: 'logs.youHaveReached',

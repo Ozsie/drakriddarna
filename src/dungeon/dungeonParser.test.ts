@@ -188,6 +188,31 @@ describe('dungeonParser', () => {
       const i2 = parseItem({ x: 4, y: 5, item: weapons[1] });
       expect(i2).toEqual({ position: { x: 4, y: 5 }, item: weapons[1] });
     });
+
+    it('parses the onlyIfNotCarried fallback option from tuple and object', () => {
+      const i1 = parseItem([2, 3, weapons[0], { onlyIfNotCarried: true }]);
+      expect(i1).toEqual({
+        position: { x: 2, y: 3 },
+        item: weapons[0],
+        onlyIfNotCarried: true,
+      });
+
+      const i2 = parseItem({
+        x: 4,
+        y: 5,
+        item: weapons[1],
+        onlyIfNotCarried: true,
+      });
+      expect(i2).toEqual({
+        position: { x: 4, y: 5 },
+        item: weapons[1],
+        onlyIfNotCarried: true,
+      });
+
+      // Without the option nothing is set
+      const i3 = parseItem([2, 3, weapons[0]]);
+      expect(i3).toEqual({ position: { x: 2, y: 3 }, item: weapons[0] });
+    });
   });
 
   describe('parseLight', () => {

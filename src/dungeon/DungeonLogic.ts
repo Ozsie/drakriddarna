@@ -117,14 +117,36 @@ export const createEquipment = (
   x: number,
   y: number,
   item: Item,
+  options?: { onlyIfNotCarried?: boolean },
 ): ItemLocation => ({
   item,
   position: { x, y },
+  ...(options?.onlyIfNotCarried ? { onlyIfNotCarried: true } : {}),
 });
 
 export const createRandomItem = (x: number, y: number): ItemLocation => ({
   position: { x, y },
 });
+
+// Fallback floor items (declared `onlyIfNotCarried`) are removed at
+// dungeon start when a hero already carries an item with the same id,
+// so a missed win-condition item can be recovered without handing a
+// party that already has it a second copy. Downed heroes count too:
+// they keep their equipment when revived. Runs on the run-private
+// campaign clone at dungeon start (see `startDungeon` and `init`).
+export const applyFallbackItems = (state: GameState): void => {
+  const isCarried = (itemId?: string): boolean =>
+    Boolean(
+      itemId &&
+        state.heroes.some((hero) =>
+          hero.inventory.some((item) => item?.id === itemId),
+        ),
+    );
+  state.dungeon.layout.items = state.dungeon.layout.items.filter(
+    (itemLocation) =>
+      !(itemLocation.onlyIfNotCarried && isCarried(itemLocation.item?.id)),
+  );
+};
 
 // Default light source values, shared by `createLight` and rendering.
 export const DEFAULT_LIGHT_COLOR = '#FFB85C';

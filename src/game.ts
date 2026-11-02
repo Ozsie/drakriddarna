@@ -1,6 +1,6 @@
 import type { Dungeon, GameState, Hero, Position } from './types';
 import { ConditionType, Level } from './types';
-import { onCheckFulfilled } from './dungeon/DungeonLogic';
+import { onCheckFulfilled, applyFallbackItems } from './dungeon/DungeonLogic';
 import { CURRENT_SAVE_VERSION, migrateSaveState } from './saveMigration';
 import { writeSave } from './saves/SavesLogic';
 import { getCampaign, isKnownCampaign, DEFAULT_CAMPAIGN_ID } from './campaigns';
@@ -187,6 +187,8 @@ export const init = (
   }
   applyStartingEquipment(state.heroes as Hero[], selectedGameMaster);
   resetLiveHeroes(state);
+  // Drop fallback items a hero already carries before the dungeon begins
+  applyFallbackItems(state);
   // The run's timer starts when the first dungeon's intro is closed, or
   // immediately when that dungeon has no intro.
   beginDungeonTiming(state, hasDungeonIntro(campaign.dungeons[0]));
