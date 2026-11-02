@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import type { GameState, Hero, Secret } from '../types';
-import { Colour, ItemType, Level, SecretType } from '../types';
-import { checkForTrapDoor } from './SecretsLogic';
+import type { Door, GameState, Hero, Secret } from '../types';
+import { Colour, ItemType, Level, SecretType, Side } from '../types';
+import { checkForTrapDoor, searchForSecret } from './SecretsLogic';
 import { getGameMaster, resetRng, setRng } from '../core';
 import { armour } from '../items/armours';
 import { shields } from '../items/shields';
@@ -43,7 +43,11 @@ const createHero = (): Hero => ({
   deathSound: '',
 });
 
-const createState = (hero: Hero, secrets: Secret[]): GameState =>
+const createState = (
+  hero: Hero,
+  secrets: Secret[],
+  doors: Door[] = [],
+): GameState =>
   ({
     dungeon: {
       name: 'Test Dungeon',
@@ -52,7 +56,7 @@ const createState = (hero: Hero, secrets: Secret[]): GameState =>
       killCount: 0,
       layout: {
         grid: ['   ', '   ', '   '],
-        doors: [],
+        doors,
         monsters: [],
         items: [],
         secrets,
@@ -113,5 +117,60 @@ describe('trap door pitfall', () => {
     expect(checkForTrapDoor(state)).toBe(false);
     expect(hero.health).toBe(10);
     expect(hero.incapacitated).toBe(false);
+  });
+});
+
+describe('searching for hidden doors', () => {
+  afterEach(() => {
+    resetRng();
+  });
+
+  const makeDoor = (side: Side): Door => ({
+    side,
+    x: 2,
+    y: 2,
+    locked: false,
+    trapped: false,
+    open: false,
+    hidden: true,
+    trapAttacks: 0,
+    reinforced: false,
+  });
+
+  it('finds a right facing door from the square above its opening squares', () => {
+    // 5/6 rolls a 6: the search succeeds for the apprentice hero
+    setRng(() => 5 / 6);
+    const hero = createHero();
+    hero.position = { x: 2, y: 1 };
+    const door = makeDoor(Side.RIGHT);
+    const state = createState(hero, [], [door]);
+
+    searchForSecret(state);
+
+    expect(door.hidden).toBe(false);
+  });
+
+  it('finds a down facing door from the square right of its opening squares', () => {
+    setRng(() => 5 / 6);
+    const hero = createHero();
+    hero.position = { x: 3, y: 3 };
+    const door = makeDoor(Side.DOWN);
+    const state = createState(hero, [], [door]);
+
+    searchForSecret(state);
+
+    expect(door.hidden).toBe(false);
+  });
+
+  it('does not find a door from a square beyond the searchable ones', () => {
+    setRng(() => 5 / 6);
+    const hero = createHero();
+    hero.position = { x: 2, y: 0 };
+    const door = makeDoor(Side.RIGHT);
+    const state = createState(hero, [], [door]);
+
+    searchForSecret(state);
+
+    expect(door.hidden).toBe(true);
   });
 });

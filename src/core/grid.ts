@@ -1,5 +1,6 @@
 import type {
   Actor,
+  Door,
   Dungeon,
   GameState,
   Hero,
@@ -60,6 +61,28 @@ export const sideOffset = (side: Side): [number, number] => {
     default:
       return [0, -1];
   }
+};
+
+// Squares a hidden door can be searched from: the two squares flanking
+// the door edge (the ones it can be opened from) plus the squares
+// directly beside those, perpendicular to the door's side — a left or
+// right facing door is findable from above and below its opening
+// squares, an up or down facing door from the left and right.
+export const isDoorSearchableFrom = (
+  door: Door,
+  x: number,
+  y: number,
+): boolean => {
+  const [dx, dy] = sideOffset(door.side);
+  const [px, py] = dx !== 0 ? [0, 1] : [1, 0];
+  return (
+    (door.x === x && door.y === y) ||
+    (door.x + dx === x && door.y + dy === y) ||
+    (door.x + px === x && door.y + py === y) ||
+    (door.x - px === x && door.y - py === y) ||
+    (door.x + dx + px === x && door.y + dy + py === y) ||
+    (door.x + dx - px === x && door.y + dy - py === y)
+  );
 };
 
 export const isDoorEdge = (

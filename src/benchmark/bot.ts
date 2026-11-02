@@ -9,6 +9,7 @@ import {
   getDifficulty,
   isDiscovered,
   isDoorEdge,
+  isDoorSearchableFrom,
   isNeighbouring,
   canSearchThrough,
 } from '../core';
@@ -213,14 +214,7 @@ export const playHeroTurn = (state: GameState): boolean => {
       (d) =>
         d.hidden &&
         !d.open &&
-        ((d.x === hero.position.x && d.y === hero.position.y) ||
-          !!isDoorEdge(
-            state.dungeon.layout,
-            hero.position.x,
-            hero.position.y,
-            d.x,
-            d.y,
-          )),
+        isDoorSearchableFrom(d, hero.position.x, hero.position.y),
     );
 
     const canFindSecret = state.dungeon.layout.secrets.some(

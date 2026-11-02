@@ -5,7 +5,7 @@ import { getDifficulty } from '../core';
 import {
   canSearchThrough,
   findCell,
-  isDoorEdge,
+  isDoorSearchableFrom,
   isNeighbouring,
   isSamePosition,
 } from '../core';
@@ -165,13 +165,7 @@ const secretAsActor = (secret: Secret): Actor =>
 const findHiddenDoor = (state: GameState, pos: Position) =>
   state.dungeon.layout.doors
     .filter((secret) => secret.hidden)
-    .find((door) => {
-      if (!isNeighbouring({ x: door.x, y: door.y }, pos.x, pos.y)) return false;
-      return (
-        (door.x === pos.x && door.y === pos.y) ||
-        !!isDoorEdge(state.dungeon.layout, pos.x, pos.y, door.x, door.y)
-      );
-    });
+    .find((door) => isDoorSearchableFrom(door, pos.x, pos.y));
 
 const findTrap = (state: GameState, pos: Position) =>
   state.dungeon.layout.doors

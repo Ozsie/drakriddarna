@@ -7,6 +7,7 @@ import {
   getDist,
   hasLineOfSight,
   isDoorEdge,
+  isDoorSearchableFrom,
   isCorridorCell,
   isNeighbouring,
   isSamePosition,
@@ -159,6 +160,36 @@ describe('grid module', () => {
     expect(isDoorEdge(layout, 1, 1, 2, 1)).toBe(door);
     expect(isDoorEdge(layout, 2, 1, 1, 1)).toBe(door);
     expect(isDoorEdge(layout, 1, 1, 1, 2)).toBeUndefined();
+  });
+
+  it('isDoorSearchableFrom covers the opening squares and the squares beside them', () => {
+    const rightDoor = makeDoor({ x: 4, y: 5, side: Side.RIGHT });
+
+    // Opening squares (4,5) and (5,5), plus above and below both
+    expect(isDoorSearchableFrom(rightDoor, 4, 5)).toBe(true);
+    expect(isDoorSearchableFrom(rightDoor, 5, 5)).toBe(true);
+    expect(isDoorSearchableFrom(rightDoor, 4, 4)).toBe(true);
+    expect(isDoorSearchableFrom(rightDoor, 4, 6)).toBe(true);
+    expect(isDoorSearchableFrom(rightDoor, 5, 4)).toBe(true);
+    expect(isDoorSearchableFrom(rightDoor, 5, 6)).toBe(true);
+    // Not from anywhere else
+    expect(isDoorSearchableFrom(rightDoor, 4, 3)).toBe(false);
+    expect(isDoorSearchableFrom(rightDoor, 6, 5)).toBe(false);
+    expect(isDoorSearchableFrom(rightDoor, 6, 4)).toBe(false);
+    expect(isDoorSearchableFrom(rightDoor, 3, 5)).toBe(false);
+
+    const downDoor = makeDoor({ x: 4, y: 5, side: Side.DOWN });
+
+    // Opening squares (4,5) and (4,6), plus left and right of both
+    expect(isDoorSearchableFrom(downDoor, 4, 5)).toBe(true);
+    expect(isDoorSearchableFrom(downDoor, 4, 6)).toBe(true);
+    expect(isDoorSearchableFrom(downDoor, 3, 5)).toBe(true);
+    expect(isDoorSearchableFrom(downDoor, 5, 5)).toBe(true);
+    expect(isDoorSearchableFrom(downDoor, 3, 6)).toBe(true);
+    expect(isDoorSearchableFrom(downDoor, 5, 6)).toBe(true);
+    // Not from above or below the opening squares
+    expect(isDoorSearchableFrom(downDoor, 4, 4)).toBe(false);
+    expect(isDoorSearchableFrom(downDoor, 4, 7)).toBe(false);
   });
 
   it('canSearchThrough allows same cell and open passages', () => {
