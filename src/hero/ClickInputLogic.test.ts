@@ -532,6 +532,47 @@ describe('zone of control during click movement', () => {
   });
 });
 
+describe('click movement cost matches stepwise movement', () => {
+  it('charges 1 movement point per step for a pure diagonal path', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    hero.movement = 3;
+    // One action left: when the move spends the last movement point,
+    // consumeActions cannot replenish it, so the exact charge is visible
+    hero.actions = 1;
+
+    onTargetCell(state, { x: 4, y: 4 });
+
+    expect(hero.position).toEqual({ x: 4, y: 4 });
+    expect(hero.movement).toBe(0);
+    expect(hero.actions).toBe(0);
+  });
+
+  it('charges 1 movement point per step for a mixed straight and diagonal path', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    hero.movement = 3;
+    hero.actions = 1;
+
+    onTargetCell(state, { x: 4, y: 3 });
+
+    expect(hero.position).toEqual({ x: 4, y: 3 });
+    expect(hero.movement).toBe(0);
+    expect(hero.actions).toBe(0);
+  });
+
+  it('rejects a diagonal path longer than the remaining movement', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    hero.movement = 2;
+
+    onTargetCell(state, { x: 4, y: 4 });
+
+    expect(hero.position).toEqual({ x: 1, y: 1 });
+    expect(hero.movement).toBe(2);
+  });
+});
+
 describe('reach weapon line of sight', () => {
   it('blocks a range-2 attack through a wall', () => {
     const state = createSplitState();

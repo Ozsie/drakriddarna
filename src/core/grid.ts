@@ -166,22 +166,13 @@ export const canSearchThrough = (
 export const getDist = (a: Position, b: Position): number =>
   Math.sqrt(Math.pow(a.x - b?.x, 2) + Math.pow(a.y - b?.y, 2));
 
-export const distanceInGrid = (a: Position, b: Position): number => {
-  const dx = Math.abs(b.x - a.x);
-  const dy = Math.abs(b.y - a.y);
-
-  const min = Math.min(dx, dy);
-  const max = Math.max(dx, dy);
-
-  const diagonalSteps = min;
-  const straightSteps = max - min;
-  let factor = Math.sqrt(2);
-  if (straightSteps === 0) {
-    factor = 1;
-  }
-
-  return Math.floor(factor * diagonalSteps + straightSteps);
-};
+// Steps between two cells when a step is 1 movement point whether
+// straight or diagonal (RULES.md: 1 point per tile, 8-directional
+// movement): the Chebyshev distance, the step count of the shortest
+// 8-directional path. Keyboard steps charge this per step and click
+// movement charges it for the whole path, so both cost the same.
+export const distanceInGrid = (a: Position, b: Position): number =>
+  Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y));
 
 export const isRoomDiscovered = (dungeon: Dungeon, cell: string): boolean =>
   dungeon.discoveredRooms.includes(cell);

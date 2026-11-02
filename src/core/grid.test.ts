@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   canSearchThrough,
+  distanceInGrid,
   findCell,
   findNeighbouringHeroes,
   getDist,
@@ -74,6 +75,18 @@ describe('grid module', () => {
 
   it('getDist computes euclidean distance', () => {
     expect(getDist({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5);
+  });
+
+  it('distanceInGrid charges 1 per step, straight or diagonal', () => {
+    // Straight line: one point per tile
+    expect(distanceInGrid({ x: 1, y: 1 }, { x: 4, y: 1 })).toBe(3);
+    // Pure diagonal: still one point per tile, not floor(√2 · steps)
+    expect(distanceInGrid({ x: 1, y: 1 }, { x: 4, y: 4 })).toBe(3);
+    // Mixed straight and diagonal: the shortest 8-directional path
+    expect(distanceInGrid({ x: 1, y: 1 }, { x: 4, y: 3 })).toBe(3);
+    expect(distanceInGrid({ x: 1, y: 1 }, { x: 2, y: 7 })).toBe(6);
+    // A diagonal neighbour is a single step
+    expect(distanceInGrid({ x: 2, y: 2 }, { x: 3, y: 3 })).toBe(1);
   });
 
   it('normaliseVector steps 1 unit along vector', () => {
