@@ -426,3 +426,58 @@ describe('grid module', () => {
     expect(neighbours[0].position).toEqual({ x: 1, y: 1 });
   });
 });
+
+describe('pits and line of sight', () => {
+  const stateWithPit = (): GameState =>
+    ({
+      dungeon: {
+        layout: {
+          grid: [
+            '#######',
+            '#AAAAA#',
+            '##AAAA#',
+            '#AAAAA#',
+            '#AAAAA#',
+            '#AAAAA#',
+            '#######',
+          ],
+          monsters: [],
+          pits: [{ x: 2, y: 1 }],
+          pillars: [],
+        },
+      },
+      heroes: [],
+    }) as unknown as GameState;
+
+  it('combat line of sight passes straight over a pit', () => {
+    const state = stateWithPit();
+
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 1 }, 48, state, false),
+    ).toBe(true);
+  });
+
+  it('combat line of sight is not cut by a pit at a corner pinch', () => {
+    const state = stateWithPit();
+    // The diagonal ray (1, 1) -> (3, 3) passes the corner of (2, 2):
+    // the flank (2, 1) is a pit, the flank (1, 2) is a wall. A pit is a
+    // hole in the floor, so sight passes over it and the pinch is not
+    // blocked.
+    expect(
+      hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 3 }, 48, state, false),
+    ).toBe(true);
+  });
+
+  it('walking lines still treat a pit as non-walkable', () => {
+    const state = stateWithPit();
+
+    // Straight walk over the pit is blocked...
+    expect(hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 1 }, 2, state, true)).toBe(
+      false,
+    );
+    // ...and so is cutting the corner past a pit flank
+    expect(hasLineOfSight({ x: 1, y: 1 }, { x: 3, y: 3 }, 2, state, true)).toBe(
+      false,
+    );
+  });
+});

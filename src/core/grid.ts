@@ -303,8 +303,21 @@ export const stepAlongLine = (
   if (cornerDx !== 0 && cornerDy !== 0) {
     const flank1: Position = { x: lastCell.x + cornerDx, y: lastCell.y };
     const flank2: Position = { x: lastCell.x, y: lastCell.y + cornerDy };
-    const flank1Blocked = isBlockingCell(state, flank1);
-    const flank2Blocked = isBlockingCell(state, flank2);
+    // A pit is a hole in the floor: it stays a blocker for walking
+    // lines (pits are not walkable, not even at a corner pinch), but
+    // combat line of sight passes over it — a pit flank never cuts a
+    // sight ray.
+    const pinchBlocked = (flank: Position): boolean => {
+      if (
+        !walking &&
+        state.dungeon.layout.pits?.some((pit) => isSamePosition(pit, flank))
+      ) {
+        return false;
+      }
+      return isBlockingCell(state, flank);
+    };
+    const flank1Blocked = pinchBlocked(flank1);
+    const flank2Blocked = pinchBlocked(flank2);
     const flank1Walled =
       isEdgeBlocked(state.dungeon.layout, lastCell, flank1) ||
       isEdgeBlocked(state.dungeon.layout, flank1, nextCellPosition);
