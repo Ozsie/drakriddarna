@@ -3,18 +3,17 @@
 ## Worth investigating
 
 - [ ] Necklace of Light: usable once per round and makes the wearer fully untargetable (esp. e1m6) — consider once per scenario and/or a weaker effect
-- [ ] Potion of Speed never resets (`USED` without `RESET_ON`) — add `RESET_ON: [NEXT_SCENARIO]` if once-per-scenario is intended
 - [ ] Items lost when a monster is killed by non-hero damage (earthquake): the monster is never removed from the layout, grants no XP and doesn't count toward `KILL_AT_LEAST`, and its inventory is lost — route all deaths through one `killMonster`-style path (like the sun-stone event does); chaos-sword kills now transfer inventory via the shared `killMonster`, dead monsters no longer trigger the zone of control, and the earthquake case is what remains
 - [ ] `checkForNextToMonster` ignores room discovery — heroes are halted (and log-spoiled) by monsters standing in undiscovered areas
 - [ ] Diagonal movement cost differs between click-path (`distanceInGrid`, `floor(√2·diagonals + straights)`) and keyboard steps (1 per step) for paths with 3+ diagonal cells — unify
 - [ ] Dark lord fire spray deviations: officially an adjacent rider forces the sword (impl can spray), the green lord hits one rider plus adjacent figures (impl hits the whole room), and monster targets aren't LOS-filtered
-- [ ] Door opening: officially only the square directly in front of a door can open it (a figure standing there blocks others) — impl allows opening from any adjacent square including diagonals
-- [ ] Event deck subsets: officially the tutorial has no event cards and adventures 1-2 use only cards 1-6 (7-16 come later) — impl uses the full deck from e1m1 with GM pacing instead — consider per-dungeon subsets
-- [ ] Pit fall damage: officially a normal attack with 3 white dice where armour doesn't protect (shields unaddressed, presumably protect) — impl ignores both — decide
+- [ ] Door opening: officially only the square directly in front of a door can open it (a figure standing there blocks others) — edge-based doors have removed diagonal opening, but impl still allows opening from either side of the door edge and has no blocking-figure rule
+- [ ] Pit fall damage: officially a normal attack with 3 white dice where armour doesn't protect (shields unaddressed, presumably protect) — currently pits are plain non-walkable blockers (no falling, no damage) — decide
 - [ ] Dropped equipment: officially any rider can pick it up from a square adjacent to the marker — impl requires standing on the item tile
 - [ ] Missable win-condition items (giant's glove for e1m6, necklace for e1m4) plus no looting of fallen heroes can softlock scenarios — consider looting dead heroes, passing items to adjacent heroes, or fallback hints
 - [ ] Earthquake damage is reduced by armour and shields — decide whether the boulder should ignore them
 - [ ] Door traps (1-2 dice) are weak compared to the suggested 3 dice — reconsider `trapAttacks` values
+- [x] Potion of Speed never resets (`USED` without `RESET_ON`) — now resets on next scenario (once per scenario use)
 - [x] Orc bow LOS: officially the shot line is blocked by any figure — already correct: the combat LOS path (`stepAlongLine` with `walking=false`) blocks heroes and monsters; only the walking variant ignores heroes
 
 # Features
@@ -153,6 +152,7 @@
 
 ## Bugs
 
+- [ ] Collapsed corridor is not rendered as soon as the event triggers
 - [x] Lights do not reset positions when a new dungeon is loaded
 - [x] Pillars can be generated in a way that blocks paths
 - [x] The volume sliders are not draggable correctly

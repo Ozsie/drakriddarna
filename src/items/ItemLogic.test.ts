@@ -191,6 +191,48 @@ describe('ItemLogic - Healing Herbs rework', () => {
   });
 });
 
+describe('potion of speed resets once per scenario', () => {
+  let hero1: Hero;
+  let potion: Item;
+  let state: GameState;
+
+  beforeEach(() => {
+    hero1 = createHero('Fearik', 1, 1);
+    const basePotion = magicItems.find((i) => i.id === 'potion_of_speed')!;
+    potion = JSON.parse(JSON.stringify(basePotion)) as Item;
+    hero1.inventory = [potion];
+    state = createGameState([hero1]);
+  });
+
+  it('potion_of_speed definition resets on NEXT_DUNGEON', () => {
+    const potionDef = magicItems.find((i) => i.id === 'potion_of_speed')!;
+    expect(potionDef.properties?.RESET_ON).toEqual([NEXT_DUNGEON]);
+    expect(potionDef.reset).toBe('potionOfSpeedOnReset');
+  });
+
+  it('grants the actions bonus once, then is consumed until scenario reset', () => {
+    state.currentActor = hero1;
+    state.targetActor = hero1;
+
+    useItem(state, potion);
+    expect(hero1.actions).toBe(4);
+    expect(potion.properties?.[USED]).toBe(true);
+
+    // Second use in the same scenario is blocked
+    const actionsAfterFirstUse = hero1.actions;
+    useItem(state, potion);
+    expect(hero1.actions).toBe(actionsAfterFirstUse);
+
+    // Scenario reset makes it usable again
+    resetOnNextDungeon(state);
+    expect(potion.properties?.[USED]).toBe(false);
+
+    useItem(state, potion);
+    expect(hero1.actions).toBe(actionsAfterFirstUse + 2);
+    expect(potion.properties?.[USED]).toBe(true);
+  });
+});
+
 describe('chaos sword kills', () => {
   it("transfers the slain monster's inventory to the killer", () => {
     const hero = createHero('Fearik', 1, 1);

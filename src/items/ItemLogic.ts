@@ -416,6 +416,9 @@ export const onReset: {
   ringOfPrecisionOnReset: (state: GameState, self: Item) => {
     if (self.properties) self.properties[USED] = false;
   },
+  potionOfSpeedOnReset: (state: GameState, self: Item) => {
+    if (self.properties) self.properties[USED] = false;
+  },
   // Backward compatibility alias
   necklaceOfLightOnUse: (state: GameState, self: Item) => {
     if (self.properties) self.properties[USED] = false;

@@ -156,8 +156,10 @@ export const magicItems: Item[] = [
       ACTIONS_BONUS: 2,
       ACTIVE: true,
       [TARGET]: TARGET_SELF,
+      RESET_ON: [NEXT_DUNGEON],
     },
     effect: 'potionOfSpeedOnUse',
+    reset: 'potionOfSpeedOnReset',
     useSound: 'sfx/buff.mp3',
   },
   {
