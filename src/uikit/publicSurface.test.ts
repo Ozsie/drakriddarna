@@ -20,6 +20,10 @@ const resolveModule = (fromDir: string, specifier: string): string | null => {
     const file = base + suffix;
     try {
       readFileSync(file);
+      // The package entry itself is the public surface, not a deep
+      // import: `from '…/uikit'` is the sanctioned consumption pattern
+      // and never needs re-exporting.
+      if (file === join(KIT_ROOT, 'index.ts')) return null;
       return file;
     } catch {
       // try the next suffix
