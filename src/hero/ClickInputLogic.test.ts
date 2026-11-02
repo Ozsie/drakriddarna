@@ -18,6 +18,7 @@ import {
   onTargetSelf,
   screenToGridPosition,
   doMouseLogic,
+  executeRadialAction,
   getCursorType,
 } from './ClickInputLogic';
 import { RadialAction } from './RadialMenuLogic';
@@ -831,5 +832,40 @@ describe('zone of control leniency when passing other heroes', () => {
     onTargetCell(state, { x: 4, y: 1 });
 
     expect(hero.position).toEqual({ x: 3, y: 1 });
+  });
+});
+
+describe('PICK_UP_ITEM executed from an adjacent square', () => {
+  it('picks up the item the entry points at, without stepping onto it', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    hero.position = { x: 2, y: 2 };
+    const floorItem = {
+      item: {
+        id: 'giants_glove',
+        name: "Giant's Glove",
+        type: ItemType.MAGIC,
+        amountInDeck: 1,
+        value: 0,
+      },
+      position: { x: 3, y: 2 },
+    };
+    state.dungeon.layout.items = [floorItem];
+    state.magicItemDeck = [floorItem.item];
+
+    executeRadialAction(
+      state,
+      RadialAction.PICK_UP_ITEM,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      floorItem,
+    );
+
+    expect(hero.inventory).toContain(floorItem.item);
+    expect(state.dungeon.layout.items).toEqual([]);
+    expect(state.magicItemDeck).toEqual([]);
+    expect(hero.position).toEqual({ x: 2, y: 2 });
   });
 });

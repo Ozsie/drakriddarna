@@ -3364,6 +3364,7 @@ export class DungeonBoardController {
             clickedBtn.entry.interactable,
             clickedBtn.entry.item,
             clickedBtn.entry.targetHero,
+            clickedBtn.entry.itemLocation,
           );
           if (!this.externalState) {
             gameStateStore.set(curState);

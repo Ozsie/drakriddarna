@@ -470,3 +470,63 @@ describe('OPEN_DOOR front squares', () => {
     ).toBe(false);
   });
 });
+
+describe('PICK_UP_ITEM from adjacent squares', () => {
+  const floorItem = (x: number, y: number) => ({
+    item: {
+      id: `item_${x}_${y}`,
+      name: 'Sword',
+      type: ItemType.WEAPON,
+      amountInDeck: 1,
+      value: 0,
+    },
+    position: { x, y },
+  });
+
+  it('offers one entry per item on or adjacent to the hero, none for distant items', () => {
+    const hero = createTestHero(2, 2);
+    const state = createTestState(hero);
+    state.dungeon.layout.items = [
+      floorItem(2, 2), // under the hero
+      floorItem(3, 2), // orthogonally adjacent
+      floorItem(1, 1), // diagonally adjacent
+      floorItem(4, 4), // two squares away — out of reach
+    ];
+
+    const entries = getAvailableRadialActions(state, hero).filter(
+      (e) => e.action === RadialAction.PICK_UP_ITEM,
+    );
+
+    expect(entries).toHaveLength(3);
+    expect(entries.map((e) => e.itemLocation?.position)).toEqual(
+      expect.arrayContaining([
+        { x: 2, y: 2 },
+        { x: 3, y: 2 },
+        { x: 1, y: 1 },
+      ]),
+    );
+    // Each entry carries its item for the menu label and the pickup
+    expect(
+      entries.every(
+        (e) =>
+          e.item?.id ===
+          `item_${String(e.itemLocation?.position.x)}_${String(
+            e.itemLocation?.position.y,
+          )}`,
+      ),
+    ).toBe(true);
+  });
+
+  it('offers PICK_UP_ITEM for an unassigned item spot next to the hero', () => {
+    const hero = createTestHero(2, 2);
+    const state = createTestState(hero);
+    state.dungeon.layout.items = [{ position: { x: 3, y: 2 } }];
+
+    const entries = getAvailableRadialActions(state, hero).filter(
+      (e) => e.action === RadialAction.PICK_UP_ITEM,
+    );
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].itemLocation?.position).toEqual({ x: 3, y: 2 });
+  });
+});

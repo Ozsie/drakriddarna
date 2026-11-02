@@ -6,7 +6,13 @@ import type {
   ItemLocation,
   InteractableCell,
 } from '../types';
-import { isDoorEdge, isSamePosition, canAct, distanceInGrid } from '../core';
+import {
+  isDoorEdge,
+  isSamePosition,
+  canAct,
+  distanceInGrid,
+  isNeighbouring,
+} from '../core';
 import { canOpenDoor, liveHeroes } from './HeroLogic';
 import {
   ACTIVE,
@@ -33,6 +39,7 @@ export type RadialMenuEntry = {
   door?: Door;
   interactable?: InteractableCell;
   item?: Item;
+  itemLocation?: ItemLocation;
   targetHero?: Hero;
 };
 
@@ -71,6 +78,21 @@ export const findItemAtHero = (
 ): ItemLocation | undefined =>
   state.dungeon.layout.items.find((item) =>
     isSamePosition(item.position, hero.position),
+  );
+
+// Items can be picked up from their own square or from any square
+// adjacent to them (official rules): `isNeighbouring` covers the item
+// tile itself and the eight squares around it.
+export const findItemsNearHero = (
+  state: GameState,
+  hero: Hero,
+): ItemLocation[] =>
+  state.dungeon.layout.items.filter((itemLocation) =>
+    isNeighbouring(
+      hero.position,
+      itemLocation.position.x,
+      itemLocation.position.y,
+    ),
   );
 
 export const getAvailableRadialActionsForTarget = (
@@ -131,9 +153,13 @@ export const getAvailableRadialActions = (
     (item) => item && item.properties?.[BREAK_LOCK],
   );
 
-  if (findItemAtHero(state, hero)) {
-    entries.push({ action: RadialAction.PICK_UP_ITEM });
-  }
+  findItemsNearHero(state, hero).forEach((itemLocation) => {
+    entries.push({
+      action: RadialAction.PICK_UP_ITEM,
+      itemLocation,
+      item: itemLocation.item,
+    });
+  });
 
   const interactable = findInteractableAtHero(state, hero);
   if (interactable && canAct(hero)) {

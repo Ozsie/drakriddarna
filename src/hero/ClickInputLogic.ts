@@ -142,6 +142,7 @@ export const executeRadialAction = (
   interactable?: InteractableCell,
   item?: Item,
   targetHero?: Hero,
+  itemLocation?: ItemLocation,
 ) => {
   const hero = state.currentActor as Hero;
   switch (action) {
@@ -160,9 +161,12 @@ export const executeRadialAction = (
       break;
     }
     case RadialAction.PICK_UP_ITEM: {
-      const itemLocation = findItemAtHero(state, hero);
-      if (itemLocation) {
-        pickUpItemAtHero(state, hero, itemLocation);
+      // An entry for a nearby item carries its floor location; entries
+      // without one (e.g. the self-click path) fall back to whatever
+      // lies under the hero.
+      const targetLocation = itemLocation ?? findItemAtHero(state, hero);
+      if (targetLocation) {
+        pickUpItemAtHero(state, hero, targetLocation);
       }
       break;
     }
