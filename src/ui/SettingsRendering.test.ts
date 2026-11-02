@@ -10,10 +10,11 @@ import {
   renderSettings,
 } from './SettingsRendering';
 import { DEFAULT_APP_SETTINGS } from '../settings/AppSettings';
+import { toSettingsViewModel } from './viewmodels/settings';
 import { loadTranslations } from '$lib/translations';
 
-const createMockCtx = (): CanvasRenderingContext2D => {
-  return {
+const createMockCtx = (): CanvasRenderingContext2D =>
+  ({
     save: vi.fn(),
     restore: vi.fn(),
     beginPath: vi.fn(),
@@ -39,8 +40,7 @@ const createMockCtx = (): CanvasRenderingContext2D => {
     textAlign: '',
     textBaseline: '',
     globalAlpha: 1,
-  } as unknown as CanvasRenderingContext2D;
-};
+  }) as unknown as CanvasRenderingContext2D;
 
 describe('SettingsRendering', () => {
   beforeAll(async () => {
@@ -99,6 +99,22 @@ describe('SettingsRendering', () => {
       const audioRow = layout.rows.find((row) => row.id === 'audioVolume');
       expect(audioRow?.dimmed).toBe(false);
       expect(audioRow?.slider?.valueText).toBe('80%');
+    });
+  });
+
+  describe('production build gating', () => {
+    it('omits the debug row so it can not be used to cheat', () => {
+      const vm = toSettingsViewModel(settings, undefined, {
+        debugAvailable: false,
+      });
+      expect(vm.rows.map((row) => row.id)).toEqual([
+        'music',
+        'audio',
+        'musicVolume',
+        'audioVolume',
+        'language',
+        'credits',
+      ]);
     });
   });
 

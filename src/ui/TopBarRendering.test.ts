@@ -8,7 +8,7 @@ import {
   getTopBarLayout,
   renderTopBar,
 } from './TopBarRendering';
-import { measureTextWidth, truncateText } from '../uikit/primitives/text';
+import { measureTextWidth, truncateText } from '../uikit';
 import { isPointInRect as isPointInBounds } from '../uikit/primitives/geometry';
 import { renderUI } from './UIRendering';
 import type { GameState } from '../types';
@@ -55,6 +55,27 @@ const createMockState = (overrides?: Partial<GameState>): GameState =>
   }) as unknown as GameState;
 
 describe('TopBarRendering', () => {
+  describe('production build gating', () => {
+    it('hides the debug button even when debug mode is on in the save', () => {
+      const state = createMockState({
+        settings: { debug: true },
+      });
+      const vm = toTopBarViewModel(state, i18nTranslator, false, {
+        debugAvailable: false,
+      });
+      expect(vm.showDebug).toBe(false);
+    });
+
+    it('hides the debug button regardless of the debugMode override', () => {
+      const state = createMockState();
+      const vm = toTopBarViewModel(state, i18nTranslator, false, {
+        debugMode: true,
+        debugAvailable: false,
+      });
+      expect(vm.showDebug).toBe(false);
+    });
+  });
+
   describe('formatting helpers', () => {
     it('formats turn counter text', () => {
       expect(formatTurnCounter(0)).toBe('Turn 0');

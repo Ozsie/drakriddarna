@@ -1,5 +1,10 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { getWelcomeHit, getWelcomeLayout, renderWelcome, WELCOME_FALLBACK_COLOR, } from './WelcomeRendering';
+import {
+  getWelcomeHit,
+  getWelcomeLayout,
+  renderWelcome,
+  WELCOME_FALLBACK_COLOR,
+} from './WelcomeRendering';
 import { getCoverFitBounds } from '../uikit';
 import { loadTranslations } from '$lib/translations';
 

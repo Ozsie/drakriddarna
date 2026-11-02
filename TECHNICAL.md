@@ -132,7 +132,12 @@ run is ongoing, like the Save button — returns to the game), the campaign
 end screen dismisses into it, and it owns the former menu items (new game,
 save/load, language, the debug on/off switch and the credits). The canvas
 menu that remains is the **debug menu** (its event-picker sub view
-included), opened from the top bar's Debug button.
+included), opened from the top bar's Debug button. Debug mode is a
+development tool gated by `isDebugModeAvailable()`
+(`src/settings/debugMode.ts`, built on `$app/environment`'s compile-time
+`dev` flag): production builds hide the settings toggle and the Debug
+button — and never activate debug mode from a save or persisted setting —
+so the debug menu cannot be used to cheat on a deployed build.
 
 App-level settings (music and sound effects on/off plus their volumes, and
 the debug on/off switch) live in `src/settings/AppSettings.ts`, persisted

@@ -5,10 +5,7 @@
 import { DifficultLevels } from '../../core';
 import { campaigns } from '../../campaigns';
 import type { Translator } from '../../uikit';
-import type {
-  NewGameDialogRowVm,
-  NewGameDialogViewModel,
-} from '../../uikit';
+import type { NewGameDialogRowVm, NewGameDialogViewModel } from '../../uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 export const getCampaignRows = (

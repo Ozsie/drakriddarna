@@ -11,6 +11,7 @@
   import { locale } from '$lib/translations';
   import { getCampaign } from '../campaigns';
   import { resolveTileset } from '../dungeon/TilesetLogic';
+  import { isDebugModeAvailable } from '../settings/debugMode';
   import { DungeonBoardController } from './DungeonBoardController';
 
   export let state: GameState | undefined = undefined;
@@ -31,10 +32,13 @@
   let containerHeight = 0;
 
   $: activeState = state ?? ($gameStateStore as GameState | null) ?? undefined;
+  // Debug mode (overlays included) exists only in dev builds; a
+  // production deploy never activates it, whatever a save carries.
   $: activeDebugMode =
-    debugMode !== undefined
+    isDebugModeAvailable() &&
+    (debugMode !== undefined
       ? debugMode
-      : Boolean(activeState?.settings?.['debug'] ?? $debugModeStore);
+      : Boolean(activeState?.settings?.['debug'] ?? $debugModeStore));
   $: dungeon = activeState?.dungeon;
   $: campaign = activeState?.campaignId
     ? getCampaign(activeState.campaignId)
