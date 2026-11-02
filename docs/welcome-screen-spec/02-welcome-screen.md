@@ -1,8 +1,8 @@
 # 02 — Welcome Screen
 
 The welcome screen is what a fresh visitor sees. It has three parts: a
-full-canvas background image, a centered panel with three buttons, and a
-build footer at the bottom.
+full-canvas background image, a centered panel with buttons (Continue and
+Save only while a run is ongoing), and a build footer at the bottom.
 
 ## Background image
 
@@ -41,13 +41,18 @@ screen and the save/load dialogs:
 Helvetica, sans-serif`, color `#fce28a`) using the human-authored welcome
   header string. No canvas-drawn game logo — title treatment belongs to the
   background image.
-- Three buttons stacked vertically below the header, in order:
+- The buttons stack vertically below the header, in order (Continue and
+  Save only render while an ongoing run is parked on the welcome screen —
+  a run whose final dungeon is beaten is a finished campaign, not an
+  ongoing run):
 
-  | Button    | Behavior                                                                                                                                                                                                                                                                          |
-  | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | New Game  | Opens the existing new-game dialog (same callback as the canvas menu's New Game). Choosing campaign, game master and game mode and pressing Begin advances to the hero selection screen (see 04); Start there begins the run. Cancel at either step returns to the welcome screen |
-  | Load Game | Opens the existing load dialog in load mode (same callback as the canvas menu's Load). Choosing a save loads it; Back returns to the welcome screen                                                                                                                               |
-  | Settings  | Switches the welcome view to `'settings'` (see 03)                                                                                                                                                                                                                                |
+  | Button    | Behavior                                                                                                                                                                                                                            |
+  | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | Continue  | Returns to the ongoing run in the store (switches the phase back to `'game'`); hidden when no run is ongoing. The in-game Menu button opens the welcome screen without ending the run — this button is the way back                 |
+  | New Game  | Opens the existing new-game dialog. Choosing campaign, game master and game mode and pressing Begin advances to the hero selection screen (see 04); Start there begins the run. Cancel at either step returns to the welcome screen |
+  | Save      | Opens the existing save dialog (name input); hidden when no run is ongoing. Back returns to the welcome screen                                                                                                                      |
+  | Load Game | Opens the existing load dialog in load mode. Choosing a save loads it; Back returns to the welcome screen                                                                                                                           |
+  | Settings  | Switches the welcome view to `'settings'` (see 03)                                                                                                                                                                                  |
 
 - Button rows follow the dialog row style: rounded rect radius 6, rest fill
   `rgba(255, 255, 255, 0.04)` / border `#334155`, hover fill `#334155` /
@@ -85,11 +90,13 @@ All new strings are human-authored in at least one language; AI may produce
 the translations into the other language. Needed keys (naming follows the
 existing `content.menu.*` structure):
 
-| Key                                     | Meaning                                                                                    |
-| --------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `content.menu.welcome.header`           | The welcome panel heading                                                                  |
-| `content.menu.welcome.buttons.newGame`  | New Game button (may reuse `content.menu.mainMenu.buttons.newGame` if the wording matches) |
-| `content.menu.welcome.buttons.loadGame` | Load Game button (same reuse rule)                                                         |
-| `content.menu.welcome.buttons.settings` | Settings button                                                                            |
+| Key                                     | Meaning                                                                              |
+| --------------------------------------- | ------------------------------------------------------------------------------------ |
+| `content.menu.welcome.header`           | The welcome panel heading                                                            |
+| `content.menu.welcome.buttons.continue` | Continue button (only while a run is ongoing)                                        |
+| `content.menu.welcome.buttons.newGame`  | New Game button (the wording the main menu's New Game item had)                      |
+| `content.menu.welcome.buttons.saveGame` | Save button (only while a run is ongoing; the wording the main menu's Save item had) |
+| `content.menu.welcome.buttons.loadGame` | Load Game button                                                                     |
+| `content.menu.welcome.buttons.settings` | Settings button                                                                      |
 
 `content.menu.settings.*` (settings screen labels) are listed in 03.

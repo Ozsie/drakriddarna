@@ -11,7 +11,10 @@ import {
   renderMonsterCards,
   type RenderMonsterCardsOptions,
 } from './MonsterCardRendering';
-import { renderMenuModal, type RenderMenuOptions } from './MenuRendering';
+import {
+  renderDebugMenuModal,
+  type RenderDebugMenuOptions,
+} from './DebugMenuRendering';
 import {
   renderDiaryAndWinConditions,
   type RenderDiaryAndWinConditionsOptions,
@@ -35,7 +38,7 @@ export interface RenderUIOptions {
   monsterCards?: RenderMonsterCardsOptions;
   eventCard?: RenderEventCardOptions;
   diary?: RenderDiaryAndWinConditionsOptions;
-  menu?: RenderMenuOptions;
+  debugMenu?: RenderDebugMenuOptions;
   dungeonIntro?: RenderDungeonIntroOptions;
   betweenDungeons?: RenderBetweenDungeonsOptions;
 }
@@ -80,9 +83,9 @@ export const renderUI = (
     viewWidth > 0 &&
     viewHeight &&
     viewHeight > 0 &&
-    options?.menu
+    options?.debugMenu
   ) {
-    renderMenuModal(ctx, viewWidth, viewHeight, state, options.menu);
+    renderDebugMenuModal(ctx, viewWidth, viewHeight, state, options.debugMenu);
   }
   if (
     state &&
@@ -136,14 +139,14 @@ export {
   type MonsterCardsHitResult,
 } from './MonsterCardRendering';
 export {
-  renderMenuModal,
-  getMenuLayout,
-  getMenuHit,
-  type MenuItemLayout,
-  type MenuLayout,
-  type RenderMenuOptions,
-  type MenuHitResult,
-} from './MenuRendering';
+  renderDebugMenuModal,
+  getDebugMenuLayout,
+  getDebugMenuHit,
+  type DebugMenuItemLayout,
+  type DebugMenuLayout,
+  type RenderDebugMenuOptions,
+  type DebugMenuHitResult,
+} from './DebugMenuRendering';
 export {
   renderDiaryAndWinConditions,
   getDiaryAndWinConditionsLayout,

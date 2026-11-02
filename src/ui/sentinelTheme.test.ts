@@ -8,8 +8,8 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { Colour } from '../types';
 import { createRecordingContext } from '../uikit/testing/recordingContext';
 import { createSentinelTheme } from '../uikit/testing/sentinelTheme';
-import type { UiEnv } from '../uikit/env';
-import { defaultTheme } from '../uikit/theme';
+import type { UiEnv } from '../uikit';
+import { defaultTheme } from '../uikit';
 import { defaultUiEnv } from './env';
 import {
   COMPACT_WIDTH,
@@ -32,7 +32,7 @@ import { renderDiaryAndWinConditions } from './DiaryAndWinConditionRendering';
 import { renderEventCard } from './EventCardRendering';
 import { renderBetweenDungeons } from './BetweenDungeonsRendering';
 import { renderDungeonIntro } from './DungeonIntroRendering';
-import { renderMenuModal } from './MenuRendering';
+import { renderDebugMenuModal } from './DebugMenuRendering';
 import { renderRadialMenu } from './RadialMenuRendering';
 import { renderSaveLoadDialog } from './SaveLoadDialogRendering';
 import { renderNewGameDialog } from './NewGameDialogRendering';
@@ -139,12 +139,18 @@ const runs: [string, (ctx: CanvasRenderingContext2D, env: UiEnv) => void][] = [
       }),
   ],
   [
-    'menuModal',
+    'debugMenuModal',
     (ctx, env) =>
-      renderMenuModal(ctx, REGULAR_WIDTH, REGULAR_HEIGHT, midCampaignState(), {
-        env,
-        view: 'main',
-      }),
+      renderDebugMenuModal(
+        ctx,
+        REGULAR_WIDTH,
+        REGULAR_HEIGHT,
+        midCampaignState(),
+        {
+          env,
+          view: 'debug',
+        },
+      ),
   ],
   [
     'radialMenu',
@@ -278,10 +284,14 @@ const GLYPH_ALLOWLIST = new Set([
 // User-typed or save-content names from the fixtures.
 const USER_CONTENT_ALLOWLIST = new Set(['Sir Sten', 'Before the gates']);
 
-// Pre-existing untranslated toggle labels in MenuLogic (game-side i18n
-// debt — fixing them needs human-authored source text, see the AI
-// policy; recorded in docs/ui-kit-inventory.md).
+// Pre-existing untranslated toggle labels in MenuLogic and the settings
+// view model (game-side i18n debt — fixing them needs human-authored
+// source text, see the AI policy; recorded in docs/ui-kit-inventory.md).
 const TOGGLE_LABEL = /^(Music|Debug|Sound|Audio): (On|Off)$/;
+
+// The debug menu header falls back to plain "Debug" while its key is
+// untranslated through the global store — same i18n debt family.
+const PLAIN_FALLBACK_LABELS = new Set(['Debug']);
 
 // Durations (mm:ss, h:mm:ss, with centiseconds) and bare counts.
 const DATA_SHAPE = /^-?\d+(:\d{2})+(\.\d+)?$|^-?\d+([./]\d+)* ?(%|XP)?$/;
@@ -295,6 +305,7 @@ const isAllowed = (text: string): boolean =>
   TEXT_MARKER.test(text) ||
   GLYPH_ALLOWLIST.has(text) ||
   USER_CONTENT_ALLOWLIST.has(text) ||
+  PLAIN_FALLBACK_LABELS.has(text) ||
   TOGGLE_LABEL.test(text) ||
   DATA_SHAPE.test(text) ||
   // Multi-token labels (e.g. a menu item with an appended game-master

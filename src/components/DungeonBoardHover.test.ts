@@ -8,7 +8,7 @@ import {
   updateDungeonIntroHover,
   updateEventCardHover,
   updateHeroCardsHover,
-  updateMenuHover,
+  updateDebugMenuHover,
   updateMonsterCardsHover,
   updateNewGameDialogHover,
   updateTopBarHover,
@@ -161,18 +161,18 @@ describe('top bar hover', () => {
   });
 });
 
-describe('canvas menu hover', () => {
+describe('canvas debug menu hover', () => {
   it('tracks the hovered menu item and clears card hovers', () => {
     const hover = createBoardHoverState();
     hover.hoveredInventoryHeroName = 'Fearik';
     hover.hoveredRadialIndex = 1;
 
-    const result = updateMenuHover(hover, {
+    const result = updateDebugMenuHover(hover, {
       type: 'item',
-      item: { id: 'debug', label: 'Debug', onClick: () => undefined },
+      item: { id: 'reveal_map', label: 'Reveal Map', onClick: () => undefined },
     });
 
-    expect(hover.hoveredMenuItemId).toBe('debug');
+    expect(hover.hoveredMenuItemId).toBe('reveal_map');
     expect(hover.hoveredInventoryHeroName).toBeNull();
     expect(hover.hoveredRadialIndex).toBeNull();
     expect(result.cursor).toBe('pointer');
@@ -180,8 +180,8 @@ describe('canvas menu hover', () => {
 
   it('shows the default cursor over the backdrop and clears the item', () => {
     const hover = createBoardHoverState();
-    hover.hoveredMenuItemId = 'debug';
-    const result = updateMenuHover(hover, { type: 'backdrop' });
+    hover.hoveredMenuItemId = 'reveal_map';
+    const result = updateDebugMenuHover(hover, { type: 'backdrop' });
     expect(hover.hoveredMenuItemId).toBeNull();
     expect(result.cursor).toBe('default');
   });

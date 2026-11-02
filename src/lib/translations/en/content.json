@@ -3,6 +3,9 @@
     "welcome": {
       "header": "Dragonfire",
       "buttons": {
+        "continue": "Continue",
+        "newGame": "New Game",
+        "saveGame": "Save",
         "loadGame": "Load Game",
         "settings": "Settings"
       }
@@ -13,7 +16,20 @@
       "audio": "SFX",
       "musicVolume": "Music Volume",
       "audioVolume": "SFX Volume",
+      "debug": "Debug",
+      "language": "-> Svenska",
       "credits": "Credits"
+    },
+    "debugMenu": {
+      "header": "Debug",
+      "buttons": {
+        "testingGrounds": "To Testing Grounds",
+        "shuffleDeck": "Shuffle Deck",
+        "selectNextEvent": "Select Next Event",
+        "outputGameState": "Output Game State",
+        "revealMap": "Reveal Map",
+        "nextDungeon": "To Next Dungeon"
+      }
     },
     "heroSelection": {
       "header": "Hero Selction",
@@ -23,25 +39,6 @@
       }
     },
     "menuButton": "Menu",
-    "mainMenu": {
-      "header": "Main Menu",
-      "buttons": {
-        "newGame": "New Game",
-        "saveGame": "Save",
-        "loadGame": "Load",
-        "debug": "Debug",
-        "music": "Music",
-        "testingGrounds": "To Testing Grounds",
-        "language": "-> Svenska",
-        "shuffleDeck": "Shuffle Deck",
-        "selectNextEvent": "Select Next Event",
-        "outputGameState": "Output Game State",
-        "revealMap": "Reveal Map",
-        "nextDungeon": "To Next Dungeon",
-        "gameMaster": "Game Master:",
-        "rights": "Rights & Licenses"
-      }
-    },
     "saveGame": {
       "header": "Save Game",
       "subtitle": "Name your save",
@@ -90,8 +87,7 @@
   },
   "actions": {
     "next": "Next",
-    "action": "Action",
-    "nextLevel": "Next Level"
+    "action": "Action"
   },
   "hero": {
     "actions": "Actions",

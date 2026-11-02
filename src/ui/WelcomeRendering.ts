@@ -7,8 +7,8 @@
 // work unchanged, with the exact same pixels: parity snapshots cover
 // the whole chain.
 
-import type { UiEnv } from '../uikit/env';
-import type { Rect } from '../uikit/primitives/geometry';
+import type { UiEnv } from '../uikit';
+import type { Rect } from '../uikit';
 import {
   hitTestWelcome,
   layoutWelcome,
@@ -17,12 +17,16 @@ import {
   renderWelcomeFooter as renderWelcomeFooterComponent,
   type WelcomeLayout as KitLayout,
 } from '../uikit/components/welcome';
-import { toWelcomeViewModel, type WelcomeButtonId } from './viewmodels/welcome';
-import { defaultTheme } from '../uikit/theme';
+import {
+  toWelcomeViewModel,
+  type WelcomeButtonId,
+  type WelcomeViewOptions,
+} from './viewmodels/welcome';
+import { defaultTheme } from '../uikit';
 import { legacyUiContext, defaultUiEnv } from './env';
 import { AssetId, getAssetUrl } from './assets';
 
-export type { WelcomeButtonId } from './viewmodels/welcome';
+export type { WelcomeButtonId, WelcomeViewOptions } from './viewmodels/welcome';
 export { getCoverFitBounds } from '../uikit/components/welcome';
 
 /** The human-authored welcome background, served like other static assets. */
@@ -48,6 +52,11 @@ export interface WelcomeLayout {
 
 export interface RenderWelcomeOptions {
   buildInfo?: { date: string; hash: string } | null;
+  /**
+   * Whether an ongoing run exists in the store; Continue and Save only
+   * appear then.
+   */
+  hasOngoingRun?: boolean;
   /** Hovered main-view button, for the row highlight. */
   hoveredButton?: WelcomeButtonId | null;
   /**
@@ -60,12 +69,23 @@ export interface RenderWelcomeOptions {
 
 export type WelcomeHitResult = WelcomeButtonId | null;
 
+const viewOptionsFor = (
+  options: RenderWelcomeOptions | undefined,
+): WelcomeViewOptions | undefined =>
+  options?.hasOngoingRun === undefined
+    ? undefined
+    : { hasOngoingRun: options.hasOngoingRun };
+
 const kitLayoutFor = (
   viewWidth: number,
   viewHeight: number,
   options: RenderWelcomeOptions | undefined,
 ): KitLayout => {
-  const vm = toWelcomeViewModel(options?.env?.t, options?.buildInfo);
+  const vm = toWelcomeViewModel(
+    options?.env?.t,
+    options?.buildInfo,
+    viewOptionsFor(options),
+  );
   return layoutWelcome(vm, {
     x: 0,
     y: 0,
@@ -99,8 +119,9 @@ export const getWelcomeHit = (
   viewHeight: number,
   x: number,
   y: number,
+  options?: RenderWelcomeOptions,
 ): WelcomeHitResult => {
-  const layout = kitLayoutFor(viewWidth, viewHeight, undefined);
+  const layout = kitLayoutFor(viewWidth, viewHeight, options);
   const hit = hitTestWelcome(layout, { x, y });
   return (hit as WelcomeButtonId | null) ?? null;
 };
@@ -116,7 +137,11 @@ export const renderWelcomeBackground = (
   viewHeight: number,
   options?: RenderWelcomeOptions,
 ): void => {
-  const vm = toWelcomeViewModel(options?.env?.t);
+  const vm = toWelcomeViewModel(
+    options?.env?.t,
+    undefined,
+    viewOptionsFor(options),
+  );
   renderWelcomeBackgroundComponent(
     legacyUiContext(ctx, options?.env),
     vm,
@@ -137,14 +162,18 @@ export const renderWelcomeFooter = (
   viewHeight: number,
   buildInfo?: { date: string; hash: string } | null,
   env: UiEnv = defaultUiEnv,
+  options?: RenderWelcomeOptions,
 ): void => {
   if (!buildInfo) return;
-  const kitLayout = layoutWelcome(toWelcomeViewModel(env.t, buildInfo), {
-    x: 0,
-    y: 0,
-    width: viewWidth,
-    height: viewHeight,
-  });
+  const kitLayout = layoutWelcome(
+    toWelcomeViewModel(env.t, buildInfo, viewOptionsFor(options)),
+    {
+      x: 0,
+      y: 0,
+      width: viewWidth,
+      height: viewHeight,
+    },
+  );
   renderWelcomeFooterComponent(legacyUiContext(ctx, env), kitLayout);
 };
 
@@ -154,7 +183,11 @@ export const renderWelcome = (
   viewHeight: number,
   options?: RenderWelcomeOptions,
 ): void => {
-  const vm = toWelcomeViewModel(options?.env?.t, options?.buildInfo);
+  const vm = toWelcomeViewModel(
+    options?.env?.t,
+    options?.buildInfo,
+    viewOptionsFor(options),
+  );
   const kitLayout = kitLayoutFor(viewWidth, viewHeight, options);
   if (!kitLayout.hasContent) return;
   renderWelcomeComponent(kitLayout, vm, legacyUiContext(ctx, options?.env), {

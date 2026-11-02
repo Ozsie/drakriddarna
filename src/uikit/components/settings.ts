@@ -1,7 +1,7 @@
-// Settings component: the welcome screen's Settings sub view (music and
-// audio toggles, volume sliders, credits button) and its Credits sub
-// view (the rights rows). Kit component per the 02 contract — the view
-// models carry every label, toggle state, slider value and dimmed flag
+// Settings component: the welcome screen's Settings sub view (toggle
+// rows, volume sliders, plain button rows) and its Credits sub view (the
+// rights rows). Kit component per the 02 contract — the view models
+// carry every label, toggle state, slider value and dimmed flag
 // prebuilt by the game-side adapter; hits are semantic row ids.
 
 import { drawRoundedRect } from '../primitives/roundedRect';
@@ -62,7 +62,7 @@ export interface SettingsLayout {
 export type SettingsHit =
   | { kind: 'toggle'; rowId: string }
   | { kind: 'slider'; rowId: string }
-  | { kind: 'credits' }
+  | { kind: 'button'; rowId: string }
   | { kind: 'back' }
   | { kind: 'panel' }
   | { kind: 'backdrop' }
@@ -265,7 +265,7 @@ export const hitTestSettings = (
         return { kind: 'toggle', rowId: row.id };
       }
       if (row.kind === 'button') {
-        return { kind: 'credits' };
+        return { kind: 'button', rowId: row.id };
       }
     }
   }

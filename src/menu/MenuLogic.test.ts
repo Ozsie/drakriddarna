@@ -1,22 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  getDebugMenuHeader,
   getDebugMenuItems,
-  getDebugMenuLabel,
-  getDifficultyMenuLabel,
+  getDebugMenuItemsForView,
   getEventMenuItems,
-  getMainMenuItems,
-  getMenuHeader,
-  getMenuItemsForView,
-  getMusicMenuLabel,
-  getRightsMenuItems,
   getSavedGameMenuItems,
+  onClickLoad,
   onNewGame,
 } from './MenuLogic';
-import { DifficultLevels } from '../core';
 import { writeSave } from '../saves/SavesLogic';
 import { Colour, type GameState, type Hero, ItemType, Level } from '../types';
-import { get } from 'svelte/store';
-import { appSettingsStore, updateAppSettings } from '../settings/AppSettings';
+import {
+  DEFAULT_APP_SETTINGS,
+  appSettingsStore,
+  updateAppSettings,
+} from '../settings/AppSettings';
 
 const createMockHero = (name = 'Hero1'): Hero => ({
   name,
@@ -121,137 +119,7 @@ describe('MenuLogic', () => {
         }
       },
     });
-  });
-
-  describe('getMainMenuItems', () => {
-    it('returns standard menu items when dungeon is not beaten', () => {
-      const items = getMainMenuItems(mockState);
-      const ids = items.map((i) => i.id);
-      expect(ids).toContain('new_game');
-      expect(ids).toContain('save_game');
-      expect(ids).toContain('load_game');
-      expect(ids).toContain('debug');
-      expect(ids).toContain('music');
-      expect(ids).toContain('language');
-      expect(ids).toContain('difficulty');
-      expect(ids).toContain('rights');
-      expect(ids).not.toContain('testing_grounds');
-      expect(ids).not.toContain('shuffle_deck');
-      expect(ids).not.toContain('select_next_event');
-      expect(ids).not.toContain('next_level');
-    });
-
-    it('shows active or inactive state in debug label', () => {
-      mockState.settings['debug'] = false;
-      const offItems = getMainMenuItems(mockState);
-      const debugOff = offItems.find((i) => i.id === 'debug');
-      expect(debugOff?.label).toBe('Debug: Off');
-
-      mockState.settings['debug'] = true;
-      const onItems = getMainMenuItems(mockState);
-      const debugOn = onItems.find((i) => i.id === 'debug');
-      expect(debugOn?.label).toBe('Debug: On');
-    });
-
-    it('shows active or inactive state in music label and defaults to on', () => {
-      // The app-level music setting is the source of truth for the label.
-      updateAppSettings({ musicOn: true });
-      const defaultItems = getMainMenuItems(mockState);
-      const musicDefault = defaultItems.find((i) => i.id === 'music');
-      expect(musicDefault?.label).toBe('Music: On');
-
-      updateAppSettings({ musicOn: false });
-      const offItems = getMainMenuItems(mockState);
-      const musicOff = offItems.find((i) => i.id === 'music');
-      expect(musicOff?.label).toBe('Music: Off');
-
-      updateAppSettings({ musicOn: true });
-      const onItems = getMainMenuItems(mockState);
-      const musicOn = onItems.find((i) => i.id === 'music');
-      expect(musicOn?.label).toBe('Music: On');
-    });
-
-    it('includes next_level when dungeon is beaten', () => {
-      mockState.dungeon.beaten = true;
-      const items = getMainMenuItems(mockState);
-      const ids = items.map((i) => i.id);
-      expect(ids).toContain('next_level');
-    });
-
-    it('opens the new-game dialog on new_game click and closes the menu', () => {
-      const openNewGameDialog = vi.fn();
-      const closeMenu = vi.fn();
-      const items = getMainMenuItems(mockState, {
-        openNewGameDialog,
-        closeMenu,
-      });
-      const newGameItem = items.find((i) => i.id === 'new_game');
-      newGameItem?.onClick(mockState);
-      expect(openNewGameDialog).toHaveBeenCalled();
-      expect(closeMenu).toHaveBeenCalled();
-    });
-
-    it('opens the load dialog on load_game click and closes the menu', () => {
-      const openLoadDialog = vi.fn();
-      const closeMenu = vi.fn();
-      const items = getMainMenuItems(mockState, {
-        openLoadDialog,
-        closeMenu,
-      });
-      const loadGameItem = items.find((i) => i.id === 'load_game');
-      loadGameItem?.onClick(mockState);
-      expect(openLoadDialog).toHaveBeenCalled();
-      expect(closeMenu).toHaveBeenCalled();
-    });
-
-    it('opens the save dialog on save_game click and closes the menu', () => {
-      const openSaveDialog = vi.fn();
-      const closeMenu = vi.fn();
-      const items = getMainMenuItems(mockState, {
-        openSaveDialog,
-        closeMenu,
-      });
-      const saveGameItem = items.find((i) => i.id === 'save_game');
-      saveGameItem?.onClick(mockState);
-      expect(openSaveDialog).toHaveBeenCalled();
-      expect(closeMenu).toHaveBeenCalled();
-    });
-
-    it('navigates to rights view on rights click', () => {
-      const setView = vi.fn();
-      const items = getMainMenuItems(mockState, { setView });
-      const rightsItem = items.find((i) => i.id === 'rights');
-      rightsItem?.onClick(mockState);
-      expect(setView).toHaveBeenCalledWith('rights');
-    });
-
-    it('toggles debug mode on debug item click', () => {
-      mockState.settings['debug'] = false;
-      const items = getMainMenuItems(mockState);
-      const debugItem = items.find((i) => i.id === 'debug');
-      debugItem?.onClick(mockState);
-      expect(mockState.settings['debug']).toBe(true);
-      debugItem?.onClick(mockState);
-      expect(mockState.settings['debug']).toBe(false);
-    });
-
-    it('toggles the app music setting on music item click', () => {
-      updateAppSettings({ musicOn: true });
-      const items = getMainMenuItems(mockState);
-      const musicItem = items.find((i) => i.id === 'music');
-      musicItem?.onClick(mockState);
-      expect(get(appSettingsStore).musicOn).toBe(false);
-      musicItem?.onClick(mockState);
-      expect(get(appSettingsStore).musicOn).toBe(true);
-    });
-
-    it('cycles difficulty on difficulty item click', () => {
-      mockState.gameMaster = DifficultLevels[0];
-      const items = getMainMenuItems(mockState);
-      const difficultyItem = items.find((i) => i.id === 'difficulty');
-      difficultyItem?.onClick(mockState);
-      expect(mockState.gameMaster).toEqual(DifficultLevels[1]);
-    });
+    appSettingsStore.set({ ...DEFAULT_APP_SETTINGS });
   });
 
   describe('getDebugMenuItems', () => {
@@ -337,6 +205,36 @@ describe('MenuLogic', () => {
       const newState = setState.mock.calls[0][0];
       expect(newState.speedrunSeed).toBe(42);
     });
+
+    it('starts the run in debug mode when the app setting is on', () => {
+      updateAppSettings({ debugOn: true });
+      const setState = vi.fn((state: GameState) => state);
+      onNewGame('iceDragonTreasure', 'tactician', mockState, setState);
+      const newState = setState.mock.calls[0][0];
+      expect(newState.settings['debug']).toBe(true);
+    });
+
+    it('starts the run out of debug mode when the app setting is off', () => {
+      updateAppSettings({ debugOn: false });
+      const setState = vi.fn((state: GameState) => state);
+      onNewGame('iceDragonTreasure', 'tactician', mockState, setState);
+      const newState = setState.mock.calls[0][0];
+      expect(newState.settings['debug']).toBe(false);
+    });
+  });
+
+  describe('onClickLoad', () => {
+    it('applies the app debug setting over the saved one', () => {
+      const saved = createMockState();
+      saved.settings['debug'] = true;
+      updateAppSettings({ debugOn: false });
+
+      const setState = vi.fn((state: GameState) => state);
+      onClickLoad(JSON.stringify(saved), mockState, setState);
+
+      const newState = setState.mock.calls[0][0];
+      expect(newState.settings['debug']).toBe(false);
+    });
   });
 
   describe('getSavedGameMenuItems', () => {
@@ -393,53 +291,18 @@ describe('MenuLogic', () => {
       expect(mockState.eventDeck[0].id).toBe('2');
       expect(closeMenu).toHaveBeenCalled();
     });
-  });
 
-  describe('getRightsMenuItems', () => {
-    it('returns ownership, music, sfx, graphics, and back items', () => {
-      const items = getRightsMenuItems(mockState);
-      const ids = items.map((i) => i.id);
-      expect(ids).toEqual([
-        'rights_implementation',
-        'rights_music',
-        'rights_sfx',
-        'rights_graphics',
-        'rights_back',
-      ]);
-    });
-
-    it('navigates back to main on back button click', () => {
+    it('navigates back to the debug view on the back item', () => {
       const setView = vi.fn();
-      const items = getRightsMenuItems(mockState, { setView });
-      const backItem = items.find((i) => i.id === 'rights_back');
-      backItem?.onClick(mockState);
-      expect(setView).toHaveBeenCalledWith('main');
-    });
-
-    it('opens AlkaKrab website when music links are clicked', () => {
-      const openSpy = vi.fn();
-      vi.stubGlobal('window', { open: openSpy });
-
-      const items = getRightsMenuItems(mockState);
-      const musicItem = items.find((i) => i.id === 'rights_music');
-
-      musicItem?.onClick(mockState);
-      expect(openSpy).toHaveBeenCalledWith(
-        'https://lostintheforest.bandcamp.com/',
-        '_blank',
-        'noopener,noreferrer',
-      );
+      const items = getEventMenuItems(mockState, { setView });
+      items[2].onClick(mockState); // click Back
+      expect(setView).toHaveBeenCalledWith('debug');
     });
   });
 
-  describe('getMenuItemsForView', () => {
-    it('returns main menu items for main view', () => {
-      const items = getMenuItemsForView('main', mockState);
-      expect(items.some((i) => i.id === 'new_game')).toBe(true);
-    });
-
-    it('returns debug menu items for debug view', () => {
-      const items = getMenuItemsForView('debug', mockState);
+  describe('getDebugMenuItemsForView', () => {
+    it('returns debug menu items for the debug view', () => {
+      const items = getDebugMenuItemsForView('debug', mockState);
       const ids = items.map((i) => i.id);
       expect(ids).toEqual([
         'testing_grounds',
@@ -451,37 +314,20 @@ describe('MenuLogic', () => {
       ]);
     });
 
-    it('returns rights menu items for rights view', () => {
-      const items = getMenuItemsForView('rights', mockState);
-      const ids = items.map((i) => i.id);
-      expect(ids).toContain('rights_implementation');
-      expect(ids).toContain('rights_music');
-      expect(ids).toContain('rights_back');
+    it('returns event items for the event view', () => {
+      const items = getDebugMenuItemsForView('event', mockState);
+      expect(items.map((i) => i.id)).toEqual([
+        'event_1',
+        'event_2',
+        'event_back',
+      ]);
     });
   });
 
-  describe('getMenuHeader and getDifficultyMenuLabel', () => {
+  describe('getDebugMenuHeader', () => {
     it('returns headers for all views', () => {
-      expect(getMenuHeader('main')).toBeTruthy();
-      expect(getMenuHeader('debug')).toBeTruthy();
-      expect(getMenuHeader('event')).toBeTruthy();
-      expect(getMenuHeader('rights')).toBeTruthy();
-    });
-
-    it('returns formatted difficulty label', () => {
-      mockState.gameMaster = DifficultLevels[0];
-      const label = getDifficultyMenuLabel(mockState);
-      expect(label).toBeTruthy();
-    });
-
-    it('returns formatted debug menu label', () => {
-      expect(getDebugMenuLabel(mockState, true)).toBe('Debug: On');
-      expect(getDebugMenuLabel(mockState, false)).toBe('Debug: Off');
-    });
-
-    it('returns formatted music menu label', () => {
-      expect(getMusicMenuLabel(mockState, true)).toBe('Music: On');
-      expect(getMusicMenuLabel(mockState, false)).toBe('Music: Off');
+      expect(getDebugMenuHeader('debug')).toBe('Debug');
+      expect(getDebugMenuHeader('event')).toBeTruthy();
     });
   });
 });

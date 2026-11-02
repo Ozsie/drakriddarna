@@ -4,12 +4,12 @@
 // dimmed flags are prebuilt here.
 
 import type { AppSettings } from '../../settings/AppSettings';
-import type { Translator } from '../../uikit/env';
+import type { Translator } from '../../uikit';
 import type {
   CreditsViewModel,
   SettingsRowVm,
   SettingsViewModel,
-} from '../../uikit/components/settings';
+} from '../../uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 export type SettingsRowId =
@@ -17,6 +17,8 @@ export type SettingsRowId =
   | 'audio'
   | 'musicVolume'
   | 'audioVolume'
+  | 'debug'
+  | 'language'
   | 'credits';
 
 // The credits rows: the same content the canvas menu's Rights view shows,
@@ -49,8 +51,8 @@ export const CREDITS_ROWS: CreditsRowDefinition[] = [
   },
 ];
 
-// The On/Off suffix follows the existing menu label pattern
-// (getMusicMenuLabel in src/menu/MenuLogic.ts).
+// The On/Off suffix follows the existing label pattern of the app's
+// toggle rows (the welcome screen inherited it from the canvas menu).
 const formatToggleLabel = (label: string, on: boolean): string =>
   `${label}: ${on ? 'On' : 'Off'}`;
 
@@ -90,6 +92,23 @@ export const toSettingsViewModel = (
       label: t('content.menu.settings.audioVolume'),
       dimmed: !appSettings.sfxOn,
       value: appSettings.sfxVolume,
+    },
+    {
+      id: 'debug',
+      kind: 'toggle',
+      label: formatToggleLabel(
+        t('content.menu.settings.debug'),
+        appSettings.debugOn,
+      ),
+      dimmed: false,
+    },
+    {
+      // The label names the language being switched to (e.g.
+      // "-> Svenska"), like the language item the main menu had.
+      id: 'language',
+      kind: 'button',
+      label: t('content.menu.settings.language'),
+      dimmed: false,
     },
     {
       id: 'credits',

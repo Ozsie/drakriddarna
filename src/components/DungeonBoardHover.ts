@@ -4,7 +4,7 @@ import type {
   DungeonIntroHitResult,
   EventCardHitResult,
   HeroCardsHitResult,
-  MenuHitResult,
+  DebugMenuHitResult,
   SaveLoadDialogHitResult,
   TopBarHitElement,
 } from '../ui/UIRendering';
@@ -248,9 +248,9 @@ export const updateTopBarHover = (
   return { cursor, changed };
 };
 
-export const updateMenuHover = (
+export const updateDebugMenuHover = (
   hover: BoardHoverState,
-  hit: MenuHitResult,
+  hit: DebugMenuHitResult,
 ): HoverResult => {
   hover.hoveredRadialIndex = null;
   let changed = clearTopBarHovers(hover);
@@ -473,8 +473,8 @@ export const updateHoverForUiHit = (
       return updateNewGameDialogHover(hover, hit.hit);
     case 'topBar':
       return updateTopBarHover(hover, hit.hit, isLogOpen);
-    case 'menu':
-      return updateMenuHover(hover, hit.hit);
+    case 'debugMenu':
+      return updateDebugMenuHover(hover, hit.hit);
     case 'heroCards':
       return updateHeroCardsHover(hover, hit.hit);
     case 'monsterCards':

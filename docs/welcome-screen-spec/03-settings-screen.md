@@ -8,21 +8,24 @@ button styles, same background image and build footer behind them.
 ## Settings view
 
 A centered panel titled with the human-authored settings header, containing
-five rows and a Back button:
+five rows and a Back button (the debug and language rows joined when the
+main menu folded into the welcome screen):
 
-| Row          | Type          | Behavior                                                                                         |
-| ------------ | ------------- | ------------------------------------------------------------------------------------------------ |
-| Music        | On/Off toggle | Toggles `appSettings.musicOn`. Off = `MusicManager.setMuted(true)`; the volume value is kept     |
-| Audio        | On/Off toggle | Toggles `appSettings.sfxOn`. Off = `SoundEffectManager.setMuted(true)`; the volume value is kept |
-| Music volume | Slider        | 0–100 percent, maps linearly to `[0, 1]` via `MusicManager.setVolume`                            |
-| Audio volume | Slider        | 0–100 percent, maps linearly to `[0, 1]` via `SoundEffectManager.setVolume`                      |
-| Credits      | Button row    | Switches to the credits view                                                                     |
+| Row          | Type          | Behavior                                                                                                                                                                           |
+| ------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Music        | On/Off toggle | Toggles `appSettings.musicOn`. Off = `MusicManager.setMuted(true)`; the volume value is kept                                                                                       |
+| Audio        | On/Off toggle | Toggles `appSettings.sfxOn`. Off = `SoundEffectManager.setMuted(true)`; the volume value is kept                                                                                   |
+| Music volume | Slider        | 0-100 percent, maps linearly to `[0, 1]` via `MusicManager.setVolume`                                                                                                              |
+| Audio volume | Slider        | 0-100 percent, maps linearly to `[0, 1]` via `SoundEffectManager.setVolume`                                                                                                        |
+| Debug        | On/Off toggle | Toggles `appSettings.debugOn` (mirrored into `GameState.settings['debug']`; a run started or loaded while it is on runs in debug mode). The former main-menu Debug item            |
+| Language     | Button row    | Switches the locale (`en` <-> `sv`); the label names the language being switched to (the former main-menu Language item). When a run exists the saved `settings['locale']` follows |
+| Credits      | Button row    | Switches to the credits view                                                                                                                                                       |
 
 - **Back button** in the primary action position (bottom-right of the
   panel, the position the load dialog's Back uses) returns to the welcome
   main view. `Escape` behaves as Back.
 - **Toggles** render as rows whose label carries the state, following the
-  existing menu label pattern (e.g. the canvas menu's `Music: On/Off`).
+  label pattern the canvas menu's toggles had (e.g. `Music: On/Off`).
   Click anywhere on the row toggles.
 - **Sliders**: a track with a handle inside the row.
   - Pointer down on the track sets the value from the x position; dragging
@@ -42,15 +45,17 @@ five rows and a Back button:
 - When a `GameState` exists, every change mirrors to
   `GameState.settings['music']` (so saves keep working and
   `musicModeStore` keeps deriving correctly).
-- The in-game canvas menu's Music item toggles the app setting instead of
-  writing `settings['music']` directly; the mirror keeps both in sync.
+- The former canvas main-menu Music item (and its view) is gone — the
+  main menu folded into the welcome screen; this settings row is the only
+  Music toggle, and the mirror keeps the saved field in sync.
 - Loading a save does **not** overwrite the app setting; the mirror is
   one-directional (app setting → save field).
 
 ## Credits view
 
 A centered panel in the same style listing the rights and licenses — the
-same content the canvas menu's Rights view shows today, from
+same content the canvas menu's Rights view showed (the credits screen
+renders it from `CREDITS_ROWS` now), from
 `content.menu.rights.*`:
 
 | Row            | Content today                                                                  |
@@ -61,8 +66,9 @@ same content the canvas menu's Rights view shows today, from
 | Graphics       | `content.menu.rights.graphics`                                                 |
 
 - External rows open their link with `window.open(url, '_blank',
-'noopener, noreferrer')`, exactly like `getRightsMenuItems` does today;
-  the URLs live next to the row definitions, not hardcoded in the renderer.
+'noopener, noreferrer')` like the former `getRightsMenuItems` did; the
+  URLs live next to the row definitions (`CREDITS_ROWS` in
+  `src/ui/viewmodels/settings.ts`), not hardcoded in the renderer.
 - The wording of these rows is human-authored content and may be extended
   by a human (e.g. replacing the Graphics placeholder) — do not author,
   rewrite or extend it as AI.
@@ -78,10 +84,13 @@ same content the canvas menu's Rights view shows today, from
 | `content.menu.settings.audio`        | Audio toggle row label                                                              |
 | `content.menu.settings.musicVolume`  | Music volume row label                                                              |
 | `content.menu.settings.audioVolume`  | Audio volume row label                                                              |
+| `content.menu.settings.debug`        | Debug toggle row label (the wording the main menu's Debug item had)                 |
+| `content.menu.settings.language`     | Language row label (names the language being switched to)                           |
 | `content.menu.settings.credits`      | Credits row label                                                                   |
 | `content.menu.settings.buttons.back` | Back button (may reuse `content.menu.loadGame.buttons.back` if the wording matches) |
 | `content.menu.rights.header`         | Credits heading — reuse of the existing key                                         |
 
-The `On`/`Off` state suffix follows whatever solution the existing menu
-labels use (`getMusicMenuLabel`); if new state words are needed, they are
+The `On`/`Off` state suffix follows the hardcoded-English solution the
+former main-menu toggle labels used (`formatToggleLabel` in
+`src/ui/viewmodels/settings.ts`); if new state words are needed, they are
 human-authored too.

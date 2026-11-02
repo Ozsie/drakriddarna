@@ -5,8 +5,8 @@
 
 import type { GameState, LogEvent } from '../../types';
 import { formatDuration, getCurrentDungeonTimeMs } from '../../core';
-import type { Translator } from '../../uikit/env';
-import type { TopBarViewModel } from '../../uikit/components/topBar';
+import type { Translator } from '../../uikit';
+import type { TopBarViewModel } from '../../uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 // Compact (narrow screen) counter labels: an emoji instead of the
@@ -76,9 +76,9 @@ export const toTopBarViewModel = (
       ? 'Menu'
       : rawMenuLabel || 'Menu';
 
-  const rawDebugLabel = t('content.menu.mainMenu.buttons.debug');
+  const rawDebugLabel = t('content.menu.debugMenu.header');
   const debugLabel =
-    rawDebugLabel === 'content.menu.mainMenu.buttons.debug'
+    rawDebugLabel === 'content.menu.debugMenu.header'
       ? 'Debug'
       : rawDebugLabel || 'Debug';
 

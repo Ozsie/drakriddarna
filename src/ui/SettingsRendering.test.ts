@@ -13,7 +13,7 @@ import { DEFAULT_APP_SETTINGS } from '../settings/AppSettings';
 import { loadTranslations } from '$lib/translations';
 
 const createMockCtx = (): CanvasRenderingContext2D => {
-  const ctx = {
+  return {
     save: vi.fn(),
     restore: vi.fn(),
     beginPath: vi.fn(),
@@ -40,7 +40,6 @@ const createMockCtx = (): CanvasRenderingContext2D => {
     textBaseline: '',
     globalAlpha: 1,
   } as unknown as CanvasRenderingContext2D;
-  return ctx;
 };
 
 describe('SettingsRendering', () => {
@@ -57,7 +56,7 @@ describe('SettingsRendering', () => {
       expect(getSettingsLayout(0, 0, settings).hasContent).toBe(false);
     });
 
-    it('builds the five rows and centers the panel', () => {
+    it('builds the seven rows and centers the panel', () => {
       const layout = getSettingsLayout(800, 600, settings);
       expect(layout.hasContent).toBe(true);
       expect(layout.rows.map((row) => row.id)).toEqual([
@@ -65,6 +64,8 @@ describe('SettingsRendering', () => {
         'audio',
         'musicVolume',
         'audioVolume',
+        'debug',
+        'language',
         'credits',
       ]);
       const { panelBounds } = layout;
@@ -114,7 +115,7 @@ describe('SettingsRendering', () => {
   });
 
   describe('settings hit', () => {
-    it('hits toggles, sliders, credits and back in their bounds', () => {
+    it('hits toggles, sliders, button rows and back in their bounds', () => {
       const layout = getSettingsLayout(800, 600, settings);
       const music = layout.rows[0];
       expect(music).toBeDefined();
@@ -128,7 +129,18 @@ describe('SettingsRendering', () => {
         );
         expect(hit).toEqual({ type: 'toggle', rowId: 'music' });
       }
-      const credits = layout.rows[4];
+      const debug = layout.rows.find((row) => row.id === 'debug');
+      if (debug) {
+        const hit = getSettingsHit(
+          800,
+          600,
+          settings,
+          debug.bounds.x + 20,
+          debug.bounds.y + debug.bounds.height / 2,
+        );
+        expect(hit).toEqual({ type: 'toggle', rowId: 'debug' });
+      }
+      const credits = layout.rows.find((row) => row.id === 'credits');
       if (credits) {
         const hit = getSettingsHit(
           800,
@@ -137,7 +149,18 @@ describe('SettingsRendering', () => {
           credits.bounds.x + 20,
           credits.bounds.y + credits.bounds.height / 2,
         );
-        expect(hit).toEqual({ type: 'credits' });
+        expect(hit).toEqual({ type: 'button', rowId: 'credits' });
+      }
+      const language = layout.rows.find((row) => row.id === 'language');
+      if (language) {
+        const hit = getSettingsHit(
+          800,
+          600,
+          settings,
+          language.bounds.x + 20,
+          language.bounds.y + language.bounds.height / 2,
+        );
+        expect(hit).toEqual({ type: 'button', rowId: 'language' });
       }
       const back = getSettingsHit(
         800,

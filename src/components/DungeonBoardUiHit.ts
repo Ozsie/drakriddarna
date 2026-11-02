@@ -1,20 +1,20 @@
 import type { GameState } from '../types';
-import type { MenuCallbacks, MenuView } from '../menu/MenuLogic';
+import type { DebugMenuView, MenuCallbacks } from '../menu/MenuLogic';
 import {
   getBetweenDungeonsHit,
   getDiaryAndWinConditionsHit,
   getDungeonIntroHit,
   getEventCardHit,
   getHeroCardsHit,
-  getMenuHit,
+  getDebugMenuHit,
   getMonsterCardsHit,
   getNewGameDialogHit,
   getSaveLoadDialogHit,
   getTopBarHit,
 } from '../ui/UIRendering';
 import type { BetweenDungeonsHitResult } from '../ui/BetweenDungeonsRendering';
-import type { TopBarHitElement } from '../ui/TopBarRendering';
-import type { MenuHitResult } from '../ui/MenuRendering';
+import type { TopBarHitElement } from '../uikit';
+import type { DebugMenuHitResult } from '../ui/DebugMenuRendering';
 import type {
   SaveLoadDialogHitResult,
   SaveLoadDialogMode,
@@ -33,15 +33,15 @@ import type { DungeonIntroHitResult } from '../ui/DungeonIntroRendering';
 // the board dispatches UI input: new-game dialog and save/load dialog (the
 // topmost centered modals — the load dialog can be opened on top of the
 // between-dungeons/party-wipe overlay), between-dungeons overlay, dungeon
-// intro, top bar, canvas menu, hero cards, monster cards, diary and event
-// card.
+// intro, top bar, canvas debug menu, hero cards, monster cards, diary and
+// event card.
 export type UiHit =
   | { kind: 'betweenDungeons'; hit: BetweenDungeonsHitResult }
   | { kind: 'dungeonIntro'; hit: DungeonIntroHitResult }
   | { kind: 'saveLoadDialog'; hit: SaveLoadDialogHitResult }
   | { kind: 'newGameDialog'; hit: NewGameDialogHitResult }
   | { kind: 'topBar'; hit: TopBarHitElement }
-  | { kind: 'menu'; hit: MenuHitResult }
+  | { kind: 'debugMenu'; hit: DebugMenuHitResult }
   | { kind: 'heroCards'; hit: HeroCardsHitResult }
   | { kind: 'monsterCards'; hit: MonsterCardsHitResult }
   | { kind: 'diary'; hit: DiaryAndWinConditionsHitResult }
@@ -58,10 +58,9 @@ export interface UiHitContext {
   dungeonIntroDismissed: boolean;
   isLogOpen: boolean;
   debugMode: boolean | undefined;
-  isCanvasMenuOpen: boolean;
-  menuView: MenuView;
+  isDebugMenuOpen: boolean;
+  debugMenuView: DebugMenuView;
   menuCallbacks: MenuCallbacks;
-  buildInfo?: { date: string; hash: string } | null;
   eventCardCollapsed: boolean;
   /** Whether the diary panel is collapsed into its corner square. */
   diaryCollapsed: boolean;
@@ -82,7 +81,7 @@ export interface UiHitTesters {
   saveLoadDialog: typeof getSaveLoadDialogHit;
   newGameDialog: typeof getNewGameDialogHit;
   topBar: typeof getTopBarHit;
-  menu: typeof getMenuHit;
+  debugMenu: typeof getDebugMenuHit;
   heroCards: typeof getHeroCardsHit;
   monsterCards: typeof getMonsterCardsHit;
   diary: typeof getDiaryAndWinConditionsHit;
@@ -95,7 +94,7 @@ export const defaultUiHitTesters: UiHitTesters = {
   saveLoadDialog: getSaveLoadDialogHit,
   newGameDialog: getNewGameDialogHit,
   topBar: getTopBarHit,
-  menu: getMenuHit,
+  debugMenu: getDebugMenuHit,
   heroCards: getHeroCardsHit,
   monsterCards: getMonsterCardsHit,
   diary: getDiaryAndWinConditionsHit,
@@ -171,22 +170,20 @@ export const findUiHit = (
   if (topBarHit) {
     return { kind: 'topBar', hit: topBarHit };
   }
-  if (context.isCanvasMenuOpen) {
-    const hit = testers.menu(
+  if (context.isDebugMenuOpen) {
+    const hit = testers.debugMenu(
       context.viewWidth,
       context.viewHeight,
       context.state,
       {
-        view: context.menuView,
-        debugMode: context.debugMode,
+        view: context.debugMenuView,
         callbacks: context.menuCallbacks,
-        buildInfo: context.buildInfo,
       },
       context.x,
       context.y,
     );
     if (hit) {
-      return { kind: 'menu', hit };
+      return { kind: 'debugMenu', hit };
     }
   }
   const heroHit = testers.heroCards(

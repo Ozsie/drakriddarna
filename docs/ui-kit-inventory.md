@@ -30,7 +30,7 @@ panels, menus, dialogs and full-screen flows. These move into
 | `src/ui/EventCardRendering.ts`            | `currentEvent`, `eventDeck`                                                                                                                                                         | `core` (i18n), `HeroCardRendering` (drawRoundedRect), `DiaryAndWinConditionRendering` (wrapText), `UiMode`                                                | 6                        | none                                                                | 22 / 7         | triple; compact collapse like the diary                                                                                                                             |
 | `src/ui/BetweenDungeonsRendering.ts`      | `betweenDungeons` (all fields incl. steps, `scenarioScore`, `campaignScore`, `wipeHighScores`), `heroes`, `scenarioScores`                                                          | `types`, `core` (i18n, formatDuration, SCORE_POINTS_PER_SECRET), `saves/HighScoresLogic`, `dungeon/BetweenDungeonsLogic` (getHeroTradableItems), wrapText | 57                       | none                                                                | 80 / 11        | triple; union of steps (levelUp, trade, campaignComplete, partyWipe); the most rule-heavy module (M5 Tier C)                                                        |
 | `src/ui/DungeonIntroRendering.ts`         | `dungeon.intro`, `dungeon.name`, `dungeon.layout.notes`, `turnCount`                                                                                                                | `core` (i18n, addLog, startDungeonTimer), wrapText                                                                                                        | 3                        | none                                                                | 11 / 3         | triple; `dismissDungeonIntro` has side effects (log + timer start) — becomes an action                                                                              |
-| `src/ui/MenuRendering.ts`                 | none directly (items come from `menu/MenuLogic` per view)                                                                                                                           | `menu/MenuLogic`                                                                                                                                          | 0 (labels via MenuLogic) | none                                                                | 11 / 3         | triple; generic item list                                                                                                                                           |
+| `src/ui/DebugMenuRendering.ts`            | none directly (items come from `menu/MenuLogic` per view)                                                                                                                           | `menu/MenuLogic`                                                                                                                                          | 0 (labels via MenuLogic) | none                                                                | 11 / 3         | triple; generic item list; renders the canvas debug menu (the main menu folded into the welcome screen)                                                             |
 | `src/ui/RadialMenuRendering.ts`           | none (takes `RadialMenuState`)                                                                                                                                                      | `hero/RadialMenuLogic` (actions, icons, labels), `core` (i18n), `items/ItemSpriteRendering`                                                               | 4                        | item sprites                                                        | 8 / 1          | circular layout; hit via `findHoveredRadialButton`; hovered index passed in                                                                                         |
 | `src/ui/SaveLoadDialogRendering.ts`       | none directly (delegates save listing to `menu/MenuLogic`, which reads `localStorage`)                                                                                              | `core` (i18n), `menu/MenuLogic` (getSavedGameMenuItems), `HeroCardRendering` helpers                                                                      | 8                        | none                                                                | 28 / 7         | triple; save-name text input (key events via controller)                                                                                                            |
 | `src/ui/NewGameDialogRendering.ts`        | none (options object in, campaign list out)                                                                                                                                         | `core` (DifficultLevels, i18n), `campaigns`                                                                                                               | 9                        | none                                                                | 34 / 7         | triple; campaign/game-master lists, speedrun seed input                                                                                                             |
@@ -149,8 +149,9 @@ living in `src/ui/assets.ts`.
   injectable testers; each tester becomes a component `hitTest` call.
 - `src/components/DungeonBoardHover.ts` — pure hover/pressed state
   reductions; stays the owner of interaction state.
-- `src/menu/MenuLogic.ts` — menu items, labels and callbacks; becomes
-  view-model/adapter material plus `src/ui/actions/` mapping.
+- `src/menu/MenuLogic.ts` — debug menu items, the save-load dialog rows
+  and the run start/load/save callbacks; becomes view-model/adapter
+  material plus `src/ui/actions/` mapping.
 - `src/components/Dungeon.svelte` — canvas lifecycle, ground sprite import,
   store subscriptions.
 
@@ -185,9 +186,11 @@ living in `src/ui/assets.ts`.
   only: the export map, build config, peer-dependency decisions and a
   separate test setup.
 
-**Known game-side i18n debt (outside the kit).** The canvas menu's
-music/debug/audio toggle labels ("Music: On", "Debug: Off") are
-hardcoded English in `src/menu/MenuLogic.ts` (`formatToggleLabel`) and
-predate the kit; the sentinel translator allowlists them. Fixing them
-needs new human-authored source text in both languages (per the AI
-policy), then routing MenuLogic's labels through the env translator.
+**Known game-side i18n debt (outside the kit).** The toggle labels of
+the welcome screen's settings rows ("Music: On", "Debug: Off") and the
+debug menu's "Debug" header fallback are hardcoded English
+(`formatToggleLabel` in `src/ui/viewmodels/settings.ts`, the fallback in
+`src/menu/MenuLogic.ts`) and predate the kit; the sentinel translator
+allowlists them. Fixing them needs new human-authored source text in
+both languages (per the AI policy), then routing the labels through the
+env translator.

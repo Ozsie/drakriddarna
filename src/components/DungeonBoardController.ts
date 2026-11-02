@@ -4,7 +4,7 @@ import actorSprites from '$lib/Dungeon_Character_3.png';
 import buildInfo from '$lib/buildInfo.json';
 import { locale } from '$lib/translations';
 import type { Dungeon, GameState, Hero, Position } from '../types';
-import type { MenuView, MenuCallbacks } from '../menu/MenuLogic';
+import type { DebugMenuView, MenuCallbacks } from '../menu/MenuLogic';
 import type { RadialMenuState } from '../store/radialMenuStore';
 import { radialMenuStore } from '../store/radialMenuStore';
 import {
@@ -17,6 +17,7 @@ import {
 } from '../store/gameStateStore';
 import {
   enterGamePhase,
+  enterWelcomePhase,
   setWelcomeView,
   type AppPhase,
   type WelcomeView,
@@ -69,7 +70,7 @@ import {
   renderMonsterCards,
   renderDiaryAndWinConditions,
   renderEventCard,
-  renderMenuModal,
+  renderDebugMenuModal,
   renderSaveLoadDialog,
   type SaveLoadDialogMode,
   renderNewGameDialog,
@@ -112,7 +113,7 @@ import {
   type WelcomeButtonId,
 } from '../ui/UIRendering';
 import { createUiEnv, defaultUiEnv, envIdentity } from '../ui/env';
-import type { UiEnv } from '../uikit/env';
+import type { UiEnv } from '../uikit';
 import { getCampaign } from '../campaigns';
 import {
   appSettingsStore,
@@ -144,7 +145,7 @@ import {
   DEFAULT_GAME_MASTER_ID,
 } from '../core';
 import { MAX_SAVE_NAME_LENGTH } from '../saves/SavesLogic';
-import { onNewGame, onSaveGame } from '../menu/MenuLogic';
+import { onChangeLanguage, onNewGame, onSaveGame } from '../menu/MenuLogic';
 import { DEFAULT_CAMPAIGN_ID } from '../campaigns';
 import {
   createTouchPanState,
@@ -350,8 +351,8 @@ export class DungeonBoardController {
   private hover = createBoardHoverState();
   private isLogHeld = false;
   private isLogOpen = false;
-  private isCanvasMenuOpen = false;
-  private currentMenuView: MenuView = 'main';
+  private isDebugMenuOpen = false;
+  private currentDebugMenuView: DebugMenuView = 'debug';
   // Centered save/load dialog, a sibling of the between-dungeons overlay
   // rather than a canvas-menu view. Opened from the main menu, closed by
   // its buttons, the backdrop, or Escape.
@@ -411,14 +412,14 @@ export class DungeonBoardController {
   private settingsSliderPressHandled = false;
 
   private menuCallbacks: MenuCallbacks = {
-    setView: (view: MenuView) => {
-      this.currentMenuView = view;
+    setView: (view: DebugMenuView) => {
+      this.currentDebugMenuView = view;
       this.hover.hoveredMenuItemId = null;
       this.renderUiLayer(true);
     },
     closeMenu: () => {
-      this.isCanvasMenuOpen = false;
-      this.currentMenuView = 'main';
+      this.isDebugMenuOpen = false;
+      this.currentDebugMenuView = 'debug';
       this.hover.hoveredMenuItemId = null;
       this.syncGameInputEnabled();
       this.renderUiLayer(true);
@@ -435,15 +436,6 @@ export class DungeonBoardController {
         this.props.onExternalStateChange(nextState);
       }
       this.renderCanvas(true);
-    },
-    openSaveDialog: () => {
-      this.openSaveLoadDialog('save');
-    },
-    openLoadDialog: () => {
-      this.openSaveLoadDialog('load');
-    },
-    openNewGameDialog: () => {
-      this.openNewGameDialog();
     },
     closeDialog: () => {
       this.closeSaveLoadDialog();
@@ -631,6 +623,8 @@ export class DungeonBoardController {
     this.welcomeView = view;
     if (phaseChanged) {
       this.hoveredWelcomeButton = null;
+      this.isDebugMenuOpen = false;
+      this.currentDebugMenuView = 'debug';
     }
     this.syncGameInputEnabled();
     if (this.mounted) {
@@ -741,7 +735,7 @@ export class DungeonBoardController {
     // The input manager is a singleton outliving the board; never leave
     // it disabled if a modal or overlay was open at teardown.
     if (
-      this.isCanvasMenuOpen ||
+      this.isDebugMenuOpen ||
       this.saveLoadDialogMode ||
       this.isNewGameDialogOpen ||
       this.showDungeonIntro ||
@@ -1503,6 +1497,7 @@ export class DungeonBoardController {
     } else {
       renderWelcome(ctx, this.containerWidth, this.containerHeight, {
         buildInfo,
+        hasOngoingRun: this.hasOngoingRun,
         hoveredButton:
           this.welcomeView === 'main' ? this.hoveredWelcomeButton : null,
         env,
@@ -1623,8 +1618,8 @@ export class DungeonBoardController {
     const welcomeSig = `${String(this.appPhase)}:${String(
       this.welcomeView,
     )}:${String(this.hoveredWelcomeButton)}`;
-    const menuSig = `${String(String(String(this.isCanvasMenuOpen)))}:${String(
-      this.currentMenuView,
+    const menuSig = `${String(String(String(this.isDebugMenuOpen)))}:${String(
+      this.currentDebugMenuView,
     )}:${String(String(this.hover.hoveredMenuItemId))}:${String(
       String(currentDebug),
     )}:${String(String(get(locale)))}:${String(
@@ -1753,17 +1748,15 @@ export class DungeonBoardController {
           env: uiEnv,
         },
       );
-      if (this.isCanvasMenuOpen) {
-        renderMenuModal(
+      if (this.isDebugMenuOpen) {
+        renderDebugMenuModal(
           ctx,
           this.containerWidth,
           this.containerHeight,
           this.activeState,
           {
-            view: this.currentMenuView,
+            view: this.currentDebugMenuView,
             hoveredItemId: this.hover.hoveredMenuItemId,
-            buildInfo,
-            debugMode: currentDebug,
             callbacks: this.menuCallbacks,
             env: uiEnv,
           },
@@ -2156,7 +2149,8 @@ export class DungeonBoardController {
 
   /**
    * Game keyboard/touch input is suppressed while any modal surface is
-   * open: the canvas menu, the save/load dialog, the new-game dialog, the
+   * open: the canvas debug menu, the save/load dialog, the new-game
+   * dialog, the
    * dungeon intro, or the between-dungeons overlay (party wipe and
    * campaign win included). The save-name and seed inputs are
    * canvas-drawn, so the InputManager's DOM-text-input guard cannot see
@@ -2165,7 +2159,7 @@ export class DungeonBoardController {
   private syncGameInputEnabled(): void {
     inputManager.setEnabled(
       this.appPhase !== 'welcome' &&
-        !this.isCanvasMenuOpen &&
+        !this.isDebugMenuOpen &&
         !this.saveLoadDialogMode &&
         !this.isNewGameDialogOpen &&
         !this.showDungeonIntro &&
@@ -2184,8 +2178,8 @@ export class DungeonBoardController {
 
   /** Opens the centered save/load dialog and closes the canvas menu. */
   private openSaveLoadDialog(mode: SaveLoadDialogMode): void {
-    this.isCanvasMenuOpen = false;
-    this.currentMenuView = 'main';
+    this.isDebugMenuOpen = false;
+    this.currentDebugMenuView = 'debug';
     this.saveLoadDialogMode = mode;
     this.syncGameInputEnabled();
     if (mode === 'save') {
@@ -2246,8 +2240,8 @@ export class DungeonBoardController {
 
   /** Opens the centered new-game dialog, preselecting the current run. */
   private openNewGameDialog(): void {
-    this.isCanvasMenuOpen = false;
-    this.currentMenuView = 'main';
+    this.isDebugMenuOpen = false;
+    this.currentDebugMenuView = 'debug';
     const activeState = this.activeState;
     // In the welcome phase there is no run to preselect from: keep the
     // previous dialog selections so returning from hero selection (Back)
@@ -2430,10 +2424,9 @@ export class DungeonBoardController {
       dungeonIntroDismissed: this.isDungeonIntroDismissed,
       isLogOpen: this.isLogOpen,
       debugMode: this.debugMode,
-      isCanvasMenuOpen: this.isCanvasMenuOpen,
-      menuView: this.currentMenuView,
+      isDebugMenuOpen: this.isDebugMenuOpen,
+      debugMenuView: this.currentDebugMenuView,
       menuCallbacks: this.menuCallbacks,
-      buildInfo,
       eventCardCollapsed: this.effectiveEventCardCollapsed,
       diaryCollapsed: this.effectiveDiaryCollapsed,
       saveLoadDialogMode: this.saveLoadDialogMode,
@@ -2469,6 +2462,32 @@ export class DungeonBoardController {
     if (!this.uiCanvas) return null;
     const rect = this.uiCanvas.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  /**
+   * Whether a run is parked in the store while the welcome screen is up
+   * (fresh visits have none): gates the Continue and Save buttons. A
+   * run whose final dungeon is beaten is a finished campaign, not an
+   * ongoing run.
+   */
+  private get hasOngoingRun(): boolean {
+    const state = this.activeState;
+    if (!state) return false;
+    return !state.dungeon?.beaten || Boolean(state.dungeon?.nextDungeon);
+  }
+
+  /**
+   * Opens the welcome screen — the menu button's target since the main
+   * menu folded into it. The run (if any) stays in the store; the
+   * welcome screen's Continue button returns to it.
+   */
+  private openWelcomeScreen(): void {
+    this.isDebugMenuOpen = false;
+    this.currentDebugMenuView = 'debug';
+    this.hover.hoveredMenuItemId = null;
+    enterWelcomePhase();
+    this.syncGameInputEnabled();
+    this.renderCanvas(true);
   }
 
   /** Dispatches a new-game dialog click (game and welcome phases alike). */
@@ -2572,12 +2591,8 @@ export class DungeonBoardController {
         hit &&
         (hit.type === 'toggle' ||
           hit.type === 'slider' ||
-          hit.type === 'credits')
-          ? hit.type === 'toggle'
-            ? hit.rowId
-            : hit.type === 'slider'
-            ? hit.rowId
-            : 'credits'
+          hit.type === 'button')
+          ? hit.rowId
           : null;
       const isBack = hit?.type === 'back';
       let changed = false;
@@ -2684,6 +2699,7 @@ export class DungeonBoardController {
       this.containerHeight,
       point.x,
       point.y,
+      { hasOngoingRun: this.hasOngoingRun },
     );
     if (hit !== this.hoveredWelcomeButton) {
       this.hoveredWelcomeButton = hit;
@@ -2755,13 +2771,27 @@ export class DungeonBoardController {
         this.renderUiLayer(true);
         return;
       }
+      if (hit.type === 'toggle' && hit.rowId === 'debug') {
+        soundEffectManager.playButtonClick();
+        // The app setting is the source of truth; it mirrors into the
+        // run's settings while one exists.
+        updateAppSettings({ debugOn: !settings.debugOn });
+        this.renderUiLayer(true);
+        return;
+      }
       if (hit.type === 'slider') {
         if (!sliderPressHandled) {
           this.setSliderValueFromPoint(hit.rowId, point);
         }
         return;
       }
-      if (hit.type === 'credits') {
+      if (hit.type === 'button' && hit.rowId === 'language') {
+        soundEffectManager.playButtonClick();
+        onChangeLanguage(this.activeState ?? null);
+        this.renderUiLayer(true);
+        return;
+      }
+      if (hit.type === 'button' && hit.rowId === 'credits') {
         soundEffectManager.playButtonClick();
         setWelcomeView('credits');
         return;
@@ -2816,11 +2846,18 @@ export class DungeonBoardController {
       this.containerHeight,
       point.x,
       point.y,
+      { hasOngoingRun: this.hasOngoingRun },
     );
     if (!hit) return;
     soundEffectManager.playButtonClick();
-    if (hit === 'newGame') {
+    if (hit === 'continue') {
+      // The parked run is still in the store; the game phase renders it.
+      enterGamePhase();
+      this.renderCanvas(true);
+    } else if (hit === 'newGame') {
       this.openNewGameDialog();
+    } else if (hit === 'save') {
+      this.openSaveLoadDialog('save');
     } else if (hit === 'loadGame') {
       this.openSaveLoadDialog('load');
     } else if (hit === 'settings') {
@@ -3120,12 +3157,9 @@ export class DungeonBoardController {
           soundEffectManager.playButtonClick();
           if (activeState.betweenDungeons.step === 'campaignComplete') {
             // Final screen dismissed: the campaign is over, so the player
-            // returns to the main menu.
+            // returns to the welcome screen (the former main menu).
             activeState.betweenDungeons = undefined;
-            this.isCanvasMenuOpen = true;
-            this.currentMenuView = 'main';
-            this.hover.hoveredMenuItemId = null;
-            this.syncGameInputEnabled();
+            this.openWelcomeScreen();
           } else if (activeState.betweenDungeons.step === 'levelUp') {
             setBetweenDungeonsStep(activeState, 'trade');
           } else {
@@ -3194,24 +3228,19 @@ export class DungeonBoardController {
         const topBarHit = hit.hit;
         if (topBarHit === 'menu') {
           soundEffectManager.playButtonClick();
-          if (this.isCanvasMenuOpen && this.currentMenuView === 'main') {
-            this.isCanvasMenuOpen = false;
-          } else {
-            this.isCanvasMenuOpen = true;
-            this.currentMenuView = 'main';
-          }
-          this.hover.hoveredMenuItemId = null;
-          this.syncGameInputEnabled();
-          this.renderUiLayer(true);
+          // The menu button opens the welcome screen — the main menu
+          // folded into it. The run stays in the store; its Continue
+          // button returns to the game.
+          this.openWelcomeScreen();
           return;
         }
         if (topBarHit === 'debug') {
           soundEffectManager.playButtonClick();
-          if (this.isCanvasMenuOpen && this.currentMenuView === 'debug') {
-            this.isCanvasMenuOpen = false;
+          if (this.isDebugMenuOpen) {
+            this.isDebugMenuOpen = false;
           } else {
-            this.isCanvasMenuOpen = true;
-            this.currentMenuView = 'debug';
+            this.isDebugMenuOpen = true;
+            this.currentDebugMenuView = 'debug';
           }
           this.hover.hoveredMenuItemId = null;
           this.syncGameInputEnabled();
@@ -3221,15 +3250,15 @@ export class DungeonBoardController {
         return;
       }
 
-      if (hit?.kind === 'menu') {
-        const menuHit = hit.hit;
-        if (menuHit.type === 'item' && menuHit.item) {
+      if (hit?.kind === 'debugMenu') {
+        const debugMenuHit = hit.hit;
+        if (debugMenuHit.type === 'item' && debugMenuHit.item) {
           soundEffectManager.playButtonClick();
-          menuHit.item.onClick(activeState);
+          debugMenuHit.item.onClick(activeState);
           this.renderCanvas(true);
-        } else if (menuHit.type === 'backdrop') {
-          this.isCanvasMenuOpen = false;
-          this.currentMenuView = 'main';
+        } else if (debugMenuHit.type === 'backdrop') {
+          this.isDebugMenuOpen = false;
+          this.currentDebugMenuView = 'debug';
           this.hover.hoveredMenuItemId = null;
           this.syncGameInputEnabled();
           this.renderUiLayer(true);

@@ -4,11 +4,11 @@
 
 import { DifficultLevels } from '../../core';
 import { campaigns } from '../../campaigns';
-import type { Translator } from '../../uikit/env';
+import type { Translator } from '../../uikit';
 import type {
   NewGameDialogRowVm,
   NewGameDialogViewModel,
-} from '../../uikit/components/newGameDialog';
+} from '../../uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 export const getCampaignRows = (
@@ -30,7 +30,7 @@ export const getGameMasterRows = (
 export const toNewGameDialogViewModel = (
   t: Translator = i18nTranslator,
 ): NewGameDialogViewModel => ({
-  titleText: t('content.menu.mainMenu.buttons.newGame'),
+  titleText: t('content.menu.welcome.buttons.newGame'),
   campaignHeaderText: t('content.menu.selectCampaign.header'),
   gameMasterHeaderText: t('content.menu.selectGameMaster.header'),
   campaignRows: getCampaignRows(t),

@@ -5,7 +5,7 @@ import type {
   DungeonIntroHitResult,
   EventCardHitResult,
   HeroCardsHitResult,
-  MenuHitResult,
+  DebugMenuHitResult,
   MonsterCardsHitResult,
   DiaryAndWinConditionsHitResult,
   SaveLoadDialogHitResult,
@@ -60,10 +60,9 @@ const createContext = (overrides?: Partial<UiHitContext>): UiHitContext => ({
   dungeonIntroDismissed: false,
   isLogOpen: false,
   debugMode: false,
-  isCanvasMenuOpen: false,
-  menuView: 'main',
+  isDebugMenuOpen: false,
+  debugMenuView: 'debug',
   menuCallbacks: {},
-  buildInfo: { date: 'today', hash: 'abc' },
   eventCardCollapsed: false,
   diaryCollapsed: false,
   saveLoadDialogMode: null,
@@ -75,7 +74,10 @@ const createContext = (overrides?: Partial<UiHitContext>): UiHitContext => ({
 
 const bdHit: BetweenDungeonsHitResult = { type: 'actionButton' };
 const introHit: DungeonIntroHitResult = { type: 'backdrop' };
-const menuHit: MenuHitResult = { type: 'item', item: { id: 'x' } as never };
+const debugMenuHit: DebugMenuHitResult = {
+  type: 'item',
+  item: { id: 'x' } as never,
+};
 const heroHit: HeroCardsHitResult = {
   type: 'inventoryButton',
   hero: { name: 'Fearik' } as never,
@@ -98,7 +100,7 @@ const noHitTesters: UiHitTesters = {
   saveLoadDialog: () => null,
   newGameDialog: () => null,
   topBar: () => null,
-  menu: () => null,
+  debugMenu: () => null,
   heroCards: () => null,
   monsterCards: () => null,
   diary: () => null,
@@ -215,16 +217,16 @@ describe('findUiHit cascade', () => {
     expect(testers.saveLoadDialog).not.toHaveBeenCalled();
   });
 
-  it('only tests the canvas menu while it is open', () => {
+  it('only tests the canvas debug menu while it is open', () => {
     const testers = {
       ...noHitTesters,
-      menu: vi.fn(() => menuHit),
+      debugMenu: vi.fn(() => debugMenuHit),
     };
     expect(findUiHit(createContext(), testers)).toBeNull();
-    expect(testers.menu).not.toHaveBeenCalled();
+    expect(testers.debugMenu).not.toHaveBeenCalled();
 
-    const hit = findUiHit(createContext({ isCanvasMenuOpen: true }), testers);
-    expect(hit).toEqual({ kind: 'menu', hit: menuHit });
+    const hit = findUiHit(createContext({ isDebugMenuOpen: true }), testers);
+    expect(hit).toEqual({ kind: 'debugMenu', hit: debugMenuHit });
   });
 
   it('orders hero cards before monster cards, diary and event card', () => {
@@ -255,18 +257,18 @@ describe('findUiHit cascade', () => {
 
   it('forwards the board position and options to each tester', () => {
     const topBar = vi.fn(() => null as TopBarHitElement);
-    const menu = vi.fn(() => null);
+    const debugMenu = vi.fn(() => null);
     const eventCard = vi.fn(() => null);
     const context = createContext({
       x: 123,
       y: 45,
       isLogOpen: true,
       debugMode: true,
-      isCanvasMenuOpen: true,
-      menuView: 'debug',
+      isDebugMenuOpen: true,
+      debugMenuView: 'event',
       eventCardCollapsed: true,
     });
-    findUiHit(context, { ...noHitTesters, topBar, menu, eventCard });
+    findUiHit(context, { ...noHitTesters, topBar, debugMenu, eventCard });
 
     expect(topBar).toHaveBeenCalledWith(
       context.viewWidth,
@@ -276,15 +278,13 @@ describe('findUiHit cascade', () => {
       null,
       { isLogOpen: true, debugMode: true },
     );
-    expect(menu).toHaveBeenCalledWith(
+    expect(debugMenu).toHaveBeenCalledWith(
       context.viewWidth,
       context.viewHeight,
       context.state,
       {
-        view: 'debug',
-        debugMode: true,
+        view: 'event',
         callbacks: {},
-        buildInfo: context.buildInfo,
       },
       123,
       45,
