@@ -2,7 +2,6 @@
 
 ## Worth investigating
 
-- [ ] Items lost when a monster is killed by non-hero damage (earthquake): the monster is never removed from the layout, grants no XP and doesn't count toward `KILL_AT_LEAST`, and its inventory is lost — route all deaths through one `killMonster`-style path (like the sun-stone event does); chaos-sword kills now transfer inventory via the shared `killMonster`, dead monsters no longer trigger the zone of control, and the earthquake case is what remains
 - [ ] `checkForNextToMonster` ignores room discovery — heroes are halted (and log-spoiled) by monsters standing in undiscovered areas
 - [ ] Diagonal movement cost differs between click-path (`distanceInGrid`, `floor(√2·diagonals + straights)`) and keyboard steps (1 per step) for paths with 3+ diagonal cells — unify
 - [ ] Dark lord fire spray deviations: officially an adjacent rider forces the sword (impl can spray), the green lord hits one rider plus adjacent figures (impl hits the whole room), and monster targets aren't LOS-filtered
@@ -12,6 +11,7 @@
 - [ ] Missable win-condition items (giant's glove for e1m6, necklace for e1m4) plus no looting of fallen heroes can softlock scenarios — consider looting dead heroes, passing items to adjacent heroes, or fallback hints
 - [ ] Earthquake damage is reduced by armour and shields — decide whether the boulder should ignore them
 - [ ] Door traps (1-2 dice) are weak compared to the suggested 3 dice — reconsider `trapAttacks` values
+- [x] Items lost when a monster is killed by non-hero damage (earthquake): the monster is never removed from the layout, grants no XP and doesn't count toward `KILL_AT_LEAST`, and its inventory is lost — now `processActorDowned` removes the monster, drops its inventory where it stood (sun-stone pattern), grants no XP and no killCount credit; hero kills still route through `killMonster` (XP + KILL_AT_LEAST + inventory to the killer), and petrified sun-stone trolls stay as statues by design
 - [x] Necklace of Light: usable once per round and makes the wearer fully untargetable (esp. e1m6) — now usable once per scenario (`RESET_ON: [NEXT_TURN, NEXT_SCENARIO]`: the round trigger only ends the untargetable effect, the scenario trigger restores the use)
 - [x] Potion of Speed never resets (`USED` without `RESET_ON`) — now resets on next scenario (once per scenario use)
 - [x] Orc bow LOS: officially the shot line is blocked by any figure — already correct: the combat LOS path (`stepAlongLine` with `walking=false`) blocks heroes and monsters; only the walking variant ignores heroes

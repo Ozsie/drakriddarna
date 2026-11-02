@@ -10,8 +10,16 @@ import {
   takeDamage,
 } from './combat';
 import { setRng, resetRng } from './dice';
-import { Colour, ItemType, Level, Side } from '../types';
-import type { Actor, Dungeon, GameState, Item } from '../types';
+import { Colour, ItemType, Level, MonsterType, Side } from '../types';
+import type {
+  Actor,
+  Dungeon,
+  GameState,
+  Hero,
+  Item,
+  Monster,
+  Weapon,
+} from '../types';
 
 const dummyDungeon: Dungeon = {
   name: 'Test',
@@ -245,6 +253,139 @@ describe('combat module', () => {
     expect(state.damageIndicators?.length).toBe(1);
     expect(state.damageIndicators?.[0].damage).toBe(2);
     expect(state.damageIndicators?.[0].position).toEqual({ x: 1, y: 0 });
+  });
+
+  describe('monster deaths by non-hero damage (hazard kills)', () => {
+    const weapon = (name: string, overrides: Partial<Weapon> = {}): Weapon => ({
+      name,
+      dice: 3,
+      amountInDeck: 1,
+      range: 1,
+      twoHanded: false,
+      useHearHeroes: true,
+      type: ItemType.WEAPON,
+      value: 0,
+      ignoresArmour: false,
+      ignoresShield: false,
+      ...overrides,
+    });
+
+    const createHazard = (): Actor => ({
+      name: 'Earthquake',
+      actions: 0,
+      movement: 0,
+      maxMovement: 0,
+      defense: 0,
+      health: 1,
+      maxHealth: 1,
+      colour: Colour.Red,
+      experience: 0,
+      position: { x: 0, y: 0 },
+      level: Level.KNIGHT,
+      weapon: weapon('boulder'),
+      inventory: [],
+    });
+
+    const createHero = (): Hero => ({
+      name: 'Fearik',
+      actions: 2,
+      movement: 5,
+      maxMovement: 5,
+      defense: 0,
+      health: 5,
+      maxHealth: 10,
+      colour: Colour.Yellow,
+      incapacitated: false,
+      position: { x: 0, y: 1 },
+      experience: 0,
+      level: Level.KNIGHT,
+      weapon: weapon('Sword'),
+      inventory: [],
+      isInventoryOpen: false,
+      ignoredByMonsters: false,
+      walkSound: '',
+      hurtSound: '',
+      deathSound: '',
+    });
+
+    const createMonster = (carried: Item[]): Monster =>
+      ({
+        name: 'Troll',
+        type: MonsterType.TROLL,
+        health: 1,
+        maxHealth: 1,
+        defense: 0,
+        actions: 0,
+        movement: 0,
+        maxMovement: 0,
+        colour: Colour.Red,
+        position: { x: 2, y: 0 },
+        experience: 2,
+        level: Level.APPRENTICE,
+        inventory: carried,
+        weapon: weapon('Club'),
+      }) as unknown as Monster;
+
+    const createState = (hero: Hero, monster: Monster): GameState => ({
+      heroes: [hero],
+      dungeon: {
+        ...dummyDungeon,
+        killCount: 0,
+        layout: {
+          ...dummyDungeon.layout,
+          monsters: [monster],
+          items: [],
+        },
+      },
+      actionLog: [],
+      itemDeck: [],
+      magicItemDeck: [],
+      settings: {},
+      eventDeck: [],
+      reRender: false,
+      drawEvents: true,
+    });
+
+    const carriedItem: Item = {
+      id: 'giants_glove',
+      name: "Giant's Glove",
+      type: ItemType.MAGIC,
+      amountInDeck: 1,
+      value: 0,
+    };
+
+    it('removes the monster, drops its inventory where it stood and grants no XP or killCount credit', () => {
+      // 5/6 gives dice roll 6 (success for KNIGHT): 3 hits, 1 health monster dies
+      setRng(() => 5 / 6);
+      const hero = createHero();
+      const monster = createMonster([carriedItem]);
+      const state = createState(hero, monster);
+
+      takeDamage(state, createHazard(), monster, false);
+
+      expect(state.dungeon.layout.monsters).not.toContain(monster);
+      expect(state.dungeon.layout.items).toEqual([
+        { item: carriedItem, position: { x: 2, y: 0 } },
+      ]);
+      expect(monster.inventory).toEqual([]);
+      expect(state.dungeon.killCount).toBe(0);
+      expect(hero.experience).toBe(0);
+      expect(monster.health).toBe(0);
+    });
+
+    it('keeps a hero-killed monster in the layout for the shared killMonster path', () => {
+      setRng(() => 5 / 6);
+      const hero = createHero();
+      const monster = createMonster([carriedItem]);
+      const state = createState(hero, monster);
+
+      takeDamage(state, hero, monster, false);
+
+      expect(monster.health).toBe(0);
+      expect(state.dungeon.layout.monsters).toContain(monster);
+      expect(state.dungeon.layout.items).toEqual([]);
+      expect(monster.inventory).toEqual([carriedItem]);
+    });
   });
 
   it('takeDamage paralyzes surviving target hit by green_dark_lord_sword', () => {

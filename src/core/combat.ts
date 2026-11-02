@@ -71,7 +71,30 @@ export const removeDamageIndicator = (state: GameState, id: string): void => {
 // health, resets the level, plays the death animation and sound, and fires
 // the difficulty's onHeroDowned hook for heroes. Shared by combat and
 // environmental damage (e.g. terrain).
-export const processActorDowned = (state: GameState, target: Actor): void => {
+// A monster downed by a hazard or another monster is removed from the
+// layout without XP or killCount credit, and what it carried drops where
+// it stood (the inventory-drop pattern of the sun-stone event). Hero
+// kills take the separate `killMonster` path instead, which grants XP,
+// counts toward KILL_AT_LEAST and hands the inventory to the killer.
+const dropDownedMonster = (state: GameState, monster: Monster): void => {
+  const monsters = state.dungeon.layout.monsters;
+  if (!monsters.includes(monster)) return;
+  state.dungeon.layout.monsters = monsters.filter((m) => m !== monster);
+  monster.inventory.forEach((item) => {
+    if (!item) return;
+    state.dungeon.layout.items.push({
+      item,
+      position: { x: monster.position.x, y: monster.position.y },
+    });
+  });
+  monster.inventory = [];
+};
+
+export const processActorDowned = (
+  state: GameState,
+  target: Actor,
+  killedByHero = false,
+): void => {
   target.health = 0;
   target.level = Level.APPRENTICE;
   playActorDeath(target);
@@ -79,6 +102,8 @@ export const processActorDowned = (state: GameState, target: Actor): void => {
     const gm = getDifficulty(state);
     const onHeroDowned = gm.rules?.onHeroDowned ?? gm.onHeroDowned;
     onHeroDowned?.(target as Hero, state);
+  } else if (!killedByHero) {
+    dropDownedMonster(state, target as Monster);
   }
   soundEffectManager.playActorDeath(target);
 };
@@ -369,7 +394,7 @@ export const takeDamage = (
       actor: i18n(source.name),
       target: i18n(target.name),
     });
-    processActorDowned(state, target);
+    processActorDowned(state, target, isHeroSource && !isHeroTarget);
   } else {
     if (damage > 0) {
       soundEffectManager.playActorHurt(target);
