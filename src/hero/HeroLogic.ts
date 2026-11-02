@@ -626,21 +626,13 @@ export const checkForNote = (state: GameState, hero: Hero) => {
   }
 };
 
-/** Whether a live monster stands adjacent to the hero without a wall between. */
-export const isAdjacentToMonster = (state: GameState, hero: Hero): boolean =>
-  state.dungeon.layout.monsters.some(
-    (monster) =>
-      monster.health > 0 &&
-      isNeighbouring(hero.position, monster.position.x, monster.position.y) &&
-      !crossesWallEdge(state.dungeon.layout, hero.position, monster.position),
-  );
-
 /**
  * Whether a live monster in a discovered area stands adjacent to the hero
- * without a wall between. LETA actions (search, pick lock) are blocked by
- * such monsters only: a monster in an undiscovered room — typically on the
- * far side of a closed door — is not engaging the hero and must not block
- * these actions.
+ * without a wall between. LETA actions (search, pick lock) and the zone of
+ * control that halts movement are blocked by such monsters only: a monster
+ * in an undiscovered room — typically on the far side of a closed door —
+ * is not engaging the hero and must neither block these actions nor end
+ * the hero's move.
  */
 export const isAdjacentToVisibleMonster = (
   state: GameState,
@@ -658,7 +650,7 @@ export const checkForNextToMonster = (
   state: GameState,
   hero: Hero,
 ): boolean => {
-  if (isAdjacentToMonster(state, hero)) {
+  if (isAdjacentToVisibleMonster(state, hero)) {
     addLog(state, 'logs.heroAction.walkedByMonster', { hero: i18n(hero.name) });
     return true;
   }

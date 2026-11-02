@@ -418,6 +418,28 @@ describe('checkForNextToMonster across edge walls', () => {
   });
 });
 
+describe('checkForNextToMonster and room discovery', () => {
+  it('ignores a monster standing in an undiscovered room', () => {
+    const hero = createTestHero({ position: { x: 2, y: 2 } });
+    const monster = createTestMonster({ position: { x: 3, y: 2 } });
+    const state = createTestState(hero, monster);
+    // The monster's cell belongs to the undiscovered room B
+    state.dungeon.layout.grid[2] = '#AABAA#';
+
+    expect(checkForNextToMonster(state, hero)).toBe(false);
+    expect(
+      state.actionLog.some((l) => l.key === 'logs.heroAction.walkedByMonster'),
+    ).toBe(false);
+
+    // Discovering the room re-engages the monster's zone of control
+    state.dungeon.discoveredRooms.push('B');
+    expect(checkForNextToMonster(state, hero)).toBe(true);
+    expect(
+      state.actionLog.some((l) => l.key === 'logs.heroAction.walkedByMonster'),
+    ).toBe(true);
+  });
+});
+
 describe('canOpenDoor', () => {
   const createTestDoor = (overrides?: Partial<Door>): Door => ({
     locked: false,
