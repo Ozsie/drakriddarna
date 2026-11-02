@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { describe, expect, it, vi } from 'vitest';
-import { getMenuHit, getMenuLayout, renderMenuModal } from './MenuRendering';
+import {
+  getDebugMenuHit,
+  getDebugMenuLayout,
+  renderDebugMenuModal,
+} from './DebugMenuRendering';
 import { isPointInRect as isPointInBounds } from '../uikit/primitives/geometry';
 import { Colour, type GameState, type Hero, ItemType, Level } from '../types';
 
@@ -92,7 +96,7 @@ const createMockCtx = () =>
     measureText: vi.fn((text: string) => ({ width: text.length * 7 })),
   }) as unknown as CanvasRenderingContext2D;
 
-describe('MenuRendering', () => {
+describe('DebugMenuRendering', () => {
   describe('isPointInBounds', () => {
     it('accurately tests if point is within bounds', () => {
       const bounds = { x: 10, y: 20, width: 100, height: 50 };
@@ -106,42 +110,40 @@ describe('MenuRendering', () => {
     });
   });
 
-  describe('getMenuLayout', () => {
+  describe('getDebugMenuLayout', () => {
     it('returns empty layout when state or dimensions are invalid', () => {
-      expect(getMenuLayout(0, 600, createMockState())).toEqual({
-        view: 'main',
+      expect(getDebugMenuLayout(0, 600, createMockState())).toEqual({
+        view: 'debug',
         panelBounds: { x: 0, y: 0, width: 0, height: 0 },
         headerBounds: { x: 0, y: 0, width: 0, height: 0, text: '' },
         items: [],
       });
-      expect(getMenuLayout(800, 0, createMockState())).toEqual({
-        view: 'main',
+      expect(getDebugMenuLayout(800, 0, createMockState())).toEqual({
+        view: 'debug',
         panelBounds: { x: 0, y: 0, width: 0, height: 0 },
         headerBounds: { x: 0, y: 0, width: 0, height: 0, text: '' },
         items: [],
       });
-      expect(getMenuLayout(800, 600, null)).toEqual({
-        view: 'main',
+      expect(getDebugMenuLayout(800, 600, null)).toEqual({
+        view: 'debug',
         panelBounds: { x: 0, y: 0, width: 0, height: 0 },
         headerBounds: { x: 0, y: 0, width: 0, height: 0, text: '' },
         items: [],
       });
     });
 
-    it('creates menu layout positioned under top bar with items and header', () => {
+    it('creates the menu layout positioned under the top bar with items and header', () => {
       const state = createMockState();
-      const layout = getMenuLayout(800, 600, state, {
-        view: 'main',
-        buildInfo: { date: '2026-10-06', hash: 'abc1234' },
+      const layout = getDebugMenuLayout(800, 600, state, {
+        view: 'debug',
       });
 
-      expect(layout.view).toBe('main');
+      expect(layout.view).toBe('debug');
       expect(layout.panelBounds.x).toBe(8);
       expect(layout.panelBounds.y).toBe(44);
       expect(layout.panelBounds.width).toBe(240);
       expect(layout.headerBounds.text).toBeTruthy();
       expect(layout.items.length).toBeGreaterThan(0);
-      expect(layout.footerBounds?.text).toBe('2026-10-06 - abc1234');
 
       // Check item bounds are arranged vertically
       for (let i = 0; i < layout.items.length; i++) {
@@ -157,14 +159,13 @@ describe('MenuRendering', () => {
       }
     });
 
-    it('creates debug view layout with debug actions', () => {
+    it('creates the debug view layout with the debug actions', () => {
       const state = createMockState();
-      const layout = getMenuLayout(800, 600, state, {
+      const layout = getDebugMenuLayout(800, 600, state, {
         view: 'debug',
       });
 
       expect(layout.view).toBe('debug');
-      expect(layout.headerBounds.text).toBe('Debug');
       expect(layout.items.some((i) => i.item.id === 'testing_grounds')).toBe(
         true,
       );
@@ -174,68 +175,54 @@ describe('MenuRendering', () => {
       );
     });
 
-    it('creates rights view layout with ownership and license info', () => {
-      const state = createMockState();
-      const layout = getMenuLayout(800, 600, state, {
-        view: 'rights',
+    it('creates the event view layout from the event deck', () => {
+      const state = createMockState({
+        eventDeck: [
+          {
+            id: 'e2',
+            number: 2,
+            name: 'Event Two',
+            description: '',
+          },
+          {
+            id: 'e1',
+            number: 1,
+            name: 'Event One',
+            description: '',
+          },
+        ] as never,
+      });
+      const layout = getDebugMenuLayout(800, 600, state, {
+        view: 'event',
       });
 
-      expect(layout.view).toBe('rights');
-      expect(layout.headerBounds.text).toBeTruthy();
-      expect(
-        layout.items.some((i) => i.item.id === 'rights_implementation'),
-      ).toBe(true);
-      expect(layout.items.some((i) => i.item.id === 'rights_music')).toBe(true);
-      expect(layout.items.some((i) => i.item.id === 'rights_graphics')).toBe(
-        true,
-      );
-      expect(layout.items.some((i) => i.item.id === 'rights_back')).toBe(true);
-    });
-
-    it('shows debug status label in main menu layout', () => {
-      const state = createMockState();
-      const layoutWithoutDebug = getMenuLayout(800, 600, state, {
-        view: 'main',
-        debugMode: false,
-      });
-      const layoutWithDebug = getMenuLayout(800, 600, state, {
-        view: 'main',
-        debugMode: true,
-      });
-
-      const debugItemOff = layoutWithoutDebug.items.find(
-        (i) => i.item.id === 'debug',
-      );
-      const debugItemOn = layoutWithDebug.items.find(
-        (i) => i.item.id === 'debug',
-      );
-
-      expect(debugItemOff?.item.label).toBe('Debug: Off');
-      expect(debugItemOn?.item.label).toBe('Debug: On');
-      expect(
-        layoutWithDebug.items.some((i) => i.item.id === 'testing_grounds'),
-      ).toBe(false);
+      expect(layout.view).toBe('event');
+      expect(layout.items.map((i) => i.item.id)).toEqual([
+        'event_e1',
+        'event_e2',
+        'event_back',
+      ]);
     });
   });
 
-  describe('getMenuHit', () => {
+  describe('getDebugMenuHit', () => {
     it('returns null when clicking outside canvas or invalid input', () => {
       const state = createMockState();
-      expect(getMenuHit(800, 600, state, undefined, -5, 10)).toBeNull();
-      expect(getMenuHit(800, 600, state, undefined, 900, 10)).toBeNull();
-      expect(getMenuHit(0, 600, state, undefined, 10, 10)).toBeNull();
+      expect(getDebugMenuHit(800, 600, state, undefined, -5, 10)).toBeNull();
+      expect(getDebugMenuHit(800, 600, state, undefined, 900, 10)).toBeNull();
+      expect(getDebugMenuHit(0, 600, state, undefined, 10, 10)).toBeNull();
     });
 
     it('returns item when clicking on an item button', () => {
       const state = createMockState();
-      const layout = getMenuLayout(800, 600, state, { view: 'main' });
+      const layout = getDebugMenuLayout(800, 600, state, { view: 'debug' });
       const firstItem = layout.items[0];
 
-      const hit = getMenuHit(
+      const hit = getDebugMenuHit(
         800,
         600,
         state,
-        { view: 'main' },
+        { view: 'debug' },
         firstItem.bounds.x + 5,
         firstItem.bounds.y + 5,
       );
@@ -245,14 +232,14 @@ describe('MenuRendering', () => {
 
     it('returns panel when clicking inside panel padding / header area', () => {
       const state = createMockState();
-      const layout = getMenuLayout(800, 600, state, { view: 'main' });
+      const layout = getDebugMenuLayout(800, 600, state, { view: 'debug' });
 
       // Click on header
-      const hit = getMenuHit(
+      const hit = getDebugMenuHit(
         800,
         600,
         state,
-        { view: 'main' },
+        { view: 'debug' },
         layout.headerBounds.x + 5,
         layout.headerBounds.y + 5,
       );
@@ -263,27 +250,26 @@ describe('MenuRendering', () => {
 
     it('returns backdrop when clicking outside the panel', () => {
       const state = createMockState();
-      const hit = getMenuHit(800, 600, state, { view: 'main' }, 500, 300);
+      const hit = getDebugMenuHit(800, 600, state, { view: 'debug' }, 500, 300);
       expect(hit).toEqual({
         type: 'backdrop',
       });
     });
   });
 
-  describe('renderMenuModal', () => {
-    it('renders backdrop, panel, header, items and footer onto canvas context', () => {
+  describe('renderDebugMenuModal', () => {
+    it('renders backdrop, panel, header and items onto the canvas context', () => {
       const state = createMockState();
       const ctx = createMockCtx();
 
-      renderMenuModal(ctx, 800, 600, state, {
-        view: 'main',
-        hoveredItemId: 'new_game',
-        buildInfo: { date: '2026-10-06', hash: 'abc1234' },
+      renderDebugMenuModal(ctx, 800, 600, state, {
+        view: 'debug',
+        hoveredItemId: 'testing_grounds',
       });
 
       expect(ctx.save).toHaveBeenCalled();
       expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 800, 600); // backdrop
-      expect(ctx.fillText).toHaveBeenCalled(); // header, items, footer
+      expect(ctx.fillText).toHaveBeenCalled(); // header and items
       expect(ctx.restore).toHaveBeenCalled();
     });
 
@@ -291,7 +277,7 @@ describe('MenuRendering', () => {
       const state = createMockState();
       const ctx = createMockCtx();
 
-      renderMenuModal(ctx, 0, 600, state);
+      renderDebugMenuModal(ctx, 0, 600, state);
       expect(ctx.save).not.toHaveBeenCalled();
     });
   });

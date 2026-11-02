@@ -37,7 +37,7 @@ import { renderDiaryAndWinConditions } from '../DiaryAndWinConditionRendering';
 import { renderEventCard } from '../EventCardRendering';
 import { renderBetweenDungeons } from '../BetweenDungeonsRendering';
 import { renderDungeonIntro } from '../DungeonIntroRendering';
-import { renderMenuModal } from '../MenuRendering';
+import { renderDebugMenuModal } from '../DebugMenuRendering';
 import { renderRadialMenu } from '../RadialMenuRendering';
 import { renderSaveLoadDialog } from '../SaveLoadDialogRendering';
 import { renderNewGameDialog } from '../NewGameDialogRendering';
@@ -163,19 +163,18 @@ describe('parity snapshots', () => {
     expect([...rec.log]).toMatchSnapshot('dungeonintro');
   });
 
-  it('snapshots the canvas menu modal', () => {
+  it('snapshots the canvas debug menu modal', () => {
     const rec = createRecordingContext();
-    renderMenuModal(
+    renderDebugMenuModal(
       rec.ctx,
       REGULAR_WIDTH,
       REGULAR_HEIGHT,
       midCampaignState(),
       {
-        view: 'main',
-        buildInfo: { date: '2026-10-31', hash: 'abc1234' },
+        view: 'debug',
       },
     );
-    expect([...rec.log]).toMatchSnapshot('menu-main');
+    expect([...rec.log]).toMatchSnapshot('debugmenu-debug');
   });
 
   it('snapshots the radial action menu', () => {
@@ -265,11 +264,20 @@ describe('parity snapshots', () => {
   });
 
   it('snapshots the welcome screen', () => {
-    const rec = createRecordingContext();
-    renderWelcome(rec.ctx, REGULAR_WIDTH, REGULAR_HEIGHT, {
+    const fresh = createRecordingContext();
+    renderWelcome(fresh.ctx, REGULAR_WIDTH, REGULAR_HEIGHT, {
       buildInfo: { date: '2026-10-31', hash: 'abc1234' },
     });
-    expect([...rec.log]).toMatchSnapshot('welcome');
+    expect([...fresh.log]).toMatchSnapshot('welcome');
+
+    // While a run is parked on the welcome screen, Continue and Save
+    // join the button list.
+    const ongoing = createRecordingContext();
+    renderWelcome(ongoing.ctx, REGULAR_WIDTH, REGULAR_HEIGHT, {
+      buildInfo: { date: '2026-10-31', hash: 'abc1234' },
+      hasOngoingRun: true,
+    });
+    expect([...ongoing.log]).toMatchSnapshot('welcome-ongoing');
   });
 
   it('snapshots the top bar and hero cards under the Swedish locale', async () => {

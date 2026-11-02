@@ -4,12 +4,13 @@
 // dimmed flags are prebuilt here.
 
 import type { AppSettings } from '../../settings/AppSettings';
-import type { Translator } from '../../uikit/env';
+import { isDebugModeAvailable } from '../../settings/debugMode';
+import type { Translator } from '../../uikit';
 import type {
   CreditsViewModel,
   SettingsRowVm,
   SettingsViewModel,
-} from '../../uikit/components/settings';
+} from '../../uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 export type SettingsRowId =
@@ -17,6 +18,8 @@ export type SettingsRowId =
   | 'audio'
   | 'musicVolume'
   | 'audioVolume'
+  | 'debug'
+  | 'language'
   | 'credits';
 
 // The credits rows: the same content the canvas menu's Rights view shows,
@@ -49,15 +52,28 @@ export const CREDITS_ROWS: CreditsRowDefinition[] = [
   },
 ];
 
-// The On/Off suffix follows the existing menu label pattern
-// (getMusicMenuLabel in src/menu/MenuLogic.ts).
+// The On/Off suffix follows the existing label pattern of the app's
+// toggle rows (the welcome screen inherited it from the canvas menu).
 const formatToggleLabel = (label: string, on: boolean): string =>
   `${label}: ${on ? 'On' : 'Off'}`;
+
+export interface SettingsAdapterOptions {
+  /**
+   * Overrides the build-mode debug gate; defaults to dev-build
+   * availability (`isDebugModeAvailable`), which production builds
+   * compile to false.
+   */
+  debugAvailable?: boolean;
+}
 
 export const toSettingsViewModel = (
   appSettings: AppSettings,
   t: Translator = i18nTranslator,
+  options?: SettingsAdapterOptions,
 ): SettingsViewModel => {
+  // The debug row exists only where debug mode is available at all
+  // (dev builds); production deploys hide it so it can't be used to
+  // cheat.
   const rows: SettingsRowVm[] = [
     {
       id: 'music',
@@ -91,13 +107,34 @@ export const toSettingsViewModel = (
       dimmed: !appSettings.sfxOn,
       value: appSettings.sfxVolume,
     },
+  ];
+  if (options?.debugAvailable ?? isDebugModeAvailable()) {
+    rows.push({
+      id: 'debug',
+      kind: 'toggle',
+      label: formatToggleLabel(
+        t('content.menu.settings.debug'),
+        appSettings.debugOn,
+      ),
+      dimmed: false,
+    });
+  }
+  rows.push(
+    {
+      // The label names the language being switched to (e.g.
+      // "-> Svenska"), like the language item the main menu had.
+      id: 'language',
+      kind: 'button',
+      label: t('content.menu.settings.language'),
+      dimmed: false,
+    },
     {
       id: 'credits',
       kind: 'button',
       label: t('content.menu.settings.credits'),
       dimmed: false,
     },
-  ];
+  );
 
   return {
     headerText: t('content.menu.settings.header'),

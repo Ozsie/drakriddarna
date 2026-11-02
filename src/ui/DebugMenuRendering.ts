@@ -1,20 +1,20 @@
-// Game-side facade for the canvas menu. The component (layout, hit test,
-// render over the view model) lives in the kit; the adapter in
-// ./viewmodels/menu is the only place that reads GameState (through
-// MenuLogic). This module keeps the historical entry points — including
-// the CanvasMenuItem-carrying hit the controller dispatches — so callers
-// work unchanged, with the exact same pixels: parity snapshots cover the
-// whole chain.
+// Game-side facade for the canvas debug menu (and its event view). The
+// component (layout, hit test, render over the view model) lives in the
+// kit; the adapter in ./viewmodels/debugMenu is the only place that
+// reads GameState (through MenuLogic). This module keeps the historical
+// entry points — including the CanvasMenuItem-carrying hit the
+// controller dispatches — so callers work unchanged, with the exact
+// same pixels: parity snapshots cover the whole chain.
 
 import type { GameState } from '../types';
 import {
   type CanvasMenuItem,
+  type DebugMenuView,
   type MenuCallbacks,
-  type MenuView,
-  getMenuItemsForView,
+  getDebugMenuItemsForView,
 } from '../menu/MenuLogic';
-import type { UiEnv } from '../uikit/env';
-import type { Rect } from '../uikit/primitives/geometry';
+import type { UiEnv } from '../uikit';
+import type { Rect } from '../uikit';
 import {
   hitTestMenu,
   layoutMenu,
@@ -22,83 +22,74 @@ import {
   type MenuHit,
   type MenuLayout as KitLayout,
 } from '../uikit/components/menu';
-import { toMenuViewModel } from './viewmodels/menu';
+import { toDebugMenuViewModel } from './viewmodels/debugMenu';
 import { legacyUiContext } from './env';
 
-export interface MenuItemLayout {
+export interface DebugMenuItemLayout {
   item: CanvasMenuItem;
   bounds: Rect;
 }
 
-export interface MenuLayout {
-  view: MenuView;
+export interface DebugMenuLayout {
+  view: DebugMenuView;
   panelBounds: Rect;
   headerBounds: Rect & { text: string };
-  items: MenuItemLayout[];
-  footerBounds?: Rect & { text: string };
+  items: DebugMenuItemLayout[];
 }
 
-export interface RenderMenuOptions {
-  view?: MenuView;
+export interface RenderDebugMenuOptions {
+  view?: DebugMenuView;
   hoveredItemId?: string | null;
-  buildInfo?: { date: string; hash: string } | null;
-  debugMode?: boolean;
   callbacks?: MenuCallbacks;
   env?: UiEnv;
 }
 
-export interface MenuHitResult {
+export interface DebugMenuHitResult {
   type: 'backdrop' | 'panel' | 'item';
   item?: CanvasMenuItem;
 }
 
-const emptyLayout = (view: MenuView): MenuLayout => ({
+const emptyLayout = (view: DebugMenuView): DebugMenuLayout => ({
   view,
   panelBounds: { x: 0, y: 0, width: 0, height: 0 },
   headerBounds: { x: 0, y: 0, width: 0, height: 0, text: '' },
   items: [],
 });
 
-const viewFor = (options: RenderMenuOptions | undefined): MenuView =>
-  options?.view ?? 'main';
+const viewFor = (options: RenderDebugMenuOptions | undefined): DebugMenuView =>
+  options?.view ?? 'debug';
 
 /** The menu items of the current view, for resolving hit ids. */
-const menuItems = (
+const debugMenuItems = (
   state: GameState,
-  view: MenuView,
-  options: RenderMenuOptions | undefined,
+  view: DebugMenuView,
+  options: RenderDebugMenuOptions | undefined,
 ): CanvasMenuItem[] =>
-  getMenuItemsForView(view, state, options?.callbacks, options?.debugMode);
+  getDebugMenuItemsForView(view, state, options?.callbacks);
 
 const kitLayoutFor = (
   viewWidth: number,
   viewHeight: number,
   state: GameState | null | undefined,
-  options: RenderMenuOptions | undefined,
+  options: RenderDebugMenuOptions | undefined,
 ): KitLayout | null => {
   if (!state || viewWidth <= 0 || viewHeight <= 0) return null;
   const view = viewFor(options);
-  const vm = toMenuViewModel(
-    state,
-    view,
-    options?.callbacks,
-    options?.debugMode,
-    options?.buildInfo,
-  );
+  const vm = toDebugMenuViewModel(state, view, options?.callbacks);
   return layoutMenu(vm, { x: 0, y: 0, width: viewWidth, height: viewHeight });
 };
 
-export const getMenuLayout = (
+export const getDebugMenuLayout = (
   viewWidth: number,
   viewHeight: number,
   state: GameState | null | undefined,
-  options?: RenderMenuOptions,
-): MenuLayout => {
+  options?: RenderDebugMenuOptions,
+): DebugMenuLayout => {
   const view = viewFor(options);
   const kitLayout = kitLayoutFor(viewWidth, viewHeight, state, options);
   if (!state || !kitLayout) return emptyLayout(view);
 
-  const items = menuItems(state, view, options);
+  const items = debugMenuItems(state, view, options);
   return {
     view,
     panelBounds: kitLayout.panelBounds,
@@ -107,18 +98,17 @@ export const getMenuLayout = (
       item: items.find((item) => item.id === itemLayout.item.id) ?? items[0],
       bounds: itemLayout.bounds,
     })),
-    footerBounds: kitLayout.footerBounds,
   };
 };
 
-export const getMenuHit = (
+export const getDebugMenuHit = (
   viewWidth: number,
   viewHeight: number,
   state: GameState | null | undefined,
-  options: RenderMenuOptions | undefined,
+  options: RenderDebugMenuOptions | undefined,
   x: number,
   y: number,
-): MenuHitResult | null => {
+): DebugMenuHitResult | null => {
   if (!state || viewWidth <= 0 || viewHeight <= 0) return null;
   if (x < 0 || y < 0 || x > viewWidth || y > viewHeight) return null;
 
@@ -127,7 +117,7 @@ export const getMenuHit = (
 
   const hit: MenuHit = hitTestMenu(kitLayout, { x, y });
   if (hit?.kind === 'item') {
-    const items = menuItems(state, viewFor(options), options);
+    const items = debugMenuItems(state, viewFor(options), options);
     const item = items.find((menuItem) => menuItem.id === hit.itemId);
     return item ? { type: 'item', item } : { type: 'panel' };
   }
@@ -136,12 +126,12 @@ export const getMenuHit = (
   return null;
 };
 
-export const renderMenuModal = (
+export const renderDebugMenuModal = (
   ctx: CanvasRenderingContext2D,
   viewWidth: number,
   viewHeight: number,
   state: GameState | null | undefined,
-  options?: RenderMenuOptions,
+  options?: RenderDebugMenuOptions,
 ): void => {
   if (!ctx || !state || viewWidth <= 0 || viewHeight <= 0) return;
 

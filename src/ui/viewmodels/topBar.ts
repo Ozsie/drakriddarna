@@ -5,8 +5,9 @@
 
 import type { GameState, LogEvent } from '../../types';
 import { formatDuration, getCurrentDungeonTimeMs } from '../../core';
-import type { Translator } from '../../uikit/env';
-import type { TopBarViewModel } from '../../uikit/components/topBar';
+import { isDebugModeAvailable } from '../../settings/debugMode';
+import type { Translator } from '../../uikit';
+import type { TopBarViewModel } from '../../uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 // Compact (narrow screen) counter labels: an emoji instead of the
@@ -62,6 +63,12 @@ export const formatScoreCounter = (
 export interface TopBarAdapterOptions {
   /** Overrides the state's debug setting. */
   debugMode?: boolean;
+  /**
+   * Overrides the build-mode debug gate; defaults to dev-build
+   * availability (`isDebugModeAvailable`), which production builds
+   * compile to false.
+   */
+  debugAvailable?: boolean;
 }
 
 export const toTopBarViewModel = (
@@ -76,9 +83,9 @@ export const toTopBarViewModel = (
       ? 'Menu'
       : rawMenuLabel || 'Menu';
 
-  const rawDebugLabel = t('content.menu.mainMenu.buttons.debug');
+  const rawDebugLabel = t('content.menu.debugMenu.header');
   const debugLabel =
-    rawDebugLabel === 'content.menu.mainMenu.buttons.debug'
+    rawDebugLabel === 'content.menu.debugMenu.header'
       ? 'Debug'
       : rawDebugLabel || 'Debug';
 
@@ -88,7 +95,12 @@ export const toTopBarViewModel = (
   return {
     menuLabel,
     debugLabel,
-    showDebug: options?.debugMode ?? Boolean(state?.settings?.['debug']),
+    // The Debug button (the debug menu's only entry point) exists only in
+    // dev builds; production deploys never show it, whatever a save or
+    // persisted setting carries, so the menu can't be used to cheat.
+    showDebug:
+      (options?.debugAvailable ?? isDebugModeAvailable()) &&
+      (options?.debugMode ?? Boolean(state?.settings?.['debug'])),
     turnText: formatTurnCounter(state?.turnCount, compact, t),
     scoreText: formatScoreCounter(state?.score, compact, t),
     isSpeedrun,

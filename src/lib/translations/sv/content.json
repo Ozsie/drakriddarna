@@ -3,6 +3,9 @@
     "welcome": {
       "header": "Drakriddarna",
       "buttons": {
+        "continue": "Fortsätt",
+        "newGame": "Nytt spel",
+        "saveGame": "Spara",
         "loadGame": "Ladda spel",
         "settings": "Inställningar"
       }
@@ -13,7 +16,20 @@
       "audio": "Ljudeffekter",
       "musicVolume": "Musikvolym",
       "audioVolume": "Volym för ljudeffekter",
+      "debug": "Debug",
+      "language": "-> English",
       "credits": "Eftertexter"
+    },
+    "debugMenu": {
+      "header": "Debug",
+      "buttons": {
+        "testingGrounds": "Till testområde",
+        "shuffleDeck": "Blanda Kortleken",
+        "selectNextEvent": "Välj Nästa Händelse",
+        "outputGameState": "Skriv ut spelläge",
+        "revealMap": "Avslöja Kartan",
+        "nextDungeon": "Till nästa grotta"
+      }
     },
     "heroSelection": {
       "header": "Val av hjälte",
@@ -23,25 +39,6 @@
       }
     },
     "menuButton": "Meny",
-    "mainMenu": {
-      "header": "Huvudmeny",
-      "buttons": {
-        "newGame": "Nytt spel",
-        "saveGame": "Spara",
-        "loadGame": "Ladda",
-        "debug": "Debug",
-        "music": "Musik",
-        "testingGrounds": "Till testområde",
-        "language": "-> English",
-        "shuffleDeck": "Blanda Kortleken",
-        "selectNextEvent": "Välj Nästa Händelse",
-        "outputGameState": "Skriv ut spelläge",
-        "revealMap": "Avslöja Kartan",
-        "nextDungeon": "Till nästa grotta",
-        "gameMaster": "Spelledare:",
-        "rights": "Rättigheter & Licenser"
-      }
-    },
     "saveGame": {
       "header": "Spara spel",
       "subtitle": "Namnge ditt sparade spel",
@@ -90,8 +87,7 @@
   },
   "actions": {
     "next": "Nästa",
-    "action": "Handling",
-    "nextLevel": "Nästa nivå"
+    "action": "Handling"
   },
   "hero": {
     "actions": "Handlingar",

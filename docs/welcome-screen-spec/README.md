@@ -2,13 +2,19 @@
 
 This folder contains the complete specification for a **welcome screen** (title
 screen): the app opens on a dedicated screen instead of booting straight into
-a campaign. The screen offers **New Game**, **Load Game** and **Settings**,
-shows the current build information at the bottom, and is drawn over a
-full-canvas background image that covers the game board and every other UI
-component. Settings opens a sub screen with music/audio toggles, music/audio
-volume sliders and Credits (rights and licenses). Every screen in the feature
-uses the same visual style as the existing between-dungeons screen and the
-save/load dialogs.
+a campaign. The screen offers **Continue** and **Save** (only while a run is
+ongoing), **New Game**, **Load Game** and **Settings**, shows the current
+build information at the bottom, and is drawn over a full-canvas background
+image that covers the game board and every other UI component. Settings
+opens a sub screen with music/audio toggles, music/audio volume sliders, the
+debug on/off switch, the language toggle and Credits (rights and licenses).
+Every screen in the feature uses the same visual style as the existing
+between-dungeons screen and the save/load dialogs.
+
+The welcome screen is also the main menu: the canvas menu's main view folded
+into it (the canvas menu that remains is the debug menu, opened from the top
+bar's Debug button), the in-game Menu button opens the welcome screen, and
+the campaign end screen dismisses into it.
 
 ## Scope decisions (already made — do not relitigate)
 
@@ -20,13 +26,13 @@ save/load dialogs.
 | Background image | One human-authored image, drawn cover-fit over the whole canvas, above the board and all UI layers. Solid-color fallback while the image is loading or missing |
 | New Game / Load Game | Reuse the existing new-game and load dialog flows. New Game gains a **hero selection step** between the new-game dialog and the run: the player selects 1 to `Campaign.maxHeroes` heroes from the campaign roster (default `heroes.length`), can rename them (defaults are the `iceDragonTreasure` names), and the selection replaces `campaign.heroes` for the run via an `init()` override — the campaign module is never mutated |
 | Hero limits | Minimum is always 1. Maximum is the campaign's `maxHeroes` when set, otherwise the campaign's roster size |
-| Settings persistence | A new app-level settings object in `localStorage` (key `appSettings`): `musicOn`, `sfxOn`, `musicVolume`, `sfxVolume`. `musicOn` mirrors into `GameState.settings['music']` so saves stay self-contained |
+| Settings persistence | A new app-level settings object in `localStorage` (key `appSettings`): `musicOn`, `sfxOn`, `musicVolume`, `sfxVolume`, `debugOn`. `musicOn` mirrors into `GameState.settings['music']` and `debugOn` into `GameState.settings['debug']` so saves stay self-contained |
 | Audio plumbing | Only the existing `MusicManager` / `SoundEffectManager` `setVolume` / `setMuted` APIs; no new audio code paths |
 | Credits | Reuses the existing rights & licenses content (`content.menu.rights.*` translations and links) rendered as a styled sub screen |
 | Build footer | `$lib/buildInfo.json` (`date` + `hash`), bottom center, same format as the existing menu footer: `${date} - ${hash}` |
 | Visual style | The between-dungeons / save-load dialog tokens: backdrop `rgba(10, 12, 16, 0.85)`, panel `#181b22`, gold border `#d4af37`, corner radius 10, Arial font stack |
 | Title treatment | No canvas-drawn game title in v1; the title/logo is part of the human-authored background image (or absent) |
-| Non-goals (v1) | Exit-to-welcome from the in-game menu, keyboard/controller navigation of welcome buttons, animated or parallax background, per-save volume settings, profile/save-slot management, editing hero stats or colours, adding heroes beyond the campaign roster |
+| Non-goals (v1) | Keyboard/controller navigation of welcome buttons, animated or parallax background, per-save volume settings, profile/save-slot management, editing hero stats or colours, adding heroes beyond the campaign roster (the former non-goal "exit-to-welcome from the in-game menu" was later superseded: the Menu button now opens the welcome screen) |
 
 ### Rationale for the two biggest calls
 
@@ -42,10 +48,13 @@ phase store rather than a fake state).
 (`src/ui/SaveLoadDialogRendering.ts`) already implement exactly what New
 Game and Load Game must do, including hit testing, hover, keyboard capture
 and the speedrunner seed. The welcome buttons call the same open-dialog
-callbacks the canvas menu uses (`MenuCallbacks.openNewGameDialog` /
-`openLoadDialog`), so behavior stays identical by construction. New Game is
+open-dialog entry points (the canvas-menu callbacks the buttons
+originally shared are gone — the controller opens the dialogs directly),
+so behavior stays identical by construction. New Game is
 extended, not replaced: Begin now advances to hero selection (04) instead
-of starting the run.
+of starting the run. (The canvas-menu callbacks the buttons originally
+shared no longer exist — the controller opens the dialogs directly; the
+welcome screen's Save button opens the save dialog the same way.)
 
 **The hero selection replaces the party per run, via an `init()` override.**
 The campaign objects registered in `src/campaigns/index.ts` are module
@@ -72,7 +81,8 @@ Give the agent this folder as its specification and tell it:
 - The game repository is the authority for every surface the spec references:
   `src/store/gameStateStore.ts` (boot), `src/components/DungeonBoardController.ts`
   (rendering and input), `src/ui/` (the layout/hit/render pattern),
-  `src/menu/MenuLogic.ts` (menu items and callbacks), `src/audio/` (managers).
+  `src/menu/MenuLogic.ts` (debug menu items and dialog callbacks),
+  `src/audio/` (managers).
   Where the spec and the game source disagree, the game source wins.
 - Read the docs in numbered order before writing code.
 - Work milestone by milestone (04); each milestone has an explicit definition

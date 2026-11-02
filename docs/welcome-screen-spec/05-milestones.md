@@ -37,9 +37,9 @@ and gameplay input gated off in `'welcome'`.
 
 ## M3 — New Game and Load Game wiring
 
-The welcome buttons open the existing new-game and load dialogs via the
-same callbacks the canvas menu uses; starting/loading switches the phase
-to `'game'`; cancel/back returns to the welcome screen.
+The welcome buttons open the existing new-game and load dialogs;
+starting/loading switches the phase to `'game'`; cancel/back returns to
+the welcome screen.
 
 **Definition of done**
 
@@ -47,7 +47,7 @@ to `'game'`; cancel/back returns to the welcome screen.
   pressing Begin proceeds to the hero selection screen (M4) — in this
   milestone Begin may still start the game directly, to be superseded by
   M4.
-- Load Game → dialog → save loads exactly as from the canvas menu; with no
+- Load Game → dialog → the save loads; with no
   saves the dialog shows only Back.
 - Cancel/Back/Escape return to the welcome main view.
 - Dialog input capture works while the welcome screen is behind it.
@@ -89,7 +89,7 @@ at the app setting.
 
 **Definition of done**
 
-- All five settings rows behave as specified in 03 (including slider drag,
+- All settings rows behave as specified in 03 (including slider drag,
   clamping, dimmed-when-muted, live volume changes).
 - Settings survive a reload; invalid stored JSON falls back to defaults.
 - Credits view shows the rights rows and opens links in a new tab.

@@ -7,7 +7,7 @@
 // cover the whole chain.
 
 import type { AppSettings } from '../settings/AppSettings';
-import type { UiEnv } from '../uikit/env';
+import type { UiEnv } from '../uikit';
 import {
   hitTestCredits,
   hitTestSettings,
@@ -52,9 +52,9 @@ export interface RenderSettingsOptions {
 }
 
 export type SettingsHitResult =
-  | { type: 'toggle'; rowId: 'music' | 'audio' }
+  | { type: 'toggle'; rowId: 'music' | 'audio' | 'debug' }
   | { type: 'slider'; rowId: 'musicVolume' | 'audioVolume' }
-  | { type: 'credits' }
+  | { type: 'button'; rowId: 'language' | 'credits' }
   | { type: 'back' }
   | { type: 'panel' }
   | { type: 'backdrop' };
@@ -116,14 +116,20 @@ export const getSettingsHit = (
 
   switch (hit.kind) {
     case 'toggle':
-      return { type: 'toggle', rowId: hit.rowId as 'music' | 'audio' };
+      return {
+        type: 'toggle',
+        rowId: hit.rowId as 'music' | 'audio' | 'debug',
+      };
     case 'slider':
       return {
         type: 'slider',
         rowId: hit.rowId as 'musicVolume' | 'audioVolume',
       };
-    case 'credits':
-      return { type: 'credits' };
+    case 'button':
+      return {
+        type: 'button',
+        rowId: hit.rowId as 'language' | 'credits',
+      };
     case 'back':
       return { type: 'back' };
     case 'panel':

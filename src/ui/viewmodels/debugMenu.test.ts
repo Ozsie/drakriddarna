@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toMenuViewModel } from './menu';
+import { toDebugMenuViewModel } from './debugMenu';
 import {
   Colour,
   type GameState,
@@ -48,37 +48,21 @@ const createMockState = (): GameState =>
     settings: {},
   }) as unknown as GameState;
 
-describe('menu view model', () => {
+describe('debug menu view model', () => {
   it('returns null without a game state', () => {
-    expect(toMenuViewModel(null, 'main')).toBeNull();
+    expect(toDebugMenuViewModel(null, 'debug')).toBeNull();
   });
 
-  it('carries the view, header and item labels of the main view', () => {
-    const vm = toMenuViewModel(createMockState(), 'main');
-    expect(vm?.view).toBe('main');
+  it('carries the view, header and item labels of the debug view', () => {
+    const vm = toDebugMenuViewModel(createMockState(), 'debug');
+    expect(vm?.view).toBe('debug');
     expect(vm?.headerText).toBeTruthy();
     expect(vm?.items.length).toBeGreaterThan(0);
     expect(vm?.items.every((item) => item.id && item.label)).toBe(true);
   });
 
-  it('includes the build-info footer only on the main view', () => {
-    const buildInfo = { date: '2026-01-01', hash: 'abc123' };
-    const main = toMenuViewModel(
-      createMockState(),
-      'main',
-      undefined,
-      false,
-      buildInfo,
-    );
-    expect(main?.footerText).toBe('2026-01-01 - abc123');
-
-    const other = toMenuViewModel(
-      createMockState(),
-      'event',
-      undefined,
-      false,
-      buildInfo,
-    );
-    expect(other?.footerText).toBe('');
+  it('carries no build-info footer (that belongs to the welcome screen)', () => {
+    const vm = toDebugMenuViewModel(createMockState(), 'debug');
+    expect(vm?.footerText).toBe('');
   });
 });

@@ -126,14 +126,28 @@ heroes keep the roster `id` (so saves keep resolving) and display the typed
 name; the selection reaches `init()` as an optional `heroes` override, and the
 registered campaign singletons are never mutated.
 
-App-level audio settings (music and sound effects on/off, plus their volumes)
-live in `src/settings/AppSettings.ts`, persisted under
-`localStorage['appSettings']` and applied live to both audio managers. The
-`musicOn` setting is the single source of truth for music: it mirrors into
-`GameState.settings['music']` one-directionally whenever a game state exists
-— so loading a save never overwrites the app setting — which keeps saves
-self-contained while the in-game menu's Music toggle simply flips the app
-setting.
+The welcome screen is also the main menu: the top bar's Menu button opens
+it (the run stays in the store, so its Continue button — shown only while a
+run is ongoing, like the Save button — returns to the game), the campaign
+end screen dismisses into it, and it owns the former menu items (new game,
+save/load, language, the debug on/off switch and the credits). The canvas
+menu that remains is the **debug menu** (its event-picker sub view
+included), opened from the top bar's Debug button. Debug mode is a
+development tool gated by `isDebugModeAvailable()`
+(`src/settings/debugMode.ts`, built on `$app/environment`'s compile-time
+`dev` flag): production builds hide the settings toggle and the Debug
+button — and never activate debug mode from a save or persisted setting —
+so the debug menu cannot be used to cheat on a deployed build.
+
+App-level settings (music and sound effects on/off plus their volumes, and
+the debug on/off switch) live in `src/settings/AppSettings.ts`, persisted
+under `localStorage['appSettings']` and applied live to the audio managers.
+The `musicOn` and `debugOn` settings are the single source of truth for
+music and debug mode: each mirrors into its `GameState.settings` field
+one-directionally whenever a game state exists — so loading a save never
+overwrites the app setting — which keeps saves self-contained while the
+welcome screen's settings rows simply flip the app settings. A run started
+or loaded while debug is toggled on runs in debug mode.
 
 ## The domain model
 
@@ -450,7 +464,7 @@ are user-named and unlimited: canvas-drawn centered modal dialogs open with a
 name input on save and a list of saves on load, and starting a new game uses
 a sibling dialog with selectable campaign and game-master columns plus the
 speedrunner checkbox and its seed input. While any of these modal surfaces
-is open — the canvas menu, the save/load or new-game dialog, the dungeon
+is open — the canvas debug menu, the save/load or new-game dialog, the dungeon
 intro, or the between-dungeons overlay (party wipe and campaign win
 included) — gameplay keyboard/touch input is suppressed through the input
 manager, so no keystroke reaches the heroes. Storage lives in

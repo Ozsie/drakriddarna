@@ -1,9 +1,10 @@
 // Welcome component: the title screen — a cover-fit background image
 // (with a themed fallback while the art is missing), a centered panel in
-// the dialog style with three buttons, and a build footer. Kit component
-// per the 02 contract — the view model carries the header, button labels
-// and footer text prebuilt by the game-side adapter; the background art
-// arrives through the asset port; hits are the semantic button ids.
+// the dialog style with a stack of buttons, and a build footer. Kit
+// component per the 02 contract — the view model carries the header,
+// button labels and footer text prebuilt by the game-side adapter; the
+// background art arrives through the asset port; hits are the semantic
+// button ids.
 
 import { isPointInRect, type Rect } from '../primitives/geometry';
 import { composeFont } from '../primitives/text';

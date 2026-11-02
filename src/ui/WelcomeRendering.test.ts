@@ -5,7 +5,7 @@ import {
   renderWelcome,
   WELCOME_FALLBACK_COLOR,
 } from './WelcomeRendering';
-import { getCoverFitBounds } from '../uikit/components/welcome';
+import { getCoverFitBounds } from '../uikit';
 import { loadTranslations } from '$lib/translations';
 
 const createMockCtx = (): CanvasRenderingContext2D => {
@@ -14,7 +14,7 @@ const createMockCtx = (): CanvasRenderingContext2D => {
   };
   const fillStyles: string[] = [];
   const fillRectCalls: { args: number[]; style: string }[] = [];
-  const ctx = {
+  return {
     save: vi.fn(),
     restore: vi.fn(),
     beginPath: vi.fn(),
@@ -52,7 +52,6 @@ const createMockCtx = (): CanvasRenderingContext2D => {
     textAlign: '',
     textBaseline: '',
   } as unknown as CanvasRenderingContext2D;
-  return ctx;
 };
 
 const createMockImage = (width: number, height: number): HTMLImageElement =>
@@ -112,6 +111,17 @@ describe('WelcomeRendering', () => {
       const [first, second, third] = layout.buttons;
       expect(second.bounds.y).toBe(first.bounds.y + first.bounds.height + 8);
       expect(third.bounds.y).toBe(second.bounds.y + second.bounds.height + 8);
+    });
+
+    it('adds Continue and Save while a run is ongoing', () => {
+      const layout = getWelcomeLayout(800, 600, { hasOngoingRun: true });
+      expect(layout.buttons.map((button) => button.id)).toEqual([
+        'continue',
+        'newGame',
+        'save',
+        'loadGame',
+        'settings',
+      ]);
     });
 
     it('scales rows down on short views without overlapping the panel', () => {

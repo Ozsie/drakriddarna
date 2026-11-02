@@ -1,11 +1,15 @@
 # Drakriddarna Welcome Screen
 
 A welcome (title) screen at app start instead of booting straight into a
-campaign: New Game, Load Game and Settings over a full-canvas background
-image, a build/version footer, a Settings sub screen with music/audio
-toggles, volumes and Credits, and a hero selection step in the New Game
-flow (select and rename 1 to `Campaign.maxHeroes` heroes). All screens in
-the existing between-dungeons / save-load dialog style.
+campaign: Continue and Save (only while a run is ongoing), New Game, Load
+Game and Settings over a full-canvas background image, a build/version
+footer, a Settings sub screen with music/audio toggles, volumes, the
+debug on/off switch, the language toggle and Credits, and a hero
+selection step in the New Game flow (select and rename 1 to
+`Campaign.maxHeroes` heroes). All screens in the existing
+between-dungeons / save-load dialog style. The welcome screen is also the
+main menu: the in-game Menu button opens it, and the canvas menu that
+remains is the debug menu.
 
 ## Specification
 
@@ -25,7 +29,8 @@ Read it in this order before writing any code:
 Where the spec and the game source disagree, **the game source wins**
 (`src/store/gameStateStore.ts` for boot, `src/components/DungeonBoardController.ts`
 for rendering and input, `src/ui/` for the layout/hit/render pattern,
-`src/menu/MenuLogic.ts` for menu items and callbacks, `src/audio/` for the
+`src/menu/MenuLogic.ts` for debug menu items and dialog callbacks,
+`src/audio/` for the
 audio managers).
 
 ## Repository layout

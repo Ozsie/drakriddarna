@@ -4,7 +4,9 @@ import {
   DEFAULT_APP_SETTINGS,
   appSettingsStore,
   applyAppSettings,
+  applyDebugSetting,
   loadAppSettings,
+  mirrorDebugSetting,
   mirrorMusicSetting,
   parseAppSettings,
   persistAppSettings,
@@ -67,6 +69,7 @@ describe('AppSettings', () => {
         sfxOn: true,
         musicVolume: 0.25,
         sfxVolume: 0.8,
+        debugOn: false,
       });
       appSettingsStore.set({ ...DEFAULT_APP_SETTINGS });
       const loaded = loadAppSettings();
@@ -97,6 +100,7 @@ describe('AppSettings', () => {
         sfxOn: true,
         musicVolume: 0.3,
         sfxVolume: 0.4,
+        debugOn: false,
       });
       expect(musicMute).toHaveBeenCalledWith(true);
       expect(musicVolume).toHaveBeenCalledWith(0.3);
@@ -115,6 +119,28 @@ describe('AppSettings', () => {
       expect(soundEffectManager.isSoundMuted()).toBe(true);
       expect(soundEffectManager.getVolume()).toBeCloseTo(0.1);
       expect(get(appSettingsStore).sfxOn).toBe(false);
+    });
+  });
+
+  describe('debug mirror', () => {
+    it('mirrors debugOn into the game state when one exists', () => {
+      initGame();
+      updateAppSettings({ debugOn: true });
+      expect(get(gameStateStore)?.settings['debug']).toBe(true);
+      updateAppSettings({ debugOn: false });
+      expect(get(gameStateStore)?.settings['debug']).toBe(false);
+    });
+
+    it('does not crash without a game state', () => {
+      gameStateStore.set(null);
+      expect(() => mirrorDebugSetting(DEFAULT_APP_SETTINGS)).not.toThrow();
+    });
+
+    it('applyDebugSetting writes the app setting onto a fresh state', () => {
+      const state = initGame();
+      updateAppSettings({ debugOn: true });
+      applyDebugSetting(state);
+      expect(state.settings['debug']).toBe(true);
     });
   });
 
