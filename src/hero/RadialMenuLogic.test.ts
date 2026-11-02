@@ -408,3 +408,65 @@ describe('getAvailableRadialActions', () => {
     });
   });
 });
+
+describe('OPEN_DOOR front squares', () => {
+  const doorRightOfCell = (x: number, y: number) => ({
+    x,
+    y,
+    side: Side.RIGHT,
+    open: false,
+    locked: false,
+    hidden: false,
+    trapped: false,
+    trapAttacks: 0,
+    reinforced: false,
+  });
+
+  it('offers OPEN_DOOR from both squares flanking the door edge', () => {
+    // The hero stands on the declared door cell
+    const heroOnDoorCell = createTestHero(1, 1);
+    const stateOnDoorCell = createTestState(heroOnDoorCell);
+    stateOnDoorCell.dungeon.layout.doors = [doorRightOfCell(1, 1)];
+    expect(
+      getAvailableRadialActions(stateOnDoorCell, heroOnDoorCell).some(
+        (e) => e.action === RadialAction.OPEN_DOOR,
+      ),
+    ).toBe(true);
+
+    // The hero stands on the offset cell, the other side of the edge
+    const heroOnOffsetCell = createTestHero(2, 1);
+    const stateOnOffsetCell = createTestState(heroOnOffsetCell);
+    stateOnOffsetCell.dungeon.layout.doors = [doorRightOfCell(1, 1)];
+    expect(
+      getAvailableRadialActions(stateOnOffsetCell, heroOnOffsetCell).some(
+        (e) => e.action === RadialAction.OPEN_DOOR,
+      ),
+    ).toBe(true);
+  });
+
+  it('does not offer OPEN_DOOR from a diagonal square of the door', () => {
+    // Door on the edge between (1, 1) and (2, 1); the hero is diagonally
+    // adjacent at (2, 2) — not a front square
+    const hero = createTestHero(2, 2);
+    const state = createTestState(hero);
+    state.dungeon.layout.doors = [doorRightOfCell(1, 1)];
+
+    expect(
+      getAvailableRadialActions(state, hero).some(
+        (e) => e.action === RadialAction.OPEN_DOOR,
+      ),
+    ).toBe(false);
+  });
+
+  it('does not offer OPEN_DOOR from a distant square', () => {
+    const hero = createTestHero(4, 4);
+    const state = createTestState(hero);
+    state.dungeon.layout.doors = [doorRightOfCell(1, 1)];
+
+    expect(
+      getAvailableRadialActions(state, hero).some(
+        (e) => e.action === RadialAction.OPEN_DOOR,
+      ),
+    ).toBe(false);
+  });
+});

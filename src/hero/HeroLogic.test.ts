@@ -993,3 +993,27 @@ describe('dropItem', () => {
     expect(state.dungeon.layout.items[0].position).toEqual({ x: 2, y: 2 });
   });
 });
+
+describe('door opening from the front squares', () => {
+  it('opens the door with a monster standing on the square across the edge', () => {
+    const hero = createTestHero({ position: { x: 2, y: 1 } });
+    const monster = createTestMonster({ position: { x: 3, y: 1 } });
+    const state = createTestState(hero, monster);
+    const door: Door = {
+      x: 2,
+      y: 1,
+      side: Side.RIGHT,
+      locked: false,
+      trapped: false,
+      open: false,
+      hidden: false,
+      reinforced: false,
+      trapAttacks: 0,
+    };
+    state.dungeon.layout.doors = [door];
+
+    openDoorAtHero(state, hero, hero.position, door);
+
+    expect(door.open).toBe(true);
+  });
+});
