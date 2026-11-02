@@ -94,7 +94,9 @@ registerMonsterAbility(MonsterType.GREEN_DARK_LORD, 'sameRoomFireAttack');
 registerMonsterAbility(MonsterType.BLUE_DARK_LORD, 'sameRoomFireAttack');
 
 const getNonDarkLordMonsters = (state: GameState) =>
-  state.dungeon.layout.monsters.filter((monster) => !isDarkLord(monster.type));
+  state.dungeon.layout.monsters.filter(
+    (monster) => !isDarkLord(monster.type) && monster.health > 0,
+  );
 
 // Built-in ability keys handled directly by the default action-selection
 // logic below; any other ability registered on a monster type is treated
@@ -520,17 +522,38 @@ const executeSlotAction = async (
       break;
     }
     case 'fire_spray': {
+      // Officially an adjacent rider forces the sword: an engaged dark
+      // lord strikes with its melee weapon instead of spraying fire.
+      const engaged = findNeighbouringHeroes(state, monster).filter(
+        (h) => !h.ignoredByMonsters,
+      );
+      if (engaged.length > 0) {
+        const target = selectMeleeTarget(engaged, monster, state);
+        monsterAttack(state, monster, target, false);
+        onAttack();
+        doReRender(state);
+        opts.onActionCallback?.(state);
+        if (opts.delayAfterAttack && opts.delayAfterAttack > 0) {
+          await sleep(opts.delayAfterAttack);
+        }
+        break;
+      }
       const visible = visibleHeroes(monster);
+      // Monster targets are line-of-sight-filtered like hero targets
+      // (`findVisibleHeroes` runs heroes through `hasLineOfSight`).
+      const monsterTargets = getNonDarkLordMonsters(state).filter((target) =>
+        hasLineOfSight(monster.position, target.position, 48, state, false),
+      );
       const diag = findDiagonalTargets(
-        [...visible, ...getNonDarkLordMonsters(state)],
+        [...visible, ...monsterTargets],
         monster,
       );
       const orth = findOrthogonalTargets(
-        [...visible, ...getNonDarkLordMonsters(state)],
+        [...visible, ...monsterTargets],
         monster,
       );
       const sameRoom = findSameRoomTargets(
-        [...liveHeroes(state), ...getNonDarkLordMonsters(state)],
+        [...liveHeroes(state), ...monsterTargets],
         monster,
         state,
       );
@@ -922,25 +945,44 @@ const findOrthogonalTargets = (possibleTargets: Actor[], source: Monster) =>
       distanceInGrid(source.position, target.position) > 1,
   );
 
+// The same-room spray (green dark lord) hits one rider plus every figure
+// standing adjacent to that rider — not every figure in the room. The
+// rider is chosen from the heroes sharing the lord's room cell.
 const findSameRoomTargets = (
   possibleTargets: Actor[],
   source: Monster,
   state: GameState,
-) =>
-  possibleTargets.filter(
+): Actor[] => {
+  if (!hasMonsterAbility(source.type, 'sameRoomFireAttack')) return [];
+  const targetable = possibleTargets.filter(
     (target) =>
-      hasMonsterAbility(source.type, 'sameRoomFireAttack') &&
+      !(
+        state.heroes.includes(target as Hero) &&
+        (target as Hero).ignoredByMonsters
+      ),
+  );
+  const sourceCell = findCell(
+    state.dungeon.layout.grid,
+    source.position.x,
+    source.position.y,
+  );
+  const riders = targetable.filter(
+    (target) =>
+      state.heroes.includes(target as Hero) &&
       findCell(
         state.dungeon.layout.grid,
-        source.position.x,
-        source.position.y,
-      ) ===
-        findCell(
-          state.dungeon.layout.grid,
-          target.position.x,
-          target.position.y,
-        ),
+        target.position.x,
+        target.position.y,
+      ) === sourceCell,
   );
+  if (riders.length === 0) return [];
+  const rider = selectMeleeTarget(riders as Hero[], source, state);
+  return targetable.filter(
+    (target) =>
+      target === rider ||
+      isNeighbouring(rider.position, target.position.x, target.position.y),
+  );
+};
 
 const performFireAttack = (
   state: GameState,

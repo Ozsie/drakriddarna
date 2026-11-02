@@ -773,3 +773,77 @@ describe('createVisibleHeroesCache', () => {
     expect(visibleHeroes(monster)).toHaveLength(1);
   });
 });
+
+describe('dark lord fire spray', () => {
+  const turnOptions = {
+    delayBetweenActions: 0,
+    delayBetweenMonsters: 0,
+    delayAfterAttack: 0,
+    waitForMovement: false,
+  };
+
+  it('an adjacent rider forces the sword instead of the fire spray', async () => {
+    const state = createTestState();
+    const hero = state.heroes[0] as Hero;
+    const lord = createMonster(MonsterType.GREEN_DARK_LORD, Colour.Red, 2, 4);
+    // Adjacent to the default hero at (1, 5), no wall between
+    state.dungeon.layout.monsters = [lord];
+
+    setRng(() => 0);
+    try {
+      await monsterActions(state, turnOptions);
+    } finally {
+      resetRng();
+    }
+
+    // The green dark lord's paralyzing sword struck: no fire sprayed
+    expect(hero.incapacitated).toBe(true);
+    expect(state.flameEffects).toBeUndefined();
+  });
+
+  it('the same-room spray hits one rider plus adjacent figures, not the whole room', async () => {
+    const fearik = createTestHero('Fearik', 3, 3);
+    const helga = createTestHero('Helga', 3, 4);
+    const althea = createTestHero('Althea', 5, 5);
+    const state = createTestState({ heroes: [fearik, helga, althea] });
+    const lord = createMonster(MonsterType.GREEN_DARK_LORD, Colour.Red, 1, 1);
+    state.dungeon.layout.monsters = [lord];
+
+    setRng(() => 0);
+    try {
+      await monsterActions(state, turnOptions);
+    } finally {
+      resetRng();
+    }
+
+    // The rider (Fearik, first scored hero) and the figure adjacent to
+    // it (Helga) are hit; Althea shares the room but stands apart
+    expect(fearik.roundTargetCount).toBe(1);
+    expect(helga.roundTargetCount).toBe(1);
+    expect(althea.roundTargetCount).toBe(0);
+    expect(state.flameEffects).toHaveLength(2);
+  });
+
+  it('line-of-sight-blocked monster targets are not sprayed', async () => {
+    const state = createTestState();
+    const lord = createMonster(MonsterType.RED_DARK_LORD, Colour.Red, 1, 1);
+    const orc = createMonster(MonsterType.ORC, Colour.Green, 3, 1);
+    state.dungeon.layout.monsters = [lord, orc];
+    // Edge wall between (2, 1) and (3, 1): the orc stands on the lord's
+    // orthogonal line but out of line of sight
+    state.dungeon.layout.walls = [{ x: 2, y: 1, side: Side.RIGHT }];
+
+    setRng(() => 0);
+    try {
+      await monsterActions(state, turnOptions);
+    } finally {
+      resetRng();
+    }
+
+    // Only the visible hero down the open column is flamed — the
+    // wall-blocked orc is not a spray target
+    expect(state.flameEffects).toHaveLength(1);
+    expect(state.flameEffects?.[0].position).toEqual({ x: 1, y: 5 });
+    expect(orc.roundTargetCount ?? 0).toBe(0);
+  });
+});

@@ -2,13 +2,13 @@
 
 ## Worth investigating
 
-- [ ] Dark lord fire spray deviations: officially an adjacent rider forces the sword (impl can spray), the green lord hits one rider plus adjacent figures (impl hits the whole room), and monster targets aren't LOS-filtered
 - [ ] Door opening: officially only the square directly in front of a door can open it (a figure standing there blocks others) — edge-based doors have removed diagonal opening, but impl still allows opening from either side of the door edge and has no blocking-figure rule
 - [ ] Pit fall damage: officially a normal attack with 3 white dice where armour doesn't protect (shields unaddressed, presumably protect) — currently pits are plain non-walkable blockers (no falling, no damage) — decide
 - [ ] Dropped equipment: officially any rider can pick it up from a square adjacent to the marker — impl requires standing on the item tile
 - [ ] Missable win-condition items (giant's glove for e1m6, necklace for e1m4) plus no looting of fallen heroes can softlock scenarios — consider looting dead heroes, passing items to adjacent heroes, or fallback hints
 - [ ] Earthquake damage is reduced by armour and shields — decide whether the boulder should ignore them
 - [ ] Door traps (1-2 dice) are weak compared to the suggested 3 dice — reconsider `trapAttacks` values
+- [x] Dark lord fire spray deviations: officially an adjacent hero forces the sword (impl can spray), the green lord hits one rider plus adjacent figures (impl hits the whole room), and monster targets aren't LOS-filtered — now an engaged dark lord melees instead of spraying, the same-room spray hits one rider plus the figures adjacent to it, and monster spray targets are line-of-sight-filtered (and living: dead monsters/petrified trolls are no longer flame targets)
 - [x] Diagonal movement cost differs between click-path (`distanceInGrid`, `floor(√2·diagonals + straights)`) and keyboard steps (1 per step) for paths with 3+ diagonal cells — unified: `distanceInGrid` is now the Chebyshev distance (a step is always 1 movement point, straight or diagonal), so click paths cost exactly what the same walk costs stepwise
 - [x] `checkForNextToMonster` ignores room discovery — heroes are halted (and log-spoiled) by monsters standing in undiscovered areas — now gated on `isAdjacentToVisibleMonster`, the same discovery-filtered check the LETA actions use
 - [x] Items lost when a monster is killed by non-hero damage (earthquake): the monster is never removed from the layout, grants no XP and doesn't count toward `KILL_AT_LEAST`, and its inventory is lost — now `processActorDowned` removes the monster, drops its inventory where it stood (sun-stone pattern), grants no XP and no killCount credit; hero kills still route through `killMonster` (XP + KILL_AT_LEAST + inventory to the killer), and petrified sun-stone trolls stay as statues by design
