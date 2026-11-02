@@ -685,6 +685,8 @@ export type Door = {
   y: number;
   side: Side;
   trapAttacks: number;
+  /** Rank-coloured dice a sprung trap rolls; unset means apprentice/white dice. */
+  level?: Level;
   reinforced: boolean;
 };
 

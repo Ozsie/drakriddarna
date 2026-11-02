@@ -196,13 +196,15 @@ export const settleMovementAfterAction = (
 /**
  * An abstract attacker for environmental hazards (door traps, pit falls,
  * earthquakes): a defenceless, actionless actor whose weapon describes the
- * hazard's attack dice and which defenses it bypasses.
+ * hazard's attack dice and which defenses it bypasses, and whose level picks
+ * the rank-coloured dice the attack rolls.
  */
 export const createHazardActor = (
   id: string | undefined,
   name: string,
   position: Position,
   weapon: Weapon,
+  level: Level = Level.APPRENTICE,
 ): Actor => ({
   ...(id ? { id } : {}),
   name,
@@ -213,7 +215,7 @@ export const createHazardActor = (
   maxMovement: 0,
   position: { x: position.x, y: position.y },
   weapon,
-  level: Level.APPRENTICE,
+  level,
   movement: 0,
   experience: 0,
   colour: Colour.Red,
@@ -240,6 +242,7 @@ export const doorAsActor = (door: Door): Actor =>
       ignoresArmour: false,
       attackSound: 'sfx/arrow.mp3',
     },
+    door.level,
   );
 
 export const getDamageString = (

@@ -21,7 +21,7 @@ import type {
   WallEdge,
   WinCondition,
 } from '../types';
-import { Colour, MonsterType, SecretType, Side } from '../types';
+import { Colour, Level, MonsterType, SecretType, Side } from '../types';
 import {
   createDoor,
   createEquipment,
@@ -54,6 +54,7 @@ export type DeclarativeDoorObject = {
   hidden?: boolean;
   open?: boolean;
   id?: string;
+  level?: Level;
 };
 
 export type DeclarativeDoorTuple = [
@@ -67,6 +68,7 @@ export type DeclarativeDoorTuple = [
     open?: boolean;
     reinforced?: boolean;
     id?: string;
+    level?: Level;
   },
 ];
 
@@ -361,6 +363,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
   let open = false;
   let reinforced = false;
   let id: string | undefined;
+  let level: Level | undefined;
 
   if (Array.isArray(doorDef)) {
     side = doorDef[0];
@@ -373,6 +376,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       open = !!opts.open;
       reinforced = !!opts.reinforced;
       id = opts.id;
+      level = opts.level;
       if (typeof opts.trapped === 'number') {
         trapped = opts.trapped > 0;
         trapAttacks = opts.trapped;
@@ -389,6 +393,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
     hidden = !!doorDef.hidden;
     open = !!doorDef.open;
     id = doorDef.id;
+    level = doorDef.level;
     if (typeof doorDef.trapped === 'number') {
       trapped = doorDef.trapped > 0;
       trapAttacks = doorDef.trapped;
@@ -405,6 +410,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       hidden,
       reinforced,
       ...(id ? { id } : {}),
+      ...(level ? { level } : {}),
     };
   }
   if (trapped && hidden) {
@@ -414,6 +420,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       locked,
       reinforced,
       ...(id ? { id } : {}),
+      ...(level ? { level } : {}),
     };
   }
   if (trapped) {
@@ -424,6 +431,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       hidden,
       reinforced,
       ...(id ? { id } : {}),
+      ...(level ? { level } : {}),
     };
   }
   if (locked) {
@@ -433,6 +441,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       hidden,
       reinforced,
       ...(id ? { id } : {}),
+      ...(level ? { level } : {}),
     };
   }
   if (hidden) {
@@ -442,6 +451,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
       locked,
       reinforced,
       ...(id ? { id } : {}),
+      ...(level ? { level } : {}),
     };
   }
 
@@ -450,6 +460,7 @@ export const parseDoor = (doorDef: DeclarativeDoor): Door => {
     open,
     reinforced,
     ...(id ? { id } : {}),
+    ...(level ? { level } : {}),
   };
 };
 

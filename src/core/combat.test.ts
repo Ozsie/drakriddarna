@@ -142,6 +142,72 @@ describe('combat module', () => {
     expect(doorActor.name).toBe('Door');
     expect(doorActor.weapon.dice).toBe(3);
     expect(doorActor.weapon.ignoresShield).toBe(true);
+    expect(doorActor.level).toBe(Level.APPRENTICE);
+  });
+
+  it('doorAsActor uses the door level as the trap dice', () => {
+    const doorActor = doorAsActor({
+      side: Side.UP,
+      x: 1,
+      y: 2,
+      locked: false,
+      trapped: true,
+      open: false,
+      hidden: false,
+      trapAttacks: 2,
+      reinforced: false,
+      level: Level.LORD,
+    });
+
+    expect(doorActor.level).toBe(Level.LORD);
+  });
+
+  it('sprung trap rolls the door level dice', () => {
+    // 3.5/6 gives a die roll of 4: a hit for knight dice (4+), a miss for
+    // the default apprentice dice (5+)
+    setRng(() => 3.5 / 6);
+    const hero = {
+      name: 'Fearik',
+      health: 10,
+      maxHealth: 10,
+      defense: 0,
+      level: Level.APPRENTICE,
+      position: { x: 1, y: 2 },
+      inventory: [],
+    } as unknown as Hero;
+    const state: GameState = {
+      heroes: [hero],
+      dungeon: dummyDungeon,
+      actionLog: [],
+      itemDeck: [],
+      magicItemDeck: [],
+      settings: {},
+      eventDeck: [],
+      reRender: false,
+      drawEvents: true,
+    };
+    const door = {
+      side: Side.UP,
+      x: 1,
+      y: 2,
+      locked: false,
+      trapped: true,
+      open: false,
+      hidden: false,
+      trapAttacks: 1,
+      reinforced: false,
+    };
+
+    takeDamage(state, doorAsActor(door), hero, false);
+    expect(hero.health).toBe(10);
+
+    takeDamage(
+      state,
+      doorAsActor({ ...door, level: Level.KNIGHT }),
+      hero,
+      false,
+    );
+    expect(hero.health).toBe(9);
   });
 
   it('getDamageString formats breakdown string', () => {

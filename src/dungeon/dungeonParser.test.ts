@@ -88,6 +88,29 @@ describe('dungeonParser', () => {
         trapAttacks: 1,
       });
     });
+
+    it('parses trap level from tuple and object options', () => {
+      const tupleDoor = parseDoor([
+        Side.RIGHT,
+        4,
+        5,
+        { trapped: 2, locked: true, level: Level.KNIGHT },
+      ]);
+      expect(tupleDoor.level).toBe(Level.KNIGHT);
+
+      const objectDoor = parseDoor({
+        side: Side.DOWN,
+        x: 1,
+        y: 2,
+        level: Level.LORD,
+      });
+      expect(objectDoor.level).toBe(Level.LORD);
+    });
+
+    it('leaves the trap level unset when not assigned', () => {
+      const door = parseDoor([Side.UP, 2, 3]);
+      expect(door.level).toBeUndefined();
+    });
   });
 
   describe('parseWall', () => {
