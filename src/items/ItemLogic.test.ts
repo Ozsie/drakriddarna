@@ -3,7 +3,9 @@ import type { GameState, Hero, Item } from '../types';
 import { Colour, ItemType, Level } from '../types';
 import {
   NEXT_DUNGEON,
+  NEXT_TURN,
   onReset,
+  resetOnNext,
   resetOnNextDungeon,
   resolveChaosSwordAttack,
   USED,
@@ -159,7 +161,7 @@ describe('ItemLogic - Healing Herbs rework', () => {
     herbs.properties![USED_ON] = ['Fearik', 'Helga'];
     herbs.properties![USED_HEROES] = ['Fearik', 'Helga'];
 
-    onReset.magicHerbsOnReset(state, herbs);
+    onReset.magicHerbsOnReset(state, herbs, NEXT_DUNGEON);
 
     expect(herbs.properties![USED]).toBe(false);
     expect(herbs.properties![USED_ON]).toEqual([]);
@@ -230,6 +232,56 @@ describe('potion of speed resets once per scenario', () => {
     useItem(state, potion);
     expect(hero1.actions).toBe(actionsAfterFirstUse + 2);
     expect(potion.properties?.[USED]).toBe(true);
+  });
+});
+
+describe('necklace of light is usable once per scenario', () => {
+  let hero1: Hero;
+  let necklace: Item;
+  let state: GameState;
+
+  beforeEach(() => {
+    hero1 = createHero('Fearik', 1, 1);
+    const baseNecklace = magicItems.find((i) => i.id === 'necklace_of_light')!;
+    necklace = JSON.parse(JSON.stringify(baseNecklace)) as Item;
+    hero1.inventory = [necklace];
+    state = createGameState([hero1]);
+  });
+
+  it('necklace_of_light definition resets the charge on NEXT_DUNGEON only', () => {
+    const necklaceDef = magicItems.find((i) => i.id === 'necklace_of_light')!;
+    expect(necklaceDef.properties?.RESET_ON).toEqual([NEXT_TURN, NEXT_DUNGEON]);
+    expect(necklaceDef.reset).toBe('necklaceOfLightOnReset');
+  });
+
+  it('makes the wearer untargetable until the round ends, but stays spent for the scenario', () => {
+    state.currentActor = hero1;
+    state.targetActor = hero1;
+
+    useItem(state, necklace);
+    expect(necklace.properties?.[USED]).toBe(true);
+    expect(hero1.ignoredByMonsters).toBe(true);
+
+    // Round end: the effect wears off, the use charge does not come back
+    resetOnNext(state);
+    expect(hero1.ignoredByMonsters).toBe(false);
+    expect(necklace.properties?.[USED]).toBe(true);
+
+    // Using it again in the same scenario does nothing
+    state.targetActor = hero1;
+    useItem(state, necklace);
+    expect(hero1.ignoredByMonsters).toBe(false);
+    expect(necklace.properties?.[USED]).toBe(true);
+
+    // Scenario reset restores the charge
+    resetOnNextDungeon(state);
+    expect(necklace.properties?.[USED]).toBe(false);
+    expect(hero1.ignoredByMonsters).toBe(false);
+
+    state.targetActor = hero1;
+    useItem(state, necklace);
+    expect(necklace.properties?.[USED]).toBe(true);
+    expect(hero1.ignoredByMonsters).toBe(true);
   });
 });
 

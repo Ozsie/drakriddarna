@@ -1,4 +1,4 @@
-import type { Actor, GameState, Hero, Item } from '../types';
+import type { Actor, GameState, Hero, Item, ResetTrigger } from '../types';
 import { Level } from '../types';
 import {
   addLog,
@@ -102,7 +102,7 @@ export const registerItemEffect = (
 
 export const registerItemReset = (
   key: string,
-  handler: (state: GameState, self: Item) => void,
+  handler: (state: GameState, self: Item, trigger: ResetTrigger) => void,
 ): void => {
   onReset[key] = handler;
 };
@@ -399,8 +399,28 @@ export const onUse: {
     }
   },
 };
+// The untargetable effect wears off at the end of the round, but the
+// use charge only comes back on the next scenario — the necklace is
+// usable once per scenario.
+const necklaceOfLightReset = (
+  state: GameState,
+  self: Item,
+  trigger: ResetTrigger,
+) => {
+  if (trigger === NEXT_TURN) {
+    state.heroes.forEach((hero) => (hero.ignoredByMonsters = false));
+    return;
+  }
+  if (self.properties) self.properties[USED] = false;
+  state.heroes.forEach((hero) => (hero.ignoredByMonsters = false));
+};
+
 export const onReset: {
-  [index: string]: (state: GameState, self: Item) => void;
+  [index: string]: (
+    state: GameState,
+    self: Item,
+    trigger: ResetTrigger,
+  ) => void;
 } = {
   magicHerbsOnReset: (state: GameState, self: Item) => {
     if (self.properties) {
@@ -409,10 +429,7 @@ export const onReset: {
       self.properties[USED_HEROES] = [];
     }
   },
-  necklaceOfLightOnReset: (state: GameState, self: Item) => {
-    if (self.properties) self.properties[USED] = false;
-    state.heroes.forEach((hero) => (hero.ignoredByMonsters = false));
-  },
+  necklaceOfLightOnReset: necklaceOfLightReset,
   ringOfPrecisionOnReset: (state: GameState, self: Item) => {
     if (self.properties) self.properties[USED] = false;
   },
@@ -420,10 +437,7 @@ export const onReset: {
     if (self.properties) self.properties[USED] = false;
   },
   // Backward compatibility alias
-  necklaceOfLightOnUse: (state: GameState, self: Item) => {
-    if (self.properties) self.properties[USED] = false;
-    state.heroes.forEach((hero) => (hero.ignoredByMonsters = false));
-  },
+  necklaceOfLightOnUse: necklaceOfLightReset,
 };
 export const useItem = (state: GameState, item: Item) => {
   if (item && item.effect && state.currentActor) {
@@ -453,7 +467,7 @@ const resetItemsOnTrigger = (state: GameState, trigger: string) => {
       .forEach((item) => {
         if (item && item.reset) {
           const reset = onReset[item.reset];
-          if (reset) reset(state, item);
+          if (reset) reset(state, item, trigger);
         }
       });
   });

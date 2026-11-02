@@ -353,7 +353,7 @@ export const tradeItem = (
     if (resetTriggers.includes(TRADE)) {
       const reset = onReset[item.reset];
       if (reset) {
-        reset(state, item);
+        reset(state, item, TRADE);
       }
     }
   }

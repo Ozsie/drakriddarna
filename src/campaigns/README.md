@@ -342,7 +342,10 @@ registerItemEffect(AMULET_OF_WARDING, (state, self, user) => {
   });
 });
 
-registerItemReset(AMULET_OF_WARDING, (_state, self) => {
+// The reset handler receives the trigger that fired it: `NEXT_TURN`
+// (end of round), `NEXT_SCENARIO` or `TRADE`, matching the item's
+// `RESET_ON` entries.
+registerItemReset(AMULET_OF_WARDING, (_state, self, _trigger) => {
   self.disabled = false;
 });
 ```

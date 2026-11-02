@@ -172,7 +172,7 @@ export const magicItems: Item[] = [
     amountInDeck: 1,
     properties: {
       USED: false,
-      RESET_ON: [NEXT_TURN],
+      RESET_ON: [NEXT_TURN, NEXT_DUNGEON],
       ACTIVE: true,
       [TARGET]: TARGET_SELF,
       DESCRIPTION: 'items.magicItems.necklaceOfLight.description',

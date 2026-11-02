@@ -2,7 +2,6 @@
 
 ## Worth investigating
 
-- [ ] Necklace of Light: usable once per round and makes the wearer fully untargetable (esp. e1m6) — consider once per scenario and/or a weaker effect
 - [ ] Items lost when a monster is killed by non-hero damage (earthquake): the monster is never removed from the layout, grants no XP and doesn't count toward `KILL_AT_LEAST`, and its inventory is lost — route all deaths through one `killMonster`-style path (like the sun-stone event does); chaos-sword kills now transfer inventory via the shared `killMonster`, dead monsters no longer trigger the zone of control, and the earthquake case is what remains
 - [ ] `checkForNextToMonster` ignores room discovery — heroes are halted (and log-spoiled) by monsters standing in undiscovered areas
 - [ ] Diagonal movement cost differs between click-path (`distanceInGrid`, `floor(√2·diagonals + straights)`) and keyboard steps (1 per step) for paths with 3+ diagonal cells — unify
@@ -13,6 +12,7 @@
 - [ ] Missable win-condition items (giant's glove for e1m6, necklace for e1m4) plus no looting of fallen heroes can softlock scenarios — consider looting dead heroes, passing items to adjacent heroes, or fallback hints
 - [ ] Earthquake damage is reduced by armour and shields — decide whether the boulder should ignore them
 - [ ] Door traps (1-2 dice) are weak compared to the suggested 3 dice — reconsider `trapAttacks` values
+- [x] Necklace of Light: usable once per round and makes the wearer fully untargetable (esp. e1m6) — now usable once per scenario (`RESET_ON: [NEXT_TURN, NEXT_SCENARIO]`: the round trigger only ends the untargetable effect, the scenario trigger restores the use)
 - [x] Potion of Speed never resets (`USED` without `RESET_ON`) — now resets on next scenario (once per scenario use)
 - [x] Orc bow LOS: officially the shot line is blocked by any figure — already correct: the combat LOS path (`stepAlongLine` with `walking=false`) blocks heroes and monsters; only the walking variant ignores heroes
 
