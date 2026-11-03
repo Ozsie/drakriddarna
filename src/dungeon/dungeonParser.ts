@@ -73,9 +73,7 @@ export type DeclarativeDoorTuple = [
 ];
 
 export type DeclarativeDoor =
-  | Door
-  | DeclarativeDoorObject
-  | DeclarativeDoorTuple;
+  Door | DeclarativeDoorObject | DeclarativeDoorTuple;
 
 export type DeclarativeWallTuple = [
   side: Side,
@@ -120,9 +118,7 @@ export type DeclarativeMonsterTuple = [
 ];
 
 export type DeclarativeMonster =
-  | Monster
-  | DeclarativeMonsterObject
-  | DeclarativeMonsterTuple;
+  Monster | DeclarativeMonsterObject | DeclarativeMonsterTuple;
 
 export type DeclarativeSecretObject = {
   type: SecretType;
@@ -142,9 +138,7 @@ export type DeclarativeSecretTuple = [
 ];
 
 export type DeclarativeSecret =
-  | Secret
-  | DeclarativeSecretObject
-  | DeclarativeSecretTuple;
+  Secret | DeclarativeSecretObject | DeclarativeSecretTuple;
 
 export type DeclarativeNoteObject = {
   x: number;
@@ -161,9 +155,7 @@ export type DeclarativeNoteTuple = [
 ];
 
 export type DeclarativeNote =
-  | Note
-  | DeclarativeNoteObject
-  | DeclarativeNoteTuple;
+  Note | DeclarativeNoteObject | DeclarativeNoteTuple;
 
 export type ItemLocationOptions = {
   onlyIfNotCarried?: boolean;
@@ -182,9 +174,7 @@ export type DeclarativeItemTuple =
   | [x: number, y: number];
 
 export type DeclarativeItem =
-  | ItemLocation
-  | DeclarativeItemObject
-  | DeclarativeItemTuple;
+  ItemLocation | DeclarativeItemObject | DeclarativeItemTuple;
 
 export type DeclarativeInteractableObject = {
   x: number;
@@ -266,9 +256,7 @@ export type DeclarativeLightTuple =
     ];
 
 export type DeclarativeLight =
-  | LightSource
-  | DeclarativeLightObject
-  | DeclarativeLightTuple;
+  LightSource | DeclarativeLightObject | DeclarativeLightTuple;
 
 export type DeclarativeTerrainObject = TerrainOptions & {
   x: number;
@@ -285,9 +273,7 @@ export type DeclarativeTerrainTuple =
     ];
 
 export type DeclarativeTerrain =
-  | TerrainCell
-  | DeclarativeTerrainObject
-  | DeclarativeTerrainTuple;
+  TerrainCell | DeclarativeTerrainObject | DeclarativeTerrainTuple;
 
 // Fog can be declared as a plain list of room/corridor letters using the
 // default styling, or keyed by letter with per-room options.
@@ -529,8 +515,8 @@ export const parseSecret = (secretDef: DeclarativeSecret): Secret => {
     (type === SecretType.EQUIPMENT
       ? 'campaign.iceDragon.randomEquipment'
       : type === SecretType.TRAP_DOOR
-      ? 'campaign.iceDragon.trapDoor'
-      : type);
+        ? 'campaign.iceDragon.trapDoor'
+        : type);
 
   return createSecret(type, defaultName, x, y, id);
 };

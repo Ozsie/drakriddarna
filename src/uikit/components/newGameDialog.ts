@@ -298,8 +298,8 @@ const renderRow = (
   ctx.fillStyle = row.selected
     ? theme.palette.text.rowSelected
     : isHovered
-    ? theme.palette.text.bright
-    : theme.palette.text.dialogValue;
+      ? theme.palette.text.bright
+      : theme.palette.text.dialogValue;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText(row.label, rb.x + 12, rb.y + rb.height / 2);
@@ -379,8 +379,8 @@ export const renderNewGameDialog = (
   ctx.strokeStyle = layout.speedrunMode
     ? theme.palette.border.checkboxSelected
     : isCheckboxHovered
-    ? theme.palette.border.rowHover
-    : theme.palette.border.input;
+      ? theme.palette.border.rowHover
+      : theme.palette.border.input;
   ctx.lineWidth = theme.shape.strokeWidth.thin;
   drawRoundedRect(ctx, cb.x, cb.y, cb.width, cb.height, 4);
   ctx.stroke();

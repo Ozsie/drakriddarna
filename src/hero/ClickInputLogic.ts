@@ -413,8 +413,8 @@ export const doMouseLogic = (
 ) => {
   const c =
     typeof document !== 'undefined'
-      ? document.getElementById('uiCanvas') ??
-        document.getElementById('gameBoard')
+      ? (document.getElementById('uiCanvas') ??
+        document.getElementById('gameBoard'))
       : null;
   if (!c) return;
 

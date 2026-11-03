@@ -28,15 +28,9 @@ endings, trailing newline.
 ```jsonc
 {
   "formatVersion": 1,
-  "campaign": {
-    /* CampaignDoc, see 02 */
-  },
-  "dungeons": [
-    /* DungeonDoc, see 02 */
-  ],
-  "translations": {
-    /* TranslationsDoc, see 02 */
-  }
+  "campaign": {/* CampaignDoc, see 02 */},
+  "dungeons": [/* DungeonDoc, see 02 */],
+  "translations": {/* TranslationsDoc, see 02 */},
 }
 ```
 
@@ -86,22 +80,22 @@ editor/app/src/main/resources/catalog.json
       "kind": "weapon", // weapon | armour | shield | magic | monster
       "nameKey": "...", // existing translation key if any
       "amountInDeck": 3,
-      "import": { "module": "items/weapons", "export": "weapons", "index": 0 }
-    }
+      "import": { "module": "items/weapons", "export": "weapons", "index": 0 },
+    },
   ],
   "monsterTypes": [
     {
       "id": "ORC",
       "import": { "module": "types", "export": "MonsterType", "member": "ORC" },
-      "stats": { "health": 2, "defense": 0, "experience": 1 }
-    }
+      "stats": { "health": 2, "defense": 0, "experience": 1 },
+    },
   ],
   "interactableEffects": ["toggleLight", "openDoor", "..."],
   "eventNumbers": [1, 2, 3],
   "enums": {
     "Colour": ["Red", "Yellow", "Green", "Blue"],
-    "Side": ["Up", "Down", "Left", "Right"]
-  }
+    "Side": ["Up", "Down", "Left", "Right"],
+  },
 }
 ```
 

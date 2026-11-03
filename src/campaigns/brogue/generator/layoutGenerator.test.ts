@@ -215,8 +215,7 @@ describe('generateLayout', () => {
           for (const door of layout.doors ?? []) {
             const tuple = door as [Side, number, number, unknown];
             const options = tuple[3] as
-              | { hidden?: boolean; locked?: boolean }
-              | undefined;
+              { hidden?: boolean; locked?: boolean } | undefined;
             if (options?.hidden || options?.locked) continue;
             const [side, x, y] = tuple;
             const tileLetter = layout.grid[y][x];

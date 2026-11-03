@@ -79,10 +79,7 @@ export type DungeonTimer = {
 };
 
 export type BetweenDungeonsStep =
-  | 'levelUp'
-  | 'trade'
-  | 'campaignComplete'
-  | 'partyWipe';
+  'levelUp' | 'trade' | 'campaignComplete' | 'partyWipe';
 
 // The three options on the party-wipe screen.
 export type PartyWipeAction = 'restartCampaign' | 'restartDungeon' | 'loadSave';
@@ -327,8 +324,7 @@ export const MonsterType = {
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type MonsterType =
-  | (typeof MonsterType)[keyof typeof MonsterType]
-  | string;
+  (typeof MonsterType)[keyof typeof MonsterType] | string;
 
 export enum Level {
   APPRENTICE = 'apprentice',
@@ -464,8 +460,7 @@ export const LightEffect = {
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type LightEffect =
-  | (typeof LightEffect)[keyof typeof LightEffect]
-  | string;
+  (typeof LightEffect)[keyof typeof LightEffect] | string;
 
 export type LightSource = {
   id?: string;
@@ -496,8 +491,7 @@ export const TerrainType = {
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type TerrainType =
-  | (typeof TerrainType)[keyof typeof TerrainType]
-  | string;
+  (typeof TerrainType)[keyof typeof TerrainType] | string;
 
 // Configuration of a terrain cell. Everything except the type is optional:
 // a cell can be purely decorative, purely gameplay-affecting, or both.
@@ -692,12 +686,7 @@ export enum ItemType {
 export type ResetTrigger = 'TRADE' | 'NEXT_SCENARIO' | 'NEXT_TURN' | string;
 
 export type ItemTarget =
-  | 'SELF'
-  | 'OWNER'
-  | 'ANY_HERO'
-  | 'ALL_HEROES'
-  | 'HERO'
-  | string;
+  'SELF' | 'OWNER' | 'ANY_HERO' | 'ALL_HEROES' | 'HERO' | string;
 
 export interface ItemProperties {
   USED?: boolean;

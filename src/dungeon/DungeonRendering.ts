@@ -1323,14 +1323,14 @@ export const sealedCornerGrid = (state: GameState): string[] => {
       door.side === Side.RIGHT
         ? door.x + 1
         : door.side === Side.LEFT
-        ? door.x - 1
-        : door.x;
+          ? door.x - 1
+          : door.x;
     const farY =
       door.side === Side.DOWN
         ? door.y + 1
         : door.side === Side.UP
-        ? door.y - 1
-        : door.y;
+          ? door.y - 1
+          : door.y;
     const farCell = findCell(grid, farX, farY);
     const nearCell = findCell(grid, door.x, door.y);
     const farDiscovered = farCell !== '' && !isEmpty(farCell, state);

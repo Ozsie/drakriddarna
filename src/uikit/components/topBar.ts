@@ -50,12 +50,7 @@ export interface TopBarLayout {
 }
 
 export type TopBarHitElement =
-  | 'menu'
-  | 'debug'
-  | 'log'
-  | 'turn'
-  | 'logDropdown'
-  | null;
+  'menu' | 'debug' | 'log' | 'turn' | 'logDropdown' | null;
 
 export interface TopBarLayoutOptions {
   /** Overrides the view model's debug chip visibility decision. */
@@ -320,14 +315,14 @@ export const renderTopBar = (
     ctx.fillStyle = isLogOpen
       ? theme.palette.surface.hudLogOpen
       : isLogHovered
-      ? theme.palette.surface.hudLogHover
-      : theme.palette.surface.hudLog;
+        ? theme.palette.surface.hudLogHover
+        : theme.palette.surface.hudLog;
     ctx.fill();
     ctx.strokeStyle = isLogOpen
       ? theme.palette.border.hudLogOpen
       : isLogHovered
-      ? theme.palette.border.hudLogHover
-      : theme.palette.border.hudLog;
+        ? theme.palette.border.hudLogHover
+        : theme.palette.border.hudLog;
     ctx.lineWidth = theme.shape.strokeWidth.thin;
     ctx.stroke();
 

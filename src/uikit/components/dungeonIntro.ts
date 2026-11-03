@@ -31,10 +31,7 @@ export interface DungeonIntroLayout {
 
 /** Semantic hit: which part of the intro modal is under the point. */
 export type DungeonIntroHit =
-  | { kind: 'close' }
-  | { kind: 'panel' }
-  | { kind: 'backdrop' }
-  | null;
+  { kind: 'close' } | { kind: 'panel' } | { kind: 'backdrop' } | null;
 
 export const emptyDungeonIntroLayout = (): DungeonIntroLayout => ({
   hasContent: false,

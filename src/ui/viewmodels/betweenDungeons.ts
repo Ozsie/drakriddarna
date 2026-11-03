@@ -308,28 +308,28 @@ export const toBetweenDungeonsViewModel = (
         name: t(bd.completedCampaignName ?? bd.completedDungeonName),
       })
     : isPartyWipe
-    ? t('content.partyWipe.title')
-    : isLevelUp
-    ? t('content.betweenDungeons.titleLevelUp', { name: completedName })
-    : t('content.betweenDungeons.titleTrade');
+      ? t('content.partyWipe.title')
+      : isLevelUp
+        ? t('content.betweenDungeons.titleLevelUp', { name: completedName })
+        : t('content.betweenDungeons.titleTrade');
 
   const subtitleText = isCampaignComplete
     ? t('content.campaignComplete.subtitle')
     : isPartyWipe
-    ? t('content.partyWipe.subtitle', { name: completedName })
-    : isLevelUp
-    ? t('content.betweenDungeons.subtitleLevelUp')
-    : t('content.betweenDungeons.subtitleTrade', {
-        nextDungeon: nextDungeonName || completedName,
-      });
+      ? t('content.partyWipe.subtitle', { name: completedName })
+      : isLevelUp
+        ? t('content.betweenDungeons.subtitleLevelUp')
+        : t('content.betweenDungeons.subtitleTrade', {
+            nextDungeon: nextDungeonName || completedName,
+          });
 
   const actionButtonLabel = isCampaignComplete
     ? t('content.betweenDungeons.buttons.finishCampaign')
     : isLevelUp
-    ? t('content.betweenDungeons.buttons.tradeItems')
-    : bd.nextDungeon
-    ? t('content.betweenDungeons.buttons.startNextDungeon')
-    : t('content.betweenDungeons.buttons.finishCampaign');
+      ? t('content.betweenDungeons.buttons.tradeItems')
+      : bd.nextDungeon
+        ? t('content.betweenDungeons.buttons.startNextDungeon')
+        : t('content.betweenDungeons.buttons.finishCampaign');
 
   return {
     step,
@@ -358,8 +358,8 @@ export const toBetweenDungeonsViewModel = (
     heroes: isLevelUp
       ? levelUpHeroesVm(state, t)
       : step === 'trade'
-      ? tradeHeroesVm(state, t)
-      : [],
+        ? tradeHeroesVm(state, t)
+        : [],
     selectedTradeHeroIndex: bd.selectedTradeItem
       ? bd.selectedTradeItem.heroIndex
       : null,

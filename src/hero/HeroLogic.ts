@@ -430,9 +430,9 @@ export const attack = (hero: Hero, state: GameState, target: Position) => {
     } else {
       const isRanged = Boolean(
         hero.weapon.range &&
-          hero.weapon.range > 1 &&
-          (Math.abs(hero.position.x - monster.position.x) > 1 ||
-            Math.abs(hero.position.y - monster.position.y) > 1),
+        hero.weapon.range > 1 &&
+        (Math.abs(hero.position.x - monster.position.x) > 1 ||
+          Math.abs(hero.position.y - monster.position.y) > 1),
       );
       takeDamage(state, hero, monster, isRanged);
     }

@@ -11,11 +11,7 @@ import { AssetId } from '../assets';
 import { i18nTranslator } from '../i18nAdapter';
 
 export type WelcomeButtonId =
-  | 'continue'
-  | 'newGame'
-  | 'save'
-  | 'loadGame'
-  | 'settings';
+  'continue' | 'newGame' | 'save' | 'loadGame' | 'settings';
 
 export interface WelcomeViewOptions {
   /**

@@ -38,8 +38,8 @@ export const getEventMinSpawnDistance = (
     (difficulty?.id === 'storyTeller' || difficulty?.id === 'easy'
       ? 4
       : difficulty?.id === 'brutalOverlord' || difficulty?.id === 'hard'
-      ? 1
-      : 3)
+        ? 1
+        : 3)
   );
 };
 
@@ -61,8 +61,8 @@ export const getEarliestMonsterEventRound = (
     (difficulty?.id === 'storyTeller' || difficulty?.id === 'easy'
       ? 4
       : difficulty?.id === 'brutalOverlord' || difficulty?.id === 'hard'
-      ? 2
-      : 3)
+        ? 2
+        : 3)
   );
 };
 

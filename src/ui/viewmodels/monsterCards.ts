@@ -39,10 +39,10 @@ export const toMonsterCardsViewModel = (
   const isMonsterTarget = (monster: Monster): boolean =>
     Boolean(
       targetActor &&
-        (targetActor === (monster as unknown) ||
-          (targetActor.name === monster.name &&
-            targetActor.position?.x === monster.position?.x &&
-            targetActor.position?.y === monster.position?.y)),
+      (targetActor === (monster as unknown) ||
+        (targetActor.name === monster.name &&
+          targetActor.position?.x === monster.position?.x &&
+          targetActor.position?.y === monster.position?.y)),
     );
 
   // On narrow screens only the active monster's card is drawn, mirroring

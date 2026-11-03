@@ -602,14 +602,14 @@ export const getRoomEdges = (
       const direction = ORTHOGONAL.find(({ side: s }) => s === side);
       return {
         from: grid[y]?.[x] ?? '',
-        to: direction ? grid[y + direction.dy]?.[x + direction.dx] ?? '' : '',
+        to: direction ? (grid[y + direction.dy]?.[x + direction.dx] ?? '') : '',
       };
     }
     const direction = ORTHOGONAL.find(({ side: s }) => s === door.side);
     return {
       from: grid[door.y]?.[door.x] ?? '',
       to: direction
-        ? grid[door.y + direction.dy]?.[door.x + direction.dx] ?? ''
+        ? (grid[door.y + direction.dy]?.[door.x + direction.dx] ?? '')
         : '',
     };
   });
@@ -849,7 +849,7 @@ export const generateLayout = (
   const startCandidates =
     freeStartCells.length >= STARTING_POSITIONS
       ? freeStartCells
-      : roomCells.get(startRoom) ?? [];
+      : (roomCells.get(startRoom) ?? []);
   const startingPositions = rig
     .shuffle(startCandidates)
     .slice(0, STARTING_POSITIONS);

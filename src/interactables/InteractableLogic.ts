@@ -39,8 +39,7 @@ import { createShake } from '../combat';
 import { soundEffectManager } from '../audio';
 
 let getCampaignDeck:
-  | ((campaignId: string) => TurnEvent[] | undefined)
-  | undefined;
+  ((campaignId: string) => TurnEvent[] | undefined) | undefined;
 
 export const setCampaignDeckProvider = (
   provider: (campaignId: string) => TurnEvent[] | undefined,

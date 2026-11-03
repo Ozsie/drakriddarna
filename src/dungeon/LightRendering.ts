@@ -1025,18 +1025,18 @@ export const activeLights = (
       door.side === Side.RIGHT
         ? CellAlignment.CENTER_RIGHT
         : door.side === Side.LEFT
-        ? CellAlignment.CENTER_LEFT
-        : door.side === Side.UP
-        ? CellAlignment.CENTER_TOP
-        : CellAlignment.CENTER_BOTTOM;
+          ? CellAlignment.CENTER_LEFT
+          : door.side === Side.UP
+            ? CellAlignment.CENTER_TOP
+            : CellAlignment.CENTER_BOTTOM;
     const farAlignment =
       door.side === Side.RIGHT
         ? CellAlignment.CENTER_LEFT
         : door.side === Side.LEFT
-        ? CellAlignment.CENTER_RIGHT
-        : door.side === Side.UP
-        ? CellAlignment.CENTER_BOTTOM
-        : CellAlignment.CENTER_TOP;
+          ? CellAlignment.CENTER_RIGHT
+          : door.side === Side.UP
+            ? CellAlignment.CENTER_BOTTOM
+            : CellAlignment.CENTER_TOP;
     [
       [door.x, door.y, nearAlignment] as const,
       [door.x + farX, door.y + farY, farAlignment] as const,
@@ -1665,8 +1665,8 @@ const lightPeakFactor = (light: LightSource): number =>
   light.effect === LightEffect.AURA
     ? 1.8
     : light.effect === LightEffect.GAS
-    ? 1.4
-    : 1.5;
+      ? 1.4
+      : 1.5;
 
 const isBakeableLight = (light: LightSource): boolean => {
   switch (light.effect) {

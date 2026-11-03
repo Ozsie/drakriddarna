@@ -119,8 +119,8 @@ hero-selection row content note).
 
 | Input                                       | Mithrael | Gilyad   |
 | ------------------------------------------- | -------- | -------- |
-| Name spelling (card: MITHRAEL / GILYAD)     | ✔       | ✔       |
-| Colour                                      | ✔       | ✔       |
-| Confirmation: armband as starting equipment | ✔       | —        |
-| Level-ladder title texts (sv, on the cards) | ✔       | standard |
-| Sprites                                     | ✔       | ✔       |
+| Name spelling (card: MITHRAEL / GILYAD)     | ✔        | ✔        |
+| Colour                                      | ✔        | ✔        |
+| Confirmation: armband as starting equipment | ✔        | —        |
+| Level-ladder title texts (sv, on the cards) | ✔        | standard |
+| Sprites                                     | ✔        | ✔        |

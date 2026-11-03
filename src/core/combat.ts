@@ -357,9 +357,9 @@ export const takeDamage = (
     ranged &&
     Boolean(
       source.position &&
-        target.position &&
-        (source.position.x !== target.position.x ||
-          source.position.y !== target.position.y),
+      target.position &&
+      (source.position.x !== target.position.x ||
+        source.position.y !== target.position.y),
     );
   const now = Date.now();
   let impactTime = now;

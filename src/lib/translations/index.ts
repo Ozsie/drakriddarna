@@ -40,7 +40,7 @@ export const deepMerge = (
   const result: Record<string, unknown> = { ...target };
   for (const [key, value] of Object.entries(source)) {
     if (isObject(value) && isObject(result[key])) {
-      result[key] = deepMerge(result[key] as Record<string, unknown>, value);
+      result[key] = deepMerge(result[key], value);
     } else {
       result[key] = value;
     }

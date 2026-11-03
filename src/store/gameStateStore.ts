@@ -282,8 +282,7 @@ export const toggleHeroInventory = (hero: Hero): void => {
   const state = get(gameStateStore);
   if (!state) return;
   const foundHero = state.heroes.find((h) => h.name === hero.name) as
-    | Hero
-    | undefined;
+    Hero | undefined;
   if (foundHero) {
     foundHero.isInventoryOpen = !foundHero.isInventoryOpen;
   } else {

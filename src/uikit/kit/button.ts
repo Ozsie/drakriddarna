@@ -38,8 +38,8 @@ export const drawButton = (
       ? theme.palette.surface.buttonPrimaryHover
       : theme.palette.surface.buttonPrimary
     : hovered
-    ? theme.palette.surface.buttonSecondaryHover
-    : theme.palette.surface.buttonSecondary;
+      ? theme.palette.surface.buttonSecondaryHover
+      : theme.palette.surface.buttonSecondary;
   const lineWidth =
     options.lineWidth ??
     (isPrimary ? theme.shape.strokeWidth.medium : theme.shape.strokeWidth.thin);

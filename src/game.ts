@@ -241,8 +241,8 @@ export const next = async (
       currentIndex === -1
         ? 0
         : turnEndActor.health > 0
-        ? currentIndex + 1
-        : currentIndex;
+          ? currentIndex + 1
+          : currentIndex;
     // Whether the round wrapped around — distinct from `nextIndex`
     // being 0, which also happens when the first hero of the round was
     // downed by their turn-end toll: only a wrap starts a new round.

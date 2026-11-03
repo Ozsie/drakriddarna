@@ -601,10 +601,10 @@ export const populate = (
       hint.x < x
         ? CellAlignment.CENTER_RIGHT
         : hint.x > x
-        ? CellAlignment.CENTER_LEFT
-        : hint.y < y
-        ? CellAlignment.CENTER_BOTTOM
-        : CellAlignment.CENTER_TOP;
+          ? CellAlignment.CENTER_LEFT
+          : hint.y < y
+            ? CellAlignment.CENTER_BOTTOM
+            : CellAlignment.CENTER_TOP;
     lights.push([hint.x, hint.y, alignment, ember]);
   }
 

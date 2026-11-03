@@ -193,11 +193,11 @@ const lineOfSightEnv = (
       .some((hero) => isSamePosition(hero.position, position));
     return Boolean(
       pillar ||
-        monster ||
-        (!walking && hero) ||
-        cell === WALL ||
-        cell === COLLAPSED ||
-        (walking && (pit || cell === EMPTY)),
+      monster ||
+      (!walking && hero) ||
+      cell === WALL ||
+      cell === COLLAPSED ||
+      (walking && (pit || cell === EMPTY)),
     );
   },
   isEdgeBlocked: (from, to) => isEdgeBlocked(state.dungeon.layout, from, to),

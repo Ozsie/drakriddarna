@@ -121,8 +121,8 @@ equipment.
 
 | Input                                                   | Alvsköld | Astari-armbandet            | Medaljongen         | Spegeln    |
 | ------------------------------------------------------- | -------- | --------------------------- | ------------------- | ---------- |
-| Name text (sv) — provided on the cards / in the article | ✔       | ✔                          | ✔                  | ✔         |
-| Description text (sv) — provided verbatim               | ✔       | ✔                          | ✔                  | ✔         |
-| `value` (scoring)                                       | ✔       | magic-item flat 100 applies | ✔                  | ✔         |
-| `amountInDeck` / fixed placement                        | ✔       | deck (magic)                | 0 (troll inventory) | 0 (pillar) |
-| Confirmation: Mithrael starts with the armband?         | —        | ✔                          | —                   | —          |
+| Name text (sv) — provided on the cards / in the article | ✔        | ✔                           | ✔                   | ✔          |
+| Description text (sv) — provided verbatim               | ✔        | ✔                           | ✔                   | ✔          |
+| `value` (scoring)                                       | ✔        | magic-item flat 100 applies | ✔                   | ✔          |
+| `amountInDeck` / fixed placement                        | ✔        | deck (magic)                | 0 (troll inventory) | 0 (pillar) |
+| Confirmation: Mithrael starts with the armband?         | —        | ✔                           | —                   | —          |

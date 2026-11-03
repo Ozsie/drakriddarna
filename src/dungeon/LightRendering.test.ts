@@ -1735,8 +1735,8 @@ describe('item light sources', () => {
 describe('hero torches and door glows', () => {
   it('gives every living hero a faint torch light at their position', () => {
     const state = createState();
-    const torch = activeLights(state).find(
-      (light) => light.id?.startsWith('hero_torch'),
+    const torch = activeLights(state).find((light) =>
+      light.id?.startsWith('hero_torch'),
     );
     expect(torch).toBeDefined();
     expect(torch!.position).toEqual({ x: 1, y: 3 });
@@ -1789,8 +1789,8 @@ describe('hero torches and door glows', () => {
     // near side, never on the undiscovered far side.
     const state = createState({ grid, discoveredRooms: ['A'], heroes: [] });
     state.dungeon.layout.doors = [door];
-    const nearGlows = activeLights(state).filter(
-      (light) => light.id?.startsWith('door_glow'),
+    const nearGlows = activeLights(state).filter((light) =>
+      light.id?.startsWith('door_glow'),
     );
     expect(nearGlows).toHaveLength(1);
     expect(nearGlows[0].position).toEqual({ x: 1, y: 2 });
@@ -1807,8 +1807,8 @@ describe('hero torches and door glows', () => {
       heroes: [],
     });
     both.dungeon.layout.doors = [door];
-    const glows = activeLights(both).filter(
-      (light) => light.id?.startsWith('door_glow'),
+    const glows = activeLights(both).filter((light) =>
+      light.id?.startsWith('door_glow'),
     );
     expect(glows).toHaveLength(2);
     const farGlow = glows.find(
@@ -1952,8 +1952,8 @@ describe('interactable and combat lights', () => {
     ];
     // Halfway between from (1) and to (4): cell 2.5 rounds to 3 at t=1100.
     const lights = activeLights(state, 1100);
-    const projectileLight = lights.find(
-      (l) => l.id?.startsWith('projectile_light'),
+    const projectileLight = lights.find((l) =>
+      l.id?.startsWith('projectile_light'),
     );
     expect(projectileLight).toBeDefined();
     expect(projectileLight!.position.x).toBe(3);
@@ -1977,8 +1977,8 @@ describe('interactable and combat lights', () => {
         durationMs: 600,
       },
     ];
-    const flameLight = activeLights(state, 1100).find(
-      (l) => l.id?.startsWith('flame_light'),
+    const flameLight = activeLights(state, 1100).find((l) =>
+      l.id?.startsWith('flame_light'),
     );
     expect(flameLight).toBeDefined();
     expect(flameLight!.position).toEqual({ x: 3, y: 2 });
