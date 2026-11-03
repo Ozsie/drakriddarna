@@ -608,7 +608,7 @@ export class DungeonBoardController {
   }
 
   /** Called by the component when the locale changes. */
-  onLocaleChange(next: string): void {
+  onLocaleChange(next: string | undefined): void {
     if (this.mounted && next && next !== this.lastLocale) {
       this.lastLocale = next;
       this.renderCanvas(true);

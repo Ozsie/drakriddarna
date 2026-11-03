@@ -45,7 +45,8 @@
 	"dependencies": {
 		"@hoard-engine/grid": "^0.1.0",
 		"@hoard-engine/rng": "^0.1.0",
-		"sveltekit-i18n": "^2.4.2"
+		"@sveltekit-i18n/extension-stores": "^3.2.1",
+		"sveltekit-i18n": "^3.4.1"
 	},
 	"imports": {
 		"#lib": "./src/lib/index.js",
