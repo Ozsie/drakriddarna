@@ -742,9 +742,19 @@ const lightStateKey = (
     .filter(([, options]) => options.blocksLight)
     .map(([room]) => room)
     .join(',');
+  // Collapsed corridor cells block light like walls do, so a collapse
+  // (or its restoration) reshapes the light polygons.
+  const collapsed = (state.dungeon.collapsedCorridors ?? [])
+    .map(
+      (group) =>
+        `${group.letter}:${group.cells
+          .map((position) => `${position.x},${position.y}`)
+          .join(',')}`,
+    )
+    .join('|');
   return `${
     state.dungeon.name
-  }|${actors}|${doors}|${rooms}|${lightBlockingFog}|${cellSize}|${
+  }|${actors}|${doors}|${rooms}|${lightBlockingFog}|${collapsed}|${cellSize}|${
     debugMode ? 'd' : 'n'
   }`;
 };

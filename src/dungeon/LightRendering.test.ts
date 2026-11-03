@@ -958,6 +958,27 @@ describe('static and animated light layers', () => {
     expect(staticLightCacheKey(state, CELL_SIZE, false)).toBe(after);
   });
 
+  it('changes the static cache key when a corridor collapses', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [createLight({ position: { x: 1, y: 2 } })];
+    const before = staticLightCacheKey(state, CELL_SIZE, false);
+    // A collapsed corridor blocks light like a wall: new polygons, new key.
+    state.dungeon.collapsedCorridors = [
+      {
+        letter: 'B',
+        cells: [
+          { x: 2, y: 2 },
+          { x: 3, y: 2 },
+        ],
+      },
+    ];
+    const collapsed = staticLightCacheKey(state, CELL_SIZE, false);
+    expect(collapsed).not.toBe(before);
+    // Restoring the corridor returns to the original occlusion.
+    state.dungeon.collapsedCorridors = [];
+    expect(staticLightCacheKey(state, CELL_SIZE, false)).toBe(before);
+  });
+
   it('changes the static cache key with occlusion and the viewport', () => {
     const state = createState();
     state.dungeon.layout.lights = [createLight({ position: { x: 3, y: 2 } })];

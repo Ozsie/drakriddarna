@@ -136,7 +136,7 @@
 
 ## Bugs
 
-- [ ] Collapsed corridor is not rendered as soon as the event triggers
+- [x] Collapsed corridor is not rendered as soon as the event triggers
 - [x] Secrets, at least doors, can't be found from adjacent cells
 - [x] Lights do not reset positions when a new dungeon is loaded
 - [x] Pillars can be generated in a way that blocks paths

@@ -1048,8 +1048,8 @@ const renderFloor = (
 ) => {
   if (notGround(cell, state)) {
     if (cell === COLLAPSED) {
-      drawTile(ctx, ground, 0, 0, cellSize, x, y, state);
-      drawTile(ctx, ground, 2, 0, cellSize, x, y, state);
+      drawTile(ctx, ground, 8, 0, cellSize, x, y, state);
+      drawTile(ctx, ground, 15, 0, cellSize, x, y, state);
     } else {
       const corner = isCornerWall(x, y, state);
       if (corner !== CornerType.NOT_CORNER) {

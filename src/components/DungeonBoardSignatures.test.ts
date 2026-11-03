@@ -59,6 +59,25 @@ describe('DungeonBoardSignatures', () => {
     expect(after).not.toBe(before);
   });
 
+  it('static signature changes when a corridor collapses and when it is restored', () => {
+    const state = createState();
+    const before = getStaticSignature(state, false, 48);
+    state.dungeon.collapsedCorridors = [
+      {
+        letter: 'B',
+        cells: [
+          { x: 1, y: 0 },
+          { x: 2, y: 0 },
+        ],
+      },
+    ];
+    const collapsed = getStaticSignature(state, false, 48);
+    expect(collapsed).not.toBe(before);
+    state.dungeon.collapsedCorridors = [];
+    const restored = getStaticSignature(state, false, 48);
+    expect(restored).toBe(before);
+  });
+
   it('dynamic signature changes when a hero moves', () => {
     const state = createState();
     const hero = {
@@ -74,6 +93,24 @@ describe('DungeonBoardSignatures', () => {
     hero.position = { x: 2, y: 0 };
     const after = getDynamicSignature(state, false, 48);
     expect(after).not.toBe(before);
+  });
+
+  it('dynamic signature changes when a corridor collapses', () => {
+    const state = createState();
+    const before = getDynamicSignature(state, false, 48);
+    state.dungeon.collapsedCorridors = [
+      {
+        letter: 'B',
+        cells: [
+          { x: 1, y: 0 },
+          { x: 2, y: 0 },
+        ],
+      },
+    ];
+    const collapsed = getDynamicSignature(state, false, 48);
+    expect(collapsed).not.toBe(before);
+    state.dungeon.collapsedCorridors = [];
+    expect(getDynamicSignature(state, false, 48)).toBe(before);
   });
 
   it('overlay signature changes when damage indicators appear', () => {

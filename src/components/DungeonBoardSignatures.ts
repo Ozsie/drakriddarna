@@ -1,5 +1,6 @@
 import type {
   Actor,
+  CollapsedCorridor,
   Door,
   GameState,
   InteractableCell,
@@ -62,7 +63,14 @@ export const getStaticSignature = (
           t.type,
         )},${String(t.color ?? '')},${String(t.opacity ?? '')}`,
     )
-    .join(';')}|${String(String(String(d.portal?.x)))},${String(
+    .join(';')}|${(d.collapsedCorridors ?? [])
+    .map(
+      (c: CollapsedCorridor) =>
+        `${String(c.letter)}@${(c.cells ?? [])
+          .map((p) => `${String(p.x)},${String(p.y)}`)
+          .join(',')}`,
+    )
+    .join('|')}|${String(String(String(d.portal?.x)))},${String(
     String(String(d.portal?.y)),
   )}|${String(String(size))}|${String(String(dbg))}`;
 };
@@ -96,6 +104,16 @@ export const getDynamicSignature = (
   // Light shadows depend on fog of war and on the light sources themselves,
   // including the light sources of items in actor inventories.
   const rooms = (st?.dungeon?.discoveredRooms ?? []).join(',');
+  // Collapsed corridors block light like walls, so they reshape the light
+  // polygons the dynamic layer composites.
+  const collapsed = (st?.dungeon?.collapsedCorridors ?? [])
+    .map(
+      (c: CollapsedCorridor) =>
+        `${String(c.letter)}@${(c.cells ?? [])
+          .map((p) => `${String(p.x)},${String(p.y)}`)
+          .join(',')}`,
+    )
+    .join('|');
   const lights = (st?.dungeon?.layout?.lights ?? [])
     .map(
       (l: LightSource) =>
@@ -154,12 +172,12 @@ export const getDynamicSignature = (
   return `${String(String(String(heroes)))}|${String(
     String(String(monsters)),
   )}|${String(String(curActor))}|${String(String(rooms))}|${String(
-    String(String(lights)),
-  )}|${String(String(itemLights))}|${String(String(eventLightFlags))}|${String(
-    String(String(eventLightsSig)),
-  )}|${String(String(interactableLights))}|${String(String(size))}|${String(
-    String(String(dbg)),
-  )}`;
+    String(String(collapsed)),
+  )}|${String(String(String(lights)))}|${String(String(itemLights))}|${String(
+    String(eventLightFlags),
+  )}|${String(String(String(eventLightsSig)))}|${String(
+    String(interactableLights),
+  )}|${String(String(size))}|${String(String(String(dbg)))}`;
 };
 
 export const getOverlaySignature = (
