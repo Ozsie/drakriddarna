@@ -1,7 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { base } from '$app/paths';
   import groundSprites from '$lib/DungeonTiles.png';
+  import characterSprites from '$lib/Dungeon_Character.png';
+  import character2Sprites from '$lib/Dungeon_Character_2.png';
   import actorSprites from '$lib/Dungeon_Character_3.png';
+  import tileset1Sprites from '$lib/Tileset 1.png';
   import {
     ACTOR_TILES,
     DUNGEON_TILES,
@@ -25,33 +29,55 @@
     actors: actorSprites,
   };
 
-  let canvases: Record<string, HTMLCanvasElement> = {};
-
-  const drawAll = (images: Partial<Record<TileSheet, HTMLImageElement>>) => {
-    groups.forEach(({ tiles }) => {
-      Object.entries(tiles).forEach(([key, tile]) => {
-        const canvas = canvases[key];
-        const image = images[tile.sheet];
-        if (!canvas || !image) return;
-        canvas.width = tile.size;
-        canvas.height = tile.size;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(
-          image,
-          tile.x,
-          tile.y,
-          tile.size,
-          tile.size,
-          0,
-          0,
-          tile.size,
-          tile.size,
-        );
-      });
-    });
+  // `lib/<file>` tileset params resolve through these imports, so hashed
+  // build URLs keep working in production; anything else is treated as a
+  // path under the site root, e.g. a file in static/.
+  const libImages: Record<string, string> = {
+    'lib/DungeonTiles.png': groundSprites,
+    'lib/Dungeon_Character.png': characterSprites,
+    'lib/Dungeon_Character_2.png': character2Sprites,
+    'lib/Dungeon_Character_3.png': actorSprites,
+    'lib/Tileset 1.png': tileset1Sprites,
   };
 
+  // The sheet a tile is drawn from and its slot in it. The registry refs
+  // are authored on the built-in 48px grid, so a custom `size` re-derives
+  // the slot position at that grid; actor tiles are not affected by the
+  // dungeon tileset override.
+  const effectiveTile = (
+    tile: TileRef,
+    dungeonSource: string,
+    customSize: number | null,
+  ): { source: string; x: number; y: number; size: number } => {
+    const overridden = tile.sheet === 'dungeon';
+    const size = overridden && customSize ? customSize : tile.size;
+    const source = overridden ? dungeonSource : sheetSources[tile.sheet];
+    return {
+      source,
+      x: (tile.x / tile.size) * size,
+      y: (tile.y / tile.size) * size,
+      size,
+    };
+  };
+
+  // Active query parameters, echoed back as data (no authored copy).
+  let queryInfo = '';
+
+  let canvases: Record<string, HTMLCanvasElement> = {};
+
   onMount(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tilesetParam = params.get('tileset');
+    const sizeParam = Number(params.get('size'));
+    const customSize = Number.isFinite(sizeParam) && sizeParam > 0 ? sizeParam : null;
+
+    const dungeonSource = tilesetParam
+      ? (libImages[tilesetParam] ??
+        `${base}/${tilesetParam.replace(/^\/+/, '')}`)
+      : sheetSources.dungeon;
+
+    queryInfo = `${tilesetParam ? `tileset=${tilesetParam} ` : ''}${customSize ? `size=${customSize}` : ''}`.trim();
+
     const loadImage = (src: string) =>
       new Promise<HTMLImageElement | null>((resolve) => {
         const image = new Image();
@@ -60,13 +86,37 @@
         image.src = src;
       });
 
+    const uniqueSources = [
+      ...new Set(
+        groups.flatMap(({ tiles }) =>
+          Object.values(tiles).map((tile) =>
+            effectiveTile(tile, dungeonSource, customSize).source,
+          ),
+        ),
+      ),
+    ];
+
     Promise.all(
-      Object.entries(sheetSources).map(async ([sheet, src]) => [
-        sheet as TileSheet,
-        await loadImage(src),
-      ]),
-    ).then((entries) => {
-      drawAll(Object.fromEntries(entries));
+      uniqueSources.map(async (src) => [src, await loadImage(src)] as const),
+    ).then((loaded) => {
+      const images = new Map(loaded);
+      groups.forEach(({ tiles }) => {
+        Object.entries(tiles).forEach(([key, tile]) => {
+          const canvas = canvases[key];
+          if (!canvas) return;
+          const { source, x, y, size } = effectiveTile(
+            tile,
+            dungeonSource,
+            customSize,
+          );
+          const image = images.get(source);
+          if (!image) return;
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(image, x, y, size, size, 0, 0, size, size);
+        });
+      });
     });
   });
 </script>
@@ -81,6 +131,12 @@
     padding: 16px;
     background-color: var(--color-bg-app, #1a1d24);
     color: var(--color-text-primary, #e2e8f0);
+  }
+
+  .query-info {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--color-text-secondary, #94a3b8);
   }
 
   .group {
@@ -99,10 +155,7 @@
 
   .rows {
     display: grid;
-    grid-template-columns: repeat(
-      auto-fill,
-      minmax(220px, 1fr)
-    );
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 8px;
   }
 
@@ -137,6 +190,9 @@
 </style>
 
 <div class="catalog">
+  {#if queryInfo}
+    <div class="query-info">{queryInfo}</div>
+  {/if}
   {#each groups as group (group.name)}
     <section class="group">
       <h2 class="group-name">{group.name}</h2>
