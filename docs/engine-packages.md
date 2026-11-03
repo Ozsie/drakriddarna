@@ -16,8 +16,10 @@ This is a target architecture, not a description of current state: today
 everything lives in `src/`, coupled through the shared `GameState` type, the
 `$lib/translations` i18n singleton, direct audio imports, and colocated
 rendering. Each package section names the coupling that must be removed first.
-(The first extraction, `@hoard-engine/rng`, is done — see its section below for the
-layout and tooling pattern the next packages follow.)
+(The first extractions are done: `@hoard-engine/rng` and
+`@hoard-engine/grid` are published on npm and consumed as dependencies —
+see their sections below for the layout and tooling pattern the next
+packages follow.)
 
 ## Package map
 
@@ -60,9 +62,9 @@ edges between the other leaves.
    package declares the minimal input interface it accepts, and TypeScript's
    structural typing keeps producers compatible without a shared import. `scene`
    does not import `@hoard-engine/lighting` — it declares its light-map input type;
-   `@hoard-engine/grid`-based pathfinding takes a `canPass(x, y)` callback instead of a
-   grid import. Producers and consumers share data shapes, not dependency
-   edges.
+   `@hoard-engine/grid` pathfinding takes injected passability callbacks (a
+   `PassableGrid`) instead of a grid import. Producers and consumers share data
+   shapes, not dependency edges.
 2. **The game is the only composition root.** Only the game knows that
    lighting feeds scene, that grid feeds pathfinding, and which logic events
    emit which audio cues. Engine packages are leaves; they never know who
@@ -135,15 +137,50 @@ The shared drawing layer (text, geometry, clipping) plus the theme-token
 contracts. Kept in-repo under the two-consumer rule until `scene` exists;
 scene's extraction is the second consumer that justifies it.
 
-### @hoard-engine/grid — source: `src/core/grid.ts`, `src/dungeon/cornerDetection.ts`,
+### @hoard-engine/grid — source: `src/core/grid.ts`,
 
-`src/dungeon/sealedCornerGrid.ts`, `src/monsters/pathfinding.ts`
+`src/dungeon/cornerDetection.ts`, `src/monsters/pathfinding.ts` — EXTRACTED
 
-Cells, line of sight, door blocking, corner detection. `grid.ts` is close to
-clean (one type import). `pathfinding.ts` is not: it imports hero logic and
-behavior scoring, so the pure pathfinder must accept injected cost/targeting
-callbacks. Split it: algorithm in the package, game-specific scoring stays in
-the game and is injected.
+Cells, line of sight, door blocking, corner detection, pathfinding. The
+package holds the pure computation; every piece of game knowledge is
+injected (the `pathfinding.ts` hero logic and behavior scoring stayed in
+the game, as planned):
+
+- Cell and edge helpers work on plain string grids and minimal shapes:
+  the tile alphabet (`EMPTY`/`COLLAPSED`/`SEALED_DOOR`/`WALL`), position
+  helpers, and door/wall edges typed as `Direction`/`DoorEdge`/`WallEdge`
+  — the game's `Side` enum and `Door`/`WallEdge` types are structurally
+  compatible, and `isDoorEdge`/`isWallEdge` are generic so consumers keep
+  their own element types.
+- Line of sight walks rays with an injected `LineOfSightEnv`: which cells
+  block a line or a corner pinch (with the sight-ray exception for
+  pits), which cells stop the line (a hero stops sight, a pit stops
+  walking) and which edges are closed.
+- Pathfinding is callback-driven: the A\*, its Chebyshev heuristic and the
+  diagonal step rules take a `PassableGrid` built from injected
+  walkability and collected blocked edges; the target is a plain
+  position and the goal is adjacency to it.
+- Corner classification owns `CornerType` (a const object plus derived
+  union, re-exported by `src/types.ts`) and works on plain string grids
+  with an optional discovered-rooms list for fog. The former
+  `sealedCornerGrid.ts` source no longer exists — its logic had already
+  been folded into corner detection.
+
+The game keeps the facades at their historical paths: `src/core/grid.ts`
+(walkability, discovery and corridor letters, the actor-blocking
+predicates, `findNeighbouringHeroes`), `src/dungeon/cornerDetection.ts`
+(pure re-export) and `src/monsters/pathfinding.ts`
+(`createPassableGrid` from state, hero-target `findPath`, scored target
+selection).
+
+**Current state:** published on npm as `@hoard-engine/grid` (v0.1.0) and
+consumed by the game as a dependency; its source folder has left this
+repo. It was developed in-repo as `packages/grid/` following the rng
+layout — self-contained folder with build, publishing, testing, lint and
+prettier scripts, its own `AGENTS.md` and `README.md`, boundary and
+public-surface tests plus colocated unit tests on synthetic grids
+(campaign-layout corner tests stay in the game: campaign content is game
+content).
 
 ### @hoard-engine/lighting — source: `src/dungeon/LightSources.ts` + the computation
 
@@ -217,6 +254,8 @@ later:
 3. `@hoard-engine/audio` — small files; requires the asset-path injection. Also
    unlocks the audio-cue inversion across the 12 importing modules.
 4. `@hoard-engine/grid` — clean once pathfinding takes callbacks.
+   **Done:** published as `@hoard-engine/grid` (v0.1.0), consumed as a
+   dependency (see the package section above).
 5. `@hoard-engine/lighting` — requires the compute/render split of `LightRendering.ts`.
 6. `@hoard-engine/saves` — requires the migrator registry.
 7. `@hoard-engine/directors` — framework only; content stays.

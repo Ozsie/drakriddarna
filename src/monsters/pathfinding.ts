@@ -1,241 +1,48 @@
+// Game-side facade over the @hoard-engine/grid engine package
+// (published on npm, consumed as a dependency). The A* algorithm, the
+// passable-grid step rules and the blocked-edge bookkeeping are
+// game-agnostic and live in the package; everything that knows the game
+// stays here — which tiles are walkable and discovered, which edges are
+// closed, target selection and scoring (see docs/engine-packages.md).
 import type { GameState, Hero, Monster, Position } from '../types';
+import { getDist, isDiscovered, isWalkable } from '../core';
 import {
-  getDist,
-  isDiscovered,
-  isNeighbouring,
-  isWalkable,
-  sideOffset,
-} from '../core';
+  collectBlockedEdges,
+  createPassableGrid as createPackagePassableGrid,
+  findPath as findPackagePath,
+  type PassableGrid,
+} from '@hoard-engine/grid';
 import { liveHeroes } from '../hero/HeroLogic';
 import { scoreHero, type ScoredHero } from './behavior';
 import { logMonsterTargetSelection } from './behavior';
 
-export interface PassableGrid {
-  width: number;
-  height: number;
-  isWalkableTile: (x: number, y: number) => boolean;
-  isEdgeBlocked: (
-    fromX: number,
-    fromY: number,
-    toX: number,
-    toY: number,
-  ) => boolean;
-  isPassableStep: (
-    fromX: number,
-    fromY: number,
-    toX: number,
-    toY: number,
-  ) => boolean;
-}
+export type { PassableGrid } from '@hoard-engine/grid';
 
 export const createPassableGrid = (state: GameState): PassableGrid => {
   const layout = state.dungeon.layout;
   const height = layout.grid.length;
   const width = layout.grid[0]?.length ?? 0;
 
-  const walkableGrid: boolean[][] = [];
-  for (let y = 0; y < height; y++) {
-    walkableGrid[y] = [];
-    for (let x = 0; x < width; x++) {
-      walkableGrid[y][x] =
-        isWalkable(layout, x, y) && isDiscovered(state.dungeon, x, y);
-    }
-  }
-
-  const isWalkableTile = (x: number, y: number): boolean => {
-    if (x < 0 || x >= width || y < 0 || y >= height) return false;
-    return walkableGrid[y]?.[x] ?? false;
-  };
+  const isWalkableTile = (x: number, y: number): boolean =>
+    isWalkable(layout, x, y) && isDiscovered(state.dungeon, x, y);
 
   // Edges a monster cannot cross: closed doors and edge walls alike. Both
   // block the shared edge between two cells in exactly the same way.
-  const blockedEdges = new Set<string>();
-  const addEdge = (x1: number, y1: number, x2: number, y2: number) => {
-    blockedEdges.add(`${x1},${y1}->${x2},${y2}`);
-    blockedEdges.add(`${x2},${y2}->${x1},${y1}`);
-  };
-
-  layout.doors?.forEach((door) => {
-    if (!door.open) {
-      const [dx, dy] = sideOffset(door.side);
-      addEdge(door.x, door.y, door.x + dx, door.y + dy);
-    }
+  const blockedEdges = collectBlockedEdges({
+    doors: layout.doors,
+    walls: layout.walls,
   });
 
-  layout.walls?.forEach((wall) => {
-    const [dx, dy] = sideOffset(wall.side);
-    addEdge(wall.x, wall.y, wall.x + dx, wall.y + dy);
-  });
-
-  const isEdgeBlocked = (
-    fromX: number,
-    fromY: number,
-    toX: number,
-    toY: number,
-  ): boolean => blockedEdges.has(`${fromX},${fromY}->${toX},${toY}`);
-
-  const isPassableStep = (
-    fromX: number,
-    fromY: number,
-    toX: number,
-    toY: number,
-  ): boolean => {
-    if (!isWalkableTile(toX, toY)) return false;
-
-    const dx = toX - fromX;
-    const dy = toY - fromY;
-    if (dx === 0 && dy === 0) return false;
-    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) return false;
-
-    // Orthogonal step
-    if (dx === 0 || dy === 0) {
-      return !isEdgeBlocked(fromX, fromY, toX, toY);
-    }
-
-    // Diagonal step
-    const i1X = fromX + dx;
-    const i1Y = fromY;
-    const path1Clear =
-      isWalkableTile(i1X, i1Y) &&
-      !isEdgeBlocked(fromX, fromY, i1X, i1Y) &&
-      !isEdgeBlocked(i1X, i1Y, toX, toY);
-
-    const i2X = fromX;
-    const i2Y = fromY + dy;
-    const path2Clear =
-      isWalkableTile(i2X, i2Y) &&
-      !isEdgeBlocked(fromX, fromY, i2X, i2Y) &&
-      !isEdgeBlocked(i2X, i2Y, toX, toY);
-
-    return path1Clear || path2Clear;
-  };
-
-  return {
-    width,
-    height,
-    isWalkableTile,
-    isEdgeBlocked,
-    isPassableStep,
-  };
+  return createPackagePassableGrid(width, height, isWalkableTile, blockedEdges);
 };
-
-interface PathNode {
-  x: number;
-  y: number;
-  g: number;
-  h: number;
-  f: number;
-  parent?: PathNode;
-}
-
-const chebyshevDistance = (a: Position, b: Position): number =>
-  Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 
 export const findPath = (
   start: Position,
   targetHero: Hero,
   passableGrid: PassableGrid,
   occupiedPositions: Set<string>,
-): Position[] | null => {
-  const targetPos = targetHero.position;
-
-  if (isNeighbouring(start, targetPos.x, targetPos.y)) {
-    return [];
-  }
-
-  const openSet: PathNode[] = [];
-  const closedSet = new Map<string, number>();
-
-  const startNode: PathNode = {
-    x: start.x,
-    y: start.y,
-    g: 0,
-    h: chebyshevDistance(start, targetPos),
-    f: chebyshevDistance(start, targetPos),
-  };
-
-  openSet.push(startNode);
-  closedSet.set(`${start.x},${start.y}`, 0);
-
-  const DIRECTIONS: Position[] = [
-    { x: -1, y: 0 },
-    { x: 1, y: 0 },
-    { x: 0, y: -1 },
-    { x: 0, y: 1 },
-    { x: -1, y: -1 },
-    { x: 1, y: -1 },
-    { x: -1, y: 1 },
-    { x: 1, y: 1 },
-  ];
-
-  while (openSet.length > 0) {
-    // Pick node with lowest f (and lowest h on tie)
-    let bestIndex = 0;
-    for (let i = 1; i < openSet.length; i++) {
-      if (
-        openSet[i].f < openSet[bestIndex].f ||
-        (openSet[i].f === openSet[bestIndex].f &&
-          openSet[i].h < openSet[bestIndex].h)
-      ) {
-        bestIndex = i;
-      }
-    }
-
-    const current = openSet.splice(bestIndex, 1)[0];
-    const currentKey = `${current.x},${current.y}`;
-
-    if (current.g > (closedSet.get(currentKey) ?? Infinity)) {
-      continue;
-    }
-
-    // Goal condition: adjacent to target hero
-    if (
-      !(current.x === start.x && current.y === start.y) &&
-      isNeighbouring(current, targetPos.x, targetPos.y)
-    ) {
-      const path: Position[] = [];
-      let curr: PathNode | undefined = current;
-      while (curr && curr.parent) {
-        path.unshift({ x: curr.x, y: curr.y });
-        curr = curr.parent;
-      }
-      return path;
-    }
-
-    for (const dir of DIRECTIONS) {
-      const nx = current.x + dir.x;
-      const ny = current.y + dir.y;
-      const neighborKey = `${nx},${ny}`;
-
-      if (!passableGrid.isPassableStep(current.x, current.y, nx, ny)) {
-        continue;
-      }
-
-      if (occupiedPositions.has(neighborKey)) {
-        continue;
-      }
-
-      const tentativeG = current.g + 1;
-      const existingG = closedSet.get(neighborKey);
-
-      if (existingG === undefined || tentativeG < existingG) {
-        closedSet.set(neighborKey, tentativeG);
-        const h = chebyshevDistance({ x: nx, y: ny }, targetPos);
-        const neighborNode: PathNode = {
-          x: nx,
-          y: ny,
-          g: tentativeG,
-          h,
-          f: tentativeG + h,
-          parent: current,
-        };
-        openSet.push(neighborNode);
-      }
-    }
-  }
-
-  return null;
-};
+): Position[] | null =>
+  findPackagePath(start, targetHero.position, passableGrid, occupiedPositions);
 
 export const findBestPathToHeroes = (
   state: GameState,

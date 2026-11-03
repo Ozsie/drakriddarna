@@ -287,11 +287,15 @@ system**:
 
 - **Pathfinding** — A\* over the passable grid, 8 directions, Chebyshev
   heuristic, with the goal condition relaxed to "reach a cell adjacent to the
-  target hero" rather than the hero's own (occupied) cell
-  (`src/monsters/pathfinding.ts`).
-- **Line of sight** — ray stepping along the grid
-  (`stepAlongLine` / `hasLineOfSight` in `src/core/grid.ts`); ranged attacks
-  and sight are blocked by walls, closed doors and (for attacks) figures.
+  target hero" rather than the hero's own (occupied) cell. The algorithm
+  lives in the `@hoard-engine/grid` engine package and takes passability as
+  injected callbacks; `src/monsters/pathfinding.ts` builds the passable
+  grid from game state and keeps the hero-target selection.
+- **Line of sight** — ray stepping along the grid (`stepAlongLine` /
+  `hasLineOfSight`, also from `@hoard-engine/grid` via the
+  `src/core/grid.ts` facade, which injects the game's blocking cells);
+  ranged attacks and sight are blocked by walls, closed doors and (for
+  attacks) figures.
 - **Target scoring** — each monster scores every visible hero
   (`behavior/scoring.ts`): expected damage from its dice, path distance,
   "did this hero just attack me", "did I already target them" (spreading
