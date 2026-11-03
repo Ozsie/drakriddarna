@@ -614,32 +614,12 @@ export type InteractableCell = {
   light?: ItemLight;
 };
 
-export type Corner = {
-  position: Position;
-  type: CornerType;
-};
-
-export enum CornerType {
-  INNER_BOTTOM_RIGHT = 'IBR',
-  INNER_TOP_RIGHT = 'ITR',
-  INNER_BOTTOM_LEFT = 'IBL',
-  INNER_TOP_LEFT = 'ITL',
-  OUTER_BOTTOM_RIGHT = 'OBR',
-  OUTER_TOP_RIGHT = 'OTR',
-  OUTER_BOTTOM_LEFT = 'OBL',
-  OUTER_TOP_LEFT = 'OTL',
-  BOTTOM_END = 'BE',
-  TOP_END = 'TE',
-  LEFT_END = 'LE',
-  RIGHT_END = 'RE',
-  FOUR_WAY_INTERSECTION = 'I',
-  THREE_WAY_INTERSECTION_UP_CLOSED = 'TUC',
-  THREE_WAY_INTERSECTION_UP = 'TUO',
-  THREE_WAY_INTERSECTION_DOWN = 'TD',
-  THREE_WAY_INTERSECTION_LEFT = 'TL',
-  THREE_WAY_INTERSECTION_RIGHT = 'TR',
-  NOT_CORNER = 'NC',
-}
+// Corner classification is owned by the @hoard-engine/grid engine package
+// (published on npm, consumed as a dependency); the game re-exports it so
+// existing imports keep working.
+import { type Corner, CornerType } from '@hoard-engine/grid';
+export { CornerType };
+export type { Corner };
 
 export type ItemLocation = {
   item?: Item;
