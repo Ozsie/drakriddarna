@@ -10,3 +10,5 @@ build/**
 
 **/.DS_Store
 packages/*/dist
+.svelte-kit/env.d.ts
+.svelte-kit/non-ambient.d.ts
