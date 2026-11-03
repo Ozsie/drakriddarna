@@ -14,7 +14,7 @@ this repository.
 
 This is a target architecture, not a description of current state: today
 everything lives in `src/`, coupled through the shared `GameState` type, the
-`$lib/translations` i18n singleton, direct audio imports, and colocated
+`#lib/translations/index.js` i18n singleton, direct audio imports, and colocated
 rendering. Each package section names the coupling that must be removed first.
 (The first extractions are done: `@hoard-engine/rng` and
 `@hoard-engine/grid` are published on npm and consumed as dependencies —
@@ -233,7 +233,7 @@ what uikit already did with `UiEnv.t`:
 - **Split `GameState`.** Separate engine-level state (grid, actors, turn
   counter, RNG seed, timers) from game data (heroes, items, dungeon content).
   Each package then consumes only its own slice, passed in by the game.
-- **Inject i18n.** `$lib/translations` is imported by logic modules
+- **Inject i18n.** `#lib/translations/index.js` is imported by logic modules
   (`core/logger.ts`, `core/combat.ts`, `MonsterLogic`, `TerrainLogic`, ...).
   Logic emits message data through an injected log/message provider.
 - **Invert audio.** Replace direct `soundEffectManager` imports in logic with

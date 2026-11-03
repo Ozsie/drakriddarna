@@ -3,7 +3,7 @@ import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
 import { campaigns } from '../campaigns';
 import { allDepthConfigs } from '../campaigns/brogue/generator/config';
-import { loadTranslations } from '$lib/translations';
+import { loadTranslations } from '#lib/translations/index.js';
 import { runGameMasterBenchmark, formatBenchmarkReport } from './benchmark';
 
 const GMS = ['storyTeller', 'tactician', 'brutalOverlord'];

@@ -10,8 +10,8 @@ import {
   setGameLocale,
   syncStore,
 } from '../store/gameStateStore';
-import { locale, setLocale } from '$lib/translations';
-import { base } from '$app/paths';
+import { locale, setLocale } from '#lib/translations/index.js';
+import { resolve } from '$app/paths';
 import { init, loadState, save } from '../game';
 import {
   getSaveHint,
@@ -122,7 +122,7 @@ export const getDebugMenuItems = (
       // A full page load rather than SPA navigation: the catalog is its
       // own route, outside the game canvas.
       if (typeof window !== 'undefined') {
-        window.location.assign(`${base}/tiles`);
+        window.location.assign(resolve(`tiles`));
       }
       callbacks?.closeMenu?.();
     },

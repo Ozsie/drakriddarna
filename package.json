@@ -20,8 +20,8 @@
 		"exportCatalog": "node scripts/export-editor-catalog.ts"
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-static": "^3.0.10",
-		"@sveltejs/kit": "^2.70.3",
+		"@sveltejs/adapter-static": "^4.0.0",
+		"@sveltejs/kit": "^3.0.0",
 		"@types/node": "^22.20.5",
 		"@typescript-eslint/eslint-plugin": "^5.45.0",
 		"@typescript-eslint/parser": "^5.45.0",
@@ -44,5 +44,9 @@
 		"@hoard-engine/grid": "^0.1.0",
 		"@hoard-engine/rng": "^0.1.0",
 		"sveltekit-i18n": "^2.4.2"
+	},
+	"imports": {
+		"#lib": "./src/lib/index.js",
+		"#lib/*": "./src/lib/*"
 	}
 }

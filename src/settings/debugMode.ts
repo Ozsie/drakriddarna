@@ -4,6 +4,6 @@
 // so shipped players cannot use it to cheat. `dev` from
 // `$app/environment` is statically replaced at build time: true in the
 // dev server and vitest, false in production builds (`npm run build`).
-import { dev } from '$app/environment';
+import { dev } from '$app/env';
 
 export const isDebugModeAvailable = (): boolean => dev;

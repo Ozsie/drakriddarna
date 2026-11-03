@@ -1,4 +1,4 @@
-import { t } from '$lib/translations';
+import { t } from '#lib/translations/index.js';
 import type { GameState } from '../types';
 import { checkpointDungeonTimer } from './timer';
 

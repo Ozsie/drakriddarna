@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import groundSprites from '$lib/DungeonTiles.png';
+  import groundSprites from '#lib/DungeonTiles.png';
   import type { GameState } from '../types';
   import { gameStateStore, debugModeStore } from '../store/gameStateStore';
   import {
@@ -8,7 +8,7 @@
     welcomeViewStore,
   } from '../store/appPhaseStore';
   import { radialMenuStore } from '../store/radialMenuStore';
-  import { locale } from '$lib/translations';
+  import { locale } from '#lib/translations/index.js';
   import { getCampaign } from '../campaigns';
   import { resolveTileset } from '../dungeon/TilesetLogic';
   import { isDebugModeAvailable } from '../settings/debugMode';

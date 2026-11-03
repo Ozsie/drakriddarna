@@ -8,6 +8,7 @@ import {
   monsterActions,
   type MonsterTurnOptions,
 } from './monsters/MonsterLogic';
+
 import {
   applyStartingEquipment,
   liveHeroes,
@@ -23,7 +24,7 @@ import {
   getEventsForDungeon,
   resetEventEffects,
 } from './events/EventsLogic';
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { addLog, doReRender, i18n } from './core';
 import { shuffle } from './core';
 import { awardScenarioScore, beginDungeonTiming } from './core';

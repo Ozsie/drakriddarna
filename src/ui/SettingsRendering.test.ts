@@ -11,7 +11,7 @@ import {
 } from './SettingsRendering';
 import { DEFAULT_APP_SETTINGS } from '../settings/AppSettings';
 import { toSettingsViewModel } from './viewmodels/settings';
-import { loadTranslations } from '$lib/translations';
+import { loadTranslations } from '#lib/translations/index.js';
 
 const createMockCtx = (): CanvasRenderingContext2D =>
   ({

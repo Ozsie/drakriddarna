@@ -1,6 +1,6 @@
 import { writable, derived, get } from 'svelte/store';
-import { browser } from '$app/environment';
-import { setLocale } from '$lib/translations';
+import { browser } from '$app/env';
+import { setLocale } from '#lib/translations/index.js';
 import type {
   Difficulty,
   GameAction,

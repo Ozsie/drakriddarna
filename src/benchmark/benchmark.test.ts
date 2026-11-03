@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
-import { loadTranslations } from '$lib/translations';
+import { loadTranslations } from '#lib/translations/index.js';
 import {
   runGameMasterBenchmark,
   runSingleGame,

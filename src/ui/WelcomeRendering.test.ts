@@ -6,7 +6,7 @@ import {
   WELCOME_FALLBACK_COLOR,
 } from './WelcomeRendering';
 import { getCoverFitBounds } from '../uikit';
-import { loadTranslations } from '$lib/translations';
+import { loadTranslations } from '#lib/translations/index.js';
 
 const createMockCtx = (): CanvasRenderingContext2D => {
   const gradient = {

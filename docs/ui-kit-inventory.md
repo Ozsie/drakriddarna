@@ -61,7 +61,7 @@ is game data, not a style).
 provides the implementations — `src/ui/i18nAdapter.ts` (Translator over
 sveltekit-i18n), `src/ui/env.ts` (env construction and layout-mode
 resolution) and `src/ui/assets.ts` (the AssetId registry; the only
-`$app`/`$lib` import under `src/ui`). Every renderer now receives an
+`$app`/`#lib` import under `src/ui`). Every renderer now receives an
 optional `env` through its options: `i18n()` calls became `env.t`, the
 `isCompactUi` reads inside layouts became `env.mode` (width-derived
 only as a fallback for legacy test callers), and theme access flows
@@ -139,7 +139,7 @@ living in `src/ui/assets.ts`.
 
 - `src/components/DungeonBoardController.ts` — the integration point: owns
   the layered canvases, builds the render options, dispatches input through
-  the hit cascade, holds the only `$lib/*.png` imports (actor sprites,
+  the hit cascade, holds the only `#lib/*.png` imports (actor sprites,
   buildInfo.json) and the locale/appSettings store reads. Calls game logic
   (`useItem`, `restartDungeonAfterWipe`, …) in response to UI hits — this
   is what `src/ui/actions/` will isolate.

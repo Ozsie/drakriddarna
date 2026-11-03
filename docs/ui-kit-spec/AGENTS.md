@@ -38,7 +38,7 @@ radial-menu stores; `src/menu/MenuLogic.ts` for menu items and callbacks).
   `components/`, `testing/`, `index.ts`).
 - New game-side glue: `src/ui/viewmodels/` (adapters), `src/ui/actions/`
   (semantic hit to game action mapping), `src/ui/assets.ts` (the only
-  `$lib/*.png` imports), `src/ui/i18nAdapter.ts`, `src/ui/theme.ts`.
+  `#lib/*.png` imports), `src/ui/i18nAdapter.ts`, `src/ui/theme.ts`.
 - Existing renderers are converted in place, one module per PR;
   `DungeonBoardController.ts`, `DungeonBoardSignatures.ts` and
   `DungeonBoardUiHit.ts` keep working throughout.
@@ -63,7 +63,7 @@ as `{ literal }` labels, never generate or correct it.
 ## Non-negotiable rules
 
 - Nothing under `src/uikit/**` imports game code: `../types`, `src/core/**`,
-  stores, `src/campaigns/**`, `src/game`, `$lib/**`, `$app/**`, `svelte`,
+  stores, `src/campaigns/**`, `src/game`, `#lib/**`, `$app/**`, `svelte`,
   `sveltekit-i18n` — enforced by lint, the literal budget and the boundary
   test (05). The reverse rule also holds: logic modules never import the
   kit, so the headless benchmark never pulls in canvas code.

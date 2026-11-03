@@ -5,7 +5,7 @@ import {
   getNewGameDialogHit,
   getNewGameDialogLayout,
 } from './NewGameDialogRendering';
-import { loadTranslations } from '$lib/translations';
+import { loadTranslations } from '#lib/translations/index.js';
 
 describe('NewGameDialogRendering', () => {
   beforeAll(async () => {

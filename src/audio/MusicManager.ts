@@ -1,8 +1,8 @@
-import { base } from '$app/paths';
+import { asset } from '$app/paths';
 import type { MusicIntensity } from './MusicIntensity';
 
-const DEFAULT_EXPLORE_TRACK = `${base}/music/explore.mp3`;
-const DEFAULT_TENSION_TRACK = `${base}/music/tension.mp3`;
+const DEFAULT_EXPLORE_TRACK = asset(`music/explore.mp3`);
+const DEFAULT_TENSION_TRACK = asset(`music/tension.mp3`);
 // Duration of the crossfade between two tracks and how often the fading
 // volumes are stepped during it.
 export const CROSSFADE_MS = 1500;

@@ -1,8 +1,8 @@
 import { get } from 'svelte/store';
-import { browser } from '$app/environment';
-import actorSprites from '$lib/Dungeon_Character_3.png';
-import buildInfo from '$lib/buildInfo.json';
-import { locale } from '$lib/translations';
+import { browser } from '$app/env';
+import actorSprites from '#lib/Dungeon_Character_3.png';
+import buildInfo from '#lib/buildInfo.json';
+import { locale } from '#lib/translations/index.js';
 import type { Dungeon, GameState, Hero, Position } from '../types';
 import type { DebugMenuView, MenuCallbacks } from '../menu/MenuLogic';
 import type { RadialMenuState } from '../store/radialMenuStore';
@@ -495,6 +495,7 @@ export class DungeonBoardController {
 
     const nextCellSize =
       (props.activeState?.settings?.['cellSize'] as number) ?? 48;
+
     if (nextCellSize !== this.lastCellSize) {
       this.cellSize = nextCellSize;
       this.lastCellSize = nextCellSize;
@@ -2935,12 +2936,14 @@ export class DungeonBoardController {
       this.renderUiLayer(true);
       return;
     }
+
     const isRenameKey =
       event.key === 'Backspace' ||
       (event.key.length === 1 &&
         !event.ctrlKey &&
         !event.metaKey &&
         !event.altKey);
+
     if (!isRenameKey) return;
     event.preventDefault();
     this.heroSelectionNames[heroId] = applyHeroRenameKey(

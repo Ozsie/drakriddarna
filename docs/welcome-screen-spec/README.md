@@ -29,7 +29,7 @@ the campaign end screen dismisses into it.
 | Settings persistence | A new app-level settings object in `localStorage` (key `appSettings`): `musicOn`, `sfxOn`, `musicVolume`, `sfxVolume`, `debugOn`. `musicOn` mirrors into `GameState.settings['music']` and `debugOn` into `GameState.settings['debug']` so saves stay self-contained |
 | Audio plumbing | Only the existing `MusicManager` / `SoundEffectManager` `setVolume` / `setMuted` APIs; no new audio code paths |
 | Credits | Reuses the existing rights & licenses content (`content.menu.rights.*` translations and links) rendered as a styled sub screen |
-| Build footer | `$lib/buildInfo.json` (`date` + `hash`), bottom center, same format as the existing menu footer: `${date} - ${hash}` |
+| Build footer | `#lib/buildInfo.json` (`date` + `hash`), bottom center, same format as the existing menu footer: `${date} - ${hash}` |
 | Visual style | The between-dungeons / save-load dialog tokens: backdrop `rgba(10, 12, 16, 0.85)`, panel `#181b22`, gold border `#d4af37`, corner radius 10, Arial font stack |
 | Title treatment | No canvas-drawn game title in v1; the title/logo is part of the human-authored background image (or absent) |
 | Non-goals (v1) | Keyboard/controller navigation of welcome buttons, animated or parallax background, per-save volume settings, profile/save-slot management, editing hero stats or colours, adding heroes beyond the campaign roster (the former non-goal "exit-to-welcome from the in-game menu" was later superseded: the Menu button now opens the welcome screen) |
@@ -112,7 +112,7 @@ Give the agent this folder as its specification and tell it:
   (`appSettings`), independent of any save.
 - **Cover fit** — the background image is scaled uniformly so it covers the
   whole canvas, cropping overflow (CSS `background-size: cover` semantics).
-- **Build info** — `{ date, hash }` from `$lib/buildInfo.json`, written by
+- **Build info** — `{ date, hash }` from `#lib/buildInfo.json`, written by
   the deploy workflow.
 - **Hero selection** — the screen between the new-game dialog and the run
   start, where the player picks and renames the party.

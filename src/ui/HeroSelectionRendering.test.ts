@@ -15,7 +15,7 @@ import {
   MIN_PARTY_SIZE,
 } from './HeroSelectionRendering';
 import { campaigns, getCampaign } from '../campaigns';
-import { loadTranslations } from '$lib/translations';
+import { loadTranslations } from '#lib/translations/index.js';
 
 describe('HeroSelectionRendering', () => {
   beforeAll(async () => {
