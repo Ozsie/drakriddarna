@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Use Node.js 18.14
+      - name: Use Node.js 22.19
         uses: actions/setup-node@v1
         with:
-          node-version: 18.14
+          node-version: 22.19
       - run: npm ci
       - name: Get current date
         id: date

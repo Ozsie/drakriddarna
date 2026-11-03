@@ -246,9 +246,13 @@ by code.
 ## Determinism: a seeded RNG everywhere it matters
 
 Gameplay-affecting randomness never calls `Math.random()` directly. All dice
-rolls and shuffles go through a swappable RNG in `src/core/dice.ts`
-(`setRng` / `createSeededRng`, a small stateful generator in the mulberry32
-family). The dice mechanic itself is board-game specific, but the engineering
+rolls and shuffles go through a swappable RNG that lives in the first
+extracted HOARD engine package, `@hoard-engine/rng` (published on npm and
+consumed as a dependency): `setRng` / `createSeededRng`, a small stateful
+generator in the mulberry32 family, plus a d6 success roll that takes the
+success threshold as a plain number. `src/core/dice.ts` is a thin game-side
+facade that maps the hero `Level` enum to that threshold and re-exports the
+package. The dice mechanic itself is board-game specific, but the engineering
 point is simple: an actor's skill sets the _threshold_ a die must beat, not
 the number of dice — so difficulty tuning is a parameter, not a code path.
 

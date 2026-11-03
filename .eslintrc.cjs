@@ -1,5 +1,5 @@
 module.exports = {
-  ignorePatterns: ['scripts/export-editor-catalog.ts'],
+  ignorePatterns: ['scripts/export-editor-catalog.ts', 'packages/*/dist'],
   env: {
     browser: true,
     es2021: true,
@@ -128,6 +128,26 @@ module.exports = {
               "Literal[value=/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/], Literal[value=/^(rgba?|hsla?)\\(/]",
             message:
               'Style literals live in the theme tokens (src/uikit/theme); components read them from the theme.',
+          },
+        ],
+      },
+    },
+    // HOARD engine packages (docs/engine-packages.md): package sources
+    // are leaves with no dependencies — only relative imports are
+    // allowed; test files may additionally import 'vitest'. The
+    // per-package boundary tests walk the import graph as a second line
+    // of defense.
+    {
+      files: ['packages/*/src/**/*.ts'],
+      excludedFiles: ['packages/*/src/**/*.test.ts'],
+      rules: {
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector:
+              'ImportDeclaration[source.value=/^[^.]/], ImportExpression[source.value=/^[^.]/], ExportAllDeclaration[source.value=/^[^.]/], ExportNamedDeclaration[source.value=/^[^.]/]',
+            message:
+              'Engine packages import nothing: use relative imports within the package.',
           },
         ],
       },

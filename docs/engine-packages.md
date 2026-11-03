@@ -4,7 +4,7 @@ This document is the spec for extracting the game-agnostic parts of this
 codebase into HOARD — a modular engine set of standalone packages, alongside
 the existing UI kit. HOARD stands for either 'Hackable Open Architecture for
 Reusable Dragonfire-games' or 'Heroic Objects, Actions, Rules and Data'. The
-packages are published under the `@hoard/*` scope. The spec defines the target
+packages are published under the `@hoard-engine/*` scope. The spec defines the target
 package map, the dependency rules that keep the packages independent,
 per-package extraction requirements, and the order of work. The packages are
 genre-neutral: pure computation (grid,
@@ -16,39 +16,41 @@ This is a target architecture, not a description of current state: today
 everything lives in `src/`, coupled through the shared `GameState` type, the
 `$lib/translations` i18n singleton, direct audio imports, and colocated
 rendering. Each package section names the coupling that must be removed first.
+(The first extraction, `@hoard-engine/rng`, is done — see its section below for the
+layout and tooling pattern the next packages follow.)
 
 ## Package map
 
 ```
-@hoard/rng        seedable RNG + dice
-@hoard/grid       cells, line of sight, doors, pathfinding (callback-driven)
-@hoard/lighting   light sources, propagation, light maps
-@hoard/audio      sample playback + intensity-driven crossfade
-@hoard/saves      versioned save framework + migration registry
-@hoard/directors  hook/dispatch framework for game-master-style directors
-@hoard/time       day/cycle/season calendar (future; see Future candidates)
-@hoard/primitives text, geometry, clipping, theme tokens
-@hoard/uikit      UI chrome: widgets, components       (exists as src/uikit/)
-@hoard/scene      world canvas: tiles, walls, light composite, sprites, VFX
+@hoard-engine/rng        seedable RNG + dice
+@hoard-engine/grid       cells, line of sight, doors, pathfinding (callback-driven)
+@hoard-engine/lighting   light sources, propagation, light maps
+@hoard-engine/audio      sample playback + intensity-driven crossfade
+@hoard-engine/saves      versioned save framework + migration registry
+@hoard-engine/directors  hook/dispatch framework for game-master-style directors
+@hoard-engine/time       day/cycle/season calendar (future; see Future candidates)
+@hoard-engine/primitives text, geometry, clipping, theme tokens
+@hoard-engine/uikit      UI chrome: widgets, components       (exists as src/uikit/)
+@hoard-engine/scene      world canvas: tiles, walls, light composite, sprites, VFX
 game              logic + content + adapters             (this repo)
 ```
 
 Dependency graph — nine leaves, one composition root:
 
 ```
-@hoard/rng        (deps: none)
-@hoard/grid       (deps: none)
-@hoard/lighting   (deps: none; takes a blocker callback)
-@hoard/audio      (deps: none)
-@hoard/saves      (deps: none; game registers migrators)
-@hoard/directors  (deps: none)
-@hoard/primitives (deps: none)
-@hoard/uikit      (deps: @hoard/primitives)
-@hoard/scene      (deps: @hoard/primitives)
+@hoard-engine/rng        (deps: none)
+@hoard-engine/grid       (deps: none)
+@hoard-engine/lighting   (deps: none; takes a blocker callback)
+@hoard-engine/audio      (deps: none)
+@hoard-engine/saves      (deps: none; game registers migrators)
+@hoard-engine/directors  (deps: none)
+@hoard-engine/primitives (deps: none)
+@hoard-engine/uikit      (deps: @hoard-engine/primitives)
+@hoard-engine/scene      (deps: @hoard-engine/primitives)
 game              (deps: all — the only node with edges)
 ```
 
-The only inter-package edges are the deliberate ones into `@hoard/primitives`,
+The only inter-package edges are the deliberate ones into `@hoard-engine/primitives`,
 extracted under the two-consumer rule (uikit and scene both draw). Do not add
 edges between the other leaves.
 
@@ -57,8 +59,8 @@ edges between the other leaves.
 1. **Consumer-defined contracts.** Packages never import each other. Each
    package declares the minimal input interface it accepts, and TypeScript's
    structural typing keeps producers compatible without a shared import. `scene`
-   does not import `@hoard/lighting` — it declares its light-map input type;
-   `@hoard/grid`-based pathfinding takes a `canPass(x, y)` callback instead of a
+   does not import `@hoard-engine/lighting` — it declares its light-map input type;
+   `@hoard-engine/grid`-based pathfinding takes a `canPass(x, y)` callback instead of a
    grid import. Producers and consumers share data shapes, not dependency
    edges.
 2. **The game is the only composition root.** Only the game knows that
@@ -71,20 +73,52 @@ edges between the other leaves.
    tiny shape it consumes; duplicate two-field interfaces are cheaper than a
    hub.
 4. **Enforcement.** Each package gets the same tooling uikit has: a boundary
-   test asserting its external import set is exactly `{@hoard/primitives}` (or
+   test asserting its external import set is exactly `{@hoard-engine/primitives}` (or
    empty), a completeness test on its public surface, and sentinel tests
    against leaked i18n literals and browser/global APIs.
+5. **Self-sufficient packages.** Each package folder carries its own
+   tooling and docs: a `build` script, a publishing workflow
+   (`prepublishOnly`), `test`, `lint` and `prettier` scripts, plus its own
+   `AGENTS.md` and `README.md` — the package can be developed, checked,
+   formatted and published standalone, lifted out of the repo as is.
 
 ## Package specifications
 
-### @hoard/rng — source: `src/core/dice.ts`
+### @hoard-engine/rng — source: `src/core/dice.ts` — EXTRACTED
 
 Seedable RNG + dice rolls, deterministic and testable. Coupling: imports only
 the `Level` enum. Extraction is near-free: accept difficulty as a value instead.
 This is the reference extraction — do it first to establish the package layout,
 boundary-test pattern, and publishing workflow.
 
-### @hoard/audio — source: `src/audio/`
+**Current state:** published on npm as `@hoard-engine/rng` (v0.1.0) and
+consumed by the game as a dependency; its source folder has left this repo.
+It was developed in-repo as `packages/rng/` — the layout later packages
+follow:
+
+- Self-contained package folder: `package.json` (name `@hoard-engine/rng`,
+  publishes the built `dist/` entry, `prepublishOnly` runs check + build +
+  tests), strict `tsconfig.json` plus `tsconfig.build.json` (declaration
+  emit) and its own `vitest.config.ts` — the folder can be lifted out of
+  the repo as is. The JS entry is an esbuild ESM bundle so the published
+  artifact also loads under plain Node.
+- Game-agnostic API: the d6 success roll takes a numeric `successThreshold`;
+  the `Level`-to-threshold mapping is game knowledge and lives in the
+  `src/core/dice.ts` facade, which re-exports the package.
+- Consumed as an npm dependency (`@hoard-engine/rng` in the game's
+  `package.json`).
+- Boundary test (`src/boundary.test.ts`: only relative imports inside the
+  package), public-surface completeness test (`src/publicSurface.test.ts`)
+  and colocated unit tests — mirroring the uikit tooling; an eslint
+  `no-restricted-syntax` override blocks non-relative imports in package
+  sources, and while a package is developed in-repo the root tsconfig
+  include covers `packages/*/src/**` so `check` and `lint` type-check
+  package code, and the root vitest include runs its tests.
+- Own `AGENTS.md` and `README.md` — the package documents itself, per the
+  self-sufficient-package rule; its script set covers build, publishing,
+  testing, lint and prettier.
+
+### @hoard-engine/audio — source: `src/audio/`
 
 `SoundEffectManager` (sample playback, volume) and `MusicManager` +
 `MusicIntensity` (crossfade between tracks driven by an intensity value).
@@ -95,13 +129,13 @@ inversion: today 12 logic modules import the `soundEffectManager` singleton
 directly; logic should emit sound-cue data and the game's adapter maps cues to
 samples.
 
-### @hoard/primitives — source: `src/uikit/primitives/`
+### @hoard-engine/primitives — source: `src/uikit/primitives/`
 
 The shared drawing layer (text, geometry, clipping) plus the theme-token
 contracts. Kept in-repo under the two-consumer rule until `scene` exists;
 scene's extraction is the second consumer that justifies it.
 
-### @hoard/grid — source: `src/core/grid.ts`, `src/dungeon/cornerDetection.ts`,
+### @hoard-engine/grid — source: `src/core/grid.ts`, `src/dungeon/cornerDetection.ts`,
 
 `src/dungeon/sealedCornerGrid.ts`, `src/monsters/pathfinding.ts`
 
@@ -111,7 +145,7 @@ behavior scoring, so the pure pathfinder must accept injected cost/targeting
 callbacks. Split it: algorithm in the package, game-specific scoring stays in
 the game and is injected.
 
-### @hoard/lighting — source: `src/dungeon/LightSources.ts` + the computation
+### @hoard-engine/lighting — source: `src/dungeon/LightSources.ts` + the computation
 
 half of `src/dungeon/LightRendering.ts`
 
@@ -120,14 +154,14 @@ blockers via a callback. The roughly 2,000 lines of gradient/canvas compositing
 in `LightRendering.ts` move to `scene` instead — the engine package outputs a
 light map that `scene` renders.
 
-### @hoard/saves — source: `src/saveMigration.ts`, `src/saves/`
+### @hoard-engine/saves — source: `src/saveMigration.ts`, `src/saves/`
 
 Versioned save schema and ordered migrations. Coupling: migrations currently
 resolve monster templates directly; replace with a migrator-registry interface
 the game populates. The package ships the framework (version stamps, ordered
 migration pipeline, validation); the game ships its migrators.
 
-### @hoard/directors — source: `src/gameMasters/` (types, hook dispatch, alias
+### @hoard-engine/directors — source: `src/gameMasters/` (types, hook dispatch, alias
 
 resolution)
 
@@ -176,14 +210,16 @@ what uikit already did with `UiEnv.t`:
 Ordered by how clean the split already is — clean splits first, inversions
 later:
 
-1. `@hoard/rng` — near-free; establishes the package pattern and tooling.
-2. `@hoard/primitives` — exists already as `uikit/primitives/`; mechanical.
-3. `@hoard/audio` — small files; requires the asset-path injection. Also
+1. `@hoard-engine/rng` — near-free; establishes the package pattern and tooling.
+   **Done:** published as `@hoard-engine/rng` (v0.1.0), consumed as a
+   dependency (see the package section above).
+2. `@hoard-engine/primitives` — exists already as `uikit/primitives/`; mechanical.
+3. `@hoard-engine/audio` — small files; requires the asset-path injection. Also
    unlocks the audio-cue inversion across the 12 importing modules.
-4. `@hoard/grid` — clean once pathfinding takes callbacks.
-5. `@hoard/lighting` — requires the compute/render split of `LightRendering.ts`.
-6. `@hoard/saves` — requires the migrator registry.
-7. `@hoard/directors` — framework only; content stays.
+4. `@hoard-engine/grid` — clean once pathfinding takes callbacks.
+5. `@hoard-engine/lighting` — requires the compute/render split of `LightRendering.ts`.
+6. `@hoard-engine/saves` — requires the migrator registry.
+7. `@hoard-engine/directors` — framework only; content stays.
 8. `scene` — last and largest: needs the render/logic separation complete and
    view-model contracts in place. Camera/viewport and map streaming are
    out-of-scope extensions for a future consumer, not part of the extraction.
@@ -197,6 +233,6 @@ policy; the packages contain no game content by construction.
 
 ## Future candidates
 
-- `@hoard/time` — a game clock/calendar leaf (day length, cycles, seasons) that
+- `@hoard-engine/time` — a game clock/calendar leaf (day length, cycles, seasons) that
   feeds lighting levels and audio intensity. Listed as a candidate, not part of
   the initial set; it has no source code to extract yet.

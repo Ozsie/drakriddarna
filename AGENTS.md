@@ -59,6 +59,12 @@ Per the [AI Policy in README.md](./README.md):
 - The write-up describes components and techniques, not line numbers or exact counts — update it in the same change as the code; do not let it drift.
 - New features at the level of the existing sections (e.g. a new rendering technique, a changed save format, a new benchmark capability) get a matching paragraph or section update.
 
+## Engine packages
+
+- The HOARD engine packages (spec: [docs/engine-packages.md](./docs/engine-packages.md)) are standalone npm packages under the `@hoard-engine/*` scope. The first one, `@hoard-engine/rng`, is published and consumed by the game as a dependency; its source folder is no longer in this repo.
+- Engine packages are dependency-free leaves: they never import game code, Svelte or i18n. The game consumes them through `package.json` dependencies and keeps game-side facades (e.g. `src/core/dice.ts` maps `Level` to the package's numeric success threshold).
+- New extractions follow the pattern the rng package established (see its section in the spec): a self-contained folder under `packages/` during development — own `package.json` with build, publishing, testing, lint and prettier scripts, strict `tsconfig.json` plus `tsconfig.build.json`, own `AGENTS.md` and `README.md` — with its public surface only through `src/index.ts` (enforced by a completeness test), colocated tests and a boundary test; published to npm and then removed from this repo.
+
 ## Content definition specs
 
 - [docs/campaign-definition.md](./docs/campaign-definition.md),
