@@ -580,7 +580,7 @@ describe('renderLights', () => {
     // Hero-free: the heroes' torch lights would add a second gradient.
     const state = createState({ heroes: [] });
     state.dungeon.layout.lights = [createLight()];
-    const addColorStop = vi.fn();
+    const addColorStop = vi.fn<(offset: number, color: string) => void>();
     const ctx = createMockCtx({ addColorStop });
     renderLights(ctx, CELL_SIZE, state, false);
     expect(ctx.createRadialGradient).toHaveBeenCalledTimes(1);
@@ -643,7 +643,7 @@ describe('renderLights', () => {
   it('scales the rendered gradient by the effect intensity', () => {
     const state = createState();
     state.dungeon.layout.lights = [createLight({ effect: 'pulse' })];
-    const addColorStop = vi.fn();
+    const addColorStop = vi.fn<(offset: number, color: string) => void>();
     const ctx = createMockCtx({ addColorStop });
     renderLights(ctx, CELL_SIZE, state, false, 0);
     // Peak alpha: intensity 0.35 * 1.5 * pulse scale 0.65 at t=0.
@@ -1511,7 +1511,7 @@ describe('sparkle and aura effects', () => {
     state.dungeon.layout.lights = [
       createLight({ position: { x: 1, y: 2 }, effect: 'aura' }),
     ];
-    const addColorStop = vi.fn();
+    const addColorStop = vi.fn<(offset: number, color: string) => void>();
     const ctx = createMockCtx({ addColorStop });
     renderLights(ctx, CELL_SIZE, state, false, 0);
     expect(ctx.createRadialGradient).toHaveBeenCalledTimes(1);
@@ -2052,7 +2052,7 @@ describe('gas effect', () => {
     state.dungeon.layout.lights = [
       createLight({ position: { x: 3, y: 2 }, effect: 'gas', radius: 4 }),
     ];
-    const addColorStop = vi.fn();
+    const addColorStop = vi.fn<(offset: number, color: string) => void>();
     const ctx = createMockCtx({ addColorStop });
     renderLights(ctx, CELL_SIZE, state, false, 1000);
     const stops = addColorStop.mock.calls.map((call: [number, string]) => call);

@@ -23,7 +23,9 @@ describe('MusicManager', () => {
     audioInstances = [];
     vi.stubGlobal(
       'Audio',
-      vi.fn().mockImplementation(() => {
+      // Vitest 5 only constructs mocks whose implementation is a
+      // `function`/`class`, and MusicManager calls `new Audio(...)`.
+      vi.fn().mockImplementation(function () {
         const audio: MockAudio = {
           play: vi.fn(),
           pause: vi.fn(),

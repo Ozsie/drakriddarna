@@ -3,7 +3,7 @@
   import Dungeon from '../components/Dungeon.svelte';
   import { inputManager } from '../input/InputManager';
 
-  let dungeonContainer: HTMLElement;
+  let dungeonContainer: HTMLElement | undefined = $state();
 
   onMount(() => {
     inputManager.attach(window);

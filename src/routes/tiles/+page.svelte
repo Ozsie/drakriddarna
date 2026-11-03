@@ -61,9 +61,9 @@
   };
 
   // Active query parameters, echoed back as data (no authored copy).
-  let queryInfo = '';
+  let queryInfo = $state('');
 
-  let canvases: Record<string, HTMLCanvasElement> = {};
+  let canvases: Record<string, HTMLCanvasElement> = $state({});
 
   onMount(() => {
     const params = new URLSearchParams(window.location.search);

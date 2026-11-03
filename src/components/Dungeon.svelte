@@ -14,50 +14,68 @@
   import { isDebugModeAvailable } from '../settings/debugMode';
   import { DungeonBoardController } from './DungeonBoardController';
 
-  export let state: GameState | undefined = undefined;
-  export let debugMode: boolean | undefined = undefined;
+  interface Props {
+    gameState?: GameState | undefined;
+    debugMode?: boolean | undefined;
+  }
+
+  let { gameState = undefined, debugMode = undefined }: Props = $props();
 
   const board = new DungeonBoardController();
 
-  // Assigning a new external `state` must happen outside the reactive
+  // Assigning a new external `gameState` must happen outside the reactive
   // updateProps block, or Svelte detects a cyclical dependency
-  // (activeState -> state -> activeState).
+  // (activeState -> gameState -> activeState).
   const handleExternalStateChange = (next: GameState) => {
-    if (state) {
-      state = next;
+    if (gameState) {
+      gameState = next;
     }
   };
 
-  let containerWidth = 0;
-  let containerHeight = 0;
+  let containerWidth = $state(0);
+  let containerHeight = $state(0);
 
-  $: activeState = state ?? ($gameStateStore as GameState | null) ?? undefined;
+  const activeState = $derived(
+    gameState ?? ($gameStateStore as GameState | null) ?? undefined
+  );
   // Debug mode (overlays included) exists only in dev builds; a
   // production deploy never activates it, whatever a save carries.
-  $: activeDebugMode =
+  const activeDebugMode = $derived(
     isDebugModeAvailable() &&
-    (debugMode !== undefined
-      ? debugMode
-      : Boolean(activeState?.settings?.['debug'] ?? $debugModeStore));
-  $: dungeon = activeState?.dungeon;
-  $: campaign = activeState?.campaignId
-    ? getCampaign(activeState.campaignId)
-    : undefined;
-  $: tileset = resolveTileset(dungeon, campaign, groundSprites);
-  $: startPosition = dungeon?.startingPositions?.[0];
-  $: board.updateProps({
-    state,
-    activeState,
-    debugMode: activeDebugMode,
-    dungeon,
-    tileset,
-    startPosition,
-    onExternalStateChange: handleExternalStateChange,
+      (debugMode !== undefined
+        ? debugMode
+        : Boolean(activeState?.settings?.['debug'] ?? $debugModeStore))
+  );
+  const dungeon = $derived(activeState?.dungeon);
+  const campaign = $derived(
+    activeState?.campaignId ? getCampaign(activeState.campaignId) : undefined
+  );
+  const tileset = $derived(resolveTileset(dungeon, campaign, groundSprites));
+  const startPosition = $derived(dungeon?.startingPositions?.[0]);
+
+  $effect.pre(() => {
+    board.updateProps({
+      state: gameState,
+      activeState,
+      debugMode: activeDebugMode,
+      dungeon,
+      tileset,
+      startPosition,
+      onExternalStateChange: handleExternalStateChange,
+    });
   });
-  $: board.setContainerSize(containerWidth, containerHeight);
-  $: board.onRadialMenuChange($radialMenuStore);
-  $: board.onLocaleChange($locale);
-  $: board.onAppPhaseChange($appPhaseStore, $welcomeViewStore);
+  $effect.pre(() => {
+    board.setContainerSize(containerWidth, containerHeight);
+  });
+  $effect.pre(() => {
+    board.onRadialMenuChange($radialMenuStore);
+  });
+  $effect.pre(() => {
+    board.onLocaleChange($locale);
+  });
+  $effect.pre(() => {
+    board.onAppPhaseChange($appPhaseStore, $welcomeViewStore);
+  });
 
   onMount(() => {
     board.mount();
@@ -96,16 +114,16 @@
       class="canvasLayer interactiveLayer"
       style="cursor: default;"
       bind:this={board.uiCanvas}
-      on:click={board.onClick}
-      on:mousedown={board.onMouseDown}
-      on:mousemove={board.onMouseMove}
-      on:mouseleave={board.onMouseLeave}
-      on:touchstart={board.onTouchStart}
-      on:touchmove={board.onTouchMove}
-      on:touchend={board.onTouchEnd}
-      on:touchcancel={board.onTouchCancel}
-      on:wheel={board.onWheel}
-      on:contextmenu|preventDefault
+      onclick={board.onClick}
+      onmousedown={board.onMouseDown}
+      onmousemove={board.onMouseMove}
+      onmouseleave={board.onMouseLeave}
+      ontouchstart={board.onTouchStart}
+      ontouchmove={board.onTouchMove}
+      ontouchend={board.onTouchEnd}
+      ontouchcancel={board.onTouchCancel}
+      onwheel={board.onWheel}
+      oncontextmenu={(event) => event.preventDefault()}
     ></canvas>
   </div>
 </div>

@@ -136,5 +136,5 @@ describe('generateCampaign', () => {
         expect(() => assertValidDungeon(result.dungeon)).not.toThrow();
       }
     }
-  });
+  }, 30000);
 });

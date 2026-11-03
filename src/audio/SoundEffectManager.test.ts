@@ -35,7 +35,11 @@ describe('SoundEffectManager', () => {
     // Mock global Audio
     vi.stubGlobal(
       'Audio',
-      vi.fn().mockImplementation(() => mockAudioInstance),
+      // Vitest 5 only constructs mocks whose implementation is a
+      // `function`/`class`, and SoundEffectManager calls `new Audio(...)`.
+      vi.fn().mockImplementation(function () {
+        return mockAudioInstance;
+      }),
     );
   });
 
