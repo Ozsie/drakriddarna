@@ -113,7 +113,10 @@ export const newHero = (
   };
 };
 
-export const act = (direction: MoveDirection | string, state: GameState) => {
+export const act = (
+  direction: MoveDirection | (string & {}),
+  state: GameState,
+) => {
   doReRender(state);
   const hero: Hero | undefined = state.currentActor;
   if (!hero || hero.health <= 0 || hero.actions <= 0) {
@@ -484,7 +487,7 @@ export const interact = (state: GameState, interactable?: InteractableCell) => {
   }
   const target = interactable ?? findInteractableAtHero(state, hero as Hero);
   if (!target) return false;
-  const success = triggerInteractable(state, target, hero as Hero);
+  const success = triggerInteractable(state, target, hero);
   if (success) {
     spendStandardAction(hero, movementModifier);
     return true;

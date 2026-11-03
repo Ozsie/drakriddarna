@@ -122,7 +122,7 @@ export const getDebugMenuItems = (
       // A full page load rather than SPA navigation: the catalog is its
       // own route, outside the game canvas.
       if (typeof window !== 'undefined') {
-        window.location.assign(resolve(`tiles`));
+        window.location.assign(resolve('tiles'));
       }
       callbacks?.closeMenu?.();
     },

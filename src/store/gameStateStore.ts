@@ -225,7 +225,7 @@ export const endHeroAction = async (
   }
 };
 
-export const moveHero = (direction: MoveDirection | string): void => {
+export const moveHero = (direction: MoveDirection | (string & {})): void => {
   if (isExecutingTurn) return;
   const state = get(gameStateStore);
   if (!state) return;

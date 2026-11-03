@@ -7,7 +7,7 @@ export interface TargetSelectionLog {
   monster: Monster;
   candidates: ScoredHero[];
   selectedHero?: Hero;
-  actionType?: 'melee' | 'ranged' | 'pathfinding' | string;
+  actionType?: 'melee' | 'ranged' | 'pathfinding' | (string & {});
   state?: GameState;
   debug?: boolean;
 }

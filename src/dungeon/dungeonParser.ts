@@ -628,7 +628,7 @@ export const parseInteractable = (
         if (typeof opts.interactSound === 'string')
           interactSound = opts.interactSound;
         if (opts.light && typeof opts.light === 'object') {
-          light = opts.light as ItemLight;
+          light = opts.light;
         }
       } else {
         args = opts;

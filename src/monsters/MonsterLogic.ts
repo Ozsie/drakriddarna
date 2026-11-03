@@ -997,7 +997,7 @@ const performFireAttack = (
       }
       state.flameEffects.push(createFlameEffect(target.position));
     }
-    if (state.heroes.includes(target as Hero)) {
+    if (state.heroes.includes(target)) {
       target.roundTargetCount = (target.roundTargetCount ?? 0) + 1;
       if (!state.roundTargetCounts) {
         state.roundTargetCounts = {};

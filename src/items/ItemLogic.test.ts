@@ -331,7 +331,7 @@ describe('chaos sword kills', () => {
     // Force the instant-kill branch: 0 hits on the chaos sword kills outright
     setRng(() => 1 / 6);
     try {
-      resolveChaosSwordAttack(state, hero, monster as never);
+      resolveChaosSwordAttack(state, hero, monster);
     } finally {
       resetRng();
     }

@@ -19,7 +19,6 @@ import { MAX_HIGH_SCORES } from '../../saves/HighScoresLogic';
 import { getHeroTradableItems } from '../../dungeon/BetweenDungeonsLogic';
 import type { Translator } from '../../uikit/env';
 import type {
-  BetweenDungeonsStep,
   BetweenDungeonsViewModel,
   CampaignCompleteHeroRowVm,
   CampaignCompleteVm,
@@ -293,7 +292,7 @@ export const toBetweenDungeonsViewModel = (
   if (!state || !state.betweenDungeons) return null;
   const bd = state.betweenDungeons;
 
-  const step = bd.step as BetweenDungeonsStep;
+  const step = bd.step;
   const isLevelUp = step === 'levelUp';
   const isCampaignComplete = step === 'campaignComplete';
   const isPartyWipe = step === 'partyWipe';

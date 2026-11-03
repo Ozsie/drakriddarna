@@ -322,9 +322,9 @@ export const MonsterType = {
   RED_DARK_LORD: 'Red Dark Lord',
   YELLOW_DARK_LORD: 'Yellow Dark Lord',
 } as const;
-// eslint-disable-next-line @typescript-eslint/no-redeclare
+
 export type MonsterType =
-  (typeof MonsterType)[keyof typeof MonsterType] | string;
+  (typeof MonsterType)[keyof typeof MonsterType] | (string & {});
 
 export enum Level {
   APPRENTICE = 'apprentice',
@@ -458,9 +458,9 @@ export const LightEffect = {
   AURA: 'aura',
   GAS: 'gas',
 } as const;
-// eslint-disable-next-line @typescript-eslint/no-redeclare
+
 export type LightEffect =
-  (typeof LightEffect)[keyof typeof LightEffect] | string;
+  (typeof LightEffect)[keyof typeof LightEffect] | (string & {});
 
 export type LightSource = {
   id?: string;
@@ -489,9 +489,9 @@ export const TerrainType = {
   WATER: 'water',
   LAVA: 'lava',
 } as const;
-// eslint-disable-next-line @typescript-eslint/no-redeclare
+
 export type TerrainType =
-  (typeof TerrainType)[keyof typeof TerrainType] | string;
+  (typeof TerrainType)[keyof typeof TerrainType] | (string & {});
 
 // Configuration of a terrain cell. Everything except the type is optional:
 // a cell can be purely decorative, purely gameplay-affecting, or both.
@@ -683,10 +683,11 @@ export enum ItemType {
   MAGIC,
 }
 
-export type ResetTrigger = 'TRADE' | 'NEXT_SCENARIO' | 'NEXT_TURN' | string;
+export type ResetTrigger =
+  'TRADE' | 'NEXT_SCENARIO' | 'NEXT_TURN' | (string & {});
 
 export type ItemTarget =
-  'SELF' | 'OWNER' | 'ANY_HERO' | 'ALL_HEROES' | 'HERO' | string;
+  'SELF' | 'OWNER' | 'ANY_HERO' | 'ALL_HEROES' | 'HERO' | (string & {});
 
 export interface ItemProperties {
   USED?: boolean;
@@ -713,17 +714,17 @@ export type ItemEffectKey =
   | 'chaosSwordOnUse'
   | 'potionOfSpeedOnUse'
   | 'necklaceOfLightOnUse'
-  | string;
+  | (string & {});
 
 export type ItemResetKey =
   | 'magicHerbsOnReset'
   | 'necklaceOfLightOnReset'
   | 'necklaceOfLightOnUse'
-  | string;
+  | (string & {});
 
-export type ItemPickupKey = 'movementBonusOnPickup' | string;
+export type ItemPickupKey = 'movementBonusOnPickup' | (string & {});
 
-export type ItemDropKey = 'movementBonusOnDrop' | string;
+export type ItemDropKey = 'movementBonusOnDrop' | (string & {});
 
 // A light source attached to an item. It has no position of its own: while
 // the item sits in a living actor's inventory, the light renders at the
@@ -787,7 +788,7 @@ export type TurnEventEffect =
   | 'theOrchDrums'
   | 'theSymbolOfWeakness'
   | 'theHexagram'
-  | string;
+  | (string & {});
 
 export type GameEventType =
   | 'SUN_STONE'

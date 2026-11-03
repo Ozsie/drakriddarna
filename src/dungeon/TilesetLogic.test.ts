@@ -2,38 +2,36 @@ import { describe, it, expect } from 'vitest';
 import { resolveTileset } from './TilesetLogic';
 import type { Campaign, Dungeon } from '../types';
 
-const createDungeon = (tileset?: string): Dungeon =>
-  ({
-    name: 'Test Dungeon',
-    intro: '',
-    layout: {
-      grid: [],
-      doors: [],
-      monsters: [],
-      secrets: [],
-      notes: [],
-      items: [],
-      corridors: [],
-      corners: [],
-    },
-    startingPositions: [],
-    discoveredRooms: [],
-    winConditions: [],
-    beaten: false,
-    killCount: 0,
-    ...(tileset ? { tileset } : {}),
-  }) as Dungeon;
+const createDungeon = (tileset?: string): Dungeon => ({
+  name: 'Test Dungeon',
+  intro: '',
+  layout: {
+    grid: [],
+    doors: [],
+    monsters: [],
+    secrets: [],
+    notes: [],
+    items: [],
+    corridors: [],
+    corners: [],
+  },
+  startingPositions: [],
+  discoveredRooms: [],
+  winConditions: [],
+  beaten: false,
+  killCount: 0,
+  ...(tileset ? { tileset } : {}),
+});
 
-const createCampaign = (tileset?: string): Campaign =>
-  ({
-    id: 'testCampaign',
-    name: 'Test Campaign',
-    dungeons: [],
-    heroes: [],
-    itemDeck: [],
-    magicItemDeck: [],
-    ...(tileset ? { tileset } : {}),
-  }) as Campaign;
+const createCampaign = (tileset?: string): Campaign => ({
+  id: 'testCampaign',
+  name: 'Test Campaign',
+  dungeons: [],
+  heroes: [],
+  itemDeck: [],
+  magicItemDeck: [],
+  ...(tileset ? { tileset } : {}),
+});
 
 describe('resolveTileset', () => {
   const fallback = 'default-tiles.png';

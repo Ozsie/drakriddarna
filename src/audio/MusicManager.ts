@@ -1,8 +1,8 @@
 import { asset } from '$app/paths';
 import type { MusicIntensity } from './MusicIntensity';
 
-const DEFAULT_EXPLORE_TRACK = asset(`music/explore.mp3`);
-const DEFAULT_TENSION_TRACK = asset(`music/tension.mp3`);
+const DEFAULT_EXPLORE_TRACK = asset('music/explore.mp3');
+const DEFAULT_TENSION_TRACK = asset('music/tension.mp3');
 // Duration of the crossfade between two tracks and how often the fading
 // volumes are stepped during it.
 export const CROSSFADE_MS = 1500;
@@ -26,7 +26,6 @@ export class MusicManager {
       const unlock = () => {
         this.isUnlocked = true;
         if (this.audio && this.audio.paused) {
-          // eslint-disable-next-line @typescript-eslint/no-empty-function
           this.audio.play().catch(() => {});
         }
         window.removeEventListener('pointerdown', unlock);
@@ -78,7 +77,6 @@ export class MusicManager {
   public unlock(): void {
     this.isUnlocked = true;
     if (this.audio && this.audio.paused && !this.isMuted) {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       this.audio.play().catch(() => {});
     }
   }
@@ -104,7 +102,6 @@ export class MusicManager {
     this.fadingAudio = previous;
 
     if (this.isUnlocked && !this.isMuted) {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       audio.play().catch(() => {});
     }
 
@@ -172,7 +169,6 @@ export class MusicManager {
       if (muted) {
         this.audio.pause();
       } else if (this.isUnlocked && this.audio.paused) {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         this.audio.play().catch(() => {});
       }
     }

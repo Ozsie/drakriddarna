@@ -56,12 +56,7 @@ describe('Type Safety & Domain Modeling', () => {
       registerMonsterTemplate('Sprite Test Monster', {
         sprite: { image: 'monster.png', frameWidth: 64, frameHeight: 64 },
       });
-      const monster = createMonster(
-        'Sprite Test Monster' as MonsterType,
-        Colour.Green,
-        1,
-        1,
-      );
+      const monster = createMonster('Sprite Test Monster', Colour.Green, 1, 1);
       expect(monster.sprite).toEqual({
         image: 'monster.png',
         frameWidth: 64,

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { describe, it, expect, vi } from 'vitest';
 import {
   getMonsterCardsLayout,
@@ -210,7 +209,7 @@ describe('MonsterCardRendering', () => {
       });
       const state = createMockState([monster1, monster2]);
       state.currentActor = undefined;
-      state.targetActor = monster1 as unknown as typeof state.targetActor;
+      state.targetActor = monster1;
 
       const layout = getMonsterCardsLayout(375, 667, state);
 

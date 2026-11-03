@@ -308,7 +308,7 @@ export class InputManager {
 
     if (distance < this.gestureConfig.minSwipeDistance) return false;
 
-    let action: InputAction | null = null;
+    let action: InputAction | null;
 
     if (this.gestureConfig.enableDiagonals) {
       const angle = (Math.atan2(dy, dx) * 180) / Math.PI; // -180 to 180

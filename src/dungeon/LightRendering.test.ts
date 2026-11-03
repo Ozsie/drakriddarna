@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { describe, expect, it, vi } from 'vitest';
 import {
   activeLights,
@@ -647,7 +646,7 @@ describe('renderLights', () => {
     const ctx = createMockCtx({ addColorStop });
     renderLights(ctx, CELL_SIZE, state, false, 0);
     // Peak alpha: intensity 0.35 * 1.5 * pulse scale 0.65 at t=0.
-    const firstStop = addColorStop.mock.calls[0] as [number, string];
+    const firstStop = addColorStop.mock.calls[0];
     const firstAlpha = Number(firstStop[1].match(/([\d.]+)\)$/)![1]);
     expect(firstAlpha).toBeCloseTo(0.35 * 1.5 * 0.65, 5);
   });
@@ -1667,7 +1666,7 @@ describe('item light sources', () => {
     const state = createState();
     state.dungeon.layout.items = [
       {
-        item: glowingItem as unknown as Item,
+        item: glowingItem,
         position: { x: 2, y: 1 },
       },
       {
@@ -1837,7 +1836,7 @@ describe('event-driven lights', () => {
   it("snuffs out all lights while the dragon's breath blinds a living hero", () => {
     const state = createState();
     state.dungeon.layout.lights = [createLight({ position: { x: 1, y: 2 } })];
-    state.heroes[0].inventory = [glowingItem as unknown as Item];
+    state.heroes[0].inventory = [glowingItem];
     // The placed light, the item light, and the hero's torch.
     expect(activeLights(state).length).toBe(3);
     state.heroes[0].blinded = true;

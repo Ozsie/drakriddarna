@@ -12,37 +12,36 @@ import {
 } from './timer';
 import type { GameState } from '../types';
 
-const createState = (overrides: Partial<GameState> = {}): GameState =>
-  ({
-    heroes: [],
-    actionLog: [],
-    itemDeck: [],
-    magicItemDeck: [],
-    settings: {},
-    eventDeck: [],
-    reRender: false,
-    drawEvents: false,
-    dungeon: {
-      name: 'test-dungeon',
-      intro: '',
-      layout: {
-        grid: [],
-        doors: [],
-        monsters: [],
-        secrets: [],
-        notes: [],
-        items: [],
-        corridors: [],
-        corners: [],
-      },
-      startingPositions: [{ x: 0, y: 0 }],
-      discoveredRooms: [],
-      winConditions: [],
-      beaten: false,
-      killCount: 0,
+const createState = (overrides: Partial<GameState> = {}): GameState => ({
+  heroes: [],
+  actionLog: [],
+  itemDeck: [],
+  magicItemDeck: [],
+  settings: {},
+  eventDeck: [],
+  reRender: false,
+  drawEvents: false,
+  dungeon: {
+    name: 'test-dungeon',
+    intro: '',
+    layout: {
+      grid: [],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corners: [],
     },
-    ...overrides,
-  }) as GameState;
+    startingPositions: [{ x: 0, y: 0 }],
+    discoveredRooms: [],
+    winConditions: [],
+    beaten: false,
+    killCount: 0,
+  },
+  ...overrides,
+});
 
 describe('beginDungeonTiming', () => {
   it('starts the timer immediately for a dungeon without an intro', () => {

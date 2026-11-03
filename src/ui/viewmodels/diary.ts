@@ -27,7 +27,7 @@ export const formatWinCondition = (
     additionalDescription = ` ${translated}`;
   }
 
-  let text = '';
+  let text: string;
   switch (cond.type) {
     case ConditionType.KILL_ALL: {
       const raw = t('content.winConditions.killAll');

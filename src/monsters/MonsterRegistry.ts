@@ -57,7 +57,10 @@ export const getMonsterTemplate = (
 // without editing this file or MonsterLogic.ts. The 3 built-in fire attacks
 // remain available as literal string constants for convenience.
 export type MonsterAbility =
-  'diagonalFireAttack' | 'orthogonalFireAttack' | 'sameRoomFireAttack' | string;
+  | 'diagonalFireAttack'
+  | 'orthogonalFireAttack'
+  | 'sameRoomFireAttack'
+  | (string & {});
 
 const monsterAbilities: Record<string, Set<MonsterAbility>> = {};
 

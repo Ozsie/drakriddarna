@@ -17,8 +17,10 @@ export type AssetId = (typeof AssetId)[keyof typeof AssetId];
 const ASSET_URLS: Record<AssetId, string> = {
   // The cast keeps the optional-asset behavior: the file is not part of
   // the typed static catalog, and the welcome screen draws its themed
-  // fallback when it 404s.
-  [AssetId.welcomeBackground]: asset(`images/welcome.png` as AssetPath),
+  // fallback when it 404s. svelte-check requires the cast against the
+  // generated AssetPath union; eslint's project service resolves a
+  // wider AssetPath and calls the same cast unnecessary.
+  [AssetId.welcomeBackground]: asset('images/welcome.png' as AssetPath),
 };
 
 /** Resolves an asset id to its URL, for the shared image cache. */

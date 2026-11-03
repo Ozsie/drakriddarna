@@ -815,9 +815,9 @@ describe('toggleLight effect', () => {
       args: { lightId: 'brazier_lever_target' },
     };
 
-    triggerInteractable(state, lever as never, hero);
+    triggerInteractable(state, lever, hero);
     expect(state.dungeon.layout.lights[0].enabled).toBe(false);
-    triggerInteractable(state, lever as never, hero);
+    triggerInteractable(state, lever, hero);
     expect(state.dungeon.layout.lights[0].enabled).toBe(true);
   });
 
