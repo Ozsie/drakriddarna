@@ -9,7 +9,7 @@ import {
   isWalkable,
 } from '../core';
 import { isBlockedByHero, isBlockedByMonster, liveHeroes } from './HeroLogic';
-import { drawCachedTile } from '../dungeon/TileTextureCache';
+import { ACTOR_TILES, drawTileRef } from '../dungeon/tiles';
 import { renderActorFlash } from '../combat';
 import {
   getReadyActorSpriteImage,
@@ -92,18 +92,7 @@ const renderHero = (
   if (spriteImage) {
     renderActorSprite(ctx, hero, spriteImage, x, y, cellSize, currentTime);
   } else {
-    drawCachedTile(
-      ctx,
-      actors,
-      0,
-      2 * 32,
-      32,
-      32,
-      x * cellSize,
-      y * cellSize,
-      32,
-      32,
-    );
+    drawTileRef(ctx, actors, ACTOR_TILES.HERO, x * cellSize, y * cellSize);
   }
   renderActorFlash(ctx, hero, x, y, cellSize, currentTime);
   if (debugMode) {

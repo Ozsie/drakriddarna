@@ -133,6 +133,7 @@ describe('MenuLogic', () => {
         'output_game_state',
         'reveal_map',
         'next_dungeon',
+        'tile_catalog',
       ]);
     });
 
@@ -311,6 +312,7 @@ describe('MenuLogic', () => {
         'output_game_state',
         'reveal_map',
         'next_dungeon',
+        'tile_catalog',
       ]);
     });
 

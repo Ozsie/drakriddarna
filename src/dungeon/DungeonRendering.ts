@@ -22,7 +22,7 @@ import {
 } from '../core';
 import { autoDetectCorners } from './cornerDetection';
 import { drawCachedTile } from './TileTextureCache';
-import { DEFAULT_TILESET_TILE_SIZE } from './TilesetLogic';
+import { type TileRef, DUNGEON_TILES, drawTileRef } from './tiles';
 import {
   TERRAIN_DEFAULT_OPACITY,
   TERRAIN_DEFAULT_RATE,
@@ -166,8 +166,7 @@ export const renderSecrets = (
       drawTile(
         ctx,
         ground,
-        9,
-        0,
+        DUNGEON_TILES.SECRET_MARKER,
         cellSize,
         secret.position.x,
         secret.position.y,
@@ -197,13 +196,11 @@ export const renderSecrets = (
 const drawTile = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
-  xPos: number,
-  yPos: number,
+  tile: TileRef,
   cellSize: number,
   x: number,
   y: number,
   state: GameState,
-  tileSize: number = DEFAULT_TILESET_TILE_SIZE,
 ) => {
   if (
     state.dungeon.discoveredRooms.some((r) => neighbourOf(x, y, r, state)) ||
@@ -212,10 +209,10 @@ const drawTile = (
     drawCachedTile(
       ctx,
       ground,
-      xPos * tileSize,
-      yPos * tileSize,
-      tileSize,
-      tileSize,
+      tile.x,
+      tile.y,
+      tile.size,
+      tile.size,
       x * cellSize,
       y * cellSize,
       cellSize,
@@ -237,53 +234,141 @@ const drawCornerTile = (
 ) => {
   switch (corner) {
     case CornerType.INNER_BOTTOM_LEFT: {
-      drawTile(ctx, ground, 0, 6, cellSize, x, y, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.CORNER_INNER_BOTTOM_LEFT,
+        cellSize,
+        x,
+        y,
+        state,
+      );
       break;
     }
     case CornerType.INNER_BOTTOM_RIGHT: {
-      drawTile(ctx, ground, 4, 6, cellSize, x, y, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.CORNER_INNER_BOTTOM_RIGHT,
+        cellSize,
+        x,
+        y,
+        state,
+      );
       break;
     }
     case CornerType.INNER_TOP_LEFT: {
-      drawTile(ctx, ground, 0, 4, cellSize, x, y, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.CORNER_INNER_TOP_LEFT,
+        cellSize,
+        x,
+        y,
+        state,
+      );
       break;
     }
     case CornerType.INNER_TOP_RIGHT: {
-      drawTile(ctx, ground, 4, 4, cellSize, x, y, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.CORNER_INNER_TOP_RIGHT,
+        cellSize,
+        x,
+        y,
+        state,
+      );
       break;
     }
     case CornerType.OUTER_TOP_RIGHT: {
-      drawTile(ctx, ground, 4, 0, cellSize, x, y, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.CORNER_OUTER_TOP_RIGHT,
+        cellSize,
+        x,
+        y,
+        state,
+      );
       break;
     }
     case CornerType.OUTER_TOP_LEFT: {
-      drawTile(ctx, ground, 0, 0, cellSize, x, y, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.CORNER_OUTER_TOP_LEFT,
+        cellSize,
+        x,
+        y,
+        state,
+      );
       break;
     }
     case CornerType.OUTER_BOTTOM_RIGHT:
     case CornerType.RIGHT_END: {
-      drawTile(ctx, ground, 4, 2, cellSize, x, y, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.CORNER_OUTER_BOTTOM_RIGHT,
+        cellSize,
+        x,
+        y,
+        state,
+      );
       break;
     }
     case CornerType.OUTER_BOTTOM_LEFT:
     case CornerType.LEFT_END: {
-      drawTile(ctx, ground, 0, 2, cellSize, x, y, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.CORNER_OUTER_BOTTOM_LEFT,
+        cellSize,
+        x,
+        y,
+        state,
+      );
       break;
     }
     case CornerType.BOTTOM_END: {
-      drawTile(ctx, ground, 2, 4, cellSize, x, y, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.CORNER_BOTTOM_END,
+        cellSize,
+        x,
+        y,
+        state,
+      );
       break;
     }
     case CornerType.TOP_END: {
-      drawTile(ctx, ground, 4, 7, cellSize, x, y, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.CORNER_TOP_END,
+        cellSize,
+        x,
+        y,
+        state,
+      );
       break;
     }
     case CornerType.THREE_WAY_INTERSECTION_UP: {
-      drawTile(ctx, ground, 4, 8, cellSize, x, y, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.CORNER_THREE_WAY_UP,
+        cellSize,
+        x,
+        y,
+        state,
+      );
       break;
     }
     default:
-      drawTile(ctx, ground, 15, 0, cellSize, x, y, state);
+      drawTile(ctx, ground, DUNGEON_TILES.RUBBLE, cellSize, x, y, state);
       break;
   }
 };
@@ -298,7 +383,7 @@ const renderPits = (
   state.dungeon.layout.pits
     ?.filter((pit) => isDiscovered(state.dungeon, pit.x, pit.y) || debugMode)
     ?.forEach((pit) => {
-      drawTile(ctx, ground, 13, 0, cellSize, pit.x, pit.y, state);
+      drawTile(ctx, ground, DUNGEON_TILES.PIT, cellSize, pit.x, pit.y, state);
     });
 };
 
@@ -903,7 +988,15 @@ export const renderPillars = (
       (pillar) => isDiscovered(state.dungeon, pillar.x, pillar.y) || debugMode,
     )
     ?.forEach((pillar) => {
-      drawTile(ctx, ground, 7, 2, cellSize, pillar.x, pillar.y, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.PILLAR_BASE,
+        cellSize,
+        pillar.x,
+        pillar.y,
+        state,
+      );
     });
 };
 
@@ -924,7 +1017,15 @@ export const renderPillarTops = (
       (pillar) => isDiscovered(state.dungeon, pillar.x, pillar.y) || debugMode,
     )
     ?.forEach((pillar) => {
-      drawTile(ctx, ground, 7, 1, cellSize, pillar.x, pillar.y - 1, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.PILLAR_TOP,
+        cellSize,
+        pillar.x,
+        pillar.y - 1,
+        state,
+      );
     });
 };
 
@@ -1015,26 +1116,18 @@ export const renderInteractables = (
   });
 };
 
-const randomFloorTileCoordinates = (seed: number) => {
-  let rndX: number;
-  let rndY: number;
+const randomFloorTileCoordinates = (seed: number): TileRef => {
   if (seed / 100 > 2) {
-    rndX = 1;
-    rndY = 5;
+    return DUNGEON_TILES.FLOOR_E;
   } else if (seed / 100 > 1.8) {
-    rndX = 11;
-    rndY = 0;
+    return DUNGEON_TILES.FLOOR_C;
   } else if (seed / 100 > 1) {
-    rndX = 10;
-    rndY = 0;
+    return DUNGEON_TILES.FLOOR_B;
   } else if (seed / 100 === 1) {
-    rndX = 12;
-    rndY = 0;
+    return DUNGEON_TILES.FLOOR_D;
   } else {
-    rndX = 8;
-    rndY = 0;
+    return DUNGEON_TILES.FLOOR_A;
   }
-  return { rndX, rndY };
 };
 
 const renderFloor = (
@@ -1048,8 +1141,8 @@ const renderFloor = (
 ) => {
   if (notGround(cell, state)) {
     if (cell === COLLAPSED) {
-      drawTile(ctx, ground, 8, 0, cellSize, x, y, state);
-      drawTile(ctx, ground, 15, 0, cellSize, x, y, state);
+      drawTile(ctx, ground, DUNGEON_TILES.FLOOR_A, cellSize, x, y, state);
+      drawTile(ctx, ground, DUNGEON_TILES.RUBBLE, cellSize, x, y, state);
     } else {
       const corner = isCornerWall(x, y, state);
       if (corner !== CornerType.NOT_CORNER) {
@@ -1059,19 +1152,67 @@ const renderFloor = (
         const horizontal = isHorizontalWall(x, y, state);
         if (horizontal !== 'none' && vertical === 'none') {
           if (horizontal === 'up') {
-            drawTile(ctx, ground, 1, 0, cellSize, x, y, state);
+            drawTile(
+              ctx,
+              ground,
+              DUNGEON_TILES.WALL_H_UP,
+              cellSize,
+              x,
+              y,
+              state,
+            );
           } else if (horizontal === 'down') {
-            drawTile(ctx, ground, 2, 4, cellSize, x, y, state);
+            drawTile(
+              ctx,
+              ground,
+              DUNGEON_TILES.WALL_H_DOWN,
+              cellSize,
+              x,
+              y,
+              state,
+            );
           } else {
-            drawTile(ctx, ground, 0, 2, cellSize, x, y, state);
+            drawTile(
+              ctx,
+              ground,
+              DUNGEON_TILES.WALL_H_BOTH,
+              cellSize,
+              x,
+              y,
+              state,
+            );
           }
         } else if (vertical !== 'none') {
           if (vertical === 'left') {
-            drawTile(ctx, ground, 4, 5, cellSize, x, y, state);
+            drawTile(
+              ctx,
+              ground,
+              DUNGEON_TILES.WALL_V_LEFT,
+              cellSize,
+              x,
+              y,
+              state,
+            );
           } else if (vertical === 'right') {
-            drawTile(ctx, ground, 0, 5, cellSize, x, y, state);
+            drawTile(
+              ctx,
+              ground,
+              DUNGEON_TILES.WALL_V_RIGHT,
+              cellSize,
+              x,
+              y,
+              state,
+            );
           } else {
-            drawTile(ctx, ground, 5, 7, cellSize, x, y, state);
+            drawTile(
+              ctx,
+              ground,
+              DUNGEON_TILES.WALL_V_BOTH,
+              cellSize,
+              x,
+              y,
+              state,
+            );
           }
         }
       }
@@ -1079,8 +1220,8 @@ const renderFloor = (
   } else if (!isEmpty(cell, state)) {
     // Ordinary floor
     const seed = (x + y) * 10;
-    const { rndX, rndY } = randomFloorTileCoordinates(seed);
-    drawTile(ctx, ground, rndX, rndY, cellSize, x, y, state);
+    const tile = randomFloorTileCoordinates(seed);
+    drawTile(ctx, ground, tile, cellSize, x, y, state);
   } else {
     renderHiddenCell(ctx, x, y, cellSize);
   }
@@ -1298,17 +1439,13 @@ const renderTrapDoor = (
   ground: CanvasImageSource,
   cellSize: number,
   secret: Secret,
-  tileSize: number = DEFAULT_TILESET_TILE_SIZE,
 ) => {
   const x = secret.position.x;
   const y = secret.position.y;
-  drawCachedTile(
+  drawTileRef(
     ctx,
     ground,
-    tileSize * 6,
-    tileSize * 7,
-    tileSize,
-    tileSize,
+    DUNGEON_TILES.TRAP_DOOR,
     x * cellSize,
     y * cellSize,
     cellSize,
@@ -1321,17 +1458,13 @@ const renderFoundSecret = (
   ground: CanvasImageSource,
   cellSize: number,
   secret: Secret,
-  tileSize: number = DEFAULT_TILESET_TILE_SIZE,
 ) => {
   const x = secret.position.x;
   const y = secret.position.y;
-  drawCachedTile(
+  drawTileRef(
     ctx,
     ground,
-    5 * tileSize,
-    4 * tileSize,
-    tileSize,
-    tileSize,
+    DUNGEON_TILES.SECRET_FOUND,
     x * cellSize,
     y * cellSize,
     cellSize,
@@ -1377,15 +1510,14 @@ const renderGridLines = (
 const drawDoorWallTile = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
-  tileX: number,
-  tileY: number,
+  tile: TileRef,
   cellSize: number,
   x: number,
   y: number,
   state: GameState,
 ) => {
   if (isCornerWall(x, y, state) !== CornerType.NOT_CORNER) return;
-  drawTile(ctx, ground, tileX, tileY, cellSize, x, y, state);
+  drawTile(ctx, ground, tile, cellSize, x, y, state);
 };
 
 const renderClosedHiddenDoor = (
@@ -1397,12 +1529,19 @@ const renderClosedHiddenDoor = (
 ) => {
   switch (door.side) {
     case Side.RIGHT: {
-      drawDoorWallTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y, state);
       drawDoorWallTile(
         ctx,
         ground,
-        4,
-        5,
+        DUNGEON_TILES.WALL_V_LEFT,
+        cellSize,
+        door.x + 1,
+        door.y,
+        state,
+      );
+      drawDoorWallTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.WALL_V_LEFT,
         cellSize,
         door.x + 1,
         door.y - 1,
@@ -1411,8 +1550,7 @@ const renderClosedHiddenDoor = (
       drawDoorWallTile(
         ctx,
         ground,
-        4,
-        5,
+        DUNGEON_TILES.WALL_V_LEFT,
         cellSize,
         door.x + 1,
         door.y + 1,
@@ -1421,12 +1559,19 @@ const renderClosedHiddenDoor = (
       break;
     }
     case Side.LEFT: {
-      drawDoorWallTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y, state);
       drawDoorWallTile(
         ctx,
         ground,
-        0,
-        5,
+        DUNGEON_TILES.WALL_V_RIGHT,
+        cellSize,
+        door.x - 1,
+        door.y,
+        state,
+      );
+      drawDoorWallTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.WALL_V_RIGHT,
         cellSize,
         door.x - 1,
         door.y - 1,
@@ -1435,8 +1580,7 @@ const renderClosedHiddenDoor = (
       drawDoorWallTile(
         ctx,
         ground,
-        0,
-        5,
+        DUNGEON_TILES.WALL_V_RIGHT,
         cellSize,
         door.x - 1,
         door.y + 1,
@@ -1445,12 +1589,19 @@ const renderClosedHiddenDoor = (
       break;
     }
     case Side.UP: {
-      drawDoorWallTile(ctx, ground, 2, 4, cellSize, door.x, door.y - 1, state);
       drawDoorWallTile(
         ctx,
         ground,
-        2,
-        4,
+        DUNGEON_TILES.WALL_H_DOWN,
+        cellSize,
+        door.x,
+        door.y - 1,
+        state,
+      );
+      drawDoorWallTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.WALL_H_DOWN,
         cellSize,
         door.x + 1,
         door.y - 1,
@@ -1459,8 +1610,7 @@ const renderClosedHiddenDoor = (
       drawDoorWallTile(
         ctx,
         ground,
-        2,
-        4,
+        DUNGEON_TILES.WALL_H_DOWN,
         cellSize,
         door.x - 1,
         door.y - 1,
@@ -1469,12 +1619,19 @@ const renderClosedHiddenDoor = (
       break;
     }
     case Side.DOWN: {
-      drawDoorWallTile(ctx, ground, 2, 6, cellSize, door.x, door.y + 1, state);
       drawDoorWallTile(
         ctx,
         ground,
-        2,
-        6,
+        DUNGEON_TILES.WALL_BELOW_DOOR,
+        cellSize,
+        door.x,
+        door.y + 1,
+        state,
+      );
+      drawDoorWallTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.WALL_BELOW_DOOR,
         cellSize,
         door.x + 1,
         door.y + 1,
@@ -1483,8 +1640,7 @@ const renderClosedHiddenDoor = (
       drawDoorWallTile(
         ctx,
         ground,
-        2,
-        6,
+        DUNGEON_TILES.WALL_BELOW_DOOR,
         cellSize,
         door.x - 1,
         door.y + 1,
@@ -1504,19 +1660,51 @@ const renderClosedDoor = (
 ) => {
   switch (door.side) {
     case Side.RIGHT: {
-      drawDoorWallTile(ctx, ground, 4, 5, cellSize, door.x + 1, door.y, state);
+      drawDoorWallTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.WALL_V_LEFT,
+        cellSize,
+        door.x + 1,
+        door.y,
+        state,
+      );
       break;
     }
     case Side.LEFT: {
-      drawDoorWallTile(ctx, ground, 0, 5, cellSize, door.x - 1, door.y, state);
+      drawDoorWallTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.WALL_V_RIGHT,
+        cellSize,
+        door.x - 1,
+        door.y,
+        state,
+      );
       break;
     }
     case Side.UP: {
-      drawDoorWallTile(ctx, ground, 2, 4, cellSize, door.x, door.y - 1, state);
+      drawDoorWallTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.WALL_H_DOWN,
+        cellSize,
+        door.x,
+        door.y - 1,
+        state,
+      );
       break;
     }
     case Side.DOWN: {
-      drawDoorWallTile(ctx, ground, 2, 6, cellSize, door.x, door.y + 1, state);
+      drawDoorWallTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.WALL_BELOW_DOOR,
+        cellSize,
+        door.x,
+        door.y + 1,
+        state,
+      );
       break;
     }
   }
@@ -1701,7 +1889,15 @@ const renderDoor = (
   }
   if (door && !door.hidden && !door.open && (nearDiscovered || farDiscovered)) {
     if (door.side === Side.UP && !farDiscovered) {
-      drawTile(ctx, ground, 13, 1, cellSize, door.x, door.y - 1, state);
+      drawTile(
+        ctx,
+        ground,
+        DUNGEON_TILES.DOOR_TOP,
+        cellSize,
+        door.x,
+        door.y - 1,
+        state,
+      );
     }
     drawClosedDoor(ctx, door, cellSize);
     if (door.locked && debugMode) {

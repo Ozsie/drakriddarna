@@ -3,7 +3,7 @@ import { ItemType } from '../types';
 import { i18n } from '../core';
 import { isDiscovered, isSamePosition } from '../core';
 import { renderTextBox } from '../notes/NotesRendering';
-import { drawCachedTile } from '../dungeon/TileTextureCache';
+import { ITEM_TILES, drawTileRef } from '../dungeon/tiles';
 import { drawItemSprite } from './ItemSpriteRendering';
 
 export const renderItems = (
@@ -54,13 +54,10 @@ const renderMagicItem = (
       )
     : false;
   if (!spriteDrawn) {
-    drawCachedTile(
+    drawTileRef(
       ctx,
       ground,
-      48 * 6,
-      48 * 3,
-      48,
-      48,
+      ITEM_TILES.ITEM_GENERIC,
       x * cellSize,
       y * cellSize,
       cellSize,

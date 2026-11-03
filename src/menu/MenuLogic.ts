@@ -11,6 +11,7 @@ import {
   syncStore,
 } from '../store/gameStateStore';
 import { locale, setLocale } from '$lib/translations';
+import { base } from '$app/paths';
 import { init, loadState, save } from '../game';
 import {
   getSaveHint,
@@ -110,6 +111,19 @@ export const getDebugMenuItems = (
     label: i18n('content.menu.debugMenu.buttons.nextDungeon'),
     onClick: (state) => {
       onNextDungeon(state);
+      callbacks?.closeMenu?.();
+    },
+  },
+  {
+    id: 'tile_catalog',
+    debugOnly: false,
+    label: i18n('content.menu.debugMenu.buttons.tileCatalog'),
+    onClick: () => {
+      // A full page load rather than SPA navigation: the catalog is its
+      // own route, outside the game canvas.
+      if (typeof window !== 'undefined') {
+        window.location.assign(`${base}/tiles`);
+      }
       callbacks?.closeMenu?.();
     },
   },

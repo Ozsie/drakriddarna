@@ -9,7 +9,7 @@ import {
   isRoomDiscovered,
   stepAlongLine,
 } from '../core';
-import { drawCachedTile } from '../dungeon/TileTextureCache';
+import { ACTOR_TILES, drawTileRef } from '../dungeon/tiles';
 import { renderActorFlash } from '../combat';
 import {
   getReadyActorSpriteImage,
@@ -124,18 +124,7 @@ const renderOrch = (
   x: number,
   y: number,
 ) => {
-  drawCachedTile(
-    ctx,
-    actors,
-    11 * 32 - 16,
-    8 * 32,
-    32,
-    32,
-    x * cellSize,
-    y * cellSize,
-    32,
-    32,
-  );
+  drawTileRef(ctx, actors, ACTOR_TILES.ORCH, x * cellSize, y * cellSize);
 };
 
 const renderTroll = (
@@ -145,18 +134,7 @@ const renderTroll = (
   x: number,
   y: number,
 ) => {
-  drawCachedTile(
-    ctx,
-    actors,
-    11 * 32 - 16,
-    4 * 32,
-    32,
-    32,
-    x * cellSize,
-    y * cellSize,
-    32,
-    32,
-  );
+  drawTileRef(ctx, actors, ACTOR_TILES.TROLL, x * cellSize, y * cellSize);
 };
 
 const renderDefaultMonster = (
@@ -166,17 +144,12 @@ const renderDefaultMonster = (
   x: number,
   y: number,
 ) => {
-  drawCachedTile(
+  drawTileRef(
     ctx,
     actors,
-    11 * 32 - 16,
-    2 * 32,
-    32,
-    32,
+    ACTOR_TILES.MONSTER_DEFAULT,
     x * cellSize,
     y * cellSize,
-    32,
-    32,
   );
 };
 
