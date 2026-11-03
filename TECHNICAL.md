@@ -34,8 +34,10 @@ works through a chain of scenarios ("dungeons") forming a campaign.
 | Tooling       | Vite, ESLint, Prettier, svelte-check |                                                         |
 | CI/CD         | GitHub Actions → GitHub Pages        | Deploy on push to `main`                                |
 
-The only runtime dependency is `sveltekit-i18n`. Everything else is dev
-tooling.
+Runtime dependencies are the i18n stack (`sveltekit-i18n` with its
+`@sveltekit-i18n/extension-stores` store surface) and the standalone HOARD
+engine packages (`@hoard-engine/rng`, `@hoard-engine/grid`). Everything else
+is dev tooling.
 
 ## Architecture: logic engine behind a thin UI
 
@@ -619,10 +621,6 @@ current design costs:
   seeded, but a real playthrough is still not bit-reproducible end to end
   unless every input event is also recorded and replayed — the benchmark
   achieves it by driving the game from code, a human session does not.
-- **Aging framework line.** The project is on SvelteKit 1.x and Svelte 4.
-  That is well off the current major versions; an upgrade (Svelte 5 runes in
-  particular would change how the store wiring works) is unprioritized work
-  with real migration cost.
 
 ## Worth stealing
 
