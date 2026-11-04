@@ -1,3 +1,4 @@
+import { createSaveMigrations } from '@hoard-engine/saves';
 import type { Dungeon, GameState, GameMaster, Monster } from './types';
 import { Colour } from './types';
 import {
@@ -18,7 +19,12 @@ import { getMonsterTemplate } from './monsters/MonsterRegistry';
 //       `collapsedCorridor` letter on the dungeon)
 //   3 — monster display names become translation keys (legacy saves carry
 //       raw English names like 'Orc (Green)' in `name`/`nameTranslationKey`)
-export const CURRENT_SAVE_VERSION = 3;
+//
+// The pipeline itself lives in @hoard-engine/saves; these migrators are
+// game knowledge (they resolve game masters, monster templates and
+// colour keys) and register into it, one step per version.
+
+const saveMigrations = createSaveMigrations<GameState>();
 
 /** Collapses the legacy `difficulty`/`gameMasterId` fields into `gameMaster`. */
 export const migrateGameMasterFields = (state: GameState): void => {
@@ -110,17 +116,16 @@ export const migrateMonsterNames = (state: GameState): void => {
   }
 };
 
+// Registered in version order after their definitions above; the public
+// constants below read the pipeline state.
+saveMigrations.register(1, migrateGameMasterFields);
+saveMigrations.register(2, migrateCollapsedCorridor);
+saveMigrations.register(3, migrateMonsterNames);
+
+/** The schema version new saves are stamped with. */
+export const CURRENT_SAVE_VERSION: number = saveMigrations.currentVersion;
+
 /** Runs every missing migration step, in order, and stamps the version. */
 export const migrateSaveState = (state: GameState): void => {
-  const version = state.saveVersion ?? 0;
-  if (version < 1) {
-    migrateGameMasterFields(state);
-  }
-  if (version < 2) {
-    migrateCollapsedCorridor(state);
-  }
-  if (version < 3) {
-    migrateMonsterNames(state);
-  }
-  state.saveVersion = CURRENT_SAVE_VERSION;
+  saveMigrations.migrateSave(state);
 };

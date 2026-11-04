@@ -37,8 +37,9 @@ works through a chain of scenarios ("dungeons") forming a campaign.
 Runtime dependencies are the i18n stack (`sveltekit-i18n` with its
 `@sveltekit-i18n/extension-stores` store surface) and the standalone HOARD
 engine packages (`@hoard-engine/rng`, `@hoard-engine/grid`,
-`@hoard-engine/primitives`, `@hoard-engine/audio` and
-`@hoard-engine/lighting`). Everything else is dev tooling.
+`@hoard-engine/primitives`, `@hoard-engine/audio`,
+`@hoard-engine/lighting` and `@hoard-engine/saves`). Everything else is
+dev tooling.
 
 ## Architecture: logic engine behind a thin UI
 
@@ -55,7 +56,7 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/events/        event deck (card draw effects)
 ├── src/campaigns/     campaign content (auto-discovered)
 ├── src/gameMasters/   difficulty "personalities" (auto-discovered)
-├── src/saves/         named-save storage (index + blobs in localStorage)
+├── src/saves/         named-save storage facade over @hoard-engine/saves (labels, hints)
 ├── src/store/         Svelte stores wrapping the game state and the app phase
 ├── src/settings/      app-level audio settings (persistence + live application)
 ├── src/uikit/         game-agnostic canvas UI kit (theme tokens, primitives, kit widgets, components; publishes through index.ts)
@@ -491,10 +492,13 @@ speedrunner checkbox and its seed input. While any of these modal surfaces
 is open — the canvas debug menu, the save/load or new-game dialog, the dungeon
 intro, or the between-dungeons overlay (party wipe and campaign win
 included) — gameplay keyboard/touch input is suppressed through the input
-manager, so no keystroke reaches the heroes. Storage lives in
-`src/saves/SavesLogic.ts` — a JSON index of save metadata under one
-`localStorage` key plus one full `GameState` blob per save, so listing saves
-never parses the blobs. Alongside the manual saves, an `autosave` key is
+manager, so no keystroke reaches the heroes. The storage mechanics live in
+the `@hoard-engine/saves` engine package — a JSON index of save metadata
+under one `localStorage` key plus one full `GameState` blob per save, so
+listing saves never parses the blobs — while the game-side facade in
+`src/saves/SavesLogic.ts` supplies everything consumer-owned: the i18n
+labels, the campaign/dungeon hints shown in the load dialog, and the id
+and timestamp rules. Alongside the manual saves, an `autosave` key is
 refreshed on turn transitions and a separate "reload guard" key restores an
 in-progress game across page reloads.
 
@@ -503,7 +507,11 @@ schema carries a `saveVersion`, and `loadState()` runs the ordered,
 individually unit-tested migration steps in `saveMigration.ts` (e.g.
 collapsing the legacy `difficulty`/`gameMasterId` fields into today's single
 `gameMaster` object) before falling back to the default campaign if the saved
-`campaignId` no longer exists. Backwards compatibility with existing saves is
+`campaignId` no longer exists. The migration pipeline itself is the
+`@hoard-engine/saves` registry — the game registers one step per schema
+version, and the framework runs every step a save has not seen, in version
+order, and stamps the current version. Backwards compatibility with
+existing saves is
 maintained in code rather than by an export/import cycle.
 
 ## Internationalization
