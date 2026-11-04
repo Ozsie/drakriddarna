@@ -36,8 +36,9 @@ works through a chain of scenarios ("dungeons") forming a campaign.
 
 Runtime dependencies are the i18n stack (`sveltekit-i18n` with its
 `@sveltekit-i18n/extension-stores` store surface) and the standalone HOARD
-engine packages (`@hoard-engine/rng`, `@hoard-engine/grid` and
-`@hoard-engine/primitives`). Everything else is dev tooling.
+engine packages (`@hoard-engine/rng`, `@hoard-engine/grid`,
+`@hoard-engine/primitives`, `@hoard-engine/audio` and
+`@hoard-engine/lighting`). Everything else is dev tooling.
 
 ## Architecture: logic engine behind a thin UI
 
@@ -60,7 +61,7 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/uikit/         game-agnostic canvas UI kit (theme tokens, primitives, kit widgets, components; publishes through index.ts)
 ├── src/ui/            pure functions that draw UI panels onto canvases
 ├── src/components/    Dungeon.svelte (thin shell) + DungeonBoardController
-└── src/audio/         sound effect and music managers
+└── src/audio/         game audio facades: sound-cue table, fallback tracks, intensity heuristic (over @hoard-engine/audio)
 ```
 
 The logic modules import nothing from Svelte's rendering side. That separation
@@ -388,7 +389,11 @@ brazier repaints only a handful of times per second. Continuous effects
 minimum-interval gate, while actor-driven frames (movement, projectiles)
 always run at full rate.
 
-The lighting (`src/dungeon/LightRendering.ts`) is the most graphics-heavy
+The lighting (`src/dungeon/LightRendering.ts`, with the ray-fan visibility
+computation, the occlusion maps, the animation effects and the sparkles in
+the `@hoard-engine/lighting` engine package over an injected occlusion
+environment; this repo keeps the gradient/sprite compositing and the
+active-light catalogue) is the most graphics-heavy
 code in the repo: a 2D visibility technique where each light source casts a
 fan of rays that walk the grid cell by cell — jumping from one boundary
 crossing to the next, gated by a sampling resolution so a cell the ray merely
@@ -426,7 +431,10 @@ controller calls the selector on each state update and hands the result to
 tension tracks — `music` and `musicTension` on the dungeon, with global
 defaults when omitted. Since the selector is pure and deterministic, it is
 unit-tested like any other logic module while the manager stays a thin
-browser-side effect.
+browser-side effect. The crossfade manager and the sample-playback
+`SoundEffectManager` live in the `@hoard-engine/audio` engine package; the
+game-side `src/audio/` facades hold the sound-cue table, inject the
+asset-resolved fallback tracks and own the intensity heuristic.
 
 ## Scenario scoring
 

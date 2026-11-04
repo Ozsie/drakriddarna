@@ -427,18 +427,23 @@ export enum ConditionType {
 // the same light pool but shines down on the actors, so they neither block
 // its light nor cast shadows in it. The `CENTER_*` alignments sit at the
 // midpoint of the named cell edge, e.g. a light hugging a doorway.
-export enum CellAlignment {
-  TOP_LEFT = 'top-left',
-  TOP_RIGHT = 'top-right',
-  BOTTOM_LEFT = 'bottom-left',
-  BOTTOM_RIGHT = 'bottom-right',
-  CENTER = 'center',
-  CENTER_LEFT = 'center-left',
-  CENTER_RIGHT = 'center-right',
-  CENTER_TOP = 'center-top',
-  CENTER_BOTTOM = 'center-bottom',
-  CEILING = 'ceiling',
-}
+// A const object plus derived union, so the `@hoard-engine/lighting`
+// package's `LightAlignment` (same member values) stays structurally
+// compatible in both directions.
+export const CellAlignment = {
+  TOP_LEFT: 'top-left',
+  TOP_RIGHT: 'top-right',
+  BOTTOM_LEFT: 'bottom-left',
+  BOTTOM_RIGHT: 'bottom-right',
+  CENTER: 'center',
+  CENTER_LEFT: 'center-left',
+  CENTER_RIGHT: 'center-right',
+  CENTER_TOP: 'center-top',
+  CENTER_BOTTOM: 'center-bottom',
+  CEILING: 'ceiling',
+} as const;
+
+export type CellAlignment = (typeof CellAlignment)[keyof typeof CellAlignment];
 
 // Light animation effects: 'static' (no animation, the default), 'pulse'
 // (breathing glow), 'flicker' (torch-like jitter), 'sweep' (rotating beam),
