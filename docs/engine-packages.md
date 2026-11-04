@@ -19,8 +19,9 @@ rendering. Each package section names the coupling that must be removed first.
 (The extractions so far are done: `@hoard-engine/rng`,
 `@hoard-engine/grid`, `@hoard-engine/primitives`,
 `@hoard-engine/audio` and `@hoard-engine/lighting` are published on npm
-and consumed as dependencies — see their sections below for the layout
-and tooling pattern the next packages follow.)
+and consumed as dependencies, and `@hoard-engine/saves` is extracted
+the same way, pending its npm publication — see their sections below
+for the layout and tooling pattern the next packages follow.)
 
 ## Package map
 
@@ -279,12 +280,57 @@ plain Node. The compute/render split the extraction performed:
   thus game content — the packages contain no game content by
   construction.
 
-### @hoard-engine/saves — source: `src/saveMigration.ts`, `src/saves/`
+### @hoard-engine/saves — source: `src/saveMigration.ts`, `src/saves/` — EXTRACTED
 
 Versioned save schema and ordered migrations. Coupling: migrations currently
 resolve monster templates directly; replace with a migrator-registry interface
 the game populates. The package ships the framework (version stamps, ordered
 migration pipeline, validation); the game ships its migrators.
+
+**Current state:** extracted from this repo and consumed by the game as a
+dependency; the package source lives standalone next to this repo (the
+hoard `saves` folder, sibling of `rng`, `grid`, `primitives`, `audio`
+and `lighting`), pending publication to npm — until it is published, the
+game's `package.json` points at it as a `file:` dependency, flipping to
+`^0.1.0` on publish. It follows the established package layout:
+self-contained folder with build, publishing, testing, lint and
+prettier scripts, its own `AGENTS.md` and `README.md`, boundary and
+public-surface tests plus colocated unit tests over an in-memory
+storage stub (and a sentinel against browser-global references — the
+package never touches `localStorage` itself), so the suite runs in
+plain Node. The framework/migrator split the extraction performed:
+
+- The migration pipeline moved with the package:
+  `createSaveMigrations` builds the registry the game populates —
+  `register` takes one step per schema version, in order, and rejects
+  gaps, duplicates and out-of-order registration; `migrateSave` runs
+  every step the save has not seen, in version order, and stamps the
+  current version (a pre-versioning save reads as version 0, a
+  current-version save passes through untouched).
+- The named-save slot store moved with the package as the pure I/O
+  half of `src/saves/SavesLogic.ts`: `createSaveSlots` operates on an
+  injected `KeyValueStorage` (or `null` when persistence is
+  unavailable), owning the metadata-index round trip, the newest-first
+  listing, the blob reads and the legacy single-slot import. The keys
+  (`saves`, `save_`, the legacy `state`) are the persisted format and
+  stay caller-supplied.
+- Validation moved with the package: `parseSaveBlob` treats JSON that
+  does not decode to a plain object as corrupt (used by the autosave
+  hint path and the legacy import, which leaves a corrupt legacy blob
+  untouched instead of importing it).
+- The game keeps the knowledge: `src/saveMigration.ts` keeps the three
+  migrators (game master resolution via `getGameMaster`, the collapsed
+  corridor conversion, the monster-name translation keys via the
+  monster registry and the `Colour` enumeration) and registers them
+  into the package pipeline, re-exporting `CURRENT_SAVE_VERSION` and
+  `migrateSaveState`; `src/saves/SavesLogic.ts` keeps the i18n labels
+  (default save name, the "Manual Save" import label), the
+  campaign/dungeon hints via the campaigns registry, the id and
+  timestamp rules, and the save-name capping. The facade signatures
+  are unchanged, so callers and tests are unchanged.
+- `src/saves/HighScoresLogic.ts` stayed with the game: the high-score
+  entries and their top-10-per-campaign semantics are game data
+  models, not save-framework mechanics.
 
 ### @hoard-engine/directors — source: `src/gameMasters/` (types, hook dispatch, alias
 
@@ -352,6 +398,8 @@ later:
    **Done:** published as `@hoard-engine/lighting` (v0.1.0), consumed as a
    dependency (see the package section above).
 6. `@hoard-engine/saves` — requires the migrator registry.
+   **Done:** extracted and consumed via a `file:` dependency pending its
+   npm publication (see the package section above).
 7. `@hoard-engine/directors` — framework only; content stays.
 8. `scene` — last and largest: needs the render/logic separation complete and
    view-model contracts in place. Camera/viewport and map streaming are
