@@ -37,7 +37,9 @@ works through a chain of scenarios ("dungeons") forming a campaign.
 Runtime dependencies are the i18n stack (`sveltekit-i18n` with its
 `@sveltekit-i18n/extension-stores` store surface) and the standalone HOARD
 engine packages (`@hoard-engine/rng`, `@hoard-engine/grid` and
-`@hoard-engine/primitives`). Everything else is dev tooling.
+`@hoard-engine/primitives`, plus `@hoard-engine/audio`, which is consumed
+from its local folder until its npm publication). Everything else is dev
+tooling.
 
 ## Architecture: logic engine behind a thin UI
 
@@ -60,7 +62,7 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/uikit/         game-agnostic canvas UI kit (theme tokens, primitives, kit widgets, components; publishes through index.ts)
 ├── src/ui/            pure functions that draw UI panels onto canvases
 ├── src/components/    Dungeon.svelte (thin shell) + DungeonBoardController
-└── src/audio/         sound effect and music managers
+└── src/audio/         game audio facades: sound-cue table, fallback tracks, intensity heuristic (over @hoard-engine/audio)
 ```
 
 The logic modules import nothing from Svelte's rendering side. That separation
@@ -426,7 +428,10 @@ controller calls the selector on each state update and hands the result to
 tension tracks — `music` and `musicTension` on the dungeon, with global
 defaults when omitted. Since the selector is pure and deterministic, it is
 unit-tested like any other logic module while the manager stays a thin
-browser-side effect.
+browser-side effect. The crossfade manager and the sample-playback
+`SoundEffectManager` live in the `@hoard-engine/audio` engine package; the
+game-side `src/audio/` facades hold the sound-cue table, inject the
+asset-resolved fallback tracks and own the intensity heuristic.
 
 ## Scenario scoring
 

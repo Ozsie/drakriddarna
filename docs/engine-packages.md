@@ -18,8 +18,9 @@ everything lives in `src/`, coupled through the shared `GameState` type, the
 rendering. Each package section names the coupling that must be removed first.
 (The extractions so far are done: `@hoard-engine/rng`,
 `@hoard-engine/grid` and `@hoard-engine/primitives` are published on npm
-and consumed as dependencies — see their sections below for the layout
-and tooling pattern the next packages follow.)
+and consumed as dependencies, and `@hoard-engine/audio` is extracted and
+consumed the same way pending its npm publication — see their sections
+below for the layout and tooling pattern the next packages follow.)
 
 ## Package map
 
@@ -120,7 +121,7 @@ follow:
   self-sufficient-package rule; its script set covers build, publishing,
   testing, lint and prettier.
 
-### @hoard-engine/audio — source: `src/audio/`
+### @hoard-engine/audio — source: `src/audio/` — EXTRACTED
 
 `SoundEffectManager` (sample playback, volume) and `MusicManager` +
 `MusicIntensity` (crossfade between tracks driven by an intensity value).
@@ -130,6 +131,33 @@ which sample) and any intensity heuristic. Extraction forces the broader
 inversion: today 12 logic modules import the `soundEffectManager` singleton
 directly; logic should emit sound-cue data and the game's adapter maps cues to
 samples.
+
+**Current state:** extracted from this repo and consumed by the game as a
+dependency; the package source lives standalone next to this repo (the
+hoard `audio` folder, sibling of `rng`, `grid` and `primitives`), pending
+publication to npm — until it is published, the game's `package.json`
+points at it as a `file:` dependency, flipping to `^0.1.0` on publish. It
+follows the established package layout: self-contained folder with build,
+publishing, testing, lint and prettier scripts, its own `AGENTS.md` and
+`README.md`, boundary and public-surface tests plus colocated unit tests
+that stub the global `Audio`, so the suite runs in plain Node. The
+coupling removals the extraction performed:
+
+- `$app/paths` left the engine code: the package `MusicManager` takes its
+  fallback tracks as injected `MusicManagerOptions`; the game facade
+  (`src/audio/MusicManager.ts`) resolves them through `asset(...)`, keeps
+  the `musicManager` singleton and re-exports the class for tests.
+- The sound-cue table is game knowledge and stayed here:
+  `src/audio/SoundEffectManager.ts` is a facade subclassing the package
+  class with the game's `play*` cue methods and the `soundEffectManager`
+  singleton; the game's types reach the engine as plain asset URLs.
+- The intensity heuristic stayed here: `selectMusicIntensity`, the
+  tension enter/exit ranges and its tests remain in
+  `src/audio/MusicIntensity.ts`, which re-exports the package's
+  `MusicIntensity` type; the crossfade itself moved with the package.
+- The sound-cue inversion (logic modules emitting cue data instead of
+  importing the manager singleton) is unlocked but still open: the 12
+  importing modules keep calling the game facade unchanged.
 
 ### @hoard-engine/primitives — source: `src/uikit/primitives/` +
 
@@ -279,6 +307,9 @@ later:
    (v0.1.0), consumed as a dependency (see the package section above).
 3. `@hoard-engine/audio` — small files; requires the asset-path injection. Also
    unlocks the audio-cue inversion across the 12 importing modules.
+   **Done:** extracted and consumed as a dependency; publication to npm is
+   pending, with the game on a `file:` dependency until then (see the
+   package section above).
 4. `@hoard-engine/grid` — clean once pathfinding takes callbacks.
    **Done:** published as `@hoard-engine/grid` (v0.1.0), consumed as a
    dependency (see the package section above).
