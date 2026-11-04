@@ -5,7 +5,7 @@
 import { asset } from '$app/paths';
 import type { AssetPath } from '$app/types';
 import { getReadyImage } from '../core/ImageCache';
-import type { AssetProvider } from '../uikit/env';
+import type { AssetProvider } from '../uikit';
 
 export const AssetId = {
   /** The welcome screen background art. */
@@ -15,11 +15,11 @@ export const AssetId = {
 export type AssetId = (typeof AssetId)[keyof typeof AssetId];
 
 const ASSET_URLS: Record<AssetId, string> = {
-  // The cast keeps the optional-asset behavior: the file is not part of
-  // the typed static catalog, and the welcome screen draws its themed
-  // fallback when it 404s. svelte-check requires the cast against the
-  // generated AssetPath union; eslint's project service resolves a
-  // wider AssetPath and calls the same cast unnecessary.
+  // The cast keeps the optional-asset behavior: the file is not in the
+  // typed static catalog (svelte-kit sync regenerates that union from
+  // the files in static/), and the welcome screen draws its themed
+  // fallback when it 404s. Drop the cast once the art exists in
+  // static/images/.
   [AssetId.welcomeBackground]: asset('images/welcome.png' as AssetPath),
 };
 
