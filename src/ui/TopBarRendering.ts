@@ -7,7 +7,8 @@
 
 import type { GameState } from '../types';
 import type { UiEnv, UiContext } from '../uikit/env';
-import type { Rect } from '../uikit/primitives/geometry';
+import type { Rect } from '@hoard-engine/primitives';
+import { defaultTheme } from '@hoard-engine/primitives';
 import {
   hitTestTopBar,
   layoutTopBar,
@@ -17,7 +18,6 @@ import {
   type TopBarLayout,
 } from '../uikit/components/topBar';
 import { toTopBarViewModel } from './viewmodels/topBar';
-import { defaultTheme } from '../uikit/theme';
 import { textMeasureFromCtx } from './env';
 import { i18nTranslator } from './i18nAdapter';
 import { uiAssetProvider } from './assets';

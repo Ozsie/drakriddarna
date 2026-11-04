@@ -3,10 +3,8 @@
 // from the five modules that drew this sequence inline (the parity
 // snapshots stayed byte-identical).
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import type { Rect } from '../primitives/geometry';
-import { composeFont } from '../primitives/text';
-import type { UiTheme } from '../theme';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
+import { drawRoundedRect, composeFont } from '@hoard-engine/primitives';
 
 /** Accent call-to-action vs neutral secondary. */
 export type ButtonVariant = 'primary' | 'secondary';

@@ -14,19 +14,24 @@ builds to drive it. For the migration history and per-module status, see
 ```
 src/uikit/
   index.ts                   // the public surface — consume this
-  theme/                     // UiTheme: the design tokens
   env.ts                     // UiEnv / UiContext contracts + shared constants
-  primitives/                // text, geometry, rounded rect
   kit/                       // widgets: modalFrame, button, listRow, textInput, spriteFrame
   components/                // the 14 full components (cards, panels, dialogs, menus)
   testing/                   // repo-internal harness: recordingContext, sentinels, literalBudget
 ```
 
+The theme tokens and the drawing primitives (text, geometry, rounded
+rect) live in the `@hoard-engine/primitives` engine package
+(the published npm package, see [engine-packages.md](./engine-packages.md))
+— the kit's single allowed dependency — and are re-exported through
+`src/uikit/index.ts`.
+
 Everything the kit draws goes through the theme; every string arrives
 through the translator port; images arrive through the asset port. The kit
 holds **no game imports and no default strings** — it is plain TypeScript
-with no Svelte, no `sveltekit-i18n`, no `#lib`/`$app` aliases. Two tests
-and three lint rules enforce this (see [Boundary](#boundary) below).
+with no Svelte, no `sveltekit-i18n`, no `#lib`/`$app` aliases, and no
+dependencies but `@hoard-engine/primitives`. Two tests and three lint
+rules enforce this (see [Boundary](#boundary) below).
 
 The public surface is `src/uikit/index.ts`. If you need something it does
 not export, that is a missing surface — add it there deliberately rather
@@ -40,10 +45,11 @@ The boundary is tool-enforced, in both directions:
 
 - **Kit side** — under `src/uikit/**`, lint errors on any import of game
   code, Svelte, SvelteKit aliases or i18n packages, and on color-like
-  string literals outside the theme (converted modules hold zero style
-  literals; the theme definition and the tests that exercise literals are
-  exempt). `src/uikit/boundary.test.ts` walks the import graph as a
-  second line of defense, catching paths lint misses.
+  string literals (converted modules hold zero style literals; the tests
+  that exercise literals are exempt). `src/uikit/boundary.test.ts` walks
+  the import graph as a second line of defense, catching paths lint
+  misses — `@hoard-engine/primitives` is the single import it allows from
+  outside the kit.
 - **Game side** — game-logic modules (`src/game.ts`, `src/core/`,
   `src/monsters/`, and so on) may not import the kit, so headless
   benchmarks never pull in canvas code. Only the UI layer
@@ -113,8 +119,10 @@ callers draw their icon fallback.
 
 ## The theme
 
-`UiTheme` (in `src/uikit/theme/theme.ts`, defaults in
-`defaultTheme.ts`) is the single style authority, organized as:
+`UiTheme` (with the defaults in `defaultTheme` and the deep-merge
+`resolveTheme`) lives in the `@hoard-engine/primitives` engine package
+and is re-exported through `src/uikit/index.ts`; it is the single style
+authority, organized as:
 
 | Group               | Contents                                                            |
 | :------------------ | :------------------------------------------------------------------ |
@@ -136,16 +144,17 @@ fails the boundary lint and both sentinels.
 
 ## Primitives and kit widgets
 
-| Module                   | Provides                                                                                                     |
-| :----------------------- | :----------------------------------------------------------------------------------------------------------- |
-| `primitives/text`        | `composeFont`, `measureTextWidth`, `truncateText`, `wrapText`, `wrapTextMeasured`, `PER_CHAR_WIDTH_FALLBACK` |
-| `primitives/geometry`    | `Rect`, `Point`, `isPointInRect`                                                                             |
-| `primitives/roundedRect` | `drawRoundedRect` (quadratic corners), `roundRectPath` (native corners)                                      |
-| `kit/modalFrame`         | `drawDialogScrim`, `drawModalFrame`, `drawModalHeader`                                                       |
-| `kit/button`             | `drawButton` (primary/secondary variants with hover)                                                         |
-| `kit/listRow`            | `drawListRow`, `listRowStyles`, `rowState`                                                                   |
-| `kit/textInput`          | `drawTextInput`, `applyTextInputKey`, `clampTextInput`                                                       |
-| `kit/spriteFrame`        | `spriteSourceRect`, `drawSpriteFrame`                                                                        |
+The drawing primitives come from `@hoard-engine/primitives` (re-exported
+through the kit index); the kit widgets are the kit's own:
+
+| Module                 | Provides                                                                                                                                                                                                                |
+| :--------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `primitives` (package) | `composeFont`, `measureTextWidth`, `truncateText`, `wrapText`, `wrapTextMeasured`, `PER_CHAR_WIDTH_FALLBACK`, `Rect`, `Point`, `isPointInRect`, `drawRoundedRect` (quadratic corners), `roundRectPath` (native corners) |
+| `kit/modalFrame`       | `drawDialogScrim`, `drawModalFrame`, `drawModalHeader`                                                                                                                                                                  |
+| `kit/button`           | `drawButton` (primary/secondary variants with hover)                                                                                                                                                                    |
+| `kit/listRow`          | `drawListRow`, `listRowStyles`, `rowState`                                                                                                                                                                              |
+| `kit/textInput`        | `drawTextInput`, `applyTextInputKey`, `clampTextInput`                                                                                                                                                                  |
+| `kit/spriteFrame`      | `spriteSourceRect`, `drawSpriteFrame`                                                                                                                                                                                   |
 
 ## View model reference
 
@@ -188,8 +197,9 @@ hand-built view models alone — the kit is usable without the game.
 
 The remaining work to publish is configuration only: the export map
 (point it at `src/uikit/index.ts`, optionally exposing
-`src/uikit/testing/` as a subpath), a build config, peer-dependency
-decisions (none today — the kit has no runtime dependencies) and a
-separate test setup. Everything else is enforced in this repo: zero game
-imports (lint + boundary test), the complete public surface
-(completeness test), and per-component theme/translator sentinels.
+`src/uikit/testing/` as a subpath), a build config, the runtime
+dependency on `@hoard-engine/primitives` and a separate test setup.
+Everything else is enforced in this repo: zero game imports (lint +
+boundary test, with `@hoard-engine/primitives` the single allowed
+external import), the complete public surface (completeness test), and
+per-component theme/translator sentinels.

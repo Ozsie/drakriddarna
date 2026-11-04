@@ -3,15 +3,15 @@
 // monsters with all card texts prebuilt by the game-side adapter; layout
 // is canvas-free; hits are semantic card ids.
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import { isPointInRect, type Rect } from '../primitives/geometry';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
 import {
+  drawRoundedRect,
+  isPointInRect,
   PER_CHAR_WIDTH_FALLBACK,
   composeFont,
   truncateText,
-} from '../primitives/text';
+} from '@hoard-engine/primitives';
 import type { UiContext } from '../env';
-import type { UiTheme } from '../theme';
 
 export interface MonsterCardViewModel {
   /** Hit-test identity: the monster's id or name. */

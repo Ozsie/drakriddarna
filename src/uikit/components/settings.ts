@@ -4,14 +4,16 @@
 // carry every label, toggle state, slider value and dimmed flag
 // prebuilt by the game-side adapter; hits are semantic row ids.
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import { isPointInRect, type Rect } from '../primitives/geometry';
-import { composeFont } from '../primitives/text';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
+import {
+  drawRoundedRect,
+  isPointInRect,
+  composeFont,
+} from '@hoard-engine/primitives';
 import { drawModalFrame, drawModalHeader } from '../kit/modalFrame';
 import { drawButton } from '../kit/button';
 import { drawListRow, listRowStyles } from '../kit/listRow';
 import type { UiContext } from '../env';
-import type { UiTheme } from '../theme';
 
 export type SettingsRowKind = 'toggle' | 'slider' | 'button';
 

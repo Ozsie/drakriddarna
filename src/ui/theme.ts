@@ -4,7 +4,7 @@
 // drops in without touching a single component. Overrides only touch
 // tokens; everything else inherits the default.
 
-import { resolveTheme } from '../uikit/theme';
+import { resolveTheme } from '@hoard-engine/primitives';
 import { Colour } from '../types';
 import type { ActorColourKey } from '../uikit/components/betweenDungeons';
 

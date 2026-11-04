@@ -6,12 +6,11 @@
 // background art arrives through the asset port; hits are the semantic
 // button ids.
 
-import { isPointInRect, type Rect } from '../primitives/geometry';
-import { composeFont } from '../primitives/text';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
+import { isPointInRect, composeFont } from '@hoard-engine/primitives';
 import { drawModalFrame, drawModalHeader } from '../kit/modalFrame';
 import { drawListRow, listRowStyles } from '../kit/listRow';
 import type { UiContext } from '../env';
-import type { UiTheme } from '../theme';
 
 export interface WelcomeButtonVm {
   /** Hit-test identity: the button id. */

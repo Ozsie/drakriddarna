@@ -4,11 +4,13 @@
 // (item ids are semantic); layout is canvas-free; the item rows use the
 // asymmetric button shape the menu has always drawn.
 
-import { roundRectPath } from '../primitives/roundedRect';
-import { isPointInRect, type Rect } from '../primitives/geometry';
-import { composeFont } from '../primitives/text';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
+import {
+  roundRectPath,
+  isPointInRect,
+  composeFont,
+} from '@hoard-engine/primitives';
 import type { UiContext } from '../env';
-import type { UiTheme } from '../theme';
 
 export interface MenuItemVm {
   /** Hit-test identity: the menu item's id. */

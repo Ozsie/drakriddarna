@@ -68,6 +68,9 @@ export default tseslint.config(
       parser: svelteParser,
       parserOptions: {
         parser: tseslint.parser,
+        // Explicit so the in-repo engine-package tsconfig under
+        // packages/ cannot become a second TSConfigRootDir candidate.
+        tsconfigRootDir: import.meta.dirname,
       },
     },
   },
@@ -139,11 +142,12 @@ export default tseslint.config(
     },
   },
   // Converted kit modules hold no style literals: components read every
-  // color and font from theme tokens. The theme definition (and the
-  // tests that exercise literals) are the only exceptions.
+  // color and font from theme tokens (which live in the
+  // @hoard-engine/primitives package). The tests that exercise literals
+  // are the only exceptions.
   {
     files: ['src/uikit/**/*.ts'],
-    ignores: ['src/uikit/theme/**', 'src/uikit/**/*.test.ts'],
+    ignores: ['src/uikit/**/*.test.ts'],
     rules: {
       'no-restricted-syntax': [
         'error',
@@ -151,7 +155,7 @@ export default tseslint.config(
           selector:
             'Literal[value=/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/], Literal[value=/^(rgba?|hsla?)\\(/]',
           message:
-            'Style literals live in the theme tokens (src/uikit/theme); components read them from the theme.',
+            'Style literals live in the theme tokens (@hoard-engine/primitives); components read them from the theme.',
         },
       ],
     },

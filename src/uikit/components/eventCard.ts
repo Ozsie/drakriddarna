@@ -5,11 +5,14 @@
 // prebuilt by the game-side adapter; layout wraps through env.measure;
 // hits are semantic.
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import { isPointInRect, type Rect } from '../primitives/geometry';
-import { composeFont, wrapTextMeasured } from '../primitives/text';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
+import {
+  drawRoundedRect,
+  isPointInRect,
+  composeFont,
+  wrapTextMeasured,
+} from '@hoard-engine/primitives';
 import { COMPACT_TOGGLE_SIZE, type UiContext, type UiEnv } from '../env';
-import type { UiTheme } from '../theme';
 
 export interface EventDeckSummaryVm {
   remaining: number;

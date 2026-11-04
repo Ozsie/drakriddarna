@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRecordingContext } from '../testing/recordingContext';
-import { defaultTheme } from '../theme';
+import { defaultTheme } from '@hoard-engine/primitives';
 import { applyTextInputKey, clampTextInput, drawTextInput } from './textInput';
 
 const bounds = { x: 40, y: 60, width: 200, height: 30 };

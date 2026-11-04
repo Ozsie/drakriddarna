@@ -5,15 +5,17 @@
 // labels prebuilt by the game-side adapter; selection, typed names and
 // focus are layout options; hits are semantic hero ids.
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import { isPointInRect, type Rect } from '../primitives/geometry';
-import { composeFont } from '../primitives/text';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
+import {
+  drawRoundedRect,
+  isPointInRect,
+  composeFont,
+} from '@hoard-engine/primitives';
 import { drawModalFrame, drawModalHeader } from '../kit/modalFrame';
 import { drawButton } from '../kit/button';
 import { drawListRow, listRowStyles } from '../kit/listRow';
 import { drawTextInput } from '../kit/textInput';
 import type { UiContext, UiEnv } from '../env';
-import type { UiTheme } from '../theme';
 
 export interface HeroSelectionRowVm {
   /** Hit-test identity: the roster hero's id. */

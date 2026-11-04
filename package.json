@@ -44,6 +44,7 @@
 	"type": "module",
 	"dependencies": {
 		"@hoard-engine/grid": "^0.1.0",
+		"@hoard-engine/primitives": "^0.1.0",
 		"@hoard-engine/rng": "^0.1.0",
 		"@sveltekit-i18n/extension-stores": "^3.2.1",
 		"sveltekit-i18n": "^3.4.1"

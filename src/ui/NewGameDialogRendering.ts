@@ -7,7 +7,7 @@
 // cover the whole chain.
 
 import type { UiEnv, UiContext } from '../uikit/env';
-import type { Rect } from '../uikit/primitives/geometry';
+import type { Rect } from '@hoard-engine/primitives';
 import {
   hitTestNewGameDialog,
   layoutNewGameDialog,

@@ -4,10 +4,8 @@
 // turns keystrokes into values. Extracted 1:1 (the parity snapshots
 // stayed byte-identical).
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import type { Rect } from '../primitives/geometry';
-import { composeFont } from '../primitives/text';
-import type { UiTheme } from '../theme';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
+import { drawRoundedRect, composeFont } from '@hoard-engine/primitives';
 
 /** Corner radius of text inputs. */
 export const TEXT_INPUT_RADIUS = 4;

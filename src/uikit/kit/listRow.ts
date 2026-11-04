@@ -4,9 +4,8 @@
 // anchors differ per surface; the box is the part every module drew
 // identically. Extracted 1:1 (parity snapshots stayed byte-identical).
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import type { Rect } from '../primitives/geometry';
-import type { UiTheme } from '../theme';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
+import { drawRoundedRect } from '@hoard-engine/primitives';
 
 /** Interaction state of a row; maps to the row* theme tokens. */
 export type ListRowState = 'rest' | 'hover' | 'selected';

@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { createRecordingContext } from '../testing/recordingContext';
-import { defaultTheme } from '../theme';
+import { defaultTheme } from '@hoard-engine/primitives';
 import type { UiContext, UiEnv } from '../env';
 
 const env: UiEnv = {

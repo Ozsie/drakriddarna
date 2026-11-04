@@ -16,7 +16,8 @@ import type {
   TradeItemSlot,
 } from '../types';
 import type { UiEnv, UiContext } from '../uikit/env';
-import type { Rect } from '../uikit/primitives/geometry';
+import type { Rect } from '@hoard-engine/primitives';
+import { actorColour } from './theme';
 import {
   hitTestBetweenDungeons,
   layoutBetweenDungeons,
@@ -26,7 +27,6 @@ import {
 } from '../uikit/components/betweenDungeons';
 import { toBetweenDungeonsViewModel } from './viewmodels/betweenDungeons';
 import { getHeroTradableItems } from '../dungeon/BetweenDungeonsLogic';
-import { actorColour } from './theme';
 import { legacyUiEnv, defaultUiEnv } from './env';
 import { uiAssetProvider } from './assets';
 

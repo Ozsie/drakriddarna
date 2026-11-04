@@ -5,16 +5,16 @@
 // asset port (the adapter resolves the sheet url to an asset id, the game
 // side maps ids to loaded images).
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import { isPointInRect, type Rect } from '../primitives/geometry';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
 import {
+  drawRoundedRect,
+  isPointInRect,
   PER_CHAR_WIDTH_FALLBACK,
   composeFont,
   truncateText,
-} from '../primitives/text';
+} from '@hoard-engine/primitives';
 import { drawSpriteFrame } from '../kit/spriteFrame';
 import type { SpriteRef, UiContext } from '../env';
-import type { UiTheme } from '../theme';
 
 /** A sprite frame reference (the shared SpriteRef, under its old name). */
 export type HeroCardSpriteRef = SpriteRef;

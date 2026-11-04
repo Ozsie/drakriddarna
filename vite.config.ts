@@ -23,6 +23,9 @@ export default defineConfig({
   test: {
     include: [
       'src/**/*.{test,spec}.{js,ts}',
+      // In-repo engine packages (docs/engine-packages.md) run under the
+      // root suite while they live under packages/.
+      'packages/*/src/**/*.{test,spec}.{js,ts}',
     ],
     exclude: [
       'node_modules/**',

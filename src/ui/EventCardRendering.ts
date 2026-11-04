@@ -8,7 +8,7 @@
 
 import type { GameState, TurnEvent } from '../types';
 import type { UiEnv, UiContext } from '../uikit/env';
-import type { Rect } from '../uikit/primitives/geometry';
+import type { Rect } from '@hoard-engine/primitives';
 import {
   hitTestEventCard,
   layoutEventCard,

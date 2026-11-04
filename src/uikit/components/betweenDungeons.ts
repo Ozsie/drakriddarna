@@ -7,13 +7,14 @@
 // the high-score merge and the tradable-item selection); layout is
 // canvas-free; hits are semantic.
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import { isPointInRect, type Rect } from '../primitives/geometry';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
 import {
+  drawRoundedRect,
+  isPointInRect,
   PER_CHAR_WIDTH_FALLBACK,
   composeFont,
   wrapTextMeasured,
-} from '../primitives/text';
+} from '@hoard-engine/primitives';
 import {
   drawDialogScrim,
   drawModalFrame,
@@ -22,7 +23,6 @@ import {
 import { drawButton } from '../kit/button';
 import { drawListRow, listRowStyles, type ListRowStyles } from '../kit/listRow';
 import type { UiContext } from '../env';
-import type { UiTheme } from '../theme';
 
 export type BetweenDungeonsStep =
   'levelUp' | 'trade' | 'campaignComplete' | 'partyWipe';

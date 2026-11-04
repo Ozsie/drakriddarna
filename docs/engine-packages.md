@@ -16,10 +16,10 @@ This is a target architecture, not a description of current state: today
 everything lives in `src/`, coupled through the shared `GameState` type, the
 `#lib/translations/index.js` i18n singleton, direct audio imports, and colocated
 rendering. Each package section names the coupling that must be removed first.
-(The first extractions are done: `@hoard-engine/rng` and
-`@hoard-engine/grid` are published on npm and consumed as dependencies —
-see their sections below for the layout and tooling pattern the next
-packages follow.)
+(The extractions so far are done: `@hoard-engine/rng`,
+`@hoard-engine/grid` and `@hoard-engine/primitives` are published on npm
+and consumed as dependencies — see their sections below for the layout
+and tooling pattern the next packages follow.)
 
 ## Package map
 
@@ -131,11 +131,35 @@ inversion: today 12 logic modules import the `soundEffectManager` singleton
 directly; logic should emit sound-cue data and the game's adapter maps cues to
 samples.
 
-### @hoard-engine/primitives — source: `src/uikit/primitives/`
+### @hoard-engine/primitives — source: `src/uikit/primitives/` +
+
+`src/uikit/theme/` — EXTRACTED
 
 The shared drawing layer (text, geometry, clipping) plus the theme-token
-contracts. Kept in-repo under the two-consumer rule until `scene` exists;
-scene's extraction is the second consumer that justifies it.
+contracts. Both `uikit` and (eventually) `scene` draw and theme, which is
+the two-consumer pair that justifies the package.
+
+**Current state:** published on npm as `@hoard-engine/primitives`
+(v0.1.0) and consumed by the game as a dependency; its source folder has
+left this repo. It was developed in-repo as `packages/primitives/`,
+following the rng/grid layout — self-contained folder with build,
+publishing, testing, lint and prettier scripts, its own `AGENTS.md` and
+`README.md`, boundary test (only relative imports inside the package) and
+a public-surface completeness test on `src/index.ts`, plus colocated unit
+tests that run canvas-free. Contents:
+
+- The theme-token contract (`UiTheme`, `DeepPartial`), the default token
+  values and the deep-merge `resolveTheme` — the whole former
+  `src/uikit/theme/` moved into the package; the kit re-exports it
+  through its index instead of holding its own copy.
+- The text primitives (`composeFont`, `measureTextWidth`, `truncateText`,
+  `wrapText`, `wrapTextMeasured`), geometry (`Rect`, `Point`,
+  `isPointInRect`) and rounded-rect clipping (`drawRoundedRect`,
+  `roundRectPath`) — the former `src/uikit/primitives/` verbatim.
+
+`src/uikit` re-exports the package's surface through its index; the game
+consumes it as a registry dependency in `package.json`, exactly like rng
+and grid before it.
 
 ### @hoard-engine/grid — source: `src/core/grid.ts`,
 
@@ -250,7 +274,9 @@ later:
 1. `@hoard-engine/rng` — near-free; establishes the package pattern and tooling.
    **Done:** published as `@hoard-engine/rng` (v0.1.0), consumed as a
    dependency (see the package section above).
-2. `@hoard-engine/primitives` — exists already as `uikit/primitives/`; mechanical.
+2. `@hoard-engine/primitives` — exists already as `uikit/primitives/`;
+   mechanical. **Done:** published as `@hoard-engine/primitives`
+   (v0.1.0), consumed as a dependency (see the package section above).
 3. `@hoard-engine/audio` — small files; requires the asset-path injection. Also
    unlocks the audio-cue inversion across the 12 importing modules.
 4. `@hoard-engine/grid` — clean once pathfinding takes callbacks.

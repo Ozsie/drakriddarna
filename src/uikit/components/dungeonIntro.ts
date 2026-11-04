@@ -4,11 +4,14 @@
 // the close label prebuilt by the game-side adapter; layout is canvas-free
 // (wrapping through env.measure); hits are semantic.
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import { isPointInRect, type Rect } from '../primitives/geometry';
-import { composeFont, wrapTextMeasured } from '../primitives/text';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
+import {
+  drawRoundedRect,
+  isPointInRect,
+  composeFont,
+  wrapTextMeasured,
+} from '@hoard-engine/primitives';
 import type { UiContext, UiEnv } from '../env';
-import type { UiTheme } from '../theme';
 
 export interface DungeonIntroViewModel {
   readonly titleText: string;

@@ -5,9 +5,12 @@
 // row prebuilt by the game-side adapter; selection and speedrun state are
 // layout options; hits are semantic ids.
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import { isPointInRect, type Rect } from '../primitives/geometry';
-import { composeFont } from '../primitives/text';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
+import {
+  drawRoundedRect,
+  isPointInRect,
+  composeFont,
+} from '@hoard-engine/primitives';
 import {
   drawDialogScrim,
   drawModalFrame,
@@ -17,7 +20,6 @@ import { drawButton } from '../kit/button';
 import { drawListRow, listRowStyles, rowState } from '../kit/listRow';
 import { drawTextInput } from '../kit/textInput';
 import type { UiContext } from '../env';
-import type { UiTheme } from '../theme';
 
 export interface NewGameDialogRowVm {
   /** Hit-test identity: the campaign or game-master id. */

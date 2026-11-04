@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRecordingContext } from '../testing/recordingContext';
-import { defaultTheme } from '../theme';
+import { defaultTheme } from '@hoard-engine/primitives';
 import { drawListRow, listRowStyles, rowState } from './listRow';
 
 const bounds = { x: 0, y: 0, width: 200, height: 48 };

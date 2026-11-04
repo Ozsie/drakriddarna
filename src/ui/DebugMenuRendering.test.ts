@@ -4,7 +4,7 @@ import {
   getDebugMenuLayout,
   renderDebugMenuModal,
 } from './DebugMenuRendering';
-import { isPointInRect as isPointInBounds } from '../uikit/primitives/geometry';
+import { isPointInRect as isPointInBounds } from '@hoard-engine/primitives';
 import { Colour, type GameState, type Hero, ItemType, Level } from '../types';
 
 const createMockHero = (name = 'Hero1'): Hero => ({

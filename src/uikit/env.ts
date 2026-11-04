@@ -4,7 +4,7 @@
 // hold a canvas context (`UiContext`). The kit defines the shapes only —
 // the game side provides the implementations (translator, assets).
 
-import type { UiTheme } from './theme';
+import type { UiTheme } from '@hoard-engine/primitives';
 
 /** Width-derived layout density; replaces `isCompactUi` reads. */
 export type LayoutMode = 'regular' | 'compact';

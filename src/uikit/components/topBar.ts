@@ -5,9 +5,13 @@
 // `env.measure`), hit testing consumes the same layout, and rendering
 // consumes layout + view model + context.
 
-import { roundRectPath } from '../primitives/roundedRect';
-import { isPointInRect, type Rect } from '../primitives/geometry';
-import { composeFont, truncateText } from '../primitives/text';
+import type { Rect } from '@hoard-engine/primitives';
+import {
+  roundRectPath,
+  isPointInRect,
+  composeFont,
+  truncateText,
+} from '@hoard-engine/primitives';
 import type { UiContext, UiEnv } from '../env';
 
 export interface TopBarViewModel {
