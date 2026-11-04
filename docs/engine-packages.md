@@ -19,8 +19,9 @@ rendering. Each package section names the coupling that must be removed first.
 (The extractions so far are done: `@hoard-engine/rng`,
 `@hoard-engine/grid`, `@hoard-engine/primitives` and
 `@hoard-engine/audio` are published on npm and consumed as
-dependencies — see their sections below for the layout and tooling
-pattern the next packages follow.)
+dependencies, and `@hoard-engine/lighting` is extracted the same way,
+pending its npm publication — see their sections below for the layout
+and tooling pattern the next packages follow.)
 
 ## Package map
 
@@ -234,12 +235,53 @@ content).
 
 ### @hoard-engine/lighting — source: `src/dungeon/LightSources.ts` + the computation
 
-half of `src/dungeon/LightRendering.ts`
+half of `src/dungeon/LightRendering.ts` — EXTRACTED
 
 Light sources on a tile grid, propagation, falloff, per-cell light level,
 blockers via a callback. The roughly 2,000 lines of gradient/canvas compositing
 in `LightRendering.ts` move to `scene` instead — the engine package outputs a
 light map that `scene` renders.
+
+**Current state:** extracted from this repo and consumed by the game as a
+dependency; the package source lives standalone next to this repo (the
+hoard `lighting` folder, sibling of `rng`, `grid`, `primitives` and
+`audio`), pending publication to npm — until it is published, the game's
+`package.json` points at it as a `file:` dependency, flipping to
+`^0.1.0` on publish. It follows the established package layout:
+self-contained folder with build, publishing, testing, lint and
+prettier scripts, its own `AGENTS.md` and `README.md`, boundary and
+public-surface tests plus colocated unit tests on synthetic
+environments, so the suite runs in plain Node. The compute/render split
+the extraction performed:
+
+- The computation half of `LightRendering.ts` moved with the package:
+  the default light values and the `createLight` factory (re-exported
+  by `src/dungeon/DungeonLogic.ts`), the alignment/ceiling center
+  geometry, the animation effects (pulse, flicker, blink, sway, sweep,
+  sparkle, aura, gas) with the quantized repaint signature, and the
+  ray-marched visibility polygons with their caches.
+- Blockers arrive via a callback: the package computes against an
+  injected `LightingEnv` — per-cell occlusion facts (`opaque`, `fog`,
+  `actor`, `open`), a step-blocked callback (closed doors and wall
+  edges, with the grid pinch rule) and a region lookup that contains
+  gas lights — a sibling of `@hoard-engine/grid`'s `LineOfSightEnv`.
+  Its caches key on the caller's opaque occlusion key plus the
+  environment identity, mirroring the historical per-state caches.
+- The game keeps the knowledge: `src/dungeon/LightRendering.ts` builds
+  the environment from the state (walls, pillars, fog of war, blocking
+  room fog, living actors) with the historical precedence, hashes
+  everything that can change occlusion into the occlusion key, owns the
+  active-light catalogue (`activeLights`: event lights, door glows,
+  hero torches, projectiles, dark lord flames, carried items,
+  interactables, terrain lights), the renderability rules, the ambient
+  level and all canvas compositing (gradients, sprites, the darkness
+  veil) — until the scene package takes the rendering over. The
+  state-based facades keep the historical signatures, so renderers and
+  tests are unchanged.
+- `src/dungeon/LightSources.ts` stayed with the game: the light presets
+  (brazier, torch, ember, ...) are dungeon-authoring vocabulary and
+  thus game content — the packages contain no game content by
+  construction.
 
 ### @hoard-engine/saves — source: `src/saveMigration.ts`, `src/saves/`
 
@@ -311,6 +353,8 @@ later:
    **Done:** published as `@hoard-engine/grid` (v0.1.0), consumed as a
    dependency (see the package section above).
 5. `@hoard-engine/lighting` — requires the compute/render split of `LightRendering.ts`.
+   **Done:** extracted and consumed via a `file:` dependency pending its
+   npm publication (see the package section above).
 6. `@hoard-engine/saves` — requires the migrator registry.
 7. `@hoard-engine/directors` — framework only; content stays.
 8. `scene` — last and largest: needs the render/logic separation complete and

@@ -11,113 +11,45 @@ import {
   isSamePosition,
 } from '../core';
 import {
-  createLight,
   DEFAULT_LIGHT_COLOR,
   DEFAULT_LIGHT_INTENSITY,
   DEFAULT_LIGHT_RADIUS,
-  DEFAULT_LIGHT_SOFTNESS,
-} from './DungeonLogic';
+  animatedLightSignature,
+  computeLightPolygon as computeLightPolygonForEnv,
+  computeSparkles,
+  createLight,
+  isAnimatedLight,
+  isCeilingLight,
+  lightBlurPx,
+  lightCenter,
+  lightInViewport,
+  lightIntensityScale,
+  lightPolygonFor as lightPolygonForEnv,
+  type LightOcclusion,
+  type LightingEnv,
+  type LightViewport,
+} from '@hoard-engine/lighting';
 
-// Number of rays cast around a light source to build its visibility polygon.
-const LIGHT_RAY_COUNT = 120;
-// Blocker detection resolution, in sample points per cell: a ray only
-// interacts with a cell it is still inside at one of these evenly spaced
-// points along its length, so a cell the ray merely clips — a corner sliver
-// between two sample points — never blocks. This is what lets light pass
-// between diagonally adjacent blockers through their shared corner.
-const LIGHT_RAY_STEPS_PER_CELL = 6;
-// Corner-aligned lights sit this fraction into their cell, so the glow stays
-// inside the cell it was placed on instead of bleeding into the wall corner.
-const CORNER_ALIGNMENT_INSET = 0.25;
-
-// How far light reaches into a blocking ('opaque') cell, as a fraction of
-// the ray's path through that cell. Enough to illuminate the near half — the
-// wall face, or an actor sprite which sits near the middle of its cell —
-// but not through the whole cell, which would look like the light passes
-// out the other side.
-const OPAQUE_CELL_PENETRATION = 0.5;
-
-// A ceiling light shines down from above its cell: actors are fully
-// illuminated and do not block it or cast shadows in it. Walls, pillars,
-// closed doors and fog still block it like any other light.
-export const isCeilingLight = (light: LightSource): boolean =>
-  (light.alignment ?? CellAlignment.CENTER) === CellAlignment.CEILING;
-
-// A swaying light (e.g. a chandelier) swings on a pendulum: its glow
-// center arcs left and right over its cell, rising slightly toward the
-// ends of the swing. The horizontal reach stays well under half a cell,
-// so the swinging center never leaves the light's own cell.
-const SWAY_ARM_CELLS = 0.6;
-const SWAY_MAX_ANGLE = Math.PI / 6;
-
-// The visible movement step of a swaying light, in cells (1/32 of a
-// cell — about a device pixel): both the ambient repaint signature and
-// the sway polygon cache treat smaller center movements as invisible.
-const SWAY_STEP_CELLS = 1 / 32;
-
-// The pendulum offset of a swaying light's center, in world pixels: zero
-// for lights that do not sway.
-export const lightSwayOffset = (
-  light: LightSource,
-  cellSize: number,
-  timeMs: number,
-): Position => {
-  if (light.effect !== LightEffect.SWAY) {
-    return { x: 0, y: 0 };
-  }
-  const t = (timeMs / 1000) * lightRate(light);
-  const angle = SWAY_MAX_ANGLE * Math.sin(2 * Math.PI * t);
-  return {
-    x: cellSize * SWAY_ARM_CELLS * Math.sin(angle),
-    y: cellSize * SWAY_ARM_CELLS * (Math.cos(angle) - 1),
-  };
-};
-
-export const lightCenter = (
-  light: LightSource,
-  cellSize: number,
-  timeMs = 0,
-): Position => {
-  const x = light.position.x * cellSize;
-  const y = light.position.y * cellSize;
-  const inset = cellSize * CORNER_ALIGNMENT_INSET;
-  let center: Position;
-  switch (light.alignment ?? CellAlignment.CENTER) {
-    case CellAlignment.TOP_LEFT:
-      center = { x: x + inset, y: y + inset };
-      break;
-    case CellAlignment.TOP_RIGHT:
-      center = { x: x + cellSize - inset, y: y + inset };
-      break;
-    case CellAlignment.BOTTOM_LEFT:
-      center = { x: x + inset, y: y + cellSize - inset };
-      break;
-    case CellAlignment.BOTTOM_RIGHT:
-      center = { x: x + cellSize - inset, y: y + cellSize - inset };
-      break;
-    case CellAlignment.CENTER_LEFT:
-      center = { x, y: y + cellSize / 2 };
-      break;
-    case CellAlignment.CENTER_RIGHT:
-      center = { x: x + cellSize, y: y + cellSize / 2 };
-      break;
-    case CellAlignment.CENTER_TOP:
-      center = { x: x + cellSize / 2, y };
-      break;
-    case CellAlignment.CENTER_BOTTOM:
-      center = { x: x + cellSize / 2, y: y + cellSize };
-      break;
-    // A ceiling fixture lights the whole cell from above; its light pool
-    // is centered on the cell, like CENTER.
-    case CellAlignment.CEILING:
-    case CellAlignment.CENTER:
-    default:
-      center = { x: x + cellSize / 2, y: y + cellSize / 2 };
-      break;
-  }
-  const sway = lightSwayOffset(light, cellSize, timeMs);
-  return { x: center.x + sway.x, y: center.y + sway.y };
-};
+// The light computation (occlusion maps, ray marching, polygons, effects,
+// sparkles) lives in the `@hoard-engine/lighting` engine package; this
+// module re-exports its pure surface at the historical import paths and
+// keeps only the game knowledge (the active-light catalogue, the
+// renderability rules) and the canvas rendering — gradients, sprites, the
+// darkness veil — until the scene package takes the latter over.
+export {
+  DEFAULT_LIGHT_RATE,
+  MAX_LIGHT_POLYGON_CACHE_ENTRIES,
+  computeSparkles,
+  isAnimatedLight,
+  isCeilingLight,
+  lightBlurPx,
+  lightCenter,
+  lightInViewport,
+  lightIntensityScale,
+  lightSwayOffset,
+  lightSweepAngle,
+} from '@hoard-engine/lighting';
+export type { LightViewport, Sparkle } from '@hoard-engine/lighting';
 
 // How light interacts with a cell:
 // - 'opaque': the cell blocks light but is itself illuminated — the ray
@@ -169,554 +101,82 @@ export const lightBlockInCell = (
   return monster || hero ? 'opaque' : 'none';
 };
 
-// --- Occlusion map --------------------------------------------------------
+// --- Lighting environment ----------------------------------------------
 
-// Per-cell light blocking, precomputed once per occlusion state (a move, a
-// door, a discovery) so the rays do not re-scan the pillar, monster and hero
-// lists for every cell they cross. The map holds the raw cell facts only;
-// the light-specific rules — a ceiling light ignoring actors, the light's
-// own cell never blocking — are applied at lookup time.
-type OcclusionMap = {
-  data: Uint8Array;
-  width: number;
-  height: number;
-};
-
-const OCCLUSION_NONE = 0;
-// Wall, collapsed wall or pillar: blocks light, but is itself illuminated.
-const OCCLUSION_OPAQUE = 1;
-// Off the grid or in an undiscovered room: blocks light at its near edge.
-const OCCLUSION_FOG = 2;
-// A living monster or hero standing on an otherwise open cell.
-const OCCLUSION_ACTOR = 3;
-
-// Builds the occlusion map for a state, with the same precedence as
-// `lightBlockInCell`: walls and pillars block even when undiscovered (they
-// must stay visible), fog wins over actors, and actors only block on open,
-// discovered cells. The map covers the grid rectangle only; lookups outside
-// it read as fog, like `findCell` returning ''.
-const buildOcclusionMap = (
+// The environment the `@hoard-engine/lighting` package computes against:
+// every piece of game knowledge the rays need arrives as a callback
+// (walls, pillars, fog of war, blocking room fog, actors, closed doors,
+// wall edges, room characters). The closures read the state live, so
+// in-place mutations (a hero moving, a door opening) are answered on
+// the next request; whether the caches recompute is decided by the
+// occlusion key hashed below.
+const buildLightingEnv = (
   state: GameState,
   debugMode: boolean,
-): OcclusionMap => {
-  const grid = state.dungeon.layout.grid;
-  const width = grid.reduce((max, row) => Math.max(max, row.length), 0);
-  const height = grid.length;
-  const data = new Uint8Array(width * height);
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const cell = findCell(grid, x, y);
-      if (cell === WALL || cell === COLLAPSED) {
-        data[y * width + x] = OCCLUSION_OPAQUE;
+): LightingEnv => {
+  const layout = state.dungeon.layout;
+  const grid = layout.grid;
+  return {
+    gridWidth: grid.reduce((max, row) => Math.max(max, row.length), 0),
+    gridHeight: grid.length,
+    // Raw per-cell facts with the same precedence as the historical
+    // occlusion map: walls and pillars block even when undiscovered
+    // (they must stay lit), fog wins over actors, and actors only
+    // block on open, discovered cells.
+    cellOcclusion: (x: number, y: number): LightOcclusion => {
+      const gridCell = findCell(grid, x, y);
+      if (gridCell === WALL || gridCell === COLLAPSED) {
+        return 'opaque';
       }
-    }
-  }
-  state.dungeon.layout.pillars?.forEach((pillar) => {
-    if (
-      pillar.x >= 0 &&
-      pillar.x < width &&
-      pillar.y >= 0 &&
-      pillar.y < height
-    ) {
-      data[pillar.y * width + pillar.x] = OCCLUSION_OPAQUE;
-    }
-  });
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const index = y * width + x;
-      if (data[index] !== OCCLUSION_NONE) {
-        continue;
+      if (layout.pillars?.some((pillar) => isSamePosition(pillar, { x, y }))) {
+        return 'opaque';
       }
-      const cell = findCell(grid, x, y);
-      if (cell === '' || (!debugMode && !isDiscovered(state.dungeon, x, y))) {
-        data[index] = OCCLUSION_FOG;
-      } else if (state.dungeon.layout.roomFog?.[cell]?.blocksLight) {
+      if (gridCell === '') {
+        return 'fog';
+      }
+      if (!debugMode && !isDiscovered(state.dungeon, x, y)) {
+        return 'fog';
+      }
+      if (layout.roomFog?.[gridCell]?.blocksLight) {
         // Fog configured to block light reads like fog of war to the
         // rays: light stops at the room's near boundary.
-        data[index] = OCCLUSION_FOG;
+        return 'fog';
       }
-    }
-  }
-  // Actors only block where the cell itself is open, matching the check
-  // order of `lightBlockInCell`.
-  const actors: Actor[] = [
-    ...state.heroes,
-    ...state.dungeon.layout.monsters,
-  ].filter((actor) => actor.health > 0);
-  actors.forEach((actor) => {
-    const { x, y } = actor.position;
-    if (x >= 0 && x < width && y >= 0 && y < height) {
-      const index = y * width + x;
-      if (data[index] === OCCLUSION_NONE) {
-        data[index] = OCCLUSION_ACTOR;
-      }
-    }
-  });
-  return { data, width, height };
+      const blocked = [...state.heroes, ...layout.monsters].some(
+        (actor) =>
+          actor.health > 0 && actor.position.x === x && actor.position.y === y,
+      );
+      return blocked ? 'actor' : 'open';
+    },
+    // A closed door or a wall edge stops light at the shared cell edge;
+    // diagonal transitions follow the grid package's pinch-point rule.
+    isStepBlocked: (from: Position, to: Position): boolean => {
+      const door = isDoorEdge(layout, from.x, from.y, to.x, to.y);
+      return (!!door && !door.open) || crossesWallEdge(layout, from, to);
+    },
+    // The room character: a gas light's cloud fills its room and stops
+    // there.
+    roomOf: (x: number, y: number): string => findCell(grid, x, y),
+  };
 };
 
-// Occlusion maps cached per state object. Game state mutates in place (a
-// move rewrites a hero's position on the same object), so the cache is keyed
-// by the state's identity and invalidated by its occlusion key changing —
-// while two different states that happen to hash to the same key (two
-// dungeons with the same name and actor layout) never share a map.
-const occlusionMapCaches = new WeakMap<
+// Environments cached per state object, like the historical
+// occlusion-map cache: the state's identity (together with the occlusion
+// key) scopes the caches inside the engine package, so two states that
+// hash to the same key never share occluded light.
+const lightingEnvCaches = new WeakMap<
   GameState,
-  { key: string; map: OcclusionMap }
+  { debugMode: boolean; env: LightingEnv }
 >();
 
-const occlusionMapFor = (
-  state: GameState,
-  cellSize: number,
-  debugMode: boolean,
-  occlusionKey?: string,
-): OcclusionMap => {
-  const key = occlusionKey ?? lightStateKey(state, cellSize, debugMode);
-  let cache = occlusionMapCaches.get(state);
-  if (!cache || cache.key !== key) {
-    cache = { key, map: buildOcclusionMap(state, debugMode) };
-    occlusionMapCaches.set(state, cache);
+const lightingEnvFor = (state: GameState, debugMode: boolean): LightingEnv => {
+  let cached = lightingEnvCaches.get(state);
+  if (!cached || cached.debugMode !== debugMode) {
+    cached = { debugMode, env: buildLightingEnv(state, debugMode) };
+    lightingEnvCaches.set(state, cached);
   }
-  return cache.map;
+  return cached.env;
 };
-
-// How a ray reads the occlusion map, applying the light-specific rules the
-// raw map cannot encode. Mirrors `lightBlockInCell` for every cell on the
-// grid; cells outside it read as fog.
-const lightBlockFromMap = (
-  map: OcclusionMap,
-  cell: Position,
-  light: LightSource,
-): LightCellBlock => {
-  const { x, y } = cell;
-  const value =
-    x < 0 || y < 0 || x >= map.width || y >= map.height
-      ? OCCLUSION_FOG
-      : map.data[y * map.width + x];
-  if (value === OCCLUSION_OPAQUE) {
-    return 'opaque';
-  }
-  if (value === OCCLUSION_FOG) {
-    return 'fog';
-  }
-  if (value === OCCLUSION_ACTOR) {
-    // The light's own cell never blocks — otherwise an actor standing on
-    // the light would black it out — and a ceiling light shines over
-    // actors.
-    if (isSamePosition(cell, light.position)) {
-      return 'none';
-    }
-    if (isCeilingLight(light)) {
-      return 'none';
-    }
-    return 'opaque';
-  }
-  return 'none';
-};
-
-// Where a ray from `center` crosses the far edge of the given cell along
-// the ray direction (capped at the light's radius). For the ray's previous
-// cell this is also its entry point into the next cell.
-const rayExitThroughCell = (
-  center: Position,
-  dirX: number,
-  dirY: number,
-  cell: Position,
-  cellSize: number,
-  radiusPx: number,
-): Position => {
-  const tX =
-    dirX === 0
-      ? Infinity
-      : ((dirX > 0 ? cell.x + 1 : cell.x) * cellSize - center.x) / dirX;
-  const tY =
-    dirY === 0
-      ? Infinity
-      : ((dirY > 0 ? cell.y + 1 : cell.y) * cellSize - center.y) / dirY;
-  const t = Math.min(tX, tY, radiusPx);
-  return { x: center.x + dirX * t, y: center.y + dirY * t };
-};
-
-// Casts `LIGHT_RAY_COUNT` rays from the light source and returns the polygon
-// (in world pixel coordinates) of the lit area. Each ray walks the grid cell
-// by cell, from one boundary crossing to the next, and stops at the first
-// blocker: a closed door (stopped at the door edge), a fog cell (stopped at
-// its near edge) or an opaque cell — which is lit partway in, so the shadow
-// starts behind it — or the light's radius. Rays pass freely between
-// diagonally adjacent opaque cells, through their shared corner. For sweep
-// lights only the rays within the rotating beam cone contribute; the rest
-// collapse onto the light source — assembled from the cached ray endpoints
-// without marching anything.
-export const computeLightPolygon = (
-  light: LightSource,
-  state: GameState,
-  cellSize: number,
-  debugMode = false,
-  timeMs = 0,
-  occlusionKey?: string,
-): Position[] => {
-  const center = lightCenter(light, cellSize, timeMs);
-  // Gas lights ignore their radius: the cloud expands until it leaves the
-  // room (grid room character) containing the light.
-  const isGas = light.effect === LightEffect.GAS;
-  const gasRoom = isGas
-    ? findCell(state.dungeon.layout.grid, light.position.x, light.position.y)
-    : undefined;
-  const radiusPx = isGas
-    ? Number.POSITIVE_INFINITY
-    : (light.radius ?? DEFAULT_LIGHT_RADIUS) * cellSize;
-  const map = occlusionMapFor(state, cellSize, debugMode, occlusionKey);
-  const points: Position[] = [];
-  // The midpoint of the shared edge between two adjacent cells, in world
-  // pixels — where a ray stops when a door, wall or fog blocks the step.
-  const sharedEdgeMidpoint = (from: Position, to: Position): Position => ({
-    x: ((from.x + to.x) / 2 + 0.5) * cellSize,
-    y: ((from.y + to.y) / 2 + 0.5) * cellSize,
-  });
-  // Where a ray entering `cell` from `from` stops, or null when the ray
-  // passes through and the walk should continue.
-  const rayStopInCell = (
-    from: Position,
-    cell: Position,
-    dirX: number,
-    dirY: number,
-  ): Position | null => {
-    if (
-      gasRoom !== undefined &&
-      findCell(state.dungeon.layout.grid, cell.x, cell.y) !== gasRoom
-    ) {
-      // Gas stays inside its room: stop at the room boundary, so the
-      // cloud never spills through open doors or into other rooms.
-      return sharedEdgeMidpoint(from, cell);
-    }
-    const door = isDoorEdge(
-      state.dungeon.layout,
-      from.x,
-      from.y,
-      cell.x,
-      cell.y,
-    );
-    if (door && !door.open) {
-      // Stop at the shared edge the door occupies.
-      return sharedEdgeMidpoint(from, cell);
-    }
-    if (crossesWallEdge(state.dungeon.layout, from, cell)) {
-      // Stop at the shared edge the wall occupies, so its face stays lit
-      // while the shadow starts behind it. Diagonal transitions use the
-      // pinch-point rule, so a corner closed by two walls stops the ray
-      // as well.
-      return sharedEdgeMidpoint(from, cell);
-    }
-    const block = lightBlockFromMap(map, cell, light);
-    if (block === 'opaque') {
-      // Illuminate the blocking cell partway from its entry edge: enough
-      // to light the wall face or actor sprite, so light never appears to
-      // pass through the whole cell. The shadow starts right behind it.
-      const entry = rayExitThroughCell(
-        center,
-        dirX,
-        dirY,
-        from,
-        cellSize,
-        radiusPx,
-      );
-      const exit = rayExitThroughCell(
-        center,
-        dirX,
-        dirY,
-        cell,
-        cellSize,
-        radiusPx,
-      );
-      return {
-        x: entry.x + (exit.x - entry.x) * OPAQUE_CELL_PENETRATION,
-        y: entry.y + (exit.y - entry.y) * OPAQUE_CELL_PENETRATION,
-      };
-    }
-    if (block === 'fog') {
-      // Undiscovered or outside the grid: light stops at the near edge.
-      return sharedEdgeMidpoint(from, cell);
-    }
-    return null;
-  };
-  // For sweep lights: the beam only covers rays within its half angle of
-  // the sweep direction; the rest collapse onto the light source.
-  const sweep = lightSweepAngle(light, timeMs);
-  if (sweep !== undefined) {
-    // A sweep beam only selects which rays contribute to the polygon:
-    // each ray's endpoint is time-independent, so all 120 endpoints are
-    // marched once per occlusion state and every frame just re-selects
-    // the rays inside the rotating beam — no per-frame ray marching.
-    const endpoints = sweepRayEndpointsFor(
-      light,
-      state,
-      cellSize,
-      debugMode,
-      occlusionKey,
-    );
-    return endpoints.map((endpoint, index) => {
-      const angle = (2 * Math.PI * index) / LIGHT_RAY_COUNT;
-      let diff = Math.abs(angle - sweep) % (2 * Math.PI);
-      if (diff > Math.PI) {
-        diff = 2 * Math.PI - diff;
-      }
-      return diff > SWEEP_BEAM_HALF_ANGLE
-        ? { x: center.x, y: center.y }
-        : endpoint;
-    });
-  }
-
-  for (let i = 0; i < LIGHT_RAY_COUNT; i++) {
-    const angle = (2 * Math.PI * i) / LIGHT_RAY_COUNT;
-    const dirX = Math.cos(angle);
-    const dirY = Math.sin(angle);
-    let end: Position = {
-      x: center.x + dirX * radiusPx,
-      y: center.y + dirY * radiusPx,
-    };
-    let prevCell = light.position;
-    // Exact grid traversal: each step jumps to the next grid line the ray
-    // crosses (a DDA walk), visiting every cell along the ray. A cell only
-    // blocks when the ray is still inside it at one of the evenly spaced
-    // sample points — cells the ray merely clips are skipped, which lets
-    // light pass between diagonally adjacent blockers. Skipped cells also
-    // leave `prevCell` untouched, so the next checked cell is entered from
-    // the last checked one, diagonally when the walk stepped around a
-    // corner — matching the pinch-point rule for diagonal transitions.
-    const sampleStep = cellSize / LIGHT_RAY_STEPS_PER_CELL;
-    let cellX = Math.floor(center.x / cellSize);
-    let cellY = Math.floor(center.y / cellSize);
-    const stepX = dirX > 0 ? 1 : dirX < 0 ? -1 : 0;
-    const stepY = dirY > 0 ? 1 : dirY < 0 ? -1 : 0;
-    let tMaxX =
-      stepX === 0
-        ? Number.POSITIVE_INFINITY
-        : ((stepX > 0 ? cellX + 1 : cellX) * cellSize - center.x) / dirX;
-    let tMaxY =
-      stepY === 0
-        ? Number.POSITIVE_INFINITY
-        : ((stepY > 0 ? cellY + 1 : cellY) * cellSize - center.y) / dirY;
-    const tDeltaX =
-      stepX === 0 ? Number.POSITIVE_INFINITY : cellSize / Math.abs(dirX);
-    const tDeltaY =
-      stepY === 0 ? Number.POSITIVE_INFINITY : cellSize / Math.abs(dirY);
-
-    // A swaying, corner-aligned light can start with its center in a cell
-    // other than its nominal one; that first cell is entered from the
-    // light's own cell, like every other step of the walk.
-    if (cellX !== prevCell.x || cellY !== prevCell.y) {
-      const tOut = Math.min(tMaxX, tMaxY);
-      if (sampleStep < tOut && sampleStep <= radiusPx) {
-        const stop = rayStopInCell(
-          prevCell,
-          { x: cellX, y: cellY },
-          dirX,
-          dirY,
-        );
-        if (stop) {
-          end = stop;
-          points.push(end);
-          continue;
-        }
-        prevCell = { x: cellX, y: cellY };
-      }
-    }
-
-    for (;;) {
-      const tNext = Math.min(tMaxX, tMaxY);
-      if (tNext >= radiusPx) {
-        break;
-      }
-      // A ray crossing an exact grid corner steps diagonally into the cell
-      // beyond it; the pinch-point rule then decides whether the diagonal
-      // step is blocked.
-      const advanceX = tMaxX === tNext;
-      const advanceY = tMaxY === tNext;
-      if (advanceX) {
-        cellX += stepX;
-        tMaxX += tDeltaX;
-      }
-      if (advanceY) {
-        cellY += stepY;
-        tMaxY += tDeltaY;
-      }
-      // The first sample point inside this cell, if any: the ray only
-      // interacts with cells it is still inside at a sample point.
-      const tOut = Math.min(tMaxX, tMaxY);
-      const tSample = Math.max(1, Math.ceil(tNext / sampleStep)) * sampleStep;
-      if (tSample < tOut && tSample <= radiusPx) {
-        const cell = { x: cellX, y: cellY };
-        const stop = rayStopInCell(prevCell, cell, dirX, dirY);
-        if (stop) {
-          end = stop;
-          break;
-        }
-        prevCell = cell;
-      }
-    }
-    points.push(end);
-  }
-  return points;
-};
-
-// Cache of the ray endpoints of every sweep light, one marching pass per
-// occlusion state: the rotating beam only re-selects rays, it never
-// changes an endpoint.
-let sweepEndpointCache: {
-  key: string;
-  endpoints: Map<string, Position[]>;
-} | null = null;
-
-const sweepRayEndpointsFor = (
-  light: LightSource,
-  state: GameState,
-  cellSize: number,
-  debugMode: boolean,
-  occlusionKey?: string,
-): Position[] => {
-  const key = occlusionKey ?? lightStateKey(state, cellSize, debugMode);
-  if (!sweepEndpointCache || sweepEndpointCache.key !== key) {
-    sweepEndpointCache = { key, endpoints: new Map() };
-  }
-  const geometry = lightPolygonCacheKey(light);
-  let points = sweepEndpointCache.endpoints.get(geometry);
-  if (!points) {
-    // March every ray to its endpoint, ignoring the sweep: the stripped
-    // light runs the plain polygon computation for all rays at once. The
-    // march is time-independent without the sweep, so timeMs is 0.
-    points = computeLightPolygon(
-      { ...light, effect: undefined },
-      state,
-      cellSize,
-      debugMode,
-      0,
-      key,
-    );
-    sweepEndpointCache.endpoints.set(geometry, points);
-  }
-  return points;
-};
-
-const rgbaFromColor = (color: string, alpha: number): string => {
-  const hex = color.replace('#', '');
-  const expand = (part: string): number =>
-    parseInt(part.length === 1 ? part + part : part, 16);
-  if (hex.length === 3) {
-    const r = expand(hex[0]);
-    const g = expand(hex[1]);
-    const b = expand(hex[2]);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-  if (hex.length === 6) {
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-  // Named colors and other formats: let them render as-is with the alpha
-  // handled through the gradient stop opacity.
-  return color;
-};
-
-// Ambient (dungeon-wide) light level used when a dungeon does not specify
-// one: 1 = fully lit, 0 = pitch black.
-export const DEFAULT_AMBIENT_LIGHT = 1;
-
-export const ambientLightLevel = (state: GameState): number => {
-  const ambient = state.dungeon.ambientLight ?? DEFAULT_AMBIENT_LIGHT;
-  return Math.min(1, Math.max(0, ambient));
-};
-
-// Whether a light is rendered at all. Outside debug mode a light must be
-// on a discovered cell; every other light is culled. Debug mode shows
-// every enabled light.
-export const isLightRenderable = (
-  state: GameState,
-  light: LightSource,
-  debugMode: boolean,
-): boolean => {
-  if (light.enabled === false) return false;
-  if (debugMode) return true;
-  return isDiscovered(state.dungeon, light.position.x, light.position.y);
-};
-
-// The visible part of the world, in grid cells: the rectangle starting
-// at (x, y) spanning width x height cells. Optional everywhere it is
-// used; without it every renderable light is drawn.
-export type LightViewport = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
-
-// How far beyond its radius a light can still be seen, in cells: the
-// softness blur reaches up to half a cell past the pool edge. This also
-// covers a swaying light's swing, which stays well under half a cell.
-const VIEWPORT_CULL_MARGIN_CELLS = 0.5;
-
-// Whether a light's glow can reach the viewport; lights further away are
-// culled entirely — not drawn, not animated. The glow is bounded by a
-// circle of the light's radius around its cell: every alignment keeps
-// the glow center inside its own cell or on the cell's edge (the
-// CENTER_* alignments), and a swaying light's swing is covered by the
-// margin. Gas lights have no cheap bound (they fill their whole room)
-// and always pass.
-export const lightInViewport = (
-  light: LightSource,
-  viewport?: LightViewport,
-): boolean => {
-  if (!viewport) return true;
-  if (light.effect === LightEffect.GAS) return true;
-  const centerX = light.position.x + 0.5;
-  const centerY = light.position.y + 0.5;
-  const extent =
-    Math.max(light.radius ?? DEFAULT_LIGHT_RADIUS, 1) +
-    VIEWPORT_CULL_MARGIN_CELLS;
-  const nearestX = Math.min(
-    Math.max(centerX, viewport.x),
-    viewport.x + viewport.width,
-  );
-  const nearestY = Math.min(
-    Math.max(centerY, viewport.y),
-    viewport.y + viewport.height,
-  );
-  const dx = centerX - nearestX;
-  const dy = centerY - nearestY;
-  return dx * dx + dy * dy <= extent * extent;
-};
-
-// Cache for light visibility polygons. A polygon depends only on the
-// light's geometry and the occlusion state — actor positions, door
-// states, fog of war, cell size — none of which change between animation
-// frames, so animated lights reuse their polygon instead of re-marching
-// rays every frame. Sway lights cache per quantized center step (their
-// polygon moves with the swing); sweep lights never enter this cache —
-// their beams assemble from the ray endpoint cache instead.
-//
-// The cache is keyed by a stable geometry string, not by object
-// identity: activeLights() recreates derived lights (carried item
-// lights, interactables, event lights, the portal, projectiles, flames)
-// as fresh objects on every call, so an identity-keyed map would miss
-// every frame and re-march all their rays. The bound keeps a long
-// animation with changing lights from growing the cache without limit;
-// the oldest entry is evicted first (Maps iterate in insertion order).
-export const MAX_LIGHT_POLYGON_CACHE_ENTRIES = 64;
-
-const lightPolygonCacheKey = (light: LightSource): string =>
-  [
-    light.id ?? '',
-    light.position.x,
-    light.position.y,
-    light.alignment ?? '',
-    light.radius ?? '',
-    light.effect ?? '',
-  ].join(',');
-
-let lightPolygonCache: {
-  key: string;
-  polygons: Map<string, { points: Position[]; center: Position }>;
-} | null = null;
 
 // Everything that can change a light polygon, hashed into a cache key.
 const lightStateKey = (
@@ -759,10 +219,29 @@ const lightStateKey = (
   }`;
 };
 
-// The light's visibility polygon, from cache when the occlusion state has
-// not changed since it was last computed. `occlusionKey` is the caller's
-// precomputed `lightStateKey` for the current pass; without it the key is
-// rebuilt here.
+// The lit-area polygon of a light (in world pixels), computed by the
+// engine package over the game's environment. `occlusionKey` is the
+// caller's precomputed `lightStateKey` for the pass; without it the key
+// is rebuilt here.
+export const computeLightPolygon = (
+  light: LightSource,
+  state: GameState,
+  cellSize: number,
+  debugMode = false,
+  timeMs = 0,
+  occlusionKey?: string,
+): Position[] =>
+  computeLightPolygonForEnv(
+    light,
+    lightingEnvFor(state, debugMode),
+    cellSize,
+    occlusionKey ?? lightStateKey(state, cellSize, debugMode),
+    timeMs,
+  );
+
+// The cached polygon lookup the renderers use: served from the engine
+// package's caches while the occlusion state hashed into the key is
+// unchanged.
 export const lightPolygonFor = (
   light: LightSource,
   state: GameState,
@@ -770,144 +249,56 @@ export const lightPolygonFor = (
   debugMode: boolean,
   timeMs: number,
   occlusionKey?: string,
-): Position[] => {
-  if (light.effect === LightEffect.SWEEP) {
-    // The beam assembles from the per-occlusion ray endpoint cache; no
-    // marching happens per frame.
-    return computeLightPolygon(
-      light,
-      state,
-      cellSize,
-      debugMode,
-      timeMs,
-      occlusionKey,
-    );
-  }
-  const key = occlusionKey ?? lightStateKey(state, cellSize, debugMode);
-  if (!lightPolygonCache || lightPolygonCache.key !== key) {
-    lightPolygonCache = { key, polygons: new Map() };
-  }
-  const cacheKey = lightPolygonCacheKey(light);
-  const center = lightCenter(light, cellSize, timeMs);
-  const cached = lightPolygonCache.polygons.get(cacheKey);
-  if (cached) {
-    // A swaying light's polygon follows its swinging center: recompute
-    // only once the center has moved a visible step (1/32 cell, the same
-    // quantum the repaint gate uses). The swing arm is 0.6 cells, so the
-    // steps are invisible while the marching drops from every frame to a
-    // handful of times per second.
-    if (
-      light.effect !== LightEffect.SWAY ||
-      Math.hypot(center.x - cached.center.x, center.y - cached.center.y) <=
-        SWAY_STEP_CELLS * cellSize
-    ) {
-      return cached.points;
-    }
-  }
-  const points = computeLightPolygon(
+): Position[] =>
+  lightPolygonForEnv(
     light,
-    state,
+    lightingEnvFor(state, debugMode),
     cellSize,
-    debugMode,
+    occlusionKey ?? lightStateKey(state, cellSize, debugMode),
     timeMs,
-    key,
   );
-  if (lightPolygonCache.polygons.size >= MAX_LIGHT_POLYGON_CACHE_ENTRIES) {
-    // Evict the oldest entry: Map keys iterate in insertion order.
-    for (const oldest of lightPolygonCache.polygons.keys()) {
-      lightPolygonCache.polygons.delete(oldest);
-      break;
-    }
+
+const rgbaFromColor = (color: string, alpha: number): string => {
+  const hex = color.replace('#', '');
+  const expand = (part: string): number =>
+    parseInt(part.length === 1 ? part + part : part, 16);
+  if (hex.length === 3) {
+    const r = expand(hex[0]);
+    const g = expand(hex[1]);
+    const b = expand(hex[2]);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
-  lightPolygonCache.polygons.set(cacheKey, { points, center });
-  return points;
-};
-
-const traceLightPolygonPath = (
-  ctx: CanvasRenderingContext2D,
-  points: Position[],
-) => {
-  ctx.beginPath();
-  points.forEach((point, index) => {
-    if (index === 0) {
-      ctx.moveTo(point.x, point.y);
-    } else {
-      ctx.lineTo(point.x, point.y);
-    }
-  });
-  ctx.closePath();
-};
-
-// Blur radius (in pixels) for a light's shadow edges, from its `softness`
-// (0..1): 0 = hard edges, 1 = half a cell of blur. Exported for tests.
-export const lightBlurPx = (light: LightSource, cellSize: number): number => {
-  const softness = Math.min(
-    1,
-    Math.max(0, light.softness ?? DEFAULT_LIGHT_SOFTNESS),
-  );
-  return (softness * cellSize) / 2;
-};
-
-// How many times per second a light's effect loops, when the light does not
-// specify a rate itself.
-export const DEFAULT_LIGHT_RATE = 1;
-// Half the opening angle of a sweep light's beam.
-const SWEEP_BEAM_HALF_ANGLE = Math.PI / 4;
-
-const lightRate = (light: LightSource): number =>
-  Math.max(0.01, light.rate ?? DEFAULT_LIGHT_RATE);
-
-// Deterministic pseudo-random value in [0, 1) from a number. Flicker uses
-// this instead of Math.random so the same instant always renders the same.
-const hash01 = (n: number): number => {
-  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
-  return s - Math.floor(s);
-};
-
-// Brightness multiplier (0..1) for a light at a given time, from its
-// animation effect. 'static' and unknown effects stay at 1.
-export const lightIntensityScale = (
-  light: LightSource,
-  timeMs: number,
-): number => {
-  const t = (timeMs / 1000) * lightRate(light);
-  switch (light.effect) {
-    case LightEffect.PULSE:
-      return 0.65 + 0.35 * (0.5 - 0.5 * Math.cos(2 * Math.PI * t));
-    case LightEffect.FLICKER: {
-      // 8 jitter steps per loop, mixed from two octaves for torch-like
-      // irregularity.
-      const n = Math.floor(t * 8);
-      const jitter = hash01(n) * 0.7 + hash01(n * 3.7 + 17) * 0.3;
-      return Math.min(1, 0.7 + 0.35 * jitter);
-    }
-    case LightEffect.BLINK:
-      return t % 1 < 0.5 ? 1 : 0.05;
-    case LightEffect.AURA:
-      // A gentle breathing, subtler than pulse.
-      return 0.8 + 0.2 * (0.5 - 0.5 * Math.cos(2 * Math.PI * t));
-    case LightEffect.GAS:
-      // Even, but gently fluctuating: two slow sines keep the cloud
-      // undulating without strong bright/dark swings.
-      return Math.min(
-        1,
-        0.85 +
-          0.1 * Math.sin(2 * Math.PI * t) +
-          0.05 * Math.sin(2 * Math.PI * t * 2.7 + 1.3),
-      );
-    default:
-      return 1;
+  if (hex.length === 6) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
+  // Named colors and other formats: let them render as-is with the alpha
+  // handled through the gradient stop opacity.
+  return color;
 };
 
-// Rotation angle (radians, 0 = pointing right) of a sweep light's beam at a
-// given time, or undefined for lights that do not sweep.
-export const lightSweepAngle = (
+// Ambient (dungeon-wide) light level used when a dungeon does not specify
+// one: 1 = fully lit, 0 = pitch black.
+export const DEFAULT_AMBIENT_LIGHT = 1;
+
+export const ambientLightLevel = (state: GameState): number => {
+  const ambient = state.dungeon.ambientLight ?? DEFAULT_AMBIENT_LIGHT;
+  return Math.min(1, Math.max(0, ambient));
+};
+
+// Whether a light is rendered at all. Outside debug mode a light must be
+// on a discovered cell; every other light is culled. Debug mode shows
+// every enabled light.
+export const isLightRenderable = (
+  state: GameState,
   light: LightSource,
-  timeMs: number,
-): number | undefined => {
-  if (light.effect !== LightEffect.SWEEP) return undefined;
-  return 2 * Math.PI * (((timeMs / 1000) * lightRate(light)) % 1);
+  debugMode: boolean,
+): boolean => {
+  if (light.enabled === false) return false;
+  if (debugMode) return true;
+  return isDiscovered(state.dungeon, light.position.x, light.position.y);
 };
 
 // --- Event-driven lights -------------------------------------------------
@@ -1178,13 +569,6 @@ export const activeLights = (
   return lights;
 };
 
-// Whether a light animates and so needs per-frame rendering: any effect
-// other than 'static' (or absent). Unknown effect strings count as
-// animated, matching how they render (statically) but keeping the
-// re-render loop running, as before.
-export const isAnimatedLight = (light: LightSource): boolean =>
-  light.effect !== undefined && light.effect !== LightEffect.STATIC;
-
 // Whether any renderable light whose glow reaches the viewport animates
 // with an effect, and so needs continuous re-rendering of the dynamic
 // layer.
@@ -1204,23 +588,14 @@ export const hasAnimatedLights = (
 
 // --- Ambient repaint signature ---------------------------------------------
 
-// Quantization steps for the time-varying parts of an animated light.
-// Flicker and blink are already stepped by their own effect math; the
-// continuous effects are quantized so the dynamic layer repaints only
-// when the visible output actually changes: intensity in 1/16 alpha
-// steps, sweep rotation in 4-degree steps, sway position in 1/32-cell
-// steps, sparkle twinkle phase in 1/16-loop steps. The sway step also
-// drives the sway polygon cache (see lightPolygonFor).
-const INTENSITY_QUANTUM = 1 / 16;
-const SWEEP_STEP_RADIANS = Math.PI / 45;
-const SPARKLE_STEP = 1 / 16;
-
 // The quantized animation state of every animated light visible in the
 // viewport, as one comparable string; empty when none animate. Two
 // renders with the same signature paint identical light output, so the
 // dynamic layer can skip the repaint entirely — a flickering brazier
 // (rate 1, 8 jitter steps per loop) repaints about 8 times per second
-// instead of every frame, a torch at rate 2 about 16 times.
+// instead of every frame, a torch at rate 2 about 16 times. The
+// per-light quantization lives in the engine package
+// (`animatedLightSignature`).
 export const animatedLightsSignature = (
   state: GameState,
   debugMode: boolean,
@@ -1235,31 +610,7 @@ export const animatedLightsSignature = (
         isLightRenderable(state, light, debugMode) &&
         lightInViewport(light, viewport),
     )
-    .map((light) => {
-      const t = (now / 1000) * lightRate(light);
-      const scale = lightIntensityScale(light, now);
-      const sweep = lightSweepAngle(light, now);
-      const sweepStep =
-        sweep === undefined ? '' : `${Math.floor(sweep / SWEEP_STEP_RADIANS)}`;
-      let sway = '';
-      if (light.effect === LightEffect.SWAY) {
-        // Cell units (cellSize 1), so the signature is cell-size agnostic.
-        const offset = lightSwayOffset(light, 1, now);
-        sway = `${Math.round(offset.x / SWAY_STEP_CELLS)},${Math.round(
-          offset.y / SWAY_STEP_CELLS,
-        )}`;
-      }
-      const sparkle =
-        light.effect === LightEffect.SPARKLE
-          ? `${Math.floor(t / SPARKLE_STEP)}`
-          : '';
-      return [
-        Math.floor(scale / INTENSITY_QUANTUM),
-        sweepStep,
-        sway,
-        sparkle,
-      ].join('.');
-    })
+    .map((light) => animatedLightSignature(light, now))
     .join('|');
 
 // Fills a light shape (a polygon glow, an aura ring, a hole punched into
@@ -1297,6 +648,21 @@ const fillLightShape = (
   ctx.filter = 'none';
 };
 
+const traceLightPolygonPath = (
+  ctx: CanvasRenderingContext2D,
+  points: Position[],
+) => {
+  ctx.beginPath();
+  points.forEach((point, index) => {
+    if (index === 0) {
+      ctx.moveTo(point.x, point.y);
+    } else {
+      ctx.lineTo(point.x, point.y);
+    }
+  });
+  ctx.closePath();
+};
+
 const fillLightPolygon = (
   ctx: CanvasRenderingContext2D,
   points: Position[],
@@ -1314,66 +680,11 @@ const fillLightPolygon = (
 
 // --- Sparkle effect ------------------------------------------------------
 
-// Twinkles inside the light's own cell.
-const SPARKLES_PER_CELL = 5;
-// Sparkles keep this far from the cell edge, as a fraction of the cell.
-const SPARKLE_SPREAD = 0.08;
-// Low-discrepancy (golden-ratio) step sequences: spread successive twinkles
-// evenly across the cell, independent of hash quality.
-const SPARKLE_STEP_X = 0.7548776667;
-const SPARKLE_STEP_Y = 0.5698402909;
-const SPARKLE_STEP_ARM = 0.4142135624;
-
-const fract = (n: number): number => n - Math.floor(n);
-
-// One visible sparkle twinkle at a given time.
-export interface Sparkle {
-  // Center in world pixel coordinates.
-  x: number;
-  y: number;
-  // Half length of the glint's arms, in pixels.
-  arm: number;
-  // 0..1 brightness of this twinkle right now.
-  alpha: number;
-}
-
-// All currently visible sparkles for a light: colored twinkles inside the
-// light's own cell — nowhere else. Positions are fixed per light and spread
-// across the whole cell; only the twinkle brightness changes over time.
-export const computeSparkles = (
-  light: LightSource,
-  cellSize: number,
-  timeMs: number,
-): Sparkle[] => {
-  const t = (timeMs / 1000) * lightRate(light);
-  // Per-light offset so sparkle lights in different cells never line up.
-  const offset = hash01(
-    light.position.x * 73856093 + light.position.y * 19349663,
-  );
-  const sparkles: Sparkle[] = [];
-  for (let index = 0; index < SPARKLES_PER_CELL; index++) {
-    const fx = fract((index + 1 + offset) * SPARKLE_STEP_X);
-    const fy = fract((index + 1 + offset * 0.618) * SPARKLE_STEP_Y);
-    const phase = fract((index + 1 + offset) * 0.6180339887);
-    const twinkle = Math.sin(2 * Math.PI * (t + phase));
-    const alpha = Math.max(0, Math.min(1, (twinkle - 0.15) / 0.6));
-    if (alpha <= 0.02) {
-      continue;
-    }
-    const span = 1 - 2 * SPARKLE_SPREAD;
-    const x = (light.position.x + SPARKLE_SPREAD + span * fx) * cellSize;
-    const y = (light.position.y + SPARKLE_SPREAD + span * fy) * cellSize;
-    const arm =
-      cellSize * (0.05 + 0.05 * fract((index + 1 + offset) * SPARKLE_STEP_ARM));
-    sparkles.push({ x, y, arm, alpha });
-  }
-  return sparkles;
-};
-
 // Draws a sparkle light: small colored glints (a cross with a bright core)
 // twinkling inside the light's cell, each with a soft disc behind it. No
 // radial glow. The glints and discs go into the light mask, so they also
 // shape the hole the sparkles punch into the ambient darkness.
+// The twinkle positions (computeSparkles) live in the engine package.
 const renderSparkles = (
   ctx: CanvasRenderingContext2D,
   light: LightSource,

@@ -37,8 +37,9 @@ works through a chain of scenarios ("dungeons") forming a campaign.
 Runtime dependencies are the i18n stack (`sveltekit-i18n` with its
 `@sveltekit-i18n/extension-stores` store surface) and the standalone HOARD
 engine packages (`@hoard-engine/rng`, `@hoard-engine/grid`,
-`@hoard-engine/primitives` and `@hoard-engine/audio`). Everything else is dev
-tooling.
+`@hoard-engine/primitives` and `@hoard-engine/audio`, plus
+`@hoard-engine/lighting`, which is consumed from its local folder until
+its npm publication). Everything else is dev tooling.
 
 ## Architecture: logic engine behind a thin UI
 
@@ -389,7 +390,11 @@ brazier repaints only a handful of times per second. Continuous effects
 minimum-interval gate, while actor-driven frames (movement, projectiles)
 always run at full rate.
 
-The lighting (`src/dungeon/LightRendering.ts`) is the most graphics-heavy
+The lighting (`src/dungeon/LightRendering.ts`, with the ray-fan visibility
+computation, the occlusion maps, the animation effects and the sparkles in
+the `@hoard-engine/lighting` engine package over an injected occlusion
+environment; this repo keeps the gradient/sprite compositing and the
+active-light catalogue) is the most graphics-heavy
 code in the repo: a 2D visibility technique where each light source casts a
 fan of rays that walk the grid cell by cell — jumping from one boundary
 crossing to the next, gated by a sampling resolution so a cell the ray merely
