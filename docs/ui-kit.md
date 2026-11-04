@@ -22,7 +22,7 @@ src/uikit/
 
 The theme tokens and the drawing primitives (text, geometry, rounded
 rect) live in the `@hoard-engine/primitives` engine package
-(`packages/primitives/`, see [engine-packages.md](./engine-packages.md))
+(the published npm package, see [engine-packages.md](./engine-packages.md))
 — the kit's single allowed dependency — and are re-exported through
 `src/uikit/index.ts`.
 

@@ -1,8 +1,0 @@
-dist
-node_modules
-README.md
-package.json
-package-lock.json
-tsconfig.json
-tsconfig.build.json
-vitest.config.ts

@@ -37,9 +37,7 @@ works through a chain of scenarios ("dungeons") forming a campaign.
 Runtime dependencies are the i18n stack (`sveltekit-i18n` with its
 `@sveltekit-i18n/extension-stores` store surface) and the standalone HOARD
 engine packages (`@hoard-engine/rng`, `@hoard-engine/grid` and
-`@hoard-engine/primitives`, the last one in development in-repo under
-`packages/` and consumed through a `file:` dependency). Everything else
-is dev tooling.
+`@hoard-engine/primitives`). Everything else is dev tooling.
 
 ## Architecture: logic engine behind a thin UI
 
