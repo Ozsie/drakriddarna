@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { describe, it, expect, vi } from 'vitest';
 import type { GameState, TerrainCell } from '../types';
 import { TerrainType } from '../types';

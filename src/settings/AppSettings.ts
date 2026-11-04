@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store';
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { musicManager, soundEffectManager } from '../audio';
 import { gameStateStore, syncStore } from '../store/gameStateStore';
 import type { GameState } from '../types';

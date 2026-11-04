@@ -312,7 +312,7 @@ export const monsterActions = async (
         if (opts.waitForMovement !== false) {
           const animRemaining = getActorRemainingAnimationDuration(monster);
           const moveWait =
-            animRemaining > 0 ? animRemaining : opts.delayBetweenActions ?? 0;
+            animRemaining > 0 ? animRemaining : (opts.delayBetweenActions ?? 0);
           if (moveWait > 0) {
             await sleep(moveWait);
           }
@@ -468,7 +468,7 @@ const executeSlotAction = async (
       if (opts.waitForMovement !== false) {
         const animRemaining = getActorRemainingAnimationDuration(monster);
         const moveWait =
-          animRemaining > 0 ? animRemaining : opts.delayBetweenActions ?? 0;
+          animRemaining > 0 ? animRemaining : (opts.delayBetweenActions ?? 0);
         if (moveWait > 0) {
           await sleep(moveWait);
         }
@@ -496,7 +496,7 @@ const executeSlotAction = async (
       if (opts.waitForMovement !== false) {
         const animRemaining = getActorRemainingAnimationDuration(monster);
         const moveWait =
-          animRemaining > 0 ? animRemaining : opts.delayBetweenActions ?? 0;
+          animRemaining > 0 ? animRemaining : (opts.delayBetweenActions ?? 0);
         if (moveWait > 0) {
           await sleep(moveWait);
         }
@@ -510,7 +510,7 @@ const executeSlotAction = async (
       if (opts.waitForMovement !== false) {
         const animRemaining = getActorRemainingAnimationDuration(monster);
         const moveWait =
-          animRemaining > 0 ? animRemaining : opts.delayBetweenActions ?? 0;
+          animRemaining > 0 ? animRemaining : (opts.delayBetweenActions ?? 0);
         if (moveWait > 0) {
           await sleep(moveWait);
         }
@@ -621,7 +621,7 @@ const executeSlotAction = async (
         if (opts.waitForMovement !== false) {
           const animRemaining = getActorRemainingAnimationDuration(monster);
           const moveWait =
-            animRemaining > 0 ? animRemaining : opts.delayBetweenActions ?? 0;
+            animRemaining > 0 ? animRemaining : (opts.delayBetweenActions ?? 0);
           if (moveWait > 0) {
             await sleep(moveWait);
           }
@@ -997,7 +997,7 @@ const performFireAttack = (
       }
       state.flameEffects.push(createFlameEffect(target.position));
     }
-    if (state.heroes.includes(target as Hero)) {
+    if (state.heroes.includes(target)) {
       target.roundTargetCount = (target.roundTargetCount ?? 0) + 1;
       if (!state.roundTargetCounts) {
         state.roundTargetCounts = {};

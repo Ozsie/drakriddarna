@@ -1,11 +1,11 @@
-import { t } from '$lib/translations';
+import { t } from '#lib/translations/index.js';
 import type { GameState } from '../types';
 import { checkpointDungeonTimer } from './timer';
 
 export const i18n = (
   key: string,
   properties?: Record<string, string>,
-): string => (t.get(key, properties) as string) || key;
+): string => t.get()(key, properties) || key;
 
 let reloadGuardTimeout: ReturnType<typeof setTimeout> | null = null;
 

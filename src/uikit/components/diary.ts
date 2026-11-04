@@ -173,14 +173,13 @@ export const layoutDiary = (
     currentY += itemHeight + 4;
   }
 
-  let diaryHeaderY = 0;
   const diaryNotesLayout: DiaryNoteItemLayout[] = [];
 
   // Show diary header and notes
   if (winConditionsLayout.length > 0) {
     currentY += 4; // Space / separator gap before diary
   }
-  diaryHeaderY = currentY;
+  const diaryHeaderY = currentY;
   currentY += 16; // Diary header height
 
   for (const note of vm.diaryNotes) {

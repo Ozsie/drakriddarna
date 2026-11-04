@@ -10,46 +10,45 @@ const stateWithWalls = (
   doors: GameState['dungeon']['layout']['doors'] = [],
   discoveredRooms = ['A'],
   wallColour?: string,
-): GameState =>
-  ({
-    dungeon: {
-      name: 'Wall Test',
-      intro: 'test',
-      discoveredRooms,
-      layout: {
-        grid: ['#####', '#AAB#', '#AAB#', '#####'],
-        doors,
-        walls,
-        ...(wallColour ? { wallColour } : {}),
-        monsters: [],
-        secrets: [],
-        notes: [],
-        items: [],
-        corridors: [],
-        corners: [],
-      },
-      startingPositions: [{ x: 1, y: 1 }],
-      winConditions: [],
-      beaten: false,
-      killCount: 0,
+): GameState => ({
+  dungeon: {
+    name: 'Wall Test',
+    intro: 'test',
+    discoveredRooms,
+    layout: {
+      grid: ['#####', '#AAB#', '#AAB#', '#####'],
+      doors,
+      walls,
+      ...(wallColour ? { wallColour } : {}),
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corners: [],
     },
-    heroes: [],
-    currentActor: undefined,
-    actionLog: [],
-    itemDeck: [],
-    magicItemDeck: [],
-    settings: { cellSize: 48 },
-    eventDeck: [],
-    reRender: false,
-    drawEvents: true,
-  }) as unknown as GameState;
+    startingPositions: [{ x: 1, y: 1 }],
+    winConditions: [],
+    beaten: false,
+    killCount: 0,
+  },
+  heroes: [],
+  currentActor: undefined,
+  actionLog: [],
+  itemDeck: [],
+  magicItemDeck: [],
+  settings: { cellSize: 48 },
+  eventDeck: [],
+  reRender: false,
+  drawEvents: true,
+});
 
 const renderWallRects = (state: GameState, debugMode = false): Rect[] => {
   const rects: Rect[] = [];
   const ctx = {
     fillStyle: '',
     fillRect: (x: number, y: number, w: number, h: number) => {
-      rects.push({ style: String(ctx.fillStyle), x, y, w, h });
+      rects.push({ style: ctx.fillStyle as string, x, y, w, h });
     },
     drawImage: vi.fn(),
     strokeRect: vi.fn(),

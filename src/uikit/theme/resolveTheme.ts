@@ -22,7 +22,7 @@ const deepMerge = (
   for (const key of Object.keys(overrides)) {
     const override = overrides[key];
     if (isPlainObject(override) && isPlainObject(merged[key])) {
-      merged[key] = deepMerge(merged[key] as Record<string, unknown>, override);
+      merged[key] = deepMerge(merged[key], override);
     } else if (override !== undefined) {
       merged[key] = override;
     }

@@ -128,7 +128,7 @@ describe('revealFullMap', () => {
     const alreadyDiscovered: GameState = {
       ...makeMapState(),
       dungeon: { ...makeMapState().dungeon, discoveredRooms: ['A', 'B', 'C'] },
-    } as unknown as GameState;
+    };
     revealFullMap(alreadyDiscovered);
     expect(alreadyDiscovered.dungeon.discoveredRooms).toEqual(['A', 'B', 'C']);
   });

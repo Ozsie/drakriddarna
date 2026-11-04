@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { base } from '$app/paths';
-  import groundSprites from '$lib/DungeonTiles.png';
-  import characterSprites from '$lib/Dungeon_Character.png';
-  import character2Sprites from '$lib/Dungeon_Character_2.png';
-  import actorSprites from '$lib/Dungeon_Character_3.png';
-  import tileset1Sprites from '$lib/Tileset 1.png';
+  import { asset } from '$app/paths';
+  import type { AssetPath } from '$app/types';
+  import groundSprites from '#lib/DungeonTiles.png';
+  import characterSprites from '#lib/Dungeon_Character.png';
+  import character2Sprites from '#lib/Dungeon_Character_2.png';
+  import actorSprites from '#lib/Dungeon_Character_3.png';
+  import tileset1Sprites from '#lib/Tileset 1.png';
   import {
     ACTOR_TILES,
     DUNGEON_TILES,
@@ -54,16 +55,16 @@
     const source = overridden ? dungeonSource : sheetSources[tile.sheet];
     return {
       source,
-      x: (tile.x / tile.size) * size,
-      y: (tile.y / tile.size) * size,
-      size,
+      x: tile.x / tile.size * size,
+      y: tile.y / tile.size * size,
+      size
     };
   };
 
   // Active query parameters, echoed back as data (no authored copy).
-  let queryInfo = '';
+  let queryInfo = $state('');
 
-  let canvases: Record<string, HTMLCanvasElement> = {};
+  let canvases: Record<string, HTMLCanvasElement> = $state({});
 
   onMount(() => {
     const params = new URLSearchParams(window.location.search);
@@ -72,19 +73,19 @@
     const customSize = Number.isFinite(sizeParam) && sizeParam > 0 ? sizeParam : null;
 
     const dungeonSource = tilesetParam
-      ? (libImages[tilesetParam] ??
-        `${base}/${tilesetParam.replace(/^\/+/, '')}`)
+      ? libImages[tilesetParam] ??
+        asset(tilesetParam.replace(/^\/+/, '') as AssetPath)
       : sheetSources.dungeon;
 
     queryInfo = `${tilesetParam ? `tileset=${tilesetParam} ` : ''}${customSize ? `size=${customSize}` : ''}`.trim();
 
     const loadImage = (src: string) =>
       new Promise<HTMLImageElement | null>((resolve) => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = () => resolve(null);
-        image.src = src;
-      });
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => resolve(null);
+      image.src = src;
+    });
 
     const uniqueSources = [
       ...new Set(
@@ -120,6 +121,31 @@
     });
   });
 </script>
+
+<div class="catalog">
+  {#if queryInfo}
+    <div class="query-info">{queryInfo}</div>
+  {/if}
+
+  {#each groups as group (group.name)}
+    <section class="group">
+      <h2 class="group-name">{group.name}</h2>
+
+      <div class="rows">
+        {#each Object.entries(group.tiles) as [key, tile] (key)}
+          <div class="row">
+            <canvas bind:this={canvases[key]} title={key}></canvas>
+
+            <div>
+              <div class="key">{key}</div>
+              <div class="slot">{tile.sheet} · {tile.x},{tile.y} · {tile.size}</div>
+            </div>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/each}
+</div>
 
 <style>
   .catalog {
@@ -188,27 +214,3 @@
     color: var(--color-text-secondary, #94a3b8);
   }
 </style>
-
-<div class="catalog">
-  {#if queryInfo}
-    <div class="query-info">{queryInfo}</div>
-  {/if}
-  {#each groups as group (group.name)}
-    <section class="group">
-      <h2 class="group-name">{group.name}</h2>
-      <div class="rows">
-        {#each Object.entries(group.tiles) as [key, tile] (key)}
-          <div class="row">
-            <canvas bind:this={canvases[key]} title={key}></canvas>
-            <div>
-              <div class="key">{key}</div>
-              <div class="slot">
-                {tile.sheet} · {tile.x},{tile.y} · {tile.size}
-              </div>
-            </div>
-          </div>
-        {/each}
-      </div>
-    </section>
-  {/each}
-</div>

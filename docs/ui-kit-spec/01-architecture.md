@@ -20,7 +20,7 @@ from game code and a lint rule proves it (see
 
 - Every HUD, menu and dialog renderer is a function of (view model, bounds,
   theme, context). Nothing under `src/uikit/` imports `GameState`,
-  `src/core`, stores, campaigns or `$lib`.
+  `src/core`, stores, campaigns or `#lib`.
 - All style literals (about 99 inline `fillStyle` values and 10 font strings)
   come from one theme object. A second theme can be dropped in without
   touching a component.

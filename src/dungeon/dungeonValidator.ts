@@ -198,10 +198,10 @@ export const validateLayout = (
     side === Side.RIGHT
       ? { x: 1, y: 0 }
       : side === Side.LEFT
-      ? { x: -1, y: 0 }
-      : side === Side.DOWN
-      ? { x: 0, y: 1 }
-      : { x: 0, y: -1 };
+        ? { x: -1, y: 0 }
+        : side === Side.DOWN
+          ? { x: 0, y: 1 }
+          : { x: 0, y: -1 };
   // Canonical key of the edge between two orthogonally adjacent cells, so
   // mirrored definitions ((x, LEFT) vs (x-1, RIGHT)) collapse to one edge.
   const edgeKey = (x: number, y: number, side: Side): string => {

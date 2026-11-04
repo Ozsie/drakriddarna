@@ -147,7 +147,7 @@ describe('migrateMonsterNames', () => {
   it('rewrites a monster held as the current target actor', () => {
     const state = createBareState();
     const lord = legacyMonster(MonsterType.RED_DARK_LORD, Colour.Red);
-    state.targetActor = lord as GameState['targetActor'];
+    state.targetActor = lord;
 
     migrateMonsterNames(state);
 

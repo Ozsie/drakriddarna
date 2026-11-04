@@ -5,7 +5,7 @@ import {
 } from './SaveLoadDialogRendering';
 import type { GameState } from '../types';
 import { writeSave } from '../saves/SavesLogic';
-import { loadTranslations } from '$lib/translations';
+import { loadTranslations } from '#lib/translations/index.js';
 
 const createMockState = (): GameState =>
   ({

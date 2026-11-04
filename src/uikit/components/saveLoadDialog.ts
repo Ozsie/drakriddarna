@@ -447,8 +447,8 @@ export const renderSaveLoadDialog = (
         ? theme.palette.surface.buttonPrimaryHover
         : theme.palette.surface.buttonSecondaryHover
       : isSave
-      ? theme.palette.surface.buttonPrimary
-      : theme.palette.surface.buttonSecondary;
+        ? theme.palette.surface.buttonPrimary
+        : theme.palette.surface.buttonSecondary;
     drawRoundedRect(ctx, ab.x, ab.y, ab.width, ab.height, 6);
     ctx.fill();
 

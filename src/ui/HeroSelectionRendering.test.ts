@@ -15,7 +15,7 @@ import {
   MIN_PARTY_SIZE,
 } from './HeroSelectionRendering';
 import { campaigns, getCampaign } from '../campaigns';
-import { loadTranslations } from '$lib/translations';
+import { loadTranslations } from '#lib/translations/index.js';
 
 describe('HeroSelectionRendering', () => {
   beforeAll(async () => {
@@ -114,7 +114,7 @@ describe('HeroSelectionRendering', () => {
         campaign.heroes[3]?.nameTranslationKey,
       );
       // Clones: mutating the override never touches the registry.
-      heroes[0]!.name = 'mutated';
+      heroes[0].name = 'mutated';
       expect(campaign.heroes[0]?.name).not.toBe('mutated');
     });
 

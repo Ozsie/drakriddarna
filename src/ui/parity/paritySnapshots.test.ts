@@ -10,7 +10,7 @@
 // time and the device pixel ratio.
 
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { loadTranslations } from '$lib/translations';
+import { loadTranslations } from '#lib/translations/index.js';
 import { createRecordingContext } from '../../uikit/testing/recordingContext';
 import {
   COMPACT_WIDTH,

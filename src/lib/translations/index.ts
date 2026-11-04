@@ -1,5 +1,6 @@
 import i18n from 'sveltekit-i18n';
 import type { Config } from 'sveltekit-i18n';
+import stores from '@sveltekit-i18n/extension-stores';
 import lang from './lang.json';
 
 // Dynamically discover translations for every campaign under src/campaigns/*/translations/{en,sv}.json
@@ -40,7 +41,7 @@ export const deepMerge = (
   const result: Record<string, unknown> = { ...target };
   for (const [key, value] of Object.entries(source)) {
     if (isObject(value) && isObject(result[key])) {
-      result[key] = deepMerge(result[key] as Record<string, unknown>, value);
+      result[key] = deepMerge(result[key], value);
     } else {
       result[key] = value;
     }
@@ -168,7 +169,10 @@ export const config: Config = {
   ],
 };
 
+// The stores extension carries the Svelte store surface ($t, $locale,
+// $loading) that sveltekit-i18n 2 had built in; `t.get()` returns the
+// translation function itself.
 export const { t, loading, locales, locale, loadTranslations, setLocale } =
-  new i18n(config);
+  new i18n({ ...config, extensions: [stores] });
 
 loading.subscribe(($loading) => $loading);

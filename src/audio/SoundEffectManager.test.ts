@@ -35,7 +35,11 @@ describe('SoundEffectManager', () => {
     // Mock global Audio
     vi.stubGlobal(
       'Audio',
-      vi.fn().mockImplementation(() => mockAudioInstance),
+      // Vitest 5 only constructs mocks whose implementation is a
+      // `function`/`class`, and SoundEffectManager calls `new Audio(...)`.
+      vi.fn().mockImplementation(function () {
+        return mockAudioInstance;
+      }),
     );
   });
 
@@ -159,22 +163,10 @@ describe('Sound system integration with gameplay events', () => {
   let playActorDeathSpy: Mock;
 
   beforeEach(() => {
-    playWeaponAttackSpy = vi.spyOn(
-      soundEffectManager,
-      'playWeaponAttack',
-    ) as unknown as Mock;
-    playActorWalkSpy = vi.spyOn(
-      soundEffectManager,
-      'playActorWalk',
-    ) as unknown as Mock;
-    playActorHurtSpy = vi.spyOn(
-      soundEffectManager,
-      'playActorHurt',
-    ) as unknown as Mock;
-    playActorDeathSpy = vi.spyOn(
-      soundEffectManager,
-      'playActorDeath',
-    ) as unknown as Mock;
+    playWeaponAttackSpy = vi.spyOn(soundEffectManager, 'playWeaponAttack');
+    playActorWalkSpy = vi.spyOn(soundEffectManager, 'playActorWalk');
+    playActorHurtSpy = vi.spyOn(soundEffectManager, 'playActorHurt');
+    playActorDeathSpy = vi.spyOn(soundEffectManager, 'playActorDeath');
   });
 
   afterEach(() => {

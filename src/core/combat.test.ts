@@ -375,23 +375,22 @@ describe('combat module', () => {
       deathSound: '',
     });
 
-    const createMonster = (carried: Item[]): Monster =>
-      ({
-        name: 'Troll',
-        type: MonsterType.TROLL,
-        health: 1,
-        maxHealth: 1,
-        defense: 0,
-        actions: 0,
-        movement: 0,
-        maxMovement: 0,
-        colour: Colour.Red,
-        position: { x: 2, y: 0 },
-        experience: 2,
-        level: Level.APPRENTICE,
-        inventory: carried,
-        weapon: weapon('Club'),
-      }) as unknown as Monster;
+    const createMonster = (carried: Item[]): Monster => ({
+      name: 'Troll',
+      type: MonsterType.TROLL,
+      health: 1,
+      maxHealth: 1,
+      defense: 0,
+      actions: 0,
+      movement: 0,
+      maxMovement: 0,
+      colour: Colour.Red,
+      position: { x: 2, y: 0 },
+      experience: 2,
+      level: Level.APPRENTICE,
+      inventory: carried,
+      weapon: weapon('Club'),
+    });
 
     const createState = (hero: Hero, monster: Monster): GameState => ({
       heroes: [hero],

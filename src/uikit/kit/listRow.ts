@@ -27,14 +27,14 @@ export const listRowStyles = (
     state === 'selected'
       ? theme.palette.surface.rowSelected
       : state === 'hover'
-      ? theme.palette.surface.rowHover
-      : theme.palette.surface.row,
+        ? theme.palette.surface.rowHover
+        : theme.palette.surface.row,
   border:
     state === 'selected'
       ? theme.palette.border.rowSelected
       : state === 'hover'
-      ? theme.palette.border.rowHover
-      : theme.palette.border.row,
+        ? theme.palette.border.rowHover
+        : theme.palette.border.row,
   lineWidth:
     state === 'selected'
       ? theme.shape.strokeWidth.medium

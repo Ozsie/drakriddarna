@@ -138,9 +138,9 @@ export const applyFallbackItems = (state: GameState): void => {
   const isCarried = (itemId?: string): boolean =>
     Boolean(
       itemId &&
-        state.heroes.some((hero) =>
-          hero.inventory.some((item) => item?.id === itemId),
-        ),
+      state.heroes.some((hero) =>
+        hero.inventory.some((item) => item?.id === itemId),
+      ),
     );
   state.dungeon.layout.items = state.dungeon.layout.items.filter(
     (itemLocation) =>

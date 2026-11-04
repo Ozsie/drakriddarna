@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { loadTranslations } from '$lib/translations';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { loadTranslations } from '#lib/translations/index.js';
 import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { e1m5 } from '../campaigns/iceDragonTreasure/dungeons/e1m5';
 import { testingGrounds } from '../dungeon/testingGrounds';
@@ -8,6 +8,10 @@ import {
   formatRenderingBenchmarkReport,
 } from './renderingBenchmark';
 import { writeBenchmarkReport } from './benchmark';
+
+// Whole-game benchmarks exceed the 5s unit-test default; this file runs
+// only under BENCHMARK=true (npm run benchmark:rendering).
+vi.setConfig({ testTimeout: 60000 });
 
 describe('Rendering benchmark', () => {
   beforeAll(async () => {

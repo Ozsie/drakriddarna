@@ -66,7 +66,7 @@ Helvetica, sans-serif`, color `#fce28a`) using the human-authored welcome
 ## Build footer
 
 - Bottom center of the canvas, drawn over the background image.
-- Content: `${date} - ${hash}` from `$lib/buildInfo.json`, formatted exactly
+- Content: `${date} - ${hash}` from `#lib/buildInfo.json`, formatted exactly
   like the existing canvas-menu footer.
 - Style: `10px Arial, Helvetica, sans-serif`, fill
   `rgba(226, 232, 240, 0.5)`, centered horizontally, baseline offset a few

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { describe, expect, it, vi } from 'vitest';
 import {
   activeLights,
@@ -580,7 +579,7 @@ describe('renderLights', () => {
     // Hero-free: the heroes' torch lights would add a second gradient.
     const state = createState({ heroes: [] });
     state.dungeon.layout.lights = [createLight()];
-    const addColorStop = vi.fn();
+    const addColorStop = vi.fn<(offset: number, color: string) => void>();
     const ctx = createMockCtx({ addColorStop });
     renderLights(ctx, CELL_SIZE, state, false);
     expect(ctx.createRadialGradient).toHaveBeenCalledTimes(1);
@@ -643,11 +642,11 @@ describe('renderLights', () => {
   it('scales the rendered gradient by the effect intensity', () => {
     const state = createState();
     state.dungeon.layout.lights = [createLight({ effect: 'pulse' })];
-    const addColorStop = vi.fn();
+    const addColorStop = vi.fn<(offset: number, color: string) => void>();
     const ctx = createMockCtx({ addColorStop });
     renderLights(ctx, CELL_SIZE, state, false, 0);
     // Peak alpha: intensity 0.35 * 1.5 * pulse scale 0.65 at t=0.
-    const firstStop = addColorStop.mock.calls[0] as [number, string];
+    const firstStop = addColorStop.mock.calls[0];
     const firstAlpha = Number(firstStop[1].match(/([\d.]+)\)$/)![1]);
     expect(firstAlpha).toBeCloseTo(0.35 * 1.5 * 0.65, 5);
   });
@@ -1511,7 +1510,7 @@ describe('sparkle and aura effects', () => {
     state.dungeon.layout.lights = [
       createLight({ position: { x: 1, y: 2 }, effect: 'aura' }),
     ];
-    const addColorStop = vi.fn();
+    const addColorStop = vi.fn<(offset: number, color: string) => void>();
     const ctx = createMockCtx({ addColorStop });
     renderLights(ctx, CELL_SIZE, state, false, 0);
     expect(ctx.createRadialGradient).toHaveBeenCalledTimes(1);
@@ -1667,7 +1666,7 @@ describe('item light sources', () => {
     const state = createState();
     state.dungeon.layout.items = [
       {
-        item: glowingItem as unknown as Item,
+        item: glowingItem,
         position: { x: 2, y: 1 },
       },
       {
@@ -1735,8 +1734,8 @@ describe('item light sources', () => {
 describe('hero torches and door glows', () => {
   it('gives every living hero a faint torch light at their position', () => {
     const state = createState();
-    const torch = activeLights(state).find(
-      (light) => light.id?.startsWith('hero_torch'),
+    const torch = activeLights(state).find((light) =>
+      light.id?.startsWith('hero_torch'),
     );
     expect(torch).toBeDefined();
     expect(torch!.position).toEqual({ x: 1, y: 3 });
@@ -1789,8 +1788,8 @@ describe('hero torches and door glows', () => {
     // near side, never on the undiscovered far side.
     const state = createState({ grid, discoveredRooms: ['A'], heroes: [] });
     state.dungeon.layout.doors = [door];
-    const nearGlows = activeLights(state).filter(
-      (light) => light.id?.startsWith('door_glow'),
+    const nearGlows = activeLights(state).filter((light) =>
+      light.id?.startsWith('door_glow'),
     );
     expect(nearGlows).toHaveLength(1);
     expect(nearGlows[0].position).toEqual({ x: 1, y: 2 });
@@ -1807,8 +1806,8 @@ describe('hero torches and door glows', () => {
       heroes: [],
     });
     both.dungeon.layout.doors = [door];
-    const glows = activeLights(both).filter(
-      (light) => light.id?.startsWith('door_glow'),
+    const glows = activeLights(both).filter((light) =>
+      light.id?.startsWith('door_glow'),
     );
     expect(glows).toHaveLength(2);
     const farGlow = glows.find(
@@ -1837,7 +1836,7 @@ describe('event-driven lights', () => {
   it("snuffs out all lights while the dragon's breath blinds a living hero", () => {
     const state = createState();
     state.dungeon.layout.lights = [createLight({ position: { x: 1, y: 2 } })];
-    state.heroes[0].inventory = [glowingItem as unknown as Item];
+    state.heroes[0].inventory = [glowingItem];
     // The placed light, the item light, and the hero's torch.
     expect(activeLights(state).length).toBe(3);
     state.heroes[0].blinded = true;
@@ -1952,8 +1951,8 @@ describe('interactable and combat lights', () => {
     ];
     // Halfway between from (1) and to (4): cell 2.5 rounds to 3 at t=1100.
     const lights = activeLights(state, 1100);
-    const projectileLight = lights.find(
-      (l) => l.id?.startsWith('projectile_light'),
+    const projectileLight = lights.find((l) =>
+      l.id?.startsWith('projectile_light'),
     );
     expect(projectileLight).toBeDefined();
     expect(projectileLight!.position.x).toBe(3);
@@ -1977,8 +1976,8 @@ describe('interactable and combat lights', () => {
         durationMs: 600,
       },
     ];
-    const flameLight = activeLights(state, 1100).find(
-      (l) => l.id?.startsWith('flame_light'),
+    const flameLight = activeLights(state, 1100).find((l) =>
+      l.id?.startsWith('flame_light'),
     );
     expect(flameLight).toBeDefined();
     expect(flameLight!.position).toEqual({ x: 3, y: 2 });
@@ -2052,7 +2051,7 @@ describe('gas effect', () => {
     state.dungeon.layout.lights = [
       createLight({ position: { x: 3, y: 2 }, effect: 'gas', radius: 4 }),
     ];
-    const addColorStop = vi.fn();
+    const addColorStop = vi.fn<(offset: number, color: string) => void>();
     const ctx = createMockCtx({ addColorStop });
     renderLights(ctx, CELL_SIZE, state, false, 1000);
     const stops = addColorStop.mock.calls.map((call: [number, string]) => call);

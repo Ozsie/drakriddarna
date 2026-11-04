@@ -25,10 +25,7 @@ import type { UiContext } from '../env';
 import type { UiTheme } from '../theme';
 
 export type BetweenDungeonsStep =
-  | 'levelUp'
-  | 'trade'
-  | 'campaignComplete'
-  | 'partyWipe';
+  'levelUp' | 'trade' | 'campaignComplete' | 'partyWipe';
 
 /** Which theme actor-dot token a hero's colour maps to. */
 export type ActorColourKey = 'red' | 'blue' | 'yellow' | 'green';
@@ -1021,16 +1018,16 @@ export const renderBetweenDungeons = (
               lineWidth: theme.shape.strokeWidth.medium,
             }
           : isHovered
-          ? {
-              fill: theme.palette.surface.rowHover,
-              border: theme.palette.border.rowHover,
-              lineWidth: theme.shape.strokeWidth.thin,
-            }
-          : {
-              fill: theme.palette.surface.tradeItem,
-              border: theme.palette.border.input,
-              lineWidth: theme.shape.strokeWidth.thin,
-            };
+            ? {
+                fill: theme.palette.surface.rowHover,
+                border: theme.palette.border.rowHover,
+                lineWidth: theme.shape.strokeWidth.thin,
+              }
+            : {
+                fill: theme.palette.surface.tradeItem,
+                border: theme.palette.border.input,
+                lineWidth: theme.shape.strokeWidth.thin,
+              };
         drawListRow(ctx, ib, itemStyles, 4);
 
         ctx.fillStyle = it.isSelected

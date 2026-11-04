@@ -21,16 +21,10 @@ const flattenKeys = (obj: Record<string, unknown>, prefix = ''): string[] =>
 
 const localeKeys = (locale: 'en' | 'sv') => {
   const shared = new Set(
-    flattenKeys(
-      (locale === 'en' ? enMonsters : svMonsters) as Record<string, unknown>,
-      'monsters.',
-    ),
+    flattenKeys(locale === 'en' ? enMonsters : svMonsters, 'monsters.'),
   );
   const brogue = new Set(
-    flattenKeys(
-      (locale === 'en' ? brogueEn : brogueSv) as Record<string, unknown>,
-      'campaign.',
-    ),
+    flattenKeys(locale === 'en' ? brogueEn : brogueSv, 'campaign.'),
   );
   return { shared, brogue };
 };

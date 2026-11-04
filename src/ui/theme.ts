@@ -53,17 +53,17 @@ export const actorColourKey = (colour: Colour): ActorColourKey =>
   colour === Colour.Red
     ? 'red'
     : colour === Colour.Blue
-    ? 'blue'
-    : colour === Colour.Yellow
-    ? 'yellow'
-    : 'green';
+      ? 'blue'
+      : colour === Colour.Yellow
+        ? 'yellow'
+        : 'green';
 
 /** The reverse mapping, for the facades' historical Colour-carrying shapes. */
 export const actorColour = (key: ActorColourKey): Colour =>
   key === 'red'
     ? Colour.Red
     : key === 'blue'
-    ? Colour.Blue
-    : key === 'yellow'
-    ? Colour.Yellow
-    : Colour.Green;
+      ? Colour.Blue
+      : key === 'yellow'
+        ? Colour.Yellow
+        : Colour.Green;

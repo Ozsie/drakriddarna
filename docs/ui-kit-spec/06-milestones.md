@@ -10,7 +10,7 @@ de-duplication value on their own; stopping after any milestone is by design.
 | --------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------ |
 | M1        | Inventory, recording context, parity snapshots, literal budget | Snapshots and inventory committed; CI green                                        | 2–3 days     |
 | M2        | Theme and shared draw primitives                               | Literal budget 0 in converted modules; parity unchanged; second theme renders      | 3–5 days     |
-| M3        | `UiEnv`/`UiContext`, translator and asset ports                | No i18n or `$lib` imports in converted modules; compact mode passed as a parameter | 2–3 days     |
+| M3        | `UiEnv`/`UiContext`, translator and asset ports                | No i18n or `#lib` imports in converted modules; compact mode passed as a parameter | 2–3 days     |
 | M4        | Component kit                                                  | Each primitive has at least two consumers and tests                                | about 1 week |
 | M5        | View-model conversion of all in-scope renderers                | Each module moved to `src/uikit/components/` and clean                             | 2–3 weeks    |
 | M6        | Hardening and package-readiness                                | Boundary lint is an error everywhere; docs updated; readiness checklist passes     | 2–3 days     |
@@ -52,14 +52,14 @@ Deliverables:
 
 - Introduce `UiEnv`/`UiContext`; the board controller builds them once per
   update.
-- Replace `i18n()` imports with `env.t` and `$lib/*.png` imports with
+- Replace `i18n()` imports with `env.t` and `#lib/*.png` imports with
   `AssetId`s resolved by `src/ui/assets.ts`.
 - Replace width-derived compact detection inside layout functions with
   `env.mode`.
 - Include env identity (locale, theme, mode) in render signatures so a
   locale or theme change repaints.
 
-Definition of done: no i18n or `$lib` imports in converted modules; compact
+Definition of done: no i18n or `#lib` imports in converted modules; compact
 mode passed as a parameter.
 
 ## M4 — Component kit
@@ -138,7 +138,7 @@ The decision gate for ever cutting the package:
   test.
 - Sentinel theme and translator tests pass for every component.
 - Every component is usable with hand-built view models.
-- No `$lib`, Svelte or `sveltekit-i18n` imports in the kit.
+- No `#lib`, Svelte or `sveltekit-i18n` imports in the kit.
 - `docs/ui-kit.md` complete; public surface only through `index.ts`.
 - Remaining work to publish is limited to the export map, build config,
   peer-dependency decisions and a separate test setup.

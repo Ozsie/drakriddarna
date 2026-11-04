@@ -136,8 +136,8 @@ export const myCustomGameMaster: GameMaster = {
       hasDeadHero || partyHpPercentage < 0.45
         ? 'EASE'
         : partyHpPercentage > 0.8
-        ? 'PUSH'
-        : 'NEUTRAL',
+          ? 'PUSH'
+          : 'NEUTRAL',
   },
 };
 

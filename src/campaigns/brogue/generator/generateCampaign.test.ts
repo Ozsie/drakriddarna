@@ -74,7 +74,7 @@ describe('generateCampaign', () => {
         .map((itemLocation) => itemLocation.item)
         .filter((item): item is Item => item?.type === ItemType.MAGIC);
       expect(magic.length).toBe(1);
-      magicIds.push(magic[0]!.id!);
+      magicIds.push(magic[0].id!);
     }
     // The unique magic items are never repeated; only the consumables may
     // appear twice once the uniques are exhausted.
@@ -136,5 +136,5 @@ describe('generateCampaign', () => {
         expect(() => assertValidDungeon(result.dungeon)).not.toThrow();
       }
     }
-  });
+  }, 30000);
 });

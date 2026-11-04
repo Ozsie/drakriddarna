@@ -19,7 +19,6 @@ import { MAX_HIGH_SCORES } from '../../saves/HighScoresLogic';
 import { getHeroTradableItems } from '../../dungeon/BetweenDungeonsLogic';
 import type { Translator } from '../../uikit/env';
 import type {
-  BetweenDungeonsStep,
   BetweenDungeonsViewModel,
   CampaignCompleteHeroRowVm,
   CampaignCompleteVm,
@@ -293,7 +292,7 @@ export const toBetweenDungeonsViewModel = (
   if (!state || !state.betweenDungeons) return null;
   const bd = state.betweenDungeons;
 
-  const step = bd.step as BetweenDungeonsStep;
+  const step = bd.step;
   const isLevelUp = step === 'levelUp';
   const isCampaignComplete = step === 'campaignComplete';
   const isPartyWipe = step === 'partyWipe';
@@ -308,28 +307,28 @@ export const toBetweenDungeonsViewModel = (
         name: t(bd.completedCampaignName ?? bd.completedDungeonName),
       })
     : isPartyWipe
-    ? t('content.partyWipe.title')
-    : isLevelUp
-    ? t('content.betweenDungeons.titleLevelUp', { name: completedName })
-    : t('content.betweenDungeons.titleTrade');
+      ? t('content.partyWipe.title')
+      : isLevelUp
+        ? t('content.betweenDungeons.titleLevelUp', { name: completedName })
+        : t('content.betweenDungeons.titleTrade');
 
   const subtitleText = isCampaignComplete
     ? t('content.campaignComplete.subtitle')
     : isPartyWipe
-    ? t('content.partyWipe.subtitle', { name: completedName })
-    : isLevelUp
-    ? t('content.betweenDungeons.subtitleLevelUp')
-    : t('content.betweenDungeons.subtitleTrade', {
-        nextDungeon: nextDungeonName || completedName,
-      });
+      ? t('content.partyWipe.subtitle', { name: completedName })
+      : isLevelUp
+        ? t('content.betweenDungeons.subtitleLevelUp')
+        : t('content.betweenDungeons.subtitleTrade', {
+            nextDungeon: nextDungeonName || completedName,
+          });
 
   const actionButtonLabel = isCampaignComplete
     ? t('content.betweenDungeons.buttons.finishCampaign')
     : isLevelUp
-    ? t('content.betweenDungeons.buttons.tradeItems')
-    : bd.nextDungeon
-    ? t('content.betweenDungeons.buttons.startNextDungeon')
-    : t('content.betweenDungeons.buttons.finishCampaign');
+      ? t('content.betweenDungeons.buttons.tradeItems')
+      : bd.nextDungeon
+        ? t('content.betweenDungeons.buttons.startNextDungeon')
+        : t('content.betweenDungeons.buttons.finishCampaign');
 
   return {
     step,
@@ -358,8 +357,8 @@ export const toBetweenDungeonsViewModel = (
     heroes: isLevelUp
       ? levelUpHeroesVm(state, t)
       : step === 'trade'
-      ? tradeHeroesVm(state, t)
-      : [],
+        ? tradeHeroesVm(state, t)
+        : [],
     selectedTradeHeroIndex: bd.selectedTradeItem
       ? bd.selectedTradeItem.heroIndex
       : null,

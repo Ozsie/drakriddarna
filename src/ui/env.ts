@@ -105,9 +105,9 @@ export const legacyUiEnv = (
   t: env?.t ?? i18nTranslator,
   measure: options.ctx
     ? textMeasureFromCtx(options.ctx)
-    : env?.measure ?? {
+    : (env?.measure ?? {
         width: (text) => text.length * (options.fallbackPerChar ?? 6.5),
-      },
+      }),
 });
 
 /**

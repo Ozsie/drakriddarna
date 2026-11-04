@@ -62,8 +62,8 @@ export const getMonsterExpectedDamage = (
 
   const defense = weapon?.ignoresArmour
     ? 0
-    : target.armour?.defense ?? target.defense ?? 0;
-  const shieldDice = weapon?.ignoresShield ? 0 : target.shield?.dice ?? 0;
+    : (target.armour?.defense ?? target.defense ?? 0);
+  const shieldDice = weapon?.ignoresShield ? 0 : (target.shield?.dice ?? 0);
   const shieldRate = getHitRate(target.level);
   const expectedShield = shieldDice * shieldRate;
 
@@ -79,8 +79,8 @@ export const scoreHero = (
     options.stepsNeeded !== undefined
       ? options.stepsNeeded
       : typeof options.stepsByHero === 'function'
-      ? options.stepsByHero(hero)
-      : options.stepsByHero?.get(hero) ?? 0;
+        ? options.stepsByHero(hero)
+        : (options.stepsByHero?.get(hero) ?? 0);
 
   let score = 10;
   score -= 3 * stepsNeeded;
@@ -89,10 +89,10 @@ export const scoreHero = (
     (monster.lastAttackedBy &&
       (monster.lastAttackedBy === hero.id ||
         monster.lastAttackedBy === hero.name)) ||
-      (monster.lastAttackedByHero &&
-        (monster.lastAttackedByHero === hero ||
-          monster.lastAttackedByHero.id === hero.id ||
-          monster.lastAttackedByHero.name === hero.name)),
+    (monster.lastAttackedByHero &&
+      (monster.lastAttackedByHero === hero ||
+        monster.lastAttackedByHero.id === hero.id ||
+        monster.lastAttackedByHero.name === hero.name)),
   );
   if (isLastAttacker) {
     score += 3;
@@ -115,8 +115,8 @@ export const scoreHero = (
     options.noticeRoll !== undefined
       ? options.noticeRoll
       : options.rng
-      ? options.rng()
-      : nextRandom();
+        ? options.rng()
+        : nextRandom();
 
   const noticedKill = hero.health <= expectedDamage && noticeRoll < 0.5;
   if (noticedKill) {

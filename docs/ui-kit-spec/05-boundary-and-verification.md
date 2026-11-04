@@ -9,7 +9,7 @@ the absence of leaked literals.
 
 1. **Lint override** for `src/uikit/**` with `no-restricted-imports` covering
    `**/types`, `**/core/**`, `**/store/**`, `**/campaigns/**`, `**/game`,
-   `**/items/**`, `**/saves/**`, `$lib/**`, `$app/**`, `svelte`,
+   `**/items/**`, `**/saves/**`, `#lib/**`, `$app/**`, `svelte`,
    `svelte/*` and `sveltekit-i18n`. If the kit needs rect or grid math it
    owns its own in `primitives/geometry.ts`.
 2. **Reverse rule**: logic modules (`src/game.ts`, `src/core/`, `src/monsters/`,

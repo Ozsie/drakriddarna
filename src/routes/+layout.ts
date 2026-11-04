@@ -1,4 +1,4 @@
-import { loadTranslations } from '$lib/translations';
+import { loadTranslations } from '#lib/translations/index.js';
 
 export const prerender = true;
 

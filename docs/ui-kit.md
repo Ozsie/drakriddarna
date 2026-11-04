@@ -25,7 +25,7 @@ src/uikit/
 Everything the kit draws goes through the theme; every string arrives
 through the translator port; images arrive through the asset port. The kit
 holds **no game imports and no default strings** — it is plain TypeScript
-with no Svelte, no `sveltekit-i18n`, no `$lib`/`$app` aliases. Two tests
+with no Svelte, no `sveltekit-i18n`, no `#lib`/`$app` aliases. Two tests
 and three lint rules enforce this (see [Boundary](#boundary) below).
 
 The public surface is `src/uikit/index.ts`. If you need something it does

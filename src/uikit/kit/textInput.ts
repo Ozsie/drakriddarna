@@ -90,5 +90,5 @@ export const applyTextInputKey = (
   key === 'Backspace'
     ? value.slice(0, -1)
     : key.length === 1
-    ? clampTextInput(value + key, maxLength)
-    : value;
+      ? clampTextInput(value + key, maxLength)
+      : value;

@@ -111,9 +111,8 @@ export const getCachedTileTexture = (
   try {
     let offscreenCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
     let offscreenCtx:
-      | CanvasRenderingContext2D
-      | OffscreenCanvasRenderingContext2D
-      | null = null;
+      CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null =
+      null;
 
     if (
       typeof document !== 'undefined' &&

@@ -63,7 +63,7 @@ describe('translations', () => {
       for (const gm of DifficultLevels) {
         const nameKey = gm.nameTranslationKey;
         expect(nameKey).toBeDefined();
-        const translatedName = t.get(nameKey) as string;
+        const translatedName = t.get()(nameKey);
         expect(translatedName).toBeDefined();
         expect(translatedName).not.toBe(nameKey);
         expect(typeof translatedName).toBe('string');
@@ -71,7 +71,7 @@ describe('translations', () => {
 
         const descKey = gm.descriptionTranslationKey;
         if (descKey) {
-          const translatedDesc = t.get(descKey) as string;
+          const translatedDesc = t.get()(descKey);
           expect(translatedDesc).toBeDefined();
           expect(translatedDesc).not.toBe(descKey);
         }
@@ -84,7 +84,7 @@ describe('translations', () => {
       for (const gm of DifficultLevels) {
         const nameKey = gm.nameTranslationKey;
         expect(nameKey).toBeDefined();
-        const translatedName = t.get(nameKey) as string;
+        const translatedName = t.get()(nameKey);
         expect(translatedName).toBeDefined();
         expect(translatedName).not.toBe(nameKey);
         expect(typeof translatedName).toBe('string');
@@ -92,7 +92,7 @@ describe('translations', () => {
 
         const descKey = gm.descriptionTranslationKey;
         if (descKey) {
-          const translatedDesc = t.get(descKey) as string;
+          const translatedDesc = t.get()(descKey);
           expect(translatedDesc).toBeDefined();
           expect(translatedDesc).not.toBe(descKey);
         }

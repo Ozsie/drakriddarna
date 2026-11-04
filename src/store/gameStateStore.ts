@@ -1,6 +1,6 @@
 import { writable, derived, get } from 'svelte/store';
-import { browser } from '$app/environment';
-import { setLocale } from '$lib/translations';
+import { browser } from '$app/env';
+import { setLocale } from '#lib/translations/index.js';
 import type {
   Difficulty,
   GameAction,
@@ -225,7 +225,7 @@ export const endHeroAction = async (
   }
 };
 
-export const moveHero = (direction: MoveDirection | string): void => {
+export const moveHero = (direction: MoveDirection | (string & {})): void => {
   if (isExecutingTurn) return;
   const state = get(gameStateStore);
   if (!state) return;
@@ -282,8 +282,7 @@ export const toggleHeroInventory = (hero: Hero): void => {
   const state = get(gameStateStore);
   if (!state) return;
   const foundHero = state.heroes.find((h) => h.name === hero.name) as
-    | Hero
-    | undefined;
+    Hero | undefined;
   if (foundHero) {
     foundHero.isInventoryOpen = !foundHero.isInventoryOpen;
   } else {

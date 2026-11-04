@@ -48,7 +48,6 @@ export class SoundEffectManager {
       audio.addEventListener('pause', cleanup);
 
       if (!this.isMuted) {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         void audio.play().catch(() => {});
       }
 

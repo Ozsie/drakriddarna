@@ -60,7 +60,7 @@ export type MonsterAbility =
   | 'diagonalFireAttack'
   | 'orthogonalFireAttack'
   | 'sameRoomFireAttack'
-  | string;
+  | (string & {});
 
 const monsterAbilities: Record<string, Set<MonsterAbility>> = {};
 

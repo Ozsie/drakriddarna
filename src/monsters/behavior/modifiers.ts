@@ -172,8 +172,8 @@ export const evaluateBehaviors = (
       ineligibleReason: !eligible
         ? ineligibleReason
         : isDefensiveDisqualified
-        ? 'Anti-stall (passive streak >= 2)'
-        : undefined,
+          ? 'Anti-stall (passive streak >= 2)'
+          : undefined,
     };
   });
 
