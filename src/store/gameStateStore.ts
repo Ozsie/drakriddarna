@@ -1,4 +1,4 @@
-import { writable, derived, get } from 'svelte/store';
+import { writable, derived, get, type Writable } from 'svelte/store';
 import { browser } from '$app/env';
 import { setLocale } from '#lib/translations/index.js';
 import type {
@@ -71,7 +71,25 @@ const getInitialState = (): GameState | null => {
   return initialState;
 };
 
-export const gameStateStore = writable<GameState | null>(getInitialState());
+// The game mutates the state in place and then publishes the same object
+// reference. Svelte 4 reactive statements re-ran on every store emission,
+// but Svelte 5 deriveds strict-compare by reference and would treat such a
+// publish as "unchanged", freezing the board's reactive render glue (room
+// reveals, hero/action/step marks, ...). Every publish therefore wraps the
+// state in a fresh top-level envelope; the nested objects (dungeon, heroes,
+// settings, ...) stay shared with the source state, so mid-flow mutations
+// remain visible to already-held references until the next publish.
+const baseGameStateStore = writable<GameState | null>(getInitialState());
+
+export const gameStateStore: Writable<GameState | null> = {
+  subscribe: baseGameStateStore.subscribe,
+  set: (state) => baseGameStateStore.set(state && { ...state }),
+  update: (fn) =>
+    baseGameStateStore.update((state) => {
+      const next = fn(state);
+      return next && { ...next };
+    }),
+};
 
 export const syncStore = (state: GameState, syncImmediate = false): void => {
   gameStateStore.set(state);

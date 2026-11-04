@@ -86,6 +86,29 @@ describe('gameStateStore and state management', () => {
     );
   });
 
+  it('publishes a fresh top-level reference while nested state stays shared', () => {
+    // The game mutates the state in place and re-publishes the same
+    // object; Svelte 5 deriveds (the board's render glue) strict-compare
+    // by reference, so every publish must wrap the state in a fresh
+    // top-level envelope. Nested objects stay shared so references
+    // already held by the game keep seeing in-place mutations.
+    const state = getState();
+    const seen: (GameState | null)[] = [];
+    const unsubscribe = gameStateStore.subscribe((s) => {
+      seen.push(s);
+    });
+
+    gameStateStore.set(state);
+
+    const latest = seen[seen.length - 1];
+    expect(latest).not.toBe(state);
+    expect(latest?.dungeon).toBe(state.dungeon);
+    expect(latest?.heroes).toBe(state.heroes);
+    expect(latest?.settings).toBe(state.settings);
+
+    unsubscribe();
+  });
+
   it('damageIndicatorsStore reflects damage indicators and removeDamageIndicatorAction removes them', () => {
     dispatch((s) => {
       s.damageIndicators = [

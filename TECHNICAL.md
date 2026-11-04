@@ -77,7 +77,13 @@ The UI layer is deliberately thin. Only three `.svelte` components exist; the
 game view (`Dungeon.svelte`) is pure reactive glue — it derives state from the
 stores and forwards it to `DungeonBoardController`, a colocated plain-TS class
 that owns the canvases, the layered render loop, pan/drag/touch handling and
-all pointer/keyboard dispatch. The controller's pure decision parts are
+all pointer/keyboard dispatch. The glue preserves a Svelte 4 contract: game
+logic mutates the single `GameState` in place and re-publishes it, so the
+store wraps every publish in a fresh top-level envelope — Svelte 5 deriveds
+compare by reference, and an identical reference would leave the derived
+chain (and every canvas repaint it schedules) stale. Nested objects stay
+shared with the source state, so in-place mutations remain visible to
+references already held. The controller's pure decision parts are
 extracted into colocated modules with their own tests
 (`DungeonBoardSignatures.ts` — dirty-check keys gating each render layer,
 `DungeonBoardUiHit.ts` — the ordered "which UI element is under the pointer"
