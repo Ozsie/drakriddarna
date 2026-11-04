@@ -6,7 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { createRecordingContext } from '../uikit/testing/recordingContext';
 import type { UiEnv } from '../uikit/env';
-import { defaultTheme } from '../uikit/theme';
+import { defaultTheme } from '@hoard-engine/primitives';
+import { highContrastTheme } from './theme';
 import { defaultUiEnv } from './env';
 import {
   REGULAR_HEIGHT,
@@ -17,7 +18,6 @@ import { renderTopBar } from './TopBarRendering';
 import { renderSettings } from './SettingsRendering';
 import { renderWelcome } from './WelcomeRendering';
 import { DEFAULT_APP_SETTINGS } from '../settings/AppSettings';
-import { highContrastTheme } from './theme';
 
 const withTheme = (theme: typeof defaultTheme): UiEnv => ({
   ...defaultUiEnv,

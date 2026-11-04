@@ -1,0 +1,60 @@
+{
+	"name": "@hoard-engine/primitives",
+	"version": "0.1.0",
+	"description": "HOARD engine: theme tokens and canvas drawing primitives (text, geometry, clipping)",
+	"keywords": [
+		"canvas",
+		"theme",
+		"tokens",
+		"text",
+		"geometry",
+		"clipping",
+		"game"
+	],
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"sideEffects": false,
+	"engines": {
+		"node": ">=18"
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json && esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js",
+		"test": "vitest run",
+		"check": "tsc --noEmit",
+		"lint": "eslint src vitest.config.ts",
+		"lint:fix": "eslint src vitest.config.ts --fix",
+		"prettier": "prettier --check .",
+		"prettier:format": "prettier --write .",
+		"prepublishOnly": "npm run check && npm run build && npm test",
+		"prepare": "npm run build"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Ozsie/hoard-primitives.git"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@types/node": "^22.20.5",
+		"esbuild": "^0.28.2",
+		"eslint": "^10.14.0",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-prettier": "^5.0.0",
+		"prettier": "^3.1.0",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.72.1",
+		"vitest": "^5.1.0"
+	}
+}

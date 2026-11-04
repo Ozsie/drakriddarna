@@ -4,18 +4,16 @@
 // that is not exported from this file, that is a missing surface, not a
 // reason to deep-import (the boundary rules keep deep imports honest).
 //
-// The surface is organized top-down: the theme (design tokens), the
-// environment contracts, the drawing primitives, the kit widgets and the
-// components. The testing helpers are deliberately NOT part of this
-// surface: they exist for this repo's parity and sentinel suites and stay
-// under src/uikit/testing/ (a packaging step can expose them as a
-// subpath export if a consumer wants the harness).
+// The surface is organized top-down: the theme tokens and drawing
+// primitives (both from the @hoard-engine/primitives engine package), the
+// environment contracts, the kit widgets and the components. The testing
+// helpers are deliberately NOT part of this surface: they exist for
+// this repo's parity and sentinel suites and stay under
+// src/uikit/testing/ (a packaging step can expose them as a subpath
+// export if a consumer wants the harness).
 
-export * from './theme';
+export * from '@hoard-engine/primitives';
 export * from './env';
-export * from './primitives/geometry';
-export * from './primitives/roundedRect';
-export * from './primitives/text';
 export * from './kit/modalFrame';
 export * from './kit/button';
 export * from './kit/listRow';

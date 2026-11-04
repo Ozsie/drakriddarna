@@ -36,7 +36,9 @@ works through a chain of scenarios ("dungeons") forming a campaign.
 
 Runtime dependencies are the i18n stack (`sveltekit-i18n` with its
 `@sveltekit-i18n/extension-stores` store surface) and the standalone HOARD
-engine packages (`@hoard-engine/rng`, `@hoard-engine/grid`). Everything else
+engine packages (`@hoard-engine/rng`, `@hoard-engine/grid` and
+`@hoard-engine/primitives`, the last one in development in-repo under
+`packages/` and consumed through a `file:` dependency). Everything else
 is dev tooling.
 
 ## Architecture: logic engine behind a thin UI
@@ -560,10 +562,13 @@ Three layers of verification:
 The in-project canvas UI kit (`src/uikit/`, reference for consumers in
 [docs/ui-kit.md](./docs/ui-kit.md), migration history in
 [docs/ui-kit-inventory.md](./docs/ui-kit-inventory.md)) is a game-agnostic
-layer — theme tokens, primitives, kit widgets and components — extracted
+layer — kit widgets and components over the theme tokens and drawing
+primitives of the `@hoard-engine/primitives` engine package (text,
+geometry, clipping and the `UiTheme` contract) — extracted
 from the game's chrome rendering. The boundary is enforced in both
 directions by lint and an import-graph test: the kit imports no game code,
-no Svelte and no i18n packages, and game-logic modules never import the kit,
+no Svelte and no i18n packages — its single external dependency is
+`@hoard-engine/primitives` — and game-logic modules never import the kit,
 so headless benchmarks stay canvas-free.
 
 Components are driven by plain view models: the component in

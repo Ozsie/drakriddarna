@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRecordingContext } from '../testing/recordingContext';
-import { defaultTheme } from '../theme';
+import { defaultTheme } from '@hoard-engine/primitives';
 import { drawDialogScrim, drawModalFrame, drawModalHeader } from './modalFrame';
 
 const bounds = { x: 100, y: 50, width: 400, height: 300 };

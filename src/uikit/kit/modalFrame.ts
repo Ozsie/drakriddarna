@@ -3,10 +3,8 @@
 // the panel header line. Extracted 1:1 from the six modules that drew this
 // sequence inline (the parity snapshots stayed byte-identical).
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import type { Rect } from '../primitives/geometry';
-import { composeFont } from '../primitives/text';
-import type { UiTheme } from '../theme';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
+import { drawRoundedRect, composeFont } from '@hoard-engine/primitives';
 
 /** Corner radius of centered dialog panels. */
 export const MODAL_PANEL_RADIUS = 10;

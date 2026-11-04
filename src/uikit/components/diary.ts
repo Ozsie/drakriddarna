@@ -5,16 +5,16 @@
 // prebuilt by the game-side adapter; layout wraps through env.measure;
 // hits are semantic.
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import { isPointInRect, type Rect } from '../primitives/geometry';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
 import {
+  drawRoundedRect,
+  isPointInRect,
   PER_CHAR_WIDTH_FALLBACK,
   composeFont,
   measureTextWidth,
   wrapTextMeasured,
-} from '../primitives/text';
+} from '@hoard-engine/primitives';
 import { COMPACT_TOGGLE_SIZE, type UiContext, type UiEnv } from '../env';
-import type { UiTheme } from '../theme';
 
 export interface WinConditionItemVm {
   /** The formatted condition text, without the bullet. */

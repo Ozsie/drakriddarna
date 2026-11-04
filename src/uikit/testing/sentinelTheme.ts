@@ -3,7 +3,7 @@
 // sentinel theme, every color and font it writes must be (or contain) a
 // marker — a leaked style literal fails the test.
 
-import type { UiTheme } from '../theme';
+import type { UiTheme } from '@hoard-engine/primitives';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);

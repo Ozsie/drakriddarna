@@ -1,10 +1,8 @@
-// The theme token model for the canvas UI kit. Every color and font a
-// renderer writes comes from here; nothing under src/uikit or a converted
-// renderer holds a style literal (see docs/ui-kit-spec/03-theme-and-parameterization.md).
-//
-// Tokens are role-named, not value-named: two roles may hold the same value
-// today so a future theme can split them, and one role never changes
-// meaning between components.
+// The theme token model for canvas UIs. Every color and font a renderer
+// writes comes from here; nothing under a consuming kit holds a style
+// literal. Tokens are role-named, not value-named: two roles may hold
+// the same value today so a future theme can split them, and one role
+// never changes meaning between components.
 
 /** Recursively-optional variant of a theme, for overrides. */
 export type DeepPartial<T> = {

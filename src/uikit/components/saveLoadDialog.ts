@@ -6,9 +6,12 @@
 // fit and asks env.t for the "+N more" overflow line; hits are semantic
 // row ids.
 
-import { drawRoundedRect } from '../primitives/roundedRect';
-import { isPointInRect, type Rect } from '../primitives/geometry';
-import { composeFont } from '../primitives/text';
+import type { Rect, UiTheme } from '@hoard-engine/primitives';
+import {
+  drawRoundedRect,
+  isPointInRect,
+  composeFont,
+} from '@hoard-engine/primitives';
 import {
   drawDialogScrim,
   drawModalFrame,
@@ -17,7 +20,6 @@ import {
 import { drawButton } from '../kit/button';
 import { drawListRow, listRowStyles } from '../kit/listRow';
 import type { UiContext, UiEnv } from '../env';
-import type { UiTheme } from '../theme';
 
 export type SaveLoadDialogMode = 'save' | 'load';
 

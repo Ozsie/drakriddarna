@@ -1,9 +1,10 @@
 import type { UiTheme } from './theme';
 
-// Today's pixels as tokens: every value is copied verbatim from the
-// renderer it was extracted from, so the default theme reproduces the
-// pre-kit output exactly (proven by the parity snapshots). The same value
-// in different roles is a separate token so a theme can split them later.
+// The default token values: the historical UI chrome pixels, copied
+// verbatim from the renderers the tokens were extracted from, so the
+// default theme reproduces the pre-kit output exactly. The same value
+// in different roles is a separate token so a theme can split them
+// later.
 
 export const defaultTheme: UiTheme = {
   palette: {

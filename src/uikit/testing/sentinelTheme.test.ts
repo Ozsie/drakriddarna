@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createSentinelTheme } from './sentinelTheme';
-import { defaultTheme } from '../theme';
+import { defaultTheme } from '@hoard-engine/primitives';
 
 describe('createSentinelTheme', () => {
   it('marks every string token with its path', () => {

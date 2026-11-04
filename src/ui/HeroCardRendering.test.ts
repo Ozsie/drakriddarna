@@ -4,9 +4,12 @@ import {
   renderHeroCards,
   getHeroCardsHit,
 } from './HeroCardRendering';
-import { measureTextWidth, truncateText } from '../uikit/primitives/text';
-import { isPointInRect as isPointInBounds } from '../uikit/primitives/geometry';
-import { drawRoundedRect } from '../uikit/primitives/roundedRect';
+import {
+  measureTextWidth,
+  truncateText,
+  isPointInRect as isPointInBounds,
+  drawRoundedRect,
+} from '@hoard-engine/primitives';
 import {
   Colour,
   Level,

@@ -1,9 +1,9 @@
 // Text primitives: measuring, ellipsized truncation, wrapping and font
 // composition. All of them are deterministic given a context (or the
-// per-character fallback when no context is available), which is what the
-// parity snapshots rely on.
+// per-character fallback when no context is available), so consumers
+// can pin and replay exact layout output.
 
-import type { UiTheme } from '../theme';
+import type { UiTheme } from './theme';
 
 /**
  * Composes a canvas font string from theme tokens:

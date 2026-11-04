@@ -5,9 +5,11 @@
 // historical behavior exactly: the default theme, the shared translator
 // and width-derived compact mode.
 
-import { defaultTheme } from '../uikit/theme';
+import {
+  defaultTheme,
+  measureTextWidth as kitMeasureTextWidth,
+} from '@hoard-engine/primitives';
 import type { LayoutMode, TextMeasure, UiContext, UiEnv } from '../uikit/env';
-import { measureTextWidth as kitMeasureTextWidth } from '../uikit/primitives/text';
 import { isCompactUi } from './UiMode';
 import { i18nTranslator } from './i18nAdapter';
 import { uiAssetProvider } from './assets';

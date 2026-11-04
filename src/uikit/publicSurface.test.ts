@@ -51,8 +51,13 @@ const collectDeepKitImports = (dir: string): string[] => {
 
 const indexReExports = (): string[] => {
   const source = readFileSync(join(KIT_ROOT, 'index.ts'), 'utf8');
-  return [...source.matchAll(/export \* from '([^']+)';/g)].map((m) =>
-    resolve(KIT_ROOT, m[1]),
+  return (
+    [...source.matchAll(/export \* from '([^']+)';/g)]
+      .map((m) => m[1])
+      // Package re-exports (e.g. '@hoard-engine/primitives') are resolved
+      // by node, not by the kit's file tree — only kit modules count.
+      .filter((specifier) => specifier.startsWith('.'))
+      .map((specifier) => resolve(KIT_ROOT, specifier))
   );
 };
 

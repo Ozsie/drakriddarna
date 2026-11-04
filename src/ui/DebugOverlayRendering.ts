@@ -6,8 +6,8 @@ import {
 } from '../monsters/behavior';
 import { getHeroCardsLayout } from './HeroCardRendering';
 import { formatDuration, getCurrentDungeonTimeMs } from '../core';
-import { composeFont } from '../uikit/primitives/text';
-import { defaultTheme, type UiTheme } from '../uikit/theme';
+import type { UiTheme } from '@hoard-engine/primitives';
+import { composeFont, defaultTheme } from '@hoard-engine/primitives';
 
 export interface DebugPrintoutCounts {
   totalReRenders: number;

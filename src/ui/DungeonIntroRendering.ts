@@ -8,7 +8,7 @@
 
 import type { GameState } from '../types';
 import type { UiEnv } from '../uikit/env';
-import type { Rect } from '../uikit/primitives/geometry';
+import type { Rect } from '@hoard-engine/primitives';
 import {
   hitTestDungeonIntro,
   layoutDungeonIntro,

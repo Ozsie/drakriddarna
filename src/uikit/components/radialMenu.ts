@@ -7,9 +7,9 @@
 // are semantic button ids.
 
 import { drawSpriteFrame } from '../kit/spriteFrame';
-import { composeFont } from '../primitives/text';
+import type { UiTheme } from '@hoard-engine/primitives';
+import { composeFont } from '@hoard-engine/primitives';
 import type { SpriteRef, UiContext } from '../env';
-import type { UiTheme } from '../theme';
 
 export interface RadialButtonVm {
   /** Hit-test identity: the button's index in the ring. */

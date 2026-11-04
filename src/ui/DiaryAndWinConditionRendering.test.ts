@@ -8,7 +8,7 @@ import {
   getDiaryAndWinConditionsHit,
   renderDiaryAndWinConditions,
 } from './DiaryAndWinConditionRendering';
-import { measureTextWidth, wrapText } from '../uikit/primitives/text';
+import { measureTextWidth, wrapText } from '@hoard-engine/primitives';
 import {
   ConditionType,
   MonsterType,
