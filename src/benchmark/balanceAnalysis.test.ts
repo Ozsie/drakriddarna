@@ -1,10 +1,14 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
 import { campaigns } from '../campaigns';
 import { allDepthConfigs } from '../campaigns/brogue/generator/config';
 import { loadTranslations } from '#lib/translations/index.js';
 import { runGameMasterBenchmark, formatBenchmarkReport } from './benchmark';
+
+// Whole-game benchmarks exceed the 5s unit-test default; this file runs
+// only under BENCHMARK=true (npm run balanceAnalysis).
+vi.setConfig({ testTimeout: 60000 });
 
 const GMS = ['storyTeller', 'tactician', 'brutalOverlord'];
 
