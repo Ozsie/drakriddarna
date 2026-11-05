@@ -18,10 +18,10 @@ everything lives in `src/`, coupled through the shared `GameState` type, the
 rendering. Each package section names the coupling that must be removed first.
 (The extractions so far are done: `@hoard-engine/rng`,
 `@hoard-engine/grid`, `@hoard-engine/primitives`,
-`@hoard-engine/audio`, `@hoard-engine/lighting` and
-`@hoard-engine/saves` are published on npm and consumed as
-dependencies — see their sections below for the layout and tooling
-pattern the next packages follow.)
+`@hoard-engine/audio`, `@hoard-engine/lighting`,
+`@hoard-engine/saves` and `@hoard-engine/directors` are published on
+npm and consumed as dependencies — see their sections below for the
+layout and tooling pattern the next packages follow.)
 
 ## Package map
 
@@ -423,13 +423,54 @@ plain Node. The framework/migrator split the extraction performed:
 
 ### @hoard-engine/directors — source: `src/gameMasters/` (types, hook dispatch, alias
 
-resolution)
+resolution) — EXTRACTED
 
 The hook/dispatch shell for director-style systems: hook types, an event
 dispatcher, id/alias resolution. The concrete game masters and all their texts
 are game content and stay in the game. The framework is cadence-agnostic: this
 game uses turn-bound hooks; a real-time consumer would register interval-based
 ones.
+
+**Current state:** published on npm as `@hoard-engine/directors`
+(v0.1.0) and consumed by the game as a dependency; its source folder
+has left this repo and lives next to the hoard `audio`/`rng`/
+`grid`/`primitives`/`lighting`/`saves` packages. It follows the
+established package layout: self-contained folder with build,
+publishing, testing, lint and prettier scripts, its own `AGENTS.md`
+and `README.md`, boundary and public-surface tests plus colocated
+unit tests over synthetic directors and hook maps, so the suite runs
+in plain Node. The framework/content split the extraction performed:
+
+- The director identity contract moved with the package: `Director` —
+  an id plus an optional `initialState` factory — which the game's
+  `GameMaster` type satisfies structurally, without an import.
+- Hook dispatch moved with the package: `dispatchDirectorEvent`
+  emits a named event to an optional hook on a plain object host
+  (a director or one of its hook groups) and returns the hook's
+  result, or `undefined` when absent. Hosts may carry data members;
+  only their function-typed members are events
+  (`DirectorEventNames`). The game's turn flow (`src/game.ts`), the
+  event draw (`src/events/EventsLogic.ts`) and the benchmark event
+  deck emit through it at their historical call sites.
+- Override resolution moved with the package: `resolveDirectorHook`
+  picks the first group defining an event over the base host — the
+  former `gm.rules?.x ?? gm.x` dual form in `src/core/combat.ts` and
+  `src/secrets/SecretsLogic.ts`.
+- Id/alias resolution moved with the package:
+  `createDirectorRegistry` resolves an injected, live directors
+  record through the historical chain — alias, then id, then the
+  default, then the first registered. The game keeps the knowledge:
+  `src/gameMasters/index.ts` keeps the `import.meta.glob` discovery
+  and the content of `GAME_MASTER_ALIASES`/`DEFAULT_GAME_MASTER_ID`
+  (difficulty words and spelling variants are game content) and
+  delegates `getGameMaster`/`isKnownGameMaster` to the registry,
+  signatures unchanged.
+- The concrete game masters, their tuned values, their translations
+  and the hook maps (`GameMasterLifecycleHooks`,
+  `GameMasterRules`, `EventDifficulty` on `GameState`-typed
+  signatures) stayed with the game: personalities and texts are
+  game content, and the hook signatures carry game types, per the
+  consumer-defined-contract rule.
 
 ### scene — source: the world-rendering files scattered today:
 
@@ -490,6 +531,8 @@ later:
    **Done:** published as `@hoard-engine/saves` (v0.1.0), consumed as a
    dependency (see the package section above).
 7. `@hoard-engine/directors` — framework only; content stays.
+   **Done:** published as `@hoard-engine/directors` (v0.1.0), consumed
+   as a dependency (see the package section above).
 8. `scene` — last and largest: needs the render/logic separation complete and
    view-model contracts in place. Camera/viewport and map streaming are
    out-of-scope extensions for a future consumer, not part of the extraction.

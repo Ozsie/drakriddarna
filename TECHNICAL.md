@@ -38,8 +38,8 @@ Runtime dependencies are the i18n stack (`sveltekit-i18n` with its
 `@sveltekit-i18n/extension-stores` store surface) and the standalone HOARD
 engine packages (`@hoard-engine/rng`, `@hoard-engine/grid`,
 `@hoard-engine/primitives`, `@hoard-engine/audio`,
-`@hoard-engine/lighting` and `@hoard-engine/saves`). Everything else is
-dev tooling.
+`@hoard-engine/lighting`, `@hoard-engine/saves` and
+`@hoard-engine/directors`). Everything else is dev tooling.
 
 ## Architecture: logic engine behind a thin UI
 
@@ -321,12 +321,17 @@ On top of that sits the **Game Master** system — the game's name for what
 other products call a difficulty director, in the spirit of Left 4 Dead's AI
 Director. A Game Master (`src/gameMasters/`) is a data-plus-hooks object that
 modifies dice odds, monster AI weights, event deck composition and pacing, and
-starting equipment. Three ship with the game: StoryTeller (easy), Tactician
-(default), BrutalOverlord (hard). Like campaigns, they are auto-discovered,
-and they carry per-monster _director states_ (`EASE`/`PUSH`/`NEUTRAL`) that
-shift monster aggression based on party HP — rubber-banding rather than a flat
-difficulty multiplier. The full field-by-field reference for the `GameMaster`
-type lives in [docs/gameMaster-definition.md](./docs/gameMaster-definition.md).
+starting equipment. The dispatch mechanics live in the `@hoard-engine/directors`
+engine package — id/alias resolution over the game's registry, turn-flow event
+dispatch and override resolution across the nested `rules` group — while the
+game keeps the personalities and the knowledge: the folder discovery, the alias
+table and every hook signature. Three ship with the game: StoryTeller (easy),
+Tactician (default), BrutalOverlord (hard). Like campaigns, they are
+auto-discovered, and they carry per-monster _director states_
+(`EASE`/`PUSH`/`NEUTRAL`) that shift monster aggression based on party HP —
+rubber-banding rather than a flat difficulty multiplier. The full field-by-field
+reference for the `GameMaster` type lives in
+[docs/gameMaster-definition.md](./docs/gameMaster-definition.md).
 
 ## Rendering: hand-rolled 2D, layered and on-demand
 

@@ -16,6 +16,7 @@ import { getDifficulty } from './DifficultLevels';
 import { flashActor, playActorAttack, playActorDeath } from './ActorAnimation';
 import { createBloodSplatter, createProjectile } from '../combat';
 import { soundEffectManager } from '../audio';
+import { resolveDirectorHook } from '@hoard-engine/directors';
 
 export const ATTACK_BONUS = 'ATTACK_BONUS';
 export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
@@ -123,7 +124,7 @@ export const processActorDowned = (
   if (state.heroes.includes(target)) {
     dropSecretRevealItems(state, target as Hero);
     const gm = getDifficulty(state);
-    const onHeroDowned = gm.rules?.onHeroDowned ?? gm.onHeroDowned;
+    const onHeroDowned = resolveDirectorHook(gm, 'onHeroDowned', gm.rules);
     onHeroDowned?.(target as Hero, state);
   } else if (!killedByHero) {
     dropDownedMonster(state, target as Monster);
@@ -334,8 +335,11 @@ export const takeDamage = (
   }
   const gm = getDifficulty(state);
   if (isHeroSource && !isHeroTarget) {
-    const modifyHeroDmg =
-      gm.rules?.modifyHeroDamageDealt ?? gm.modifyHeroDamageDealt;
+    const modifyHeroDmg = resolveDirectorHook(
+      gm,
+      'modifyHeroDamageDealt',
+      gm.rules,
+    );
     if (modifyHeroDmg) {
       damage = Math.max(
         0,
@@ -343,8 +347,11 @@ export const takeDamage = (
       );
     }
   } else if (!isHeroSource && isHeroTarget) {
-    const modifyMonsterDmg =
-      gm.rules?.modifyMonsterDamageDealt ?? gm.modifyMonsterDamageDealt;
+    const modifyMonsterDmg = resolveDirectorHook(
+      gm,
+      'modifyMonsterDamageDealt',
+      gm.rules,
+    );
     if (modifyMonsterDmg) {
       damage = Math.max(
         0,
