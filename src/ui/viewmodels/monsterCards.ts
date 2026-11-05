@@ -4,8 +4,8 @@
 
 import type { GameState, Monster } from '../../types';
 import { findVisibleMonsters } from '../../monsters/MonsterLogic';
-import type { Translator } from '../../uikit/env';
-import type { MonsterCardsViewModel } from '../../uikit/components/monsterCards';
+import type { Translator } from '@hoard-engine/uikit';
+import type { MonsterCardsViewModel } from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 const translateOrFallback = (

@@ -5,7 +5,7 @@
 // Monster-carrying hit for the cascade — so callers work unchanged.
 
 import type { GameState, Monster } from '../types';
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv, UiContext } from '@hoard-engine/uikit';
 import type { Rect } from '@hoard-engine/primitives';
 import {
   hitTestMonsterCards,
@@ -13,7 +13,7 @@ import {
   renderMonsterCards as renderMonsterCardsComponent,
   type MonsterCardsLayout as KitLayout,
   type MonsterCardsViewModel,
-} from '../uikit/components/monsterCards';
+} from '@hoard-engine/uikit';
 import { toMonsterCardsViewModel } from './viewmodels/monsterCards';
 import { legacyUiEnv, layoutModeForWidth } from './env';
 import { uiAssetProvider } from './assets';

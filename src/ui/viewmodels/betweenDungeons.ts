@@ -17,7 +17,7 @@ import { ItemType } from '../../types';
 import { SCORE_POINTS_PER_SECRET, formatDuration } from '../../core';
 import { MAX_HIGH_SCORES } from '../../saves/HighScoresLogic';
 import { getHeroTradableItems } from '../../dungeon/BetweenDungeonsLogic';
-import type { Translator } from '../../uikit/env';
+import type { Translator } from '@hoard-engine/uikit';
 import type {
   BetweenDungeonsViewModel,
   CampaignCompleteHeroRowVm,
@@ -27,7 +27,7 @@ import type {
   ScoreSectionVm,
   TradeItemVm,
   WipeChoiceVm,
-} from '../../uikit/components/betweenDungeons';
+} from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 import { actorColourKey } from '../theme';
 

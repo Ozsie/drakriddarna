@@ -113,7 +113,7 @@ import {
   type WelcomeButtonId,
 } from '../ui/UIRendering';
 import { createUiEnv, defaultUiEnv, envIdentity } from '../ui/env';
-import type { UiEnv } from '../uikit';
+import type { UiEnv } from '@hoard-engine/uikit';
 import { getCampaign } from '../campaigns';
 import {
   appSettingsStore,

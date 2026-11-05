@@ -13,15 +13,15 @@ import {
   type MenuCallbacks,
   getDebugMenuItemsForView,
 } from '../menu/MenuLogic';
-import type { UiEnv } from '../uikit';
-import type { Rect } from '../uikit';
+import type { UiEnv } from '@hoard-engine/uikit';
+import type { Rect } from '@hoard-engine/uikit';
 import {
   hitTestMenu,
   layoutMenu,
   renderMenu as renderMenuComponent,
   type MenuHit,
   type MenuLayout as KitLayout,
-} from '../uikit/components/menu';
+} from '@hoard-engine/uikit';
 import { toDebugMenuViewModel } from './viewmodels/debugMenu';
 import { legacyUiContext } from './env';
 

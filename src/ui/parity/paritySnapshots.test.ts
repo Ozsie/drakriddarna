@@ -11,7 +11,7 @@
 
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { loadTranslations } from '#lib/translations/index.js';
-import { createRecordingContext } from '../../uikit/testing/recordingContext';
+import { createRecordingContext } from '@hoard-engine/uikit/testing';
 import {
   COMPACT_WIDTH,
   REGULAR_HEIGHT,

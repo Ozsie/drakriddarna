@@ -9,14 +9,14 @@
 
 import type { GameState, Hero, Item } from '../types';
 import { liveHeroes } from '../hero/HeroLogic';
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv, UiContext } from '@hoard-engine/uikit';
 import {
   hitTestHeroCards,
   layoutHeroCards,
   renderHeroCards as renderHeroCardsComponent,
   type HeroCardsLayout as KitLayout,
   type HeroCardsViewModel,
-} from '../uikit/components/heroCards';
+} from '@hoard-engine/uikit';
 import { toHeroCardsViewModel } from './viewmodels/heroCards';
 import { legacyUiEnv, layoutModeForWidth } from './env';
 import { uiAssetProvider } from './assets';

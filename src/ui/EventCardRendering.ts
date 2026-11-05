@@ -7,7 +7,7 @@
 // snapshots cover the whole chain.
 
 import type { GameState, TurnEvent } from '../types';
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv, UiContext } from '@hoard-engine/uikit';
 import type { Rect } from '@hoard-engine/primitives';
 import {
   hitTestEventCard,
@@ -15,7 +15,7 @@ import {
   renderEventCard as renderEventCardComponent,
   type EventCardHit,
   type EventCardLayout as KitLayout,
-} from '../uikit/components/eventCard';
+} from '@hoard-engine/uikit';
 import { toEventCardViewModel } from './viewmodels/eventCard';
 import { legacyUiEnv } from './env';
 import { uiAssetProvider } from './assets';

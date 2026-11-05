@@ -5,8 +5,8 @@
 // only exist then); the asset id of the background art is resolved here
 // so the component only knows the port.
 
-import type { Translator } from '../../uikit';
-import type { WelcomeViewModel } from '../../uikit';
+import type { Translator } from '@hoard-engine/uikit';
+import type { WelcomeViewModel } from '@hoard-engine/uikit';
 import { AssetId } from '../assets';
 import { i18nTranslator } from '../i18nAdapter';
 

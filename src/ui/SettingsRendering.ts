@@ -7,7 +7,7 @@
 // cover the whole chain.
 
 import type { AppSettings } from '../settings/AppSettings';
-import type { UiEnv } from '../uikit';
+import type { UiEnv } from '@hoard-engine/uikit';
 import {
   hitTestCredits,
   hitTestSettings,
@@ -21,7 +21,7 @@ import {
   type SettingsHit as KitSettingsHit,
   type SettingsLayout,
   type SettingsLayout as KitSettingsLayout,
-} from '../uikit/components/settings';
+} from '@hoard-engine/uikit';
 import {
   toCreditsViewModel,
   toSettingsViewModel,
@@ -33,7 +33,7 @@ import { i18nTranslator } from './i18nAdapter';
 export type { SettingsRowId } from './viewmodels/settings';
 export type { CreditsRowDefinition } from './viewmodels/settings';
 export { CREDITS_ROWS } from './viewmodels/settings';
-export { getSliderValueFromX } from '../uikit/components/settings';
+export { getSliderValueFromX } from '@hoard-engine/uikit';
 
 export type {
   CreditsLayout,
@@ -41,7 +41,7 @@ export type {
   SettingsLayout,
   SettingsRowLayout,
   SettingsSliderLayout,
-} from '../uikit/components/settings';
+} from '@hoard-engine/uikit';
 
 export interface RenderSettingsOptions {
   /** Kept for option-object symmetry; the render call takes it directly. */

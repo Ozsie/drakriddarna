@@ -3,7 +3,7 @@
 // historical width-derived rule still applies (legacy call sites).
 
 import { describe, expect, it } from 'vitest';
-import type { UiEnv } from '../uikit/env';
+import type { UiEnv } from '@hoard-engine/uikit';
 import { defaultUiEnv, layoutModeForWidth } from './env';
 import { getHeroCardsLayout } from './HeroCardRendering';
 import { getMonsterCardsLayout } from './MonsterCardRendering';

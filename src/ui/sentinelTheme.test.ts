@@ -6,10 +6,10 @@
 
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { Colour } from '../types';
-import { createRecordingContext } from '../uikit/testing/recordingContext';
-import { createSentinelTheme } from '../uikit/testing/sentinelTheme';
-import type { UiEnv } from '../uikit';
-import { defaultTheme } from '../uikit';
+import { createRecordingContext } from '@hoard-engine/uikit/testing';
+import { createSentinelTheme } from '@hoard-engine/uikit/testing';
+import type { UiEnv } from '@hoard-engine/uikit';
+import { defaultTheme } from '@hoard-engine/uikit';
 import { defaultUiEnv } from './env';
 import {
   COMPACT_WIDTH,

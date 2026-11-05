@@ -59,7 +59,6 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/saves/         named-save storage facade over @hoard-engine/saves (labels, hints)
 ├── src/store/         Svelte stores wrapping the game state and the app phase
 ├── src/settings/      app-level audio settings (persistence + live application)
-├── src/uikit/         game-agnostic canvas UI kit (theme tokens, primitives, kit widgets, components; publishes through index.ts)
 ├── src/ui/            pure functions that draw UI panels onto canvases
 ├── src/components/    Dungeon.svelte (thin shell) + DungeonBoardController
 └── src/audio/         game audio facades: sound-cue table, fallback tracks, intensity heuristic (over @hoard-engine/audio)
@@ -578,26 +577,31 @@ Three layers of verification:
 
 ## The canvas UI kit
 
-The in-project canvas UI kit (`src/uikit/`, reference for consumers in
-[docs/ui-kit.md](./docs/ui-kit.md), migration history in
-[docs/ui-kit-inventory.md](./docs/ui-kit-inventory.md)) is a game-agnostic
-layer — kit widgets and components over the theme tokens and drawing
-primitives of the `@hoard-engine/primitives` engine package (text,
-geometry, clipping and the `UiTheme` contract) — extracted
+The canvas UI kit (`@hoard-engine/uikit`, a published engine package —
+its longer consumer reference is the package repository's `ui-kit.md`;
+the kit's migration history in this repo lives in
+[docs/ui-kit-inventory.md](./docs/ui-kit-inventory.md)) is a
+game-agnostic layer — kit widgets and components over the theme tokens
+and drawing primitives of the `@hoard-engine/primitives` engine package
+(text, geometry, clipping and the `UiTheme` contract) — extracted
 from the game's chrome rendering. The boundary is enforced in both
-directions by lint and an import-graph test: the kit imports no game code,
-no Svelte and no i18n packages — its single external dependency is
-`@hoard-engine/primitives` — and game-logic modules never import the kit,
-so headless benchmarks stay canvas-free.
+directions: the package's lint and import-graph test keep it free of
+game code, Svelte and i18n packages — its single external dependency is
+`@hoard-engine/primitives` — and this repo's lint keeps game-logic
+modules from importing `@hoard-engine/uikit`, so headless benchmarks
+stay canvas-free.
 
-Components are driven by plain view models: the component in
-`src/uikit/components/` does layout, semantic hit testing and rendering, the
-adapter in `src/ui/viewmodels/` is the only GameState/AppSettings/campaign
+Components are driven by plain view models: the component inside the
+package does layout, semantic hit testing and rendering, the adapter
+in `src/ui/viewmodels/` is the only GameState/AppSettings/campaign
 reader, and a game-side facade keeps the historical entry points so the
-controller and hit cascade work unchanged. The kit ships no default strings
-and no style literals — labels arrive through a `UiEnv` translator, colors
-and fonts through theme tokens — and `src/uikit/index.ts` is its deliberate
-public surface, checked by a completeness test.
+controller and hit cascade work unchanged. The kit ships no default
+strings and no style literals — labels arrive through a `UiEnv`
+translator, colors and fonts through theme tokens — and the package
+entry (`@hoard-engine/uikit`, plus the `@hoard-engine/uikit/testing`
+harness subpath) is its deliberate public surface, checked by the
+package's completeness test and the game-side surface test
+(`src/ui/publicSurface.test.ts`).
 
 A verification net guards the extraction: a recording context (a stub
 `CanvasRenderingContext2D` that logs every call with a deterministic

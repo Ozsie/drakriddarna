@@ -12,14 +12,17 @@ lighting, dice), pure I/O abstractions (audio, saves), and pure rendering
 (primitives, UI chrome, scene). Everything genre- or content-specific stays in
 this repository.
 
-This is a target architecture, not a description of current state: today
-everything lives in `src/`, coupled through the shared `GameState` type, the
-`#lib/translations/index.js` i18n singleton, direct audio imports, and colocated
-rendering. Each package section names the coupling that must be removed first.
-(The extractions so far are done: `@hoard-engine/rng`,
+This is a target architecture, not a description of current state: eight of
+the packages are published and consumed as dependencies, and what remains in
+`src/` is still coupled through the shared `GameState` type, the
+`#lib/translations/index.js` i18n singleton, direct imports of the
+`soundEffectManager` facade, and colocated rendering. Each package section
+names the coupling its extraction removed — and, for `scene`, still must
+remove. (The extractions so far are done: `@hoard-engine/rng`,
 `@hoard-engine/grid`, `@hoard-engine/primitives`,
 `@hoard-engine/audio`, `@hoard-engine/lighting`,
-`@hoard-engine/saves` and `@hoard-engine/directors` are published on
+`@hoard-engine/saves`, `@hoard-engine/directors` and
+`@hoard-engine/uikit` are published on
 npm and consumed as dependencies — see their sections below for the
 layout and tooling pattern the next packages follow.)
 
@@ -33,8 +36,9 @@ layout and tooling pattern the next packages follow.)
 @hoard-engine/saves      versioned save framework + migration registry
 @hoard-engine/directors  hook/dispatch framework for game-master-style directors
 @hoard-engine/time       day/cycle/season calendar (future; see Future candidates)
+@hoard-engine/input      key bindings, action dispatch, touch gestures (future; see Future candidates)
 @hoard-engine/primitives text, geometry, clipping, theme tokens
-@hoard-engine/uikit      UI chrome: widgets, components       (exists as src/uikit/)
+@hoard-engine/uikit      UI chrome: widgets, components       (source: src/uikit/)
 @hoard-engine/scene      world canvas: tiles, walls, light composite, sprites, VFX
 game              logic + content + adapters             (this repo)
 ```
@@ -472,13 +476,71 @@ in plain Node. The framework/content split the extraction performed:
   game content, and the hook signatures carry game types, per the
   consumer-defined-contract rule.
 
+### @hoard-engine/uikit — source: `src/uikit/` — EXTRACTED
+
+The game-agnostic canvas UI kit, lifted into a package once its
+prerequisites were already in place from the earlier lifts: the theme
+tokens and drawing primitives live in `@hoard-engine/primitives` (its
+single deliberate dependency, per the two-consumer rule — the future
+`scene` package consumes primitives directly, never this package), the
+component contract (`UiEnv`/`UiContext`, layout → hitTest → render over
+plain view models) had been enforced in-repo for the full migration.
+
+**Current state:** published on npm as `@hoard-engine/uikit` (v0.1.0)
+and consumed by the game as a dependency; its source folder has left
+this repo and lives next to the other hoard packages. The kit/package
+split the lift performed:
+
+- The whole former `src/uikit/` moved with the package: the `env.ts`
+  environment contracts (`UiEnv`, `UiContext`, `Translator`,
+  `AssetProvider`, `SpriteRef`), the five kit widgets (modalFrame,
+  button, listRow, textInput, spriteFrame), the 14 components (topBar,
+  heroCards, monsterCards, radialMenu, dungeonIntro, menu, welcome,
+  saveLoadDialog, newGameDialog, heroSelection, settings/credits,
+  eventCard, diary, betweenDungeons) and the test harness.
+- The export map has two entries: `.` (the built index — the primitives
+  surface re-exported, the contracts, the widgets, the components) and
+  the **required** `./testing` subpath (the recording context, the
+  sentinel theme, the literal-budget counter), so the game keeps its
+  parity and sentinel suites unchanged: they import
+  `@hoard-engine/uikit/testing` where they used to import
+  `src/uikit/testing/*`.
+- The kit-side tooling moved with the package: the boundary test
+  (module-relative now; the external import set is exactly
+  `{@hoard-engine/primitives}`), the public-surface completeness test
+  (now package-internal — the index re-exports every source module) and
+  the error-side lint rules (the kit import restriction and the color
+  literal sentinel). The package carries its own build (tsc
+  declarations plus esbuild ESM bundles for both entries, primitives
+  external), its own AGENTS.md and README.md, and its longer consumer
+  reference (`ui-kit.md`, the former `docs/ui-kit.md` with its paths
+  rewritten).
+- The game keeps the knowledge: `src/ui/viewmodels/` (the GameState
+  adapters), `src/ui/env.ts` (theme, layout mode, translator, measure),
+  `src/ui/i18nAdapter.ts`, `src/ui/assets.ts` (the asset port), the
+  `*Rendering.ts` facades with their historical entry points, the parity
+  snapshots and the sentinels — all unchanged, importing through
+  `@hoard-engine/uikit`. The game-side completeness net is re-scoped
+  (`src/ui/publicSurface.test.ts`): the game imports the kit only
+  through the package entry points, and the reverse lint rule
+  (game-logic modules cannot import the kit) now targets the package
+  specifier.
+
 ### scene — source: the world-rendering files scattered today:
 
 `src/dungeon/DungeonRendering.ts`, `TileTextureCache.ts`, `TilesetLogic.ts`,
 `WallRendering`/`DoorRendering`/`TerrainRendering`, the render half of
-`LightRendering.ts`, `src/core/ActorSpriteRendering.ts` +
-`ActorAnimation.ts`, `src/monsters/MonsterRendering.ts`,
-`src/combat/DamageIndicatorRendering.ts`
+`LightRendering.ts`, `src/core/ImageCache.ts`, `src/core/ActorSpriteRendering.ts` +
+`ActorAnimation.ts`, `src/monsters/MonsterRendering.ts`, the actor/prop
+sprite renderers (`src/hero/HeroRendering.ts`,
+`src/items/ItemSpriteRendering.ts`, `src/items/ItemRendering.ts`),
+`src/combat/DamageIndicatorRendering.ts`. `ImageCache.ts` — the
+per-URL image cache shared by actor sheets, item sheets and the UI asset
+port — is generic but browser-bound by nature; it folds into `scene`
+rather than standing as its own package. The sprite renderers
+(`HeroRendering`, `ItemRendering`) import `GameState` and draw named
+game tiles, so like the other scene sources they arrive as view models
+under adapters, with the tile references staying game content.
 
 The world canvas renderer: draw-ordered layer compositing (terrain →
 walls/doors → actors → light → VFX), tileset handling with texture caching and
@@ -497,9 +559,13 @@ what uikit already did with `UiEnv.t`:
 - **Split `GameState`.** Separate engine-level state (grid, actors, turn
   counter, RNG seed, timers) from game data (heroes, items, dungeon content).
   Each package then consumes only its own slice, passed in by the game.
-- **Inject i18n.** `#lib/translations/index.js` is imported by logic modules
-  (`core/logger.ts`, `core/combat.ts`, `MonsterLogic`, `TerrainLogic`, ...).
-  Logic emits message data through an injected log/message provider.
+- **Inject i18n.** Largely done: combat, monster and terrain logic now emit
+  message data through `addLog` instead of importing the singleton. The
+  remaining direct imports of `#lib/translations/index.js` outside routes
+  and tests are `core/logger.ts` (the `i18n()` lookup helper forming the
+  seam) and the locale lifecycle (`menu/MenuLogic.ts`,
+  `store/gameStateStore.ts`, `components/DungeonBoardController.ts`) —
+  app-shell seams, not engine seams.
 - **Invert audio.** Replace direct `soundEffectManager` imports in logic with
   sound-cue data plus a game-side adapter.
 - **Separate compute from render.** Rendering files colocated in logic
@@ -533,7 +599,12 @@ later:
 7. `@hoard-engine/directors` — framework only; content stays.
    **Done:** published as `@hoard-engine/directors` (v0.1.0), consumed
    as a dependency (see the package section above).
-8. `scene` — last and largest: needs the render/logic separation complete and
+8. `@hoard-engine/uikit` — the in-repo kit was already an isolated leaf
+   over `@hoard-engine/primitives`; the lift is a package move plus the
+   `./testing` subpath export (see the package section above).
+   **Done:** published as `@hoard-engine/uikit` (v0.1.0), consumed as
+   a dependency; `src/uikit/` has left this repo.
+9. `scene` — last and largest: needs the render/logic separation complete and
    view-model contracts in place. Camera/viewport and map streaming are
    out-of-scope extensions for a future consumer, not part of the extraction.
 
@@ -547,5 +618,71 @@ policy; the packages contain no game content by construction.
 ## Future candidates
 
 - `@hoard-engine/time` — a game clock/calendar leaf (day length, cycles, seasons) that
-  feeds lighting levels and audio intensity. Listed as a candidate, not part of
-  the initial set; it has no source code to extract yet.
+  feeds lighting levels and audio intensity. It now has source to seed it:
+  the wall-clock timing in `src/core/timer.ts` is generic machinery under
+  game vocabulary — an accumulated-elapsed-plus-`runningFrom` segment
+  accumulator updated without per-frame writes, the
+  `checkpointDungeonTimer`/`resumeDungeonTimer` rebase pair around
+  serialize/deserialize (so an offline gap is not counted), and the pure
+  `formatDuration`. A calendar and run timing are distinct features; if
+  both extract they would be two exports of one leaf, not two packages.
+  Low priority: the machinery is small and works fine behind its
+  `GameState`-typed facade, and the timer's dungeon/campaign semantics
+  stay with the game regardless.
+- `@hoard-engine/input` — the framework half of `src/input/`. The
+  `InputManager` class is a generic leaf in game costume: a rebindable
+  key-binding registry (bind/unbind/set/query, guarded against
+  re-entrancy by cloning), an action-to-handlers dispatcher with
+  enable/disable, a key handler that ignores text-field targets, and a
+  swipe classifier (distance/time thresholds, octant angles, optional
+  diagonals). `TouchPanLogic.ts` is already pure: the two-finger-centroid
+  pan state machine has no imports at all. The extraction has the same
+  shape as audio's: the `InputAction` enum values and default key
+  bindings are game vocabulary, `registerDefaultDispatchers` wires the
+  store actions, and `$app/env` supplies the browser flag. The package
+  would be generic over the action type with injected bindings and
+  dispatch; the game keeps the enum, the defaults, the dispatchers, the
+  `$app` seam and the singleton, mirroring the `SoundEffectManager`
+  facade pattern. Like uikit it is browser-bound by nature
+  (Keyboard/Touch events); its tests run in plain Node over stub events.
+  Two-consumer check: weaker than most — the second consumer is the
+  benchmark's `bot.ts` turn injector, which currently builds its own
+  DIRECTIONS table.
+
+## Evaluated and rejected (November 2026 review)
+
+A November 2026 review pass compared this spec with what remains in
+`src/`. The published packages and their facades match the spec above,
+including the open-item ledger: the sound-cue inversion is still open
+(12 modules import the `soundEffectManager` facade) and the scene
+extraction (step 9) has not started. Besides the two future candidates
+above, these framework-looking modules were examined and stay in the
+game:
+
+- `src/dungeon/dungeonParser.ts` + `dungeonValidator.ts` (~1,500 lines)
+  — the authoring-DSL parser and validator look engine-shaped, but every
+  declared type is game vocabulary (`DeclarativeDoor`,
+  `Level`-conditioned options, monster factories) and they emit `Dungeon`
+  directly. The parser is the strongest non-candidate on size alone.
+- `src/components/DungeonBoardSignatures.ts` — the layer-signature
+  change-detection pattern (redraw a layer only when its stringified
+  signature changes) is generic and should inform `scene`'s layer
+  compositing contract; but the signatures themselves are stringified
+  `GameState` slices, i.e. per-game adapter material, and stay.
+- `src/core/scoring.ts` — the point constants and weights are tuned
+  game content by construction.
+- `src/core/logger.ts` (including the reloadGuard and its debounce) —
+  debounced `localStorage` snapshotting of the whole state plus the
+  `actionLog` format; the game-mechanics half is tiny behind app-shell
+  coupling, and the saves package already owns the storage abstraction
+  this would use instead of `localStorage` directly.
+- `src/benchmark/` — the harness wraps the concrete `init`/`next` turn
+  flow and `bot.ts` imports hero logic; the generic parts (win/loss and
+  std-dev summaries) are thin and would need a turn-flow contract first.
+  Not worth an extraction; keeping the benchmarks in-repo also keeps
+  the headless, canvas-free property this spec relies on.
+- `src/settings/AppSettings.ts` — parse/clamp/persist settings with
+  live mirrors into the audio managers and `GameState.settings`:
+  app-shell wiring around a svelte store and one `localStorage` key.
+- `src/store/` — svelte stores of `GameState` and app phase; the
+  composition root's own state, not engine material.

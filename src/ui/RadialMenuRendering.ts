@@ -9,14 +9,14 @@
 import type { ItemSprite } from '../types';
 import type { RadialMenuEntry } from '../hero/RadialMenuLogic';
 import type { RadialMenuState } from '../store/radialMenuStore';
-import type { SpriteRef, Translator, UiEnv } from '../uikit/env';
+import type { SpriteRef, Translator, UiEnv } from '@hoard-engine/uikit';
 import {
   hitTestRadialMenu,
   layoutRadialMenu,
   renderRadialMenu as renderRadialMenuComponent,
   renderRadialTooltip as renderRadialTooltipComponent,
   type RadialMenuLayout as KitLayout,
-} from '../uikit/components/radialMenu';
+} from '@hoard-engine/uikit';
 import { toRadialMenuViewModel } from './viewmodels/radialMenu';
 import { legacyUiContext, defaultUiEnv } from './env';
 import { i18nTranslator } from './i18nAdapter';

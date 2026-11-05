@@ -6,12 +6,12 @@
 
 import type { GameState, Note, WinCondition } from '../../types';
 import { ConditionType } from '../../types';
-import type { Translator } from '../../uikit/env';
+import type { Translator } from '@hoard-engine/uikit';
 import type {
   DiaryNoteItemVm,
   DiaryViewModel,
   WinConditionItemVm,
-} from '../../uikit/components/diary';
+} from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 export const formatWinCondition = (

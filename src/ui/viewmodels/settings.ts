@@ -5,12 +5,12 @@
 
 import type { AppSettings } from '../../settings/AppSettings';
 import { isDebugModeAvailable } from '../../settings/debugMode';
-import type { Translator } from '../../uikit';
+import type { Translator } from '@hoard-engine/uikit';
 import type {
   CreditsViewModel,
   SettingsRowVm,
   SettingsViewModel,
-} from '../../uikit';
+} from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 export type SettingsRowId =

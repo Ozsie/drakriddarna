@@ -6,7 +6,7 @@
 
 import { resolveTheme } from '@hoard-engine/primitives';
 import { Colour } from '../types';
-import type { ActorColourKey } from '../uikit/components/betweenDungeons';
+import type { ActorColourKey } from '@hoard-engine/uikit';
 
 export const highContrastTheme = resolveTheme({
   palette: {
