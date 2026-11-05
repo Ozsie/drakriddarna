@@ -24,6 +24,14 @@ Resolution via `getGameMaster(idOrAlias)` (`src/gameMasters/index.ts`):
 3. An unknown id falls back to the default, `'tactician'`
    (`DEFAULT_GAME_MASTER_ID`).
 
+The mechanics of the chain — alias, then id, then the default, then the
+first registered — live in the `@hoard-engine/directors` engine package
+(`createDirectorRegistry` over the game's registry record); the alias
+table, the default id and the discovered personalities are game
+knowledge kept in `src/gameMasters/index.ts`, the facade that
+re-exports `getGameMaster`/`isKnownGameMaster` with their historical
+signatures.
+
 The selected Game Master is stored on `state.gameMaster` and chosen when
 starting a game (`init(campaignId, heroes, gameMasterId)` in
 `src/game.ts`); its `initialState()` result is stored on
@@ -89,9 +97,14 @@ Consumed in `src/events/EventsLogic.ts`.
 ### Lifecycle hooks and rule overrides
 
 Two hook groups exist, and the rule hooks can be written **top-level or
-nested under a `rules` key** — both are consumed (`gm.rules?.x ?? gm.x` in
-`src/core/combat.ts` and `src/secrets/SecretsLogic.ts`); the nested form
-wins when both are set. Prefer one form consistently.
+nested under a `rules` key** — both are consumed via
+`resolveDirectorHook(gm, '<hook>', gm.rules)` from
+`@hoard-engine/directors` in `src/core/combat.ts` and
+`src/secrets/SecretsLogic.ts`; the nested form wins when both are set.
+Prefer one form consistently. The lifecycle hooks are emitted through the
+engine package's `dispatchDirectorEvent` at the turn-flow call sites (and
+the framework stays cadence-agnostic: a real-time game would emit the same
+events from its scheduler instead).
 
 Lifecycle (`GameMasterLifecycleHooks`), all optional, invoked from the
 turn flow in `src/game.ts`:

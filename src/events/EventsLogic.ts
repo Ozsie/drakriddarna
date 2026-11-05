@@ -52,6 +52,7 @@ import { findVisibleMonsters } from '../monsters/MonsterLogic';
 import { getMonsterTemplate } from '../monsters/MonsterRegistry';
 import { createShake } from '../combat';
 import { soundEffectManager } from '../audio';
+import { dispatchDirectorEvent } from '@hoard-engine/directors';
 
 export const getEventsForDungeon = (
   dungeon: Dungeon,
@@ -75,16 +76,19 @@ export const drawNextEvent = (state: GameState): TurnEvent => {
   }
 
   const difficulty = getDifficulty(state);
-  if (difficulty?.events?.onEventDrawn) {
-    const customResult = difficulty.events.onEventDrawn(unUsedEvents[0], state);
-    if (customResult !== null && customResult !== undefined) {
-      return customResult;
-    }
-    // If hook returned null, mark current event as skipped/used or skip to next event if available
-    if (customResult === null) {
-      unUsedEvents[0].used = true;
-      return drawNextEvent(state);
-    }
+  const customResult = dispatchDirectorEvent(
+    difficulty?.events,
+    'onEventDrawn',
+    unUsedEvents[0],
+    state,
+  );
+  if (customResult === null) {
+    // The director discarded the event — mark it used and draw again.
+    unUsedEvents[0].used = true;
+    return drawNextEvent(state);
+  }
+  if (customResult !== undefined) {
+    return customResult;
   }
 
   const wasPlayedPreviousRound =

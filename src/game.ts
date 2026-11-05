@@ -39,6 +39,7 @@ import {
 import { clearActorAnimations } from './core';
 import { setNextDungeonTransitionProvider } from './interactables/InteractableLogic';
 import { soundEffectManager } from './audio';
+import { dispatchDirectorEvent } from '@hoard-engine/directors';
 
 // Re-exported because gameStateStore consumes it through the game module.
 export { removeDamageIndicator } from './core/combat';
@@ -132,10 +133,13 @@ export const init = (
       heroes: campaign.heroes,
       dungeon: campaign.dungeons[0],
     } as GameState;
-    dungeonEvents = selectedGameMaster.events.modifyEventDeck(
-      dungeonEvents,
-      partialState,
-    );
+    dungeonEvents =
+      dispatchDirectorEvent(
+        selectedGameMaster.events,
+        'modifyEventDeck',
+        dungeonEvents,
+        partialState,
+      ) ?? dungeonEvents;
   }
 
   const state: GameState = {
@@ -193,9 +197,14 @@ export const init = (
   // The run's timer starts when the first dungeon's intro is closed, or
   // immediately when that dungeon has no intro.
   beginDungeonTiming(state, hasDungeonIntro(campaign.dungeons[0]));
-  selectedGameMaster?.onGameInit?.(state);
+  dispatchDirectorEvent(selectedGameMaster, 'onGameInit', state);
   if (state.currentActor) {
-    selectedGameMaster?.onHeroTurnStart?.(state.currentActor, state);
+    dispatchDirectorEvent(
+      selectedGameMaster,
+      'onHeroTurnStart',
+      state.currentActor,
+      state,
+    );
   }
   if (browser) {
     localStorage.setItem('autosave', JSON.stringify(state));
@@ -251,9 +260,9 @@ export const next = async (
     if (nextIndex >= liveHeroes(state).length) {
       state.currentActor = undefined;
       const gm = getDifficulty(state);
-      gm.onHeroPhaseEnd?.(state);
+      dispatchDirectorEvent(gm, 'onHeroPhaseEnd', state);
       await monsterActions(state, monsterOptions);
-      gm.onMonsterPhaseEnd?.(state);
+      dispatchDirectorEvent(gm, 'onMonsterPhaseEnd', state);
       nextIndex = 0;
       roundEnded = true;
       resetOnNext(state);
@@ -279,9 +288,9 @@ export const next = async (
       if (nextIndex >= liveHeroes(state).length) {
         state.currentActor = undefined;
         const gm = getDifficulty(state);
-        gm.onHeroPhaseEnd?.(state);
+        dispatchDirectorEvent(gm, 'onHeroPhaseEnd', state);
         await monsterActions(state, monsterOptions);
-        gm.onMonsterPhaseEnd?.(state);
+        dispatchDirectorEvent(gm, 'onMonsterPhaseEnd', state);
         nextIndex = 0;
         roundEnded = true;
         resetOnNext(state);
@@ -302,7 +311,7 @@ export const next = async (
     if (roundEnded) {
       state.turnCount = (state.turnCount ?? 0) + 1;
       const gm = getDifficulty(state);
-      gm.onRoundStart?.(state.turnCount, state);
+      dispatchDirectorEvent(gm, 'onRoundStart', state.turnCount, state);
     }
     const hasKilledAll = killAllMonstersAchieved(state);
     if (roundEnded && !hasKilledAll) {
@@ -330,7 +339,7 @@ export const next = async (
       );
     }
     const gm = getDifficulty(state);
-    gm.onHeroTurnStart?.(state.currentActor, state);
+    dispatchDirectorEvent(gm, 'onHeroTurnStart', state.currentActor, state);
     addLog(state, 'logs.startedTurn', { name: i18n(state.currentActor.name) });
     doReRender(state);
   }
@@ -361,7 +370,7 @@ export const endAction = async (
 export const resetLevel = (currentState: GameState): GameState => {
   clearActorAnimations();
   const gm = getDifficulty(currentState);
-  gm.onPartyDefeat?.(currentState);
+  dispatchDirectorEvent(gm, 'onPartyDefeat', currentState);
   if (typeof localStorage !== 'undefined') {
     const loadedRawState = localStorage.getItem('autosave');
     if (loadedRawState) {
@@ -497,7 +506,7 @@ const checkWinConditions = (state: GameState) => {
   if (state.dungeon.beaten) {
     if (!previouslyBeaten) {
       const gm = getDifficulty(state);
-      gm.onDungeonComplete?.(state);
+      dispatchDirectorEvent(gm, 'onDungeonComplete', state);
       const score = awardScenarioScore(state);
       addLog(state, 'logs.scenarioScore', {
         score: String(score.total),

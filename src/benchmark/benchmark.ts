@@ -8,6 +8,7 @@ import { liveHeroes, resetLiveHeroes, levelUp } from '../hero/HeroLogic';
 import { getCampaign } from '../campaigns';
 import { getEventsForDungeon } from '../events/EventsLogic';
 import { playHeroTurn } from './bot';
+import { dispatchDirectorEvent } from '@hoard-engine/directors';
 
 export const HEADLESS_MONSTER_OPTIONS: MonsterTurnOptions = {
   delayBetweenMonsters: 0,
@@ -117,9 +118,13 @@ export const runSingleGame = async (
         state.dungeon,
         campaign?.eventDeck ?? [],
       );
-      if (gameMaster?.events?.modifyEventDeck) {
-        dungeonEvents = gameMaster.events.modifyEventDeck(dungeonEvents, state);
-      }
+      dungeonEvents =
+        dispatchDirectorEvent(
+          gameMaster?.events,
+          'modifyEventDeck',
+          dungeonEvents,
+          state,
+        ) ?? dungeonEvents;
       state.eventDeck = dungeonEvents;
     }
 
