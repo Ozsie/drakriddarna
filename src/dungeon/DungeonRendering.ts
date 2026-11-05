@@ -1,25 +1,6 @@
-import {
-  CornerType,
-  type Corner,
-  type Door,
-  type Dungeon,
-  type Position,
-  type RoomFogOptions,
-  type Secret,
-  type TerrainCell,
-  SecretType,
-  Side,
-  TerrainType,
-  type WallEdge,
-} from '../types';
+import { CornerType, TerrainType } from '../types';
 import { COLLAPSED, EMPTY, SEALED_DOOR, WALL } from '../core';
-import {
-  findCell,
-  isDiscovered,
-  isRoomDiscovered,
-  isSamePosition,
-  toArray,
-} from '../core';
+import { findCell, isSamePosition, toArray } from '../core';
 import { autoDetectCorners } from './cornerDetection';
 import { drawCachedTile } from './TileTextureCache';
 import { type TileRef, DUNGEON_TILES, drawTileRef } from './tiles';
@@ -29,6 +10,34 @@ import {
   TERRAIN_DEFAULT_STYLING,
 } from './TerrainLogic';
 import type { LightViewport } from './LightRendering';
+import type { ScenePoint } from '../scene/contracts';
+import type {
+  SceneCorner,
+  SceneDungeonView,
+  SceneDoor,
+  SceneEdgeWall,
+  SceneFogOptions,
+  SceneSecret,
+  SceneTerrainCell,
+} from '../scene/dungeon';
+
+// Discovery over the contract's own shapes: the imported game helpers
+// take the game's `Dungeon` type, and the renderer must resolve
+// visibility against plain grid rows and the discovered-room set —
+// the two-field duplicate is cheaper than an import edge
+// (docs/engine-packages.md, dependency rule 3).
+const isRoomDiscovered = (dungeon: SceneDungeonView, cell: string): boolean =>
+  dungeon.discoveredRooms.includes(cell);
+
+const isDiscovered = (
+  dungeon: SceneDungeonView,
+  x: number,
+  y: number,
+): boolean => {
+  const cell = findCell(dungeon.layout.grid, x, y);
+  if (!cell) return false;
+  return isRoomDiscovered(dungeon, cell);
+};
 
 export const background = '#1E1C19';
 
@@ -42,7 +51,7 @@ export const renderDoors = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
 ) => {
   dungeon.layout.doors.forEach((door) => {
@@ -60,14 +69,14 @@ const WALL_EDGE_COLOUR = '#4a4741';
 // is kept separate from the painting so a tileset piece can replace the flat
 // colour without touching the visibility rules.
 export const edgeWallRect = (
-  wall: WallEdge,
+  wall: SceneEdgeWall,
   cellSize: number,
 ): { x: number; y: number; w: number; h: number; vertical: boolean } => {
   const thickness = doorThickness(cellSize);
   const half = Math.floor(thickness / 2);
-  const vertical = wall.side === Side.RIGHT || wall.side === Side.LEFT;
-  const edgeX = wall.x * cellSize + (wall.side === Side.RIGHT ? cellSize : 0);
-  const edgeY = wall.y * cellSize + (wall.side === Side.DOWN ? cellSize : 0);
+  const vertical = wall.side === 'Right' || wall.side === 'Left';
+  const edgeX = wall.x * cellSize + (wall.side === 'Right' ? cellSize : 0);
+  const edgeY = wall.y * cellSize + (wall.side === 'Down' ? cellSize : 0);
   return {
     x: vertical ? edgeX - half : wall.x * cellSize,
     y: vertical ? wall.y * cellSize : edgeY - half,
@@ -84,14 +93,14 @@ export const edgeWallRect = (
 // disabled.
 const drawEdgeWall = (
   ctx: CanvasRenderingContext2D,
-  wall: WallEdge,
+  wall: SceneEdgeWall,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
 ) => {
   const layout = dungeon.layout;
-  const farX = wall.side === Side.RIGHT ? 1 : wall.side === Side.LEFT ? -1 : 0;
-  const farY = wall.side === Side.DOWN ? 1 : wall.side === Side.UP ? -1 : 0;
+  const farX = wall.side === 'Right' ? 1 : wall.side === 'Left' ? -1 : 0;
+  const farY = wall.side === 'Down' ? 1 : wall.side === 'Up' ? -1 : 0;
   const nearDiscovered = isDiscovered(dungeon, wall.x, wall.y);
   const farDiscovered = isDiscovered(dungeon, wall.x + farX, wall.y + farY);
   if (!nearDiscovered && !farDiscovered && !debugMode) return;
@@ -112,7 +121,7 @@ const drawEdgeWall = (
 export const renderWalls = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
 ) => {
   dungeon.layout.walls?.forEach((wall) => {
@@ -124,7 +133,7 @@ export const renderGrid = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
 ) => {
   dungeon.layout.grid.forEach((row, y) => {
@@ -140,14 +149,14 @@ export const renderSecrets = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
 ) => {
   dungeon.layout.secrets
     .filter((secret) => secret.found)
     .forEach((secret) => {
       switch (secret.type) {
-        case SecretType.TRAP_DOOR:
+        case 'Trap Door':
           renderTrapDoor(ctx, ground, cellSize, secret);
           break;
         default:
@@ -196,7 +205,7 @@ const drawTile = (
   cellSize: number,
   x: number,
   y: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
 ) => {
   if (
     dungeon.discoveredRooms.some((r) => neighbourOf(x, y, r, dungeon)) ||
@@ -222,11 +231,11 @@ const drawTile = (
 const drawCornerTile = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
-  corner: CornerType,
+  corner: string,
   cellSize: number,
   x: number,
   y: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
 ) => {
   switch (corner) {
     case CornerType.INNER_BOTTOM_LEFT: {
@@ -373,7 +382,7 @@ const renderPits = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
 ) => {
   dungeon.layout.pits
@@ -393,7 +402,7 @@ const DEFAULT_TERRAIN_COLOR = '#56606a';
 export const renderTerrain = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
 ) => {
   (dungeon.layout.terrain ?? [])
@@ -445,7 +454,10 @@ const cellHash = (x: number, y: number, salt = 0): number =>
     Math.sin((x + 1) * 12.9898 + (y + 1) * 78.233 + salt * 37.719) * 43758.5453,
   );
 
-const cellInViewport = (cell: Position, viewport?: LightViewport): boolean => {
+const cellInViewport = (
+  cell: ScenePoint,
+  viewport?: LightViewport,
+): boolean => {
   if (!viewport) return true;
   return (
     cell.x + 1 > viewport.x &&
@@ -455,21 +467,24 @@ const cellInViewport = (cell: Position, viewport?: LightViewport): boolean => {
   );
 };
 
-const terrainOverlayRate = (cell: TerrainCell): number =>
+const terrainOverlayRate = (cell: SceneTerrainCell): number =>
   cell.rate ?? TERRAIN_DEFAULT_STYLING[cell.type]?.rate ?? TERRAIN_DEFAULT_RATE;
 
 // The visible fog cells of all fogged rooms: one grid scan collects each
 // discovered cell whose grid letter carries fog options, together with
 // the letter so renderers can group cells into whole-room shapes.
 const collectFogCells = (
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
   viewport?: LightViewport,
-): { position: Position; room: string; options: RoomFogOptions }[] => {
+): { position: ScenePoint; room: string; options: SceneFogOptions }[] => {
   const fog = dungeon.layout.roomFog;
   if (!fog) return [];
-  const cells: { position: Position; room: string; options: RoomFogOptions }[] =
-    [];
+  const cells: {
+    position: ScenePoint;
+    room: string;
+    options: SceneFogOptions;
+  }[] = [];
   dungeon.layout.grid.forEach((row, y) => {
     toArray(row).forEach((letter: string, x: number) => {
       const options = fog[letter];
@@ -488,7 +503,7 @@ const collectFogCells = (
 // Whether any animated terrain or fog overlay is visible, and so the
 // dynamic layer needs continuous re-rendering.
 export const hasAnimatedTerrainEffects = (
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
   viewport?: LightViewport,
 ): boolean =>
@@ -539,7 +554,7 @@ const strokeWaterWave = (
 const renderWaterShimmer = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  cell: TerrainCell,
+  cell: SceneTerrainCell,
   timeMs: number,
 ): void => {
   const rate = terrainOverlayRate(cell);
@@ -589,7 +604,7 @@ const renderWaterShimmer = (
 const renderLavaPulse = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  cell: TerrainCell,
+  cell: SceneTerrainCell,
   timeMs: number,
 ): void => {
   const rate = terrainOverlayRate(cell);
@@ -644,7 +659,7 @@ const renderLavaPulse = (
 export const renderTerrainAnimation = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
   timeMs: number,
   viewport?: LightViewport,
@@ -668,7 +683,7 @@ export const renderTerrainAnimation = (
 
 // The blur radius of a fog cloud's edges, in pixels. `softness` 0 keeps
 // hard cell edges; 1 feathers the cloud roughly half a cell out and in.
-const fogEdgeBlurPx = (options: RoomFogOptions, cellSize: number): number =>
+const fogEdgeBlurPx = (options: SceneFogOptions, cellSize: number): number =>
   Math.max(
     0,
     Math.round((options.softness ?? DEFAULT_FOG_SOFTNESS) * 0.3 * cellSize),
@@ -680,7 +695,7 @@ const fogEdgeBlurPx = (options: RoomFogOptions, cellSize: number): number =>
 const traceRoomPath = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  cells: { position: Position }[],
+  cells: { position: ScenePoint }[],
 ): void => {
   ctx.beginPath();
   cells.forEach(({ position }) => {
@@ -690,13 +705,13 @@ const traceRoomPath = (
 
 // The fog rooms currently relevant for rendering, grouped by grid letter.
 const groupFogRooms = (
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
   viewport?: LightViewport,
-): Map<string, { position: Position; options: RoomFogOptions }[]> => {
+): Map<string, { position: ScenePoint; options: SceneFogOptions }[]> => {
   const rooms = new Map<
     string,
-    { position: Position; options: RoomFogOptions }[]
+    { position: ScenePoint; options: SceneFogOptions }[]
   >();
   collectFogCells(dungeon, debugMode, viewport).forEach(
     ({ position, room, options }) => {
@@ -737,7 +752,7 @@ const canBuildOffscreenCanvas = (): boolean =>
 // (runtime fog fills mutate these), the discovered cells it covers, the
 // grid itself (collapses rewrite room letters) and the cell size.
 const fogCloudCacheKey = (
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   room: string,
   cellSize: number,
   debugMode: boolean,
@@ -749,7 +764,7 @@ const fogCloudCacheKey = (
   )}`;
 
 const buildFogCloudCanvas = (
-  cells: { position: Position }[],
+  cells: { position: ScenePoint }[],
   fillStyle: string,
   blurPx: number,
   cellSize: number,
@@ -785,11 +800,11 @@ const buildFogCloudCanvas = (
 // of the viewport: the cached fog cloud covers the whole visible room, so
 // its pixels — and so its cache key — stay valid across pans.
 const collectRoomFogCells = (
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   room: string,
   debugMode: boolean,
-): Position[] => {
-  const cells: Position[] = [];
+): ScenePoint[] => {
+  const cells: ScenePoint[] = [];
   dungeon.layout.grid.forEach((row, y) => {
     toArray(row).forEach((letter: string, x: number) => {
       if (letter === room && (debugMode || isDiscovered(dungeon, x, y))) {
@@ -801,9 +816,9 @@ const collectRoomFogCells = (
 };
 
 const fogCloudFor = (
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   room: string,
-  options: RoomFogOptions,
+  options: SceneFogOptions,
   cellSize: number,
   debugMode: boolean,
 ): FogCloudCacheEntry | null => {
@@ -873,7 +888,7 @@ const fogCloudFor = (
 export const renderRoomFog = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
   timeMs: number,
   viewport?: LightViewport,
@@ -926,7 +941,7 @@ export const renderRoomFog = (
 export const renderFogLightDim = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
   viewport?: LightViewport,
 ): void => {
@@ -976,7 +991,7 @@ export const renderPillars = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
 ) => {
   dungeon.layout.pillars
@@ -1003,7 +1018,7 @@ export const renderPillarTops = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
 ) => {
   dungeon.layout.pillars
@@ -1024,7 +1039,7 @@ export const renderPillarTops = (
 export const renderPortal = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
 ) => {
   const portal = dungeon.portal;
@@ -1064,7 +1079,7 @@ export const renderInteractables = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   debugMode: boolean,
 ) => {
   dungeon.layout.interactables?.forEach((interactable) => {
@@ -1125,7 +1140,7 @@ const randomFloorTileCoordinates = (seed: number): TileRef => {
 const renderFloor = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   cell: string,
   x: number,
   y: number,
@@ -1219,7 +1234,11 @@ const renderFloor = (
   }
 };
 
-const isHorizontalWall = (x: number, y: number, dungeon: Dungeon): string => {
+const isHorizontalWall = (
+  x: number,
+  y: number,
+  dungeon: SceneDungeonView,
+): string => {
   // Classify against the sealed grid: a hidden cell sealed behind a closed
   // door renders as a wall piece here, so it must classify as one
   const grid = sealedGrid(dungeon);
@@ -1254,7 +1273,11 @@ const isHorizontalWall = (x: number, y: number, dungeon: Dungeon): string => {
   }
 };
 
-const isVerticalWall = (x: number, y: number, dungeon: Dungeon): string => {
+const isVerticalWall = (
+  x: number,
+  y: number,
+  dungeon: SceneDungeonView,
+): string => {
   // Classify against the sealed grid: a hidden cell sealed behind a closed
   // door renders as a wall piece here, so it must classify as one
   const grid = sealedGrid(dungeon);
@@ -1302,7 +1325,7 @@ const isVerticalWall = (x: number, y: number, dungeon: Dungeon): string => {
 // than rock. Invisible sealed cells (no discovered floor bordering them)
 // resolve to unknown during classification, so sealing never fabricates
 // junction shapes on the wall pieces themselves.
-export const sealedCornerGrid = (dungeon: Dungeon): string[] => {
+export const sealedCornerGrid = (dungeon: SceneDungeonView): string[] => {
   const grid = [...dungeon.layout.grid];
   const sealable = (cell: string) =>
     Boolean(cell) &&
@@ -1312,23 +1335,23 @@ export const sealedCornerGrid = (dungeon: Dungeon): string[] => {
   dungeon.layout.doors.forEach((door) => {
     if (door.open) return;
     const farX =
-      door.side === Side.RIGHT
+      door.side === 'Right'
         ? door.x + 1
-        : door.side === Side.LEFT
+        : door.side === 'Left'
           ? door.x - 1
           : door.x;
     const farY =
-      door.side === Side.DOWN
+      door.side === 'Down'
         ? door.y + 1
-        : door.side === Side.UP
+        : door.side === 'Up'
           ? door.y - 1
           : door.y;
     const farCell = findCell(grid, farX, farY);
     const nearCell = findCell(grid, door.x, door.y);
     const farDiscovered = farCell !== '' && !isEmpty(farCell, dungeon);
     const nearDiscovered = nearCell !== '' && !isEmpty(nearCell, dungeon);
-    const flankX = door.side === Side.UP || door.side === Side.DOWN ? 1 : 0;
-    const flankY = door.side === Side.LEFT || door.side === Side.RIGHT ? 1 : 0;
+    const flankX = door.side === 'Up' || door.side === 'Down' ? 1 : 0;
+    const flankY = door.side === 'Left' || door.side === 'Right' ? 1 : 0;
     // Seal whichever side of the doorway is still undiscovered: the far side
     // when approaching the door from the front, the near side when it is
     // approached from behind
@@ -1353,7 +1376,7 @@ export const sealedCornerGrid = (dungeon: Dungeon): string[] => {
 
 // Everything that can change the visible corner classification or the sealed
 // grid, hashed into a shared cache key.
-const visibleStateKey = (dungeon: Dungeon): string => {
+const visibleStateKey = (dungeon: SceneDungeonView): string => {
   const doors = dungeon.layout.doors
     .map((door) => (door.open ? '1' : '0'))
     .join('');
@@ -1364,7 +1387,7 @@ const visibleStateKey = (dungeon: Dungeon): string => {
 // changed since it was last built.
 let sealedGridCache: { key: string; grid: string[] } | null = null;
 
-const sealedGrid = (dungeon: Dungeon): string[] => {
+const sealedGrid = (dungeon: SceneDungeonView): string[] => {
   const key = visibleStateKey(dungeon);
   if (!sealedGridCache || sealedGridCache.key !== key) {
     sealedGridCache = { key, grid: sealedCornerGrid(dungeon) };
@@ -1378,9 +1401,9 @@ const sealedGrid = (dungeon: Dungeon): string[] => {
 // as wall. The visible corner set depends only on the grid, the discovered
 // rooms, and the door open states, so it is cached until one of them changes
 // instead of being re-detected on every render.
-let visibleCornersCache: { key: string; corners: Corner[] } | null = null;
+let visibleCornersCache: { key: string; corners: SceneCorner[] } | null = null;
 
-const visibleCorners = (dungeon: Dungeon): Corner[] => {
+const visibleCorners = (dungeon: SceneDungeonView): SceneCorner[] => {
   const key = visibleStateKey(dungeon);
   if (!visibleCornersCache || visibleCornersCache.key !== key) {
     visibleCornersCache = {
@@ -1391,7 +1414,11 @@ const visibleCorners = (dungeon: Dungeon): Corner[] => {
   return visibleCornersCache.corners;
 };
 
-const isCornerWall = (x: number, y: number, dungeon: Dungeon): CornerType => {
+const isCornerWall = (
+  x: number,
+  y: number,
+  dungeon: SceneDungeonView,
+): string => {
   const corner = visibleCorners(dungeon).filter((corner) =>
     isSamePosition(corner.position, { x, y }),
   );
@@ -1402,10 +1429,10 @@ const isCornerWall = (x: number, y: number, dungeon: Dungeon): CornerType => {
   }
 };
 
-const notGround = (cell: string, dungeon: Dungeon) =>
+const notGround = (cell: string, dungeon: SceneDungeonView) =>
   isWall(cell) || (!isRoomDiscovered(dungeon, cell) && cell !== EMPTY);
 
-const isRoom = (cell: string, dungeon: Dungeon) =>
+const isRoom = (cell: string, dungeon: SceneDungeonView) =>
   dungeon.discoveredRooms.includes(cell);
 
 const renderHiddenCell = (
@@ -1425,7 +1452,7 @@ const renderTrapDoor = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  secret: Secret,
+  secret: SceneSecret,
 ) => {
   const x = secret.position.x;
   const y = secret.position.y;
@@ -1444,7 +1471,7 @@ const renderFoundSecret = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  secret: Secret,
+  secret: SceneSecret,
 ) => {
   const x = secret.position.x;
   const y = secret.position.y;
@@ -1462,7 +1489,7 @@ const renderFoundSecret = (
 const renderGridLines = (
   ctx: CanvasRenderingContext2D,
   cell: string,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
   x: number,
   y: number,
   cellSize: number,
@@ -1501,21 +1528,21 @@ const drawDoorWallTile = (
   cellSize: number,
   x: number,
   y: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
 ) => {
   if (isCornerWall(x, y, dungeon) !== CornerType.NOT_CORNER) return;
   drawTile(ctx, ground, tile, cellSize, x, y, dungeon);
 };
 
 const renderClosedHiddenDoor = (
-  door: Door,
+  door: SceneDoor,
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
 ) => {
   switch (door.side) {
-    case Side.RIGHT: {
+    case 'Right': {
       drawDoorWallTile(
         ctx,
         ground,
@@ -1545,7 +1572,7 @@ const renderClosedHiddenDoor = (
       );
       break;
     }
-    case Side.LEFT: {
+    case 'Left': {
       drawDoorWallTile(
         ctx,
         ground,
@@ -1575,7 +1602,7 @@ const renderClosedHiddenDoor = (
       );
       break;
     }
-    case Side.UP: {
+    case 'Up': {
       drawDoorWallTile(
         ctx,
         ground,
@@ -1605,7 +1632,7 @@ const renderClosedHiddenDoor = (
       );
       break;
     }
-    case Side.DOWN: {
+    case 'Down': {
       drawDoorWallTile(
         ctx,
         ground,
@@ -1639,14 +1666,14 @@ const renderClosedHiddenDoor = (
 };
 
 const renderClosedDoor = (
-  door: Door,
+  door: SceneDoor,
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  dungeon: Dungeon,
+  dungeon: SceneDungeonView,
 ) => {
   switch (door.side) {
-    case Side.RIGHT: {
+    case 'Right': {
       drawDoorWallTile(
         ctx,
         ground,
@@ -1658,7 +1685,7 @@ const renderClosedDoor = (
       );
       break;
     }
-    case Side.LEFT: {
+    case 'Left': {
       drawDoorWallTile(
         ctx,
         ground,
@@ -1670,7 +1697,7 @@ const renderClosedDoor = (
       );
       break;
     }
-    case Side.UP: {
+    case 'Up': {
       drawDoorWallTile(
         ctx,
         ground,
@@ -1682,7 +1709,7 @@ const renderClosedDoor = (
       );
       break;
     }
-    case Side.DOWN: {
+    case 'Down': {
       drawDoorWallTile(
         ctx,
         ground,
@@ -1722,14 +1749,14 @@ const doorThickness = (cellSize: number): number =>
 // plate when locked, wood with a brass handle when unlocked.
 const drawClosedDoor = (
   ctx: CanvasRenderingContext2D,
-  door: Door,
+  door: SceneDoor,
   cellSize: number,
 ) => {
   const thickness = doorThickness(cellSize);
   const half = Math.floor(thickness / 2);
-  const vertical = door.side === Side.RIGHT || door.side === Side.LEFT;
-  const edgeX = door.x * cellSize + (door.side === Side.RIGHT ? cellSize : 0);
-  const edgeY = door.y * cellSize + (door.side === Side.DOWN ? cellSize : 0);
+  const vertical = door.side === 'Right' || door.side === 'Left';
+  const edgeX = door.x * cellSize + (door.side === 'Right' ? cellSize : 0);
+  const edgeY = door.y * cellSize + (door.side === 'Down' ? cellSize : 0);
   const leafX = vertical ? edgeX - half : door.x * cellSize;
   const leafY = vertical ? door.y * cellSize : edgeY - half;
   const leafW = vertical ? thickness : cellSize;
@@ -1796,13 +1823,13 @@ const drawClosedDoor = (
 
 const drawDoorEdgeStrip = (
   ctx: CanvasRenderingContext2D,
-  door: Door,
+  door: SceneDoor,
   cellSize: number,
 ) => {
   const thickness = doorThickness(cellSize);
   const half = Math.floor(thickness / 2);
   switch (door.side) {
-    case Side.RIGHT: {
+    case 'Right': {
       ctx.fillRect(
         door.x * cellSize + (cellSize - half),
         door.y * cellSize,
@@ -1811,7 +1838,7 @@ const drawDoorEdgeStrip = (
       );
       break;
     }
-    case Side.LEFT: {
+    case 'Left': {
       ctx.fillRect(
         door.x * cellSize - half,
         door.y * cellSize,
@@ -1820,7 +1847,7 @@ const drawDoorEdgeStrip = (
       );
       break;
     }
-    case Side.UP: {
+    case 'Up': {
       ctx.fillRect(
         door.x * cellSize,
         door.y * cellSize - half,
@@ -1829,7 +1856,7 @@ const drawDoorEdgeStrip = (
       );
       break;
     }
-    case Side.DOWN: {
+    case 'Down': {
       ctx.fillRect(
         door.x * cellSize,
         door.y * cellSize + (cellSize - 2),
@@ -1845,15 +1872,13 @@ const renderDoor = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  dungeon: Dungeon,
-  door: Door,
+  dungeon: SceneDungeonView,
+  door: SceneDoor,
   debugMode: boolean,
 ) => {
   const cell = dungeon.layout.grid[door.y][door.x];
-  const farOffsetX =
-    door.side === Side.RIGHT ? 1 : door.side === Side.LEFT ? -1 : 0;
-  const farOffsetY =
-    door.side === Side.DOWN ? 1 : door.side === Side.UP ? -1 : 0;
+  const farOffsetX = door.side === 'Right' ? 1 : door.side === 'Left' ? -1 : 0;
+  const farOffsetY = door.side === 'Down' ? 1 : door.side === 'Up' ? -1 : 0;
   const farCell = findCell(
     dungeon.layout.grid,
     door.x + farOffsetX,
@@ -1875,7 +1900,7 @@ const renderDoor = (
     }
   }
   if (door && !door.hidden && !door.open && (nearDiscovered || farDiscovered)) {
-    if (door.side === Side.UP && !farDiscovered) {
+    if (door.side === 'Up' && !farDiscovered) {
       drawTile(
         ctx,
         ground,
@@ -1890,7 +1915,7 @@ const renderDoor = (
     if (door.locked && debugMode) {
       ctx.fillStyle = 'grey';
       switch (door.side) {
-        case Side.RIGHT: {
+        case 'Right': {
           ctx.fillRect(
             door.x * cellSize + (cellSize - 4),
             door.y * cellSize + (cellSize / 2 - 4),
@@ -1899,7 +1924,7 @@ const renderDoor = (
           );
           break;
         }
-        case Side.LEFT: {
+        case 'Left': {
           ctx.fillRect(
             door.x * cellSize - 4,
             door.y * cellSize + (cellSize / 2 - 4),
@@ -1908,7 +1933,7 @@ const renderDoor = (
           );
           break;
         }
-        case Side.UP: {
+        case 'Up': {
           ctx.fillRect(
             door.x * cellSize + (cellSize / 2 - 4),
             door.y * cellSize - 4,
@@ -1917,7 +1942,7 @@ const renderDoor = (
           );
           break;
         }
-        case Side.DOWN: {
+        case 'Down': {
           ctx.fillRect(
             door.x * cellSize + (cellSize / 2 - 4),
             door.y * cellSize + (cellSize - 4),
@@ -1952,10 +1977,15 @@ const renderDoor = (
 
 const isWall = (cell: string) => cell === WALL;
 
-const isEmpty = (cell: string, dungeon: Dungeon) =>
+const isEmpty = (cell: string, dungeon: SceneDungeonView) =>
   cell === EMPTY || !isRoomDiscovered(dungeon, cell);
 
-const neighbourOf = (x: number, y: number, value: string, dungeon: Dungeon) => {
+const neighbourOf = (
+  x: number,
+  y: number,
+  value: string,
+  dungeon: SceneDungeonView,
+) => {
   if (!dungeon) return;
   const xMin = Math.max(x - 1, 0);
   const yMin = Math.max(y - 1, 0);

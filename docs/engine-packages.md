@@ -592,18 +592,27 @@ step-9 gate ("view-model contracts in place") is being built under
   The superseded `src/core/ActorSpriteRendering.ts` and
   `src/items/ItemSpriteRendering.ts` are folded into the adapters and
   scene helpers (their tests moved with the math).
-- Dungeon plane, stage A done: every `DungeonRendering` entry point
+- Dungeon plane, stages A+B done: every `DungeonRendering` entry point
   (`renderGrid`/`renderWalls`/`renderDoors`/`renderSecrets`/`renderTerrain`
   /`renderTerrainAnimation`/`renderRoomFog`/`renderFogLightDim`/
   `renderPillars`/`renderPillarTops`/`renderPortal`/`renderInteractables`,
   `hasAnimatedTerrainEffects`, `sealedCornerGrid`, `edgeWallRect`) now
-  takes `Dungeon` instead of `GameState` — `state.dungeon` was its only
-  slice, and callers (the board controller, layer tests, the rendering
-  benchmark) pass `state.dungeon`. What remains for the plane is the
-  plain-shape contract: scene declares its own `DungeonView` (grid
-  strings, door/secret/terrain-cell shapes, fog options) that
-  `Dungeon` satisfies structurally, replacing the game-type param at the
-  wall/door contract design.
+  consumes the `SceneDungeonView` contract
+  (`src/scene/dungeon.ts`): plain shapes — string grid rows, doors and
+  edge walls with a literal side union, secrets/terrain/fog/corner
+  descriptors with open string types, the portal and the
+  discovered-room set. The game's `Dungeon` satisfies the contract
+  structurally (its `Side`/`SecretType` enums carry the contract's
+  literal strings), pinned by a compile-time sentinel test
+  (`src/scene/dungeon.test.ts`); callers pass their own `Dungeon` data.
+  Discovery resolves inside the renderer against grid rows and the
+  discovered-room set (two-field duplicate, no game helper import). The
+  vocabulary imports that remain until the adapter resolves them at
+  lift: the corner-type string list (`CornerType`, a const-object data
+  vocabulary re-exported from the grid engine), `TerrainType`'s open
+  union, TerrainLogic's default styling, the `autoDetectCorners`
+  re-export (corner data will arrive in the view at lift) and the
+  grid-string helpers `findCell`/`toArray`.
 - Still to convert for step 9: the light plane (the render half of
   `LightRendering`, whose state slices span heroes, event lights,
   projectiles and flame effects), `ImageCache`, and the
