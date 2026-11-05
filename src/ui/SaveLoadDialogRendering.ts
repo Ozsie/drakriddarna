@@ -8,7 +8,7 @@
 
 import type { GameState } from '../types';
 import type { CanvasMenuItem, MenuCallbacks } from '../menu/MenuLogic';
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv, UiContext } from '@hoard-engine/uikit';
 import type { Rect } from '@hoard-engine/primitives';
 import {
   hitTestSaveLoadDialog,
@@ -17,7 +17,7 @@ import {
   type SaveLoadDialogHit as KitHit,
   type SaveLoadDialogLayout as KitLayout,
   type SaveLoadDialogMode,
-} from '../uikit/components/saveLoadDialog';
+} from '@hoard-engine/uikit';
 import {
   savedGameItems,
   toSaveLoadDialogViewModel,
@@ -25,7 +25,7 @@ import {
 import { legacyUiEnv } from './env';
 import { uiAssetProvider } from './assets';
 
-export type { SaveLoadDialogMode } from '../uikit/components/saveLoadDialog';
+export type { SaveLoadDialogMode } from '@hoard-engine/uikit';
 
 export interface SaveLoadDialogRowLayout {
   item: CanvasMenuItem;

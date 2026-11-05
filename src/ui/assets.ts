@@ -5,7 +5,7 @@
 import { asset } from '$app/paths';
 import type { AssetPath } from '$app/types';
 import { getReadyImage } from '../core/ImageCache';
-import type { AssetProvider } from '../uikit';
+import type { AssetProvider } from '@hoard-engine/uikit';
 
 export const AssetId = {
   /** The welcome screen background art. */
@@ -23,7 +23,7 @@ const ASSET_URLS: Record<AssetId, string> = {
   // project service resolves $app/types via SvelteKit's ambient
   // declaration (AssetPath = string) and calls the cast unnecessary,
   // while svelte-check resolves the generated union and requires it.
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+
   [AssetId.welcomeBackground]: asset('images/welcome.png' as AssetPath),
 };
 

@@ -6,7 +6,7 @@
 // cascade work unchanged, with the exact same pixels: parity snapshots
 // cover the whole chain.
 
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv, UiContext } from '@hoard-engine/uikit';
 import type { Rect } from '@hoard-engine/primitives';
 import {
   hitTestNewGameDialog,
@@ -15,7 +15,7 @@ import {
   type NewGameDialogHit as KitHit,
   type NewGameDialogLayout as KitLayout,
   type NewGameDialogLayoutOptions,
-} from '../uikit/components/newGameDialog';
+} from '@hoard-engine/uikit';
 import { toNewGameDialogViewModel } from './viewmodels/newGameDialog';
 import { legacyUiEnv } from './env';
 import { uiAssetProvider } from './assets';

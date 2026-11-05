@@ -5,7 +5,7 @@ import {
   renderWelcome,
   WELCOME_FALLBACK_COLOR,
 } from './WelcomeRendering';
-import { getCoverFitBounds } from '../uikit';
+import { getCoverFitBounds } from '@hoard-engine/uikit';
 import { loadTranslations } from '#lib/translations/index.js';
 
 const createMockCtx = (): CanvasRenderingContext2D => {

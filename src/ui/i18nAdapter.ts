@@ -3,7 +3,7 @@
 // never import i18n themselves (M3).
 
 import { i18n } from '../core';
-import type { Translator } from '../uikit/env';
+import type { Translator } from '@hoard-engine/uikit';
 
 const toI18nParams = (
   params?: Record<string, string | number>,

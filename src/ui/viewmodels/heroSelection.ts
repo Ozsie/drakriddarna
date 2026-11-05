@@ -4,9 +4,9 @@
 
 import { getCampaign } from '../../campaigns';
 import type { Campaign, Hero } from '../../types';
-import type { Translator } from '../../uikit/env';
-import type { HeroSelectionViewModel } from '../../uikit/components/heroSelection';
-import { applyTextInputKey, clampTextInput } from '../../uikit/kit/textInput';
+import type { Translator } from '@hoard-engine/uikit';
+import type { HeroSelectionViewModel } from '@hoard-engine/uikit';
+import { applyTextInputKey, clampTextInput } from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 /** Player-typed names are clamped but never corrected or generated. */

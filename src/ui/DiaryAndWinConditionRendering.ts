@@ -8,7 +8,7 @@
 // pixels: parity snapshots cover the whole chain.
 
 import type { GameState, Note, WinCondition } from '../types';
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv, UiContext } from '@hoard-engine/uikit';
 import type { Rect } from '@hoard-engine/primitives';
 import {
   hitTestDiary,
@@ -16,7 +16,7 @@ import {
   renderDiary as renderDiaryComponent,
   type DiaryHit,
   type DiaryLayout as KitLayout,
-} from '../uikit/components/diary';
+} from '@hoard-engine/uikit';
 import {
   foundDiaryNotes,
   sortedWinConditions,

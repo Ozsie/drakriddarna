@@ -5,11 +5,8 @@
 
 import { RadialAction, type RadialMenuEntry } from '../../hero/RadialMenuLogic';
 import type { RadialMenuState } from '../../store/radialMenuStore';
-import type { Translator } from '../../uikit/env';
-import type {
-  RadialButtonVm,
-  RadialMenuViewModel,
-} from '../../uikit/components/radialMenu';
+import type { Translator } from '@hoard-engine/uikit';
+import type { RadialButtonVm, RadialMenuViewModel } from '@hoard-engine/uikit';
 import { itemSpriteRef } from './heroCards';
 import { i18nTranslator } from '../i18nAdapter';
 

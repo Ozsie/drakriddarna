@@ -19,7 +19,8 @@ rendering. Each package section names the coupling that must be removed first.
 (The extractions so far are done: `@hoard-engine/rng`,
 `@hoard-engine/grid`, `@hoard-engine/primitives`,
 `@hoard-engine/audio`, `@hoard-engine/lighting`,
-`@hoard-engine/saves` and `@hoard-engine/directors` are published on
+`@hoard-engine/saves`, `@hoard-engine/directors` and
+`@hoard-engine/uikit` are published on
 npm and consumed as dependencies — see their sections below for the
 layout and tooling pattern the next packages follow.)
 
@@ -34,7 +35,7 @@ layout and tooling pattern the next packages follow.)
 @hoard-engine/directors  hook/dispatch framework for game-master-style directors
 @hoard-engine/time       day/cycle/season calendar (future; see Future candidates)
 @hoard-engine/primitives text, geometry, clipping, theme tokens
-@hoard-engine/uikit      UI chrome: widgets, components       (exists as src/uikit/)
+@hoard-engine/uikit      UI chrome: widgets, components       (source: src/uikit/)
 @hoard-engine/scene      world canvas: tiles, walls, light composite, sprites, VFX
 game              logic + content + adapters             (this repo)
 ```
@@ -472,6 +473,56 @@ in plain Node. The framework/content split the extraction performed:
   game content, and the hook signatures carry game types, per the
   consumer-defined-contract rule.
 
+### @hoard-engine/uikit — source: `src/uikit/` — EXTRACTED
+
+The game-agnostic canvas UI kit, lifted into a package once its
+prerequisites were already in place from the earlier lifts: the theme
+tokens and drawing primitives live in `@hoard-engine/primitives` (its
+single deliberate dependency, per the two-consumer rule — the future
+`scene` package consumes primitives directly, never this package), the
+component contract (`UiEnv`/`UiContext`, layout → hitTest → render over
+plain view models) had been enforced in-repo for the full migration.
+
+**Current state:** published on npm as `@hoard-engine/uikit` (v0.1.0)
+and consumed by the game as a dependency; its source folder has left
+this repo and lives next to the other hoard packages. The kit/package
+split the lift performed:
+
+- The whole former `src/uikit/` moved with the package: the `env.ts`
+  environment contracts (`UiEnv`, `UiContext`, `Translator`,
+  `AssetProvider`, `SpriteRef`), the five kit widgets (modalFrame,
+  button, listRow, textInput, spriteFrame), the 14 components (topBar,
+  heroCards, monsterCards, radialMenu, dungeonIntro, menu, welcome,
+  saveLoadDialog, newGameDialog, heroSelection, settings/credits,
+  eventCard, diary, betweenDungeons) and the test harness.
+- The export map has two entries: `.` (the built index — the primitives
+  surface re-exported, the contracts, the widgets, the components) and
+  the **required** `./testing` subpath (the recording context, the
+  sentinel theme, the literal-budget counter), so the game keeps its
+  parity and sentinel suites unchanged: they import
+  `@hoard-engine/uikit/testing` where they used to import
+  `src/uikit/testing/*`.
+- The kit-side tooling moved with the package: the boundary test
+  (module-relative now; the external import set is exactly
+  `{@hoard-engine/primitives}`), the public-surface completeness test
+  (now package-internal — the index re-exports every source module) and
+  the error-side lint rules (the kit import restriction and the color
+  literal sentinel). The package carries its own build (tsc
+  declarations plus esbuild ESM bundles for both entries, primitives
+  external), its own AGENTS.md and README.md, and its longer consumer
+  reference (`ui-kit.md`, the former `docs/ui-kit.md` with its paths
+  rewritten).
+- The game keeps the knowledge: `src/ui/viewmodels/` (the GameState
+  adapters), `src/ui/env.ts` (theme, layout mode, translator, measure),
+  `src/ui/i18nAdapter.ts`, `src/ui/assets.ts` (the asset port), the
+  `*Rendering.ts` facades with their historical entry points, the parity
+  snapshots and the sentinels — all unchanged, importing through
+  `@hoard-engine/uikit`. The game-side completeness net is re-scoped
+  (`src/ui/publicSurface.test.ts`): the game imports the kit only
+  through the package entry points, and the reverse lint rule
+  (game-logic modules cannot import the kit) now targets the package
+  specifier.
+
 ### scene — source: the world-rendering files scattered today:
 
 `src/dungeon/DungeonRendering.ts`, `TileTextureCache.ts`, `TilesetLogic.ts`,
@@ -533,7 +584,12 @@ later:
 7. `@hoard-engine/directors` — framework only; content stays.
    **Done:** published as `@hoard-engine/directors` (v0.1.0), consumed
    as a dependency (see the package section above).
-8. `scene` — last and largest: needs the render/logic separation complete and
+8. `@hoard-engine/uikit` — the in-repo kit was already an isolated leaf
+   over `@hoard-engine/primitives`; the lift is a package move plus the
+   `./testing` subpath export (see the package section above).
+   **Done:** published as `@hoard-engine/uikit` (v0.1.0), consumed as
+   a dependency; `src/uikit/` has left this repo.
+9. `scene` — last and largest: needs the render/logic separation complete and
    view-model contracts in place. Camera/viewport and map streaming are
    out-of-scope extensions for a future consumer, not part of the extraction.
 

@@ -8,11 +8,11 @@ import {
   type MenuCallbacks,
   getSavedGameMenuItems,
 } from '../../menu/MenuLogic';
-import type { Translator } from '../../uikit/env';
+import type { Translator } from '@hoard-engine/uikit';
 import type {
   SaveLoadDialogMode,
   SaveLoadDialogViewModel,
-} from '../../uikit/components/saveLoadDialog';
+} from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 export const toSaveLoadDialogViewModel = (

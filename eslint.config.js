@@ -7,7 +7,8 @@ import globals from 'globals';
 // Flat-config replacement for the old .eslintrc.cjs (ESLint 10,
 // typescript-eslint 8). Behavior is carried over rule for rule:
 // type-aware linting over .ts files with prettier enforced, plus the
-// UI-kit, engine-package and reverse-boundary import restrictions.
+// engine-package and reverse-boundary import restrictions (the UI kit
+// now ships its own kit-side rules inside @hoard-engine/uikit).
 export default tseslint.config(
   {
     ignores: [
@@ -84,82 +85,6 @@ export default tseslint.config(
       '@typescript-eslint/unbound-method': 'off',
     },
   },
-  // UI-kit boundary (docs/ui-kit-spec/05-boundary-and-verification.md):
-  // nothing under src/uikit may import game code, Svelte, SvelteKit
-  // aliases or i18n packages — the kit is plain, game-agnostic
-  // TypeScript. The src/uikit/boundary.test.ts walks the import graph
-  // as a second line of defense against paths lint misses.
-  {
-    files: ['src/uikit/**/*.ts'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: [
-            {
-              name: 'svelte',
-              message:
-                'The UI kit is plain TypeScript: no Svelte, SvelteKit aliases or i18n packages.',
-            },
-            {
-              name: 'sveltekit-i18n',
-              message:
-                'The UI kit is plain TypeScript: no Svelte, SvelteKit aliases or i18n packages.',
-            },
-          ],
-          patterns: [
-            'svelte/*',
-            '$lib/*',
-            '$app/*',
-            '**/types',
-            '**/types.ts',
-            '**/core/**',
-            '**/store/**',
-            '**/campaigns/**',
-            '**/game',
-            '**/game.ts',
-            '**/items/**',
-            '**/saves/**',
-            '**/monsters/**',
-            '**/hero/**',
-            '**/menu/**',
-            '**/dungeon/**',
-            '**/events/**',
-            '**/secrets/**',
-            '**/interactables/**',
-            '**/combat/**',
-            '**/notes/**',
-            '**/gameMasters/**',
-            '**/settings/**',
-            // src/components and src/ui escapes are not listed here
-            // because '**/components/**' also matches the kit's own
-            // internal imports of './components/*'; the boundary test
-            // (src/uikit/boundary.test.ts) walks the import graph and
-            // catches those escapes.
-          ],
-        },
-      ],
-    },
-  },
-  // Converted kit modules hold no style literals: components read every
-  // color and font from theme tokens (which live in the
-  // @hoard-engine/primitives package). The tests that exercise literals
-  // are the only exceptions.
-  {
-    files: ['src/uikit/**/*.ts'],
-    ignores: ['src/uikit/**/*.test.ts'],
-    rules: {
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector:
-            'Literal[value=/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/], Literal[value=/^(rgba?|hsla?)\\(/]',
-          message:
-            'Style literals live in the theme tokens (@hoard-engine/primitives); components read them from the theme.',
-        },
-      ],
-    },
-  },
   // HOARD engine packages (docs/engine-packages.md): package sources
   // are leaves with no dependencies — only relative imports are
   // allowed; test files may additionally import 'vitest'. The
@@ -180,9 +105,9 @@ export default tseslint.config(
       ],
     },
   },
-  // Reverse boundary: game-logic modules may not import the UI kit, so
-  // headless benchmarks never pull in canvas code (any hit of these
-  // patterns means logic reached into the kit).
+  // Reverse boundary: game-logic modules may not import the UI kit
+  // (@hoard-engine/uikit), so headless benchmarks never pull in canvas
+  // code (any hit of these patterns means logic reached into the kit).
   {
     files: [
       'src/game.ts',
@@ -207,7 +132,7 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          patterns: ['**/uikit', '**/uikit/**', 'uikit', 'uikit/**'],
+          patterns: ['@hoard-engine/uikit', '@hoard-engine/uikit/**'],
         },
       ],
     },

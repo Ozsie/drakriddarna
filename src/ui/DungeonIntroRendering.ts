@@ -7,14 +7,14 @@
 // pixels: parity snapshots cover the whole chain.
 
 import type { GameState } from '../types';
-import type { UiEnv } from '../uikit/env';
+import type { UiEnv } from '@hoard-engine/uikit';
 import type { Rect } from '@hoard-engine/primitives';
 import {
   hitTestDungeonIntro,
   layoutDungeonIntro,
   renderDungeonIntro as renderDungeonIntroComponent,
   type DungeonIntroLayout as KitLayout,
-} from '../uikit/components/dungeonIntro';
+} from '@hoard-engine/uikit';
 import {
   shouldShowDungeonIntro as shouldShow,
   toDungeonIntroViewModel,

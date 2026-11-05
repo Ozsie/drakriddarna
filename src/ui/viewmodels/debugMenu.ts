@@ -12,7 +12,7 @@ import {
   getDebugMenuHeader,
   getDebugMenuItemsForView,
 } from '../../menu/MenuLogic';
-import type { MenuViewModel } from '../../uikit';
+import type { MenuViewModel } from '@hoard-engine/uikit';
 
 export const toDebugMenuViewModel = (
   state: GameState | null | undefined,

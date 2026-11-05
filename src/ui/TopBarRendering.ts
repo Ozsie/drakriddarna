@@ -6,7 +6,7 @@
 // the exact same pixels: parity snapshots cover the whole chain.
 
 import type { GameState } from '../types';
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv, UiContext } from '@hoard-engine/uikit';
 import type { Rect } from '@hoard-engine/primitives';
 import { defaultTheme } from '@hoard-engine/primitives';
 import {
@@ -16,7 +16,7 @@ import {
   type RenderTopBarOptions as ComponentRenderOptions,
   type TopBarHitElement,
   type TopBarLayout,
-} from '../uikit/components/topBar';
+} from '@hoard-engine/uikit';
 import { toTopBarViewModel } from './viewmodels/topBar';
 import { textMeasureFromCtx } from './env';
 import { i18nTranslator } from './i18nAdapter';
@@ -26,7 +26,7 @@ export type {
   TopBarElementBounds,
   TopBarHitElement,
   TopBarLayout,
-} from '../uikit/components/topBar';
+} from '@hoard-engine/uikit';
 export {
   formatLatestLog,
   formatTurnCounter,
