@@ -14,6 +14,7 @@ import { createHazardActor, takeDamage } from '../core';
 import { pickupItem } from '../hero/HeroLogic';
 import { onPickup, SEARCH_BONUS } from '../items/ItemLogic';
 import { soundEffectManager } from '../audio';
+import { resolveDirectorHook } from '@hoard-engine/directors';
 
 export const checkForItemRevealedSecret = (state: GameState, hero: Hero) => {
   const heroRoom = findCell(
@@ -63,7 +64,7 @@ export const searchForSecret = (state: GameState) => {
   const gm = getDifficulty(state);
   const searchDifficultyModifier = gm.modifiers.search;
   let result = roll(hero.level, 1 + searchBonus + searchDifficultyModifier);
-  const modifySearch = gm.rules?.modifySearchRoll ?? gm.modifySearchRoll;
+  const modifySearch = resolveDirectorHook(gm, 'modifySearchRoll', gm.rules);
   if (modifySearch) {
     result = modifySearch(result, hero, state);
   }
@@ -84,14 +85,18 @@ export const searchForSecret = (state: GameState) => {
       interactable = lookForSecretInteractable(state, hero, result);
     }
     if (!trapDoor && !hiddenDoor && !trap && !secret && !interactable) {
-      const onSearchFailed = gm.rules?.onSearchFailed ?? gm.onSearchFailed;
+      const onSearchFailed = resolveDirectorHook(
+        gm,
+        'onSearchFailed',
+        gm.rules,
+      );
       onSearchFailed?.(hero, state);
       addLog(state, 'logs.heroAction.searchFoundNothing', {
         hero: i18n(hero.name),
       });
     }
   } else {
-    const onSearchFailed = gm.rules?.onSearchFailed ?? gm.onSearchFailed;
+    const onSearchFailed = resolveDirectorHook(gm, 'onSearchFailed', gm.rules);
     onSearchFailed?.(hero, state);
     addLog(state, 'logs.heroAction.searchFoundNothing', {
       hero: i18n(hero.name),
