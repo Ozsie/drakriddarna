@@ -4,8 +4,11 @@
 
 import { DifficultLevels } from '../../core';
 import { campaigns } from '../../campaigns';
-import type { Translator } from '../../uikit';
-import type { NewGameDialogRowVm, NewGameDialogViewModel } from '../../uikit';
+import type { Translator } from '@hoard-engine/uikit';
+import type {
+  NewGameDialogRowVm,
+  NewGameDialogViewModel,
+} from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 export const getCampaignRows = (

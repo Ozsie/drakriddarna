@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   countStyleLiterals,
   type StyleLiteralCount,
-} from '../uikit/testing/literalBudget';
+} from '@hoard-engine/uikit/testing';
 
 // The style-literal budget: every color and font literal under src/ui (the
 // renderer layer) counts against it. The kit migration moves these into

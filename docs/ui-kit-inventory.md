@@ -1,6 +1,11 @@
 # UI Kit Inventory (M1)
 
-The module-by-module inventory behind the UI-kit migration
+Historical record: the migration tracked below finished with the kit
+lifted into the `@hoard-engine/uikit` engine package — its
+`src/uikit/` paths refer to the folder as it lived in this repo at the
+time ([07-extraction.md](./ui-kit-spec/07-extraction.md),
+[engine-packages.md](./engine-packages.md)). The module-by-module
+inventory behind the UI-kit migration
 ([spec](./ui-kit-spec/)), produced by milestone M1. It records, for every
 renderer, what game knowledge it holds today: the `GameState` fields it
 reads, the logic modules it imports, its `i18n()` calls, asset imports and
@@ -182,9 +187,10 @@ living in `src/ui/assets.ts`.
   surface with a completeness test, every component passes the
   independence test (hand-built view models only) and the sentinel theme
   and translator suites, and the consumer reference is
-  [docs/ui-kit.md](./ui-kit.md). What remains to publish is configuration
-  only: the export map, build config, peer-dependency decisions and a
-  separate test setup.
+  `ui-kit.md` (now the package's consumer reference; this doc's
+  sibling `docs/ui-kit.md` moved with the lift). The lift itself is
+  done: the kit is published as `@hoard-engine/uikit` (see
+  [engine-packages.md](./engine-packages.md)).
 
 **Known game-side i18n debt (outside the kit).** The toggle labels of
 the welcome screen's settings rows ("Music: On", "Debug: Off") and the

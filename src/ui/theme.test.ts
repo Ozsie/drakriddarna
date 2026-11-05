@@ -4,8 +4,8 @@
 // default theme's.
 
 import { describe, expect, it } from 'vitest';
-import { createRecordingContext } from '../uikit/testing/recordingContext';
-import type { UiEnv } from '../uikit/env';
+import { createRecordingContext } from '@hoard-engine/uikit/testing';
+import type { UiEnv } from '@hoard-engine/uikit';
 import { defaultTheme } from '@hoard-engine/primitives';
 import { highContrastTheme } from './theme';
 import { defaultUiEnv } from './env';

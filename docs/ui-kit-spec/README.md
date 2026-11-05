@@ -1,5 +1,10 @@
 # In-Project UI Kit — Specification & Agent Guidelines
 
+Historical record: this spec drove building and lifting the kit; the
+kit now lives in the `@hoard-engine/uikit` engine package
+([07-extraction.md](./07-extraction.md)). Its `src/uikit/` paths refer
+to the folder as it lived in this repo at the time.
+
 This folder contains the complete specification for building a
 **parameterized canvas UI kit inside the repository** (`src/uikit/`):
 shared primitives, a theme token object, view models and a UI context, so

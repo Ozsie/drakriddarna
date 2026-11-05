@@ -6,7 +6,7 @@
 // work unchanged, with the exact same pixels: parity snapshots cover
 // the whole chain.
 
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv, UiContext } from '@hoard-engine/uikit';
 import {
   hitTestHeroSelection,
   layoutHeroSelection,
@@ -15,7 +15,7 @@ import {
   type HeroSelectionLayout,
   type HeroSelectionLayout as KitLayout,
   type HeroSelectionRowLayout,
-} from '../uikit/components/heroSelection';
+} from '@hoard-engine/uikit';
 import { toHeroSelectionViewModel } from './viewmodels/heroSelection';
 import { legacyUiEnv } from './env';
 import { uiAssetProvider } from './assets';

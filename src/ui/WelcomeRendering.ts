@@ -7,8 +7,8 @@
 // work unchanged, with the exact same pixels: parity snapshots cover
 // the whole chain.
 
-import type { UiEnv } from '../uikit';
-import type { Rect } from '../uikit';
+import type { UiEnv } from '@hoard-engine/uikit';
+import type { Rect } from '@hoard-engine/uikit';
 import {
   hitTestWelcome,
   layoutWelcome,
@@ -16,18 +16,18 @@ import {
   renderWelcomeBackground as renderWelcomeBackgroundComponent,
   renderWelcomeFooter as renderWelcomeFooterComponent,
   type WelcomeLayout as KitLayout,
-} from '../uikit/components/welcome';
+} from '@hoard-engine/uikit';
 import {
   toWelcomeViewModel,
   type WelcomeButtonId,
   type WelcomeViewOptions,
 } from './viewmodels/welcome';
-import { defaultTheme } from '../uikit';
+import { defaultTheme } from '@hoard-engine/uikit';
 import { legacyUiContext, defaultUiEnv } from './env';
 import { AssetId, getAssetUrl } from './assets';
 
 export type { WelcomeButtonId, WelcomeViewOptions } from './viewmodels/welcome';
-export { getCoverFitBounds } from '../uikit/components/welcome';
+export { getCoverFitBounds } from '@hoard-engine/uikit';
 
 /** The human-authored welcome background, served like other static assets. */
 export const WELCOME_BACKGROUND_IMAGE = getAssetUrl(AssetId.welcomeBackground);

@@ -9,7 +9,12 @@ import {
   defaultTheme,
   measureTextWidth as kitMeasureTextWidth,
 } from '@hoard-engine/primitives';
-import type { LayoutMode, TextMeasure, UiContext, UiEnv } from '../uikit/env';
+import type {
+  LayoutMode,
+  TextMeasure,
+  UiContext,
+  UiEnv,
+} from '@hoard-engine/uikit';
 import { isCompactUi } from './UiMode';
 import { i18nTranslator } from './i18nAdapter';
 import { uiAssetProvider } from './assets';

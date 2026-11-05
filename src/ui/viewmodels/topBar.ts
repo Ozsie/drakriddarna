@@ -6,8 +6,8 @@
 import type { GameState, LogEvent } from '../../types';
 import { formatDuration, getCurrentDungeonTimeMs } from '../../core';
 import { isDebugModeAvailable } from '../../settings/debugMode';
-import type { Translator } from '../../uikit';
-import type { TopBarViewModel } from '../../uikit';
+import type { Translator } from '@hoard-engine/uikit';
+import type { TopBarViewModel } from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 // Compact (narrow screen) counter labels: an emoji instead of the

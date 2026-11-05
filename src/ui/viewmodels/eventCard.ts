@@ -3,11 +3,8 @@
 // list (already bulleted) are prebuilt here.
 
 import type { GameState, TurnEvent } from '../../types';
-import type { Translator } from '../../uikit/env';
-import type {
-  DrawnEventVm,
-  EventCardViewModel,
-} from '../../uikit/components/eventCard';
+import type { Translator } from '@hoard-engine/uikit';
+import type { DrawnEventVm, EventCardViewModel } from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 export const formatEventTitle = (

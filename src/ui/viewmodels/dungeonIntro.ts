@@ -3,8 +3,8 @@
 // dismissed) and the translated title/intro/close texts live here.
 
 import type { GameState } from '../../types';
-import type { Translator } from '../../uikit/env';
-import type { DungeonIntroViewModel } from '../../uikit/components/dungeonIntro';
+import type { Translator } from '@hoard-engine/uikit';
+import type { DungeonIntroViewModel } from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 /** Whether the intro modal should be shown for this state. */

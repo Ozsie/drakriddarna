@@ -15,7 +15,7 @@ import type {
   PartyWipeAction,
   TradeItemSlot,
 } from '../types';
-import type { UiEnv, UiContext } from '../uikit/env';
+import type { UiEnv, UiContext } from '@hoard-engine/uikit';
 import type { Rect } from '@hoard-engine/primitives';
 import { actorColour } from './theme';
 import {
@@ -24,7 +24,7 @@ import {
   renderBetweenDungeons as renderBetweenDungeonsComponent,
   type BetweenDungeonsHit as KitHit,
   type BetweenDungeonsLayout as KitLayout,
-} from '../uikit/components/betweenDungeons';
+} from '@hoard-engine/uikit';
 import { toBetweenDungeonsViewModel } from './viewmodels/betweenDungeons';
 import { getHeroTradableItems } from '../dungeon/BetweenDungeonsLogic';
 import { legacyUiEnv, defaultUiEnv } from './env';

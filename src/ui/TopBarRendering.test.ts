@@ -7,7 +7,7 @@ import {
   getTopBarLayout,
   renderTopBar,
 } from './TopBarRendering';
-import { measureTextWidth, truncateText } from '../uikit';
+import { measureTextWidth, truncateText } from '@hoard-engine/uikit';
 import { isPointInRect as isPointInBounds } from '@hoard-engine/primitives';
 import { renderUI } from './UIRendering';
 import type { GameState } from '../types';

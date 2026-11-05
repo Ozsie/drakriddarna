@@ -1,5 +1,11 @@
 # 07 — Lifting the kit into its own repository
 
+**Status: done.** The kit is published as `@hoard-engine/uikit`
+(v0.1.0, see [engine-packages.md](../engine-packages.md)) with the
+export map, test split, rewiring and doc moves this plan prescribes;
+`src/uikit/` has left this repo. The notes below are the original plan,
+kept as the record of the decisions behind the lift.
+
 M1–M6 are complete and the package-readiness gate in
 [06-milestones.md](./06-milestones.md) is closed: nothing under
 `src/uikit/**` imports game code (lint and boundary test), the public

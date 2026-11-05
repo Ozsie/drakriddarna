@@ -13,7 +13,7 @@ import {
   getTopBarHit,
 } from '../ui/UIRendering';
 import type { BetweenDungeonsHitResult } from '../ui/BetweenDungeonsRendering';
-import type { TopBarHitElement } from '../uikit';
+import type { TopBarHitElement } from '@hoard-engine/uikit';
 import type { DebugMenuHitResult } from '../ui/DebugMenuRendering';
 import type {
   SaveLoadDialogHitResult,

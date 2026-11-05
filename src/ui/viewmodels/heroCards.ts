@@ -6,14 +6,14 @@
 import type { GameState, Hero, Item } from '../../types';
 import { liveHeroes } from '../../hero/HeroLogic';
 import { ACTIVE, DESCRIPTION, USED } from '../../items/ItemLogic';
-import type { Translator } from '../../uikit/env';
+import type { Translator } from '@hoard-engine/uikit';
 import type {
   HeroCardSpriteRef,
   HeroCardVm,
   HeroCardsViewModel,
   HeroInventoryItemVm,
   HeroInventoryVm,
-} from '../../uikit/components/heroCards';
+} from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
 const heroCardVm = (
