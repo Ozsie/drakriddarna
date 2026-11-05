@@ -18,6 +18,14 @@ export class SoundEffectManager extends EngineSoundEffectManager {
     return this.playSound('sfx/door_open.mp3');
   }
 
+  public playUnlock(): HTMLAudioElement | null {
+    return this.playSound('sfx/unlock.mp3');
+  }
+
+  public playLocked(): HTMLAudioElement | null {
+    return this.playSound('sfx/locked.mp3');
+  }
+
   public playWeaponAttack(weapon?: Weapon | null): HTMLAudioElement | null {
     return this.playSound(weapon?.attackSound);
   }

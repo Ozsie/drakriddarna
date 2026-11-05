@@ -45,6 +45,11 @@ export type GameState = {
   flameEffects?: FlameEffect[];
   // Screen shakes active or recently expired; the renderer prunes them.
   shakeEffects?: ShakeEffect[];
+  // Transient sound-cue data appended by game logic: logic modules never
+  // import the audio facade, they describe what happened as cue data and
+  // the game's sound-cue adapter drains it on publish
+  // (see src/audio/SoundCueAdapter.ts).
+  soundCues?: SoundCue[];
   roundActionsDelta?: number;
   // Transient light sources spawned by events, cleared at round reset.
   eventLights?: LightSource[];
@@ -216,6 +221,38 @@ export type LogEvent = {
   properties?: Record<string, string>;
   turn: number;
 };
+
+// A sound cue: logic's side of the audio inversion
+// (docs/engine-packages.md). Logic never imports the soundEffectManager
+// facade; it appends one of these to `state.soundCues` describing the game
+// event that happened, and the game's sound-cue adapter
+// (src/audio/SoundCueAdapter.ts) drains the queue on publish and maps
+// each cue to a sample through the facade's cue table. Source-specific
+// cues carry the game object whose sound field (walkSound, attackSound,
+// ...) names the sample; which fixed cue plays which fixed sample is
+// table knowledge and lives in the facade, not here.
+export type SoundCue =
+  | { cue: 'actorWalk'; actor?: Actor }
+  | { cue: 'actorHurt'; actor?: Actor }
+  | { cue: 'actorDeath'; actor?: Actor }
+  | { cue: 'weaponAttack'; weapon?: Weapon }
+  | { cue: 'shieldBlock'; shield?: Shield }
+  | { cue: 'itemUse'; item?: Item }
+  | { cue: 'interact'; interactable?: InteractableCell }
+  | { cue: 'eventSound'; event?: TurnEvent }
+  | { cue: 'search'; searchResult: number }
+  | { cue: 'doorOpen' }
+  | { cue: 'unlock' }
+  | { cue: 'locked' }
+  | { cue: 'miss' }
+  | { cue: 'criticalHit' }
+  | { cue: 'dropItem' }
+  | { cue: 'pickUpItem' }
+  | { cue: 'shuffle' }
+  | { cue: 'fireBall' }
+  | { cue: 'diaryAdd' }
+  | { cue: 'paralyze' }
+  | { cue: 'levelUp' };
 
 // The five supported actor sprite animations, in sprite-sheet row order.
 export type ActorAnimationName = 'idle' | 'walk' | 'attack' | 'hurt' | 'death';

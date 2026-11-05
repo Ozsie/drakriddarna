@@ -37,8 +37,8 @@ import {
   DEFAULT_GAME_MASTER_ID,
 } from './core';
 import { clearActorAnimations } from './core';
+import { emitSoundCue } from './core';
 import { setNextDungeonTransitionProvider } from './interactables/InteractableLogic';
-import { soundEffectManager } from './audio';
 import { dispatchDirectorEvent } from '@hoard-engine/directors';
 
 // Re-exported because gameStateStore consumes it through the game module.
@@ -190,6 +190,9 @@ export const init = (
   if (selectedGameMaster?.initialState) {
     state.gameMasterState = selectedGameMaster.initialState();
   }
+  // The deck was shuffled before the state existed, so its shuffle cue is
+  // emitted here once the state can carry it.
+  emitSoundCue(state, { cue: 'shuffle' });
   applyStartingEquipment(state.heroes as Hero[], selectedGameMaster);
   resetLiveHeroes(state);
   // Drop fallback items a hero already carries before the dungeon begins
@@ -320,7 +323,7 @@ export const next = async (
         state.previousEvent = state.currentEvent;
         const event = drawNextEvent(state);
         state.currentEvent = event;
-        soundEffectManager.playEventSound(event);
+        emitSoundCue(state, { cue: 'eventSound', event });
         const effect = eventEffects[event.effect];
         if (effect) {
           effect(state, event);

@@ -1,5 +1,6 @@
 export * from './logger';
 export * from './dice';
+export * from './soundCues';
 export * from './grid';
 export * from './combat';
 export * from './scoring';

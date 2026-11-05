@@ -287,7 +287,11 @@ export const onSaveGame = (activeState?: GameState | null, name = '') => {
 export const toTestingGrounds = (activeState?: GameState | null) => {
   if (activeState) {
     activeState.dungeon = testingGrounds;
-    activeState.eventDeck = getEventsForDungeon(activeState.dungeon);
+    activeState.eventDeck = getEventsForDungeon(
+      activeState.dungeon,
+      [],
+      activeState,
+    );
     resetLiveHeroes(activeState);
     gameStateStore.set(activeState);
   } else {

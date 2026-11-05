@@ -13,6 +13,7 @@ import {
   addLog,
   clearActorAnimations,
   doReRender,
+  emitSoundCue,
   findCell,
   getDifficulty,
   i18n,
@@ -36,7 +37,6 @@ import {
 } from '../dungeon/dungeonParser';
 import { applyTerrainEnterEffects, terrainAt } from '../dungeon/TerrainLogic';
 import { createShake } from '../combat';
-import { soundEffectManager } from '../audio';
 
 let getCampaignDeck:
   ((campaignId: string) => TurnEvent[] | undefined) | undefined;
@@ -186,7 +186,7 @@ export const interactableEffects: Record<string, InteractableEffectHandler> = {
         state.campaignId && getCampaignDeck
           ? getCampaignDeck(state.campaignId)
           : undefined;
-      state.eventDeck = getEventsForDungeon(state.dungeon, campaignDeck);
+      state.eventDeck = getEventsForDungeon(state.dungeon, campaignDeck, state);
       state.currentEvent = undefined;
       state.drawEvents = true;
       state.roundActionsDelta = 0;
@@ -360,7 +360,7 @@ export const triggerInteractable = (
   }
 
   interactable.interacted = true;
-  soundEffectManager.playInteractSound(interactable);
+  emitSoundCue(state, { cue: 'interact', interactable });
   handler(state, interactable, actor);
   return true;
 };

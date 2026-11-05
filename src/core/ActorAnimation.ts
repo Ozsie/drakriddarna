@@ -1,5 +1,4 @@
 import type { Actor, ActorAnimationName, Position } from '../types';
-import { soundEffectManager } from '../audio';
 
 export const DEFAULT_ACTOR_MOVEMENT_DURATION_MS = 200;
 export const DEFAULT_ACTOR_SPRITE_FRAME_DURATION_MS = 150;
@@ -59,13 +58,17 @@ export const resetActorMovementDuration = (): void => {
 const easeInOutQuad = (t: number): number =>
   t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
+// Records a movement step for the actor's sprite animation. Returns true
+// when a step was actually queued (the target differs from the last
+// waypoint); callers emit the walk sound cue for the recorded step, so
+// the audio is emitted with the game state instead of played here.
 export const recordActorStep = (
   actor: Actor,
   to: Position,
   duration: number = currentMovementDurationMs,
   currentTime: number = Date.now(),
-): void => {
-  if (!actor) return;
+): boolean => {
+  if (!actor) return false;
 
   let state = actorAnimations.get(actor);
   if (!state) {
@@ -84,10 +87,8 @@ export const recordActorStep = (
     : { x: state.targetPos.x, y: state.targetPos.y };
 
   if (from.x === to.x && from.y === to.y) {
-    return;
+    return false;
   }
-
-  soundEffectManager.playActorWalk(actor);
 
   const startTime = Math.max(currentTime, state.lastStepEndTime);
   const stepDuration = Math.max(10, duration);
@@ -102,6 +103,7 @@ export const recordActorStep = (
   state.lastStepEndTime = startTime + stepDuration;
   state.targetPos = { x: to.x, y: to.y };
   activeActors.add(actor);
+  return true;
 };
 
 export const getActorVisualPosition = (

@@ -13,7 +13,7 @@ import { randomInt, roll } from '../core';
 import { createHazardActor, takeDamage } from '../core';
 import { pickupItem } from '../hero/HeroLogic';
 import { onPickup, SEARCH_BONUS } from '../items/ItemLogic';
-import { soundEffectManager } from '../audio';
+import { emitSoundCue } from '../core';
 import { resolveDirectorHook } from '@hoard-engine/directors';
 
 export const checkForItemRevealedSecret = (state: GameState, hero: Hero) => {
@@ -68,7 +68,7 @@ export const searchForSecret = (state: GameState) => {
   if (modifySearch) {
     result = modifySearch(result, hero, state);
   }
-  soundEffectManager.playSearch(result);
+  emitSoundCue(state, { cue: 'search', searchResult: result });
   let trapDoor, hiddenDoor, trap, secret, interactable;
   if (result >= 1) {
     trapDoor = lookForTrapDoor(state, hero, result);

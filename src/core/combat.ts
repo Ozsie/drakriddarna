@@ -15,7 +15,7 @@ import { addLog, i18n } from './logger';
 import { getDifficulty } from './DifficultLevels';
 import { flashActor, playActorAttack, playActorDeath } from './ActorAnimation';
 import { createBloodSplatter, createProjectile } from '../combat';
-import { soundEffectManager } from '../audio';
+import { emitSoundCue } from './soundCues';
 import { resolveDirectorHook } from '@hoard-engine/directors';
 
 export const ATTACK_BONUS = 'ATTACK_BONUS';
@@ -129,7 +129,7 @@ export const processActorDowned = (
   } else if (!killedByHero) {
     dropDownedMonster(state, target as Monster);
   }
-  soundEffectManager.playActorDeath(target);
+  emitSoundCue(state, { cue: 'actorDeath', actor: target });
 };
 
 export const getEffectiveMaxMovement = (
@@ -266,7 +266,7 @@ export const takeDamage = (
   if (ranged && source.rangedWeapon) {
     weapon = source.rangedWeapon;
   }
-  soundEffectManager.playWeaponAttack(weapon);
+  emitSoundCue(state, { cue: 'weaponAttack', weapon });
   playActorAttack(source);
   const isHeroSource = state.heroes.includes(source);
   const isHeroTarget = state.heroes.includes(target);
@@ -288,7 +288,7 @@ export const takeDamage = (
   if (!weapon.ignoresShield) {
     shield = roll(target.level, target.shield?.dice ?? 0);
     if (shield > 0) {
-      soundEffectManager.playShieldBlockSound(target.shield);
+      emitSoundCue(state, { cue: 'shieldBlock', shield: target.shield });
     }
   } else if (target.shield) {
     addLog(state, 'logs.takeDamage.shieldUseless', {
@@ -407,7 +407,7 @@ export const takeDamage = (
           timestamp: impactTime,
         }),
       );
-      soundEffectManager.playCriticalHit();
+      emitSoundCue(state, { cue: 'criticalHit' });
     } else {
       state.damageIndicators.push(
         createDamageIndicator(damage, target.position, {
@@ -430,9 +430,9 @@ export const takeDamage = (
     processActorDowned(state, target, isHeroSource && !isHeroTarget);
   } else {
     if (damage > 0) {
-      soundEffectManager.playActorHurt(target);
+      emitSoundCue(state, { cue: 'actorHurt', actor: target });
     } else {
-      soundEffectManager.playMiss();
+      emitSoundCue(state, { cue: 'miss' });
     }
     if (weapon.id === 'green_dark_lord_sword') {
       addLog(state, 'logs.takeDamage.paralyzed', {
@@ -442,7 +442,7 @@ export const takeDamage = (
       target.movement = 0;
       target.actions = 0;
       target.incapacitated = true;
-      soundEffectManager.playParalyze();
+      emitSoundCue(state, { cue: 'paralyze' });
     }
   }
 };

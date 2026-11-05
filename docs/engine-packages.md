@@ -15,8 +15,10 @@ this repository.
 This is a target architecture, not a description of current state: eight of
 the packages are published and consumed as dependencies, and what remains in
 `src/` is still coupled through the shared `GameState` type, the
-`#lib/translations/index.js` i18n singleton, direct imports of the
-`soundEffectManager` facade, and colocated rendering. Each package section
+`#lib/translations/index.js` i18n singleton, and colocated rendering — the
+audio inversion is done: logic modules emit sound-cue data that the game's
+adapter maps to samples, and no logic module imports the
+`soundEffectManager` facade. Each package section
 names the coupling its extraction removed — and, for `scene`, still must
 remove. (The extractions so far are done: `@hoard-engine/rng`,
 `@hoard-engine/grid`, `@hoard-engine/primitives`,
@@ -223,10 +225,9 @@ follow:
 `MusicIntensity` (crossfade between tracks driven by an intensity value).
 Coupling: `$app/paths` (inject the asset base path, as uikit does with `UiEnv`)
 and type-only imports. The game keeps the sound-cue table (which event plays
-which sample) and any intensity heuristic. Extraction forces the broader
-inversion: today 12 logic modules import the `soundEffectManager` singleton
-directly; logic should emit sound-cue data and the game's adapter maps cues to
-samples.
+which sample) and any intensity heuristic. Extraction forced the broader
+inversion, now done: logic modules emit sound-cue data and the game's
+adapter maps cues to samples (see the current-state bullets below).
 
 **Current state:** published on npm as `@hoard-engine/audio` (v0.1.0) and
 consumed by the game as a dependency; its source folder has left this
@@ -249,9 +250,18 @@ plain Node. The coupling removals the extraction performed:
   tension enter/exit ranges and its tests remain in
   `src/audio/MusicIntensity.ts`, which re-exports the package's
   `MusicIntensity` type; the crossfade itself moved with the package.
-- The sound-cue inversion (logic modules emitting cue data instead of
-  importing the manager singleton) is unlocked but still open: the 12
-  importing modules keep calling the game facade unchanged.
+- The sound-cue inversion is done: logic modules never import the
+  manager singleton — they append `SoundCue` data to
+  `state.soundCues` via `emitSoundCue`
+  (`src/core/soundCues.ts`), and the game's adapter
+  (`src/audio/SoundCueAdapter.ts`) drains the queue in emission
+  order on every store publish (`src/store/gameStateStore.ts`)
+  and maps each cue to a `play*` facade method. The cue
+  discriminants live in `src/types.ts`; the adapter is the only
+  consumer of the facade besides the UI shell (button clicks,
+  volume/mute wiring in `AppSettings`). Headless consumers
+  (benchmarks, logic tests) see cue data on the state and stay
+  silent.
 
 ### @hoard-engine/primitives — source: `src/uikit/primitives/` +
 
@@ -566,8 +576,9 @@ what uikit already did with `UiEnv.t`:
   seam) and the locale lifecycle (`menu/MenuLogic.ts`,
   `store/gameStateStore.ts`, `components/DungeonBoardController.ts`) —
   app-shell seams, not engine seams.
-- **Invert audio.** Replace direct `soundEffectManager` imports in logic with
-  sound-cue data plus a game-side adapter.
+- **Invert audio.** Done: direct `soundEffectManager` imports in logic are
+  replaced by sound-cue data on the state plus a game-side adapter (see the
+  audio section).
 - **Separate compute from render.** Rendering files colocated in logic
   directories move to `scene`; logic emits data (animation/sound/effect events)
   that presentation consumes.
@@ -653,8 +664,9 @@ policy; the packages contain no game content by construction.
 
 A November 2026 review pass compared this spec with what remains in
 `src/`. The published packages and their facades match the spec above,
-including the open-item ledger: the sound-cue inversion is still open
-(12 modules import the `soundEffectManager` facade) and the scene
+including the open-item ledger: the sound-cue inversion is done (logic
+emits cue data; only the adapter, the UI shell and `AppSettings` import
+the `soundEffectManager` facade) and the scene
 extraction (step 9) has not started. Besides the two future candidates
 above, these framework-looking modules were examined and stay in the
 game:

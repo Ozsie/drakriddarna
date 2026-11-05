@@ -156,19 +156,12 @@ describe('SoundEffectManager', () => {
   });
 });
 
-describe('Sound system integration with gameplay events', () => {
-  let playWeaponAttackSpy: Mock;
-  let playActorWalkSpy: Mock;
-  let playActorHurtSpy: Mock;
-  let playActorDeathSpy: Mock;
-
-  beforeEach(() => {
-    playWeaponAttackSpy = vi.spyOn(soundEffectManager, 'playWeaponAttack');
-    playActorWalkSpy = vi.spyOn(soundEffectManager, 'playActorWalk');
-    playActorHurtSpy = vi.spyOn(soundEffectManager, 'playActorHurt');
-    playActorDeathSpy = vi.spyOn(soundEffectManager, 'playActorDeath');
-  });
-
+// The audio inversion (docs/engine-packages.md): logic modules never
+// import the soundEffectManager facade. They append sound-cue data to the
+// state, and the game's adapter drains it on publish. These tests assert
+// the cue data logic emits; the adapter's mapping is covered by
+// src/audio/SoundCueAdapter.test.ts.
+describe('Sound-cue emission from gameplay events', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     clearActorAnimations();
@@ -206,7 +199,7 @@ describe('Sound system integration with gameplay events', () => {
     drawEvents: false,
   });
 
-  it('takeDamage plays weapon attack sound and target hurt sound when target survives', () => {
+  it('takeDamage emits weapon attack and hurt cues when the target survives', () => {
     const state = createTestState();
     const attackerWeapon: Weapon = {
       name: 'Sword',
@@ -260,14 +253,24 @@ describe('Sound system integration with gameplay events', () => {
 
     takeDamage(state, attacker, defender, false);
 
-    expect(playWeaponAttackSpy).toHaveBeenCalledWith(attackerWeapon);
+    const cues = state.soundCues ?? [];
+    const names = cues.map((cue) => cue.cue);
+    expect(names).toContain('weaponAttack');
+    expect(names).toContain('actorHurt');
+    expect(names).not.toContain('actorDeath');
+    expect(cues[0]).toEqual({
+      cue: 'weaponAttack',
+      weapon: attackerWeapon,
+    });
+    expect(cues.find((cue) => cue.cue === 'actorHurt')).toEqual({
+      cue: 'actorHurt',
+      actor: defender,
+    });
     expect(defender.health).toBeLessThan(10);
     expect(defender.health).toBeGreaterThan(0);
-    expect(playActorHurtSpy).toHaveBeenCalledWith(defender);
-    expect(playActorDeathSpy).not.toHaveBeenCalled();
   });
 
-  it('takeDamage plays weapon attack sound and target death sound when target dies', () => {
+  it('takeDamage emits the death cue when the target dies', () => {
     const state = createTestState();
     const attackerWeapon: Weapon = {
       name: 'Sword',
@@ -321,12 +324,19 @@ describe('Sound system integration with gameplay events', () => {
 
     takeDamage(state, attacker, defender, false);
 
-    expect(playWeaponAttackSpy).toHaveBeenCalledWith(attackerWeapon);
+    const cues = state.soundCues ?? [];
+    const names = cues.map((cue) => cue.cue);
+    expect(names).toContain('weaponAttack');
+    expect(names).toContain('actorDeath');
+    expect(names).not.toContain('actorHurt');
+    expect(cues.find((cue) => cue.cue === 'actorDeath')).toEqual({
+      cue: 'actorDeath',
+      actor: defender,
+    });
     expect(defender.health).toBe(0);
-    expect(playActorDeathSpy).toHaveBeenCalledWith(defender);
   });
 
-  it('recordActorStep plays walk sound when actor moves to a new position', () => {
+  it('recordActorStep reports whether a step was recorded; callers emit the walk cue', () => {
     const actor: Actor = {
       name: 'Hero',
       walkSound: '/sounds/footstep.mp3',
@@ -355,13 +365,9 @@ describe('Sound system integration with gameplay events', () => {
       inventory: [],
     };
 
-    recordActorStep(actor, { x: 1, y: 0 });
-    expect(playActorWalkSpy).toHaveBeenCalledWith(actor);
-
-    playActorWalkSpy.mockClear();
-    // Same position step should not trigger walk sound
-    recordActorStep(actor, { x: 1, y: 0 });
-    expect(playActorWalkSpy).not.toHaveBeenCalled();
+    expect(recordActorStep(actor, { x: 1, y: 0 })).toBe(true);
+    // A same-position step records nothing, so no walk cue is emitted.
+    expect(recordActorStep(actor, { x: 1, y: 0 })).toBe(false);
   });
 
   it('monster templates support walkSound, hurtSound, and deathSound overrides', () => {
