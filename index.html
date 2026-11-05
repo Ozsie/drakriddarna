@@ -4,21 +4,23 @@
 		<meta charset="utf-8" />
 		<link rel="icon" href="./favicon.png" />
 		<meta name="viewport" content="width=device-width" />
+		<link href="./_app/immutable/entry/start.Dzt8gnPu.js" rel="modulepreload">
+		<link href="./_app/immutable/entry/payload.DSmR2FwN.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/CRzLMJPS.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/0ull-osL.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/OQX67Pe3.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/B72DkQNH.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/Sv5xkaRE.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/DYrviY11.js" rel="modulepreload">
+		<link href="./_app/immutable/entry/app.Q7kXzlso.js" rel="modulepreload">
+		<link href="./_app/immutable/nodes/0.vOsEYz0k.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/C8NMvu52.js" rel="modulepreload">
+		<link href="./_app/immutable/nodes/2.Be1l26hZ.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/BvoMiZb1.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/DZ4_2nch.js" rel="modulepreload">
 		
-		<link href="./_app/immutable/assets/0.3ca4d169.css" rel="stylesheet">
-		<link href="./_app/immutable/assets/2.84ede33d.css" rel="stylesheet">
-		<link rel="modulepreload" href="./_app/immutable/entry/start.58d9105c.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/scheduler.4fa3a7cb.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/singletons.ffa0cf93.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/index.b997bf1e.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/paths.2209bd69.js">
-		<link rel="modulepreload" href="./_app/immutable/entry/app.ac94b77a.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/preload-helper.a4192956.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/index.d618cd40.js">
-		<link rel="modulepreload" href="./_app/immutable/nodes/0.261b05f9.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/index.5f9cec19.js">
-		<link rel="modulepreload" href="./_app/immutable/nodes/2.7510cadd.js">
-		<link rel="modulepreload" href="./_app/immutable/chunks/tiles.2defe40a.js">
+		<link href="./_app/immutable/assets/0.BBGshlJQ.css" rel="stylesheet">
+		<link href="./_app/immutable/assets/2.De4qfxzy.css" rel="stylesheet">
 		<style>
 			/* iOS WebKit paints a gray tap-highlight flash over tapped
 			   elements (the full-screen game canvas in particular);
@@ -29,27 +31,24 @@
 		</style>
 	</head>
 	<body data-sveltekit-preload-data="hover">
-		<div style="display: contents">  <div class="app-container svelte-87caw1"><div class="main-section svelte-87caw1"><main class="dungeon-view svelte-87caw1"><div class="dungeon svelte-196w3bn" id="gameBoardContainer"><div class="canvasContainer svelte-196w3bn"><canvas id="staticCanvas" class="canvasLayer svelte-196w3bn"></canvas> <canvas id="actorCanvas" class="canvasLayer svelte-196w3bn"></canvas> <canvas id="gameBoard" class="canvasLayer svelte-196w3bn"></canvas> <canvas id="uiCanvas" class="canvasLayer interactiveLayer svelte-196w3bn" style="cursor: default;"></canvas></div> </div></main></div></div> 
+		<div style="display: contents"><!--[--><!--[--><!--[0--><!--[--><!--[--><!--[-1--><!--[--><div class="app-container svelte-1uha8ag"><div class="main-section svelte-1uha8ag"><main class="dungeon-view svelte-1uha8ag"><div class="dungeon svelte-6pc42a" id="gameBoardContainer"><div class="canvasContainer svelte-6pc42a"><canvas id="staticCanvas" class="canvasLayer svelte-6pc42a"></canvas> <canvas id="actorCanvas" class="canvasLayer svelte-6pc42a"></canvas> <canvas id="gameBoard" class="canvasLayer svelte-6pc42a"></canvas> <canvas id="uiCanvas" class="canvasLayer interactiveLayer svelte-6pc42a" style="cursor: default;"></canvas></div></div><!----></main></div></div><!--]--><!--]--><!--]--><!----><!--]--><!--]--><!--]--><!----> <!--[-1--><!--]--><!--]-->
 			
 			<script>
 				{
-					__sveltekit_19x6zkv = {
-						assets: "/drakriddarna",
+					__sveltekit_1m4akaf = {
 						base: new URL(".", location).pathname.slice(0, -1),
-						env: {}
+						version: "1793881724907",
+						assets: "/drakriddarna"
 					};
 
 					const element = document.currentScript.parentElement;
 
-					const data = [null,null];
-
-					Promise.all([
-						import("./_app/immutable/entry/start.58d9105c.js"),
-						import("./_app/immutable/entry/app.ac94b77a.js")
-					]).then(([kit, app]) => {
+					import("./_app/immutable/entry/start.Dzt8gnPu.js").then(async (kit) => {
+						kit.init(__sveltekit_1m4akaf);
+						const app = await import("./_app/immutable/entry/app.Q7kXzlso.js");
 						kit.start(app, element, {
 							node_ids: [0, 2],
-							data,
+							data: [null,null],
 							form: null,
 							error: null
 						});

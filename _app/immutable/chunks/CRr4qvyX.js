@@ -1,0 +1,1 @@
+var e={orc:{red:`Orc (Red)`,blue:`Orc (Blue)`,green:`Orc (Green)`,yellow:`Orc (Yellow)`},troll:{red:`Troll (Red)`,blue:`Troll (Blue)`,green:`Troll (Green)`,yellow:`Troll (Yellow)`},darkLord:{red:`Dark Lord (Red)`,blue:`Dark Lord (Blue)`,green:`Dark Lord (Green)`,yellow:`Dark Lord (Yellow)`}};export{e as default};
