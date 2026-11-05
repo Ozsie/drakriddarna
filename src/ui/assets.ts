@@ -10,7 +10,7 @@ import type { AssetProvider } from '@hoard-engine/uikit';
 export const AssetId = {
   /** The welcome screen background art. */
   welcomeBackground: 'welcomeBackground',
-} as const;
+};
 
 export type AssetId = (typeof AssetId)[keyof typeof AssetId];
 
@@ -31,7 +31,7 @@ export const getAssetUrl = (id: AssetId): string => ASSET_URLS[id];
  */
 export const uiAssetProvider: AssetProvider = {
   get: (id) => {
-    const url = ASSET_URLS[id as AssetId] ?? id;
+    const url = ASSET_URLS[id] ?? id;
     return getReadyImage(url) ?? undefined;
   },
 };
