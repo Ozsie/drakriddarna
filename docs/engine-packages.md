@@ -18,10 +18,9 @@ everything lives in `src/`, coupled through the shared `GameState` type, the
 rendering. Each package section names the coupling that must be removed first.
 (The extractions so far are done: `@hoard-engine/rng`,
 `@hoard-engine/grid`, `@hoard-engine/primitives`,
-`@hoard-engine/audio`, `@hoard-engine/lighting` and
-`@hoard-engine/saves` are published on npm and consumed as
-dependencies, and `@hoard-engine/directors` is extracted the same
-way, pending its npm publication — see their sections below for the
+`@hoard-engine/audio`, `@hoard-engine/lighting`,
+`@hoard-engine/saves` and `@hoard-engine/directors` are published on
+npm and consumed as dependencies — see their sections below for the
 layout and tooling pattern the next packages follow.)
 
 ## Package map
@@ -432,12 +431,10 @@ are game content and stay in the game. The framework is cadence-agnostic: this
 game uses turn-bound hooks; a real-time consumer would register interval-based
 ones.
 
-**Current state:** extracted from this repo and consumed by the game as a
-dependency; the package source lives standalone next to this repo (the
-hoard `directors` folder, sibling of `rng`, `grid`, `primitives`,
-`audio`, `lighting` and `saves`), pending publication to npm — until
-it is published, the game's `package.json` points at it as a `file:`
-dependency, flipping to `^0.1.0` on publish. It follows the
+**Current state:** published on npm as `@hoard-engine/directors`
+(v0.1.0) and consumed by the game as a dependency; its source folder
+has left this repo and lives next to the hoard `audio`/`rng`/
+`grid`/`primitives`/`lighting`/`saves` packages. It follows the
 established package layout: self-contained folder with build,
 publishing, testing, lint and prettier scripts, its own `AGENTS.md`
 and `README.md`, boundary and public-surface tests plus colocated
@@ -534,9 +531,8 @@ later:
    **Done:** published as `@hoard-engine/saves` (v0.1.0), consumed as a
    dependency (see the package section above).
 7. `@hoard-engine/directors` — framework only; content stays.
-   **Done:** extracted next to the other hoard packages and consumed
-   as a dependency (see the package section above), pending
-   publication to npm.
+   **Done:** published as `@hoard-engine/directors` (v0.1.0), consumed
+   as a dependency (see the package section above).
 8. `scene` — last and largest: needs the render/logic separation complete and
    view-model contracts in place. Camera/viewport and map streaming are
    out-of-scope extensions for a future consumer, not part of the extraction.
