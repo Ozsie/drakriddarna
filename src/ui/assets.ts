@@ -3,7 +3,6 @@
 // owns the URL construction (and, in M5, the $lib sprite imports).
 
 import { asset } from '$app/paths';
-import type { AssetPath } from '$app/types';
 import { getReadyImage } from '../core/ImageCache';
 import type { AssetProvider } from '@hoard-engine/uikit';
 
@@ -15,16 +14,7 @@ export const AssetId = {
 export type AssetId = (typeof AssetId)[keyof typeof AssetId];
 
 const ASSET_URLS: Record<AssetId, string> = {
-  // The cast keeps the optional-asset behavior: the file is not in the
-  // typed static catalog (svelte-kit sync regenerates that union from
-  // the files in static/), and the welcome screen draws its themed
-  // fallback when it 404s. Drop the cast and the disable once the art
-  // exists in static/images/. The disable is needed because eslint's
-  // project service resolves $app/types via SvelteKit's ambient
-  // declaration (AssetPath = string) and calls the cast unnecessary,
-  // while svelte-check resolves the generated union and requires it.
-
-  [AssetId.welcomeBackground]: asset('images/welcome.png' as AssetPath),
+  [AssetId.welcomeBackground]: asset('images/welcome.png'),
 };
 
 /** Resolves an asset id to its URL, for the shared image cache. */
