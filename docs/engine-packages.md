@@ -613,11 +613,34 @@ step-9 gate ("view-model contracts in place") is being built under
   union, TerrainLogic's default styling, the `autoDetectCorners`
   re-export (corner data will arrive in the view at lift) and the
   grid-string helpers `findCell`/`toArray`.
-- Still to convert for step 9: the light plane (the render half of
-  `LightRendering`, whose state slices span heroes, event lights,
-  projectiles and flame effects), `ImageCache`, and the
-  `ActorAnimation` timeline split (logic records steps, rendering
-  resolves frames — today both sides share the module).
+- Light plane, view-model seam done: the compositing half of
+  `LightRendering` draws only `SceneLightView` descriptors
+  (`src/scene/lights.ts`) — resolved center (alignment, ceiling, sway,
+  sweep), defaulted colour/intensity/radius, per-frame brightness, blur,
+  open effect name, occlusion polygon, sparkles and sprite-cache
+  tokens. A `buildLightViews` pass inside the facade resolves every
+  `@hoard-engine/lighting` engine computation the renderer used to call
+  (`lightCenter`, `lightIntensityScale`, `lightBlurPx`,
+  `computeSparkles`, `lightPolygonFor`, `isAnimatedLight`/
+  `isBakeableLight` classification) and applies the game knowledge
+  (renderability, viewport culling, one occlusion key per pass), so the
+  compositing — gradients, polygons, aura rings, gas clouds, baked
+  sprites, the darkness veil — never sees `GameState` or the engine
+  package. Facade signatures are unchanged; the 100-test light suite
+  pins the pixel behaviour.
+- The two remaining bookkeeping moves, decided rather than pending:
+  `ImageCache` and the `ActorAnimation` timeline stay with the game.
+  `ImageCache` folds into the scene package at lift as its internal
+  per-URL cache; the adapter may keep calling the game-side facade
+  (the game imports its packages — nothing forbids that direction).
+  `ActorAnimation` was listed as scene source before the view-model
+  contracts existed; with the contracts, its rendering half is the
+  adapter's frame/position resolution (game side) and its recording
+  half is logic (game side) — nothing of it moves.
+- What remains for step 9 is the lift itself: move the view-typed
+  compositing cores into `packages/scene/`, give the package the
+  boundary/completeness/sentinel tooling, publish, and keep the
+  facades.
 
 ## Prerequisites (cross-cutting)
 

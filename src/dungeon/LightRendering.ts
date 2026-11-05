@@ -1,5 +1,7 @@
 import type { Actor, GameState, Item, LightSource, Position } from '../types';
 import { CellAlignment, LightEffect, Side } from '../types';
+import type { SceneLightView } from '../scene/lights';
+import type { ScenePoint } from '../scene/contracts';
 import { PROJECTILE_DURATION_MS } from '../combat';
 import {
   COLLAPSED,
@@ -633,12 +635,11 @@ const fillLightShape = (
   ctx: CanvasRenderingContext2D,
   trace: (ctx: CanvasRenderingContext2D) => void,
   fillStyle: CanvasGradient,
-  light: LightSource,
-  cellSize: number,
+  blurPx: number,
 ) => {
-  const blurPx = lightBlurDisabled ? 0 : lightBlurPx(light, cellSize);
-  if (blurPx > 0) {
-    ctx.filter = `blur(${blurPx}px)`;
+  const blur = lightBlurDisabled ? 0 : blurPx;
+  if (blur > 0) {
+    ctx.filter = `blur(${blur}px)`;
   }
   ctx.save();
   trace(ctx);
@@ -650,7 +651,7 @@ const fillLightShape = (
 
 const traceLightPolygonPath = (
   ctx: CanvasRenderingContext2D,
-  points: Position[],
+  points: ScenePoint[],
 ) => {
   ctx.beginPath();
   points.forEach((point, index) => {
@@ -665,17 +666,15 @@ const traceLightPolygonPath = (
 
 const fillLightPolygon = (
   ctx: CanvasRenderingContext2D,
-  points: Position[],
+  points: ScenePoint[],
   fillStyle: CanvasGradient,
-  light: LightSource,
-  cellSize: number,
+  blurPx: number,
 ) =>
   fillLightShape(
     ctx,
     (c) => traceLightPolygonPath(c, points),
     fillStyle,
-    light,
-    cellSize,
+    blurPx,
   );
 
 // --- Sparkle effect ------------------------------------------------------
@@ -687,15 +686,13 @@ const fillLightPolygon = (
 // The twinkle positions (computeSparkles) live in the engine package.
 const renderSparkles = (
   ctx: CanvasRenderingContext2D,
-  light: LightSource,
+  view: SceneLightView,
   cellSize: number,
-  timeMs: number,
 ) => {
-  const color = light.color ?? DEFAULT_LIGHT_COLOR;
-  const intensity = light.intensity ?? DEFAULT_LIGHT_INTENSITY;
-  const sparkles = computeSparkles(light, cellSize, timeMs);
+  const intensity = view.intensity;
+  const sparkles = view.sparkles;
   ctx.save();
-  ctx.strokeStyle = color;
+  ctx.strokeStyle = view.color;
   ctx.lineWidth = Math.max(1, cellSize / 32);
   ctx.fillStyle = '#FFFFFF';
   sparkles.forEach((sparkle) => {
@@ -753,19 +750,17 @@ const auraRingAlpha = (t: number, peak: number): number => {
 // cell, with a soft center glow and a bright ring around it.
 const createAuraGradient = (
   ctx: CanvasRenderingContext2D,
-  light: LightSource,
+  view: SceneLightView,
   cellSize: number,
-  timeMs: number,
   scaleOverride?: number,
 ) => {
-  const center = lightCenter(light, cellSize, timeMs);
+  const center = view.center;
   const radiusPx = cellSize / 2;
-  const color = light.color ?? DEFAULT_LIGHT_COLOR;
-  const intensity = light.intensity ?? DEFAULT_LIGHT_INTENSITY;
+  const color = view.color;
   // Slightly brighter than a plain glow so the ring reads as a halo.
   const peak = Math.min(
     1,
-    intensity * 1.8 * (scaleOverride ?? lightIntensityScale(light, timeMs)),
+    view.intensity * 1.8 * (scaleOverride ?? view.intensityScale),
   );
   const gradient = ctx.createRadialGradient(
     center.x,
@@ -784,7 +779,7 @@ const createAuraGradient = (
 
 // The farthest polygon point from the light, so a room-filling gas
 // gradient covers the whole cloud.
-const polygonExtentPx = (center: Position, points: Position[]): number =>
+const polygonExtentPx = (center: ScenePoint, points: ScenePoint[]): number =>
   points.reduce(
     (max, point) =>
       Math.max(max, Math.hypot(point.x - center.x, point.y - center.y)),
@@ -801,17 +796,14 @@ const polygonExtentPx = (center: Position, points: Position[]): number =>
 // when the polygon is larger (gas fills its whole room).
 const createGasGradient = (
   ctx: CanvasRenderingContext2D,
-  light: LightSource,
-  cellSize: number,
-  timeMs: number,
+  view: SceneLightView,
   gradientRadiusPx?: number,
   scaleOverride?: number,
 ) => {
-  const center = lightCenter(light, cellSize, timeMs);
-  const color = light.color ?? DEFAULT_LIGHT_COLOR;
-  const intensity = light.intensity ?? DEFAULT_LIGHT_INTENSITY;
-  const radiusPx =
-    gradientRadiusPx ?? (light.radius ?? DEFAULT_LIGHT_RADIUS) * cellSize;
+  const center = view.center;
+  const color = view.color;
+  const intensity = view.intensity;
+  const radiusPx = gradientRadiusPx ?? view.radius;
   const gradient = ctx.createRadialGradient(
     center.x,
     center.y,
@@ -822,7 +814,7 @@ const createGasGradient = (
   );
   const alpha = Math.min(
     1,
-    intensity * 1.4 * (scaleOverride ?? lightIntensityScale(light, timeMs)),
+    intensity * 1.4 * (scaleOverride ?? view.intensityScale),
   );
   const stops = [0, 0.15, 0.3, 0.45, 0.55, 0.7, 0.85, 1];
   stops.forEach((t) => {
@@ -835,9 +827,9 @@ const createGasGradient = (
 };
 
 const traceAuraCircle =
-  (light: LightSource, cellSize: number, timeMs: number) =>
+  (view: SceneLightView, cellSize: number) =>
   (ctx: CanvasRenderingContext2D) => {
-    const center = lightCenter(light, cellSize, timeMs);
+    const center = view.center;
     ctx.beginPath();
     ctx.arc(center.x, center.y, cellSize / 2, 0, Math.PI * 2);
   };
@@ -847,16 +839,14 @@ const traceAuraCircle =
 // neighbouring cells.
 const renderAura = (
   ctx: CanvasRenderingContext2D,
-  light: LightSource,
+  view: SceneLightView,
   cellSize: number,
-  timeMs: number,
 ) => {
   fillLightShape(
     ctx,
-    traceAuraCircle(light, cellSize, timeMs),
-    createAuraGradient(ctx, light, cellSize, timeMs),
-    light,
-    cellSize,
+    traceAuraCircle(view, cellSize),
+    createAuraGradient(ctx, view, cellSize),
+    view.blurPx,
   );
 };
 
@@ -867,15 +857,13 @@ const renderAura = (
 // around the center.
 const createLightGradient = (
   ctx: CanvasRenderingContext2D,
-  light: LightSource,
-  cellSize: number,
-  timeMs: number,
+  view: SceneLightView,
   scaleOverride?: number,
 ) => {
-  const center = lightCenter(light, cellSize, timeMs);
-  const color = light.color ?? DEFAULT_LIGHT_COLOR;
-  const intensity = light.intensity ?? DEFAULT_LIGHT_INTENSITY;
-  const radiusPx = (light.radius ?? DEFAULT_LIGHT_RADIUS) * cellSize;
+  const center = view.center;
+  const color = view.color;
+  const intensity = view.intensity;
+  const radiusPx = view.radius;
   const gradient = ctx.createRadialGradient(
     center.x,
     center.y,
@@ -886,7 +874,7 @@ const createLightGradient = (
   );
   const peakIntensity = Math.min(
     1,
-    intensity * 1.5 * (scaleOverride ?? lightIntensityScale(light, timeMs)),
+    intensity * 1.5 * (scaleOverride ?? view.intensityScale),
   );
   const falloffStops = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1];
   falloffStops.forEach((t) => {
@@ -902,58 +890,32 @@ const createLightGradient = (
 // unavailable (the node test environment).
 const renderLightDirect = (
   ctx: CanvasRenderingContext2D,
-  light: LightSource,
+  view: SceneLightView,
   cellSize: number,
-  state: GameState,
-  debugMode: boolean,
-  timeMs: number,
-  occlusionKey?: string,
 ): void => {
-  switch (light.effect) {
+  switch (view.effect) {
     case LightEffect.SPARKLE:
-      renderSparkles(ctx, light, cellSize, timeMs);
+      renderSparkles(ctx, view, cellSize);
       break;
     case LightEffect.AURA:
-      renderAura(ctx, light, cellSize, timeMs);
+      renderAura(ctx, view, cellSize);
       break;
     case LightEffect.GAS: {
-      const points = lightPolygonFor(
-        light,
-        state,
-        cellSize,
-        debugMode,
-        timeMs,
-        occlusionKey,
-      );
+      const points = view.polygon;
       fillLightPolygon(
         ctx,
         points,
-        createGasGradient(
-          ctx,
-          light,
-          cellSize,
-          timeMs,
-          polygonExtentPx(lightCenter(light, cellSize, timeMs), points),
-        ),
-        light,
-        cellSize,
+        createGasGradient(ctx, view, polygonExtentPx(view.center, points)),
+        view.blurPx,
       );
       break;
     }
     default:
       fillLightPolygon(
         ctx,
-        lightPolygonFor(
-          light,
-          state,
-          cellSize,
-          debugMode,
-          timeMs,
-          occlusionKey,
-        ),
-        createLightGradient(ctx, light, cellSize, timeMs),
-        light,
-        cellSize,
+        view.polygon,
+        createLightGradient(ctx, view),
+        view.blurPx,
       );
       break;
   }
@@ -1028,6 +990,8 @@ const canBuildLightSprite = (): boolean =>
   typeof document !== 'undefined' &&
   typeof document.createElement === 'function';
 
+// The sprite identity hash of a light descriptor — resolved into the
+// view's `spriteIdentity` so the sprite cache stays keyed on plain data.
 const lightSpriteIdentity = (light: LightSource): string =>
   [
     light.position.x,
@@ -1043,65 +1007,51 @@ const lightSpriteIdentity = (light: LightSource): string =>
 // Bakes the light's full-brightness glow into an offscreen canvas: the
 // visibility polygon (or aura ring or gas cloud) filled with its radial
 // gradient under the softness blur, exactly as the direct path renders,
-// but at animation scale 1 and only once per occlusion state.
+// but at animation scale 1 and only once per occlusion state. The view's
+// polygon and center are frame-invariant for bakeable lights (sway,
+// sweep and sparkle are not bakeable), so the view data is exactly the
+// bake input.
 const buildLightSprite = (
-  state: GameState,
-  light: LightSource,
+  view: SceneLightView,
   cellSize: number,
-  debugMode: boolean,
-  stateKey: string,
   key: string,
 ): LightSprite | null => {
   if (!canBuildLightSprite()) return null;
-  const timeMs = 0;
-  const center = lightCenter(light, cellSize, timeMs);
-  const blurPx = lightBlurPx(light, cellSize);
+  const blurPx = view.blurPx;
   let draw: (c: CanvasRenderingContext2D) => void;
   let extent: number;
-  if (light.effect === LightEffect.AURA) {
+  if (view.effect === LightEffect.AURA) {
     extent = cellSize / 2 + blurPx + 2;
     draw = (c) =>
       fillLightShape(
         c,
-        traceAuraCircle(light, cellSize, timeMs),
-        createAuraGradient(c, light, cellSize, timeMs, 1),
-        light,
-        cellSize,
+        traceAuraCircle(view, cellSize),
+        createAuraGradient(c, view, cellSize, 1),
+        blurPx,
       );
   } else {
-    const points = lightPolygonFor(
-      light,
-      state,
-      cellSize,
-      debugMode,
-      timeMs,
-      stateKey,
-    );
-    extent = polygonExtentPx(center, points) + blurPx + 2;
+    const points = view.polygon;
+    extent = polygonExtentPx(view.center, points) + blurPx + 2;
     draw =
-      light.effect === LightEffect.GAS
+      view.effect === LightEffect.GAS
         ? (c) =>
             fillLightPolygon(
               c,
               points,
               createGasGradient(
                 c,
-                light,
-                cellSize,
-                timeMs,
-                polygonExtentPx(center, points),
+                view,
+                polygonExtentPx(view.center, points),
                 1,
               ),
-              light,
-              cellSize,
+              blurPx,
             )
         : (c) =>
             fillLightPolygon(
               c,
               points,
-              createLightGradient(c, light, cellSize, timeMs, 1),
-              light,
-              cellSize,
+              createLightGradient(c, view, 1),
+              blurPx,
             );
   }
 
@@ -1114,7 +1064,7 @@ const buildLightSprite = (
   const spriteCtx = canvas.getContext('2d');
   if (!spriteCtx) return null;
   spriteCtx.scale(ratio, ratio);
-  spriteCtx.translate(extent - center.x, extent - center.y);
+  spriteCtx.translate(extent - view.center.x, extent - view.center.y);
   // Bakes always run at full quality, even mid-drag: the sprite cache
   // key does not encode the blur flag, so an unblurred bake would poison
   // the cache for the post-drag full-quality frames.
@@ -1125,33 +1075,27 @@ const buildLightSprite = (
   } finally {
     lightBlurDisabled = blurWasDisabled;
   }
-  return { key, canvas, x: center.x - extent, y: center.y - extent, size };
+  return {
+    key,
+    canvas,
+    x: view.center.x - extent,
+    y: view.center.y - extent,
+    size,
+  };
 };
 
 const lightSpriteFor = (
-  state: GameState,
-  light: LightSource,
+  view: SceneLightView,
   cellSize: number,
-  debugMode: boolean,
-  occlusionKey?: string,
 ): LightSprite | null => {
   if (!canBuildLightSprite()) return null;
-  const stateKey = occlusionKey ?? lightStateKey(state, cellSize, debugMode);
-  const identity = lightSpriteIdentity(light);
-  const key = `${stateKey}|${identity}`;
-  const cached = lightSpriteCaches.get(identity);
+  const key = `${view.occlusionKey}|${view.spriteIdentity}`;
+  const cached = lightSpriteCaches.get(view.spriteIdentity);
   if (cached && cached.key === key) return cached;
-  const sprite = buildLightSprite(
-    state,
-    light,
-    cellSize,
-    debugMode,
-    stateKey,
-    key,
-  );
+  const sprite = buildLightSprite(view, cellSize, key);
   if (sprite) {
     if (
-      !lightSpriteCaches.has(identity) &&
+      !lightSpriteCaches.has(view.spriteIdentity) &&
       lightSpriteCaches.size >= MAX_LIGHT_SPRITE_CACHE_ENTRIES
     ) {
       // Evict the oldest entry: Map keys iterate in insertion order.
@@ -1160,7 +1104,7 @@ const lightSpriteFor = (
         break;
       }
     }
-    lightSpriteCaches.set(identity, sprite);
+    lightSpriteCaches.set(view.spriteIdentity, sprite);
   }
   return sprite;
 };
@@ -1168,25 +1112,14 @@ const lightSpriteFor = (
 const renderLight = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  state: GameState,
-  light: LightSource,
+  view: SceneLightView,
   debugMode: boolean,
-  timeMs: number,
-  occlusionKey?: string,
 ) => {
-  if (!isLightRenderable(state, light, debugMode)) return;
-
-  if (isBakeableLight(light)) {
-    const sprite = lightSpriteFor(
-      state,
-      light,
-      cellSize,
-      debugMode,
-      occlusionKey,
-    );
+  if (view.bakeable) {
+    const sprite = lightSpriteFor(view, cellSize);
     if (sprite) {
       ctx.save();
-      ctx.globalAlpha = lightIntensityScale(light, timeMs);
+      ctx.globalAlpha = view.intensityScale;
       ctx.drawImage(
         sprite.canvas,
         sprite.x,
@@ -1196,44 +1129,90 @@ const renderLight = (
       );
       ctx.restore();
       if (debugMode) {
-        const center = lightCenter(light, cellSize, timeMs);
-        ctx.save();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, cellSize * 0.2, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
+        drawLightDebugCircle(ctx, view.center, cellSize);
       }
       return;
     }
   }
 
-  renderLightDirect(
-    ctx,
-    light,
-    cellSize,
-    state,
-    debugMode,
-    timeMs,
-    occlusionKey,
-  );
+  renderLightDirect(ctx, view, cellSize);
 
   if (debugMode) {
-    const center = lightCenter(light, cellSize, timeMs);
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(center.x, center.y, cellSize * 0.2, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
+    drawLightDebugCircle(ctx, view.center, cellSize);
   }
+};
+
+const drawLightDebugCircle = (
+  ctx: CanvasRenderingContext2D,
+  center: ScenePoint,
+  cellSize: number,
+) => {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, cellSize * 0.2, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
 };
 
 // Whether a light never changes between frames ('static' or no effect):
 // it can be drawn into a caller-cached layer instead of every frame.
 const isStaticLight = (light: LightSource): boolean => !isAnimatedLight(light);
+
+// Resolves the game's lights into the plain per-frame view models the
+// compositing consumes (src/scene/lights.ts): the animated center, the
+// occlusion polygon, the per-frame brightness, the blur and the sparkles
+// are all engine computations the renderer cannot make. Renderability
+// (discovery, blindness) and viewport culling are game knowledge and
+// filter the list before the view is built. The occlusion key is hashed
+// once for the whole pass and shared by every light's polygon lookup.
+const buildLightViews = (
+  lights: LightSource[],
+  state: GameState,
+  cellSize: number,
+  debugMode: boolean,
+  timeMs: number,
+  viewport?: LightViewport,
+): SceneLightView[] => {
+  const occlusionKey = lightStateKey(state, cellSize, debugMode);
+  return lights
+    .filter((light) => isLightRenderable(state, light, debugMode))
+    .filter((light) => lightInViewport(light, viewport))
+    .map((light) => {
+      const effect = light.effect ?? '';
+      // The aura and sparkle effects draw inside their own cell and use
+      // no polygon.
+      const needsPolygon =
+        effect !== LightEffect.SPARKLE && effect !== LightEffect.AURA;
+      return {
+        center: lightCenter(light, cellSize, timeMs),
+        color: light.color ?? DEFAULT_LIGHT_COLOR,
+        intensity: light.intensity ?? DEFAULT_LIGHT_INTENSITY,
+        radius: (light.radius ?? DEFAULT_LIGHT_RADIUS) * cellSize,
+        intensityScale: lightIntensityScale(light, timeMs),
+        blurPx: lightBlurPx(light, cellSize),
+        effect,
+        polygon: needsPolygon
+          ? lightPolygonFor(
+              light,
+              state,
+              cellSize,
+              debugMode,
+              timeMs,
+              occlusionKey,
+            )
+          : [],
+        sparkles:
+          effect === LightEffect.SPARKLE
+            ? computeSparkles(light, cellSize, timeMs)
+            : [],
+        bakeable: isBakeableLight(light),
+        spriteIdentity: lightSpriteIdentity(light),
+        occlusionKey,
+      };
+    });
+};
 
 // Cache key for the static light layer, covering everything that can
 // change the pixels static lights draw: the occlusion state (actors,
@@ -1271,24 +1250,18 @@ export const staticLightCacheKey = (
   return `${lightStateKey(state, cellSize, debugMode)}|${lights}|${view}`;
 };
 
-// Draws the given lights, culling per renderability and viewport. The
-// occlusion key is built once for the whole pass and shared by every light's
-// polygon lookup, instead of being rebuilt per light.
-const renderLightList = (
+// Draws the given lights, resolved to view models (renderability and
+// viewport culling are applied by the builder). The occlusion key is
+// hashed once for the whole pass and shared by every light's polygon
+// lookup, instead of being rebuilt per light.
+const renderViewList = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  state: GameState,
-  lights: LightSource[],
+  views: SceneLightView[],
   debugMode: boolean,
-  timeMs: number,
-  viewport?: LightViewport,
 ) => {
-  let occlusionKey: string | undefined;
-  lights.forEach((light) => {
-    if (!isLightRenderable(state, light, debugMode)) return;
-    if (!lightInViewport(light, viewport)) return;
-    occlusionKey ??= lightStateKey(state, cellSize, debugMode);
-    renderLight(ctx, cellSize, state, light, debugMode, timeMs, occlusionKey);
+  views.forEach((view) => {
+    renderLight(ctx, cellSize, view, debugMode);
   });
 };
 
@@ -1303,15 +1276,15 @@ export const renderStaticLights = (
   viewport?: LightViewport,
   frameLights?: LightSource[],
 ) => {
-  renderLightList(
-    ctx,
-    cellSize,
-    state,
+  const views = buildLightViews(
     (frameLights ?? activeLights(state)).filter(isStaticLight),
+    state,
+    cellSize,
     debugMode,
     0,
     viewport,
   );
+  renderViewList(ctx, cellSize, views, debugMode);
 };
 
 // Draws the animating lights into `ctx` at `timeMs`, on top of the
@@ -1325,17 +1298,17 @@ export const renderAnimatedLights = (
   viewport?: LightViewport,
   frameLights?: LightSource[],
 ) => {
-  renderLightList(
-    ctx,
-    cellSize,
-    state,
+  const views = buildLightViews(
     (frameLights ?? activeLights(state)).filter(
       (light) => !isStaticLight(light),
     ),
+    state,
+    cellSize,
     debugMode,
     timeMs,
     viewport,
   );
+  renderViewList(ctx, cellSize, views, debugMode);
 };
 
 // Renders every renderable light into `ctx`. The caller draws the result
@@ -1355,7 +1328,15 @@ export const renderLights = (
 ) => {
   const lights = frameLights ?? activeLights(state);
   if (lights.length === 0) return;
-  renderLightList(ctx, cellSize, state, lights, debugMode, timeMs, viewport);
+  const views = buildLightViews(
+    lights,
+    state,
+    cellSize,
+    debugMode,
+    timeMs,
+    viewport,
+  );
+  renderViewList(ctx, cellSize, views, debugMode);
 };
 
 // Draws the dungeon's ambient darkness over the scene: the whole view is
@@ -1370,13 +1351,14 @@ export const renderLights = (
 // opaque, so the mask's alpha controls how much of the veil is lifted.
 // Composited on top of actors, so actors standing in the dark are dimmed
 // as well.
-export const renderAmbientDarkness = (
+// The view-typed veil: the ambient level arrives resolved by the facade,
+// so the drawing sees no game state.
+const renderViewAmbientDarkness = (
   ctx: CanvasRenderingContext2D,
   darknessCanvas: HTMLCanvasElement,
   lightMaskCanvas: HTMLCanvasElement,
-  state: GameState,
+  ambient: number,
 ): void => {
-  const ambient = ambientLightLevel(state);
   if (ambient >= 1) return;
   const darknessCtx = darknessCanvas.getContext('2d');
   if (!darknessCtx) return;
@@ -1403,4 +1385,20 @@ export const renderAmbientDarkness = (
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(darknessCanvas, 0, 0);
   ctx.restore();
+};
+
+// Facade with the historical signature: resolves the ambient level from
+// the state and delegates to the view-typed veil drawing.
+export const renderAmbientDarkness = (
+  ctx: CanvasRenderingContext2D,
+  darknessCanvas: HTMLCanvasElement,
+  lightMaskCanvas: HTMLCanvasElement,
+  state: GameState,
+): void => {
+  renderViewAmbientDarkness(
+    ctx,
+    darknessCanvas,
+    lightMaskCanvas,
+    ambientLightLevel(state),
+  );
 };
