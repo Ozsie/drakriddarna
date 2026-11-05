@@ -18,9 +18,10 @@ everything lives in `src/`, coupled through the shared `GameState` type, the
 rendering. Each package section names the coupling that must be removed first.
 (The extractions so far are done: `@hoard-engine/rng`,
 `@hoard-engine/grid`, `@hoard-engine/primitives`,
-`@hoard-engine/audio` and `@hoard-engine/lighting` are published on npm
-and consumed as dependencies — see their sections below for the layout
-and tooling pattern the next packages follow.)
+`@hoard-engine/audio`, `@hoard-engine/lighting` and
+`@hoard-engine/saves` are published on npm and consumed as
+dependencies — see their sections below for the layout and tooling
+pattern the next packages follow.)
 
 ## Package map
 
@@ -84,6 +85,97 @@ edges between the other leaves.
    (`prepublishOnly`), `test`, `lint` and `prettier` scripts, plus its own
    `AGENTS.md` and `README.md` — the package can be developed, checked,
    formatted and published standalone, lifted out of the repo as is.
+
+## Package documentation
+
+Rule 5 makes the docs part of the package tooling: `AGENTS.md` and
+`README.md` are contract, not afterthought. They serve different
+audiences — `AGENTS.md` is written for an agent working in the package
+folder, `README.md` for a consumer browsing npm — but both open with the
+same statement of design goals, and their layouts are fixed so any HOARD
+package is recognizable from any other. When writing either file for a
+new package, copy the shared blocks verbatim from an existing one (rng
+is the reference extraction) instead of paraphrasing them.
+
+The design goals, stated in both files and in this order:
+
+- **Pluggable.** Adopt a package on its own, or swap it out, without
+  touching the rest of the engine — no central engine object to install
+  and no package that owns the others.
+- **Interoperable.** Packages compose with each other and with consumer
+  code through data: minimal shapes, callback seams and plain values —
+  never through shared state or a common framework.
+- **As standalone as possible.** Each package is usable as-is in any
+  project, HOARD-based or not; the leaf packages carry no dependencies
+  and import no siblings.
+
+Both files treat a new dependency or a sibling import as a design
+regression, not an optimization.
+
+### README.md
+
+Seven sections, in this order:
+
+1. **Title + intro.** `# <package name>`, then one paragraph naming what
+   the package does and what it contains, ending with the
+   dependency-free-leaf framing.
+2. **`## Pluggable, interoperable, standalone`.** The design-goals block
+   verbatim, identical in every package, closed by the line "This
+   package meets all three by construction."
+3. **`## Install`.** An `npm install <name>` fence, followed by
+   "Requires Node 18+ (ESM only)." — matching the `engines` field every
+   package publishes.
+4. **`## Usage`.** One commented code sample showing the main flow, game
+   knowledge injected; closes with the paragraph naming what the package
+   never asks for — world state, framework, asset paths — and what the
+   consumer therefore injects.
+5. **`## API`.** A reference table — `| Export | Description |` — with
+   one row per public export: everything `src/index.ts` re-exports and
+   nothing else, so the table and the completeness test hold the same
+   list. Rows in capability order, descriptions derived from the source,
+   pipe-aligned cells.
+6. **`## Design notes`.** Behavior a consumer cannot see from the
+   signatures: semantics, rules and caveats, one subject per bullet.
+7. **`## Development`.** The same command block in every package:
+
+   ```bash
+   npm test          # vitest
+   npm run check     # tsc --noEmit
+   npm run lint      # eslint over src
+   npm run prettier  # prettier --check (fix via prettier:format)
+   npm run build     # tsc declarations + esbuild ESM bundle to dist/
+   npm publish       # prepublishOnly runs check + build + test first
+   ```
+
+### AGENTS.md
+
+Two layouts are in use: the long form (rng, grid, lighting, saves —
+`## What this package is`, `## Hard boundaries`, `## Commands`,
+`## Conventions`) and the short form (primitives, audio — `## Rules`,
+`## Commands`). Either is acceptable; the required content is the same
+in both:
+
+- **Identity.** The package name and what it is — what was extracted
+  from the game and what kind of leaf it is.
+- **The design goals.** The same three goals, stated as rules: long form
+  as a bullet under "What this package is", short form as the lead rule,
+  before the boundary rules.
+- **Hard boundaries.** Relative imports only — no game, framework or
+  sibling code, no content; the public surface is exactly `src/index.ts`;
+  game knowledge arrives as data. Rule decisions belong to the game:
+  point at RULES.md and instruct to ask before "fixing" either side.
+- **Commands.** The check, test, lint, prettier and build script set with
+  the instruction to run check, test and lint before considering work
+  done.
+- **Conventions.** Prettier and strict-TypeScript settings, colocated
+  tests, `dist/` as never-edited build output, and the publishing
+  workflow — `prepublishOnly` runs check + build + test, the version is
+  bumped first, and no license field is added unilaterally (that is the
+  repo owner's decision).
+
+Formatting for both files: prose wrapped at the repository print width
+(80 columns), sentence-case headings, fenced `bash` blocks with aligned
+comments.
 
 ## Package specifications
 
@@ -279,12 +371,55 @@ plain Node. The compute/render split the extraction performed:
   thus game content — the packages contain no game content by
   construction.
 
-### @hoard-engine/saves — source: `src/saveMigration.ts`, `src/saves/`
+### @hoard-engine/saves — source: `src/saveMigration.ts`, `src/saves/` — EXTRACTED
 
 Versioned save schema and ordered migrations. Coupling: migrations currently
 resolve monster templates directly; replace with a migrator-registry interface
 the game populates. The package ships the framework (version stamps, ordered
 migration pipeline, validation); the game ships its migrators.
+
+**Current state:** published on npm as `@hoard-engine/saves` (v0.1.0)
+and consumed by the game as a dependency; its source folder lives next
+to the hoard `audio`/`rng`/`grid`/`primitives`/`lighting` packages. It
+follows the established package layout: self-contained
+folder with build, publishing, testing, lint and
+prettier scripts, its own `AGENTS.md` and `README.md`, boundary and
+public-surface tests plus colocated unit tests over an in-memory
+storage stub (and a sentinel against browser-global references — the
+package never touches `localStorage` itself), so the suite runs in
+plain Node. The framework/migrator split the extraction performed:
+
+- The migration pipeline moved with the package:
+  `createSaveMigrations` builds the registry the game populates —
+  `register` takes one step per schema version, in order, and rejects
+  gaps, duplicates and out-of-order registration; `migrateSave` runs
+  every step the save has not seen, in version order, and stamps the
+  current version (a pre-versioning save reads as version 0, a
+  current-version save passes through untouched).
+- The named-save slot store moved with the package as the pure I/O
+  half of `src/saves/SavesLogic.ts`: `createSaveSlots` operates on an
+  injected `KeyValueStorage` (or `null` when persistence is
+  unavailable), owning the metadata-index round trip, the newest-first
+  listing, the blob reads and the legacy single-slot import. The keys
+  (`saves`, `save_`, the legacy `state`) are the persisted format and
+  stay caller-supplied.
+- Validation moved with the package: `parseSaveBlob` treats JSON that
+  does not decode to a plain object as corrupt (used by the autosave
+  hint path and the legacy import, which leaves a corrupt legacy blob
+  untouched instead of importing it).
+- The game keeps the knowledge: `src/saveMigration.ts` keeps the three
+  migrators (game master resolution via `getGameMaster`, the collapsed
+  corridor conversion, the monster-name translation keys via the
+  monster registry and the `Colour` enumeration) and registers them
+  into the package pipeline, re-exporting `CURRENT_SAVE_VERSION` and
+  `migrateSaveState`; `src/saves/SavesLogic.ts` keeps the i18n labels
+  (default save name, the "Manual Save" import label), the
+  campaign/dungeon hints via the campaigns registry, the id and
+  timestamp rules, and the save-name capping. The facade signatures
+  are unchanged, so callers and tests are unchanged.
+- `src/saves/HighScoresLogic.ts` stayed with the game: the high-score
+  entries and their top-10-per-campaign semantics are game data
+  models, not save-framework mechanics.
 
 ### @hoard-engine/directors — source: `src/gameMasters/` (types, hook dispatch, alias
 
@@ -352,6 +487,8 @@ later:
    **Done:** published as `@hoard-engine/lighting` (v0.1.0), consumed as a
    dependency (see the package section above).
 6. `@hoard-engine/saves` — requires the migrator registry.
+   **Done:** published as `@hoard-engine/saves` (v0.1.0), consumed as a
+   dependency (see the package section above).
 7. `@hoard-engine/directors` — framework only; content stays.
 8. `scene` — last and largest: needs the render/logic separation complete and
    view-model contracts in place. Camera/viewport and map streaming are

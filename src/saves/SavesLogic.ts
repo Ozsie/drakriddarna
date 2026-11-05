@@ -1,3 +1,8 @@
+import {
+  createSaveSlots,
+  parseSaveBlob,
+  type SaveSlots,
+} from '@hoard-engine/saves';
 import { i18n } from '../core';
 import type { GameState } from '../types';
 // Evaluation order matters: the campaign modules call `defineDungeon` through
@@ -7,10 +12,14 @@ import '../dungeon/DungeonLogic';
 import { campaigns } from '../campaigns';
 
 // Named manual saves: a JSON index of save metadata under `saves`, and one
-// full `GameState` blob per save under `save_<id>`. The metadata carries
-// everything the load dialog shows (name plus campaign/dungeon hints), so
-// listing saves never parses the full save blobs. The pre-multiple-saves
-// single manual slot (`state`) is imported into the list on first access.
+// full `GameState` blob per save under `save_<id>`. The storage mechanics
+// (index round trip, newest-first listing, blob reads, the legacy single
+// manual slot import) come from @hoard-engine/saves; everything else is game
+// knowledge injected here — the i18n labels, the campaign/dungeon hints,
+// the ids and the timestamps. The metadata carries everything the load
+// dialog shows (name plus campaign/dungeon hints), so listing saves never
+// parses the full save blobs. The pre-multiple-saves single manual slot
+// (`state`) is imported into the list on first access.
 
 const SAVE_INDEX_KEY = 'saves';
 const SAVE_PREFIX = 'save_';
@@ -37,6 +46,18 @@ const generateSaveId = (): string =>
     ? crypto.randomUUID()
     : `save-${String(Date.now())}-${String(Math.floor(Math.random() * 1e9))}`;
 
+// The slot store is built lazily so storage availability is evaluated on
+// first use, like the historical per-call check.
+let slotStore: SaveSlots<SaveMetaData> | null = null;
+const getSlots = (): SaveSlots<SaveMetaData> => {
+  slotStore ??= createSaveSlots<SaveMetaData>({
+    storage: hasLocalStorage() ? localStorage : null,
+    indexKey: SAVE_INDEX_KEY,
+    slotPrefix: SAVE_PREFIX,
+  });
+  return slotStore;
+};
+
 /** Campaign/dungeon display keys for one saved state, for the load dialog. */
 export const extractSaveHints = (state: GameState): SaveHints => {
   const campaign = state.campaignId ? campaigns[state.campaignId] : undefined;
@@ -59,50 +80,20 @@ export const getSaveHint = (hints: SaveHints): string => {
   return [campaign, dungeon].filter((part) => part !== '').join(' - ');
 };
 
-const readIndex = (): SaveMetaData[] => {
-  try {
-    const raw = localStorage.getItem(SAVE_INDEX_KEY);
-    const parsed = raw ? (JSON.parse(raw) as SaveMetaData[]) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    // A corrupt index is treated as empty; the save blobs stay untouched.
-    return [];
-  }
-};
-
-const writeIndex = (saves: SaveMetaData[]): void => {
-  localStorage.setItem(SAVE_INDEX_KEY, JSON.stringify(saves));
-};
-
-const addSaveToIndex = (meta: SaveMetaData): void => {
-  const index = readIndex().filter((existing) => existing.id !== meta.id);
-  index.unshift(meta);
-  writeIndex(index);
-};
-
 /**
  * Imports the legacy single manual-save slot (`state`) into the named save
  * list, once. The blob moves to `save_<id>` under the "Manual Save" name
  * and the legacy key is removed; nothing else has written it since.
  */
 const importLegacyManualSave = (): void => {
-  const legacy = localStorage.getItem(LEGACY_STATE_KEY);
-  if (!legacy) return;
-  try {
-    const state = JSON.parse(legacy) as GameState;
-    const meta = createSaveMetaData(
-      state,
+  getSlots().importLegacySlot(LEGACY_STATE_KEY, (state) =>
+    createSaveMetaData(
+      state as GameState,
       i18n('content.menu.loadGame.buttons.manualSave'),
       generateSaveId(),
       Date.now(),
-    );
-    localStorage.setItem(`${SAVE_PREFIX}${meta.id}`, legacy);
-    addSaveToIndex(meta);
-  } catch {
-    // Leave a corrupt legacy save untouched rather than dropping it.
-    return;
-  }
-  localStorage.removeItem(LEGACY_STATE_KEY);
+    ),
+  );
 };
 
 export const createSaveMetaData = (
@@ -119,11 +110,8 @@ export const createSaveMetaData = (
 
 /** All named saves, newest first. Runs the legacy-slot import first. */
 export const listSaves = (): SaveMetaData[] => {
-  if (!hasLocalStorage()) return [];
   importLegacyManualSave();
-  return readIndex()
-    .filter((meta) => meta && typeof meta.id === 'string')
-    .sort((a, b) => b.timestamp - a.timestamp);
+  return getSlots().list();
 };
 
 /**
@@ -134,7 +122,6 @@ export const writeSave = (
   state: GameState,
   name: string,
 ): SaveMetaData | null => {
-  if (!hasLocalStorage()) return null;
   const trimmed = name.trim().slice(0, MAX_SAVE_NAME_LENGTH);
   const meta = createSaveMetaData(
     state,
@@ -142,20 +129,12 @@ export const writeSave = (
     generateSaveId(),
     Date.now(),
   );
-  try {
-    localStorage.setItem(`${SAVE_PREFIX}${meta.id}`, JSON.stringify(state));
-    addSaveToIndex(meta);
-  } catch {
-    return null;
-  }
-  return meta;
+  return getSlots().write(state, meta);
 };
 
 /** The raw saved `GameState` JSON for one save id, or null when missing. */
-export const readSaveStateString = (id: string): string | null => {
-  if (!hasLocalStorage() || !id) return null;
-  return localStorage.getItem(`${SAVE_PREFIX}${id}`);
-};
+export const readSaveStateString = (id: string): string | null =>
+  getSlots().readSlot(id);
 
 /** Load-dialog hint for a raw saved state string (the autosave slot). */
 let lastHintSource: string | null = null;
@@ -165,11 +144,7 @@ export const getSaveHintFromStateString = (stateString: string): string => {
   // autosave blob is parsed only when its content actually changed.
   if (stateString === lastHintSource) return lastHintResult;
   lastHintSource = stateString;
-  try {
-    const state = JSON.parse(stateString) as GameState;
-    lastHintResult = getSaveHint(extractSaveHints(state));
-  } catch {
-    lastHintResult = '';
-  }
+  const state = parseSaveBlob<GameState>(stateString);
+  lastHintResult = state ? getSaveHint(extractSaveHints(state)) : '';
   return lastHintResult;
 };
