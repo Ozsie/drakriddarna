@@ -1,4 +1,11 @@
-import type { GameState, IndicatorEffect } from '../types';
+import type { GameState } from '../types';
+import type { SceneFloatingText } from '../scene/contracts';
+
+// Facade over the view-model renderer: the historical entry point keeps
+// its GameState signature (callers and tests unchanged) and passes the
+// state's plain indicator data to the view-model core that moves with
+// @hoard-engine/scene (the scene contracts re-declare the indicator
+// shape structurally, so the game data passes by compatibility).
 
 export const DAMAGE_INDICATOR_DURATION_MS = 1000;
 
@@ -10,7 +17,7 @@ export type EffectTransform = {
 };
 
 export const EFFECT_TRANSFORMS: Record<
-  IndicatorEffect,
+  string,
   (progress: number, cellSize: number) => EffectTransform
 > = {
   float: (progress: number, cellSize: number): EffectTransform => {
@@ -71,14 +78,24 @@ export const renderDamageIndicators = (
   cellSize: number,
   state: GameState,
   currentTime: number = Date.now(),
+): boolean =>
+  renderFloatingTexts(ctx, cellSize, state.damageIndicators ?? [], currentTime);
+
+export const renderFloatingIndicators = renderDamageIndicators;
+
+export const renderFloatingTexts = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  texts: SceneFloatingText[],
+  currentTime: number = Date.now(),
 ): boolean => {
-  if (!state.damageIndicators || state.damageIndicators.length === 0) {
+  if (texts.length === 0) {
     return false;
   }
 
   let hasActiveIndicators = false;
 
-  state.damageIndicators.forEach((indicator) => {
+  texts.forEach((indicator) => {
     const timestamp = indicator.timestamp ?? currentTime;
     const elapsed = currentTime - timestamp;
     const duration = indicator.durationMs ?? DAMAGE_INDICATOR_DURATION_MS;
@@ -139,5 +156,3 @@ export const renderDamageIndicators = (
 
   return hasActiveIndicators;
 };
-
-export const renderFloatingIndicators = renderDamageIndicators;

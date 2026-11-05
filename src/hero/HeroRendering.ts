@@ -1,20 +1,15 @@
-import type { Difficulty, GameState, Hero } from '../types';
+import type { GameState } from '../types';
+import type { SceneActorView, SceneHeroOverlayView } from '../scene/contracts';
 import {
-  getActorVisualPosition,
-  hasLineOfSight,
-  isActorAnimating,
-  isActorDeathAnimating,
-  isActorSpriteAnimationActive,
-  isDiscovered,
-  isWalkable,
-} from '../core';
-import { isBlockedByHero, isBlockedByMonster, liveHeroes } from './HeroLogic';
-import { ACTOR_TILES, drawTileRef } from '../dungeon/tiles';
-import { renderActorFlash } from '../combat';
-import {
-  getReadyActorSpriteImage,
-  renderActorSprite,
-} from '../core/ActorSpriteRendering';
+  buildHeroOverlayViewModel,
+  buildHeroViewModels,
+} from '../scene/adapters';
+import { drawFlash, drawSpriteFrame, drawTileFrame } from '../scene/ActorLayer';
+
+// Facades over the view-model renderers: the historical entry points
+// keep their GameState signatures (callers and tests unchanged), resolve
+// the state into scene view models, and leave the drawing to the
+// view-model core that moves with @hoard-engine/scene.
 
 export const renderHeroes = (
   ctx: CanvasRenderingContext2D,
@@ -24,28 +19,10 @@ export const renderHeroes = (
   debugMode: boolean,
   currentTime: number = Date.now(),
 ): boolean => {
-  const heroes: Hero[] = [
-    ...liveHeroes(state),
-    // Dead heroes stay visible only while their death animation plays
-    // (sprite-less heroes vanish immediately, as before).
-    ...state.heroes.filter(
-      (hero): hero is Hero =>
-        hero.health <= 0 &&
-        Boolean(hero.sprite) &&
-        isActorDeathAnimating(hero, currentTime),
-    ),
-  ];
+  const views = buildHeroViewModels(state, actors, debugMode, currentTime);
   let hasActiveAnimation = false;
-  heroes.forEach((hero) => {
-    const isAnim = renderHero(
-      ctx,
-      hero,
-      actors,
-      cellSize,
-      debugMode,
-      currentTime,
-    );
-    if (isAnim) hasActiveAnimation = true;
+  views.forEach((view) => {
+    if (renderHeroView(ctx, view, cellSize)) hasActiveAnimation = true;
   });
   return hasActiveAnimation;
 };
@@ -60,66 +37,64 @@ export const renderHeroOverlays = (
   state: GameState,
   currentTime: number = Date.now(),
 ) => {
-  renderWalkableArea(ctx, state, cellSize);
-  liveHeroes(state).forEach((hero) => {
-    const visualPos = getActorVisualPosition(hero, currentTime);
-    renderActionOnActor(ctx, hero, visualPos.x, visualPos.y, cellSize);
-    renderActorBar(ctx, hero, visualPos.x, visualPos.y, cellSize);
-    renderHealthBar(
-      ctx,
-      hero,
-      visualPos.x,
-      visualPos.y,
-      cellSize,
-      state.gameMaster,
-    );
+  const view = buildHeroOverlayViewModel(state, currentTime);
+  renderWalkableArea(ctx, view, cellSize);
+  view.bars.forEach((bar) => {
+    renderActionPips(ctx, bar, cellSize);
+    renderColourBar(ctx, bar.position, bar.colour, cellSize);
+    renderHealthBar(ctx, bar.position, bar.health, cellSize);
   });
-  renderCurrentActor(ctx, state, cellSize, currentTime);
+  renderCurrentActorMarker(ctx, view.marker, cellSize);
 };
 
-const renderHero = (
+const renderHeroView = (
   ctx: CanvasRenderingContext2D,
-  hero: Hero,
-  actors: CanvasImageSource,
+  view: SceneActorView,
   cellSize: number,
-  debugMode: boolean,
-  currentTime: number = Date.now(),
 ): boolean => {
-  const visualPos = getActorVisualPosition(hero, currentTime);
-  const x = visualPos.x;
-  const y = visualPos.y;
-  const spriteImage = getReadyActorSpriteImage(hero);
-  if (spriteImage) {
-    renderActorSprite(ctx, hero, spriteImage, x, y, cellSize, currentTime);
-  } else {
-    drawTileRef(ctx, actors, ACTOR_TILES.HERO, x * cellSize, y * cellSize);
+  const { x, y } = view.position;
+  if (view.sprite) {
+    drawSpriteFrame(ctx, view.sprite, x, y, cellSize);
+  } else if (view.tile) {
+    drawTileFrame(ctx, view.tile, x * cellSize, y * cellSize);
   }
-  renderActorFlash(ctx, hero, x, y, cellSize, currentTime);
-  if (debugMode) {
-    const debugText = `(${hero.position.x},${hero.position.y})`;
+  drawFlash(ctx, view.position, view.flashIntensity, cellSize);
+  if (view.debugLabel) {
     ctx.fillStyle = 'black';
     ctx.font = '8px Arial';
-    ctx.fillText(debugText, x * cellSize + 3, y * cellSize + 10);
+    ctx.fillText(view.debugLabel, x * cellSize + 3, y * cellSize + 10);
   }
-  return (
-    isActorAnimating(hero, currentTime) ||
-    isActorSpriteAnimationActive(hero, currentTime)
-  );
+  return view.active;
 };
 
-const renderActionOnActor = (
+const renderWalkableArea = (
   ctx: CanvasRenderingContext2D,
-  hero: Hero,
-  x: number,
-  y: number,
+  view: SceneHeroOverlayView,
   cellSize: number,
 ) => {
+  // An outline rather than a tint: it marks the cell without covering
+  // the floor and lighting beneath it.
+  ctx.strokeStyle = 'rgb(10 115 69 / 0.65)';
+  ctx.lineWidth = 1;
+  view.walkableCells.forEach((cell) => {
+    ctx.strokeRect(cell.x * cellSize, cell.y * cellSize, cellSize, cellSize);
+  });
+};
+
+const renderActionPips = (
+  ctx: CanvasRenderingContext2D,
+  bar: SceneHeroOverlayView['bars'][number],
+  cellSize: number,
+) => {
+  const { position, actionPips, movePips } = bar;
+  const x = position.x;
+  const y = position.y;
   const prevFillStyle = ctx.fillStyle;
   const prevStrokeStyle = ctx.strokeStyle;
 
   ctx.strokeStyle = '#080808';
   ctx.fillStyle = 'darkred';
-  for (let index = 0; index < hero.actions; index++) {
+  for (let index = 0; index < (actionPips ?? 0); index++) {
     ctx.fillRect(
       x * cellSize + 4 + 6 * index,
       y * cellSize + cellSize - 12,
@@ -131,7 +106,7 @@ const renderActionOnActor = (
   }
 
   ctx.fillStyle = 'blue';
-  for (let index = 0; index < hero.movement; index++) {
+  for (let index = 0; index < (movePips ?? 0); index++) {
     ctx.fillRect(
       x * cellSize + cellSize - 22 + 6 * index,
       y * cellSize + cellSize - 12,
@@ -151,132 +126,81 @@ const renderActionOnActor = (
   ctx.strokeStyle = prevStrokeStyle;
 };
 
-const renderHealthBar = (
+const renderColourBar = (
   ctx: CanvasRenderingContext2D,
-  hero: Hero,
-  x: number,
-  y: number,
-  cellSize: number,
-  difficulty?: Difficulty,
-) => {
-  const effectiveMaxHealth = Math.max(
-    1,
-    hero.maxHealth + (difficulty?.modifiers.health ?? 0),
-  );
-  ctx.beginPath();
-  ctx.strokeStyle = 'black';
-  ctx.fillStyle = 'red';
-  ctx.fillRect(x * cellSize + 4, y * cellSize, cellSize - 8, 4);
-  ctx.fillStyle = 'green';
-  ctx.fillRect(
-    x * cellSize + 4,
-    y * cellSize,
-    (cellSize - 8) * (hero.health / effectiveMaxHealth),
-    4,
-  );
-  ctx.rect(x * cellSize + 4, y * cellSize, cellSize - 8, 4);
-  ctx.stroke();
-};
-
-const renderActorBar = (
-  ctx: CanvasRenderingContext2D,
-  hero: Hero,
-  x: number,
-  y: number,
+  position: { x: number; y: number },
+  colour: string,
   cellSize: number,
 ) => {
   ctx.beginPath();
-  ctx.strokeStyle = hero.colour;
-  ctx.fillStyle = hero.colour;
+  ctx.strokeStyle = colour;
+  ctx.fillStyle = colour;
   ctx.fillRect(
-    x * cellSize + 4,
-    y * cellSize + (cellSize - 6),
+    position.x * cellSize + 4,
+    position.y * cellSize + (cellSize - 6),
     cellSize - 8,
     4,
   );
   ctx.stroke();
 };
 
-const renderWalkableArea = (
+const renderHealthBar = (
   ctx: CanvasRenderingContext2D,
-  state: GameState,
+  position: { x: number; y: number },
+  health: { current: number; max: number },
   cellSize: number,
 ) => {
-  const hero = state.currentActor;
-  if (hero) {
-    for (
-      let pX: number = hero.position.x - hero.movement;
-      pX <= hero.position.x + hero.movement;
-      pX++
-    ) {
-      for (
-        let pY: number = hero.position.y - hero.movement;
-        pY <= hero.position.y + hero.movement;
-        pY++
-      ) {
-        const discovered = isDiscovered(state.dungeon, pX, pY);
-        if (
-          discovered &&
-          !(pX === hero?.position.x && pY === hero?.position.y)
-        ) {
-          const blockedByMonster = isBlockedByMonster(state, pX, pY);
-          const blockedByHeroes = isBlockedByHero(state, pX, pY);
-          const walkable = isWalkable(state.dungeon.layout, pX, pY);
-          const los = hasLineOfSight(
-            hero.position,
-            { x: pX, y: pY },
-            2,
-            state,
-            true,
-          );
-          if (!blockedByHeroes && !blockedByMonster && walkable && los) {
-            // An outline rather than a tint: it marks the cell without
-            // covering the floor and lighting beneath it.
-            ctx.strokeStyle = 'rgb(10 115 69 / 0.65)';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(pX * cellSize, pY * cellSize, cellSize, cellSize);
-          }
-        }
-      }
-    }
-  }
+  ctx.beginPath();
+  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'red';
+  ctx.fillRect(
+    position.x * cellSize + 4,
+    position.y * cellSize,
+    cellSize - 8,
+    4,
+  );
+  ctx.fillStyle = 'green';
+  ctx.fillRect(
+    position.x * cellSize + 4,
+    position.y * cellSize,
+    (cellSize - 8) * (health.current / health.max),
+    4,
+  );
+  ctx.rect(position.x * cellSize + 4, position.y * cellSize, cellSize - 8, 4);
+  ctx.stroke();
 };
 
-const renderCurrentActor = (
+const renderCurrentActorMarker = (
   ctx: CanvasRenderingContext2D,
-  state: GameState,
+  marker: SceneHeroOverlayView['marker'],
   cellSize: number,
-  currentTime: number = Date.now(),
 ) => {
-  const hero = state.currentActor;
-  if (hero) {
-    const visualPos = getActorVisualPosition(hero, currentTime);
-    const x = visualPos.x;
-    const y = visualPos.y;
-    ctx.beginPath();
-    ctx.strokeStyle = 'lightblue';
-    ctx.lineWidth = 2;
+  if (!marker) return;
+  const x = marker.x;
+  const y = marker.y;
+  ctx.beginPath();
+  ctx.strokeStyle = 'lightblue';
+  ctx.lineWidth = 2;
 
-    ctx.moveTo(x * cellSize, y * cellSize);
-    ctx.lineTo(x * cellSize + cellSize / 3, y * cellSize);
-    ctx.moveTo(x * cellSize, y * cellSize);
-    ctx.lineTo(x * cellSize, y * cellSize + cellSize / 3);
+  ctx.moveTo(x * cellSize, y * cellSize);
+  ctx.lineTo(x * cellSize + cellSize / 3, y * cellSize);
+  ctx.moveTo(x * cellSize, y * cellSize);
+  ctx.lineTo(x * cellSize, y * cellSize + cellSize / 3);
 
-    ctx.moveTo(x * cellSize + cellSize, y * cellSize);
-    ctx.lineTo(x * cellSize + (cellSize / 3) * 2, y * cellSize);
-    ctx.moveTo(x * cellSize + cellSize, y * cellSize);
-    ctx.lineTo(x * cellSize + cellSize, y * cellSize + cellSize / 3);
+  ctx.moveTo(x * cellSize + cellSize, y * cellSize);
+  ctx.lineTo(x * cellSize + (cellSize / 3) * 2, y * cellSize);
+  ctx.moveTo(x * cellSize + cellSize, y * cellSize);
+  ctx.lineTo(x * cellSize + cellSize, y * cellSize + cellSize / 3);
 
-    ctx.moveTo(x * cellSize, y * cellSize + cellSize);
-    ctx.lineTo(x * cellSize, y * cellSize + (cellSize / 3) * 2);
-    ctx.moveTo(x * cellSize, y * cellSize + cellSize);
-    ctx.lineTo(x * cellSize + cellSize / 3, y * cellSize + cellSize);
+  ctx.moveTo(x * cellSize, y * cellSize + cellSize);
+  ctx.lineTo(x * cellSize, y * cellSize + (cellSize / 3) * 2);
+  ctx.moveTo(x * cellSize, y * cellSize + cellSize);
+  ctx.lineTo(x * cellSize + cellSize / 3, y * cellSize + cellSize);
 
-    ctx.moveTo(x * cellSize + cellSize, y * cellSize + cellSize);
-    ctx.lineTo(x * cellSize + cellSize, y * cellSize + (cellSize / 3) * 2);
-    ctx.moveTo(x * cellSize + cellSize, y * cellSize + cellSize);
-    ctx.lineTo(x * cellSize + (cellSize / 3) * 2, y * cellSize + cellSize);
-    ctx.stroke();
-    ctx.lineWidth = 1;
-  }
+  ctx.moveTo(x * cellSize + cellSize, y * cellSize + cellSize);
+  ctx.lineTo(x * cellSize + cellSize, y * cellSize + (cellSize / 3) * 2);
+  ctx.moveTo(x * cellSize + cellSize, y * cellSize + cellSize);
+  ctx.lineTo(x * cellSize + (cellSize / 3) * 2, y * cellSize + cellSize);
+  ctx.stroke();
+  ctx.lineWidth = 1;
 };

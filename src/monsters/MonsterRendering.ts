@@ -1,20 +1,18 @@
-import type { Actor, GameState, Monster, Position } from '../types';
-import { MonsterType } from '../types';
+import type { GameState } from '../types';
+import type { SceneActorView } from '../scene/contracts';
+import { buildMonsterViewModels } from '../scene/adapters';
 import {
-  getActorVisualPosition,
-  getDyingActors,
-  isActorAnimating,
-  isActorDeathAnimating,
-  isActorSpriteAnimationActive,
-  isRoomDiscovered,
-  stepAlongLine,
-} from '../core';
-import { ACTOR_TILES, drawTileRef } from '../dungeon/tiles';
-import { renderActorFlash } from '../combat';
-import {
-  getReadyActorSpriteImage,
-  renderActorSprite,
-} from '../core/ActorSpriteRendering';
+  drawColourBar,
+  drawFlash,
+  drawHealthBar,
+  drawSpriteFrame,
+  drawTileFrame,
+} from '../scene/ActorLayer';
+
+// Facade over the view-model renderer: the historical entry point keeps
+// its GameState signature (callers and tests unchanged), resolves the
+// state into scene view models, and leaves the drawing to the
+// view-model core that moves with @hoard-engine/scene.
 
 export const renderMonsters = (
   ctx: CanvasRenderingContext2D,
@@ -24,225 +22,51 @@ export const renderMonsters = (
   debugMode: boolean,
   currentTime: number = Date.now(),
 ): boolean => {
+  const views = buildMonsterViewModels(state, actors, debugMode, currentTime);
   let hasActiveAnimation = false;
-  state.dungeon.layout.monsters.forEach((monster) => {
-    const isAnim = renderMonster(
-      ctx,
-      actors,
-      state,
-      monster,
-      cellSize,
-      debugMode,
-      currentTime,
-    );
-    if (isAnim) hasActiveAnimation = true;
+  views.forEach((view) => {
+    if (renderMonsterView(ctx, view, cellSize)) hasActiveAnimation = true;
   });
-  // Killed monsters are removed from the layout immediately, so keep drawing
-  // them from the dying list until their death animation finishes.
-  getDyingActors(currentTime)
-    .filter((actor) => !state.heroes.includes(actor))
-    .forEach((actor) => {
-      const isAnim = renderMonster(
-        ctx,
-        actors,
-        state,
-        actor as Monster,
-        cellSize,
-        debugMode,
-        currentTime,
-      );
-      if (isAnim) hasActiveAnimation = true;
-    });
   return hasActiveAnimation;
 };
 
-const renderMonster = (
+const renderMonsterView = (
   ctx: CanvasRenderingContext2D,
-  actors: CanvasImageSource,
-  state: GameState,
-  monster: Monster,
+  view: SceneActorView,
   cellSize: number,
-  debugMode: boolean,
-  currentTime: number = Date.now(),
 ): boolean => {
-  const cell =
-    state.dungeon.layout.grid[monster.position.y][monster.position.x];
-  // Only monsters with a death animation linger after death; sprite-less
-  // monsters vanish immediately, as before.
-  const isDying =
-    Boolean(monster.sprite) && isActorDeathAnimating(monster, currentTime);
-  if (
-    monster &&
-    (monster.health > 0 || isDying) &&
-    isRoomDiscovered(state.dungeon, cell)
-  ) {
-    const visualPos = getActorVisualPosition(monster, currentTime);
-    const x = visualPos.x;
-    const y = visualPos.y;
-    const spriteImage = getReadyActorSpriteImage(monster);
-    if (spriteImage) {
-      renderActorSprite(ctx, monster, spriteImage, x, y, cellSize, currentTime);
-    } else {
-      switch (monster.type) {
-        case MonsterType.ORC:
-        case MonsterType.ORCH:
-          renderOrch(ctx, actors, cellSize, x, y);
-          break;
-        case MonsterType.TROLL:
-          renderTroll(ctx, actors, cellSize, x, y);
-          break;
-        default:
-          renderDefaultMonster(ctx, actors, cellSize, x, y);
-          break;
-      }
-    }
-    renderActorFlash(ctx, monster, x, y, cellSize, currentTime);
-    renderActorBar(ctx, monster, cellSize, x, y);
-    renderHealthBar(ctx, monster, cellSize, x, y);
-    renderLineOfSight(
-      ctx,
-      monster,
-      state.heroes,
-      state,
-      cellSize,
-      debugMode,
-      x,
-      y,
-    );
-    return (
-      isActorAnimating(monster, currentTime) ||
-      isActorSpriteAnimationActive(monster, currentTime)
-    );
+  const { x, y } = view.position;
+  if (view.sprite) {
+    drawSpriteFrame(ctx, view.sprite, x, y, cellSize);
+  } else if (view.tile) {
+    drawTileFrame(ctx, view.tile, x * cellSize, y * cellSize);
   }
-  return false;
-};
-
-const renderOrch = (
-  ctx: CanvasRenderingContext2D,
-  actors: CanvasImageSource,
-  cellSize: number,
-  x: number,
-  y: number,
-) => {
-  drawTileRef(ctx, actors, ACTOR_TILES.ORCH, x * cellSize, y * cellSize);
-};
-
-const renderTroll = (
-  ctx: CanvasRenderingContext2D,
-  actors: CanvasImageSource,
-  cellSize: number,
-  x: number,
-  y: number,
-) => {
-  drawTileRef(ctx, actors, ACTOR_TILES.TROLL, x * cellSize, y * cellSize);
-};
-
-const renderDefaultMonster = (
-  ctx: CanvasRenderingContext2D,
-  actors: CanvasImageSource,
-  cellSize: number,
-  x: number,
-  y: number,
-) => {
-  drawTileRef(
-    ctx,
-    actors,
-    ACTOR_TILES.MONSTER_DEFAULT,
-    x * cellSize,
-    y * cellSize,
-  );
-};
-
-const renderActorBar = (
-  ctx: CanvasRenderingContext2D,
-  monster: Monster,
-  cellSize: number,
-  x: number,
-  y: number,
-) => {
-  ctx.beginPath();
-  ctx.strokeStyle = monster.colour;
-  ctx.fillStyle = monster.colour;
-  ctx.fillRect(
-    x * cellSize + 4,
-    y * cellSize + (cellSize - 6),
-    cellSize - 8,
-    4,
-  );
-  ctx.stroke();
-  ctx.strokeStyle = 'black';
-  ctx.fillStyle = 'black';
-};
-
-const renderHealthBar = (
-  ctx: CanvasRenderingContext2D,
-  monster: Monster,
-  cellSize: number,
-  x: number,
-  y: number,
-) => {
-  ctx.beginPath();
-  ctx.strokeStyle = 'black';
-  ctx.fillStyle = 'red';
-  ctx.fillRect(x * cellSize + 4, y * cellSize, cellSize - 8, 4);
-  ctx.fillStyle = 'green';
-  ctx.fillRect(
-    x * cellSize + 4,
-    y * cellSize,
-    (cellSize - 8) * (monster.health / monster.maxHealth),
-    4,
-  );
-  ctx.rect(x * cellSize + 4, y * cellSize, cellSize - 8, 4);
-  ctx.stroke();
-  ctx.strokeStyle = 'black';
-  ctx.fillStyle = 'black';
-};
-
-const renderLineOfSight = (
-  ctx: CanvasRenderingContext2D,
-  from: Monster,
-  to: Actor[],
-  state: GameState,
-  cellSize: number,
-  debugMode: boolean,
-  x: number,
-  y: number,
-) => {
-  if (debugMode) {
-    to.forEach((target) => {
-      const seenCells: Position[] = [];
-      const startPixelPos = {
-        x: x * 48 - 24,
-        y: y * 48 - 24,
-      };
-      const targetPixelPos = {
-        x: target.position.x * 48 - 24,
-        y: target.position.y * 48 - 24,
-      };
-      const seen = stepAlongLine(
-        startPixelPos,
-        { x: Math.round(x), y: Math.round(y) },
-        targetPixelPos,
-        target.position,
-        48,
-        state,
-        false,
-        seenCells,
-      );
-      if (seen) {
-        const sX = x;
-        const sY = y;
-        const eX = target.position.x;
-        const eY = target.position.y;
-
-        ctx.beginPath();
-        ctx.strokeStyle = from.colour;
-        ctx.lineWidth = 2;
-        ctx.moveTo(sX * cellSize + cellSize / 2, sY * cellSize + cellSize / 2);
-        ctx.lineTo(eX * cellSize + cellSize / 2, eY * cellSize + cellSize / 2);
-        ctx.stroke();
-        ctx.lineWidth = 1;
-      }
-    });
+  drawFlash(ctx, view.position, view.flashIntensity, cellSize);
+  if (view.colourBar) {
+    drawColourBar(ctx, view.position, view.colourBar, cellSize);
   }
+  if (view.healthBar) {
+    drawHealthBar(ctx, view.position, view.healthBar, cellSize);
+  }
+  view.debugLines.forEach((line) => {
+    ctx.beginPath();
+    ctx.strokeStyle = line.colour;
+    ctx.lineWidth = 2;
+    ctx.moveTo(
+      line.from.x * cellSize + cellSize / 2,
+      line.from.y * cellSize + cellSize / 2,
+    );
+    ctx.lineTo(
+      line.to.x * cellSize + cellSize / 2,
+      line.to.y * cellSize + cellSize / 2,
+    );
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  });
+  if (view.debugLabel) {
+    ctx.fillStyle = 'black';
+    ctx.font = '8px Arial';
+    ctx.fillText(view.debugLabel, x * cellSize + 3, y * cellSize + 10);
+  }
+  return view.active;
 };

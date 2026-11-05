@@ -540,17 +540,20 @@ split the lift performed:
 
 `src/dungeon/DungeonRendering.ts`, `TileTextureCache.ts`, `TilesetLogic.ts`,
 `WallRendering`/`DoorRendering`/`TerrainRendering`, the render half of
-`LightRendering.ts`, `src/core/ImageCache.ts`, `src/core/ActorSpriteRendering.ts` +
-`ActorAnimation.ts`, `src/monsters/MonsterRendering.ts`, the actor/prop
+`LightRendering.ts`, `src/core/ImageCache.ts`, `src/core/ActorAnimation.ts`, `src/monsters/MonsterRendering.ts`, the actor/prop
 sprite renderers (`src/hero/HeroRendering.ts`,
-`src/items/ItemSpriteRendering.ts`, `src/items/ItemRendering.ts`),
-`src/combat/DamageIndicatorRendering.ts`. `ImageCache.ts` — the
+`src/items/ItemRendering.ts`), `src/combat/DamageIndicatorRendering.ts`.
+`ImageCache.ts` — the
 per-URL image cache shared by actor sheets, item sheets and the UI asset
 port — is generic but browser-bound by nature; it folds into `scene`
 rather than standing as its own package. The sprite renderers
 (`HeroRendering`, `ItemRendering`) import `GameState` and draw named
 game tiles, so like the other scene sources they arrive as view models
-under adapters, with the tile references staying game content.
+under adapters, with the tile references staying game content — the
+actor/item/effect plane is done this way already (see the current-state
+note below; the former `src/core/ActorSpriteRendering.ts` and
+`src/items/ItemSpriteRendering.ts` folded into the scene adapters and
+helpers).
 
 The world canvas renderer: draw-ordered layer compositing (terrain →
 walls/doors → actors → light → VFX), tileset handling with texture caching and
@@ -560,6 +563,42 @@ actor sprites, effect descriptors — never `GameState`, `Monster`, or any game
 type. The game keeps the adapters (today's `src/ui/viewmodels/` role) and all
 assets. `scene` and `uikit` are siblings: neither imports the other, and nothing
 engine-side imports either, keeping headless benchmarks canvas-free.
+
+**Current state: view-model contracts, first plane in place.** The
+step-9 gate ("view-model contracts in place") is being built under
+`src/scene/`, staged plane by plane:
+
+- `src/scene/contracts.ts` — the view-model types the future package
+  consumes: `SceneActorView` (sprite frame or fallback tile, visual
+  position, flash intensity, active flag, bars, debug data),
+  `SceneHeroOverlayView` (walkable-area cells, per-hero bars/pips,
+  current-actor marker), `SceneItemView` (sprite frame, generic tile,
+  resolved i18n label) and `SceneFloatingText` (structurally compatible
+  with the game's `DamageIndicator`, so indicator data passes by data).
+  No game types: positions are two-field `ScenePoint`s, tiles and
+  frames are plain rectangles plus sheet images.
+- `src/scene/adapters.ts` — the GameState → view-model builders, the
+  game-side half that stays when the renderers leave: animation-timeline
+  resolution (current sprite frame), dying-actor visibility (lingering
+  death animations), monster discovery filtering, walkable-area rules
+  (discovery, blocking, line of sight), difficulty-scaled health bars,
+  named-tile resolution (`ACTOR_TILES.HERO`, the monster type switch is
+  game knowledge) and the i18n item labels.
+- `src/scene/ActorLayer.ts` / `spriteSheets.ts` — the view-model draw
+  primitives and sprite-sheet source-rect math (package material).
+- Converted, facades unchanged: `HeroRendering`, `MonsterRendering`,
+  `ItemRendering` and `DamageIndicatorRendering` keep their historical
+  signatures and now resolveGameState → view models → view-typed cores.
+  The superseded `src/core/ActorSpriteRendering.ts` and
+  `src/items/ItemSpriteRendering.ts` are folded into the adapters and
+  scene helpers (their tests moved with the math).
+- Still to convert for step 9: the dungeon plane (`DungeonRendering`'s
+  tiles/walls/doors/terrain/fog — today `state.dungeon` is its only
+  GameState slice), the light plane (the render half of
+  `LightRendering`, whose state slices span heroes, event lights,
+  projectiles and flame effects), `ImageCache`, and the
+  `ActorAnimation` timeline split (logic records steps, rendering
+  resolves frames — today both sides share the module).
 
 ## Prerequisites (cross-cutting)
 
@@ -581,7 +620,9 @@ what uikit already did with `UiEnv.t`:
   audio section).
 - **Separate compute from render.** Rendering files colocated in logic
   directories move to `scene`; logic emits data (animation/sound/effect events)
-  that presentation consumes.
+  that presentation consumes. In progress: the actor/item/effect rendering
+  plane consumes view models built by `src/scene/adapters.ts` (see the scene
+  section); the dungeon and light planes still read `GameState` directly.
 
 ## Extraction order
 
@@ -666,8 +707,10 @@ A November 2026 review pass compared this spec with what remains in
 `src/`. The published packages and their facades match the spec above,
 including the open-item ledger: the sound-cue inversion is done (logic
 emits cue data; only the adapter, the UI shell and `AppSettings` import
-the `soundEffectManager` facade) and the scene
-extraction (step 9) has not started. Besides the two future candidates
+the `soundEffectManager` facade) and the scene extraction (step 9) has
+started — the actor/item/effect plane renders from view models under
+`src/scene/` (see the scene section); the dungeon and light planes and
+the package lift remain. Besides the two future candidates
 above, these framework-looking modules were examined and stay in the
 game:
 

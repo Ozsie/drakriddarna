@@ -1,10 +1,15 @@
-import type { GameState, ItemLocation } from '../types';
-import { ItemType } from '../types';
-import { i18n } from '../core';
-import { isDiscovered, isSamePosition } from '../core';
+import type { GameState } from '../types';
+import type { SceneItemView } from '../scene/contracts';
+import { buildItemViewModels } from '../scene/adapters';
+import { drawSpriteFrame, drawTileFrame } from '../scene/ActorLayer';
 import { renderTextBox } from '../notes/NotesRendering';
-import { ITEM_TILES, drawTileRef } from '../dungeon/tiles';
-import { drawItemSprite } from './ItemSpriteRendering';
+
+// Facade over the view-model renderer: the historical entry point keeps
+// its GameState signature (callers and tests unchanged), resolves the
+// state into scene view models, and leaves the drawing to the
+// view-model core that moves with @hoard-engine/scene. Fully generic
+// items define no special handling today — the case switch collapsed
+// into the shared sprite-or-tile draw.
 
 export const renderItems = (
   ctx: CanvasRenderingContext2D,
@@ -13,63 +18,24 @@ export const renderItems = (
   state: GameState,
   debugMode: boolean,
 ) => {
-  state.dungeon.layout.items.forEach((itemLocation) => {
-    if (
-      !isDiscovered(
-        state.dungeon,
-        itemLocation.position.x,
-        itemLocation.position.y,
-      ) &&
-      !debugMode
-    )
-      return;
-    switch (itemLocation.item?.type ?? ItemType.WEAPON) {
-      case ItemType.MAGIC:
-        renderMagicItem(ctx, ground, cellSize, state, itemLocation);
-        break;
-      case ItemType.WEAPON:
-        renderMagicItem(ctx, ground, cellSize, state, itemLocation);
-    }
-  });
+  const views = buildItemViewModels(state, ground, cellSize, debugMode);
+  views.forEach((view) => renderItemView(ctx, view, cellSize));
 };
 
-const renderMagicItem = (
+const renderItemView = (
   ctx: CanvasRenderingContext2D,
-  ground: CanvasImageSource,
+  view: SceneItemView,
   cellSize: number,
-  state: GameState,
-  itemLocation: ItemLocation,
 ) => {
-  const x = itemLocation.position.x;
-  const y = itemLocation.position.y;
+  const { x, y } = view.position;
   // Item sprite sheet when the item defines one, the generic tileset item
   // tile otherwise (and while the sheet is still loading).
-  const spriteDrawn = itemLocation.item?.sprite
-    ? drawItemSprite(
-        ctx,
-        itemLocation.item.sprite,
-        x * cellSize,
-        y * cellSize,
-        cellSize,
-      )
-    : false;
-  if (!spriteDrawn) {
-    drawTileRef(
-      ctx,
-      ground,
-      ITEM_TILES.ITEM_GENERIC,
-      x * cellSize,
-      y * cellSize,
-      cellSize,
-      cellSize,
-    );
+  if (view.sprite) {
+    drawSpriteFrame(ctx, view.sprite, x, y, cellSize);
+  } else {
+    drawTileFrame(ctx, view.fallbackTile, x * cellSize, y * cellSize);
   }
-  if (!state.currentActor) return;
-  const actor = state.currentActor;
-  if (isSamePosition(actor?.position, itemLocation.position)) {
-    const text = itemLocation.item
-      ? i18n(itemLocation.item.name)
-      : i18n('campaign.iceDragon.randomItem');
-    renderTextBox(ctx, text, itemLocation.position, cellSize);
+  if (view.label) {
+    renderTextBox(ctx, view.label, view.position, cellSize);
   }
 };
