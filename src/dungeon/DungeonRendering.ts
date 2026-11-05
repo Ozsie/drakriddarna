@@ -2,7 +2,7 @@ import {
   CornerType,
   type Corner,
   type Door,
-  type GameState,
+  type Dungeon,
   type Position,
   type RoomFogOptions,
   type Secret,
@@ -42,11 +42,11 @@ export const renderDoors = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
 ) => {
-  state.dungeon.layout.doors.forEach((door) => {
-    renderDoor(ctx, ground, cellSize, state, door, debugMode);
+  dungeon.layout.doors.forEach((door) => {
+    renderDoor(ctx, ground, cellSize, dungeon, door, debugMode);
   });
 };
 
@@ -86,18 +86,14 @@ const drawEdgeWall = (
   ctx: CanvasRenderingContext2D,
   wall: WallEdge,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
 ) => {
-  const layout = state.dungeon.layout;
+  const layout = dungeon.layout;
   const farX = wall.side === Side.RIGHT ? 1 : wall.side === Side.LEFT ? -1 : 0;
   const farY = wall.side === Side.DOWN ? 1 : wall.side === Side.UP ? -1 : 0;
-  const nearDiscovered = isDiscovered(state.dungeon, wall.x, wall.y);
-  const farDiscovered = isDiscovered(
-    state.dungeon,
-    wall.x + farX,
-    wall.y + farY,
-  );
+  const nearDiscovered = isDiscovered(dungeon, wall.x, wall.y);
+  const farDiscovered = isDiscovered(dungeon, wall.x + farX, wall.y + farY);
   if (!nearDiscovered && !farDiscovered && !debugMode) return;
 
   const rect = edgeWallRect(wall, cellSize);
@@ -116,11 +112,11 @@ const drawEdgeWall = (
 export const renderWalls = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
 ) => {
-  state.dungeon.layout.walls?.forEach((wall) => {
-    drawEdgeWall(ctx, wall, cellSize, state, debugMode);
+  dungeon.layout.walls?.forEach((wall) => {
+    drawEdgeWall(ctx, wall, cellSize, dungeon, debugMode);
   });
 };
 
@@ -128,26 +124,26 @@ export const renderGrid = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
 ) => {
-  state.dungeon.layout.grid.forEach((row, y) => {
+  dungeon.layout.grid.forEach((row, y) => {
     toArray(row).forEach((cell: string, x: number) => {
-      renderFloor(ctx, ground, state, cell, x, y, cellSize);
-      renderGridLines(ctx, cell, state, x, y, cellSize, debugMode);
+      renderFloor(ctx, ground, dungeon, cell, x, y, cellSize);
+      renderGridLines(ctx, cell, dungeon, x, y, cellSize, debugMode);
     });
   });
-  renderPits(ctx, ground, cellSize, state, debugMode);
+  renderPits(ctx, ground, cellSize, dungeon, debugMode);
 };
 
 export const renderSecrets = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
 ) => {
-  state.dungeon.layout.secrets
+  dungeon.layout.secrets
     .filter((secret) => secret.found)
     .forEach((secret) => {
       switch (secret.type) {
@@ -159,7 +155,7 @@ export const renderSecrets = (
           break;
       }
     });
-  state.dungeon.layout.secrets
+  dungeon.layout.secrets
     .filter((secret) => !secret.found)
     .forEach((secret) => {
       ctx.globalAlpha = 0.6;
@@ -170,7 +166,7 @@ export const renderSecrets = (
         cellSize,
         secret.position.x,
         secret.position.y,
-        state,
+        dungeon,
       );
       ctx.globalAlpha = 1;
       if (debugMode) {
@@ -200,11 +196,11 @@ const drawTile = (
   cellSize: number,
   x: number,
   y: number,
-  state: GameState,
+  dungeon: Dungeon,
 ) => {
   if (
-    state.dungeon.discoveredRooms.some((r) => neighbourOf(x, y, r, state)) ||
-    neighbourOf(x, y, COLLAPSED, state)
+    dungeon.discoveredRooms.some((r) => neighbourOf(x, y, r, dungeon)) ||
+    neighbourOf(x, y, COLLAPSED, dungeon)
   ) {
     drawCachedTile(
       ctx,
@@ -230,7 +226,7 @@ const drawCornerTile = (
   cellSize: number,
   x: number,
   y: number,
-  state: GameState,
+  dungeon: Dungeon,
 ) => {
   switch (corner) {
     case CornerType.INNER_BOTTOM_LEFT: {
@@ -241,7 +237,7 @@ const drawCornerTile = (
         cellSize,
         x,
         y,
-        state,
+        dungeon,
       );
       break;
     }
@@ -253,7 +249,7 @@ const drawCornerTile = (
         cellSize,
         x,
         y,
-        state,
+        dungeon,
       );
       break;
     }
@@ -265,7 +261,7 @@ const drawCornerTile = (
         cellSize,
         x,
         y,
-        state,
+        dungeon,
       );
       break;
     }
@@ -277,7 +273,7 @@ const drawCornerTile = (
         cellSize,
         x,
         y,
-        state,
+        dungeon,
       );
       break;
     }
@@ -289,7 +285,7 @@ const drawCornerTile = (
         cellSize,
         x,
         y,
-        state,
+        dungeon,
       );
       break;
     }
@@ -301,7 +297,7 @@ const drawCornerTile = (
         cellSize,
         x,
         y,
-        state,
+        dungeon,
       );
       break;
     }
@@ -314,7 +310,7 @@ const drawCornerTile = (
         cellSize,
         x,
         y,
-        state,
+        dungeon,
       );
       break;
     }
@@ -327,7 +323,7 @@ const drawCornerTile = (
         cellSize,
         x,
         y,
-        state,
+        dungeon,
       );
       break;
     }
@@ -339,7 +335,7 @@ const drawCornerTile = (
         cellSize,
         x,
         y,
-        state,
+        dungeon,
       );
       break;
     }
@@ -351,7 +347,7 @@ const drawCornerTile = (
         cellSize,
         x,
         y,
-        state,
+        dungeon,
       );
       break;
     }
@@ -363,12 +359,12 @@ const drawCornerTile = (
         cellSize,
         x,
         y,
-        state,
+        dungeon,
       );
       break;
     }
     default:
-      drawTile(ctx, ground, DUNGEON_TILES.RUBBLE, cellSize, x, y, state);
+      drawTile(ctx, ground, DUNGEON_TILES.RUBBLE, cellSize, x, y, dungeon);
       break;
   }
 };
@@ -377,13 +373,13 @@ const renderPits = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
 ) => {
-  state.dungeon.layout.pits
-    ?.filter((pit) => isDiscovered(state.dungeon, pit.x, pit.y) || debugMode)
+  dungeon.layout.pits
+    ?.filter((pit) => isDiscovered(dungeon, pit.x, pit.y) || debugMode)
     ?.forEach((pit) => {
-      drawTile(ctx, ground, DUNGEON_TILES.PIT, cellSize, pit.x, pit.y, state);
+      drawTile(ctx, ground, DUNGEON_TILES.PIT, cellSize, pit.x, pit.y, dungeon);
     });
 };
 
@@ -397,14 +393,13 @@ const DEFAULT_TERRAIN_COLOR = '#56606a';
 export const renderTerrain = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
 ) => {
-  (state.dungeon.layout.terrain ?? [])
+  (dungeon.layout.terrain ?? [])
     .filter(
       (cell) =>
-        isDiscovered(state.dungeon, cell.position.x, cell.position.y) ||
-        debugMode,
+        isDiscovered(dungeon, cell.position.x, cell.position.y) || debugMode,
     )
     .forEach((cell) => {
       const styling = TERRAIN_DEFAULT_STYLING[cell.type];
@@ -467,20 +462,20 @@ const terrainOverlayRate = (cell: TerrainCell): number =>
 // discovered cell whose grid letter carries fog options, together with
 // the letter so renderers can group cells into whole-room shapes.
 const collectFogCells = (
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
   viewport?: LightViewport,
 ): { position: Position; room: string; options: RoomFogOptions }[] => {
-  const fog = state.dungeon.layout.roomFog;
+  const fog = dungeon.layout.roomFog;
   if (!fog) return [];
   const cells: { position: Position; room: string; options: RoomFogOptions }[] =
     [];
-  state.dungeon.layout.grid.forEach((row, y) => {
+  dungeon.layout.grid.forEach((row, y) => {
     toArray(row).forEach((letter: string, x: number) => {
       const options = fog[letter];
       if (
         options &&
-        (debugMode || isDiscovered(state.dungeon, x, y)) &&
+        (debugMode || isDiscovered(dungeon, x, y)) &&
         cellInViewport({ x, y }, viewport)
       ) {
         cells.push({ position: { x, y }, room: letter, options });
@@ -493,17 +488,16 @@ const collectFogCells = (
 // Whether any animated terrain or fog overlay is visible, and so the
 // dynamic layer needs continuous re-rendering.
 export const hasAnimatedTerrainEffects = (
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
   viewport?: LightViewport,
 ): boolean =>
-  (state.dungeon.layout.terrain ?? []).some(
+  (dungeon.layout.terrain ?? []).some(
     (cell) =>
       isAnimatedTerrainType(cell.type) &&
-      (debugMode ||
-        isDiscovered(state.dungeon, cell.position.x, cell.position.y)) &&
+      (debugMode || isDiscovered(dungeon, cell.position.x, cell.position.y)) &&
       cellInViewport(cell.position, viewport),
-  ) || collectFogCells(state, debugMode, viewport).length > 0;
+  ) || collectFogCells(dungeon, debugMode, viewport).length > 0;
 
 // Travelling wave crests: two translucent lines drift down the water
 // cell, fading in and out, wiggling slightly to read as ripples.
@@ -650,17 +644,17 @@ const renderLavaPulse = (
 export const renderTerrainAnimation = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
   timeMs: number,
   viewport?: LightViewport,
 ): void => {
-  (state.dungeon.layout.terrain ?? [])
+  (dungeon.layout.terrain ?? [])
     .filter(
       (cell) =>
         isAnimatedTerrainType(cell.type) &&
         (debugMode ||
-          isDiscovered(state.dungeon, cell.position.x, cell.position.y)) &&
+          isDiscovered(dungeon, cell.position.x, cell.position.y)) &&
         cellInViewport(cell.position, viewport),
     )
     .forEach((cell) => {
@@ -696,7 +690,7 @@ const traceRoomPath = (
 
 // The fog rooms currently relevant for rendering, grouped by grid letter.
 const groupFogRooms = (
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
   viewport?: LightViewport,
 ): Map<string, { position: Position; options: RoomFogOptions }[]> => {
@@ -704,7 +698,7 @@ const groupFogRooms = (
     string,
     { position: Position; options: RoomFogOptions }[]
   >();
-  collectFogCells(state, debugMode, viewport).forEach(
+  collectFogCells(dungeon, debugMode, viewport).forEach(
     ({ position, room, options }) => {
       const group = rooms.get(room) ?? [];
       group.push({ position, options });
@@ -743,15 +737,15 @@ const canBuildOffscreenCanvas = (): boolean =>
 // (runtime fog fills mutate these), the discovered cells it covers, the
 // grid itself (collapses rewrite room letters) and the cell size.
 const fogCloudCacheKey = (
-  state: GameState,
+  dungeon: Dungeon,
   room: string,
   cellSize: number,
   debugMode: boolean,
 ): string =>
-  `${state.dungeon.name}|${room}|${cellSize}|${debugMode ? 'd' : 'n'}|${
-    state.dungeon.discoveredRooms.includes(room) ? 'd' : 'n'
-  }|${state.dungeon.layout.grid.join('')}|${JSON.stringify(
-    state.dungeon.layout.roomFog?.[room] ?? null,
+  `${dungeon.name}|${room}|${cellSize}|${debugMode ? 'd' : 'n'}|${
+    dungeon.discoveredRooms.includes(room) ? 'd' : 'n'
+  }|${dungeon.layout.grid.join('')}|${JSON.stringify(
+    dungeon.layout.roomFog?.[room] ?? null,
   )}`;
 
 const buildFogCloudCanvas = (
@@ -791,14 +785,14 @@ const buildFogCloudCanvas = (
 // of the viewport: the cached fog cloud covers the whole visible room, so
 // its pixels — and so its cache key — stay valid across pans.
 const collectRoomFogCells = (
-  state: GameState,
+  dungeon: Dungeon,
   room: string,
   debugMode: boolean,
 ): Position[] => {
   const cells: Position[] = [];
-  state.dungeon.layout.grid.forEach((row, y) => {
+  dungeon.layout.grid.forEach((row, y) => {
     toArray(row).forEach((letter: string, x: number) => {
-      if (letter === room && (debugMode || isDiscovered(state.dungeon, x, y))) {
+      if (letter === room && (debugMode || isDiscovered(dungeon, x, y))) {
         cells.push({ x, y });
       }
     });
@@ -807,14 +801,14 @@ const collectRoomFogCells = (
 };
 
 const fogCloudFor = (
-  state: GameState,
+  dungeon: Dungeon,
   room: string,
   options: RoomFogOptions,
   cellSize: number,
   debugMode: boolean,
 ): FogCloudCacheEntry | null => {
   if (!canBuildOffscreenCanvas()) return null;
-  const key = fogCloudCacheKey(state, room, cellSize, debugMode);
+  const key = fogCloudCacheKey(dungeon, room, cellSize, debugMode);
   const cached = fogCloudCaches.get(room);
   if (cached && cached.key === key) return cached;
 
@@ -822,9 +816,11 @@ const fogCloudFor = (
   // viewport-culled subset: the cache key does not include the viewport,
   // so the cached pixels must not depend on it either. Callers still use
   // the viewport to decide which rooms render at all.
-  const cells = collectRoomFogCells(state, room, debugMode).map((position) => ({
-    position,
-  }));
+  const cells = collectRoomFogCells(dungeon, room, debugMode).map(
+    (position) => ({
+      position,
+    }),
+  );
   if (cells.length === 0) return null;
 
   const minX = Math.min(...cells.map(({ position }) => position.x));
@@ -877,14 +873,14 @@ const fogCloudFor = (
 export const renderRoomFog = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
   timeMs: number,
   viewport?: LightViewport,
 ): void => {
-  const fog = state.dungeon.layout.roomFog;
+  const fog = dungeon.layout.roomFog;
   if (!fog) return;
-  groupFogRooms(state, debugMode, viewport).forEach((cells, room) => {
+  groupFogRooms(dungeon, debugMode, viewport).forEach((cells, room) => {
     const options = cells[0].options;
     const rate = options.rate ?? DEFAULT_FOG_RATE;
     const t = (timeMs / 1000) * rate;
@@ -894,7 +890,7 @@ export const renderRoomFog = (
         0.22 * Math.sin(2 * Math.PI * (t + cellHash(room.charCodeAt(0), 0))));
 
     // Fast path: blit the cached blurred cloud with the breathing alpha.
-    const cache = fogCloudFor(state, room, options, cellSize, debugMode);
+    const cache = fogCloudFor(dungeon, room, options, cellSize, debugMode);
     if (cache) {
       ctx.save();
       ctx.globalAlpha = alpha;
@@ -930,13 +926,13 @@ export const renderRoomFog = (
 export const renderFogLightDim = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
   viewport?: LightViewport,
 ): void => {
-  const fog = state.dungeon.layout.roomFog;
+  const fog = dungeon.layout.roomFog;
   if (!fog) return;
-  const rooms = groupFogRooms(state, debugMode, viewport);
+  const rooms = groupFogRooms(dungeon, debugMode, viewport);
   rooms.forEach((cells, room) => {
     const options = cells[0].options;
     const density = options.density ?? DEFAULT_FOG_DENSITY;
@@ -945,7 +941,7 @@ export const renderFogLightDim = (
     }
 
     // Fast path: erase through the cached blurred dim mask.
-    const cache = fogCloudFor(state, room, options, cellSize, debugMode);
+    const cache = fogCloudFor(dungeon, room, options, cellSize, debugMode);
     if (cache) {
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
@@ -980,13 +976,11 @@ export const renderPillars = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
 ) => {
-  state.dungeon.layout.pillars
-    ?.filter(
-      (pillar) => isDiscovered(state.dungeon, pillar.x, pillar.y) || debugMode,
-    )
+  dungeon.layout.pillars
+    ?.filter((pillar) => isDiscovered(dungeon, pillar.x, pillar.y) || debugMode)
     ?.forEach((pillar) => {
       drawTile(
         ctx,
@@ -995,7 +989,7 @@ export const renderPillars = (
         cellSize,
         pillar.x,
         pillar.y,
-        state,
+        dungeon,
       );
     });
 };
@@ -1009,13 +1003,11 @@ export const renderPillarTops = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
 ) => {
-  state.dungeon.layout.pillars
-    ?.filter(
-      (pillar) => isDiscovered(state.dungeon, pillar.x, pillar.y) || debugMode,
-    )
+  dungeon.layout.pillars
+    ?.filter((pillar) => isDiscovered(dungeon, pillar.x, pillar.y) || debugMode)
     ?.forEach((pillar) => {
       drawTile(
         ctx,
@@ -1024,7 +1016,7 @@ export const renderPillarTops = (
         cellSize,
         pillar.x,
         pillar.y - 1,
-        state,
+        dungeon,
       );
     });
 };
@@ -1032,12 +1024,12 @@ export const renderPillarTops = (
 export const renderPortal = (
   ctx: CanvasRenderingContext2D,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
 ) => {
-  const portal = state.dungeon.portal;
+  const portal = dungeon.portal;
   if (!portal) return;
-  if (!isDiscovered(state.dungeon, portal.x, portal.y) && !debugMode) return;
+  if (!isDiscovered(dungeon, portal.x, portal.y) && !debugMode) return;
 
   const centerX = portal.x * cellSize + cellSize / 2;
   const centerY = portal.y * cellSize + cellSize / 2;
@@ -1072,13 +1064,13 @@ export const renderInteractables = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   debugMode: boolean,
 ) => {
-  state.dungeon.layout.interactables?.forEach((interactable) => {
+  dungeon.layout.interactables?.forEach((interactable) => {
     if (
       !isDiscovered(
-        state.dungeon,
+        dungeon,
         interactable.position.x,
         interactable.position.y,
       ) &&
@@ -1133,23 +1125,23 @@ const randomFloorTileCoordinates = (seed: number): TileRef => {
 const renderFloor = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
-  state: GameState,
+  dungeon: Dungeon,
   cell: string,
   x: number,
   y: number,
   cellSize: number,
 ) => {
-  if (notGround(cell, state)) {
+  if (notGround(cell, dungeon)) {
     if (cell === COLLAPSED) {
-      drawTile(ctx, ground, DUNGEON_TILES.FLOOR_A, cellSize, x, y, state);
-      drawTile(ctx, ground, DUNGEON_TILES.RUBBLE, cellSize, x, y, state);
+      drawTile(ctx, ground, DUNGEON_TILES.FLOOR_A, cellSize, x, y, dungeon);
+      drawTile(ctx, ground, DUNGEON_TILES.RUBBLE, cellSize, x, y, dungeon);
     } else {
-      const corner = isCornerWall(x, y, state);
+      const corner = isCornerWall(x, y, dungeon);
       if (corner !== CornerType.NOT_CORNER) {
-        drawCornerTile(ctx, ground, corner, cellSize, x, y, state);
+        drawCornerTile(ctx, ground, corner, cellSize, x, y, dungeon);
       } else {
-        const vertical = isVerticalWall(x, y, state);
-        const horizontal = isHorizontalWall(x, y, state);
+        const vertical = isVerticalWall(x, y, dungeon);
+        const horizontal = isHorizontalWall(x, y, dungeon);
         if (horizontal !== 'none' && vertical === 'none') {
           if (horizontal === 'up') {
             drawTile(
@@ -1159,7 +1151,7 @@ const renderFloor = (
               cellSize,
               x,
               y,
-              state,
+              dungeon,
             );
           } else if (horizontal === 'down') {
             drawTile(
@@ -1169,7 +1161,7 @@ const renderFloor = (
               cellSize,
               x,
               y,
-              state,
+              dungeon,
             );
           } else {
             drawTile(
@@ -1179,7 +1171,7 @@ const renderFloor = (
               cellSize,
               x,
               y,
-              state,
+              dungeon,
             );
           }
         } else if (vertical !== 'none') {
@@ -1191,7 +1183,7 @@ const renderFloor = (
               cellSize,
               x,
               y,
-              state,
+              dungeon,
             );
           } else if (vertical === 'right') {
             drawTile(
@@ -1201,7 +1193,7 @@ const renderFloor = (
               cellSize,
               x,
               y,
-              state,
+              dungeon,
             );
           } else {
             drawTile(
@@ -1211,26 +1203,26 @@ const renderFloor = (
               cellSize,
               x,
               y,
-              state,
+              dungeon,
             );
           }
         }
       }
     }
-  } else if (!isEmpty(cell, state)) {
+  } else if (!isEmpty(cell, dungeon)) {
     // Ordinary floor
     const seed = (x + y) * 10;
     const tile = randomFloorTileCoordinates(seed);
-    drawTile(ctx, ground, tile, cellSize, x, y, state);
+    drawTile(ctx, ground, tile, cellSize, x, y, dungeon);
   } else {
     renderHiddenCell(ctx, x, y, cellSize);
   }
 };
 
-const isHorizontalWall = (x: number, y: number, state: GameState): string => {
+const isHorizontalWall = (x: number, y: number, dungeon: Dungeon): string => {
   // Classify against the sealed grid: a hidden cell sealed behind a closed
   // door renders as a wall piece here, so it must classify as one
-  const grid = sealedGrid(state);
+  const grid = sealedGrid(dungeon);
   const cell = findCell(grid, x, y);
   if (cell !== WALL && cell !== SEALED_DOOR) {
     return 'none';
@@ -1242,17 +1234,17 @@ const isHorizontalWall = (x: number, y: number, state: GameState): string => {
   const cellRight = findCell(grid, x + 1, y);
   const isHorizontal =
     cellLeft === WALL ||
-    isEmpty(cellLeft, state) ||
+    isEmpty(cellLeft, dungeon) ||
     cellRight === WALL ||
-    isEmpty(cellRight, state);
+    isEmpty(cellRight, dungeon);
   if (isHorizontal) {
     const cellAbove = findCell(grid, x, y - 1);
     const cellBelow = findCell(grid, x, y + 1);
-    if (isRoom(cellAbove, state) && isRoom(cellBelow, state)) {
+    if (isRoom(cellAbove, dungeon) && isRoom(cellBelow, dungeon)) {
       return 'both';
-    } else if (isRoom(cellAbove, state)) {
+    } else if (isRoom(cellAbove, dungeon)) {
       return 'up';
-    } else if (isRoom(cellBelow, state)) {
+    } else if (isRoom(cellBelow, dungeon)) {
       return 'down';
     } else {
       return 'none';
@@ -1262,10 +1254,10 @@ const isHorizontalWall = (x: number, y: number, state: GameState): string => {
   }
 };
 
-const isVerticalWall = (x: number, y: number, state: GameState): string => {
+const isVerticalWall = (x: number, y: number, dungeon: Dungeon): string => {
   // Classify against the sealed grid: a hidden cell sealed behind a closed
   // door renders as a wall piece here, so it must classify as one
-  const grid = sealedGrid(state);
+  const grid = sealedGrid(dungeon);
   const cell = findCell(grid, x, y);
   if (cell !== WALL && cell !== SEALED_DOOR) {
     return 'none';
@@ -1278,17 +1270,17 @@ const isVerticalWall = (x: number, y: number, state: GameState): string => {
   const cellBelow = findCell(grid, x, y + 1);
   const isVertical =
     cellAbove === WALL ||
-    isEmpty(cellAbove, state) ||
+    isEmpty(cellAbove, dungeon) ||
     cellBelow === WALL ||
-    isEmpty(cellBelow, state);
+    isEmpty(cellBelow, dungeon);
   if (isVertical) {
     const cellLeft = findCell(grid, x - 1, y);
     const cellRight = findCell(grid, x + 1, y);
-    if (isRoom(cellLeft, state) && isRoom(cellRight, state)) {
+    if (isRoom(cellLeft, dungeon) && isRoom(cellRight, dungeon)) {
       return 'both';
-    } else if (isRoom(cellLeft, state)) {
+    } else if (isRoom(cellLeft, dungeon)) {
       return 'left';
-    } else if (isRoom(cellRight, state)) {
+    } else if (isRoom(cellRight, dungeon)) {
       return 'right';
     } else {
       return 'none';
@@ -1310,14 +1302,14 @@ const isVerticalWall = (x: number, y: number, state: GameState): string => {
 // than rock. Invisible sealed cells (no discovered floor bordering them)
 // resolve to unknown during classification, so sealing never fabricates
 // junction shapes on the wall pieces themselves.
-export const sealedCornerGrid = (state: GameState): string[] => {
-  const grid = [...state.dungeon.layout.grid];
+export const sealedCornerGrid = (dungeon: Dungeon): string[] => {
+  const grid = [...dungeon.layout.grid];
   const sealable = (cell: string) =>
     Boolean(cell) &&
     cell !== WALL &&
     cell !== COLLAPSED &&
-    !isRoomDiscovered(state.dungeon, cell);
-  state.dungeon.layout.doors.forEach((door) => {
+    !isRoomDiscovered(dungeon, cell);
+  dungeon.layout.doors.forEach((door) => {
     if (door.open) return;
     const farX =
       door.side === Side.RIGHT
@@ -1333,8 +1325,8 @@ export const sealedCornerGrid = (state: GameState): string[] => {
           : door.y;
     const farCell = findCell(grid, farX, farY);
     const nearCell = findCell(grid, door.x, door.y);
-    const farDiscovered = farCell !== '' && !isEmpty(farCell, state);
-    const nearDiscovered = nearCell !== '' && !isEmpty(nearCell, state);
+    const farDiscovered = farCell !== '' && !isEmpty(farCell, dungeon);
+    const nearDiscovered = nearCell !== '' && !isEmpty(nearCell, dungeon);
     const flankX = door.side === Side.UP || door.side === Side.DOWN ? 1 : 0;
     const flankY = door.side === Side.LEFT || door.side === Side.RIGHT ? 1 : 0;
     // Seal whichever side of the doorway is still undiscovered: the far side
@@ -1361,23 +1353,21 @@ export const sealedCornerGrid = (state: GameState): string[] => {
 
 // Everything that can change the visible corner classification or the sealed
 // grid, hashed into a shared cache key.
-const visibleStateKey = (state: GameState): string => {
-  const doors = state.dungeon.layout.doors
+const visibleStateKey = (dungeon: Dungeon): string => {
+  const doors = dungeon.layout.doors
     .map((door) => (door.open ? '1' : '0'))
     .join('');
-  return `${state.dungeon.name}|${state.dungeon.discoveredRooms.join(
-    ',',
-  )}|${doors}`;
+  return `${dungeon.name}|${dungeon.discoveredRooms.join(',')}|${doors}`;
 };
 
 // The sealed classification grid, from cache when the visible state has not
 // changed since it was last built.
 let sealedGridCache: { key: string; grid: string[] } | null = null;
 
-const sealedGrid = (state: GameState): string[] => {
-  const key = visibleStateKey(state);
+const sealedGrid = (dungeon: Dungeon): string[] => {
+  const key = visibleStateKey(dungeon);
   if (!sealedGridCache || sealedGridCache.key !== key) {
-    sealedGridCache = { key, grid: sealedCornerGrid(state) };
+    sealedGridCache = { key, grid: sealedCornerGrid(dungeon) };
   }
   return sealedGridCache.grid;
 };
@@ -1390,22 +1380,19 @@ const sealedGrid = (state: GameState): string[] => {
 // instead of being re-detected on every render.
 let visibleCornersCache: { key: string; corners: Corner[] } | null = null;
 
-const visibleCorners = (state: GameState): Corner[] => {
-  const key = visibleStateKey(state);
+const visibleCorners = (dungeon: Dungeon): Corner[] => {
+  const key = visibleStateKey(dungeon);
   if (!visibleCornersCache || visibleCornersCache.key !== key) {
     visibleCornersCache = {
       key,
-      corners: autoDetectCorners(
-        sealedGrid(state),
-        state.dungeon.discoveredRooms,
-      ),
+      corners: autoDetectCorners(sealedGrid(dungeon), dungeon.discoveredRooms),
     };
   }
   return visibleCornersCache.corners;
 };
 
-const isCornerWall = (x: number, y: number, state: GameState): CornerType => {
-  const corner = visibleCorners(state).filter((corner) =>
+const isCornerWall = (x: number, y: number, dungeon: Dungeon): CornerType => {
+  const corner = visibleCorners(dungeon).filter((corner) =>
     isSamePosition(corner.position, { x, y }),
   );
   if (corner.length === 1) {
@@ -1415,11 +1402,11 @@ const isCornerWall = (x: number, y: number, state: GameState): CornerType => {
   }
 };
 
-const notGround = (cell: string, state: GameState) =>
-  isWall(cell) || (!isRoomDiscovered(state.dungeon, cell) && cell !== EMPTY);
+const notGround = (cell: string, dungeon: Dungeon) =>
+  isWall(cell) || (!isRoomDiscovered(dungeon, cell) && cell !== EMPTY);
 
-const isRoom = (cell: string, state: GameState) =>
-  state.dungeon.discoveredRooms.includes(cell);
+const isRoom = (cell: string, dungeon: Dungeon) =>
+  dungeon.discoveredRooms.includes(cell);
 
 const renderHiddenCell = (
   ctx: CanvasRenderingContext2D,
@@ -1475,20 +1462,20 @@ const renderFoundSecret = (
 const renderGridLines = (
   ctx: CanvasRenderingContext2D,
   cell: string,
-  state: GameState,
+  dungeon: Dungeon,
   x: number,
   y: number,
   cellSize: number,
   debugMode: boolean,
 ) => {
-  if (!debugMode && (isEmpty(cell, state) || cell === WALL)) return;
+  if (!debugMode && (isEmpty(cell, dungeon) || cell === WALL)) return;
   ctx.beginPath();
   ctx.strokeStyle = 'black';
   ctx.rect(x * cellSize, y * cellSize, cellSize, cellSize);
   if (debugMode) {
-    const horizontalWall = isHorizontalWall(x, y, state);
-    const verticalWall = isVerticalWall(x, y, state);
-    const isCorner = isCornerWall(x, y, state);
+    const horizontalWall = isHorizontalWall(x, y, dungeon);
+    const verticalWall = isVerticalWall(x, y, dungeon);
+    const isCorner = isCornerWall(x, y, dungeon);
     let text = `${cell}: ${x},${y}`;
     if (isCorner !== CornerType.NOT_CORNER) {
       text += ` C ${isCorner.valueOf()}`;
@@ -1514,10 +1501,10 @@ const drawDoorWallTile = (
   cellSize: number,
   x: number,
   y: number,
-  state: GameState,
+  dungeon: Dungeon,
 ) => {
-  if (isCornerWall(x, y, state) !== CornerType.NOT_CORNER) return;
-  drawTile(ctx, ground, tile, cellSize, x, y, state);
+  if (isCornerWall(x, y, dungeon) !== CornerType.NOT_CORNER) return;
+  drawTile(ctx, ground, tile, cellSize, x, y, dungeon);
 };
 
 const renderClosedHiddenDoor = (
@@ -1525,7 +1512,7 @@ const renderClosedHiddenDoor = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
 ) => {
   switch (door.side) {
     case Side.RIGHT: {
@@ -1536,7 +1523,7 @@ const renderClosedHiddenDoor = (
         cellSize,
         door.x + 1,
         door.y,
-        state,
+        dungeon,
       );
       drawDoorWallTile(
         ctx,
@@ -1545,7 +1532,7 @@ const renderClosedHiddenDoor = (
         cellSize,
         door.x + 1,
         door.y - 1,
-        state,
+        dungeon,
       );
       drawDoorWallTile(
         ctx,
@@ -1554,7 +1541,7 @@ const renderClosedHiddenDoor = (
         cellSize,
         door.x + 1,
         door.y + 1,
-        state,
+        dungeon,
       );
       break;
     }
@@ -1566,7 +1553,7 @@ const renderClosedHiddenDoor = (
         cellSize,
         door.x - 1,
         door.y,
-        state,
+        dungeon,
       );
       drawDoorWallTile(
         ctx,
@@ -1575,7 +1562,7 @@ const renderClosedHiddenDoor = (
         cellSize,
         door.x - 1,
         door.y - 1,
-        state,
+        dungeon,
       );
       drawDoorWallTile(
         ctx,
@@ -1584,7 +1571,7 @@ const renderClosedHiddenDoor = (
         cellSize,
         door.x - 1,
         door.y + 1,
-        state,
+        dungeon,
       );
       break;
     }
@@ -1596,7 +1583,7 @@ const renderClosedHiddenDoor = (
         cellSize,
         door.x,
         door.y - 1,
-        state,
+        dungeon,
       );
       drawDoorWallTile(
         ctx,
@@ -1605,7 +1592,7 @@ const renderClosedHiddenDoor = (
         cellSize,
         door.x + 1,
         door.y - 1,
-        state,
+        dungeon,
       );
       drawDoorWallTile(
         ctx,
@@ -1614,7 +1601,7 @@ const renderClosedHiddenDoor = (
         cellSize,
         door.x - 1,
         door.y - 1,
-        state,
+        dungeon,
       );
       break;
     }
@@ -1626,7 +1613,7 @@ const renderClosedHiddenDoor = (
         cellSize,
         door.x,
         door.y + 1,
-        state,
+        dungeon,
       );
       drawDoorWallTile(
         ctx,
@@ -1635,7 +1622,7 @@ const renderClosedHiddenDoor = (
         cellSize,
         door.x + 1,
         door.y + 1,
-        state,
+        dungeon,
       );
       drawDoorWallTile(
         ctx,
@@ -1644,7 +1631,7 @@ const renderClosedHiddenDoor = (
         cellSize,
         door.x - 1,
         door.y + 1,
-        state,
+        dungeon,
       );
       break;
     }
@@ -1656,7 +1643,7 @@ const renderClosedDoor = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
 ) => {
   switch (door.side) {
     case Side.RIGHT: {
@@ -1667,7 +1654,7 @@ const renderClosedDoor = (
         cellSize,
         door.x + 1,
         door.y,
-        state,
+        dungeon,
       );
       break;
     }
@@ -1679,7 +1666,7 @@ const renderClosedDoor = (
         cellSize,
         door.x - 1,
         door.y,
-        state,
+        dungeon,
       );
       break;
     }
@@ -1691,7 +1678,7 @@ const renderClosedDoor = (
         cellSize,
         door.x,
         door.y - 1,
-        state,
+        dungeon,
       );
       break;
     }
@@ -1703,7 +1690,7 @@ const renderClosedDoor = (
         cellSize,
         door.x,
         door.y + 1,
-        state,
+        dungeon,
       );
       break;
     }
@@ -1858,22 +1845,22 @@ const renderDoor = (
   ctx: CanvasRenderingContext2D,
   ground: CanvasImageSource,
   cellSize: number,
-  state: GameState,
+  dungeon: Dungeon,
   door: Door,
   debugMode: boolean,
 ) => {
-  const cell = state.dungeon.layout.grid[door.y][door.x];
+  const cell = dungeon.layout.grid[door.y][door.x];
   const farOffsetX =
     door.side === Side.RIGHT ? 1 : door.side === Side.LEFT ? -1 : 0;
   const farOffsetY =
     door.side === Side.DOWN ? 1 : door.side === Side.UP ? -1 : 0;
   const farCell = findCell(
-    state.dungeon.layout.grid,
+    dungeon.layout.grid,
     door.x + farOffsetX,
     door.y + farOffsetY,
   );
-  const nearDiscovered = !isEmpty(cell, state);
-  const farDiscovered = farCell !== '' && !isEmpty(farCell, state);
+  const nearDiscovered = !isEmpty(cell, dungeon);
+  const farDiscovered = farCell !== '' && !isEmpty(farCell, dungeon);
 
   // The wall tiles are painted on the far side of the door edge. Only do so
   // while that side is undiscovered — otherwise they would cover floor the
@@ -1882,9 +1869,9 @@ const renderDoor = (
   // from both sides.
   if (door && !door.open && !farDiscovered) {
     if (door.hidden) {
-      renderClosedHiddenDoor(door, ctx, ground, cellSize, state);
+      renderClosedHiddenDoor(door, ctx, ground, cellSize, dungeon);
     } else {
-      renderClosedDoor(door, ctx, ground, cellSize, state);
+      renderClosedDoor(door, ctx, ground, cellSize, dungeon);
     }
   }
   if (door && !door.hidden && !door.open && (nearDiscovered || farDiscovered)) {
@@ -1896,7 +1883,7 @@ const renderDoor = (
         cellSize,
         door.x,
         door.y - 1,
-        state,
+        dungeon,
       );
     }
     drawClosedDoor(ctx, door, cellSize);
@@ -1948,7 +1935,7 @@ const renderDoor = (
     ctx.fillStyle = 'darkgrey';
     drawDoorEdgeStrip(ctx, door, cellSize);
   }
-  if (debugMode && !isEmpty(cell, state)) {
+  if (debugMode && !isEmpty(cell, dungeon)) {
     ctx.fillStyle = 'black';
     ctx.font = '12px Arial';
     ctx.fillText(
@@ -1965,18 +1952,18 @@ const renderDoor = (
 
 const isWall = (cell: string) => cell === WALL;
 
-const isEmpty = (cell: string, state: GameState) =>
-  cell === EMPTY || !isRoomDiscovered(state.dungeon, cell);
+const isEmpty = (cell: string, dungeon: Dungeon) =>
+  cell === EMPTY || !isRoomDiscovered(dungeon, cell);
 
-const neighbourOf = (x: number, y: number, value: string, state: GameState) => {
-  if (!state) return;
+const neighbourOf = (x: number, y: number, value: string, dungeon: Dungeon) => {
+  if (!dungeon) return;
   const xMin = Math.max(x - 1, 0);
   const yMin = Math.max(y - 1, 0);
-  const yMax = Math.min(y + 1, state.dungeon.layout.grid.length - 1);
-  const xMax = Math.min(x + 1, state.dungeon.layout.grid[0].length - 1);
+  const yMax = Math.min(y + 1, dungeon.layout.grid.length - 1);
+  const xMax = Math.min(x + 1, dungeon.layout.grid[0].length - 1);
   for (let pX = xMin; pX <= xMax; pX++) {
     for (let pY = yMin; pY <= yMax; pY++) {
-      const row = state.dungeon.layout.grid[pY];
+      const row = dungeon.layout.grid[pY];
       const valueAt = toArray(row)[pX];
       if (valueAt === value) return true;
     }

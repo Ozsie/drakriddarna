@@ -283,6 +283,12 @@ export const buildMonsterViewModels = (
     });
   const dying = getDyingActors(currentTime)
     .filter((actor) => !state.heroes.includes(actor))
+    // Killed monsters leave the layout immediately; the dying list keeps
+    // drawing exactly those — a monster that somehow stays in the layout
+    // is drawn (once) by the layout path above.
+    .filter(
+      (actor) => !state.dungeon.layout.monsters.includes(actor as Monster),
+    )
     .filter((actor) =>
       isMonsterVisible(state.dungeon, actor as Monster, currentTime),
     )

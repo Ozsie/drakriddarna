@@ -159,12 +159,12 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     const staticCtx = createMockCtx();
     const mockGround = { src: 'ground.png' } as unknown as CanvasImageSource;
 
-    renderGrid(staticCtx, mockGround, 48, state, false);
-    renderSecrets(staticCtx, mockGround, 48, state, false);
+    renderGrid(staticCtx, mockGround, 48, state.dungeon, false);
+    renderSecrets(staticCtx, mockGround, 48, state.dungeon, false);
     renderItems(staticCtx, mockGround, 48, state, false);
-    renderInteractables(staticCtx, mockGround, 48, state, false);
-    renderDoors(staticCtx, mockGround, 48, state, false);
-    renderPillars(staticCtx, mockGround, 48, state, false);
+    renderInteractables(staticCtx, mockGround, 48, state.dungeon, false);
+    renderDoors(staticCtx, mockGround, 48, state.dungeon, false);
+    renderPillars(staticCtx, mockGround, 48, state.dungeon, false);
 
     expect(staticCtx.drawImage).toHaveBeenCalled();
   });
@@ -181,13 +181,13 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
       ).mock.calls.some((call) => call.includes(-48));
 
     // The static pass draws only the pillar base in its own cell (0, 0).
-    renderPillars(staticCtx, mockGround, 48, state, false);
+    renderPillars(staticCtx, mockGround, 48, state.dungeon, false);
     expect(staticCtx.drawImage).toHaveBeenCalled();
     expect(drewIntoRowAbove(staticCtx)).toBe(false);
 
     // The overhead pass draws the shaft into the cell above, at y = -1
     // cells, covering actors that stand north of the pillar.
-    renderPillarTops(dynamicCtx, mockGround, 48, state, false);
+    renderPillarTops(dynamicCtx, mockGround, 48, state.dungeon, false);
     expect(dynamicCtx.drawImage).toHaveBeenCalled();
     expect(drewIntoRowAbove(dynamicCtx)).toBe(true);
   });
@@ -210,7 +210,7 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     const staticCtx = createMockCtx();
     const mockGround = { src: 'ground.png' } as unknown as CanvasImageSource;
 
-    renderInteractables(staticCtx, mockGround, 48, state, false);
+    renderInteractables(staticCtx, mockGround, 48, state.dungeon, false);
 
     // Non-secret interactable gets highlight fillRect(1 * 48, 1 * 48, 48, 48)
     expect(staticCtx.fillRect).toHaveBeenCalledWith(48, 48, 48, 48);
@@ -219,7 +219,7 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
 
     // In debugMode, secret interactable overlay is rendered
     const debugCtx = createMockCtx();
-    renderInteractables(debugCtx, mockGround, 48, state, true);
+    renderInteractables(debugCtx, mockGround, 48, state.dungeon, true);
     expect(debugCtx.fillRect).toHaveBeenCalledWith(96, 96, 48, 48);
     expect(debugCtx.fillText).toHaveBeenCalledWith('secretEffect', 98, 108);
   });

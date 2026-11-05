@@ -235,6 +235,37 @@ describe('buildMonsterViewModels', () => {
     expect(views).toHaveLength(1);
     expect(views[0].active).toBe(true);
   });
+
+  it('never draws the same monster twice when a killed monster stays in the layout', () => {
+    const zombie = monster('Lingering Zombie', 0, 0);
+    zombie.health = 0;
+    zombie.sprite = {
+      image: 'zombie-sheet.png',
+      frameWidth: 32,
+      frameHeight: 32,
+    };
+    playActorDeath(zombie, 600, now - 100);
+    // Unremoved from the layout, e.g. a future kill path that misses the
+    // removal — the layout path draws it, the dying list must not.
+    const state = createState({
+      dungeon: {
+        ...createState().dungeon,
+        layout: {
+          ...createState().dungeon.layout,
+          monsters: [zombie],
+        },
+      },
+    });
+
+    const views = buildMonsterViewModels(
+      state,
+      {} as CanvasImageSource,
+      false,
+      now,
+    );
+
+    expect(views).toHaveLength(1);
+  });
 });
 
 describe('buildHeroOverlayViewModel', () => {

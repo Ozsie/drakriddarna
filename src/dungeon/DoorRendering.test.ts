@@ -73,7 +73,7 @@ const renderDoorRects = (state: GameState): Rect[] => {
     setTransform: vi.fn(),
     scale: vi.fn(),
   } as unknown as CanvasRenderingContext2D;
-  renderDoors(ctx, {} as CanvasImageSource, 48, state, false);
+  renderDoors(ctx, {} as CanvasImageSource, 48, state.dungeon, false);
   return rects;
 };
 

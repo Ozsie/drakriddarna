@@ -592,9 +592,19 @@ step-9 gate ("view-model contracts in place") is being built under
   The superseded `src/core/ActorSpriteRendering.ts` and
   `src/items/ItemSpriteRendering.ts` are folded into the adapters and
   scene helpers (their tests moved with the math).
-- Still to convert for step 9: the dungeon plane (`DungeonRendering`'s
-  tiles/walls/doors/terrain/fog — today `state.dungeon` is its only
-  GameState slice), the light plane (the render half of
+- Dungeon plane, stage A done: every `DungeonRendering` entry point
+  (`renderGrid`/`renderWalls`/`renderDoors`/`renderSecrets`/`renderTerrain`
+  /`renderTerrainAnimation`/`renderRoomFog`/`renderFogLightDim`/
+  `renderPillars`/`renderPillarTops`/`renderPortal`/`renderInteractables`,
+  `hasAnimatedTerrainEffects`, `sealedCornerGrid`, `edgeWallRect`) now
+  takes `Dungeon` instead of `GameState` — `state.dungeon` was its only
+  slice, and callers (the board controller, layer tests, the rendering
+  benchmark) pass `state.dungeon`. What remains for the plane is the
+  plain-shape contract: scene declares its own `DungeonView` (grid
+  strings, door/secret/terrain-cell shapes, fog options) that
+  `Dungeon` satisfies structurally, replacing the game-type param at the
+  wall/door contract design.
+- Still to convert for step 9: the light plane (the render half of
   `LightRendering`, whose state slices span heroes, event lights,
   projectiles and flame effects), `ImageCache`, and the
   `ActorAnimation` timeline split (logic records steps, rendering

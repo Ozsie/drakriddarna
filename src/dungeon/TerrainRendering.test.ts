@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { GameState, TerrainCell } from '../types';
+import type { Dungeon, TerrainCell } from '../types';
 import { TerrainType } from '../types';
 import {
   hasAnimatedTerrainEffects,
@@ -13,17 +13,15 @@ const makeState = (
   roomFog?: Record<string, Record<string, number | boolean | string>>,
   grid: string[] = ['AAA', 'AAA'],
   discoveredRooms: string[] = ['A'],
-): GameState =>
+): Dungeon =>
   ({
-    dungeon: {
-      layout: {
-        grid,
-        terrain,
-        roomFog,
-      },
-      discoveredRooms,
+    layout: {
+      grid,
+      terrain,
+      roomFog,
     },
-  }) as unknown as GameState;
+    discoveredRooms,
+  }) as unknown as Dungeon;
 
 const createMockCtx = () =>
   ({
