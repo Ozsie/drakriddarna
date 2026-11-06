@@ -15,7 +15,6 @@ export const AssetId = {
 export type AssetId = (typeof AssetId)[keyof typeof AssetId];
 
 const ASSET_URLS: Record<AssetId, string> = {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   [AssetId.welcomeBackground]: asset('images/welcome.png' as AssetPath),
 };
 

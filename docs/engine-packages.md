@@ -12,21 +12,24 @@ lighting, dice), pure I/O abstractions (audio, saves), and pure rendering
 (primitives, UI chrome, scene). Everything genre- or content-specific stays in
 this repository.
 
-This is a target architecture, not a description of current state: eight of
-the packages are published and consumed as dependencies, and what remains in
-`src/` is still coupled through the shared `GameState` type, the
-`#lib/translations/index.js` i18n singleton, and colocated rendering — the
+The target architecture has now been reached: all nine packages are
+published and consumed as dependencies, and what remains in `src/` is
+the game — the turn pipeline, the content and the adapters/facades that
+resolve game state into the packages' contracts. The remaining coupling
+is deliberate game knowledge: the shared `GameState` type, the
+`#lib/translations/index.js` i18n singleton, and the world-rendering
+adapters and facades — the
 audio inversion is done: logic modules emit sound-cue data that the game's
 adapter maps to samples, and no logic module imports the
 `soundEffectManager` facade. Each package section
-names the coupling its extraction removed — and, for `scene`, still must
-remove. (The extractions so far are done: `@hoard-engine/rng`,
+names the coupling its extraction removed. (The extractions are done:
+`@hoard-engine/rng`,
 `@hoard-engine/grid`, `@hoard-engine/primitives`,
 `@hoard-engine/audio`, `@hoard-engine/lighting`,
-`@hoard-engine/saves`, `@hoard-engine/directors` and
-`@hoard-engine/uikit` are published on
+`@hoard-engine/saves`, `@hoard-engine/directors`,
+`@hoard-engine/uikit` and `@hoard-engine/scene` are published on
 npm and consumed as dependencies — see their sections below for the
-layout and tooling pattern the next packages follow.)
+layout and tooling pattern.)
 
 ## Package map
 
@@ -637,10 +640,13 @@ step-9 gate ("view-model contracts in place") is being built under
   contracts existed; with the contracts, its rendering half is the
   adapter's frame/position resolution (game side) and its recording
   half is logic (game side) — nothing of it moves.
-- What remains for step 9 is the lift itself: move the view-typed
-  compositing cores into `packages/scene/`, give the package the
-  boundary/completeness/sentinel tooling, publish, and keep the
-  facades.
+- What remains for step 9 was the lift itself: the view-typed
+  compositing cores have moved into the `@hoard-engine/scene` package
+  (sibling folder in the hoard root, `../scene`), with the
+  boundary/completeness tooling and its own AGENTS/README; the game
+  keeps the facades and the adapters. **Done:** published as
+  `@hoard-engine/scene` (v0.1.0), consumed as a dependency like every
+  other engine package.
 
 ## Prerequisites (cross-cutting)
 
@@ -701,6 +707,15 @@ later:
 9. `scene` — last and largest: needs the render/logic separation complete and
    view-model contracts in place. Camera/viewport and map streaming are
    out-of-scope extensions for a future consumer, not part of the extraction.
+   **Done:** published as `@hoard-engine/scene` (v0.1.0), consumed as a
+   dependency, with the consumer-defined contract drains the spec named —
+   corner data and the sealed grid arrive in the view
+   (`layout.corners`/`layout.sealedGrid`, resolved by `src/scene/adapters.ts`
+   with the grid engine's classifier), terrain styling resolves in the
+   adapter, and the vocabulary lists (cell tokens, corner types, light
+   effects) are package-local const duplicates behind structural
+   compatibility. The engine knowledge that is composition glue (the
+   corner/sealed derivation, the light view builder) stays in the game.
 
 ## What stays in the game
 
@@ -749,10 +764,10 @@ A November 2026 review pass compared this spec with what remains in
 `src/`. The published packages and their facades match the spec above,
 including the open-item ledger: the sound-cue inversion is done (logic
 emits cue data; only the adapter, the UI shell and `AppSettings` import
-the `soundEffectManager` facade) and the scene extraction (step 9) has
-started — the actor/item/effect plane renders from view models under
-`src/scene/` (see the scene section); the dungeon and light planes and
-the package lift remain. Besides the two future candidates
+the `soundEffectManager` facade) and the scene extraction (step 9) is
+complete — published as `@hoard-engine/scene`, with the game keeping
+the adapters and the render facades (see the scene section). Besides
+the two future candidates
 above, these framework-looking modules were examined and stay in the
 game:
 

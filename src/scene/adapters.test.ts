@@ -19,7 +19,7 @@ import {
 } from '../types';
 
 // The adapters resolve GameState into scene view models
-// (src/scene/contracts.ts); these tests pin the game-side rules that the
+// (@hoard-engine/scene); these tests pin the game-side rules that the
 // plain data carries: visibility, lingering death animations, bar
 // scaling and label resolution.
 

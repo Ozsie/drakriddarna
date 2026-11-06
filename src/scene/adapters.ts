@@ -1,9 +1,9 @@
-// Game side of the scene view-model contracts (src/scene/contracts.ts):
+// Game side of the scene view-model contracts (@hoard-engine/scene):
 // these builders resolve GameState, Actor/Item game data, animation
 // timelines, discovery rules and i18n labels into the plain view models
-// the world-canvas renderers consume. When the renderers leave as
-// @hoard-engine/scene (docs/engine-packages.md, step 9), the contracts
-// move with them; the GameState knowledge stays here.
+// the world-canvas renderers consume. The renderer cores left as the
+// @hoard-engine/scene engine package (docs/engine-packages.md, step 9);
+// the GameState knowledge stays here.
 
 import type {
   Actor,
@@ -15,7 +15,7 @@ import type {
   Monster,
   Position,
 } from '../types';
-import { MonsterType } from '../types';
+import { MonsterType, TerrainType } from '../types';
 import {
   getActorFlashIntensity,
   getActorAnimationFrameIndex,
@@ -39,16 +39,183 @@ import {
   liveHeroes,
 } from '../hero/HeroLogic';
 import { getReadyImage } from '../core/ImageCache';
-import { ACTOR_SPRITE_ANIMATION_ORDER } from '../core/ActorAnimation';
+import { ACTOR_SPRITE_ANIMATION_ORDER } from '../core';
 import { ACTOR_TILES, ITEM_TILES, type TileRef } from '../dungeon/tiles';
-import { getSpriteSourceRect } from './spriteSheets';
-import type {
-  SceneActorView,
-  SceneHeroOverlayView,
-  SceneItemView,
-  SceneSpriteFrame,
-  SceneTileFrame,
-} from './contracts';
+import {
+  TERRAIN_OVERLAY,
+  getSpriteSourceRect,
+  type SceneActorView,
+  type SceneCorner,
+  type SceneDungeonView,
+  type SceneHeroOverlayView,
+  type SceneItemView,
+  type SceneSpriteFrame,
+  type SceneTerrainCell,
+  type SceneTileFrame,
+} from '@hoard-engine/scene';
+import { autoDetectCorners, findCell } from '@hoard-engine/grid';
+import { COLLAPSED, EMPTY, SEALED_DOOR, WALL } from '@hoard-engine/grid';
+import { TERRAIN_DEFAULT_STYLING } from '../dungeon/TerrainLogic';
+import type { TerrainCell } from '../types';
+
+// --- Dungeon plane view ----------------------------------------------------
+
+// A closed door is drawn as wall pieces (the renderers' closed-door
+// passes plus the wall pieces the sealed cells classify as), sealing the
+// passage until it is opened. The corner classifier must see the same
+// sealed geometry from both sides: whichever side of the doorway is not
+// discovered yet has its cell and the two cells flanking the doorway
+// replaced with the SEALED_DOOR marker. Sealed cells count as wall for
+// closed sides — a corridor end gets its corner caps exactly like a dead
+// end, and the corner cells beside a door set in a solid wall render
+// their caps too — but never as the stem of a junction, since a sealed
+// doorway renders as a door rather than rock. Invisible sealed cells (no
+// discovered floor bordering them) resolve to unknown during
+// classification, so sealing never fabricates junction shapes on the
+// wall pieces themselves.
+export const sealedCornerGrid = (dungeon: SceneDungeonView): string[] => {
+  const grid = [...dungeon.layout.grid];
+  const sealable = (cell: string) =>
+    Boolean(cell) &&
+    cell !== WALL &&
+    cell !== COLLAPSED &&
+    !isDiscoveredRoom(dungeon, cell);
+  (dungeon.layout.doors ?? []).forEach((door) => {
+    if (door.open) return;
+    const farX =
+      door.side === 'Right'
+        ? door.x + 1
+        : door.side === 'Left'
+          ? door.x - 1
+          : door.x;
+    const farY =
+      door.side === 'Down'
+        ? door.y + 1
+        : door.side === 'Up'
+          ? door.y - 1
+          : door.y;
+    const farCell = findCell(grid, farX, farY);
+    const nearCell = findCell(grid, door.x, door.y);
+    const farDiscovered = farCell !== '' && !isEmpty(farCell, dungeon);
+    const nearDiscovered = nearCell !== '' && !isEmpty(nearCell, dungeon);
+    const flankX = door.side === 'Up' || door.side === 'Down' ? 1 : 0;
+    const flankY = door.side === 'Left' || door.side === 'Right' ? 1 : 0;
+    // Seal whichever side of the doorway is still undiscovered: the far
+    // side when approaching the door from the front, the near side when
+    // it is approached from behind
+    const sealed: [number, number][] = [];
+    if (!farDiscovered) {
+      sealed.push([farX, farY]);
+      sealed.push([farX - flankX, farY - flankY]);
+      sealed.push([farX + flankX, farY + flankY]);
+    }
+    if (!nearDiscovered) {
+      sealed.push([door.x, door.y]);
+      sealed.push([door.x - flankX, door.y - flankY]);
+      sealed.push([door.x + flankX, door.y + flankY]);
+    }
+    sealed.forEach(([x, y]) => {
+      if (!sealable(findCell(grid, x, y))) return;
+      grid[y] = grid[y].slice(0, x) + SEALED_DOOR + grid[y].slice(x + 1);
+    });
+  });
+  return grid;
+};
+
+const isEmpty = (cell: string, dungeon: SceneDungeonView) =>
+  cell === EMPTY || !isDiscoveredRoom(dungeon, cell);
+
+// Discovery over the contract's own shapes — the core helper takes the
+// game's Dungeon type, and the adapter must resolve visibility against
+// plain view data (the two-field duplicate is cheaper than an import
+// edge).
+const isDiscoveredRoom = (dungeon: SceneDungeonView, cell: string): boolean =>
+  (dungeon.discoveredRooms ?? []).includes(cell);
+
+// Everything that can change the visible corner classification or the
+// sealed grid, hashed into a shared cache key.
+const visibleStateKey = (dungeon: SceneDungeonView): string => {
+  const doors = (dungeon.layout.doors ?? [])
+    .map((door) => (door.open ? '1' : '0'))
+    .join('');
+  return `${dungeon.name}|${dungeon.discoveredRooms.join(',')}|${doors}`;
+};
+
+// The sealed classification grid, from cache when the visible state has
+// not changed since it was last built.
+let sealedGridCache: { key: string; grid: string[] } | null = null;
+
+const sealedGrid = (dungeon: SceneDungeonView): string[] => {
+  const key = visibleStateKey(dungeon);
+  if (!sealedGridCache || sealedGridCache.key !== key) {
+    sealedGridCache = { key, grid: sealedCornerGrid(dungeon) };
+  }
+  return sealedGridCache.grid;
+};
+
+// Corners are classified against the visible dungeon: an undiscovered
+// room renders as solid rock, so corners on the fog-of-war boundary look
+// different from their full-layout classification, and closed doors seal
+// their doorway as wall. The visible corner set depends only on the
+// grid, the discovered rooms, and the door open states, so it is cached
+// until one of them changes instead of being re-detected on every
+// render.
+let visibleCornersCache: { key: string; corners: SceneCorner[] } | null = null;
+
+const visibleCorners = (dungeon: SceneDungeonView): SceneCorner[] => {
+  const key = visibleStateKey(dungeon);
+  if (!visibleCornersCache || visibleCornersCache.key !== key) {
+    visibleCornersCache = {
+      key,
+      corners: autoDetectCorners(sealedGrid(dungeon), dungeon.discoveredRooms),
+    };
+  }
+  return visibleCornersCache.corners;
+};
+
+// Resolves one terrain cell into its view form: the type's default
+// styling folded into the plain fields, and the game's terrain type
+// mapping onto the renderer's overlay styles (water shimmer, lava
+// pulse).
+const resolveTerrainCell = (cell: TerrainCell): SceneTerrainCell => {
+  const styling = TERRAIN_DEFAULT_STYLING[cell.type];
+  const overlay =
+    cell.type === TerrainType.WATER
+      ? TERRAIN_OVERLAY.WATER
+      : cell.type === TerrainType.LAVA
+        ? TERRAIN_OVERLAY.LAVA
+        : undefined;
+  return {
+    position: cell.position,
+    type: cell.type,
+    overlay,
+    color: cell.color ?? styling?.color,
+    opacity: cell.opacity ?? styling?.opacity,
+    rate: cell.rate ?? styling?.rate,
+  };
+};
+
+// Builds the dungeon plane the @hoard-engine/scene renderers consume:
+// the game's dungeon data is structurally compatible with the package's
+// SceneDungeonView, and this pass resolves the game knowledge the
+// package cannot — the fog-of-war-sealed grid, the visible corner
+// classification and the terrain styling. The sealed grid and corners
+// are content-cached; terrain resolves per call (a cheap map over the
+// layout's cells).
+export const buildDungeonView = (
+  dungeon: Dungeon | SceneDungeonView,
+): SceneDungeonView => {
+  const view = dungeon;
+  return {
+    ...view,
+    layout: {
+      ...view.layout,
+      sealedGrid: sealedGrid(view),
+      corners: visibleCorners(view),
+      terrain: (view.layout.terrain ?? []).map(resolveTerrainCell),
+    },
+  };
+};
 
 const actorTileFrame = (
   sheet: CanvasImageSource,
