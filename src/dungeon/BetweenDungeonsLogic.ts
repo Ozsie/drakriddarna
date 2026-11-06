@@ -28,8 +28,13 @@ import {
   RESET_ON,
 } from '../items/ItemLogic';
 import { applyFallbackItems } from './DungeonLogic';
-import { soundEffectManager } from '../audio';
-import { addLog, i18n, clearActorAnimations, doReRender } from '../core';
+import {
+  addLog,
+  clearActorAnimations,
+  doReRender,
+  emitSoundCue,
+  i18n,
+} from '../core';
 import {
   addDungeonTimeToCampaign,
   beginDungeonTiming,
@@ -177,7 +182,7 @@ export const openBetweenDungeons = (state: GameState): BetweenDungeonsState => {
   );
 
   if (anyHeroLeveledUp) {
-    soundEffectManager.playLevelUp();
+    emitSoundCue(state, { cue: 'levelUp' });
   }
 
   // Replace dead heroes and reset scenario items
@@ -393,7 +398,7 @@ export const tradeItem = (
     }
   }
 
-  soundEffectManager.playPickUpItem();
+  emitSoundCue(state, { cue: 'pickUpItem' });
 
   if (state.betweenDungeons) {
     state.betweenDungeons.selectedTradeItem = null;
@@ -440,7 +445,7 @@ const startDungeon = (state: GameState, nextDungeon: Dungeon): void => {
     state.campaignId && isKnownCampaign(state.campaignId)
       ? getCampaign(state.campaignId).eventDeck
       : undefined;
-  state.eventDeck = getEventsForDungeon(state.dungeon, campaignEvents);
+  state.eventDeck = getEventsForDungeon(state.dungeon, campaignEvents, state);
   state.currentEvent = undefined;
   state.drawEvents = true;
   state.roundActionsDelta = 0;

@@ -38,6 +38,7 @@ import { testingGrounds } from '../dungeon/testingGrounds';
 import { getEventsForDungeon } from '../events/EventsLogic';
 import { saveReloadGuard, debouncedSaveReloadGuard } from '../core';
 import { beginDungeonTiming } from '../core';
+import { drainSoundCues } from '../audio/SoundCueAdapter';
 import { appPhaseStore, enterGamePhase } from './appPhaseStore';
 
 // Fresh browser visits boot into the welcome phase without creating any
@@ -99,6 +100,18 @@ export const syncStore = (state: GameState, syncImmediate = false): void => {
     debouncedSaveReloadGuard(state);
   }
 };
+
+// The single seam where sound-cue data crosses into audio: every publish
+// drains the cues logic appended, in emission order, whichever flow ran
+// (turn pipeline, between dungeons, menu actions). Logic modules never
+// import the audio facade; the adapter maps cues to samples
+// (src/audio/SoundCueAdapter.ts). Headless consumers (benchmarks, logic
+// tests) do not import this store and stay silent.
+gameStateStore.subscribe((state) => {
+  if (state) {
+    drainSoundCues(state);
+  }
+});
 
 // Derived Stores
 export const currentHero = derived(
@@ -365,7 +378,7 @@ export const goToTestingGrounds = (): void => {
   const state = get(gameStateStore);
   if (!state) return;
   state.dungeon = testingGrounds;
-  state.eventDeck = getEventsForDungeon(state.dungeon);
+  state.eventDeck = getEventsForDungeon(state.dungeon, [], state);
   resetLiveHeroes(state);
   // The testing grounds show an intro like any dungeon; its timer starts
   // when that intro is closed.

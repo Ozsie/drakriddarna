@@ -4,11 +4,11 @@ import {
   addLog,
   createDamageIndicator,
   createIndicator,
+  emitSoundCue,
   flashActor,
   i18n,
 } from '../core';
 import { createBloodSplatter } from '../combat';
-import { soundEffectManager } from '../audio';
 import { roll } from '../core';
 import {
   canAct,
@@ -125,7 +125,7 @@ export const resolveChaosSwordAttack = (
   user: Actor,
   target: Actor,
 ): void => {
-  soundEffectManager.playWeaponAttack(user.weapon);
+  emitSoundCue(state, { cue: 'weaponAttack', weapon: user.weapon });
   const isHeroSource = state.heroes.includes(user);
   const isHeroTarget = state.heroes.includes(target);
   if (isHeroSource && !isHeroTarget) {
@@ -142,10 +142,10 @@ export const resolveChaosSwordAttack = (
     state.damageIndicators.push(
       createIndicator(damageAmount, target.position, { effect: 'crit' }),
     );
-    soundEffectManager.playCriticalHit();
+    emitSoundCue(state, { cue: 'criticalHit' });
     target.health = 0;
     target.level = Level.APPRENTICE;
-    soundEffectManager.playActorDeath(target);
+    emitSoundCue(state, { cue: 'actorDeath', actor: target });
     const monster = state.dungeon.layout.monsters.find((m) => m === target);
     if (monster) {
       killMonster(state, monster, user as Hero);
@@ -174,7 +174,7 @@ export const resolveChaosSwordAttack = (
       user.movement = 0;
       user.actions = 0;
       user.incapacitated = true;
-      soundEffectManager.playParalyze();
+      emitSoundCue(state, { cue: 'paralyze' });
       break;
     case 2:
     case 3: {
@@ -207,13 +207,13 @@ export const resolveChaosSwordAttack = (
         });
         killTarget(damage);
       } else {
-        soundEffectManager.playActorHurt(target);
+        emitSoundCue(state, { cue: 'actorHurt', actor: target });
       }
       break;
     }
     default:
       addLog(state, 'logs.item.chaosSwordMiss', { user: i18n(user.name) });
-      soundEffectManager.playMiss();
+      emitSoundCue(state, { cue: 'miss' });
       break;
   }
 };
@@ -447,7 +447,7 @@ export const useItem = (state: GameState, item: Item) => {
       return;
     }
     use(state, item, state.currentActor, state.targetActor);
-    soundEffectManager.playItemUse(item);
+    emitSoundCue(state, { cue: 'itemUse', item });
     state.targetActor = undefined;
   }
 };

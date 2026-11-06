@@ -117,15 +117,15 @@ const renderStaticScene = (
   state: GameState,
 ): void => {
   const debugMode = false;
-  renderGrid(ctx, ground, cellSize, state, debugMode);
-  renderTerrain(ctx, cellSize, state, debugMode);
-  renderSecrets(ctx, ground, cellSize, state, debugMode);
+  renderGrid(ctx, ground, cellSize, state.dungeon, debugMode);
+  renderTerrain(ctx, cellSize, state.dungeon, debugMode);
+  renderSecrets(ctx, ground, cellSize, state.dungeon, debugMode);
   renderItems(ctx, ground, cellSize, state, debugMode);
-  renderInteractables(ctx, ground, cellSize, state, debugMode);
-  renderWalls(ctx, cellSize, state, debugMode);
-  renderDoors(ctx, ground, cellSize, state, debugMode);
-  renderPillars(ctx, ground, cellSize, state, debugMode);
-  renderPortal(ctx, cellSize, state, debugMode);
+  renderInteractables(ctx, ground, cellSize, state.dungeon, debugMode);
+  renderWalls(ctx, cellSize, state.dungeon, debugMode);
+  renderDoors(ctx, ground, cellSize, state.dungeon, debugMode);
+  renderPillars(ctx, ground, cellSize, state.dungeon, debugMode);
+  renderPortal(ctx, cellSize, state.dungeon, debugMode);
 };
 
 // The per-frame light mask work: the (caller-cached) static light layer

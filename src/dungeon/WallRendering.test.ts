@@ -68,7 +68,7 @@ const renderWallRects = (state: GameState, debugMode = false): Rect[] => {
     setTransform: vi.fn(),
     scale: vi.fn(),
   } as unknown as CanvasRenderingContext2D;
-  renderWalls(ctx, 48, state, debugMode);
+  renderWalls(ctx, 48, state.dungeon, debugMode);
   return rects;
 };
 

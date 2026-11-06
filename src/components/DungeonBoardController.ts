@@ -957,20 +957,20 @@ export class DungeonBoardController {
       ctx,
       this.ground,
       this.cellSize,
-      this.activeState,
+      this.activeState.dungeon,
       this.debugMode ?? false,
     );
     renderTerrain(
       ctx,
       this.cellSize,
-      this.activeState,
+      this.activeState.dungeon,
       this.debugMode ?? false,
     );
     renderSecrets(
       ctx,
       this.ground,
       this.cellSize,
-      this.activeState,
+      this.activeState.dungeon,
       this.debugMode ?? false,
     );
     renderItems(
@@ -984,25 +984,35 @@ export class DungeonBoardController {
       ctx,
       this.ground,
       this.cellSize,
-      this.activeState,
+      this.activeState.dungeon,
       this.debugMode ?? false,
     );
-    renderWalls(ctx, this.cellSize, this.activeState, this.debugMode ?? false);
+    renderWalls(
+      ctx,
+      this.cellSize,
+      this.activeState.dungeon,
+      this.debugMode ?? false,
+    );
     renderDoors(
       ctx,
       this.ground,
       this.cellSize,
-      this.activeState,
+      this.activeState.dungeon,
       this.debugMode ?? false,
     );
     renderPillars(
       ctx,
       this.ground,
       this.cellSize,
-      this.activeState,
+      this.activeState.dungeon,
       this.debugMode ?? false,
     );
-    renderPortal(ctx, this.cellSize, this.activeState, this.debugMode ?? false);
+    renderPortal(
+      ctx,
+      this.cellSize,
+      this.activeState.dungeon,
+      this.debugMode ?? false,
+    );
   };
 
   private renderDynamicLayer = (force = false) => {
@@ -1048,7 +1058,7 @@ export class DungeonBoardController {
     // change their output slowly, so their animation state is stepped by
     // time instead of quantized per effect.
     const hasTerrainEffects = hasAnimatedTerrainEffects(
-      this.activeState,
+      this.activeState.dungeon,
       debugMode,
       lightViewport,
     );
@@ -1188,7 +1198,7 @@ export class DungeonBoardController {
       renderFogLightDim(
         lightCtx,
         this.cellSize,
-        this.activeState,
+        this.activeState.dungeon,
         debugMode,
         lightViewport,
       );
@@ -1209,7 +1219,7 @@ export class DungeonBoardController {
       renderFogLightDim(
         ctx,
         this.cellSize,
-        this.activeState,
+        this.activeState.dungeon,
         debugMode,
         lightViewport,
       );
@@ -1220,7 +1230,7 @@ export class DungeonBoardController {
     renderTerrainAnimation(
       ctx,
       this.cellSize,
-      this.activeState,
+      this.activeState.dungeon,
       debugMode,
       currentTime,
       lightViewport,
@@ -1251,7 +1261,7 @@ export class DungeonBoardController {
         ctx,
         this.ground,
         this.cellSize,
-        this.activeState,
+        this.activeState.dungeon,
         debugMode,
       );
     }
@@ -1261,7 +1271,7 @@ export class DungeonBoardController {
     renderRoomFog(
       ctx,
       this.cellSize,
-      this.activeState,
+      this.activeState.dungeon,
       debugMode,
       currentTime,
       lightViewport,

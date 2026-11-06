@@ -18,6 +18,7 @@ import {
 import {
   addLog,
   doReRender,
+  emitSoundCue,
   getActorRemainingAnimationDuration,
   i18n,
   recordActorStep,
@@ -64,7 +65,6 @@ import {
   applyTerrainEnterEffects,
   applyTerrainTurnEndEffects,
 } from '../dungeon/TerrainLogic';
-import { soundEffectManager } from '../audio';
 
 export { resetRoundTargetCounters } from './behavior';
 
@@ -793,7 +793,9 @@ export const monsterMoveToPosition = (
       x: monster.position.x,
       y: monster.position.y,
     };
-    recordActorStep(monster, nextPos);
+    if (recordActorStep(monster, nextPos)) {
+      emitSoundCue(state, { cue: 'actorWalk', actor: monster });
+    }
     monster.position = nextPos;
     addLog(state, 'logs.monsterAction.movedTowards', {
       monster: i18n(monster.name),
@@ -900,7 +902,9 @@ export const monsterMove = (
       x: monster.position.x,
       y: monster.position.y,
     };
-    recordActorStep(monster, nextPos);
+    if (recordActorStep(monster, nextPos)) {
+      emitSoundCue(state, { cue: 'actorWalk', actor: monster });
+    }
     monster.position = nextPos;
     addLog(state, 'logs.monsterAction.movedTowards', {
       monster: i18n(monster.name),
@@ -990,7 +994,7 @@ const performFireAttack = (
   targets: Actor[],
 ) => {
   targets.forEach((target) => {
-    soundEffectManager.playFireBall();
+    emitSoundCue(state, { cue: 'fireBall' });
     if (target.position) {
       if (!state.flameEffects) {
         state.flameEffects = [];

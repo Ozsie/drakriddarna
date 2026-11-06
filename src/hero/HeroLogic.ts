@@ -70,8 +70,7 @@ import {
   resolveChaosSwordAttack,
 } from '../items/ItemLogic';
 import { COLLAPSED, EMPTY, WALL } from '../core';
-import { itemPickupScore } from '../core';
-import { soundEffectManager } from '../audio';
+import { emitSoundCue, itemPickupScore } from '../core';
 
 export const newHero = (
   name: string,
@@ -257,12 +256,12 @@ export const pickLock = (state: GameState, door?: Door) => {
     if (result >= 1) {
       door.locked = false;
       addLog(state, 'logs.heroAction.pickedLock', { hero: i18n(hero.name) });
-      soundEffectManager.playSound('sfx/unlock.mp3');
+      emitSoundCue(state, { cue: 'unlock' });
     } else {
       addLog(state, 'logs.heroAction.failedToPickLock', {
         hero: i18n(hero.name),
       });
-      soundEffectManager.playSound('sfx/locked.mp3');
+      emitSoundCue(state, { cue: 'locked' });
     }
     spendStandardAction(hero, movementModifier, true);
   }
@@ -378,7 +377,7 @@ export const openDoor = (
   }
   move(hero, state, hero.position.x, hero.position.y, 1);
   addLog(state, 'logs.heroAction.openedDoor', { hero: i18n(hero.name) });
-  soundEffectManager.playDoorOpen();
+  emitSoundCue(state, { cue: 'doorOpen' });
 };
 
 /**
@@ -545,7 +544,7 @@ export const levelUp = (state: GameState) => {
       hero.level = Level.KNIGHT;
     }
     if (currentLevel !== hero.level) {
-      soundEffectManager.playLevelUp();
+      emitSoundCue(state, { cue: 'levelUp' });
       addLog(state, 'logs.heroAction.leveledUp', {
         hero: i18n(hero.name),
         level: i18n(`content.level.${hero.level}`),
@@ -610,7 +609,7 @@ export const checkForNote = (state: GameState, hero: Hero) => {
           hero: i18n(hero.name),
           note: i18n(note.message),
         });
-        soundEffectManager.playDiaryAdd();
+        emitSoundCue(state, { cue: 'diaryAdd' });
         const text = i18n(note.message);
         if (!state.damageIndicators) {
           state.damageIndicators = [];
@@ -675,7 +674,7 @@ export const dropItem = (state: GameState, item: Item, actor: Actor) => {
       drop(state, item, actor);
     }
   }
-  soundEffectManager.playDropItem();
+  emitSoundCue(state, { cue: 'dropItem' });
 };
 
 export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
@@ -711,7 +710,7 @@ export const pickupItem = (state: GameState, item: Item, hero: Hero) => {
     const pickup = onPickup[item.pickup];
     if (pickup) pickup(state, item, hero);
   }
-  soundEffectManager.playPickUpItem();
+  emitSoundCue(state, { cue: 'pickUpItem' });
 };
 
 /**
@@ -727,7 +726,9 @@ export const arriveOnCell = (
   pos: Position,
 ): boolean => {
   const previousPosition = { x: hero.position.x, y: hero.position.y };
-  recordActorStep(hero, pos);
+  if (recordActorStep(hero, pos)) {
+    emitSoundCue(state, { cue: 'actorWalk', actor: hero });
+  }
   hero.position.x = pos.x;
   hero.position.y = pos.y;
   // Opening a door without stepping through it routes through here as

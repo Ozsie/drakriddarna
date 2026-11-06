@@ -26,6 +26,7 @@ import {
   addLog,
   createIndicator,
   distanceInGrid,
+  emitSoundCue,
   getDifficulty,
   getEarliestMonsterEventRound,
   getEffectiveMaxHealth,
@@ -51,27 +52,28 @@ import { ACTIVE, onDrop, onPickup } from '../items/ItemLogic';
 import { findVisibleMonsters } from '../monsters/MonsterLogic';
 import { getMonsterTemplate } from '../monsters/MonsterRegistry';
 import { createShake } from '../combat';
-import { soundEffectManager } from '../audio';
 import { dispatchDirectorEvent } from '@hoard-engine/directors';
 
 export const getEventsForDungeon = (
   dungeon: Dungeon,
   campaignEvents: TurnEvent[] = [],
+  state?: GameState,
 ): TurnEvent[] => {
   const eventPool = [...events, ...campaignEvents];
   if (dungeon.events) {
     return shuffleEvents(
       eventPool.filter((event) => dungeon?.events?.includes(event.number)),
+      state,
     );
   } else {
-    return shuffleEvents(eventPool);
+    return shuffleEvents(eventPool, state);
   }
 };
 
 export const drawNextEvent = (state: GameState): TurnEvent => {
   const unUsedEvents = state.eventDeck.filter((event) => !event.used);
   if (unUsedEvents.length === 0) {
-    shuffleEvents(state.eventDeck);
+    shuffleEvents(state.eventDeck, state);
     return drawNextEvent(state);
   }
 
@@ -109,7 +111,7 @@ export const drawNextEvent = (state: GameState): TurnEvent => {
 };
 
 export const shuffleEventDeck = (state: GameState): void => {
-  shuffleEvents(state.eventDeck);
+  shuffleEvents(state.eventDeck, state);
 };
 
 export const selectNextEvent = (
@@ -772,8 +774,14 @@ const eventDescriptionLog = (state: GameState, event: TurnEvent) => {
   addLog(state, event.name);
 };
 
-const shuffleEvents = (array: TurnEvent[]): TurnEvent[] => {
-  soundEffectManager.playShuffle();
+// Shuffles the deck and marks every event unused. When a state is
+// provided the shuffle sound is emitted as cue data on it — deck creation
+// before a state exists (init) stays silent and the game emits the cue
+// itself once the state is built.
+const shuffleEvents = (array: TurnEvent[], state?: GameState): TurnEvent[] => {
+  if (state) {
+    emitSoundCue(state, { cue: 'shuffle' });
+  }
   let currentIndex = array.length,
     randomIndex;
   while (currentIndex > 0) {

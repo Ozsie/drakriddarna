@@ -12,19 +12,24 @@ lighting, dice), pure I/O abstractions (audio, saves), and pure rendering
 (primitives, UI chrome, scene). Everything genre- or content-specific stays in
 this repository.
 
-This is a target architecture, not a description of current state: eight of
-the packages are published and consumed as dependencies, and what remains in
-`src/` is still coupled through the shared `GameState` type, the
-`#lib/translations/index.js` i18n singleton, direct imports of the
-`soundEffectManager` facade, and colocated rendering. Each package section
-names the coupling its extraction removed — and, for `scene`, still must
-remove. (The extractions so far are done: `@hoard-engine/rng`,
+The target architecture has now been reached: all nine packages are
+published and consumed as dependencies, and what remains in `src/` is
+the game — the turn pipeline, the content and the adapters/facades that
+resolve game state into the packages' contracts. The remaining coupling
+is deliberate game knowledge: the shared `GameState` type, the
+`#lib/translations/index.js` i18n singleton, and the world-rendering
+adapters and facades — the
+audio inversion is done: logic modules emit sound-cue data that the game's
+adapter maps to samples, and no logic module imports the
+`soundEffectManager` facade. Each package section
+names the coupling its extraction removed. (The extractions are done:
+`@hoard-engine/rng`,
 `@hoard-engine/grid`, `@hoard-engine/primitives`,
 `@hoard-engine/audio`, `@hoard-engine/lighting`,
-`@hoard-engine/saves`, `@hoard-engine/directors` and
-`@hoard-engine/uikit` are published on
+`@hoard-engine/saves`, `@hoard-engine/directors`,
+`@hoard-engine/uikit` and `@hoard-engine/scene` are published on
 npm and consumed as dependencies — see their sections below for the
-layout and tooling pattern the next packages follow.)
+layout and tooling pattern.)
 
 ## Package map
 
@@ -223,10 +228,9 @@ follow:
 `MusicIntensity` (crossfade between tracks driven by an intensity value).
 Coupling: `$app/paths` (inject the asset base path, as uikit does with `UiEnv`)
 and type-only imports. The game keeps the sound-cue table (which event plays
-which sample) and any intensity heuristic. Extraction forces the broader
-inversion: today 12 logic modules import the `soundEffectManager` singleton
-directly; logic should emit sound-cue data and the game's adapter maps cues to
-samples.
+which sample) and any intensity heuristic. Extraction forced the broader
+inversion, now done: logic modules emit sound-cue data and the game's
+adapter maps cues to samples (see the current-state bullets below).
 
 **Current state:** published on npm as `@hoard-engine/audio` (v0.1.0) and
 consumed by the game as a dependency; its source folder has left this
@@ -249,9 +253,18 @@ plain Node. The coupling removals the extraction performed:
   tension enter/exit ranges and its tests remain in
   `src/audio/MusicIntensity.ts`, which re-exports the package's
   `MusicIntensity` type; the crossfade itself moved with the package.
-- The sound-cue inversion (logic modules emitting cue data instead of
-  importing the manager singleton) is unlocked but still open: the 12
-  importing modules keep calling the game facade unchanged.
+- The sound-cue inversion is done: logic modules never import the
+  manager singleton — they append `SoundCue` data to
+  `state.soundCues` via `emitSoundCue`
+  (`src/core/soundCues.ts`), and the game's adapter
+  (`src/audio/SoundCueAdapter.ts`) drains the queue in emission
+  order on every store publish (`src/store/gameStateStore.ts`)
+  and maps each cue to a `play*` facade method. The cue
+  discriminants live in `src/types.ts`; the adapter is the only
+  consumer of the facade besides the UI shell (button clicks,
+  volume/mute wiring in `AppSettings`). Headless consumers
+  (benchmarks, logic tests) see cue data on the state and stay
+  silent.
 
 ### @hoard-engine/primitives — source: `src/uikit/primitives/` +
 
@@ -530,17 +543,20 @@ split the lift performed:
 
 `src/dungeon/DungeonRendering.ts`, `TileTextureCache.ts`, `TilesetLogic.ts`,
 `WallRendering`/`DoorRendering`/`TerrainRendering`, the render half of
-`LightRendering.ts`, `src/core/ImageCache.ts`, `src/core/ActorSpriteRendering.ts` +
-`ActorAnimation.ts`, `src/monsters/MonsterRendering.ts`, the actor/prop
+`LightRendering.ts`, `src/core/ImageCache.ts`, `src/core/ActorAnimation.ts`, `src/monsters/MonsterRendering.ts`, the actor/prop
 sprite renderers (`src/hero/HeroRendering.ts`,
-`src/items/ItemSpriteRendering.ts`, `src/items/ItemRendering.ts`),
-`src/combat/DamageIndicatorRendering.ts`. `ImageCache.ts` — the
+`src/items/ItemRendering.ts`), `src/combat/DamageIndicatorRendering.ts`.
+`ImageCache.ts` — the
 per-URL image cache shared by actor sheets, item sheets and the UI asset
 port — is generic but browser-bound by nature; it folds into `scene`
 rather than standing as its own package. The sprite renderers
 (`HeroRendering`, `ItemRendering`) import `GameState` and draw named
 game tiles, so like the other scene sources they arrive as view models
-under adapters, with the tile references staying game content.
+under adapters, with the tile references staying game content — the
+actor/item/effect plane is done this way already (see the current-state
+note below; the former `src/core/ActorSpriteRendering.ts` and
+`src/items/ItemSpriteRendering.ts` folded into the scene adapters and
+helpers).
 
 The world canvas renderer: draw-ordered layer compositing (terrain →
 walls/doors → actors → light → VFX), tileset handling with texture caching and
@@ -550,6 +566,87 @@ actor sprites, effect descriptors — never `GameState`, `Monster`, or any game
 type. The game keeps the adapters (today's `src/ui/viewmodels/` role) and all
 assets. `scene` and `uikit` are siblings: neither imports the other, and nothing
 engine-side imports either, keeping headless benchmarks canvas-free.
+
+**Current state: view-model contracts, first plane in place.** The
+step-9 gate ("view-model contracts in place") is being built under
+`src/scene/`, staged plane by plane:
+
+- `src/scene/contracts.ts` — the view-model types the future package
+  consumes: `SceneActorView` (sprite frame or fallback tile, visual
+  position, flash intensity, active flag, bars, debug data),
+  `SceneHeroOverlayView` (walkable-area cells, per-hero bars/pips,
+  current-actor marker), `SceneItemView` (sprite frame, generic tile,
+  resolved i18n label) and `SceneFloatingText` (structurally compatible
+  with the game's `DamageIndicator`, so indicator data passes by data).
+  No game types: positions are two-field `ScenePoint`s, tiles and
+  frames are plain rectangles plus sheet images.
+- `src/scene/adapters.ts` — the GameState → view-model builders, the
+  game-side half that stays when the renderers leave: animation-timeline
+  resolution (current sprite frame), dying-actor visibility (lingering
+  death animations), monster discovery filtering, walkable-area rules
+  (discovery, blocking, line of sight), difficulty-scaled health bars,
+  named-tile resolution (`ACTOR_TILES.HERO`, the monster type switch is
+  game knowledge) and the i18n item labels.
+- `src/scene/ActorLayer.ts` / `spriteSheets.ts` — the view-model draw
+  primitives and sprite-sheet source-rect math (package material).
+- Converted, facades unchanged: `HeroRendering`, `MonsterRendering`,
+  `ItemRendering` and `DamageIndicatorRendering` keep their historical
+  signatures and now resolveGameState → view models → view-typed cores.
+  The superseded `src/core/ActorSpriteRendering.ts` and
+  `src/items/ItemSpriteRendering.ts` are folded into the adapters and
+  scene helpers (their tests moved with the math).
+- Dungeon plane, stages A+B done: every `DungeonRendering` entry point
+  (`renderGrid`/`renderWalls`/`renderDoors`/`renderSecrets`/`renderTerrain`
+  /`renderTerrainAnimation`/`renderRoomFog`/`renderFogLightDim`/
+  `renderPillars`/`renderPillarTops`/`renderPortal`/`renderInteractables`,
+  `hasAnimatedTerrainEffects`, `sealedCornerGrid`, `edgeWallRect`) now
+  consumes the `SceneDungeonView` contract
+  (`src/scene/dungeon.ts`): plain shapes — string grid rows, doors and
+  edge walls with a literal side union, secrets/terrain/fog/corner
+  descriptors with open string types, the portal and the
+  discovered-room set. The game's `Dungeon` satisfies the contract
+  structurally (its `Side`/`SecretType` enums carry the contract's
+  literal strings), pinned by a compile-time sentinel test
+  (`src/scene/dungeon.test.ts`); callers pass their own `Dungeon` data.
+  Discovery resolves inside the renderer against grid rows and the
+  discovered-room set (two-field duplicate, no game helper import). The
+  vocabulary imports that remain until the adapter resolves them at
+  lift: the corner-type string list (`CornerType`, a const-object data
+  vocabulary re-exported from the grid engine), `TerrainType`'s open
+  union, TerrainLogic's default styling, the `autoDetectCorners`
+  re-export (corner data will arrive in the view at lift) and the
+  grid-string helpers `findCell`/`toArray`.
+- Light plane, view-model seam done: the compositing half of
+  `LightRendering` draws only `SceneLightView` descriptors
+  (`src/scene/lights.ts`) — resolved center (alignment, ceiling, sway,
+  sweep), defaulted colour/intensity/radius, per-frame brightness, blur,
+  open effect name, occlusion polygon, sparkles and sprite-cache
+  tokens. A `buildLightViews` pass inside the facade resolves every
+  `@hoard-engine/lighting` engine computation the renderer used to call
+  (`lightCenter`, `lightIntensityScale`, `lightBlurPx`,
+  `computeSparkles`, `lightPolygonFor`, `isAnimatedLight`/
+  `isBakeableLight` classification) and applies the game knowledge
+  (renderability, viewport culling, one occlusion key per pass), so the
+  compositing — gradients, polygons, aura rings, gas clouds, baked
+  sprites, the darkness veil — never sees `GameState` or the engine
+  package. Facade signatures are unchanged; the 100-test light suite
+  pins the pixel behaviour.
+- The two remaining bookkeeping moves, decided rather than pending:
+  `ImageCache` and the `ActorAnimation` timeline stay with the game.
+  `ImageCache` folds into the scene package at lift as its internal
+  per-URL cache; the adapter may keep calling the game-side facade
+  (the game imports its packages — nothing forbids that direction).
+  `ActorAnimation` was listed as scene source before the view-model
+  contracts existed; with the contracts, its rendering half is the
+  adapter's frame/position resolution (game side) and its recording
+  half is logic (game side) — nothing of it moves.
+- What remains for step 9 was the lift itself: the view-typed
+  compositing cores have moved into the `@hoard-engine/scene` package
+  (sibling folder in the hoard root, `../scene`), with the
+  boundary/completeness tooling and its own AGENTS/README; the game
+  keeps the facades and the adapters. **Done:** published as
+  `@hoard-engine/scene` (v0.1.0), consumed as a dependency like every
+  other engine package.
 
 ## Prerequisites (cross-cutting)
 
@@ -566,11 +663,14 @@ what uikit already did with `UiEnv.t`:
   seam) and the locale lifecycle (`menu/MenuLogic.ts`,
   `store/gameStateStore.ts`, `components/DungeonBoardController.ts`) —
   app-shell seams, not engine seams.
-- **Invert audio.** Replace direct `soundEffectManager` imports in logic with
-  sound-cue data plus a game-side adapter.
+- **Invert audio.** Done: direct `soundEffectManager` imports in logic are
+  replaced by sound-cue data on the state plus a game-side adapter (see the
+  audio section).
 - **Separate compute from render.** Rendering files colocated in logic
   directories move to `scene`; logic emits data (animation/sound/effect events)
-  that presentation consumes.
+  that presentation consumes. In progress: the actor/item/effect rendering
+  plane consumes view models built by `src/scene/adapters.ts` (see the scene
+  section); the dungeon and light planes still read `GameState` directly.
 
 ## Extraction order
 
@@ -607,6 +707,15 @@ later:
 9. `scene` — last and largest: needs the render/logic separation complete and
    view-model contracts in place. Camera/viewport and map streaming are
    out-of-scope extensions for a future consumer, not part of the extraction.
+   **Done:** published as `@hoard-engine/scene` (v0.1.0), consumed as a
+   dependency, with the consumer-defined contract drains the spec named —
+   corner data and the sealed grid arrive in the view
+   (`layout.corners`/`layout.sealedGrid`, resolved by `src/scene/adapters.ts`
+   with the grid engine's classifier), terrain styling resolves in the
+   adapter, and the vocabulary lists (cell tokens, corner types, light
+   effects) are package-local const duplicates behind structural
+   compatibility. The engine knowledge that is composition glue (the
+   corner/sealed derivation, the light view builder) stays in the game.
 
 ## What stays in the game
 
@@ -653,9 +762,12 @@ policy; the packages contain no game content by construction.
 
 A November 2026 review pass compared this spec with what remains in
 `src/`. The published packages and their facades match the spec above,
-including the open-item ledger: the sound-cue inversion is still open
-(12 modules import the `soundEffectManager` facade) and the scene
-extraction (step 9) has not started. Besides the two future candidates
+including the open-item ledger: the sound-cue inversion is done (logic
+emits cue data; only the adapter, the UI shell and `AppSettings` import
+the `soundEffectManager` facade) and the scene extraction (step 9) is
+complete — published as `@hoard-engine/scene`, with the game keeping
+the adapters and the render facades (see the scene section). Besides
+the two future candidates
 above, these framework-looking modules were examined and stay in the
 game:
 
