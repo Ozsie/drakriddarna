@@ -1,3 +1,4 @@
+import { screenToWorld } from '@hoard-engine/camera';
 import {
   addLog,
   cellsAlongLine,
@@ -364,20 +365,18 @@ export const screenToWorldPosition = (
   panY: number,
   cellSize: number,
   centerPosition?: Position,
-): { x: number; y: number } => {
-  const centerOffsetX = centerPosition
-    ? (centerPosition.x + 0.5) * cellSize
-    : 0;
-  const centerOffsetY = centerPosition
-    ? (centerPosition.y + 0.5) * cellSize
-    : 0;
-  const originX = viewWidth / 2 + panX - centerOffsetX;
-  const originY = viewHeight / 2 + panY - centerOffsetY;
-  return {
-    x: screenX - originX,
-    y: screenY - originY,
-  };
-};
+): { x: number; y: number } =>
+  screenToWorld(
+    { x: screenX, y: screenY },
+    {
+      width: viewWidth,
+      height: viewHeight,
+      centerX: centerPosition ? (centerPosition.x + 0.5) * cellSize : 0,
+      centerY: centerPosition ? (centerPosition.y + 0.5) * cellSize : 0,
+      panX,
+      panY,
+    },
+  );
 
 export const screenToGridPosition = (
   screenX: number,
