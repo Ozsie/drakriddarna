@@ -6,7 +6,6 @@ import { asset } from '$app/paths';
 import type { AssetPath } from '$app/types';
 import { getReadyImage, setImageUrlResolver } from '../core/ImageCache';
 import type { AssetProvider } from '@hoard-engine/uikit';
-import type { AssetPath } from '$app/types';
 
 // Content sprite sheets (actor sprites like the knight pack, item sheets)
 // reference their images by bare asset paths; wire the shared image
