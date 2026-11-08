@@ -77,8 +77,8 @@ is what makes two unusual things possible:
 The UI layer is deliberately thin. Only three `.svelte` components exist; the
 game view (`Dungeon.svelte`) is pure reactive glue — it derives state from the
 stores and forwards it to `DungeonBoardController`, a colocated plain-TS class
-that owns the canvases, the layered render loop, pan/drag/touch handling and
-all pointer/keyboard dispatch. The glue preserves a Svelte 4 contract: game
+that owns the canvases, the layered render loop, pan/drag/touch/zoom handling
+and all pointer/keyboard dispatch. The glue preserves a Svelte 4 contract: game
 logic mutates the single `GameState` in place and re-publishes it, so the
 store wraps every publish in a fresh top-level envelope — Svelte 5 deriveds
 compare by reference, and an identical reference would leave the derived
@@ -648,7 +648,7 @@ current design costs:
 - **The board's DOM glue is concentrated in one class.** `Dungeon.svelte`
   was once a monolith and is now a thin reactive shell, but the extracted
   `DungeonBoardController` still bundles the render loop, canvas setup, pan
-  handling and input dispatch. Its pure decision parts (hover state,
+  and zoom handling and input dispatch. Its pure decision parts (hover state,
   hit-test cascade, render signatures) are extracted into colocated modules
   and unit-tested; the glue itself needs a real DOM and remains untested.
 - **Determinism only as deep as the state.** All gameplay randomness is

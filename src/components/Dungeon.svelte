@@ -118,10 +118,6 @@
       onmousedown={board.onMouseDown}
       onmousemove={board.onMouseMove}
       onmouseleave={board.onMouseLeave}
-      ontouchstart={board.onTouchStart}
-      ontouchmove={board.onTouchMove}
-      ontouchend={board.onTouchEnd}
-      ontouchcancel={board.onTouchCancel}
       onwheel={board.onWheel}
       oncontextmenu={(event) => event.preventDefault()}
     ></canvas>
