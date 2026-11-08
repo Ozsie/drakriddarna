@@ -6,4 +6,5 @@ export * from './combat';
 export * from './scoring';
 export * from './timer';
 export * from './ActorAnimation';
+export * from './facing';
 export * from './DifficultLevels';

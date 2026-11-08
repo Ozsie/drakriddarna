@@ -26,6 +26,8 @@ import {
   i18n,
   recordActorStep,
   clearActorAnimations,
+  faceHeroesTowardClosestRoomDoor,
+  faceRevealedMonsters,
 } from '../core';
 import {
   findCell,
@@ -654,6 +656,11 @@ export const resetLiveHeroes = (state: GameState) => {
       }
     });
   });
+  // The dungeon start is also a facing reset: heroes take their starting
+  // positions looking out of the room (its closest door), and monsters
+  // already standing in discovered rooms turn to face the party.
+  faceHeroesTowardClosestRoomDoor(state);
+  faceRevealedMonsters(state, state.dungeon.discoveredRooms);
 };
 
 export const liveHeroes = (state: GameState): Hero[] =>
@@ -692,6 +699,9 @@ export const openDoor = (
     if (!state.dungeon.discoveredRooms.includes(target)) {
       state.dungeon.discoveredRooms.push(target);
       executeRoomDiscoveredEffect(state, target);
+      // Opening a door lifts the fog off the room beyond: any monster
+      // standing there turns to face the intruding party.
+      faceRevealedMonsters(state, [target]);
     }
   }
   move(hero, state, hero.position.x, hero.position.y, 1);

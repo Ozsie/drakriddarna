@@ -41,6 +41,8 @@ import { shields } from '../items/shields';
 import { armour } from '../items/armours';
 import type { Door } from '../types';
 import { Side } from '../types';
+import { getActorFacing } from '../core';
+import { openDoor } from './HeroLogic';
 
 const chaosSwordWeapon: Weapon = {
   id: 'sword_of_chaos',
@@ -1165,5 +1167,55 @@ describe('hero sprite rotation', () => {
         });
       });
     });
+  });
+});
+
+describe('reveal and dungeon-start facings', () => {
+  const closedDoor = (x: number, y: number, side: Side): Door => ({
+    x,
+    y,
+    side,
+    locked: false,
+    trapped: false,
+    open: false,
+    hidden: false,
+    reinforced: false,
+    trapAttacks: 0,
+  });
+
+  it('openDoor faces monsters revealed by the door toward the party', () => {
+    const hero = createTestHero({ position: { x: 2, y: 2 } });
+    const monster = createTestMonster({ position: { x: 2, y: 4 } });
+    const state = createTestState(hero, monster);
+    state.dungeon.layout.grid = [
+      '#######',
+      '#AAAAA#',
+      '#AAAAA#',
+      '#BBBBB#',
+      '#BBBBB#',
+      '#######',
+    ];
+    state.dungeon.layout.doors = [closedDoor(2, 2, Side.DOWN)];
+
+    openDoor(hero, state, 2, 3);
+
+    expect(state.dungeon.discoveredRooms).toContain('B');
+    expect(getActorFacing(monster)).toBe('north');
+  });
+
+  it('resetLiveHeroes faces heroes and discovered monsters at a dungeon start', () => {
+    const hero = createTestHero({ position: { x: -1, y: -1 } });
+    const monster = createTestMonster({ position: { x: 2, y: 1 }, health: 1 });
+    const state = createTestState(hero, monster);
+    state.dungeon.startingPositions = [{ x: 1, y: 1 }];
+    state.dungeon.layout.doors = [closedDoor(1, 1, Side.RIGHT)];
+
+    resetLiveHeroes(state);
+
+    expect(hero.position).toEqual({ x: 1, y: 1 });
+    // The hero faces the closest door of the starting room...
+    expect(getActorFacing(hero)).toBe('east');
+    // ...and the monster standing in the discovered room faces the party.
+    expect(getActorFacing(monster)).toBe('west');
   });
 });
