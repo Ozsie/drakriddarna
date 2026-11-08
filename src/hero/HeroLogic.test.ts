@@ -1077,9 +1077,9 @@ describe('knight hero sprite', () => {
 
   it('times one-shot animations consistently with the declared frame counts', () => {
     const s = sprite();
-    expect(s?.frameDurationMs).toBe(50);
-    expect((s?.animations?.attack ?? 0) * (s?.frameDurationMs ?? 0)).toBe(750);
-    expect((s?.animations?.death ?? 0) * (s?.frameDurationMs ?? 0)).toBe(750);
+    expect(s?.frameDurationMs).toBe(65);
+    expect((s?.animations?.attack ?? 0) * (s?.frameDurationMs ?? 0)).toBe(975);
+    expect((s?.animations?.death ?? 0) * (s?.frameDurationMs ?? 0)).toBe(975);
   });
 });
 
@@ -1150,7 +1150,7 @@ describe('hero sprite rotation', () => {
       expect(s.frameWidth).toBe(128);
       expect(s.frameHeight).toBe(128);
       expect(s.drawScale).toBeGreaterThan(1);
-      expect(s.frameDurationMs).toBe(50);
+      expect(s.frameDurationMs).toBe(65);
       ANIMATIONS.forEach((animation) => {
         expect(s.animationImages?.[animation]).toMatch(/\.png$/);
         FACINGS.forEach((facing) => {

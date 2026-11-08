@@ -3,7 +3,6 @@
 // owns the URL construction (and, in M5, the $lib sprite imports).
 
 import { asset } from '$app/paths';
-import type { AssetPath } from '$app/types';
 import { getReadyImage, setImageUrlResolver } from '../core/ImageCache';
 import type { AssetProvider } from '@hoard-engine/uikit';
 
@@ -12,7 +11,7 @@ import type { AssetProvider } from '@hoard-engine/uikit';
 // cache to resolve those against the deployment's base path. Rooted and
 // protocol URLs pass through the cache untouched.
 
-setImageUrlResolver((path) => asset(path as AssetPath));
+setImageUrlResolver((path) => asset(path));
 
 export const AssetId = {
   /** The welcome screen background art. */
@@ -22,7 +21,7 @@ export const AssetId = {
 export type AssetId = (typeof AssetId)[keyof typeof AssetId];
 
 const ASSET_URLS: Record<AssetId, string> = {
-  [AssetId.welcomeBackground]: asset('images/welcome.png' as AssetPath),
+  [AssetId.welcomeBackground]: asset('images/welcome.png'),
 };
 
 /** Resolves an asset id to its URL, for the shared image cache. */

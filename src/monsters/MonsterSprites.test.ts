@@ -51,7 +51,7 @@ describe('monster sprite packs', () => {
       ANIMATIONS.forEach((animation) => {
         expect(sprite.animations?.[animation]).toBe(15);
       });
-      expect(sprite.frameDurationMs).toBe(50);
+      expect(sprite.frameDurationMs).toBe(65);
     }
   });
 

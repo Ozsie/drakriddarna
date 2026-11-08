@@ -31,7 +31,7 @@ const CHARACTER_PACK_FRAMES_PER_ROW = 15;
 // default step duration, and full one-shot swings inside the animation
 // windows derived from the same numbers. Raise or lower this to speed up
 // or slow down every character-pack actor (heroes and monsters alike).
-export const CHARACTER_PACK_FRAME_DURATION_MS = 50;
+export const CHARACTER_PACK_FRAME_DURATION_MS = 65;
 
 export type CharacterPackAnimationFiles = Record<ActorAnimationName, string>;
 
