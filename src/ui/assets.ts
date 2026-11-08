@@ -3,9 +3,9 @@
 // owns the URL construction (and, in M5, the $lib sprite imports).
 
 import { asset } from '$app/paths';
-import type { AssetPath } from '$app/types';
 import { getReadyImage } from '../core/ImageCache';
 import type { AssetProvider } from '@hoard-engine/uikit';
+import type { AssetPath } from '$app/types';
 
 export const AssetId = {
   /** The welcome screen background art. */
@@ -15,6 +15,7 @@ export const AssetId = {
 export type AssetId = (typeof AssetId)[keyof typeof AssetId];
 
 const ASSET_URLS: Record<AssetId, string> = {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   [AssetId.welcomeBackground]: asset('images/welcome.png' as AssetPath),
 };
 

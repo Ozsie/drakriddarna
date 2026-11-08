@@ -111,6 +111,7 @@ export class InputManager {
       ...customBindings,
     });
     this.actionDispatcher = new ActionDispatcher((error, action) =>
+      // eslint-disable-next-line no-console
       console.error(`Error executing action handler for ${action}:`, error),
     );
     this.gestureConfig = {
@@ -206,12 +207,11 @@ export class InputManager {
   /**
    * Handles keyboard event. Returns true if the key was intercepted and handled.
    */
-  public handleKeyDown = (event: KeyboardEvent): boolean => {
-    return dispatchKeyInput(event, this.keyBindings, this.actionDispatcher, {
+  public handleKeyDown = (event: KeyboardEvent): boolean =>
+    dispatchKeyInput(event, this.keyBindings, this.actionDispatcher, {
       includeSelect: true,
       includeContentEditable: true,
     });
-  };
 
   /**
    * Touch / Gesture Handlers
