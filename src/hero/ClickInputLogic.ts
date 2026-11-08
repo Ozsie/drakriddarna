@@ -1,4 +1,4 @@
-import { screenToWorld } from '@hoard-engine/camera';
+import { screenToWorldZoomed, ZOOM_DEFAULT } from '../camera/ZoomLogic';
 import {
   addLog,
   cellsAlongLine,
@@ -351,6 +351,7 @@ export const getCursorType = (
 export interface CameraOffset {
   panX: number;
   panY: number;
+  zoom?: number;
   viewWidth?: number;
   viewHeight?: number;
   centerPosition?: Position;
@@ -365,8 +366,9 @@ export const screenToWorldPosition = (
   panY: number,
   cellSize: number,
   centerPosition?: Position,
+  zoom: number = ZOOM_DEFAULT,
 ): { x: number; y: number } =>
-  screenToWorld(
+  screenToWorldZoomed(
     { x: screenX, y: screenY },
     {
       width: viewWidth,
@@ -376,6 +378,7 @@ export const screenToWorldPosition = (
       panX,
       panY,
     },
+    zoom,
   );
 
 export const screenToGridPosition = (
@@ -387,6 +390,7 @@ export const screenToGridPosition = (
   panY: number,
   cellSize: number,
   centerPosition?: Position,
+  zoom: number = ZOOM_DEFAULT,
 ): Position => {
   const world = screenToWorldPosition(
     screenX,
@@ -397,6 +401,7 @@ export const screenToGridPosition = (
     panY,
     cellSize,
     centerPosition,
+    zoom,
   );
   return {
     x: Math.floor(world.x / cellSize),
@@ -438,6 +443,7 @@ export const doMouseLogic = (
       camera.panY,
       cellSize,
       centerPosition,
+      camera.zoom ?? ZOOM_DEFAULT,
     );
     x = pos.x;
     y = pos.y;

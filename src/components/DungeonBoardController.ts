@@ -1,8 +1,4 @@
-import {
-  screenToWorld,
-  worldToScreen,
-  type CameraView,
-} from '@hoard-engine/camera';
+import type { CameraView } from '@hoard-engine/camera';
 import { get } from 'svelte/store';
 import { browser } from '$app/env';
 import actorSprites from '#lib/Dungeon_Character_3.png';
@@ -65,7 +61,7 @@ import {
   staticLightCacheKey,
   animatedLightsSignature,
 } from '../dungeon/LightRendering';
-import type { LightViewport } from '../dungeon/LightRendering';
+import type { LightViewport } from '@hoard-engine/lighting';
 import { renderItems } from '../items/ItemRendering';
 import {
   renderRadialMenu,
@@ -142,8 +138,8 @@ import {
   activeShakes,
   shakeJitter,
 } from '../combat';
-import { clearTileTextureCache } from '../dungeon/TileTextureCache';
-import { clearFogCloudCaches } from '../dungeon/DungeonRendering';
+import { clearTileTextureCache } from '@hoard-engine/scene';
+import { clearFogCloudCaches } from '@hoard-engine/scene';
 import {
   hasActiveActorAnimations,
   i18n,
@@ -152,12 +148,34 @@ import {
 import { MAX_SAVE_NAME_LENGTH } from '../saves/SavesLogic';
 import { onChangeLanguage, onNewGame, onSaveGame } from '../menu/MenuLogic';
 import { DEFAULT_CAMPAIGN_ID } from '../campaigns';
+import { getTouchCentroid } from '@hoard-engine/input';
 import {
-  createTouchPanState,
-  handleTwoFingerTouchStart,
-  handleTwoFingerTouchMove,
-  handleTwoFingerTouchEnd,
-} from '../input/TouchPanLogic';
+  createPinchZoomState,
+  handlePinchZoomEnd,
+  handlePinchZoomMove,
+  handlePinchZoomStart,
+} from '../input/PinchZoomLogic';
+import {
+  activateTouchHoldPan,
+  cancelTouchHoldPan,
+  createTouchHoldPanState,
+  beginTouchHoldPan,
+  endTouchHoldPan,
+  handleTouchHoldPanMove,
+  TOUCH_HOLD_PAN_DELAY_MS,
+} from '../input/TouchHoldPanLogic';
+import {
+  classifyWheelEvent,
+  createWheelGestureState,
+} from '../input/WheelGestureLogic';
+import {
+  screenToWorldZoomed,
+  worldToScreenZoomed,
+  zoomAtAnchor,
+  zoomByStep,
+  zoomFromWheelDelta,
+  ZOOM_DEFAULT,
+} from '../camera/ZoomLogic';
 import { inputManager } from '../input/InputManager';
 import { musicManager, soundEffectManager } from '../audio';
 import { selectMusicIntensity } from '../audio/MusicIntensity';
@@ -335,7 +353,21 @@ export class DungeonBoardController {
   private dragStartPanX = 0;
   private dragStartPanY = 0;
   private hasMovedDuringDrag = false;
-  private touchPanState = createTouchPanState();
+  private touchHoldPanState = createTouchHoldPanState();
+  // The one-finger hold-to-pan timer: arms on a single-finger touchstart
+  // and promotes the gesture to a pan when it elapses without movement.
+  // Cleared on any lift, cancel or second finger.
+  private holdPanTimerId: ReturnType<typeof setTimeout> | null = null;
+  // Board zoom: 1 by default, clamped between ZOOM_MIN (0.5) and
+  // ZOOM_MAX (1.5). Keyboard '+/-', wheel scrolling and two-finger
+  // pinching all drive the same value, anchored so the world point under
+  // the cursor/centroid stays put.
+  private zoom = ZOOM_DEFAULT;
+  private pinchZoomState = createPinchZoomState();
+  // Wheel burst classifier: one wheel stream pans *or* zooms per burst —
+  // never both — so a trackpad drag does not smear sideways while it
+  // zooms. Ctrl+wheel (the trackpad pinch) always zooms.
+  private wheelGestureState = createWheelGestureState();
   // Reduced render quality while a pan drag is active: canvases at CSS
   // pixel ratio (1) instead of the device pixel ratio, light glow without
   // its softness blur. Cuts the per-frame fill cost roughly 4x on retina
@@ -565,6 +597,7 @@ export class DungeonBoardController {
       this.lastDungeonKey = dungeonKey;
       this.panX = 0;
       this.panY = 0;
+      this.zoom = ZOOM_DEFAULT;
       this.updateAllCanvasTransforms();
       this.renderCanvas(true);
     }
@@ -660,11 +693,27 @@ export class DungeonBoardController {
     if (browser) {
       window.addEventListener('mousemove', this.onWindowMouseMove);
       window.addEventListener('mouseup', this.onWindowMouseUp);
-      window.addEventListener('touchmove', this.onTouchMove, {
-        passive: false,
-      });
-      window.addEventListener('touchend', this.onTouchEnd);
-      window.addEventListener('touchcancel', this.onTouchCancel);
+      // The touch handlers are attached here rather than through Svelte
+      // event attributes: Svelte marks touchstart/touchmove listeners
+      // passive by default, and the pan/pinch gestures need
+      // preventDefault. The canvas listener also runs before the input
+      // manager's container listener, so the end-of-gesture
+      // stopPropagation can keep pans and pinches from turning into
+      // swipes. Touch events stick to the element they started on, so
+      // the ui canvas — the top layer covering the board — receives
+      // every event of a board gesture.
+      if (this.uiCanvas) {
+        this.uiCanvas.addEventListener('touchstart', this.onTouchStart, {
+          passive: false,
+        });
+        this.uiCanvas.addEventListener('touchmove', this.onTouchMove, {
+          passive: false,
+        });
+        this.uiCanvas.addEventListener('touchend', this.onTouchEnd, {
+          passive: false,
+        });
+        this.uiCanvas.addEventListener('touchcancel', this.onTouchCancel);
+      }
       window.addEventListener('keydown', this.onWindowKeyDown);
     }
 
@@ -752,9 +801,12 @@ export class DungeonBoardController {
     if (browser) {
       window.removeEventListener('mousemove', this.onWindowMouseMove);
       window.removeEventListener('mouseup', this.onWindowMouseUp);
-      window.removeEventListener('touchmove', this.onTouchMove);
-      window.removeEventListener('touchend', this.onTouchEnd);
-      window.removeEventListener('touchcancel', this.onTouchCancel);
+      if (this.uiCanvas) {
+        this.uiCanvas.removeEventListener('touchstart', this.onTouchStart);
+        this.uiCanvas.removeEventListener('touchmove', this.onTouchMove);
+        this.uiCanvas.removeEventListener('touchend', this.onTouchEnd);
+        this.uiCanvas.removeEventListener('touchcancel', this.onTouchCancel);
+      }
       window.removeEventListener('keydown', this.onWindowKeyDown);
       musicManager.stop();
       soundEffectManager.stop();
@@ -771,6 +823,7 @@ export class DungeonBoardController {
       clearTimeout(this.uiTimerId);
       this.uiTimerId = null;
     }
+    this.clearHoldPanTimer();
     if (this.dynamicAnimationId) {
       cancelAnimationFrame(this.dynamicAnimationId);
       this.dynamicAnimationId = null;
@@ -895,11 +948,45 @@ export class DungeonBoardController {
     panY: this.panY,
   });
 
+  // Applies a zoom step around a screen-space anchor (the cursor for the
+  // wheel, the touch centroid for pinch, the view centre for the
+  // keyboard): the world point under the anchor stays under it. Returns
+  // false when the zoom was already clamped at the limit, so callers
+  // with their own pan changes can still repaint. Full-quality repaint —
+  // the pinch path applies the same math inline under the pan drag's
+  // reduced quality and coalesced rAF instead.
+  private applyZoom = (
+    nextZoomRaw: number,
+    anchorX: number,
+    anchorY: number,
+  ): boolean => {
+    const next = zoomAtAnchor(this.cameraView(), this.zoom, nextZoomRaw, {
+      x: anchorX,
+      y: anchorY,
+    });
+    if (next.zoom === this.zoom) return false;
+    this.zoom = next.zoom;
+    this.panX = next.panX;
+    this.panY = next.panY;
+    this.updateAllCanvasTransforms();
+    this.renderCanvas(true);
+    return true;
+  };
+
+  // Keyboard zoom around the view centre, shared by the +/- handlers.
+  private zoomByKeyboard = (steps: number): void => {
+    this.applyZoom(
+      zoomByStep(this.zoom, steps),
+      this.containerWidth / 2,
+      this.containerHeight / 2,
+    );
+  };
+
   private updateAllCanvasTransforms = () => {
     if (!this.containerWidth || !this.containerHeight) return;
     const ratio = this.canvasRatio;
     const view = this.cameraView();
-    const origin = worldToScreen({ x: 0, y: 0 }, view);
+    const origin = worldToScreenZoomed({ x: 0, y: 0 }, view, this.zoom);
     // The transform change invalidates the static light layer: its cached
     // pixels were drawn under the previous transform and are copied into
     // the light mask in device space, so they would sit offset relative
@@ -908,7 +995,7 @@ export class DungeonBoardController {
       this.containerWidth,
     )},${String(this.containerHeight)},${String(this.panX)},${String(
       this.panY,
-    )},${String(view.centerX)},${String(view.centerY)}`;
+    )},${String(view.centerX)},${String(view.centerY)},${String(this.zoom)}`;
     if (transformSig !== this.lastWorldTransformSig) {
       this.lastWorldTransformSig = transformSig;
       this.lastStaticLightKey = '';
@@ -926,10 +1013,10 @@ export class DungeonBoardController {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.setTransform(
-            ratio,
+            ratio * this.zoom,
             0,
             0,
-            ratio,
+            ratio * this.zoom,
             ratio * origin.x,
             ratio * origin.y,
           );
@@ -1041,13 +1128,18 @@ export class DungeonBoardController {
     this.lastDynamicFrameTs = performance.now();
     const debugMode = this.debugMode ?? false;
     // The visible part of the world, in cells: lights whose glow cannot
-    // reach it are culled from rendering and animation alike.
-    const worldOrigin = screenToWorld({ x: 0, y: 0 }, this.cameraView());
+    // reach it are culled from rendering and animation alike. The zoom
+    // shrinks the visible world area accordingly.
+    const worldOrigin = screenToWorldZoomed(
+      { x: 0, y: 0 },
+      this.cameraView(),
+      this.zoom,
+    );
     const lightViewport: LightViewport = {
       x: worldOrigin.x / this.cellSize,
       y: worldOrigin.y / this.cellSize,
-      width: this.containerWidth / this.cellSize,
-      height: this.containerHeight / this.cellSize,
+      width: this.containerWidth / this.zoom / this.cellSize,
+      height: this.containerHeight / this.zoom / this.cellSize,
     };
     const hasActiveAnimations = hasActiveActorAnimations();
     // Light effects (pulse, flicker, sweep, blink, sway) animate while any
@@ -1080,9 +1172,11 @@ export class DungeonBoardController {
     // a canvas resize clears them. Folding both into the ambient
     // signature keeps a forced repaint after a pan or a canvas
     // reinitialization from being mistaken for a redundant one.
-    const surfaceSig = `${String(this.panX)},${String(this.panY)},${String(
-      this.actorCanvas?.width ?? 0,
-    )},${String(this.actorCanvas?.height ?? 0)}`;
+    const surfaceSig = `${String(this.zoom)},${String(this.panX)},${String(
+      this.panY,
+    )},${String(this.actorCanvas?.width ?? 0)},${String(
+      this.actorCanvas?.height ?? 0,
+    )}`;
     const ambientSig =
       hasLightEffects || hasTerrainEffects
         ? `${lightSig}|${
@@ -1882,9 +1976,10 @@ export class DungeonBoardController {
 
     if (active.length > 0) {
       // The view centre in cells, matching the light viewport maths.
-      const worldCenter = screenToWorld(
+      const worldCenter = screenToWorldZoomed(
         { x: this.containerWidth / 2, y: this.containerHeight / 2 },
         this.cameraView(),
+        this.zoom,
       );
       const viewCenter = {
         x: worldCenter.x / this.cellSize,
@@ -1933,11 +2028,19 @@ export class DungeonBoardController {
     canvas.style.height = `${String(String(String(height)))}px`;
     const ctx = canvas.getContext('2d', options);
     if (ctx) {
-      const origin = worldToScreen(
+      const origin = worldToScreenZoomed(
         { x: 0, y: 0 },
         this.cameraView(width, height),
+        this.zoom,
       );
-      ctx.setTransform(ratio, 0, 0, ratio, ratio * origin.x, ratio * origin.y);
+      ctx.setTransform(
+        ratio * this.zoom,
+        0,
+        0,
+        ratio * this.zoom,
+        ratio * origin.x,
+        ratio * origin.y,
+      );
       // Resizing a canvas clears it and this call re-applies the world
       // transform, so the cached static light layer no longer matches the
       // surface it was drawn on.
@@ -1987,6 +2090,27 @@ export class DungeonBoardController {
     }
   };
 
+  // Touch model: one finger tap = click (move/interact, via the
+  // synthesized click), one finger held then dragged = pan, two fingers =
+  // pinch zoom. The hold starts panning only after TOUCH_HOLD_PAN_DELAY_MS
+  // without movement; movement before that hands the gesture back to
+  // tap/swipe so hero movement stays reachable.
+  private scheduleHoldPanTimer = (): void => {
+    this.clearHoldPanTimer();
+    this.holdPanTimerId = setTimeout(() => {
+      this.holdPanTimerId = null;
+      activateTouchHoldPan(this.touchHoldPanState);
+      // Nothing to render yet: panning shows once the finger moves.
+    }, TOUCH_HOLD_PAN_DELAY_MS);
+  };
+
+  private clearHoldPanTimer = (): void => {
+    if (this.holdPanTimerId !== null) {
+      clearTimeout(this.holdPanTimerId);
+      this.holdPanTimerId = null;
+    }
+  };
+
   public onTouchStart = (event: TouchEvent) => {
     if (this.appPhase === 'welcome') {
       const touch = event.touches[0];
@@ -2002,15 +2126,23 @@ export class DungeonBoardController {
       }
       return;
     }
-    const started = handleTwoFingerTouchStart(
-      event.touches,
-      { x: this.panX, y: this.panY },
-      this.touchPanState,
-    );
-    if (started) {
-      this.hasMovedDuringDrag = false;
-      if (event.cancelable) {
-        event.preventDefault();
+    if (event.touches.length === 1) {
+      beginTouchHoldPan(
+        event.touches[0],
+        { x: this.panX, y: this.panY },
+        this.touchHoldPanState,
+      );
+      this.scheduleHoldPanTimer();
+    } else {
+      // Any second (or third) finger cancels the held pan candidate; two
+      // of them carry the pinch. preventDefault keeps the browser from
+      // synthesizing mouse/click events for the pinch sequence.
+      cancelTouchHoldPan(this.touchHoldPanState);
+      this.clearHoldPanTimer();
+      if (handlePinchZoomStart(event.touches, this.zoom, this.pinchZoomState)) {
+        if (event.cancelable) {
+          event.preventDefault();
+        }
       }
     }
   };
@@ -2031,13 +2163,35 @@ export class DungeonBoardController {
       }
       return;
     }
-    const result = handleTwoFingerTouchMove(event.touches, this.touchPanState);
-    if (result) {
-      this.panX = result.panX;
-      this.panY = result.panY;
-      if (result.moved) {
-        this.hasMovedDuringDrag = true;
+    // One finger, held then dragged: pan. handleTouchHoldPanMove only
+    // reports once the hold elapsed (activateTouchHoldPan scheduled from
+    // the touchstart timer); earlier movement cancels the candidate and
+    // the gesture stays a tap or swipe on release.
+    const pan = handleTouchHoldPanMove(event.touches, this.touchHoldPanState);
+    if (pan) {
+      this.panX = pan.panX;
+      this.panY = pan.panY;
+      this.hasMovedDuringDrag = true;
+      this.schedulePanRender();
+      if (event.cancelable) {
+        event.preventDefault();
       }
+    }
+    // Two fingers: pinch zoom, anchored at the touch centroid so the
+    // world point under the centroid stays under it. Scaled from the
+    // anchored pinch start, so drift between move events cancels out.
+    const pinch = handlePinchZoomMove(event.touches, this.pinchZoomState);
+    const centroid = pinch ? getTouchCentroid(event.touches) : null;
+    if (pinch && centroid) {
+      const next = zoomAtAnchor(
+        this.cameraView(),
+        this.zoom,
+        pinch.zoom,
+        centroid,
+      );
+      this.zoom = next.zoom;
+      this.panX = next.panX;
+      this.panY = next.panY;
       this.schedulePanRender();
       if (event.cancelable) {
         event.preventDefault();
@@ -2053,16 +2207,44 @@ export class DungeonBoardController {
       }
       return;
     }
-    const result = handleTwoFingerTouchEnd(event.touches, this.touchPanState, {
-      x: this.panX,
-      y: this.panY,
-    });
-    if (result.shouldEnd) {
+    if (event.touches.length === 2) {
+      // A third finger lifting back to two re-anchors the pinch at the
+      // current zoom.
+      handlePinchZoomStart(event.touches, this.zoom, this.pinchZoomState);
+    } else if (handlePinchZoomEnd(event.touches, this.pinchZoomState)) {
+      // The pinch owned its sequence: the release must neither synthesize
+      // a click (move/interact) nor reach the input manager's swipe
+      // classifier, so it stops at the board.
       this.exitLowQualityPan();
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+      event.stopPropagation();
       if (this.hasMovedDuringDrag) {
         setTimeout(() => {
           this.hasMovedDuringDrag = false;
         }, 50);
+      }
+    }
+    if (event.touches.length === 0) {
+      this.clearHoldPanTimer();
+      const ended = endTouchHoldPan(this.touchHoldPanState);
+      if (ended.wasPanning) {
+        // A hold without movement resolves as a plain press-release.
+        this.exitLowQualityPan();
+      }
+      if (ended.moved) {
+        // The pan owned its sequence: same release suppression as the
+        // pinch — no synthesized click, no swipe classification.
+        if (event.cancelable) {
+          event.preventDefault();
+        }
+        event.stopPropagation();
+        if (this.hasMovedDuringDrag) {
+          setTimeout(() => {
+            this.hasMovedDuringDrag = false;
+          }, 50);
+        }
       }
     }
   };
@@ -2070,7 +2252,9 @@ export class DungeonBoardController {
   public onTouchCancel = () => {
     this.settingsSliderDrag = null;
     this.settingsSliderPressHandled = false;
-    this.touchPanState.isDragging = false;
+    this.clearHoldPanTimer();
+    cancelTouchHoldPan(this.touchHoldPanState);
+    this.pinchZoomState.isPinching = false;
     this.exitLowQualityPan();
     if (this.hasMovedDuringDrag) {
       setTimeout(() => {
@@ -2119,6 +2303,17 @@ export class DungeonBoardController {
       radialMenuStore.set(null);
       this.hover.hoveredRadialIndex = null;
       this.renderUiLayer(true);
+    }
+    // Board zoom: '+' (or '=' on unshifted-plus layouts) zooms in, '-'
+    // (or '_') zooms out, anchored at the view centre. The dialogs and
+    // welcome views above capture their keys first, so the board owns
+    // these keys here.
+    if (event.key === '+' || event.key === '=') {
+      event.preventDefault();
+      this.zoomByKeyboard(1);
+    } else if (event.key === '-' || event.key === '_') {
+      event.preventDefault();
+      this.zoomByKeyboard(-1);
     }
   };
 
@@ -2323,6 +2518,7 @@ export class DungeonBoardController {
     this.syncGameInputEnabled();
     this.panX = 0;
     this.panY = 0;
+    this.zoom = ZOOM_DEFAULT;
     this.updateAllCanvasTransforms();
     this.renderCanvas(true);
   };
@@ -3150,6 +3346,7 @@ export class DungeonBoardController {
             if (activeState.dungeon?.startingPositions?.[0]) {
               this.panX = 0;
               this.panY = 0;
+              this.zoom = ZOOM_DEFAULT;
               this.updateAllCanvasTransforms();
             }
             this.renderCanvas(true);
@@ -3175,6 +3372,7 @@ export class DungeonBoardController {
             if (activeState.dungeon?.startingPositions?.[0]) {
               this.panX = 0;
               this.panY = 0;
+              this.zoom = ZOOM_DEFAULT;
               this.updateAllCanvasTransforms();
             }
           }
@@ -3355,6 +3553,7 @@ export class DungeonBoardController {
         this.panY,
         this.cellSize,
         this.startPosition,
+        this.zoom,
       );
       const clickedBtn = findHoveredRadialButton(menu, this.cellSize, worldPos);
       radialMenuStore.set(null);
@@ -3386,6 +3585,7 @@ export class DungeonBoardController {
       doMouseLogic(event, this.cellSize, this.externalState, {
         panX: this.panX,
         panY: this.panY,
+        zoom: this.zoom,
         viewWidth: this.containerWidth,
         viewHeight: this.containerHeight,
         centerPosition: this.startPosition,
@@ -3395,6 +3595,7 @@ export class DungeonBoardController {
       handleCanvasClick(event, this.cellSize, {
         panX: this.panX,
         panY: this.panY,
+        zoom: this.zoom,
         viewWidth: this.containerWidth,
         viewHeight: this.containerHeight,
         centerPosition: this.startPosition,
@@ -3467,6 +3668,7 @@ export class DungeonBoardController {
         this.panY,
         this.cellSize,
         this.startPosition,
+        this.zoom,
       );
       const hoveredBtn = findHoveredRadialButton(menu, this.cellSize, worldPos);
       if (hoveredBtn) {
@@ -3495,6 +3697,7 @@ export class DungeonBoardController {
       this.panY,
       this.cellSize,
       this.startPosition,
+      this.zoom,
     );
 
     const grid = this.activeState.dungeon?.layout?.grid;
@@ -3527,15 +3730,55 @@ export class DungeonBoardController {
   };
 
   public onWheel = (event: WheelEvent) => {
-    // Nothing to pan on the welcome screen; still swallow the scroll.
+    // Nothing to zoom or pan on the welcome screen; still swallow the
+    // scroll.
     if (this.appPhase === 'welcome') {
       event.preventDefault();
       return;
     }
-    this.panX -= event.deltaX;
-    this.panY -= event.deltaY;
-    this.updateAllCanvasTransforms();
-    this.renderCanvas(true);
+    const rect = this.uiCanvas?.getBoundingClientRect();
+    const anchorX = rect ? event.clientX - rect.left : this.containerWidth / 2;
+    const anchorY = rect ? event.clientY - rect.top : this.containerHeight / 2;
+    // One wheel burst resolves to a single gesture: trackpad scrolls
+    // (small/fractional pixel deltas, or line-mode on their own) pan,
+    // while discrete mouse-wheel notches and ctrl+wheel (trackpad pinch)
+    // zoom. The classification sticks for a burst mid-stream so a trackpad
+    // flick never flips gestures halfway.
+    const mode = classifyWheelEvent(
+      this.wheelGestureState,
+      {
+        deltaX: event.deltaX,
+        deltaY: event.deltaY,
+        deltaMode: event.deltaMode,
+        ctrlKey: event.ctrlKey,
+      },
+      Date.now(),
+    );
+    if (mode === 'pan') {
+      const startPanX = this.panX;
+      const startPanY = this.panY;
+      this.panX -= event.deltaX;
+      this.panY -= event.deltaY;
+      if (this.panX !== startPanX || this.panY !== startPanY) {
+        this.updateAllCanvasTransforms();
+        this.renderCanvas(true);
+      }
+    } else {
+      // Sideways deltas in a zoom burst belong to tilt wheels; pure zoom
+      // streams carry none, so this never mixes a trackpad's pan into the
+      // zoom.
+      const startPanX = this.panX;
+      this.panX -= event.deltaX;
+      const zoomed = this.applyZoom(
+        zoomFromWheelDelta(this.zoom, event.deltaY),
+        anchorX,
+        anchorY,
+      );
+      if (!zoomed && this.panX !== startPanX) {
+        this.updateAllCanvasTransforms();
+        this.renderCanvas(true);
+      }
+    }
     event.preventDefault();
   };
 }
