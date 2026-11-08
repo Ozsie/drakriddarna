@@ -1,4 +1,9 @@
-import type { Actor, ActorAnimationName, Position } from '../types';
+import type {
+  Actor,
+  ActorAnimationName,
+  ActorSpriteFacing,
+  Position,
+} from '../types';
 
 export const DEFAULT_ACTOR_MOVEMENT_DURATION_MS = 200;
 export const DEFAULT_ACTOR_SPRITE_FRAME_DURATION_MS = 150;
@@ -15,6 +20,11 @@ export const ACTOR_SPRITE_ANIMATION_ORDER: ActorAnimationName[] = [
   'death',
 ];
 
+// Facing a directional sprite (ActorSprite.facings) shows before the actor
+// has ever stepped: towards the viewer, the most readable default on a
+// board viewed from above.
+export const DEFAULT_ACTOR_SPRITE_FACING: ActorSpriteFacing = 'south';
+
 let currentMovementDurationMs = DEFAULT_ACTOR_MOVEMENT_DURATION_MS;
 
 export interface MovementWaypoint {
@@ -29,6 +39,9 @@ export interface ActorAnimationState {
   targetPos: Position;
   waypoints: MovementWaypoint[];
   lastStepEndTime: number;
+  // Facing derived from the last recorded step; used to pick the facing
+  // row of directional sprite packs (ActorSprite.facings).
+  facing?: ActorSpriteFacing;
   flashStartTime?: number;
   flashDurationMs?: number;
   attackStartTime?: number;
@@ -57,6 +70,22 @@ export const resetActorMovementDuration = (): void => {
 
 const easeInOutQuad = (t: number): number =>
   t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+// The facing the direction from one position to another points in, in
+// grid coordinates: east is +x, south is +y. Null when the positions are
+// identical.
+export const facingBetween = (
+  from: Position,
+  to: Position,
+): ActorSpriteFacing | null => {
+  const dx = Math.sign(to.x - from.x);
+  const dy = Math.sign(to.y - from.y);
+  if (dx === 0 && dy === 0) return null;
+  if (dy === 0) return dx > 0 ? 'east' : 'west';
+  if (dx === 0) return dy > 0 ? 'south' : 'north';
+  if (dx > 0) return dy > 0 ? 'southEast' : 'northEast';
+  return dy > 0 ? 'southWest' : 'northWest';
+};
 
 // Records a movement step for the actor's sprite animation. Returns true
 // when a step was actually queued (the target differs from the last
@@ -88,6 +117,11 @@ export const recordActorStep = (
 
   if (from.x === to.x && from.y === to.y) {
     return false;
+  }
+
+  const facing = facingBetween(from, to);
+  if (facing) {
+    state.facing = facing;
   }
 
   const startTime = Math.max(currentTime, state.lastStepEndTime);
@@ -339,6 +373,48 @@ export const getActorSpriteFrameDurationMs = (actor: Actor): number =>
     1,
     actor.sprite?.frameDurationMs ?? DEFAULT_ACTOR_SPRITE_FRAME_DURATION_MS,
   );
+
+// The actor's facing for directional sprites (ActorSprite.facings): the
+// direction of its last recorded step, defaulting to the viewer-facing
+// row until the actor first moves.
+export const getActorFacing = (actor: Actor): ActorSpriteFacing =>
+  actorAnimations.get(actor)?.facing ?? DEFAULT_ACTOR_SPRITE_FACING;
+
+// Turns the actor to face the given direction without recording a
+// movement — pure visual state for directional sprites (e.g. facing the
+// attack target before a swing).
+export const setActorFacing = (
+  actor: Actor,
+  facing: ActorSpriteFacing,
+  currentTime: number = Date.now(),
+): void => {
+  getOrCreateAnimationState(actor, currentTime).facing = facing;
+};
+
+// Row index of the actor's current facing in a directional sprite's
+// sheets; 0 for sprites without facings and for facings missing from the
+// configured row order.
+export const getActorSpriteFacingRow = (actor: Actor): number => {
+  const facings = actor.sprite?.facings;
+  if (!facings || facings.length === 0) return 0;
+  const row = facings.indexOf(getActorFacing(actor));
+  return row >= 0 ? row : 0;
+};
+
+// Natural duration of one pass over the actor's sprite animation (frame
+// count x frame duration), or the given default when the sprite declares
+// no frame count for the animation. Used to size one-shot animation
+// windows (attack, hurt, death) so a pack's full swing or collapse
+// actually plays instead of clipping after the hard-coded default.
+export const getActorSpriteAnimationDurationMs = (
+  actor: Actor,
+  animation: ActorAnimationName,
+  defaultMs: number,
+): number => {
+  const frames = actor.sprite?.animations?.[animation];
+  if (!frames || frames < 1) return defaultMs;
+  return frames * getActorSpriteFrameDurationMs(actor);
+};
 
 // Index of the frame to show within the animation's row: looping for
 // idle/walk, clipped to the last frame for attack/hurt/death.

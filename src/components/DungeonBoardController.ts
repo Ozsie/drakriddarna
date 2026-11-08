@@ -1933,9 +1933,26 @@ export class DungeonBoardController {
     canvas.style.height = `${String(String(String(height)))}px`;
     const ctx = canvas.getContext('2d', options);
     if (ctx) {
-      const origin = worldToScreen(
-        { x: 0, y: 0 },
-        this.cameraView(width, height),
+      // The actor layer is pixel art: its cached sprite frames upscale
+      // nearest-neighbour on high-DPI displays instead of the default
+      // smoothing that softens them. The other layers stay smoothed —
+      // lights and text are gradients and vector shapes.
+      if (canvas === this.actorCanvas) {
+        ctx.imageSmoothingEnabled = false;
+      }
+      const centerOffsetX = this.startPosition
+        ? (this.startPosition.x + 0.5) * this.cellSize
+        : 0;
+      const centerOffsetY = this.startPosition
+        ? (this.startPosition.y + 0.5) * this.cellSize
+        : 0;
+      ctx.setTransform(
+        ratio,
+        0,
+        0,
+        ratio,
+        ratio * (width / 2 + this.panX - centerOffsetX),
+        ratio * (height / 2 + this.panY - centerOffsetY),
       );
       ctx.setTransform(ratio, 0, 0, ratio, ratio * origin.x, ratio * origin.y);
       // Resizing a canvas clears it and this call re-applies the world

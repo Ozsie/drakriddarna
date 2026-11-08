@@ -5,15 +5,37 @@ import { isImageReady } from '../dungeon/TileTextureCache';
 
 const cachedImages = new Map<string, HTMLImageElement>();
 
+// Resolves content-relative asset paths ('characters/knight/Idle.png')
+// against the deployment's base path. Wired by the UI asset port
+// (src/ui/assets.ts) because core stays framework-agnostic; unset means
+// relative URLs resolve against the page URL (the pre-port behaviour).
+let relativeUrlResolver: ((url: string) => string) | null = null;
+
+export const setImageUrlResolver = (
+  resolver: ((url: string) => string) | null,
+): void => {
+  relativeUrlResolver = resolver;
+};
+
+// Only bare relative paths go through the resolver; rooted paths,
+// protocol URLs and data URLs pass through unchanged.
+const resolveUrl = (url: string): string => {
+  if (!url || url.startsWith('/') || /^[a-z][a-z0-9+.-]*:/i.test(url)) {
+    return url;
+  }
+  return relativeUrlResolver ? relativeUrlResolver(url) : url;
+};
+
 export const getCachedImage = (url: string): HTMLImageElement | null => {
   if (typeof Image === 'undefined') {
     return null;
   }
-  let image = cachedImages.get(url);
+  const resolved = resolveUrl(url);
+  let image = cachedImages.get(resolved);
   if (!image) {
     image = new Image();
-    image.src = url;
-    cachedImages.set(url, image);
+    image.src = resolved;
+    cachedImages.set(resolved, image);
   }
   return image;
 };

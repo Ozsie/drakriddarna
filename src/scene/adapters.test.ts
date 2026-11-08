@@ -1,9 +1,12 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   buildHeroViewModels,
   buildMonsterViewModels,
   buildHeroOverlayViewModel,
   buildItemViewModels,
+  drawActorViewSprite,
+  renderActorViewWithSprite,
+  type GameActorView,
 } from './adapters';
 import { clearActorAnimations, playActorDeath } from '../core';
 import { weapons } from '../items/weapons';
@@ -337,5 +340,94 @@ describe('buildItemViewModels', () => {
     );
 
     expect(views[0].label).toBe('Potion');
+  });
+});
+
+describe('scaled actor sprites', () => {
+  const scaledHero = (name: string, x: number, y: number): Hero => ({
+    ...hero(name, x, y),
+    sprite: {
+      frameWidth: 128,
+      frameHeight: 128,
+      frameDurationMs: 40,
+      animations: { idle: 15, walk: 15, attack: 15, hurt: 15, death: 15 },
+      animationImages: {
+        idle: 'characters/knight/Idle.png',
+        walk: 'characters/knight/Walk.png',
+        attack: 'characters/knight/Melee.png',
+        hurt: 'characters/knight/TakeDamage.png',
+        death: 'characters/knight/Die.png',
+      },
+      drawScale: 2,
+    },
+  });
+
+  it('carries the sprite draw scale on the view', () => {
+    const state = createState({ heroes: [scaledHero('Big', 2, 3)] });
+    const views = buildHeroViewModels(state, {} as CanvasImageSource, false);
+    expect((views[0] as GameActorView).spriteDraw).toEqual({ scale: 2 });
+  });
+
+  it('leaves views without a scaled sprite untouched', () => {
+    const state = createState({ heroes: [hero('Plain', 1, 1)] });
+    const views = buildHeroViewModels(state, {} as CanvasImageSource, false);
+    expect((views[0] as GameActorView).spriteDraw).toBeUndefined();
+  });
+
+  it('draws scaled sprites centered on the cell and anchored to its floor', () => {
+    const image = {} as CanvasImageSource;
+    const drawImage = vi.fn();
+    const ctx = { drawImage } as unknown as CanvasRenderingContext2D;
+    const view = {
+      position: { x: 3, y: 2 },
+      sprite: { image, sx: 100, sy: 200, sw: 70, sh: 70 },
+      tile: null,
+      flashIntensity: 0,
+      active: false,
+      colourBar: '',
+      healthBar: null,
+      debugLabel: null,
+      debugLines: [],
+      spriteDraw: { scale: 2 },
+    } as unknown as GameActorView;
+    const cellSize = 48;
+
+    drawActorViewSprite(ctx, view, cellSize);
+
+    expect(drawImage).toHaveBeenCalledTimes(1);
+    // 96px draw box centered on the 48px cell: (48-96)/2 = -24 offset;
+    // floor-anchored: the box bottom lands on the cell's bottom edge.
+    expect(drawImage).toHaveBeenCalledWith(
+      image,
+      100,
+      200,
+      70,
+      70,
+      3 * cellSize - 24,
+      (2 + 1) * cellSize - 96,
+      96,
+      96,
+    );
+  });
+
+  it('draws through the facade helper and strips the sprite for the package path', () => {
+    const drawImage = vi.fn();
+    const image = {} as CanvasImageSource;
+    const ctx = { drawImage } as unknown as CanvasRenderingContext2D;
+    const view = {
+      position: { x: 0, y: 0 },
+      sprite: { image, sx: 0, sy: 0, sw: 70, sh: 70 },
+      tile: null,
+      flashIntensity: 0,
+      active: false,
+      colourBar: '',
+      healthBar: null,
+      debugLabel: null,
+      debugLines: [],
+      spriteDraw: { scale: 2 },
+    } as unknown as GameActorView;
+
+    expect(renderActorViewWithSprite(ctx, view, 48)).toBe(false);
+    expect(drawImage).toHaveBeenCalledTimes(1);
   });
 });

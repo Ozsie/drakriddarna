@@ -2,6 +2,8 @@ import type {
   Shield,
   Armour,
   Actor,
+  ActorSprite,
+  ActorSpriteFacing,
   GameState,
   Hero,
   Monster,
@@ -72,6 +74,123 @@ import {
 import { COLLAPSED, EMPTY, WALL } from '../core';
 import { emitSoundCue, itemPickupScore } from '../core';
 
+// The knight character pack (static/characters/knight): one 1920x1024 PNG
+// per animation, 128px frames — 15 columns per row, one row per facing in
+// the order below (pack order: east first, sweeping clockwise to
+// north-east). All heroes share the one sprite; per-hero identity stays
+// the colour bar.
+const KNIGHT_SPRITE_FACINGS: ActorSpriteFacing[] = [
+  'east',
+  'southEast',
+  'south',
+  'southWest',
+  'west',
+  'northWest',
+  'north',
+  'northEast',
+];
+
+// Frames per facing in each of the pack's sheets.
+const KNIGHT_SPRITE_FRAMES_PER_ROW = 15;
+
+// 70px square of the 128px frames: the pack's 57-68px figures fill the
+// cell at pack scale (drawn into the full cell instead of the empty
+// frame padding that would shrink them to half the cell).
+const KNIGHT_SPRITE_CROP_SIZE = 70;
+
+// Source window per animation and facing, measured from the pack's frame
+// content: horizontally centred on each facing's median silhouette,
+// bottom-anchored at its 90th-percentile feet line so the stance stands
+// on the cell floor. Extreme weapon sweeps and collapse poses extend
+// past the window and clip at the cell edge, which reads as part of the
+// motion rather than shrinking the figure.
+const KNIGHT_SPRITE_CROPS: Record<
+  'idle' | 'walk' | 'attack' | 'hurt' | 'death',
+  Partial<Record<ActorSpriteFacing, { x: number; y: number; size: number }>>
+> = {
+  idle: {
+    east: { x: 33, y: 37, size: KNIGHT_SPRITE_CROP_SIZE },
+    southEast: { x: 31, y: 40, size: KNIGHT_SPRITE_CROP_SIZE },
+    south: { x: 25, y: 39, size: KNIGHT_SPRITE_CROP_SIZE },
+    southWest: { x: 21, y: 38, size: KNIGHT_SPRITE_CROP_SIZE },
+    west: { x: 26, y: 29, size: KNIGHT_SPRITE_CROP_SIZE },
+    northWest: { x: 29, y: 27, size: KNIGHT_SPRITE_CROP_SIZE },
+    north: { x: 35, y: 33, size: KNIGHT_SPRITE_CROP_SIZE },
+    northEast: { x: 38, y: 37, size: KNIGHT_SPRITE_CROP_SIZE },
+  },
+  walk: {
+    east: { x: 38, y: 36, size: KNIGHT_SPRITE_CROP_SIZE },
+    southEast: { x: 33, y: 37, size: KNIGHT_SPRITE_CROP_SIZE },
+    south: { x: 29, y: 41, size: KNIGHT_SPRITE_CROP_SIZE },
+    southWest: { x: 21, y: 40, size: KNIGHT_SPRITE_CROP_SIZE },
+    west: { x: 22, y: 36, size: KNIGHT_SPRITE_CROP_SIZE },
+    northWest: { x: 27, y: 32, size: KNIGHT_SPRITE_CROP_SIZE },
+    north: { x: 31, y: 32, size: KNIGHT_SPRITE_CROP_SIZE },
+    northEast: { x: 37, y: 35, size: KNIGHT_SPRITE_CROP_SIZE },
+  },
+  attack: {
+    east: { x: 47, y: 45, size: KNIGHT_SPRITE_CROP_SIZE },
+    southEast: { x: 42, y: 52, size: KNIGHT_SPRITE_CROP_SIZE },
+    south: { x: 26, y: 58, size: KNIGHT_SPRITE_CROP_SIZE },
+    southWest: { x: 11, y: 56, size: KNIGHT_SPRITE_CROP_SIZE },
+    west: { x: 14, y: 45, size: KNIGHT_SPRITE_CROP_SIZE },
+    northWest: { x: 17, y: 33, size: KNIGHT_SPRITE_CROP_SIZE },
+    north: { x: 32, y: 33, size: KNIGHT_SPRITE_CROP_SIZE },
+    northEast: { x: 49, y: 41, size: KNIGHT_SPRITE_CROP_SIZE },
+  },
+  hurt: {
+    east: { x: 30, y: 45, size: KNIGHT_SPRITE_CROP_SIZE },
+    southEast: { x: 27, y: 40, size: KNIGHT_SPRITE_CROP_SIZE },
+    south: { x: 22, y: 40, size: KNIGHT_SPRITE_CROP_SIZE },
+    southWest: { x: 22, y: 37, size: KNIGHT_SPRITE_CROP_SIZE },
+    west: { x: 29, y: 32, size: KNIGHT_SPRITE_CROP_SIZE },
+    northWest: { x: 33, y: 32, size: KNIGHT_SPRITE_CROP_SIZE },
+    north: { x: 37, y: 41, size: KNIGHT_SPRITE_CROP_SIZE },
+    northEast: { x: 38, y: 45, size: KNIGHT_SPRITE_CROP_SIZE },
+  },
+  death: {
+    east: { x: 43, y: 44, size: KNIGHT_SPRITE_CROP_SIZE },
+    southEast: { x: 36, y: 58, size: KNIGHT_SPRITE_CROP_SIZE },
+    south: { x: 29, y: 58, size: KNIGHT_SPRITE_CROP_SIZE },
+    southWest: { x: 17, y: 52, size: KNIGHT_SPRITE_CROP_SIZE },
+    west: { x: 14, y: 43, size: KNIGHT_SPRITE_CROP_SIZE },
+    northWest: { x: 23, y: 43, size: KNIGHT_SPRITE_CROP_SIZE },
+    north: { x: 28, y: 46, size: KNIGHT_SPRITE_CROP_SIZE },
+    northEast: { x: 40, y: 43, size: KNIGHT_SPRITE_CROP_SIZE },
+  },
+};
+
+// 15 frames x 40ms = 600ms per pass: one walk cycle per grid step at the
+// default step duration, and full attack/hurt/death swings inside the
+// one-shot windows derived from the same numbers.
+const KNIGHT_SPRITE_FRAME_DURATION_MS = 40;
+
+// Shared and frozen: the sprite is content data, never mutated per hero.
+const knightSprite: ActorSprite = Object.freeze({
+  frameWidth: 128,
+  frameHeight: 128,
+  frameDurationMs: KNIGHT_SPRITE_FRAME_DURATION_MS,
+  animations: {
+    idle: KNIGHT_SPRITE_FRAMES_PER_ROW,
+    walk: KNIGHT_SPRITE_FRAMES_PER_ROW,
+    attack: KNIGHT_SPRITE_FRAMES_PER_ROW,
+    hurt: KNIGHT_SPRITE_FRAMES_PER_ROW,
+    death: KNIGHT_SPRITE_FRAMES_PER_ROW,
+  },
+  animationImages: {
+    idle: 'characters/knight/Idle.png',
+    walk: 'characters/knight/Walk.png',
+    attack: 'characters/knight/Melee.png',
+    hurt: 'characters/knight/TakeDamage.png',
+    death: 'characters/knight/Die.png',
+  },
+  facings: KNIGHT_SPRITE_FACINGS,
+  frameCrops: KNIGHT_SPRITE_CROPS,
+  // Two cells tall: the pack's figures read as heroes rather than tokens
+  // on a board, towering into the cell above (anchored to the floor).
+  drawScale: 1.2,
+});
+
 export const newHero = (
   name: string,
   colour: Colour,
@@ -109,6 +228,7 @@ export const newHero = (
     walkSound: 'sfx/walk_knight.wav',
     hurtSound: 'sfx/hurt_knight.wav',
     deathSound: 'sfx/die_knight.wav',
+    sprite: knightSprite,
   };
 };
 

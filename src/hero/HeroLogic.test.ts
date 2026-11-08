@@ -1017,3 +1017,63 @@ describe('door opening from the front squares', () => {
     expect(door.open).toBe(true);
   });
 });
+
+describe('knight hero sprite', () => {
+  const ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'death'] as const;
+  const FACINGS = [
+    'east',
+    'southEast',
+    'south',
+    'southWest',
+    'west',
+    'northWest',
+    'north',
+    'northEast',
+  ] as const;
+
+  const sprite = () => newHero('SpriteHero', Colour.Red).sprite;
+
+  it('gives every hero a per-animation directional pack sprite', () => {
+    const s = sprite();
+    expect(s).toBeDefined();
+    expect(s?.frameWidth).toBe(128);
+    expect(s?.frameHeight).toBe(128);
+    expect(s?.facings).toEqual(FACINGS);
+    expect(s?.drawScale).toBe(2);
+    ANIMATIONS.forEach((animation) => {
+      expect(s?.animationImages?.[animation]).toMatch(/\.png$/);
+    });
+  });
+
+  it('declares a frame window for every animation and facing', () => {
+    const s = sprite();
+    ANIMATIONS.forEach((animation) => {
+      const crops = s?.frameCrops?.[animation];
+      FACINGS.forEach((facing) => {
+        expect(crops?.[facing], `${animation}/${facing}`).toBeDefined();
+      });
+    });
+  });
+
+  it('keeps every frame window square and inside the frame', () => {
+    const s = sprite();
+    ANIMATIONS.forEach((animation) => {
+      FACINGS.forEach((facing) => {
+        const crop = s?.frameCrops?.[animation]?.[facing];
+        if (!crop) return;
+        expect(crop.size).toBeGreaterThan(0);
+        expect(crop.x).toBeGreaterThanOrEqual(0);
+        expect(crop.y).toBeGreaterThanOrEqual(0);
+        expect(crop.x + crop.size).toBeLessThanOrEqual(s?.frameWidth ?? 128);
+        expect(crop.y + crop.size).toBeLessThanOrEqual(s?.frameHeight ?? 128);
+      });
+    });
+  });
+
+  it('times one-shot animations consistently with the declared frame counts', () => {
+    const s = sprite();
+    expect(s?.frameDurationMs).toBe(40);
+    expect((s?.animations?.attack ?? 0) * (s?.frameDurationMs ?? 0)).toBe(600);
+    expect((s?.animations?.death ?? 0) * (s?.frameDurationMs ?? 0)).toBe(600);
+  });
+});

@@ -1,6 +1,8 @@
 import type { GameState } from '../types';
-import { buildMonsterViewModels } from '../scene/adapters';
-import { renderActorView } from '@hoard-engine/scene';
+import {
+  buildMonsterViewModels,
+  renderActorViewWithSprite,
+} from '../scene/adapters';
 
 // Facade over the view-model renderer: the historical entry point keeps
 // its GameState signature (callers and tests unchanged), resolves the
@@ -18,7 +20,8 @@ export const renderMonsters = (
   const views = buildMonsterViewModels(state, actors, debugMode, currentTime);
   let hasActiveAnimation = false;
   views.forEach((view) => {
-    if (renderActorView(ctx, view, cellSize)) hasActiveAnimation = true;
+    if (renderActorViewWithSprite(ctx, view, cellSize))
+      hasActiveAnimation = true;
   });
   return hasActiveAnimation;
 };

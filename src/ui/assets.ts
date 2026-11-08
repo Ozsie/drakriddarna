@@ -3,9 +3,16 @@
 // owns the URL construction (and, in M5, the $lib sprite imports).
 
 import { asset } from '$app/paths';
-import { getReadyImage } from '../core/ImageCache';
+import type { AssetPath } from '$app/types';
+import { getReadyImage, setImageUrlResolver } from '../core/ImageCache';
 import type { AssetProvider } from '@hoard-engine/uikit';
 import type { AssetPath } from '$app/types';
+
+// Content sprite sheets (actor sprites like the knight pack, item sheets)
+// reference their images by bare asset paths; wire the shared image
+// cache to resolve those against the deployment's base path. Rooted and
+// protocol URLs pass through the cache untouched.
+setImageUrlResolver((path) => asset(path as AssetPath));
 
 export const AssetId = {
   /** The welcome screen background art. */

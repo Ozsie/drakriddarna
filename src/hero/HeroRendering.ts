@@ -1,9 +1,10 @@
 import type { GameState } from '../types';
 import type { SceneActorView, SceneHeroOverlayView } from '@hoard-engine/scene';
-import { renderActorView, renderHeroOverlay } from '@hoard-engine/scene';
+import { renderHeroOverlay } from '@hoard-engine/scene';
 import {
   buildHeroOverlayViewModel,
   buildHeroViewModels,
+  renderActorViewWithSprite,
 } from '../scene/adapters';
 
 // Facades over the view-model renderers: the historical entry points
@@ -20,9 +21,15 @@ export const renderHeroes = (
   currentTime: number = Date.now(),
 ): boolean => {
   const views = buildHeroViewModels(state, actors, debugMode, currentTime);
+  // Sprites taller than a cell overlap the actor on the cell above, so
+  // heroes draw in row order: a southerly hero's head correctly covers
+  // the hero standing north of them.
+  views.sort((a, b) => a.position.y - b.position.y);
   let hasActiveAnimation = false;
   views.forEach((view: SceneActorView) => {
-    if (renderActorView(ctx, view, cellSize)) hasActiveAnimation = true;
+    if (renderActorViewWithSprite(ctx, view, cellSize)) {
+      hasActiveAnimation = true;
+    }
   });
   return hasActiveAnimation;
 };

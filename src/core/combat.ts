@@ -13,7 +13,16 @@ import { Colour, ItemType, Level } from '../types';
 import { roll } from './dice';
 import { addLog, i18n } from './logger';
 import { getDifficulty } from './DifficultLevels';
-import { flashActor, playActorAttack, playActorDeath } from './ActorAnimation';
+import {
+  DEFAULT_ACTOR_ATTACK_ANIMATION_MS,
+  DEFAULT_ACTOR_DEATH_ANIMATION_MS,
+  facingBetween,
+  flashActor,
+  getActorSpriteAnimationDurationMs,
+  playActorAttack,
+  playActorDeath,
+  setActorFacing,
+} from './ActorAnimation';
 import { createBloodSplatter, createProjectile } from '../combat';
 import { emitSoundCue } from './soundCues';
 import { resolveDirectorHook } from '@hoard-engine/directors';
@@ -120,7 +129,14 @@ export const processActorDowned = (
 ): void => {
   target.health = 0;
   target.level = Level.APPRENTICE;
-  playActorDeath(target);
+  playActorDeath(
+    target,
+    getActorSpriteAnimationDurationMs(
+      target,
+      'death',
+      DEFAULT_ACTOR_DEATH_ANIMATION_MS,
+    ),
+  );
   if (state.heroes.includes(target)) {
     dropSecretRevealItems(state, target as Hero);
     const gm = getDifficulty(state);
@@ -267,7 +283,24 @@ export const takeDamage = (
     weapon = source.rangedWeapon;
   }
   emitSoundCue(state, { cue: 'weaponAttack', weapon });
-  playActorAttack(source);
+  // Face the target for the swing: pure sprite state (actors without a
+  // directional sprite ignore it), so the knight's Melee row matches the
+  // direction of the attack.
+  const attackFacing =
+    source.position && target.position
+      ? facingBetween(source.position, target.position)
+      : null;
+  if (attackFacing) {
+    setActorFacing(source, attackFacing);
+  }
+  playActorAttack(
+    source,
+    getActorSpriteAnimationDurationMs(
+      source,
+      'attack',
+      DEFAULT_ACTOR_ATTACK_ANIMATION_MS,
+    ),
+  );
   const isHeroSource = state.heroes.includes(source);
   const isHeroTarget = state.heroes.includes(target);
   if (isHeroSource && !isHeroTarget) {
@@ -382,7 +415,11 @@ export const takeDamage = (
     impactTime = now + (projectile.durationMs ?? 200);
   }
 
-  flashActor(target, 200, impactTime);
+  flashActor(
+    target,
+    getActorSpriteAnimationDurationMs(target, 'hurt', 200),
+    impactTime,
+  );
 
   if (target.position) {
     if (damage > 0) {

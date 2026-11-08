@@ -17,9 +17,11 @@ import type {
 } from '../types';
 import { MonsterType, TerrainType } from '../types';
 import {
+  getActorFacing,
   getActorFlashIntensity,
   getActorAnimationFrameIndex,
   getActorAnimationName,
+  getActorSpriteFacingRow,
   getActorVisualPosition,
   getDyingActors,
   hasLineOfSight,
@@ -44,6 +46,7 @@ import { ACTOR_TILES, ITEM_TILES, type TileRef } from '../dungeon/tiles';
 import {
   TERRAIN_OVERLAY,
   getSpriteSourceRect,
+  renderActorView,
   type SceneActorView,
   type SceneCorner,
   type SceneDungeonView,
@@ -238,10 +241,44 @@ const getActorSpriteFrame = (
 ): SceneSpriteFrame | null => {
   const sprite = actor.sprite;
   if (!sprite) return null;
-  const image = getReadyImage(sprite.image);
-  if (!image) return null;
   const animation = getActorAnimationName(actor, currentTime);
   const configured = sprite.animations?.[animation];
+  // Per-animation pack model (ActorSprite.animationImages): one sheet per
+  // animation, one row per facing in ActorSprite.facings order.
+  const animationImage = sprite.animationImages?.[animation];
+  if (animationImage) {
+    const image = getReadyImage(animationImage);
+    if (!image) return null;
+    const frameCount =
+      configured !== undefined
+        ? Math.max(1, configured)
+        : Math.max(
+            1,
+            Math.floor((image.naturalWidth || image.width) / sprite.frameWidth),
+          );
+    const frameIndex = getActorAnimationFrameIndex(
+      actor,
+      animation,
+      frameCount,
+      currentTime,
+    );
+    const frameX = frameIndex * sprite.frameWidth;
+    const frameY = getActorSpriteFacingRow(actor) * sprite.frameHeight;
+    // Packs whose figures occupy only part of each frame declare a
+    // per-facing source window so the figure fills the cell.
+    const crop = sprite.frameCrops?.[animation]?.[getActorFacing(actor)];
+    return {
+      image,
+      sx: frameX + (crop?.x ?? 0),
+      sy: frameY + (crop?.y ?? 0),
+      sw: crop?.size ?? sprite.frameWidth,
+      sh: crop?.size ?? sprite.frameHeight,
+    };
+  }
+  // Shared-sheet model: one row per animation in ACTOR_SPRITE_ANIMATION_ORDER.
+  if (!sprite.image) return null;
+  const image = getReadyImage(sprite.image);
+  if (!image) return null;
   const frameCount =
     configured !== undefined
       ? Math.max(1, configured)
@@ -363,15 +400,27 @@ const debugLabelFor = (
   debugMode: boolean,
 ): string | null => (debugMode ? `(${x},${y})` : null);
 
+// An actor view plus the game-side sprite drawing demand: when an actor's
+// sprite declares a drawScale (ActorSprite.drawScale), the game facades
+// draw the frame themselves and hand the package a sprite-less view for
+// the flash/bars; the scene package's own sprite path always draws into
+// exactly one cell.
+export type GameActorView = SceneActorView & {
+  spriteDraw?: { scale: number };
+};
+
 const toActorView = (
   actor: Actor,
   tile: SceneTileFrame | null,
   showDebugLabel: boolean,
   currentTime: number,
   bars: Pick<SceneActorView, 'colourBar' | 'healthBar'>,
-): SceneActorView => ({
+): GameActorView => ({
   position: getActorVisualPosition(actor, currentTime),
   sprite: getActorSpriteFrame(actor, currentTime),
+  ...(actor.sprite?.drawScale && actor.sprite.drawScale > 1
+    ? { spriteDraw: { scale: actor.sprite.drawScale } }
+    : {}),
   tile,
   flashIntensity: getActorFlashIntensity(actor, currentTime),
   active:
@@ -384,6 +433,51 @@ const toActorView = (
     : null,
   debugLines: [],
 });
+
+// Draws the view's sprite frame at its declared scale: horizontally
+// centered on the actor's cell and anchored to the cell floor, so scales
+// above 1 tower into the cells above without sinking into the ground or
+// sliding sideways. Crop windows are bottom-aligned to the feet, which
+// makes the floor anchor correct.
+export const drawActorViewSprite = (
+  ctx: CanvasRenderingContext2D,
+  view: SceneActorView,
+  cellSize: number,
+): void => {
+  const frame = view.sprite;
+  if (!frame) return;
+  const scale = (view as GameActorView).spriteDraw?.scale ?? 1;
+  const size = cellSize * scale;
+  const dx = view.position.x * cellSize + (cellSize - size) / 2;
+  const dy = (view.position.y + 1) * cellSize - size;
+  ctx.drawImage(
+    frame.image,
+    frame.sx,
+    frame.sy,
+    frame.sw,
+    frame.sh,
+    dx,
+    dy,
+    size,
+    size,
+  );
+};
+
+// One actor view drawn through both paths: the game-side scaled sprite
+// when the view carries a draw scale (the scene package's sprite path
+// always draws into exactly one cell), then the package's own flash,
+// bars and debug extras.
+export const renderActorViewWithSprite = (
+  ctx: CanvasRenderingContext2D,
+  view: SceneActorView,
+  cellSize: number,
+): boolean => {
+  if ((view as GameActorView).spriteDraw) {
+    drawActorViewSprite(ctx, view, cellSize);
+    return renderActorView(ctx, { ...view, sprite: null }, cellSize);
+  }
+  return renderActorView(ctx, view, cellSize);
+};
 
 // Hero views for the actor layer: the live heroes, plus dead heroes that
 // still carry a sprite while their death animation plays (sprite-less

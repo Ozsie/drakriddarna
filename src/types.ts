@@ -267,17 +267,72 @@ export type ItemSprite = {
   index: number;
 };
 
+// The facings a directional sprite pack carries, one sheet row each:
+// 'east' is the +x grid direction, 'south' the +y grid direction
+// (towards the viewer), the diagonals the 45-degree turns between them.
+export type ActorSpriteFacing =
+  | 'east'
+  | 'southEast'
+  | 'south'
+  | 'southWest'
+  | 'west'
+  | 'northWest'
+  | 'north'
+  | 'northEast';
+
+// A square window inside a sprite frame, in frame-local pixels. The
+// renderer draws the window (instead of the full frame) scaled into the
+// cell, so a pack whose figure occupies only part of each frame still
+// fills the cell; destination cells are square, so non-square windows
+// would distort the figure.
+export type ActorSpriteFrameCrop = {
+  x: number;
+  y: number;
+  size: number;
+};
+
 export type ActorSprite = {
-  // URL of the sprite sheet: one row per animation, in the order defined by
-  // ACTOR_SPRITE_ANIMATION_ORDER in src/core/ActorAnimation.ts
-  // (idle, walk, attack, hurt, death), frames laid out horizontally.
-  image: string;
+  // URL of the shared sprite sheet, if the sprite uses one: one row per
+  // animation, in the order defined by ACTOR_SPRITE_ANIMATION_ORDER in
+  // src/core/ActorAnimation.ts (idle, walk, attack, hurt, death), frames
+  // laid out horizontally. Optional when `animationImages` carries every
+  // animation (the per-animation-pack model below).
+  image?: string;
   frameWidth: number;
   frameHeight: number;
   frameDurationMs?: number;
   // Optional explicit frame counts per animation; when omitted, the count is
-  // derived from the image width divided by frameWidth.
+  // derived from the image width divided by frameWidth. One-shot animation
+  // windows are derived from these (see getActorSpriteAnimationDurationMs in
+  // src/core/ActorAnimation.ts), so packs that time their one-shots by
+  // geometry declare them even when the layout also implies them.
   animations?: Partial<Record<ActorAnimationName, number>>;
+  // Optional per-animation sheet URLs (character packs like
+  // static/characters/knight): each sheet holds a single animation's
+  // frames, one row per facing in `facings` order, and takes precedence
+  // over that animation's row in the shared sheet. Frame counts still
+  // come from `animations` or the image width.
+  animationImages?: Partial<Record<ActorAnimationName, string>>;
+  // The order of the facing rows in the sheets; set only for directional
+  // sprites. The actor's facing is the direction of its last step
+  // (recordActorStep in src/core/ActorAnimation.ts), defaulting to
+  // DEFAULT_ACTOR_SPRITE_FACING until it first moves.
+  facings?: ActorSpriteFacing[];
+  // How many cells wide/tall the sprite draws (default 1). Scales above
+  // 1 draw the frame centered on the cell and anchored to the cell floor
+  // (knights with drawScale 2 tower into the cells above them), so a
+  // pack's figure can be larger than one cell.
+  drawScale?: number;
+  // Optional per-animation, per-facing source windows (frameCrops draw
+  // the figure at pack scale): meaured from the pack's frames so every
+  // facing's stance fills the cell the same way. Missing entries fall
+  // back to the full frame.
+  frameCrops?: Partial<
+    Record<
+      ActorAnimationName,
+      Partial<Record<ActorSpriteFacing, ActorSpriteFrameCrop>>
+    >
+  >;
 };
 
 export type Campaign = {

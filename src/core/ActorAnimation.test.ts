@@ -16,10 +16,16 @@ import {
   isActorSpriteAnimationActive,
   getActorAnimationName,
   getActorAnimationFrameIndex,
+  getActorFacing,
+  getActorSpriteFacingRow,
+  getActorSpriteAnimationDurationMs,
+  setActorFacing,
+  facingBetween,
   getDyingActors,
   DEFAULT_ACTOR_MOVEMENT_DURATION_MS,
+  DEFAULT_ACTOR_SPRITE_FACING,
 } from './ActorAnimation';
-import type { Actor } from '../types';
+import type { Actor, ActorSprite, ActorSpriteFacing } from '../types';
 import { Colour, Level } from '../types';
 import { weapons } from '../items/weapons';
 
@@ -297,5 +303,150 @@ describe('Actor Sprite Animations', () => {
     playActorDeath(actor, 600, 1000);
     playActorDeath(actor, 600, 1100);
     expect(getDyingActors(1200).length).toBe(1);
+  });
+});
+
+describe('Actor Sprite Facings', () => {
+  beforeEach(() => {
+    clearActorAnimations();
+    resetActorMovementDuration();
+  });
+
+  const KNIGHT_FACINGS: ActorSpriteFacing[] = [
+    'east',
+    'southEast',
+    'south',
+    'southWest',
+    'west',
+    'northWest',
+    'north',
+    'northEast',
+  ];
+
+  const createDirectionalActor = (): Actor => {
+    const actor = createMockActor('Knight', 1, 1);
+    const sprite: ActorSprite = {
+      frameWidth: 128,
+      frameHeight: 128,
+      frameDurationMs: 40,
+      animations: { idle: 15, walk: 15, attack: 15, hurt: 15, death: 15 },
+      animationImages: {
+        idle: 'characters/knight/Idle.png',
+        walk: 'characters/knight/Walk.png',
+        attack: 'characters/knight/Melee.png',
+        hurt: 'characters/knight/TakeDamage.png',
+        death: 'characters/knight/Die.png',
+      },
+      facings: KNIGHT_FACINGS,
+    };
+    actor.sprite = sprite;
+    return actor;
+  };
+
+  it('defaults the facing to the viewer-facing row', () => {
+    const actor = createDirectionalActor();
+    expect(getActorFacing(actor)).toBe(DEFAULT_ACTOR_SPRITE_FACING);
+    expect(DEFAULT_ACTOR_SPRITE_FACING).toBe('south');
+    expect(getActorSpriteFacingRow(actor)).toBe(2);
+  });
+
+  it('tracks the facing of the last recorded step', () => {
+    const actor = createDirectionalActor();
+    recordActorStep(actor, { x: 2, y: 1 }, 200, 1000);
+    expect(getActorFacing(actor)).toBe('east');
+    expect(getActorSpriteFacingRow(actor)).toBe(0);
+
+    recordActorStep(actor, { x: 2, y: 2 }, 200, 1200);
+    expect(getActorFacing(actor)).toBe('south');
+    expect(getActorSpriteFacingRow(actor)).toBe(2);
+
+    recordActorStep(actor, { x: 3, y: 2 }, 200, 1400);
+    expect(getActorFacing(actor)).toBe('east');
+    expect(getActorSpriteFacingRow(actor)).toBe(0);
+  });
+
+  it('tracks diagonal facings', () => {
+    const actor = createDirectionalActor();
+    recordActorStep(actor, { x: 0, y: 0 }, 200, 1000);
+    expect(getActorFacing(actor)).toBe('northWest');
+    expect(getActorSpriteFacingRow(actor)).toBe(5);
+
+    recordActorStep(actor, { x: 1, y: 1 }, 200, 1200);
+    expect(getActorFacing(actor)).toBe('southEast');
+    expect(getActorSpriteFacingRow(actor)).toBe(1);
+
+    recordActorStep(actor, { x: 0, y: 2 }, 200, 1400);
+    expect(getActorFacing(actor)).toBe('southWest');
+    expect(getActorSpriteFacingRow(actor)).toBe(3);
+
+    recordActorStep(actor, { x: 1, y: 0 }, 200, 1600);
+    expect(getActorFacing(actor)).toBe('northEast');
+    expect(getActorSpriteFacingRow(actor)).toBe(7);
+  });
+
+  it('keeps the row at 0 for sprites without facings', () => {
+    const actor = createMockActor('PlainActor', 1, 1);
+    actor.sprite = { image: 'sheet.png', frameWidth: 32, frameHeight: 32 };
+    recordActorStep(actor, { x: 0, y: 0 }, 200, 1000);
+    expect(getActorSpriteFacingRow(actor)).toBe(0);
+  });
+
+  it('falls back to row 0 for facings missing from the row order', () => {
+    const actor = createMockActor('PartialPackActor', 1, 1);
+    actor.sprite = {
+      frameWidth: 128,
+      frameHeight: 128,
+      facings: ['east', 'west'],
+    };
+    recordActorStep(actor, { x: 1, y: 2 }, 200, 1000);
+    expect(getActorFacing(actor)).toBe('south');
+    expect(getActorSpriteFacingRow(actor)).toBe(0);
+  });
+
+  it('faces a target without recording movement', () => {
+    const actor = createDirectionalActor();
+    setActorFacing(
+      actor,
+      facingBetween({ x: 1, y: 1 }, { x: 3, y: 2 }) ?? 'south',
+    );
+    expect(getActorFacing(actor)).toBe('southEast');
+    expect(getActorSpriteFacingRow(actor)).toBe(1);
+    // Pure visual state: no waypoints, no walk animation.
+    expect(isActorAnimating(actor, 1000)).toBe(false);
+  });
+});
+
+describe('Actor Sprite Animation Durations', () => {
+  beforeEach(() => {
+    clearActorAnimations();
+  });
+
+  it('derives the duration from the declared frame count and frame duration', () => {
+    const actor = createMockActor('Knight', 1, 1);
+    actor.sprite = {
+      frameWidth: 128,
+      frameHeight: 128,
+      frameDurationMs: 40,
+      animations: { attack: 15, hurt: 15 },
+    };
+    expect(getActorSpriteAnimationDurationMs(actor, 'attack', 300)).toBe(600);
+    expect(getActorSpriteAnimationDurationMs(actor, 'hurt', 200)).toBe(600);
+  });
+
+  it('returns the default for animations without a declared frame count', () => {
+    const actor = createMockActor('SparseSpriteActor', 1, 1);
+    actor.sprite = {
+      frameWidth: 32,
+      frameHeight: 32,
+      frameDurationMs: 150,
+      animations: { walk: 4 },
+    };
+    expect(getActorSpriteAnimationDurationMs(actor, 'death', 600)).toBe(600);
+    expect(getActorSpriteAnimationDurationMs(actor, 'walk', 300)).toBe(600);
+  });
+
+  it('returns the default for actors without a sprite', () => {
+    const actor = createMockActor('PlainActor', 1, 1);
+    expect(getActorSpriteAnimationDurationMs(actor, 'attack', 300)).toBe(300);
   });
 });
