@@ -21,6 +21,7 @@ import {
   isSamePosition,
 } from '../core';
 import {
+  heroSpriteForIndex,
   levelUp,
   liveHeroes,
   newHero,
@@ -80,6 +81,10 @@ export const interactableEffects: Record<string, InteractableEffectHandler> = {
       const heroColour =
         (args.colour as Colour) ?? (args.color as Colour) ?? Colour.Yellow;
       heroToAdd = newHero(heroName, heroColour, getDifficulty(state));
+      // A hero joining mid-game continues the party's sprite rotation
+      // from the party's current size. Object heroes (args.hero) keep
+      // whatever sprite they were authored with.
+      heroToAdd.sprite = heroSpriteForIndex(state.heroes.length);
     }
 
     const targetPos: Position = (args.position as Position) ?? {

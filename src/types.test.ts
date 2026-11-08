@@ -65,8 +65,13 @@ describe('Type Safety & Domain Modeling', () => {
     });
 
     it('createMonster leaves the sprite undefined without a template sprite', () => {
-      const orc = createMonster(MonsterType.ORC, Colour.Green, 2, 3);
-      expect(orc.sprite).toBeUndefined();
+      const spriteless = createMonster(
+        'Spriteless Test Type',
+        Colour.Green,
+        2,
+        3,
+      );
+      expect(spriteless.sprite).toBeUndefined();
     });
   });
 

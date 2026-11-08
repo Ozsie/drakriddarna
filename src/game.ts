@@ -11,6 +11,7 @@ import {
 
 import {
   applyStartingEquipment,
+  assignHeroSprites,
   liveHeroes,
   replaceDeadHeroes,
   resetLiveHeroes,
@@ -119,6 +120,9 @@ export const init = (
   if (heroes && heroes.length > 0) {
     campaign.heroes = heroes;
   }
+  // Party sprites are position-based, not roster-fixed: whatever subset
+  // the hero selection screen sends plays the rotation's packs in turn.
+  assignHeroSprites(campaign.heroes as Hero[]);
   const selectedGameMaster = getGameMaster(gameMasterId);
 
   let dungeonEvents = getEventsForDungeon(

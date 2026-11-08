@@ -22,6 +22,9 @@ import {
   canOpenDoor,
   newHero,
   applyStartingEquipment,
+  assignHeroSprites,
+  heroSpriteForIndex,
+  HERO_SPRITE_PACKS,
   resetLiveHeroes,
   replaceDeadHeroes,
   openDoorAtHero,
@@ -38,6 +41,8 @@ import { shields } from '../items/shields';
 import { armour } from '../items/armours';
 import type { Door } from '../types';
 import { Side } from '../types';
+import { getActorFacing } from '../core';
+import { openDoor } from './HeroLogic';
 
 const chaosSwordWeapon: Weapon = {
   id: 'sword_of_chaos',
@@ -1015,5 +1020,202 @@ describe('door opening from the front squares', () => {
     openDoorAtHero(state, hero, hero.position, door);
 
     expect(door.open).toBe(true);
+  });
+});
+
+describe('knight hero sprite', () => {
+  const ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'death'] as const;
+  const FACINGS = [
+    'east',
+    'southEast',
+    'south',
+    'southWest',
+    'west',
+    'northWest',
+    'north',
+    'northEast',
+  ] as const;
+
+  const sprite = () => newHero('SpriteHero', Colour.Red).sprite;
+
+  it('gives every hero a per-animation directional pack sprite', () => {
+    const s = sprite();
+    expect(s).toBeDefined();
+    expect(s?.frameWidth).toBe(128);
+    expect(s?.frameHeight).toBe(128);
+    expect(s?.facings).toEqual(FACINGS);
+    expect(s?.drawScale).toBeGreaterThan(1);
+    ANIMATIONS.forEach((animation) => {
+      expect(s?.animationImages?.[animation]).toMatch(/\.png$/);
+    });
+  });
+
+  it('declares a frame window for every animation and facing', () => {
+    const s = sprite();
+    ANIMATIONS.forEach((animation) => {
+      const crops = s?.frameCrops?.[animation];
+      FACINGS.forEach((facing) => {
+        expect(crops?.[facing], `${animation}/${facing}`).toBeDefined();
+      });
+    });
+  });
+
+  it('keeps every frame window square and inside the frame', () => {
+    const s = sprite();
+    ANIMATIONS.forEach((animation) => {
+      FACINGS.forEach((facing) => {
+        const crop = s?.frameCrops?.[animation]?.[facing];
+        if (!crop) return;
+        expect(crop.size).toBeGreaterThan(0);
+        expect(crop.x).toBeGreaterThanOrEqual(0);
+        expect(crop.y).toBeGreaterThanOrEqual(0);
+        expect(crop.x + crop.size).toBeLessThanOrEqual(s?.frameWidth ?? 128);
+        expect(crop.y + crop.size).toBeLessThanOrEqual(s?.frameHeight ?? 128);
+      });
+    });
+  });
+
+  it('times one-shot animations consistently with the declared frame counts', () => {
+    const s = sprite();
+    expect(s?.frameDurationMs).toBe(65);
+    expect((s?.animations?.attack ?? 0) * (s?.frameDurationMs ?? 0)).toBe(975);
+    expect((s?.animations?.death ?? 0) * (s?.frameDurationMs ?? 0)).toBe(975);
+  });
+});
+
+describe('hero sprite rotation', () => {
+  const ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'death'] as const;
+  const FACINGS = [
+    'east',
+    'southEast',
+    'south',
+    'southWest',
+    'west',
+    'northWest',
+    'north',
+    'northEast',
+  ] as const;
+
+  const partyOf = (count: number): Hero[] =>
+    Array.from({ length: count }, (_, i) => newHero(`Hero ${i}`, Colour.Red));
+
+  it('hands out the packs in order paladin, nomad, knight, witch doctor and starts over', () => {
+    const heroes = partyOf(5);
+    assignHeroSprites(heroes);
+    const expectedIdle = [
+      'characters/paladin/Idle.png',
+      'characters/nomad/Idle.png',
+      'characters/knight/Idle.png',
+      'characters/witchDoctor/Idle.png',
+      'characters/paladin/Idle.png',
+    ];
+    const expectedAttack = [
+      'Melee.png',
+      'Attack1.png',
+      'Melee.png',
+      'Attack1.png',
+    ];
+    heroes.forEach((hero, index) => {
+      expect(hero.sprite?.animationImages?.idle).toBe(expectedIdle[index]);
+      if (index < expectedAttack.length) {
+        expect(hero.sprite?.animationImages?.attack).toBe(
+          `characters/${expectedIdle[index].split('/')[1]}/${expectedAttack[index]}`,
+        );
+      }
+    });
+  });
+
+  it('replaces the knight fallback the roster heroes carry', () => {
+    const heroes = partyOf(1);
+    expect(heroes[0].sprite?.animationImages?.idle).toBe(
+      'characters/knight/Idle.png',
+    );
+    assignHeroSprites(heroes);
+    expect(heroes[0].sprite?.animationImages?.idle).toBe(
+      'characters/paladin/Idle.png',
+    );
+  });
+
+  it('keeps one frozen sprite object per rotation slot, four distinct packs', () => {
+    expect(heroSpriteForIndex(4)).toBe(heroSpriteForIndex(0));
+    expect(heroSpriteForIndex(7)).toBe(heroSpriteForIndex(3));
+    expect(Object.isFrozen(heroSpriteForIndex(0))).toBe(true);
+    expect(HERO_SPRITE_PACKS).toHaveLength(4);
+    const packs = HERO_SPRITE_PACKS.map((s) => s.animationImages?.idle);
+    expect(new Set(packs).size).toBe(4);
+  });
+
+  it('gives every rotation pack a complete and in-frame crop table', () => {
+    HERO_SPRITE_PACKS.forEach((s) => {
+      expect(s.frameWidth).toBe(128);
+      expect(s.frameHeight).toBe(128);
+      expect(s.drawScale).toBeGreaterThan(1);
+      expect(s.frameDurationMs).toBe(65);
+      ANIMATIONS.forEach((animation) => {
+        expect(s.animationImages?.[animation]).toMatch(/\.png$/);
+        FACINGS.forEach((facing) => {
+          const crop = s.frameCrops?.[animation]?.[facing];
+          if (!crop) {
+            expect.fail(`${animation}/${facing} has no crop window`);
+            return;
+          }
+          expect(crop.size).toBeGreaterThan(0);
+          expect(crop.x).toBeGreaterThanOrEqual(0);
+          expect(crop.y).toBeGreaterThanOrEqual(0);
+          expect(crop.x + crop.size).toBeLessThanOrEqual(128);
+          expect(crop.y + crop.size).toBeLessThanOrEqual(128);
+        });
+      });
+    });
+  });
+});
+
+describe('reveal and dungeon-start facings', () => {
+  const closedDoor = (x: number, y: number, side: Side): Door => ({
+    x,
+    y,
+    side,
+    locked: false,
+    trapped: false,
+    open: false,
+    hidden: false,
+    reinforced: false,
+    trapAttacks: 0,
+  });
+
+  it('openDoor faces monsters revealed by the door toward the party', () => {
+    const hero = createTestHero({ position: { x: 2, y: 2 } });
+    const monster = createTestMonster({ position: { x: 2, y: 4 } });
+    const state = createTestState(hero, monster);
+    state.dungeon.layout.grid = [
+      '#######',
+      '#AAAAA#',
+      '#AAAAA#',
+      '#BBBBB#',
+      '#BBBBB#',
+      '#######',
+    ];
+    state.dungeon.layout.doors = [closedDoor(2, 2, Side.DOWN)];
+
+    openDoor(hero, state, 2, 3);
+
+    expect(state.dungeon.discoveredRooms).toContain('B');
+    expect(getActorFacing(monster)).toBe('north');
+  });
+
+  it('resetLiveHeroes faces heroes and discovered monsters at a dungeon start', () => {
+    const hero = createTestHero({ position: { x: -1, y: -1 } });
+    const monster = createTestMonster({ position: { x: 2, y: 1 }, health: 1 });
+    const state = createTestState(hero, monster);
+    state.dungeon.startingPositions = [{ x: 1, y: 1 }];
+    state.dungeon.layout.doors = [closedDoor(1, 1, Side.RIGHT)];
+
+    resetLiveHeroes(state);
+
+    expect(hero.position).toEqual({ x: 1, y: 1 });
+    // The hero faces the closest door of the starting room...
+    expect(getActorFacing(hero)).toBe('east');
+    // ...and the monster standing in the discovered room faces the party.
+    expect(getActorFacing(monster)).toBe('west');
   });
 });

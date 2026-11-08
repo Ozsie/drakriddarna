@@ -4,6 +4,7 @@ import {
   EMPTY,
   WALL,
   doReRender,
+  faceRevealedMonsters,
   findRoomCells,
   isSamePosition,
   toArray,
@@ -90,11 +91,16 @@ export const revealFullMap = (state: GameState): void => {
       }
     });
   });
+  const revealedNow: string[] = [];
   rooms.forEach((room) => {
     if (!state.dungeon.discoveredRooms.includes(room)) {
       state.dungeon.discoveredRooms.push(room);
       executeRoomDiscoveredEffect(state, room);
+      revealedNow.push(room);
     }
   });
+  // The debug reveal behaves like any other reveal: monsters the fog
+  // lifts off turn to face the party.
+  faceRevealedMonsters(state, revealedNow);
   doReRender(state);
 };

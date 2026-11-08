@@ -1,14 +1,20 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { renderMonsterHealthBars } from './ActorRendering';
 import {
+  buildCorpseViewModels,
   buildHeroViewModels,
   buildMonsterViewModels,
   buildHeroOverlayViewModel,
   buildItemViewModels,
+  drawActorViewSprite,
+  drawScaledHeroBar,
+  renderActorViewWithSprite,
+  type GameActorView,
 } from './adapters';
 import { clearActorAnimations, playActorDeath } from '../core';
 import { weapons } from '../items/weapons';
 import { ACTOR_TILES, ITEM_TILES } from '../dungeon/tiles';
-import type { GameState, Hero, Monster } from '../types';
+import type { Corpse, GameState, Hero, Monster } from '../types';
 import {
   Colour,
   ItemType,
@@ -179,7 +185,7 @@ describe('buildMonsterViewModels', () => {
     clearActorAnimations();
   });
 
-  it('includes discovered monsters with bars and skips undiscovered ones', () => {
+  it('includes discovered monsters with a health bar and skips undiscovered ones', () => {
     const visible = monster('Orc', 0, 0);
     const hidden = monster('Hidden', 1, 1); // cell 'B' is undiscovered
     const state = createState({
@@ -200,7 +206,9 @@ describe('buildMonsterViewModels', () => {
     );
 
     expect(views).toHaveLength(1);
-    expect(views[0].colourBar).toBe(Colour.Green);
+    // The monster colour bar is gone from the board; the view keeps the
+    // health bar for the post-lighting pass.
+    expect(views[0].colourBar).toBe('');
     expect(views[0].healthBar).toEqual({ current: 3, max: 4 });
   });
 
@@ -265,6 +273,86 @@ describe('buildMonsterViewModels', () => {
     );
 
     expect(views).toHaveLength(1);
+  });
+});
+
+describe('buildCorpseViewModels', () => {
+  afterEach(() => {
+    clearActorAnimations();
+  });
+
+  const corpseAt = (
+    x: number,
+    y: number,
+    sprite: Corpse['sprite'],
+  ): Corpse => ({
+    position: { x, y },
+    sprite,
+    facing: 'south',
+  });
+
+  const stateWithCorpses = (corpses: Corpse[]): GameState => {
+    const state = createState();
+    state.dungeon.layout.corpses = corpses;
+    return state;
+  };
+
+  it('draws corpses on discovered cells, frozen, without bars or flash', () => {
+    const visible = corpseAt(0, 0, {
+      image: 'orc-sheet.png',
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+    const hidden = corpseAt(1, 1, {
+      image: 'orc-sheet.png',
+      frameWidth: 32,
+      frameHeight: 32,
+    }); // cell 'B' is undiscovered
+    const state = stateWithCorpses([visible, hidden]);
+
+    const views = buildCorpseViewModels(state, now);
+
+    expect(views).toHaveLength(1);
+    expect(views[0].position).toEqual({ x: 0, y: 0 });
+    // The sheet never loads in the test environment, so the frozen frame
+    // resolves to null; everything else about the view is set.
+    expect(views[0].sprite).toBeNull();
+    expect(views[0].tile).toBeNull();
+    expect(views[0].flashIntensity).toBe(0);
+    expect(views[0].colourBar).toBe('');
+    expect(views[0].healthBar).toBeNull();
+    expect(views[0].active).toBe(false);
+  });
+
+  it('hides a corpse while its dying actor still animates in the same cell', () => {
+    const sprite: Corpse['sprite'] = {
+      image: 'orc-sheet.png',
+      frameWidth: 32,
+      frameHeight: 32,
+    };
+    const dying = monster('Dying Orc', 0, 0);
+    dying.health = 0;
+    dying.sprite = sprite;
+    playActorDeath(dying, 600, now - 100);
+    const state = stateWithCorpses([corpseAt(0, 0, sprite)]);
+
+    // While the death animation plays, the dying path draws that cell.
+    expect(buildCorpseViewModels(state, now)).toHaveLength(0);
+    // Once it finishes, the corpse takes over.
+    expect(buildCorpseViewModels(state, now + 600)).toHaveLength(1);
+  });
+
+  it('carries the draw scale of the fallen actor', () => {
+    const scaled = corpseAt(0, 0, {
+      frameWidth: 128,
+      frameHeight: 128,
+      drawScale: 2,
+    });
+    const state = stateWithCorpses([scaled]);
+
+    const views = buildCorpseViewModels(state, now);
+
+    expect(views[0].spriteDraw).toEqual({ scale: 2 });
   });
 });
 
@@ -337,5 +425,346 @@ describe('buildItemViewModels', () => {
     );
 
     expect(views[0].label).toBe('Potion');
+  });
+});
+
+describe('scaled actor sprites', () => {
+  const scaledHero = (name: string, x: number, y: number): Hero => ({
+    ...hero(name, x, y),
+    sprite: {
+      frameWidth: 128,
+      frameHeight: 128,
+      frameDurationMs: 40,
+      animations: { idle: 15, walk: 15, attack: 15, hurt: 15, death: 15 },
+      animationImages: {
+        idle: 'characters/knight/Idle.png',
+        walk: 'characters/knight/Walk.png',
+        attack: 'characters/knight/Melee.png',
+        hurt: 'characters/knight/TakeDamage.png',
+        death: 'characters/knight/Die.png',
+      },
+      drawScale: 2,
+    },
+  });
+
+  it('carries the sprite draw scale on the view', () => {
+    const state = createState({ heroes: [scaledHero('Big', 2, 3)] });
+    const views = buildHeroViewModels(state, {} as CanvasImageSource, false);
+    expect((views[0] as GameActorView).spriteDraw).toEqual({ scale: 2 });
+  });
+
+  it('leaves views without a scaled sprite untouched', () => {
+    const state = createState({ heroes: [hero('Plain', 1, 1)] });
+    const views = buildHeroViewModels(state, {} as CanvasImageSource, false);
+    expect((views[0] as GameActorView).spriteDraw).toBeUndefined();
+  });
+
+  it('draws scaled sprites centered on the cell and anchored to its floor', () => {
+    const image = {} as CanvasImageSource;
+    const drawImage = vi.fn();
+    const ctx = { drawImage } as unknown as CanvasRenderingContext2D;
+    const view = {
+      position: { x: 3, y: 2 },
+      sprite: { image, sx: 100, sy: 200, sw: 70, sh: 70 },
+      tile: null,
+      flashIntensity: 0,
+      active: false,
+      colourBar: '',
+      healthBar: null,
+      debugLabel: null,
+      debugLines: [],
+      spriteDraw: { scale: 2 },
+    } as unknown as GameActorView;
+    const cellSize = 48;
+
+    drawActorViewSprite(ctx, view, cellSize);
+
+    expect(drawImage).toHaveBeenCalledTimes(1);
+    // 96px draw box centered on the 48px cell: (48-96)/2 = -24 offset;
+    // floor-anchored: the box bottom lands on the cell's bottom edge.
+    expect(drawImage).toHaveBeenCalledWith(
+      image,
+      100,
+      200,
+      70,
+      70,
+      3 * cellSize - 24,
+      (2 + 1) * cellSize - 96,
+      96,
+      96,
+    );
+  });
+
+  it('draws through the facade helper and strips the sprite and tile for the package path', () => {
+    const drawImage = vi.fn();
+    const image = {} as CanvasImageSource;
+    const ctx = { drawImage } as unknown as CanvasRenderingContext2D;
+    const tile = {
+      sheet: {} as CanvasImageSource,
+      sx: 0,
+      sy: 0,
+      size: 32,
+      drawSize: 32,
+    };
+    const view = {
+      position: { x: 0, y: 0 },
+      sprite: { image, sx: 0, sy: 0, sw: 70, sh: 70 },
+      tile,
+      flashIntensity: 0,
+      active: false,
+      colourBar: '',
+      healthBar: null,
+      debugLabel: null,
+      debugLines: [],
+      spriteDraw: { scale: 2 },
+    } as unknown as GameActorView;
+
+    expect(renderActorViewWithSprite(ctx, view, 48)).toBe(false);
+    // Only the scaled sprite's own drawImage: the unscaled fallback tile
+    // must not render a duplicate behind the larger figure.
+    expect(drawImage).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the fallback tile while the scaled sprite has not loaded', () => {
+    const drawImage = vi.fn();
+    const ctx = { drawImage } as unknown as CanvasRenderingContext2D;
+    const tile = {
+      sheet: {} as CanvasImageSource,
+      sx: 0,
+      sy: 0,
+      size: 32,
+      drawSize: 32,
+    };
+    const view = {
+      position: { x: 0, y: 0 },
+      sprite: null,
+      tile,
+      flashIntensity: 0,
+      active: false,
+      colourBar: '',
+      healthBar: null,
+      debugLabel: null,
+      debugLines: [],
+      spriteDraw: { scale: 2 },
+    } as unknown as GameActorView;
+
+    expect(renderActorViewWithSprite(ctx, view, 48)).toBe(false);
+    // The tile draw falls through the package path (drawCachedTile ends
+    // in a drawImage call under the test environment).
+    expect(drawImage).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws no health bar in the actor pass', () => {
+    const fillRects: number[][] = [];
+    const ctx = {
+      drawImage: () => {},
+      beginPath: () => {},
+      rect: () => {},
+      stroke: () => {},
+      fillRect: (...args: number[]) => {
+        fillRects.push(args);
+      },
+      fillStyle: 'black',
+      strokeStyle: 'black',
+    } as unknown as CanvasRenderingContext2D;
+    const view = {
+      position: { x: 2, y: 3 },
+      sprite: { image: {} as CanvasImageSource, sx: 0, sy: 0, sw: 70, sh: 70 },
+      tile: null,
+      flashIntensity: 0,
+      active: false,
+      colourBar: '',
+      healthBar: { current: 5, max: 10 },
+      debugLabel: null,
+      debugLines: [],
+      spriteDraw: { scale: 2 },
+    } as unknown as GameActorView;
+
+    renderActorViewWithSprite(ctx, view, 48);
+
+    // The scaled sprite's own drawImage is the only drawing: the health
+    // bar belongs to the post-lighting pass, not the actor layer.
+    expect(fillRects).toHaveLength(0);
+  });
+});
+
+describe('renderMonsterHealthBars', () => {
+  afterEach(() => {
+    clearActorAnimations();
+  });
+
+  const barCtx = () => {
+    const fillRects: number[][] = [];
+    const ctx = {
+      beginPath: () => {},
+      rect: () => {},
+      stroke: () => {},
+      fillRect: (...args: number[]) => {
+        fillRects.push(args);
+      },
+      fillStyle: 'black',
+      strokeStyle: 'black',
+    } as unknown as CanvasRenderingContext2D;
+    return { ctx, fillRects };
+  };
+
+  const stateWithMonsters = (...monsters: Monster[]): GameState =>
+    createState({
+      dungeon: {
+        ...createState().dungeon,
+        layout: {
+          ...createState().dungeon.layout,
+          monsters,
+        },
+      },
+    });
+
+  it('draws each visible monster health bar at its cell top', () => {
+    const { ctx, fillRects } = barCtx();
+    const state = stateWithMonsters(monster('Orc', 1, 0)); // cell 'A'
+
+    renderMonsterHealthBars(
+      ctx,
+      {} as CanvasImageSource,
+      48,
+      state,
+      false,
+      now,
+    );
+
+    // Capacity rect: red strip across the cell top.
+    expect(fillRects).toContainEqual([48 + 4, 0, 48 - 8, 4]);
+    // Fill rect scales with current health (3 of 4).
+    expect(fillRects).toContainEqual([48 + 4, 0, (48 - 8) * (3 / 4), 4]);
+  });
+
+  it('lifts the health bar above a scaled sprite', () => {
+    const { ctx, fillRects } = barCtx();
+    const scaled = {
+      ...monster('Big Orc', 0, 1), // cell 'A'
+      sprite: {
+        image: 'orc-sheet.png',
+        frameWidth: 32,
+        frameHeight: 32,
+        drawScale: 2,
+      },
+    } as Monster;
+    const state = stateWithMonsters(scaled);
+
+    renderMonsterHealthBars(
+      ctx,
+      {} as CanvasImageSource,
+      48,
+      state,
+      false,
+      now,
+    );
+
+    // The red capacity bar draws at the top of the doubled sprite, one
+    // cell above the actor's own cell, not at the cell top.
+    expect(fillRects).toContainEqual([4, (1 - 1) * 48, 48 - 8, 4]);
+    expect(fillRects).not.toContainEqual([4, 48, 48 - 8, 4]);
+  });
+
+  it('draws nothing for undiscovered monsters', () => {
+    const { ctx, fillRects } = barCtx();
+    const state = stateWithMonsters(monster('Hidden', 1, 1)); // cell 'B'
+
+    renderMonsterHealthBars(
+      ctx,
+      {} as CanvasImageSource,
+      48,
+      state,
+      false,
+      now,
+    );
+
+    expect(fillRects).toHaveLength(0);
+  });
+});
+
+describe('scaled hero bars', () => {
+  const barCtx = () => {
+    const fillRects: number[][] = [];
+    const ctx = {
+      beginPath: () => {},
+      rect: () => {},
+      stroke: () => {},
+      fillRect: (...args: number[]) => {
+        fillRects.push(args);
+      },
+      fillStyle: 'black',
+      strokeStyle: 'black',
+    } as unknown as CanvasRenderingContext2D;
+    return { ctx, fillRects };
+  };
+
+  it('carries the sprite draw scale on the bars of scaled heroes', () => {
+    const state = createState({
+      heroes: [
+        {
+          ...hero('Big', 1, 2),
+          sprite: { frameWidth: 128, frameHeight: 128, drawScale: 2 },
+        },
+      ],
+    });
+    const view = buildHeroOverlayViewModel(state);
+    expect(view.bars[0].spriteDraw).toEqual({ scale: 2 });
+  });
+
+  it('leaves bars without a scaled sprite for the package path', () => {
+    const state = createState({ heroes: [hero('Plain', 1, 1)] });
+    const view = buildHeroOverlayViewModel(state);
+    expect(view.bars[0].spriteDraw).toBeUndefined();
+  });
+
+  it('lifts the health bar above the sprite while the colour bar stays at the cell', () => {
+    const { ctx, fillRects } = barCtx();
+    drawScaledHeroBar(
+      ctx,
+      {
+        position: { x: 2, y: 3 },
+        colour: Colour.Red,
+        health: { current: 5, max: 10 },
+        actionPips: 0,
+        movePips: 0,
+        spriteDraw: { scale: 2 },
+      },
+      48,
+    );
+
+    // Health bar capacity rect: at the top of the doubled sprite, one
+    // cell above the hero's own cell top.
+    expect(fillRects).toContainEqual([2 * 48 + 4, (3 - 1) * 48, 48 - 8, 4]);
+    // Colour bar: still at the hero's own cell floor.
+    expect(fillRects).toContainEqual([2 * 48 + 4, 3 * 48 + 48 - 6, 48 - 8, 4]);
+  });
+
+  it('draws action and move pips at the hero cell floor', () => {
+    const { ctx, fillRects } = barCtx();
+    drawScaledHeroBar(
+      ctx,
+      {
+        position: { x: 2, y: 3 },
+        colour: Colour.Red,
+        health: { current: 5, max: 10 },
+        actionPips: 2,
+        movePips: 1,
+        spriteDraw: { scale: 2 },
+      },
+      48,
+    );
+
+    // Action pips line the cell bottom-left...
+    expect(fillRects).toContainEqual([2 * 48 + 4, 3 * 48 + 48 - 12, 5, 5]);
+    expect(fillRects).toContainEqual([2 * 48 + 4 + 6, 3 * 48 + 48 - 12, 5, 5]);
+    // ...and the move pips the bottom-right, mirroring the package's
+    // own pip rendering.
+    expect(fillRects).toContainEqual([
+      2 * 48 + 48 - 22,
+      3 * 48 + 48 - 12,
+      5,
+      5,
+    ]);
   });
 });

@@ -7,6 +7,7 @@
 
 import type {
   Actor,
+  Corpse,
   Dungeon,
   GameState,
   Hero,
@@ -17,9 +18,12 @@ import type {
 } from '../types';
 import { MonsterType, TerrainType } from '../types';
 import {
+  DEFAULT_ACTOR_SPRITE_FACING,
+  getActorFacing,
   getActorFlashIntensity,
   getActorAnimationFrameIndex,
   getActorAnimationName,
+  getActorSpriteFacingRow,
   getActorVisualPosition,
   getDyingActors,
   hasLineOfSight,
@@ -43,7 +47,11 @@ import { ACTOR_SPRITE_ANIMATION_ORDER } from '../core';
 import { ACTOR_TILES, ITEM_TILES, type TileRef } from '../dungeon/tiles';
 import {
   TERRAIN_OVERLAY,
+  drawColourBar,
+  drawHealthBar,
   getSpriteSourceRect,
+  renderActorView,
+  spriteDirectionRow,
   type SceneActorView,
   type SceneCorner,
   type SceneDungeonView,
@@ -238,10 +246,45 @@ const getActorSpriteFrame = (
 ): SceneSpriteFrame | null => {
   const sprite = actor.sprite;
   if (!sprite) return null;
-  const image = getReadyImage(sprite.image);
-  if (!image) return null;
   const animation = getActorAnimationName(actor, currentTime);
   const configured = sprite.animations?.[animation];
+  // Per-animation pack model (ActorSprite.animationImages): one sheet per
+  // animation, one row per facing in ActorSprite.facings order.
+  const animationImage = sprite.animationImages?.[animation];
+  if (animationImage) {
+    const image = getReadyImage(animationImage);
+    if (!image) return null;
+    const frameCount =
+      configured !== undefined
+        ? Math.max(1, configured)
+        : Math.max(
+            1,
+            Math.floor((image.naturalWidth || image.width) / sprite.frameWidth),
+          );
+    const frameIndex = getActorAnimationFrameIndex(
+      actor,
+      animation,
+      frameCount,
+      currentTime,
+    );
+    const frameX = frameIndex * sprite.frameWidth;
+    const frameY = getActorSpriteFacingRow(actor) * sprite.frameHeight;
+    // Packs whose figures occupy only part of each frame declare a
+    // per-facing source window so the figure fills the cell.
+    const crop = sprite.frameCrops?.[animation]?.[getActorFacing(actor)];
+    return {
+      image,
+      sx: frameX + (crop?.x ?? 0),
+      sy: frameY + (crop?.y ?? 0),
+      sw: crop?.size ?? sprite.frameWidth,
+      sh: crop?.size ?? sprite.frameHeight,
+    };
+  }
+  // Shared-sheet model: one row per animation in ACTOR_SPRITE_ANIMATION_ORDER;
+  // the row lookup is the scene package's sheet order convention.
+  if (!sprite.image) return null;
+  const image = getReadyImage(sprite.image);
+  if (!image) return null;
   const frameCount =
     configured !== undefined
       ? Math.max(1, configured)
@@ -255,10 +298,59 @@ const getActorSpriteFrame = (
     frameCount,
     currentTime,
   );
-  const row = ACTOR_SPRITE_ANIMATION_ORDER.indexOf(animation);
+  const row = spriteDirectionRow(ACTOR_SPRITE_ANIMATION_ORDER, animation);
   return {
     image,
     sx: frameIndex * sprite.frameWidth,
+    sy: row * sprite.frameHeight,
+    sw: sprite.frameWidth,
+    sh: sprite.frameHeight,
+  };
+};
+
+// The corpse's frozen frame: the last frame of its death animation, on
+// the death row of the shared sheet or the facing row it fell at (the
+// per-animation-pack model), with the same crop window a living actor
+// of that sprite would draw.
+const getCorpseSpriteFrame = (corpse: Corpse): SceneSpriteFrame | null => {
+  const sprite = corpse.sprite;
+  const configured = sprite.animations?.death;
+  const lastFrameIndex = (image: HTMLImageElement): number => {
+    const frameCount =
+      configured !== undefined
+        ? Math.max(1, configured)
+        : Math.max(
+            1,
+            Math.floor((image.naturalWidth || image.width) / sprite.frameWidth),
+          );
+    return frameCount - 1;
+  };
+  const animationImage = sprite.animationImages?.death;
+  if (animationImage) {
+    const image = getReadyImage(animationImage);
+    if (!image) return null;
+    const facing = corpse.facing ?? DEFAULT_ACTOR_SPRITE_FACING;
+    const crop = sprite.frameCrops?.death?.[facing];
+    return {
+      image,
+      sx: lastFrameIndex(image) * sprite.frameWidth + (crop?.x ?? 0),
+      sy:
+        (sprite.facings?.length
+          ? spriteDirectionRow(sprite.facings, facing)
+          : 0) *
+          sprite.frameHeight +
+        (crop?.y ?? 0),
+      sw: crop?.size ?? sprite.frameWidth,
+      sh: crop?.size ?? sprite.frameHeight,
+    };
+  }
+  if (!sprite.image) return null;
+  const image = getReadyImage(sprite.image);
+  if (!image) return null;
+  const row = spriteDirectionRow(ACTOR_SPRITE_ANIMATION_ORDER, 'death');
+  return {
+    image,
+    sx: lastFrameIndex(image) * sprite.frameWidth,
     sy: row * sprite.frameHeight,
     sw: sprite.frameWidth,
     sh: sprite.frameHeight,
@@ -363,15 +455,27 @@ const debugLabelFor = (
   debugMode: boolean,
 ): string | null => (debugMode ? `(${x},${y})` : null);
 
+// An actor view plus the game-side sprite drawing demand: when an actor's
+// sprite declares a drawScale (ActorSprite.drawScale), the game facades
+// draw the frame themselves and hand the package a sprite-less view for
+// the flash/bars; the scene package's own sprite path always draws into
+// exactly one cell.
+export type GameActorView = SceneActorView & {
+  spriteDraw?: { scale: number };
+};
+
 const toActorView = (
   actor: Actor,
   tile: SceneTileFrame | null,
   showDebugLabel: boolean,
   currentTime: number,
   bars: Pick<SceneActorView, 'colourBar' | 'healthBar'>,
-): SceneActorView => ({
+): GameActorView => ({
   position: getActorVisualPosition(actor, currentTime),
   sprite: getActorSpriteFrame(actor, currentTime),
+  ...(actor.sprite?.drawScale && actor.sprite.drawScale > 1
+    ? { spriteDraw: { scale: actor.sprite.drawScale } }
+    : {}),
   tile,
   flashIntensity: getActorFlashIntensity(actor, currentTime),
   active:
@@ -384,6 +488,68 @@ const toActorView = (
     : null,
   debugLines: [],
 });
+
+// Draws the view's sprite frame at its declared scale: horizontally
+// centered on the actor's cell and anchored to the cell floor, so scales
+// above 1 tower into the cells above without sinking into the ground or
+// sliding sideways. Crop windows are bottom-aligned to the feet, which
+// makes the floor anchor correct. Returns whether a frame was drawn.
+export const drawActorViewSprite = (
+  ctx: CanvasRenderingContext2D,
+  view: SceneActorView,
+  cellSize: number,
+): boolean => {
+  const frame = view.sprite;
+  if (!frame) return false;
+  const scale = (view as GameActorView).spriteDraw?.scale ?? 1;
+  const size = cellSize * scale;
+  const dx = view.position.x * cellSize + (cellSize - size) / 2;
+  const dy = (view.position.y + 1) * cellSize - size;
+  ctx.drawImage(
+    frame.image,
+    frame.sx,
+    frame.sy,
+    frame.sw,
+    frame.sh,
+    dx,
+    dy,
+    size,
+    size,
+  );
+  return true;
+};
+
+// One actor view drawn through both paths: the game-side scaled sprite
+// when the view carries a draw scale (the scene package's sprite path
+// always draws into exactly one cell), then the package's own flash,
+// colour bar and debug extras. Health bars are never drawn here: they
+// draw in a later pass above the lighting and the darkness veil (see
+// renderMonsterHealthBars in src/scene/ActorRendering.ts), so they stay
+// legible in unlit rooms. The fallback tile only draws while the scaled
+// sheets are still loading; once the sprite has drawn at its larger
+// size, drawing the cell-sized tile underneath would show a duplicate
+// silhouette behind the figure.
+export const renderActorViewWithSprite = (
+  ctx: CanvasRenderingContext2D,
+  view: SceneActorView,
+  cellSize: number,
+): boolean => {
+  const draw = view as GameActorView;
+  if (!draw.spriteDraw) {
+    return renderActorView(ctx, { ...view, healthBar: null }, cellSize);
+  }
+  const drew = drawActorViewSprite(ctx, view, cellSize);
+  return renderActorView(
+    ctx,
+    {
+      ...view,
+      sprite: null,
+      healthBar: null,
+      ...(drew ? { tile: null } : {}),
+    },
+    cellSize,
+  );
+};
 
 // Hero views for the actor layer: the live heroes, plus dead heroes that
 // still carry a sprite while their death animation plays (sprite-less
@@ -433,7 +599,7 @@ export const buildMonsterViewModels = (
         false,
         currentTime,
         {
-          colourBar: monster.colour,
+          colourBar: '',
           healthBar: { current: monster.health, max: monster.maxHealth },
         },
       );
@@ -467,7 +633,7 @@ export const buildMonsterViewModels = (
         false,
         currentTime,
         {
-          colourBar: monster.colour,
+          colourBar: '',
           healthBar: { current: monster.health, max: monster.maxHealth },
         },
       );
@@ -483,6 +649,45 @@ export const buildMonsterViewModels = (
       return view;
     });
   return [...visible, ...dying];
+};
+
+// Corpse views for the actor layer: the fallen stay in the cell they
+// died, frozen on the last frame of their death animation, until another
+// actor dies on top of them. While the dying actor's own death animation
+// is still playing in that cell, the dying path draws there instead —
+// the corpse stays hidden so the cell is never drawn twice. Corpses
+// respect the room discovery the same way live monsters do, and they
+// never animate: no bars, no flash, nothing to keep the render loop
+// ticking.
+export const buildCorpseViewModels = (
+  state: GameState,
+  currentTime: number = Date.now(),
+): GameActorView[] => {
+  const dying = getDyingActors(currentTime);
+  return (state.dungeon.layout.corpses ?? [])
+    .filter(
+      (corpse) =>
+        !dying.some((actor) => isSamePosition(actor.position, corpse.position)),
+    )
+    .filter((corpse) => {
+      const cell =
+        state.dungeon.layout.grid[corpse.position.y]?.[corpse.position.x] ?? '';
+      return isRoomDiscovered(state.dungeon, cell);
+    })
+    .map((corpse) => ({
+      position: { x: corpse.position.x, y: corpse.position.y },
+      sprite: getCorpseSpriteFrame(corpse),
+      ...(corpse.sprite.drawScale && corpse.sprite.drawScale > 1
+        ? { spriteDraw: { scale: corpse.sprite.drawScale } }
+        : {}),
+      tile: null,
+      flashIntensity: 0,
+      active: false,
+      colourBar: '',
+      healthBar: null,
+      debugLabel: null,
+      debugLines: [],
+    }));
 };
 
 // The current hero's walkable-area outline for the hero overlay layer:
@@ -527,10 +732,87 @@ export const buildWalkableCells = (
 
 // Hero bars, pips and the current-actor reticule for the hero overlay
 // layer, at the heroes' visual (animated) positions.
+// A hero overlay bar with the game-side sprite scale attached: bars of
+// scaled-sprite heroes draw game-side (see drawScaledHeroBar), because
+// their health bar must sit above the sprite instead of above its cell.
+export type GameHeroOverlayBar = SceneHeroOverlayView['bars'][number] & {
+  spriteDraw?: { scale: number };
+};
+
+export type GameHeroOverlayView = Omit<SceneHeroOverlayView, 'bars'> & {
+  bars: GameHeroOverlayBar[];
+};
+
+// One scaled-sprite hero's bar stack: the action/move pips and the
+// colour bar stay at the hero's cell, while the health bar lifts to the
+// sprite's top edge — a drawScale N sprite tops out (N - 1) cells above
+// its cell.
+export const drawScaledHeroBar = (
+  ctx: CanvasRenderingContext2D,
+  bar: GameHeroOverlayBar,
+  cellSize: number,
+): void => {
+  const scale = bar.spriteDraw?.scale ?? 1;
+  drawHeroBarPips(ctx, bar, cellSize);
+  drawColourBar(ctx, bar.position, bar.colour, cellSize);
+  drawHealthBar(
+    ctx,
+    { x: bar.position.x, y: bar.position.y - (scale - 1) },
+    bar.health,
+    cellSize,
+  );
+};
+
+// The package's pip rendering is module-private (actorCanvas.js
+// renderActionPips); this mirrors its geometry for the scaled-sprite
+// bars, which draw game-side. Keep in sync with the package until the
+// pip primitive is exported.
+const drawHeroBarPips = (
+  ctx: CanvasRenderingContext2D,
+  bar: GameHeroOverlayBar,
+  cellSize: number,
+): void => {
+  const { position, actionPips, movePips } = bar;
+  const x = position.x;
+  const y = position.y;
+  const prevFillStyle = ctx.fillStyle;
+  const prevStrokeStyle = ctx.strokeStyle;
+  ctx.strokeStyle = '#080808';
+  ctx.fillStyle = 'darkred';
+  for (let index = 0; index < (actionPips ?? 0); index++) {
+    ctx.fillRect(
+      x * cellSize + 4 + 6 * index,
+      y * cellSize + cellSize - 12,
+      5,
+      5,
+    );
+    ctx.rect(x * cellSize + 4 + 6 * index, y * cellSize + cellSize - 12, 5, 5);
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'blue';
+  for (let index = 0; index < (movePips ?? 0); index++) {
+    ctx.fillRect(
+      x * cellSize + cellSize - 22 + 6 * index,
+      y * cellSize + cellSize - 12,
+      5,
+      5,
+    );
+    ctx.rect(
+      x * cellSize + cellSize - 22 + 6 * index,
+      y * cellSize + cellSize - 12,
+      5,
+      5,
+    );
+    ctx.stroke();
+  }
+  ctx.fillStyle = prevFillStyle;
+  ctx.strokeStyle = prevStrokeStyle;
+};
+
 export const buildHeroOverlayViewModel = (
   state: GameState,
   currentTime: number = Date.now(),
-): SceneHeroOverlayView => {
+): GameHeroOverlayView => {
   const currentActor = state.currentActor;
   return {
     walkableCells: buildWalkableCells(state),
@@ -549,6 +831,9 @@ export const buildHeroOverlayViewModel = (
       },
       actionPips: hero.actions,
       movePips: hero.movement,
+      ...(hero.sprite?.drawScale && hero.sprite.drawScale > 1
+        ? { spriteDraw: { scale: hero.sprite.drawScale } }
+        : {}),
     })),
   };
 };

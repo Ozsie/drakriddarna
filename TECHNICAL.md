@@ -389,10 +389,15 @@ derived lights as fresh objects every pass stays cheap. Ambient redraws are
 driven by a quantized animation signature instead of the frame clock: each
 animated effect contributes its stepped visible output, and the dynamic layer
 only clears and repaints when the signature actually changes — a flickering
-brazier repaints only a handful of times per second. Continuous effects
-(sweeping beams, twinkling sparkles) are capped below display rate by a
-minimum-interval gate, while actor-driven frames (movement, projectiles)
-always run at full rate.
+brazier repaints only a handful of times per second. The whole dynamic
+loop is frame-rate locked by a small governor
+(`src/components/DungeonBoardFrameRate.ts`): actor-driven frames
+(movement, projectiles) render at most 60 times per second regardless of
+display refresh, and when a machine's average painted frame stops
+fitting the 60 fps budget the lock drops to 30 fps until frames fit it
+again — with hysteresis so a borderline machine cannot flap between
+rates. Ambient-only frames (light effects, terrain, fog) run at half
+rate, halving the continuous CPU cost of an animated dungeon.
 
 The lighting (`src/dungeon/LightRendering.ts`, with the ray-fan visibility
 computation, the occlusion maps, the animation effects and the sparkles in
@@ -417,7 +422,11 @@ ray-casting idea used in 2D shadow algorithms generally.
 
 Animations (actor movement, projectiles, damage indicators) are managed as
 small state machines in `core/ActorAnimation.ts`, driven by
-`requestAnimationFrame` only while an animation is in flight. Screen shakes
+`requestAnimationFrame` only while an animation is in flight. A downed actor
+also leaves a corpse (`layout.corpses`, placed by `processActorDowned`): plain
+game state, one per cell — a later death on the same cell replaces it — drawn
+by the actor pass as the frozen last frame of the actor's death animation,
+after the dying animation itself finishes. Screen shakes
 (`shakeEffects`, `src/combat/CombatEffects.ts`) are transient state effects,
 but render differently: the board controller jitters the world canvases with a
 CSS `translate` per frame while a shake runs — cached layers are never redrawn

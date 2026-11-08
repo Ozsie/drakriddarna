@@ -267,17 +267,72 @@ export type ItemSprite = {
   index: number;
 };
 
+// The facings a directional sprite pack carries, one sheet row each:
+// 'east' is the +x grid direction, 'south' the +y grid direction
+// (towards the viewer), the diagonals the 45-degree turns between them.
+export type ActorSpriteFacing =
+  | 'east'
+  | 'southEast'
+  | 'south'
+  | 'southWest'
+  | 'west'
+  | 'northWest'
+  | 'north'
+  | 'northEast';
+
+// A square window inside a sprite frame, in frame-local pixels. The
+// renderer draws the window (instead of the full frame) scaled into the
+// cell, so a pack whose figure occupies only part of each frame still
+// fills the cell; destination cells are square, so non-square windows
+// would distort the figure.
+export type ActorSpriteFrameCrop = {
+  x: number;
+  y: number;
+  size: number;
+};
+
 export type ActorSprite = {
-  // URL of the sprite sheet: one row per animation, in the order defined by
-  // ACTOR_SPRITE_ANIMATION_ORDER in src/core/ActorAnimation.ts
-  // (idle, walk, attack, hurt, death), frames laid out horizontally.
-  image: string;
+  // URL of the shared sprite sheet, if the sprite uses one: one row per
+  // animation, in the order defined by ACTOR_SPRITE_ANIMATION_ORDER in
+  // src/core/ActorAnimation.ts (idle, walk, attack, hurt, death), frames
+  // laid out horizontally. Optional when `animationImages` carries every
+  // animation (the per-animation-pack model below).
+  image?: string;
   frameWidth: number;
   frameHeight: number;
   frameDurationMs?: number;
   // Optional explicit frame counts per animation; when omitted, the count is
-  // derived from the image width divided by frameWidth.
+  // derived from the image width divided by frameWidth. One-shot animation
+  // windows are derived from these (see getActorSpriteAnimationDurationMs in
+  // src/core/ActorAnimation.ts), so packs that time their one-shots by
+  // geometry declare them even when the layout also implies them.
   animations?: Partial<Record<ActorAnimationName, number>>;
+  // Optional per-animation sheet URLs (character packs like
+  // static/characters/knight): each sheet holds a single animation's
+  // frames, one row per facing in `facings` order, and takes precedence
+  // over that animation's row in the shared sheet. Frame counts still
+  // come from `animations` or the image width.
+  animationImages?: Partial<Record<ActorAnimationName, string>>;
+  // The order of the facing rows in the sheets; set only for directional
+  // sprites. The actor's facing is the direction of its last step
+  // (recordActorStep in src/core/ActorAnimation.ts), defaulting to
+  // DEFAULT_ACTOR_SPRITE_FACING until it first moves.
+  facings?: ActorSpriteFacing[];
+  // How many cells wide/tall the sprite draws (default 1). Scales above
+  // 1 draw the frame centered on the cell and anchored to the cell floor
+  // (knights with drawScale 2 tower into the cells above them), so a
+  // pack's figure can be larger than one cell.
+  drawScale?: number;
+  // Optional per-animation, per-facing source windows (frameCrops draw
+  // the figure at pack scale): meaured from the pack's frames so every
+  // facing's stance fills the cell the same way. Missing entries fall
+  // back to the full frame.
+  frameCrops?: Partial<
+    Record<
+      ActorAnimationName,
+      Partial<Record<ActorSpriteFacing, ActorSpriteFrameCrop>>
+    >
+  >;
 };
 
 export type Campaign = {
@@ -362,6 +417,20 @@ export const MonsterType = {
 
 export type MonsterType =
   (typeof MonsterType)[keyof typeof MonsterType] | (string & {});
+
+// A fallen actor left lying in the cell where it died: the last frame of
+// its death animation keeps drawing in that cell until another actor
+// dies on top of it. Purely visual — a corpse's cell moves and blocks
+// exactly as before.
+export type Corpse = {
+  position: Position;
+  // The dead actor's sprite: the corpse frame (the death animation's
+  // final frame, at the facing the actor fell at) resolves from it at
+  // draw time, so corpses follow the same sheet, crop and scale model
+  // as living actors.
+  sprite: ActorSprite;
+  facing?: ActorSpriteFacing;
+};
 
 export enum Level {
   APPRENTICE = 'apprentice',
@@ -596,6 +665,11 @@ export type Layout = {
   secrets: Secret[];
   notes: Note[];
   items: ItemLocation[];
+  // Fallen actors left lying in the dungeon (runtime state, not authored
+  // content): one corpse per cell, and a later death on the same cell
+  // replaces the corpse already there (see `placeCorpse` in
+  // src/core/combat.ts).
+  corpses?: Corpse[];
   corridors: string[];
   // Cells inside a room letter that are corridors without a door between
   // them and the room (e.g. a corridor stub opening straight into a room).

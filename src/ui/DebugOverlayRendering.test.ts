@@ -95,6 +95,7 @@ describe('DebugOverlayRendering', () => {
       staticReRenders: 3,
       dynamicReRenders: 4,
       dynamicFps: 60,
+      dynamicTargetFps: 60,
       overlayFps: 30,
     });
 
@@ -106,7 +107,7 @@ describe('DebugOverlayRendering', () => {
     expect(calls[0][0]).toBe('Re-renders: 7 (Static: 3, Dynamic: 4)');
     expect(calls[0][1]).toBe(8);
     expect(calls[0][2]).toBe(heroCardsTop - 6 - 36);
-    expect(calls[1][0]).toBe('FPS (Dynamic: 60, Overlay: 30)');
+    expect(calls[1][0]).toBe('FPS (Dynamic: 60 @60, Overlay: 30)');
     expect(calls[1][1]).toBe(8);
     expect(calls[1][2]).toBe(heroCardsTop - 6 - 24);
     expect(calls[2][0]).toBe(
@@ -130,6 +131,7 @@ describe('DebugOverlayRendering', () => {
       staticReRenders: 1,
       dynamicReRenders: 0,
       dynamicFps: 0,
+      dynamicTargetFps: 30,
       overlayFps: 0,
     });
 
@@ -144,6 +146,7 @@ describe('DebugOverlayRendering', () => {
       staticReRenders: 1,
       dynamicReRenders: 0,
       dynamicFps: 0,
+      dynamicTargetFps: 30,
       overlayFps: 0,
     });
 
@@ -164,6 +167,7 @@ describe('DebugOverlayRendering', () => {
       staticReRenders: 1,
       dynamicReRenders: 0,
       dynamicFps: 0,
+      dynamicTargetFps: 30,
       overlayFps: 0,
     });
 
@@ -178,6 +182,7 @@ describe('DebugOverlayRendering', () => {
       staticReRenders: 1,
       dynamicReRenders: 0,
       dynamicFps: 0,
+      dynamicTargetFps: 30,
       overlayFps: 0,
     });
 

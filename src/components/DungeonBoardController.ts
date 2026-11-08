@@ -30,8 +30,8 @@ import {
   screenToWorldPosition,
   executeRadialAction,
 } from '../hero/ClickInputLogic';
-import { renderHeroes, renderHeroOverlays } from '../hero/HeroRendering';
-import { renderMonsters } from '../monsters/MonsterRendering';
+import { renderHeroOverlays } from '../hero/HeroRendering';
+import { renderActors, renderMonsterHealthBars } from '../scene/ActorRendering';
 import {
   background,
   dungeonViewBackdrop,
@@ -186,6 +186,11 @@ import {
 } from './DungeonBoardSignatures';
 import { findUiHit, type UiHit } from './DungeonBoardUiHit';
 import {
+  createFrameRateGovernor,
+  trackFrameCost,
+  type FrameRateGovernor,
+} from './DungeonBoardFrameRate';
+import {
   clearBoardHovers,
   createBoardHoverState,
   updateBetweenDungeonsHover,
@@ -249,7 +254,8 @@ const trackFps = (tracker: FpsTracker, now: number): void => {
 
 export class DungeonBoardController {
   // Ambient-only dynamic frames (light effects, terrain, fog) render at
-  // most this often; actor-driven frames run at the display's rate.
+  // most this often; actor-driven frames render at most once per the
+  // frame-rate governor's locked target interval (30 or 60 fps).
   static readonly AMBIENT_FRAME_MIN_MS = 1000 / 30;
 
   // --- props + derived -----------------------------------------------------
@@ -337,6 +343,10 @@ export class DungeonBoardController {
   private panRenderAnimationId: number | null = null;
   private dynamicFpsTracker = createFpsTracker();
   private overlayFpsTracker = createFpsTracker();
+  // Locks the dynamic loop's frame rate to 60 fps, dropping to 30 on
+  // machines whose painted frames cannot hold the 60 fps budget (with
+  // hysteresis, see DungeonBoardFrameRate).
+  private frameRateGovernor: FrameRateGovernor = createFrameRateGovernor();
   private lastDynamicFrameTs = 0;
   private lastDungeonKey = '';
   private lastTileset = '';
@@ -1342,15 +1352,10 @@ export class DungeonBoardController {
       lightViewport,
     );
 
-    const hasActiveMonsters = renderMonsters(
-      ctx,
-      this.actors,
-      this.cellSize,
-      this.activeState,
-      this.debugMode ?? false,
-      currentTime,
-    );
-    const hasActiveHeroes = renderHeroes(
+    // Monsters and heroes draw as one row-sorted pass: sprites taller
+    // than a cell overlap the actor on the cell above, so the draw keeps
+    // whoever stands south in front (see src/scene/ActorRendering.ts).
+    const hasActiveActors = renderActors(
       ctx,
       this.actors,
       this.cellSize,
@@ -1392,6 +1397,18 @@ export class DungeonBoardController {
       );
     }
 
+    // Monster health bars draw above the lights and the darkness veil
+    // (the actor pass below lights them), so they stay fully readable on
+    // unlit cells.
+    renderMonsterHealthBars(
+      ctx,
+      this.actors,
+      this.cellSize,
+      this.activeState,
+      this.debugMode ?? false,
+      currentTime,
+    );
+
     // The hero turn UI (walkable outline, reticule, colour bar, health
     // bar, action and step markers) is drawn above the lights and the
     // darkness veil, so it stays fully visible even on unlit cells.
@@ -1402,38 +1419,49 @@ export class DungeonBoardController {
       this.dynamicAnimationId = null;
     }
 
+    // The layer actually painted, so this frame's wall-clock cost is
+    // real: feed it to the frame-rate governor, which locks the loop at
+    // 60 fps and drops it to 30 once painted frames stop fitting the
+    // 60 fps budget (recovering 60 when they fit again). The record
+    // reference was taken at the top of this call.
+    trackFrameCost(
+      this.frameRateGovernor,
+      performance.now() - this.lastDynamicFrameTs,
+      performance.now(),
+    );
+
     if (
-      hasActiveMonsters ||
-      hasActiveHeroes ||
+      hasActiveActors ||
       hasLightEffects ||
       hasTerrainEffects ||
       hasActiveActorAnimations(currentTime)
     ) {
-      // Actor movement keeps the full frame rate; ambient effects
-      // (flickering torches, water, fog) render at half rate, halving
-      // the continuous CPU cost of an animated dungeon.
-      const fullRate =
-        hasActiveMonsters ||
-        hasActiveHeroes ||
-        hasActiveActorAnimations(currentTime);
+      // Actor movement renders at the governor's locked target rate
+      // (60 fps, or 30 on a slower machine — never above 60, whatever
+      // the display refreshes at); ambient effects (flickering torches,
+      // water, fog) render at half rate, halving the continuous CPU
+      // cost of an animated dungeon.
+      const fullRate = hasActiveActors || hasActiveActorAnimations(currentTime);
       this.scheduleDynamicFrame(fullRate);
     }
   };
 
-  // Schedules the next dynamic-layer frame. Ambient-only frames are
-  // throttled to AMBIENT_FRAME_MIN_MS: the rAF keeps ticking at full rate
-  // but only renders when enough time has passed, so light effects stay
-  // smooth enough while the heavy per-frame work (ray casting, blur
-  // blits, full-canvas composites) runs at half frequency.
+  // Schedules the next dynamic-layer frame. Every rAF tick optimistically
+  // reschedules, but only renders once enough time has passed since the
+  // last processed frame: ambient-only frames wait at least
+  // AMBIENT_FRAME_MIN_MS, actor-driven frames at least the governor's
+  // target interval (1000/60 or 1000/30). The rAF keeps ticking at full
+  // rate so the heavy per-frame work (ray casting, blur blits,
+  // full-canvas composites) never runs above the locked frame rate,
+  // while a high-refresh display simply skips renders.
   private scheduleDynamicFrame = (fullRate: boolean): void => {
     this.dynamicAnimationId = requestAnimationFrame(() => {
       const now = performance.now();
-      if (
-        !fullRate &&
-        now - this.lastDynamicFrameTs <
-          DungeonBoardController.AMBIENT_FRAME_MIN_MS
-      ) {
-        this.scheduleDynamicFrame(false);
+      const minFrameIntervalMs = fullRate
+        ? 1000 / this.frameRateGovernor.targetFps
+        : DungeonBoardController.AMBIENT_FRAME_MIN_MS;
+      if (now - this.lastDynamicFrameTs < minFrameIntervalMs) {
+        this.scheduleDynamicFrame(fullRate);
         return;
       }
       this.renderDynamicLayer(true);
@@ -1520,6 +1548,7 @@ export class DungeonBoardController {
           staticReRenders: this.staticRenderCount,
           dynamicReRenders: this.dynamicRenderCount,
           dynamicFps: this.dynamicFpsTracker.fps,
+          dynamicTargetFps: this.frameRateGovernor.targetFps,
           overlayFps: this.overlayFpsTracker.fps,
         },
         this.uiEnv.theme,
@@ -2028,6 +2057,13 @@ export class DungeonBoardController {
     canvas.style.height = `${String(String(String(height)))}px`;
     const ctx = canvas.getContext('2d', options);
     if (ctx) {
+      // The actor layer is pixel art: its cached sprite frames upscale
+      // nearest-neighbour on high-DPI displays instead of the default
+      // smoothing that softens them. The other layers stay smoothed —
+      // lights and text are gradients and vector shapes.
+      if (canvas === this.actorCanvas) {
+        ctx.imageSmoothingEnabled = false;
+      }
       const origin = worldToScreenZoomed(
         { x: 0, y: 0 },
         this.cameraView(width, height),
