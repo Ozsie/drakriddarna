@@ -480,19 +480,36 @@ export const renderActorViewWithSprite = (
   view: SceneActorView,
   cellSize: number,
 ): boolean => {
-  if ((view as GameActorView).spriteDraw) {
-    const drew = drawActorViewSprite(ctx, view, cellSize);
-    return renderActorView(
+  const draw = view as GameActorView;
+  if (!draw.spriteDraw) {
+    return renderActorView(ctx, view, cellSize);
+  }
+  const drew = drawActorViewSprite(ctx, view, cellSize);
+  const active = renderActorView(
+    ctx,
+    {
+      ...view,
+      sprite: null,
+      ...(drew ? { tile: null } : {}),
+      ...(view.healthBar ? { healthBar: null } : {}),
+    },
+    cellSize,
+  );
+  // The package anchors the actor-layer health bar to the cell top,
+  // which on a scaled sprite sits mid-figure; lift it to the sprite's
+  // top edge like the hero overlay bars.
+  if (view.healthBar) {
+    drawHealthBar(
       ctx,
       {
-        ...view,
-        sprite: null,
-        ...(drew ? { tile: null } : {}),
+        x: view.position.x,
+        y: view.position.y - (draw.spriteDraw.scale - 1),
       },
+      view.healthBar,
       cellSize,
     );
   }
-  return renderActorView(ctx, view, cellSize);
+  return active;
 };
 
 // Hero views for the actor layer: the live heroes, plus dead heroes that

@@ -34,8 +34,8 @@ import {
   screenToWorldPosition,
   executeRadialAction,
 } from '../hero/ClickInputLogic';
-import { renderHeroes, renderHeroOverlays } from '../hero/HeroRendering';
-import { renderMonsters } from '../monsters/MonsterRendering';
+import { renderHeroOverlays } from '../hero/HeroRendering';
+import { renderActors } from '../scene/ActorRendering';
 import {
   background,
   dungeonViewBackdrop,
@@ -1248,15 +1248,10 @@ export class DungeonBoardController {
       lightViewport,
     );
 
-    const hasActiveMonsters = renderMonsters(
-      ctx,
-      this.actors,
-      this.cellSize,
-      this.activeState,
-      this.debugMode ?? false,
-      currentTime,
-    );
-    const hasActiveHeroes = renderHeroes(
+    // Monsters and heroes draw as one row-sorted pass: sprites taller
+    // than a cell overlap the actor on the cell above, so the draw keeps
+    // whoever stands south in front (see src/scene/ActorRendering.ts).
+    const hasActiveActors = renderActors(
       ctx,
       this.actors,
       this.cellSize,
@@ -1309,8 +1304,7 @@ export class DungeonBoardController {
     }
 
     if (
-      hasActiveMonsters ||
-      hasActiveHeroes ||
+      hasActiveActors ||
       hasLightEffects ||
       hasTerrainEffects ||
       hasActiveActorAnimations(currentTime)
@@ -1318,10 +1312,7 @@ export class DungeonBoardController {
       // Actor movement keeps the full frame rate; ambient effects
       // (flickering torches, water, fog) render at half rate, halving
       // the continuous CPU cost of an animated dungeon.
-      const fullRate =
-        hasActiveMonsters ||
-        hasActiveHeroes ||
-        hasActiveActorAnimations(currentTime);
+      const fullRate = hasActiveActors || hasActiveActorAnimations(currentTime);
       this.scheduleDynamicFrame(fullRate);
     }
   };

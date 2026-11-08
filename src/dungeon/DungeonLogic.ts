@@ -19,12 +19,18 @@ import {
   getMonsterTemplate,
   registerMonsterTemplate,
 } from '../monsters/MonsterRegistry';
+import {
+  darkLordSprite,
+  orcSprite,
+  trollSprite,
+} from '../monsters/MonsterSprites';
 
 // Built-in monster templates, registered here so campaign-defined monster
 // types can register their own stat templates the same way via
 // `registerMonsterTemplate` (see src/monsters/MonsterRegistry.ts).
 registerMonsterTemplate(MonsterType.ORC, {
   nameTranslationKey: 'monsters.orc',
+  sprite: orcSprite,
   level: Level.APPRENTICE,
   defense: 0,
   health: 2,
@@ -39,6 +45,7 @@ registerMonsterTemplate(MonsterType.ORC, {
 });
 registerMonsterTemplate(MonsterType.TROLL, {
   nameTranslationKey: 'monsters.troll',
+  sprite: trollSprite,
   level: Level.KNIGHT,
   defense: 1,
   health: 3,
@@ -52,6 +59,7 @@ registerMonsterTemplate(MonsterType.TROLL, {
 });
 registerMonsterTemplate(MonsterType.YELLOW_DARK_LORD, {
   nameTranslationKey: 'monsters.darkLord',
+  sprite: darkLordSprite,
   actions: 3,
   walkSound: 'sfx/walk_boss.wav',
   hurtSound: 'sfx/hurt3_monster.wav',
@@ -59,6 +67,7 @@ registerMonsterTemplate(MonsterType.YELLOW_DARK_LORD, {
 });
 registerMonsterTemplate(MonsterType.GREEN_DARK_LORD, {
   nameTranslationKey: 'monsters.darkLord',
+  sprite: darkLordSprite,
   weapon: monsterWeapons[4],
   walkSound: 'sfx/walk_boss.wav',
   hurtSound: 'sfx/hurt3_monster.wav',
@@ -66,6 +75,7 @@ registerMonsterTemplate(MonsterType.GREEN_DARK_LORD, {
 });
 registerMonsterTemplate(MonsterType.BLUE_DARK_LORD, {
   nameTranslationKey: 'monsters.darkLord',
+  sprite: darkLordSprite,
   shield: monsterShields[0],
   walkSound: 'sfx/walk_boss.wav',
   hurtSound: 'sfx/hurt3_monster.wav',
@@ -75,6 +85,7 @@ registerMonsterTemplate(MonsterType.BLUE_DARK_LORD, {
 // but still needs the shared translation key for its display name.
 registerMonsterTemplate(MonsterType.RED_DARK_LORD, {
   nameTranslationKey: 'monsters.darkLord',
+  sprite: darkLordSprite,
 });
 
 export { COLLAPSED, EMPTY, WALL };

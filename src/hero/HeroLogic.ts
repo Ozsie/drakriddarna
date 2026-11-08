@@ -3,7 +3,6 @@ import type {
   Armour,
   Actor,
   ActorSprite,
-  ActorSpriteFacing,
   GameState,
   Hero,
   Monster,
@@ -16,6 +15,10 @@ import type {
   Difficulty,
 } from '../types';
 import { Colour, ItemType, Level } from '../types';
+import {
+  characterPackSprite,
+  type CharacterPackCrops,
+} from '../characters/CharacterSpritePacks';
 import { weapons } from '../items/weapons';
 import {
   addLog,
@@ -74,25 +77,6 @@ import {
 import { COLLAPSED, EMPTY, WALL } from '../core';
 import { emitSoundCue, itemPickupScore } from '../core';
 
-// The knight character pack (static/characters/knight): one 1920x1024 PNG
-// per animation, 128px frames — 15 columns per row, one row per facing in
-// the order below (pack order: east first, sweeping clockwise to
-// north-east). All heroes share the one sprite; per-hero identity stays
-// the colour bar.
-const KNIGHT_SPRITE_FACINGS: ActorSpriteFacing[] = [
-  'east',
-  'southEast',
-  'south',
-  'southWest',
-  'west',
-  'northWest',
-  'north',
-  'northEast',
-];
-
-// Frames per facing in each of the pack's sheets.
-const KNIGHT_SPRITE_FRAMES_PER_ROW = 15;
-
 // 70px square of the 128px frames: the pack's 57-68px figures fill the
 // cell at pack scale (drawn into the full cell instead of the empty
 // frame padding that would shrink them to half the cell).
@@ -104,10 +88,7 @@ const KNIGHT_SPRITE_CROP_SIZE = 70;
 // on the cell floor. Extreme weapon sweeps and collapse poses extend
 // past the window and clip at the cell edge, which reads as part of the
 // motion rather than shrinking the figure.
-const KNIGHT_SPRITE_CROPS: Record<
-  'idle' | 'walk' | 'attack' | 'hurt' | 'death',
-  Partial<Record<ActorSpriteFacing, { x: number; y: number; size: number }>>
-> = {
+const KNIGHT_SPRITE_CROPS: CharacterPackCrops = {
   idle: {
     east: { x: 33, y: 37, size: KNIGHT_SPRITE_CROP_SIZE },
     southEast: { x: 31, y: 40, size: KNIGHT_SPRITE_CROP_SIZE },
@@ -160,35 +141,21 @@ const KNIGHT_SPRITE_CROPS: Record<
   },
 };
 
-// 15 frames x 40ms = 600ms per pass: one walk cycle per grid step at the
-// default step duration, and full attack/hurt/death swings inside the
-// one-shot windows derived from the same numbers.
-const KNIGHT_SPRITE_FRAME_DURATION_MS = 40;
-
-// Shared and frozen: the sprite is content data, never mutated per hero.
-const knightSprite: ActorSprite = Object.freeze({
-  frameWidth: 128,
-  frameHeight: 128,
-  frameDurationMs: KNIGHT_SPRITE_FRAME_DURATION_MS,
+// All heroes share the one knight sprite (static/characters/knight);
+// per-hero identity stays the colour bar. drawScale taller than one
+// cell, so the pack's figures read as heroes rather than tokens on a
+// board: the draw is centered on the cell, anchored to the floor, and
+// towers (scale - 1) cells into the row above.
+const knightSprite: ActorSprite = characterPackSprite({
+  pack: 'knight',
   animations: {
-    idle: KNIGHT_SPRITE_FRAMES_PER_ROW,
-    walk: KNIGHT_SPRITE_FRAMES_PER_ROW,
-    attack: KNIGHT_SPRITE_FRAMES_PER_ROW,
-    hurt: KNIGHT_SPRITE_FRAMES_PER_ROW,
-    death: KNIGHT_SPRITE_FRAMES_PER_ROW,
+    idle: 'Idle.png',
+    walk: 'Walk.png',
+    attack: 'Melee.png',
+    hurt: 'TakeDamage.png',
+    death: 'Die.png',
   },
-  animationImages: {
-    idle: 'characters/knight/Idle.png',
-    walk: 'characters/knight/Walk.png',
-    attack: 'characters/knight/Melee.png',
-    hurt: 'characters/knight/TakeDamage.png',
-    death: 'characters/knight/Die.png',
-  },
-  facings: KNIGHT_SPRITE_FACINGS,
-  frameCrops: KNIGHT_SPRITE_CROPS,
-  // Taller than one cell, so the pack's figures read as heroes rather
-  // than tokens on a board: the draw is centered on the cell, anchored
-  // to the floor, and towers (scale - 1) cells into the row above.
+  crops: KNIGHT_SPRITE_CROPS,
   drawScale: 1.2,
 });
 

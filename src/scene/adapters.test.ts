@@ -469,6 +469,42 @@ describe('scaled actor sprites', () => {
     // in a drawImage call under the test environment).
     expect(drawImage).toHaveBeenCalledTimes(1);
   });
+
+  it('lifts the actor health bar above the scaled sprite', () => {
+    const fillRects: number[][] = [];
+    const ctx = {
+      drawImage: () => {},
+      beginPath: () => {},
+      rect: () => {},
+      stroke: () => {},
+      fillRect: (...args: number[]) => {
+        fillRects.push(args);
+      },
+      fillStyle: 'black',
+      strokeStyle: 'black',
+    } as unknown as CanvasRenderingContext2D;
+    const view = {
+      position: { x: 2, y: 3 },
+      sprite: { image: {} as CanvasImageSource, sx: 0, sy: 0, sw: 70, sh: 70 },
+      tile: null,
+      flashIntensity: 0,
+      active: false,
+      colourBar: '#CD5C5C',
+      healthBar: { current: 5, max: 10 },
+      debugLabel: null,
+      debugLines: [],
+      spriteDraw: { scale: 2 },
+    } as unknown as GameActorView;
+
+    renderActorViewWithSprite(ctx, view, 48);
+
+    // The red capacity bar draws at the top of the doubled sprite, one
+    // cell above the actor's own cell, not at the cell top.
+    expect(fillRects).toContainEqual([2 * 48 + 4, (3 - 1) * 48, 48 - 8, 4]);
+    expect(fillRects).not.toContainEqual([2 * 48 + 4, 3 * 48, 48 - 8, 4]);
+    // The colour bar stays at the actor's own cell floor.
+    expect(fillRects).toContainEqual([2 * 48 + 4, 3 * 48 + 48 - 6, 48 - 8, 4]);
+  });
 });
 
 describe('scaled hero bars', () => {
