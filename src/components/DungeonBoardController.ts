@@ -35,7 +35,7 @@ import {
   executeRadialAction,
 } from '../hero/ClickInputLogic';
 import { renderHeroOverlays } from '../hero/HeroRendering';
-import { renderActors } from '../scene/ActorRendering';
+import { renderActors, renderMonsterHealthBars } from '../scene/ActorRendering';
 import {
   background,
   dungeonViewBackdrop,
@@ -65,7 +65,7 @@ import {
   staticLightCacheKey,
   animatedLightsSignature,
 } from '../dungeon/LightRendering';
-import type { LightViewport } from '../dungeon/LightRendering';
+import type { LightViewport } from '@hoard-engine/lighting';
 import { renderItems } from '../items/ItemRendering';
 import {
   renderRadialMenu,
@@ -142,8 +142,8 @@ import {
   activeShakes,
   shakeJitter,
 } from '../combat';
-import { clearTileTextureCache } from '../dungeon/TileTextureCache';
-import { clearFogCloudCaches } from '../dungeon/DungeonRendering';
+import { clearTileTextureCache } from '@hoard-engine/scene';
+import { clearFogCloudCaches } from '@hoard-engine/scene';
 import {
   hasActiveActorAnimations,
   i18n,
@@ -157,7 +157,7 @@ import {
   handleTwoFingerTouchStart,
   handleTwoFingerTouchMove,
   handleTwoFingerTouchEnd,
-} from '../input/TouchPanLogic';
+} from '@hoard-engine/input';
 import { inputManager } from '../input/InputManager';
 import { musicManager, soundEffectManager } from '../audio';
 import { selectMusicIntensity } from '../audio/MusicIntensity';
@@ -1293,6 +1293,18 @@ export class DungeonBoardController {
       );
     }
 
+    // Monster health bars draw above the lights and the darkness veil
+    // (the actor pass below lights them), so they stay fully readable on
+    // unlit cells.
+    renderMonsterHealthBars(
+      ctx,
+      this.actors,
+      this.cellSize,
+      this.activeState,
+      this.debugMode ?? false,
+      currentTime,
+    );
+
     // The hero turn UI (walkable outline, reticule, colour bar, health
     // bar, action and step markers) is drawn above the lights and the
     // darkness veil, so it stays fully visible even on unlit cells.
@@ -1922,6 +1934,8 @@ export class DungeonBoardController {
     canvas.height = Math.round(height * ratio);
     canvas.style.width = `${String(String(String(width)))}px`;
     canvas.style.height = `${String(String(String(height)))}px`;
+    const view = this.cameraView();
+    const origin = worldToScreen({ x: 0, y: 0 }, view);
     const ctx = canvas.getContext('2d', options);
     if (ctx) {
       // The actor layer is pixel art: its cached sprite frames upscale

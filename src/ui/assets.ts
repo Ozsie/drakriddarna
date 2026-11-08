@@ -11,6 +11,7 @@ import type { AssetProvider } from '@hoard-engine/uikit';
 // reference their images by bare asset paths; wire the shared image
 // cache to resolve those against the deployment's base path. Rooted and
 // protocol URLs pass through the cache untouched.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 setImageUrlResolver((path) => asset(path as AssetPath));
 
 export const AssetId = {

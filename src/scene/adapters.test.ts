@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import { renderMonsterHealthBars } from './ActorRendering';
 import {
   buildHeroViewModels,
   buildMonsterViewModels,
@@ -183,7 +184,7 @@ describe('buildMonsterViewModels', () => {
     clearActorAnimations();
   });
 
-  it('includes discovered monsters with bars and skips undiscovered ones', () => {
+  it('includes discovered monsters with a health bar and skips undiscovered ones', () => {
     const visible = monster('Orc', 0, 0);
     const hidden = monster('Hidden', 1, 1); // cell 'B' is undiscovered
     const state = createState({
@@ -204,7 +205,9 @@ describe('buildMonsterViewModels', () => {
     );
 
     expect(views).toHaveLength(1);
-    expect(views[0].colourBar).toBe(Colour.Green);
+    // The monster colour bar is gone from the board; the view keeps the
+    // health bar for the post-lighting pass.
+    expect(views[0].colourBar).toBe('');
     expect(views[0].healthBar).toEqual({ current: 3, max: 4 });
   });
 
@@ -470,7 +473,7 @@ describe('scaled actor sprites', () => {
     expect(drawImage).toHaveBeenCalledTimes(1);
   });
 
-  it('lifts the actor health bar above the scaled sprite', () => {
+  it('draws no health bar in the actor pass', () => {
     const fillRects: number[][] = [];
     const ctx = {
       drawImage: () => {},
@@ -489,7 +492,7 @@ describe('scaled actor sprites', () => {
       tile: null,
       flashIntensity: 0,
       active: false,
-      colourBar: '#CD5C5C',
+      colourBar: '',
       healthBar: { current: 5, max: 10 },
       debugLabel: null,
       debugLines: [],
@@ -498,12 +501,109 @@ describe('scaled actor sprites', () => {
 
     renderActorViewWithSprite(ctx, view, 48);
 
+    // The scaled sprite's own drawImage is the only drawing: the health
+    // bar belongs to the post-lighting pass, not the actor layer.
+    expect(fillRects).toHaveLength(0);
+  });
+});
+
+describe('renderMonsterHealthBars', () => {
+  afterEach(() => {
+    clearActorAnimations();
+  });
+
+  const barCtx = () => {
+    const fillRects: number[][] = [];
+    const ctx = {
+      beginPath: () => {},
+      rect: () => {},
+      stroke: () => {},
+      fillRect: (...args: number[]) => {
+        fillRects.push(args);
+      },
+      fillStyle: 'black',
+      strokeStyle: 'black',
+    } as unknown as CanvasRenderingContext2D;
+    return { ctx, fillRects };
+  };
+
+  const stateWithMonsters = (...monsters: Monster[]): GameState =>
+    createState({
+      dungeon: {
+        ...createState().dungeon,
+        layout: {
+          ...createState().dungeon.layout,
+          monsters,
+        },
+      },
+    });
+
+  it('draws each visible monster health bar at its cell top', () => {
+    const { ctx, fillRects } = barCtx();
+    const state = stateWithMonsters(monster('Orc', 1, 0)); // cell 'A'
+
+    renderMonsterHealthBars(
+      ctx,
+      {} as CanvasImageSource,
+      48,
+      state,
+      false,
+      now,
+    );
+
+    // Capacity rect: red strip across the cell top.
+    expect(fillRects).toContainEqual([48 + 4, 0, 48 - 8, 4]);
+    // Fill rect scales with current health (3 of 4).
+    expect(fillRects).toContainEqual([
+      48 + 4,
+      0,
+      (48 - 8) * (3 / 4),
+      4,
+    ]);
+  });
+
+  it('lifts the health bar above a scaled sprite', () => {
+    const { ctx, fillRects } = barCtx();
+    const scaled = {
+      ...monster('Big Orc', 0, 1), // cell 'A'
+      sprite: {
+        image: 'orc-sheet.png',
+        frameWidth: 32,
+        frameHeight: 32,
+        drawScale: 2,
+      },
+    } as Monster;
+    const state = stateWithMonsters(scaled);
+
+    renderMonsterHealthBars(
+      ctx,
+      {} as CanvasImageSource,
+      48,
+      state,
+      false,
+      now,
+    );
+
     // The red capacity bar draws at the top of the doubled sprite, one
     // cell above the actor's own cell, not at the cell top.
-    expect(fillRects).toContainEqual([2 * 48 + 4, (3 - 1) * 48, 48 - 8, 4]);
-    expect(fillRects).not.toContainEqual([2 * 48 + 4, 3 * 48, 48 - 8, 4]);
-    // The colour bar stays at the actor's own cell floor.
-    expect(fillRects).toContainEqual([2 * 48 + 4, 3 * 48 + 48 - 6, 48 - 8, 4]);
+    expect(fillRects).toContainEqual([0 + 4, (1 - 1) * 48, 48 - 8, 4]);
+    expect(fillRects).not.toContainEqual([0 + 4, 48, 48 - 8, 4]);
+  });
+
+  it('draws nothing for undiscovered monsters', () => {
+    const { ctx, fillRects } = barCtx();
+    const state = stateWithMonsters(monster('Hidden', 1, 1)); // cell 'B'
+
+    renderMonsterHealthBars(
+      ctx,
+      {} as CanvasImageSource,
+      48,
+      state,
+      false,
+      now,
+    );
+
+    expect(fillRects).toHaveLength(0);
   });
 });
 

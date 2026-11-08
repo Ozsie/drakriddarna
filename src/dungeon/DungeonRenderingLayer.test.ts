@@ -10,13 +10,13 @@ import {
 import { renderHeroes } from '../hero/HeroRendering';
 import { renderMonsters } from '../monsters/MonsterRendering';
 import { renderNotes } from '../notes/NotesRendering';
-import { renderDamageIndicators } from '../combat/DamageIndicatorRendering';
+import { renderDamageIndicators } from '../combat';
 import {
   renderBloodSplatters,
   renderProjectiles,
   createBloodSplatter,
   createProjectile,
-} from '../combat/CombatEffects';
+} from '../combat';
 import { renderItems } from '../items/ItemRendering';
 import { renderUI } from '../ui/UIRendering';
 import { RadialAction } from '../hero/RadialMenuLogic';
@@ -232,8 +232,10 @@ describe('Multi-Layer Canvas Rendering Pipeline', () => {
     renderMonsters(actorCtx, mockActors, 48, state, false);
     renderHeroes(actorCtx, mockActors, 48, state, false);
 
+    // The actor pass draws sprites and tiles only: monster health bars
+    // moved to the post-lighting pass (see src/scene/ActorRendering.ts).
     expect(actorCtx.drawImage).toHaveBeenCalled();
-    expect(actorCtx.fillRect).toHaveBeenCalled();
+    expect(actorCtx.fillRect).not.toHaveBeenCalled();
   });
 
   it('renders overlay notes, damage indicators, blood splatters, and projectiles onto overlay context', () => {

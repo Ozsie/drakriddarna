@@ -3,15 +3,18 @@
 // the cell above, so drawing the two families separately in fixed order
 // (monsters, then heroes) would put a northerly hero's body over a
 // southerly monster's head; the row sort keeps whoever stands south in
-// front. Hero-only and monster-only facades remain for their historical
-// entry points (see src/hero/HeroRendering.ts and
-// src/monsters/MonsterRendering.ts).
+// front. This pass never draws health bars; renderMonsterHealthBars draws
+// them above the lighting (see below). Hero-only and monster-only facades
+// remain for their historical entry points (see src/hero/HeroRendering.ts
+// and src/monsters/MonsterRendering.ts).
 import type { GameState } from '../types';
 import {
   buildHeroViewModels,
   buildMonsterViewModels,
   renderActorViewWithSprite,
+  type GameActorView,
 } from './adapters';
+import { drawHealthBar } from '@hoard-engine/scene';
 
 export const renderActors = (
   ctx: CanvasRenderingContext2D,
@@ -34,4 +37,31 @@ export const renderActors = (
       }
     });
   return hasActiveAnimation;
+};
+
+// Monster health bars, drawn above the lighting and the darkness veil so
+// they stay fully readable in unlit rooms (the actor pass draws below the
+// veil). The package anchors the bar to the cell top, which on a scaled
+// sprite sits mid-figure; lift it to the sprite's top edge, one cell above
+// the actor's own cell per extra scale step, like the hero overlay bars.
+export const renderMonsterHealthBars = (
+  ctx: CanvasRenderingContext2D,
+  actorsSheet: CanvasImageSource,
+  cellSize: number,
+  state: GameState,
+  debugMode: boolean,
+  currentTime: number = Date.now(),
+): void => {
+  buildMonsterViewModels(state, actorsSheet, debugMode, currentTime).forEach(
+    (view) => {
+      if (!view.healthBar) return;
+      const scale = (view as GameActorView).spriteDraw?.scale ?? 1;
+      drawHealthBar(
+        ctx,
+        { x: view.position.x, y: view.position.y - (scale - 1) },
+        view.healthBar,
+        cellSize,
+      );
+    },
+  );
 };

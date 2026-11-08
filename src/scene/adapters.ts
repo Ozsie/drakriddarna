@@ -471,7 +471,10 @@ export const drawActorViewSprite = (
 // One actor view drawn through both paths: the game-side scaled sprite
 // when the view carries a draw scale (the scene package's sprite path
 // always draws into exactly one cell), then the package's own flash,
-// bars and debug extras. The fallback tile only draws while the scaled
+// colour bar and debug extras. Health bars are never drawn here: they
+// draw in a later pass above the lighting and the darkness veil (see
+// renderMonsterHealthBars in src/scene/ActorRendering.ts), so they stay
+// legible in unlit rooms. The fallback tile only draws while the scaled
 // sheets are still loading; once the sprite has drawn at its larger
 // size, drawing the cell-sized tile underneath would show a duplicate
 // silhouette behind the figure.
@@ -482,34 +485,19 @@ export const renderActorViewWithSprite = (
 ): boolean => {
   const draw = view as GameActorView;
   if (!draw.spriteDraw) {
-    return renderActorView(ctx, view, cellSize);
+    return renderActorView(ctx, { ...view, healthBar: null }, cellSize);
   }
   const drew = drawActorViewSprite(ctx, view, cellSize);
-  const active = renderActorView(
+  return renderActorView(
     ctx,
     {
       ...view,
       sprite: null,
+      healthBar: null,
       ...(drew ? { tile: null } : {}),
-      ...(view.healthBar ? { healthBar: null } : {}),
     },
     cellSize,
   );
-  // The package anchors the actor-layer health bar to the cell top,
-  // which on a scaled sprite sits mid-figure; lift it to the sprite's
-  // top edge like the hero overlay bars.
-  if (view.healthBar) {
-    drawHealthBar(
-      ctx,
-      {
-        x: view.position.x,
-        y: view.position.y - (draw.spriteDraw.scale - 1),
-      },
-      view.healthBar,
-      cellSize,
-    );
-  }
-  return active;
 };
 
 // Hero views for the actor layer: the live heroes, plus dead heroes that
@@ -560,7 +548,7 @@ export const buildMonsterViewModels = (
         false,
         currentTime,
         {
-          colourBar: monster.colour,
+          colourBar: '',
           healthBar: { current: monster.health, max: monster.maxHealth },
         },
       );
@@ -594,7 +582,7 @@ export const buildMonsterViewModels = (
         false,
         currentTime,
         {
-          colourBar: monster.colour,
+          colourBar: '',
           healthBar: { current: monster.health, max: monster.maxHealth },
         },
       );
