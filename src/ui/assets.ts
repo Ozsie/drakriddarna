@@ -3,7 +3,6 @@
 // owns the URL construction (and, in M5, the $lib sprite imports).
 
 import { asset } from '$app/paths';
-import type { AssetPath } from '$app/types';
 import { getReadyImage } from '../core/ImageCache';
 import type { AssetProvider } from '@hoard-engine/uikit';
 
@@ -15,7 +14,7 @@ export const AssetId = {
 export type AssetId = (typeof AssetId)[keyof typeof AssetId];
 
 const ASSET_URLS: Record<AssetId, string> = {
-  [AssetId.welcomeBackground]: asset('images/welcome.png' as AssetPath),
+  [AssetId.welcomeBackground]: asset('images/welcome.png'),
 };
 
 /** Resolves an asset id to its URL, for the shared image cache. */
