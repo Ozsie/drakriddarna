@@ -1,14 +1,17 @@
-// The board's single dynamic-layer actor pass: monsters and heroes
-// together, in row order. Sprites taller than a cell overlap the actor on
-// the cell above, so drawing the two families separately in fixed order
-// (monsters, then heroes) would put a northerly hero's body over a
-// southerly monster's head; the row sort keeps whoever stands south in
-// front. This pass never draws health bars; renderMonsterHealthBars draws
-// them above the lighting (see below). Hero-only and monster-only facades
-// remain for their historical entry points (see src/hero/HeroRendering.ts
-// and src/monsters/MonsterRendering.ts).
+// The board's single dynamic-layer actor pass: corpses, monsters and
+// heroes together, in row order. Sprites taller than a cell overlap the
+// actor on the cell above, so drawing the two families separately in
+// fixed order (monsters, then heroes) would put a northerly hero's body
+// over a southerly monster's head; the row sort keeps whoever stands
+// south in front. Corpses lead the list so, on equal rows, whatever
+// still stands draws over whatever already lies. This pass never draws
+// health bars; renderMonsterHealthBars draws them above the lighting
+// (see below). Hero-only and monster-only facades remain for their
+// historical entry points (see src/hero/HeroRendering.ts and
+// src/monsters/MonsterRendering.ts).
 import type { GameState } from '../types';
 import {
+  buildCorpseViewModels,
   buildHeroViewModels,
   buildMonsterViewModels,
   renderActorViewWithSprite,
@@ -25,6 +28,7 @@ export const renderActors = (
   currentTime: number = Date.now(),
 ): boolean => {
   const views = [
+    ...buildCorpseViewModels(state, currentTime),
     ...buildMonsterViewModels(state, actorsSheet, debugMode, currentTime),
     ...buildHeroViewModels(state, actorsSheet, debugMode, currentTime),
   ];

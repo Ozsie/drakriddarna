@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { renderMonsterHealthBars } from './ActorRendering';
 import {
+  buildCorpseViewModels,
   buildHeroViewModels,
   buildMonsterViewModels,
   buildHeroOverlayViewModel,
@@ -13,7 +14,7 @@ import {
 import { clearActorAnimations, playActorDeath } from '../core';
 import { weapons } from '../items/weapons';
 import { ACTOR_TILES, ITEM_TILES } from '../dungeon/tiles';
-import type { GameState, Hero, Monster } from '../types';
+import type { Corpse, GameState, Hero, Monster } from '../types';
 import {
   Colour,
   ItemType,
@@ -272,6 +273,86 @@ describe('buildMonsterViewModels', () => {
     );
 
     expect(views).toHaveLength(1);
+  });
+});
+
+describe('buildCorpseViewModels', () => {
+  afterEach(() => {
+    clearActorAnimations();
+  });
+
+  const corpseAt = (
+    x: number,
+    y: number,
+    sprite: Corpse['sprite'],
+  ): Corpse => ({
+    position: { x, y },
+    sprite,
+    facing: 'south',
+  });
+
+  const stateWithCorpses = (corpses: Corpse[]): GameState => {
+    const state = createState();
+    state.dungeon.layout.corpses = corpses;
+    return state;
+  };
+
+  it('draws corpses on discovered cells, frozen, without bars or flash', () => {
+    const visible = corpseAt(0, 0, {
+      image: 'orc-sheet.png',
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+    const hidden = corpseAt(1, 1, {
+      image: 'orc-sheet.png',
+      frameWidth: 32,
+      frameHeight: 32,
+    }); // cell 'B' is undiscovered
+    const state = stateWithCorpses([visible, hidden]);
+
+    const views = buildCorpseViewModels(state, now);
+
+    expect(views).toHaveLength(1);
+    expect(views[0].position).toEqual({ x: 0, y: 0 });
+    // The sheet never loads in the test environment, so the frozen frame
+    // resolves to null; everything else about the view is set.
+    expect(views[0].sprite).toBeNull();
+    expect(views[0].tile).toBeNull();
+    expect(views[0].flashIntensity).toBe(0);
+    expect(views[0].colourBar).toBe('');
+    expect(views[0].healthBar).toBeNull();
+    expect(views[0].active).toBe(false);
+  });
+
+  it('hides a corpse while its dying actor still animates in the same cell', () => {
+    const sprite: Corpse['sprite'] = {
+      image: 'orc-sheet.png',
+      frameWidth: 32,
+      frameHeight: 32,
+    };
+    const dying = monster('Dying Orc', 0, 0);
+    dying.health = 0;
+    dying.sprite = sprite;
+    playActorDeath(dying, 600, now - 100);
+    const state = stateWithCorpses([corpseAt(0, 0, sprite)]);
+
+    // While the death animation plays, the dying path draws that cell.
+    expect(buildCorpseViewModels(state, now)).toHaveLength(0);
+    // Once it finishes, the corpse takes over.
+    expect(buildCorpseViewModels(state, now + 600)).toHaveLength(1);
+  });
+
+  it('carries the draw scale of the fallen actor', () => {
+    const scaled = corpseAt(0, 0, {
+      frameWidth: 128,
+      frameHeight: 128,
+      drawScale: 2,
+    });
+    const state = stateWithCorpses([scaled]);
+
+    const views = buildCorpseViewModels(state, now);
+
+    expect(views[0].spriteDraw).toEqual({ scale: 2 });
   });
 });
 

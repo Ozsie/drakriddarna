@@ -14,6 +14,7 @@ import { setRng, resetRng } from './dice';
 import { Colour, ItemType, Level, MonsterType, Side } from '../types';
 import type {
   Actor,
+  ActorSprite,
   Dungeon,
   GameState,
   Hero,
@@ -839,5 +840,133 @@ describe('secret-reveal items drop from downed heroes', () => {
 
     expect(hero.inventory).toEqual([necklace, sword]);
     expect(state.dungeon.layout.items).toEqual([]);
+  });
+});
+
+describe('corpses from downed actors', () => {
+  const sprite = (image: string): ActorSprite => ({
+    image,
+    frameWidth: 32,
+    frameHeight: 32,
+  });
+
+  const createActor = (name: string, x: number, y: number): Actor => ({
+    name,
+    actions: 0,
+    movement: 0,
+    maxMovement: 0,
+    defense: 0,
+    health: 5,
+    maxHealth: 10,
+    colour: Colour.Yellow,
+    experience: 0,
+    position: { x, y },
+    level: Level.KNIGHT,
+    weapon: {
+      name: 'Dagger',
+      dice: 1,
+      amountInDeck: 1,
+      range: 1,
+      twoHanded: false,
+      useHearHeroes: true,
+      type: ItemType.WEAPON,
+      value: 0,
+      ignoresShield: false,
+      ignoresArmour: false,
+    },
+    inventory: [],
+    sprite: sprite('actor-sheet.png'),
+  });
+
+  const createState = (): GameState => ({
+    heroes: [],
+    dungeon: {
+      ...dummyDungeon,
+      layout: { ...dummyDungeon.layout, items: [] },
+    },
+    actionLog: [],
+    itemDeck: [],
+    magicItemDeck: [],
+    settings: {},
+    eventDeck: [],
+    reRender: false,
+    drawEvents: true,
+  });
+
+  it('leaves a corpse in the cell where the actor died', () => {
+    const state = createState();
+    const fallen = createActor('Fallen', 2, 2);
+
+    processActorDowned(state, fallen);
+
+    expect(state.dungeon.layout.corpses).toEqual([
+      {
+        position: { x: 2, y: 2 },
+        sprite: fallen.sprite,
+        facing: 'south',
+      },
+    ]);
+  });
+
+  it('replaces the corpse already lying in the cell of a later death', () => {
+    const state = createState();
+    const later = {
+      ...createActor('Later', 2, 2),
+      sprite: sprite('other.png'),
+    };
+    state.dungeon.layout.corpses = [
+      {
+        position: { x: 2, y: 2 },
+        sprite: sprite('lying.png'),
+        facing: 'south',
+      },
+    ];
+
+    processActorDowned(state, later);
+
+    expect(state.dungeon.layout.corpses).toEqual([
+      {
+        position: { x: 2, y: 2 },
+        sprite: later.sprite,
+        facing: 'south',
+      },
+    ]);
+  });
+
+  it('keeps corpses in other cells when replacing one', () => {
+    const state = createState();
+    const elsewhere = {
+      ...createActor('Elsewhere', 1, 0),
+      sprite: sprite('a.png'),
+    };
+    const later = { ...createActor('Later', 2, 2), sprite: sprite('b.png') };
+    state.dungeon.layout.corpses = [
+      {
+        position: { x: 1, y: 0 },
+        sprite: elsewhere.sprite,
+        facing: 'south',
+      },
+    ];
+
+    processActorDowned(state, later);
+
+    const corpses = state.dungeon.layout.corpses ?? [];
+    expect(corpses).toHaveLength(2);
+    expect(corpses[0]).toMatchObject({
+      position: { x: 1, y: 0 },
+    });
+    expect(corpses[1]).toMatchObject({
+      position: { x: 2, y: 2 },
+    });
+  });
+
+  it('leaves no corpse for a spriteless actor', () => {
+    const state = createState();
+    const silent = createActor('Silent', 2, 2);
+    silent.sprite = undefined;
+
+    processActorDowned(state, silent);
+
+    expect(state.dungeon.layout.corpses).toBeUndefined();
   });
 });

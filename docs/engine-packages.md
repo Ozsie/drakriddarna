@@ -590,7 +590,9 @@ step-9 gate ("view-model contracts in place") is being built under
 - `src/scene/adapters.ts` — the GameState → view-model builders, the
   game-side half that stays when the renderers leave: animation-timeline
   resolution (current sprite frame), dying-actor visibility (lingering
-  death animations), monster discovery filtering, walkable-area rules
+  death animations), corpse views (fallen actors stay drawn in their
+  death cell, frozen on the death animation's last frame), monster
+  discovery filtering, walkable-area rules
   (discovery, blocking, line of sight), difficulty-scaled health bars,
   named-tile resolution (`ACTOR_TILES.HERO`, the monster type switch is
   game knowledge) and the i18n item labels.

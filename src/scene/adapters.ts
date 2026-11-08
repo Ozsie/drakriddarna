@@ -7,6 +7,7 @@
 
 import type {
   Actor,
+  Corpse,
   Dungeon,
   GameState,
   Hero,
@@ -17,6 +18,7 @@ import type {
 } from '../types';
 import { MonsterType, TerrainType } from '../types';
 import {
+  DEFAULT_ACTOR_SPRITE_FACING,
   getActorFacing,
   getActorFlashIntensity,
   getActorAnimationFrameIndex,
@@ -300,6 +302,55 @@ const getActorSpriteFrame = (
   return {
     image,
     sx: frameIndex * sprite.frameWidth,
+    sy: row * sprite.frameHeight,
+    sw: sprite.frameWidth,
+    sh: sprite.frameHeight,
+  };
+};
+
+// The corpse's frozen frame: the last frame of its death animation, on
+// the death row of the shared sheet or the facing row it fell at (the
+// per-animation-pack model), with the same crop window a living actor
+// of that sprite would draw.
+const getCorpseSpriteFrame = (corpse: Corpse): SceneSpriteFrame | null => {
+  const sprite = corpse.sprite;
+  const configured = sprite.animations?.death;
+  const lastFrameIndex = (image: HTMLImageElement): number => {
+    const frameCount =
+      configured !== undefined
+        ? Math.max(1, configured)
+        : Math.max(
+            1,
+            Math.floor((image.naturalWidth || image.width) / sprite.frameWidth),
+          );
+    return frameCount - 1;
+  };
+  const animationImage = sprite.animationImages?.death;
+  if (animationImage) {
+    const image = getReadyImage(animationImage);
+    if (!image) return null;
+    const facing = corpse.facing ?? DEFAULT_ACTOR_SPRITE_FACING;
+    const crop = sprite.frameCrops?.death?.[facing];
+    return {
+      image,
+      sx: lastFrameIndex(image) * sprite.frameWidth + (crop?.x ?? 0),
+      sy:
+        (sprite.facings?.length
+          ? spriteDirectionRow(sprite.facings, facing)
+          : 0) *
+          sprite.frameHeight +
+        (crop?.y ?? 0),
+      sw: crop?.size ?? sprite.frameWidth,
+      sh: crop?.size ?? sprite.frameHeight,
+    };
+  }
+  if (!sprite.image) return null;
+  const image = getReadyImage(sprite.image);
+  if (!image) return null;
+  const row = spriteDirectionRow(ACTOR_SPRITE_ANIMATION_ORDER, 'death');
+  return {
+    image,
+    sx: lastFrameIndex(image) * sprite.frameWidth,
     sy: row * sprite.frameHeight,
     sw: sprite.frameWidth,
     sh: sprite.frameHeight,
@@ -598,6 +649,45 @@ export const buildMonsterViewModels = (
       return view;
     });
   return [...visible, ...dying];
+};
+
+// Corpse views for the actor layer: the fallen stay in the cell they
+// died, frozen on the last frame of their death animation, until another
+// actor dies on top of them. While the dying actor's own death animation
+// is still playing in that cell, the dying path draws there instead —
+// the corpse stays hidden so the cell is never drawn twice. Corpses
+// respect the room discovery the same way live monsters do, and they
+// never animate: no bars, no flash, nothing to keep the render loop
+// ticking.
+export const buildCorpseViewModels = (
+  state: GameState,
+  currentTime: number = Date.now(),
+): GameActorView[] => {
+  const dying = getDyingActors(currentTime);
+  return (state.dungeon.layout.corpses ?? [])
+    .filter(
+      (corpse) =>
+        !dying.some((actor) => isSamePosition(actor.position, corpse.position)),
+    )
+    .filter((corpse) => {
+      const cell =
+        state.dungeon.layout.grid[corpse.position.y]?.[corpse.position.x] ?? '';
+      return isRoomDiscovered(state.dungeon, cell);
+    })
+    .map((corpse) => ({
+      position: { x: corpse.position.x, y: corpse.position.y },
+      sprite: getCorpseSpriteFrame(corpse),
+      ...(corpse.sprite.drawScale && corpse.sprite.drawScale > 1
+        ? { spriteDraw: { scale: corpse.sprite.drawScale } }
+        : {}),
+      tile: null,
+      flashIntensity: 0,
+      active: false,
+      colourBar: '',
+      healthBar: null,
+      debugLabel: null,
+      debugLines: [],
+    }));
 };
 
 // The current hero's walkable-area outline for the hero overlay layer:

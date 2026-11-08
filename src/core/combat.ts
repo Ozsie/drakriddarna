@@ -18,6 +18,7 @@ import {
   DEFAULT_ACTOR_DEATH_ANIMATION_MS,
   facingBetween,
   flashActor,
+  getActorFacing,
   getActorSpriteAnimationDurationMs,
   playActorAttack,
   playActorDeath,
@@ -26,6 +27,7 @@ import {
 import { createBloodSplatter, createProjectile } from '../combat';
 import { emitSoundCue } from './soundCues';
 import { resolveDirectorHook } from '@hoard-engine/directors';
+import { isSamePosition } from './grid';
 
 export const ATTACK_BONUS = 'ATTACK_BONUS';
 export const RE_ROLL_ATTACK = 'RE_ROLL_ATTACK';
@@ -122,6 +124,27 @@ const dropSecretRevealItems = (state: GameState, hero: Hero): void => {
   });
 };
 
+// Leaves the fallen actor lying in the cell where it died: one corpse per
+// cell, so a later death on the same cell replaces the corpse already
+// there. The corpse is frozen on the last frame of the death animation,
+// drawn at the facing the actor had when it fell. Spriteless actors have
+// no frame to freeze, so they leave no corpse (the hero renderer already
+// drops spriteless dead heroes instead of animating them).
+const placeCorpse = (state: GameState, target: Actor): void => {
+  if (!target.sprite) return;
+  const layout = state.dungeon.layout;
+  layout.corpses = [
+    ...(layout.corpses ?? []).filter(
+      (corpse) => !isSamePosition(corpse.position, target.position),
+    ),
+    {
+      position: { x: target.position.x, y: target.position.y },
+      sprite: target.sprite,
+      facing: getActorFacing(target),
+    },
+  ];
+};
+
 export const processActorDowned = (
   state: GameState,
   target: Actor,
@@ -137,6 +160,7 @@ export const processActorDowned = (
       DEFAULT_ACTOR_DEATH_ANIMATION_MS,
     ),
   );
+  placeCorpse(state, target);
   if (state.heroes.includes(target)) {
     dropSecretRevealItems(state, target as Hero);
     const gm = getDifficulty(state);

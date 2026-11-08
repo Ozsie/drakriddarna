@@ -418,6 +418,20 @@ export const MonsterType = {
 export type MonsterType =
   (typeof MonsterType)[keyof typeof MonsterType] | (string & {});
 
+// A fallen actor left lying in the cell where it died: the last frame of
+// its death animation keeps drawing in that cell until another actor
+// dies on top of it. Purely visual — a corpse's cell moves and blocks
+// exactly as before.
+export type Corpse = {
+  position: Position;
+  // The dead actor's sprite: the corpse frame (the death animation's
+  // final frame, at the facing the actor fell at) resolves from it at
+  // draw time, so corpses follow the same sheet, crop and scale model
+  // as living actors.
+  sprite: ActorSprite;
+  facing?: ActorSpriteFacing;
+};
+
 export enum Level {
   APPRENTICE = 'apprentice',
   KNIGHT = 'knight',
@@ -651,6 +665,11 @@ export type Layout = {
   secrets: Secret[];
   notes: Note[];
   items: ItemLocation[];
+  // Fallen actors left lying in the dungeon (runtime state, not authored
+  // content): one corpse per cell, and a later death on the same cell
+  // replaces the corpse already there (see `placeCorpse` in
+  // src/core/combat.ts).
+  corpses?: Corpse[];
   corridors: string[];
   // Cells inside a room letter that are corridors without a door between
   // them and the room (e.g. a corridor stub opening straight into a room).
