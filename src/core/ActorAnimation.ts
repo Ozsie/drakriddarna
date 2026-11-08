@@ -1,3 +1,4 @@
+import { spriteDirectionRow, spriteGridFrameIndex } from '@hoard-engine/scene';
 import type {
   Actor,
   ActorAnimationName,
@@ -393,12 +394,12 @@ export const setActorFacing = (
 
 // Row index of the actor's current facing in a directional sprite's
 // sheets; 0 for sprites without facings and for facings missing from the
-// configured row order.
+// configured row order. The row lookup is the scene package's sheet
+// convention; the facing itself (last recorded step) is game state.
 export const getActorSpriteFacingRow = (actor: Actor): number => {
   const facings = actor.sprite?.facings;
   if (!facings || facings.length === 0) return 0;
-  const row = facings.indexOf(getActorFacing(actor));
-  return row >= 0 ? row : 0;
+  return spriteDirectionRow(facings, getActorFacing(actor));
 };
 
 // Natural duration of one pass over the actor's sprite animation (frame
@@ -417,7 +418,10 @@ export const getActorSpriteAnimationDurationMs = (
 };
 
 // Index of the frame to show within the animation's row: looping for
-// idle/walk, clipped to the last frame for attack/hurt/death.
+// idle/walk, clipped to the last frame for attack/hurt/death. The name
+// policy (which animations loop and which event starts the one-shot
+// clock) is game knowledge; the frame selection math is the scene
+// package's uniform-grid timing rule.
 export const getActorAnimationFrameIndex = (
   actor: Actor,
   animation: ActorAnimationName,
@@ -432,10 +436,12 @@ export const getActorAnimationFrameIndex = (
   else if (animation === 'hurt') startTime = state?.flashStartTime;
   else if (animation === 'death') startTime = state?.deathStartTime;
   if (animation === 'idle' || animation === 'walk' || startTime === undefined) {
-    return Math.floor(currentTime / frameDurationMs) % frameCount;
+    return spriteGridFrameIndex({ frameCount, frameDurationMs }, currentTime);
   }
-  const elapsed = Math.max(0, currentTime - startTime);
-  return Math.min(Math.floor(elapsed / frameDurationMs), frameCount - 1);
+  return spriteGridFrameIndex(
+    { frameCount, frameDurationMs, loop: false },
+    currentTime - startTime,
+  );
 };
 
 // Whether the actor's sprite animation may still advance (keeps the render

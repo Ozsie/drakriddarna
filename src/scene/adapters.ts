@@ -49,6 +49,7 @@ import {
   drawHealthBar,
   getSpriteSourceRect,
   renderActorView,
+  spriteDirectionRow,
   type SceneActorView,
   type SceneCorner,
   type SceneDungeonView,
@@ -277,7 +278,8 @@ const getActorSpriteFrame = (
       sh: crop?.size ?? sprite.frameHeight,
     };
   }
-  // Shared-sheet model: one row per animation in ACTOR_SPRITE_ANIMATION_ORDER.
+  // Shared-sheet model: one row per animation in ACTOR_SPRITE_ANIMATION_ORDER;
+  // the row lookup is the scene package's sheet order convention.
   if (!sprite.image) return null;
   const image = getReadyImage(sprite.image);
   if (!image) return null;
@@ -294,7 +296,7 @@ const getActorSpriteFrame = (
     frameCount,
     currentTime,
   );
-  const row = ACTOR_SPRITE_ANIMATION_ORDER.indexOf(animation);
+  const row = spriteDirectionRow(ACTOR_SPRITE_ANIMATION_ORDER, animation);
   return {
     image,
     sx: frameIndex * sprite.frameWidth,
