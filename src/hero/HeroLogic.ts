@@ -141,11 +141,13 @@ const KNIGHT_SPRITE_CROPS: CharacterPackCrops = {
   },
 };
 
-// All heroes share the one knight sprite (static/characters/knight);
-// per-hero identity stays the colour bar. drawScale taller than one
-// cell, so the pack's figures read as heroes rather than tokens on a
-// board: the draw is centered on the cell, anchored to the floor, and
-// towers (scale - 1) cells into the row above.
+// Every hero pack sprite (static/characters/*) draws with drawScale
+// taller than one cell, so the pack's figures read as heroes rather than
+// tokens on a board: the draw is centered on the cell, anchored to the
+// floor, and towers (scale - 1) cells into the row above. Per-hero
+// identity stays the colour bar.
+const HERO_DRAW_SCALE = 1.2;
+
 const knightSprite: ActorSprite = characterPackSprite({
   pack: 'knight',
   animations: {
@@ -156,8 +158,237 @@ const knightSprite: ActorSprite = characterPackSprite({
     death: 'Die.png',
   },
   crops: KNIGHT_SPRITE_CROPS,
-  drawScale: 1.2,
+  drawScale: HERO_DRAW_SCALE,
 });
+
+// Measured from the paladin pack's frames the same way as the knight's
+// tables: 70px windows, horizontally centred on each facing's median
+// silhouette, bottom-anchored at its 90th-percentile feet line.
+const PALADIN_SPRITE_CROPS: CharacterPackCrops = {
+  idle: {
+    east: { x: 30, y: 40, size: 70 },
+    southEast: { x: 27, y: 42, size: 70 },
+    south: { x: 25, y: 40, size: 70 },
+    southWest: { x: 19, y: 38, size: 70 },
+    west: { x: 29, y: 31, size: 70 },
+    northWest: { x: 32, y: 27, size: 70 },
+    north: { x: 36, y: 40, size: 70 },
+    northEast: { x: 40, y: 43, size: 70 },
+  },
+  walk: {
+    east: { x: 28, y: 45, size: 70 },
+    southEast: { x: 28, y: 44, size: 70 },
+    south: { x: 18, y: 41, size: 70 },
+    southWest: { x: 24, y: 37, size: 70 },
+    west: { x: 30, y: 31, size: 70 },
+    northWest: { x: 31, y: 39, size: 70 },
+    north: { x: 43, y: 42, size: 70 },
+    northEast: { x: 35, y: 40, size: 70 },
+  },
+  attack: {
+    east: { x: 41, y: 58, size: 70 },
+    southEast: { x: 31, y: 58, size: 70 },
+    south: { x: 22, y: 58, size: 70 },
+    southWest: { x: 12, y: 58, size: 70 },
+    west: { x: 17, y: 45, size: 70 },
+    northWest: { x: 28, y: 33, size: 70 },
+    north: { x: 38, y: 45, size: 70 },
+    northEast: { x: 45, y: 58, size: 70 },
+  },
+  hurt: {
+    east: { x: 27, y: 49, size: 70 },
+    southEast: { x: 24, y: 43, size: 70 },
+    south: { x: 22, y: 43, size: 70 },
+    southWest: { x: 23, y: 40, size: 70 },
+    west: { x: 31, y: 35, size: 70 },
+    northWest: { x: 35, y: 44, size: 70 },
+    north: { x: 39, y: 50, size: 70 },
+    northEast: { x: 37, y: 48, size: 70 },
+  },
+  death: {
+    east: { x: 38, y: 48, size: 70 },
+    southEast: { x: 31, y: 58, size: 70 },
+    south: { x: 30, y: 58, size: 70 },
+    southWest: { x: 17, y: 53, size: 70 },
+    west: { x: 20, y: 45, size: 70 },
+    northWest: { x: 27, y: 43, size: 70 },
+    north: { x: 29, y: 46, size: 70 },
+    northEast: { x: 41, y: 51, size: 70 },
+  },
+};
+
+const paladinSprite: ActorSprite = characterPackSprite({
+  pack: 'paladin',
+  animations: {
+    idle: 'Idle.png',
+    walk: 'Walk.png',
+    attack: 'Melee.png',
+    hurt: 'TakeDamage.png',
+    death: 'Die.png',
+  },
+  crops: PALADIN_SPRITE_CROPS,
+  drawScale: HERO_DRAW_SCALE,
+});
+
+// Measured from the nomad pack's frames (70px windows): the pack's
+// attack sheet is Attack1.png rather than the knight family's Melee.png.
+const NOMAD_SPRITE_CROPS: CharacterPackCrops = {
+  idle: {
+    east: { x: 33, y: 23, size: 70 },
+    southEast: { x: 30, y: 32, size: 70 },
+    south: { x: 32, y: 33, size: 70 },
+    southWest: { x: 24, y: 27, size: 70 },
+    west: { x: 27, y: 24, size: 70 },
+    northWest: { x: 30, y: 25, size: 70 },
+    north: { x: 30, y: 27, size: 70 },
+    northEast: { x: 36, y: 27, size: 70 },
+  },
+  walk: {
+    east: { x: 40, y: 31, size: 70 },
+    southEast: { x: 35, y: 40, size: 70 },
+    south: { x: 27, y: 36, size: 70 },
+    southWest: { x: 18, y: 29, size: 70 },
+    west: { x: 21, y: 25, size: 70 },
+    northWest: { x: 26, y: 21, size: 70 },
+    north: { x: 35, y: 22, size: 70 },
+    northEast: { x: 44, y: 23, size: 70 },
+  },
+  attack: {
+    east: { x: 40, y: 41, size: 70 },
+    southEast: { x: 31, y: 38, size: 70 },
+    south: { x: 30, y: 38, size: 70 },
+    southWest: { x: 28, y: 37, size: 70 },
+    west: { x: 20, y: 39, size: 70 },
+    northWest: { x: 29, y: 37, size: 70 },
+    north: { x: 31, y: 43, size: 70 },
+    northEast: { x: 32, y: 43, size: 70 },
+  },
+  hurt: {
+    east: { x: 36, y: 40, size: 70 },
+    southEast: { x: 31, y: 39, size: 70 },
+    south: { x: 25, y: 32, size: 70 },
+    southWest: { x: 20, y: 31, size: 70 },
+    west: { x: 25, y: 27, size: 70 },
+    northWest: { x: 29, y: 23, size: 70 },
+    north: { x: 35, y: 24, size: 70 },
+    northEast: { x: 42, y: 28, size: 70 },
+  },
+  death: {
+    east: { x: 50, y: 45, size: 70 },
+    southEast: { x: 37, y: 58, size: 70 },
+    south: { x: 15, y: 55, size: 70 },
+    southWest: { x: 6, y: 36, size: 70 },
+    west: { x: 11, y: 19, size: 70 },
+    northWest: { x: 24, y: 16, size: 70 },
+    north: { x: 46, y: 17, size: 70 },
+    northEast: { x: 55, y: 21, size: 70 },
+  },
+};
+
+const nomadSprite: ActorSprite = characterPackSprite({
+  pack: 'nomad',
+  animations: {
+    idle: 'Idle.png',
+    walk: 'Walk.png',
+    attack: 'Attack1.png',
+    hurt: 'TakeDamage.png',
+    death: 'Die.png',
+  },
+  crops: NOMAD_SPRITE_CROPS,
+  drawScale: HERO_DRAW_SCALE,
+});
+
+// Measured from the witch doctor pack's frames (70px windows); its
+// attack sheet is Attack1.png like the nomad's.
+const WITCHDOCTOR_SPRITE_CROPS: CharacterPackCrops = {
+  idle: {
+    east: { x: 40, y: 42, size: 70 },
+    southEast: { x: 27, y: 47, size: 70 },
+    south: { x: 19, y: 42, size: 70 },
+    southWest: { x: 14, y: 33, size: 70 },
+    west: { x: 21, y: 23, size: 70 },
+    northWest: { x: 35, y: 22, size: 70 },
+    north: { x: 43, y: 27, size: 70 },
+    northEast: { x: 48, y: 38, size: 70 },
+  },
+  walk: {
+    east: { x: 42, y: 37, size: 70 },
+    southEast: { x: 29, y: 44, size: 70 },
+    south: { x: 23, y: 42, size: 70 },
+    southWest: { x: 18, y: 32, size: 70 },
+    west: { x: 21, y: 24, size: 70 },
+    northWest: { x: 33, y: 28, size: 70 },
+    north: { x: 39, y: 30, size: 70 },
+    northEast: { x: 45, y: 35, size: 70 },
+  },
+  attack: {
+    east: { x: 44, y: 43, size: 70 },
+    southEast: { x: 38, y: 53, size: 70 },
+    south: { x: 21, y: 58, size: 70 },
+    southWest: { x: 16, y: 58, size: 70 },
+    west: { x: 16, y: 38, size: 70 },
+    northWest: { x: 23, y: 39, size: 70 },
+    north: { x: 39, y: 39, size: 70 },
+    northEast: { x: 45, y: 41, size: 70 },
+  },
+  hurt: {
+    east: { x: 42, y: 43, size: 70 },
+    southEast: { x: 29, y: 42, size: 70 },
+    south: { x: 17, y: 43, size: 70 },
+    southWest: { x: 18, y: 35, size: 70 },
+    west: { x: 18, y: 23, size: 70 },
+    northWest: { x: 32, y: 21, size: 70 },
+    north: { x: 45, y: 25, size: 70 },
+    northEast: { x: 46, y: 37, size: 70 },
+  },
+  death: {
+    east: { x: 34, y: 46, size: 70 },
+    southEast: { x: 30, y: 43, size: 70 },
+    south: { x: 22, y: 43, size: 70 },
+    southWest: { x: 22, y: 40, size: 70 },
+    west: { x: 25, y: 38, size: 70 },
+    northWest: { x: 30, y: 34, size: 70 },
+    north: { x: 40, y: 30, size: 70 },
+    northEast: { x: 38, y: 38, size: 70 },
+  },
+};
+
+const witchDoctorSprite: ActorSprite = characterPackSprite({
+  pack: 'witchDoctor',
+  animations: {
+    idle: 'Idle.png',
+    walk: 'Walk.png',
+    attack: 'Attack1.png',
+    hurt: 'TakeDamage.png',
+    death: 'Die.png',
+  },
+  crops: WITCHDOCTOR_SPRITE_CROPS,
+  drawScale: HERO_DRAW_SCALE,
+});
+
+// The party's sprite rotation, picked by party index: the first hero is
+// a paladin, the second a nomad, the third the knight, the fourth a witch
+// doctor, and the cycle starts over for any heroes beyond the fourth.
+export const HERO_SPRITE_PACKS: ActorSprite[] = [
+  paladinSprite,
+  nomadSprite,
+  knightSprite,
+  witchDoctorSprite,
+];
+
+export const heroSpriteForIndex = (index: number): ActorSprite =>
+  HERO_SPRITE_PACKS[Math.abs(index) % HERO_SPRITE_PACKS.length];
+
+/**
+ * Assigns the rotation's sprite to every hero by its party position,
+ * preserving each hero's other data (roster and selected heroes already
+ * carry the knight fallback from `newHero`).
+ */
+export const assignHeroSprites = (heroes: Hero[]): void => {
+  heroes.forEach((hero, index) => {
+    hero.sprite = heroSpriteForIndex(index);
+  });
+};
 
 export const newHero = (
   name: string,

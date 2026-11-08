@@ -554,12 +554,7 @@ describe('renderMonsterHealthBars', () => {
     // Capacity rect: red strip across the cell top.
     expect(fillRects).toContainEqual([48 + 4, 0, 48 - 8, 4]);
     // Fill rect scales with current health (3 of 4).
-    expect(fillRects).toContainEqual([
-      48 + 4,
-      0,
-      (48 - 8) * (3 / 4),
-      4,
-    ]);
+    expect(fillRects).toContainEqual([48 + 4, 0, (48 - 8) * (3 / 4), 4]);
   });
 
   it('lifts the health bar above a scaled sprite', () => {
@@ -586,8 +581,8 @@ describe('renderMonsterHealthBars', () => {
 
     // The red capacity bar draws at the top of the doubled sprite, one
     // cell above the actor's own cell, not at the cell top.
-    expect(fillRects).toContainEqual([0 + 4, (1 - 1) * 48, 48 - 8, 4]);
-    expect(fillRects).not.toContainEqual([0 + 4, 48, 48 - 8, 4]);
+    expect(fillRects).toContainEqual([4, (1 - 1) * 48, 48 - 8, 4]);
+    expect(fillRects).not.toContainEqual([4, 48, 48 - 8, 4]);
   });
 
   it('draws nothing for undiscovered monsters', () => {

@@ -40,6 +40,18 @@ describe('game orchestrator', () => {
     });
   });
 
+  it('init deals hero sprites in rotation order for the selected party', () => {
+    const campaign = getCampaign('iceDragonTreasure');
+    const ids = campaign.heroes
+      .map((hero) => hero.id)
+      .filter((id): id is string => typeof id === 'string');
+    const heroes = buildSelectedHeroes(campaign, [ids[1], ids[0]], {});
+    const state = init('iceDragonTreasure', 'tactician', undefined, heroes);
+    expect(
+      state.heroes.map((hero) => hero.sprite?.animationImages?.idle),
+    ).toEqual(['characters/paladin/Idle.png', 'characters/nomad/Idle.png']);
+  });
+
   it('init with hard difficulty initializes with hard difficulty and without extra starting shields', () => {
     const state = init('iceDragonTreasure', 'hard');
     expect(state.gameMaster?.id).toBe('brutalOverlord');

@@ -28,7 +28,12 @@ import {
 } from '../hero/RadialMenuLogic';
 import { defineDungeon, parseTileMap } from '../dungeon/dungeonParser';
 import { validateLayout } from '../dungeon/dungeonValidator';
-import { interact, newHero, search } from '../hero/HeroLogic';
+import {
+  interact,
+  heroSpriteForIndex,
+  newHero,
+  search,
+} from '../hero/HeroLogic';
 import { resetRng, setRng, getGameMaster } from '../core';
 
 const defaultWeapon: Weapon = {
@@ -163,6 +168,11 @@ describe('InteractableLogic', () => {
       expect(added).toBeDefined();
       expect(added?.colour).toBe(Colour.Blue);
       expect(added?.position).toEqual({ x: 2, y: 2 });
+      // The new hero continues the party's sprite rotation at its size
+      // (one hero in the party: the newcomer is the second, a nomad).
+      expect(added?.sprite?.animationImages?.idle).toBe(
+        'characters/nomad/Idle.png',
+      );
     });
 
     it('adds an existing hero object to current heroes party', () => {
@@ -186,6 +196,30 @@ describe('InteractableLogic', () => {
       expect(state.heroes.length).toBe(2);
       expect(state.heroes).toContain(alliedHero);
       expect(alliedHero.position).toEqual({ x: 4, y: 4 });
+    });
+
+    it('keeps an authored sprite when adding an existing hero object', () => {
+      const hero = createTestHero(1, 1);
+      const state = createTestState(hero);
+      const alliedHero = newHero('Thor', Colour.Red);
+      alliedHero.sprite = heroSpriteForIndex(3); // witch doctor
+
+      const interactable = {
+        position: { x: 3, y: 3 },
+        effect: 'addHero',
+        args: {
+          hero: alliedHero,
+          position: { x: 4, y: 4 },
+        },
+        oneTime: true,
+      };
+
+      triggerInteractable(state, interactable, hero);
+
+      expect(state.heroes).toContain(alliedHero);
+      expect(alliedHero.sprite?.animationImages?.idle).toBe(
+        'characters/witchDoctor/Idle.png',
+      );
     });
 
     it('equips newly created ally with difficulty-based starting equipment', () => {
