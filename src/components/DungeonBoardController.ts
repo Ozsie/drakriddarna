@@ -1,3 +1,8 @@
+import {
+  screenToWorld,
+  worldToScreen,
+  type CameraView,
+} from '@hoard-engine/camera';
 import { get } from 'svelte/store';
 import { browser } from '$app/env';
 import actorSprites from '#lib/Dungeon_Character_3.png';
@@ -874,15 +879,27 @@ export class DungeonBoardController {
     });
   };
 
+  private cameraView = (
+    width = this.containerWidth,
+    height = this.containerHeight,
+  ): CameraView => ({
+    width,
+    height,
+    centerX: this.startPosition
+      ? (this.startPosition.x + 0.5) * this.cellSize
+      : 0,
+    centerY: this.startPosition
+      ? (this.startPosition.y + 0.5) * this.cellSize
+      : 0,
+    panX: this.panX,
+    panY: this.panY,
+  });
+
   private updateAllCanvasTransforms = () => {
     if (!this.containerWidth || !this.containerHeight) return;
     const ratio = this.canvasRatio;
-    const centerOffsetX = this.startPosition
-      ? (this.startPosition.x + 0.5) * this.cellSize
-      : 0;
-    const centerOffsetY = this.startPosition
-      ? (this.startPosition.y + 0.5) * this.cellSize
-      : 0;
+    const view = this.cameraView();
+    const origin = worldToScreen({ x: 0, y: 0 }, view);
     // The transform change invalidates the static light layer: its cached
     // pixels were drawn under the previous transform and are copied into
     // the light mask in device space, so they would sit offset relative
@@ -891,7 +908,7 @@ export class DungeonBoardController {
       this.containerWidth,
     )},${String(this.containerHeight)},${String(this.panX)},${String(
       this.panY,
-    )},${String(centerOffsetX)},${String(centerOffsetY)}`;
+    )},${String(view.centerX)},${String(view.centerY)}`;
     if (transformSig !== this.lastWorldTransformSig) {
       this.lastWorldTransformSig = transformSig;
       this.lastStaticLightKey = '';
@@ -913,8 +930,8 @@ export class DungeonBoardController {
             0,
             0,
             ratio,
-            ratio * (this.containerWidth / 2 + this.panX - centerOffsetX),
-            ratio * (this.containerHeight / 2 + this.panY - centerOffsetY),
+            ratio * origin.x,
+            ratio * origin.y,
           );
         }
       }
@@ -1025,15 +1042,10 @@ export class DungeonBoardController {
     const debugMode = this.debugMode ?? false;
     // The visible part of the world, in cells: lights whose glow cannot
     // reach it are culled from rendering and animation alike.
-    const centerOffsetX = this.startPosition
-      ? (this.startPosition.x + 0.5) * this.cellSize
-      : 0;
-    const centerOffsetY = this.startPosition
-      ? (this.startPosition.y + 0.5) * this.cellSize
-      : 0;
+    const worldOrigin = screenToWorld({ x: 0, y: 0 }, this.cameraView());
     const lightViewport: LightViewport = {
-      x: (centerOffsetX - this.panX - this.containerWidth / 2) / this.cellSize,
-      y: (centerOffsetY - this.panY - this.containerHeight / 2) / this.cellSize,
+      x: worldOrigin.x / this.cellSize,
+      y: worldOrigin.y / this.cellSize,
       width: this.containerWidth / this.cellSize,
       height: this.containerHeight / this.cellSize,
     };
@@ -1870,21 +1882,13 @@ export class DungeonBoardController {
 
     if (active.length > 0) {
       // The view centre in cells, matching the light viewport maths.
-      const centerOffsetX = this.startPosition
-        ? (this.startPosition.x + 0.5) * this.cellSize
-        : 0;
-      const centerOffsetY = this.startPosition
-        ? (this.startPosition.y + 0.5) * this.cellSize
-        : 0;
+      const worldCenter = screenToWorld(
+        { x: this.containerWidth / 2, y: this.containerHeight / 2 },
+        this.cameraView(),
+      );
       const viewCenter = {
-        x:
-          (centerOffsetX - this.panX - this.containerWidth / 2) /
-            this.cellSize +
-          this.containerWidth / (2 * this.cellSize),
-        y:
-          (centerOffsetY - this.panY - this.containerHeight / 2) /
-            this.cellSize +
-          this.containerHeight / (2 * this.cellSize),
+        x: worldCenter.x / this.cellSize,
+        y: worldCenter.y / this.cellSize,
       };
       const jitter = shakeJitter(active, viewCenter, now);
       const transform = `translate(${jitter.x.toFixed(2)}px, ${jitter.y.toFixed(
@@ -1929,20 +1933,11 @@ export class DungeonBoardController {
     canvas.style.height = `${String(String(String(height)))}px`;
     const ctx = canvas.getContext('2d', options);
     if (ctx) {
-      const centerOffsetX = this.startPosition
-        ? (this.startPosition.x + 0.5) * this.cellSize
-        : 0;
-      const centerOffsetY = this.startPosition
-        ? (this.startPosition.y + 0.5) * this.cellSize
-        : 0;
-      ctx.setTransform(
-        ratio,
-        0,
-        0,
-        ratio,
-        ratio * (width / 2 + this.panX - centerOffsetX),
-        ratio * (height / 2 + this.panY - centerOffsetY),
+      const origin = worldToScreen(
+        { x: 0, y: 0 },
+        this.cameraView(width, height),
       );
+      ctx.setTransform(ratio, 0, 0, ratio, ratio * origin.x, ratio * origin.y);
       // Resizing a canvas clears it and this call re-applies the world
       // transform, so the cached static light layer no longer matches the
       // surface it was drawn on.

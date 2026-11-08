@@ -12,9 +12,11 @@ lighting, dice), pure I/O abstractions (audio, saves), and pure rendering
 (primitives, UI chrome, scene). Everything genre- or content-specific stays in
 this repository.
 
-The target architecture has now been reached: all nine packages are
-published and consumed as dependencies, and what remains in `src/` is
-the game — the turn pipeline, the content and the adapters/facades that
+The target architecture has now been reached: the nine original packages
+are published and consumed as dependencies; the in-repository input and
+camera extracts are consumed locally but are not yet published. What
+remains in `src/` is the game — the turn pipeline, the content and the
+adapters/facades that
 resolve game state into the packages' contracts. The remaining coupling
 is deliberate game knowledge: the shared `GameState` type, the
 `#lib/translations/index.js` i18n singleton, and the world-rendering
@@ -27,9 +29,10 @@ names the coupling its extraction removed. (The extractions are done:
 `@hoard-engine/grid`, `@hoard-engine/primitives`,
 `@hoard-engine/audio`, `@hoard-engine/lighting`,
 `@hoard-engine/saves`, `@hoard-engine/directors`,
-`@hoard-engine/uikit` and `@hoard-engine/scene` are published on
-npm and consumed as dependencies — see their sections below for the
-layout and tooling pattern.)
+`@hoard-engine/uikit` and `@hoard-engine/scene` are published on npm and
+consumed as dependencies; `@hoard-engine/input` and `@hoard-engine/camera`
+are extracted local packages, not yet published — see their sections
+below for the layout and tooling pattern.)
 
 ## Package map
 
@@ -41,14 +44,15 @@ layout and tooling pattern.)
 @hoard-engine/saves      versioned save framework + migration registry
 @hoard-engine/directors  hook/dispatch framework for game-master-style directors
 @hoard-engine/time       day/cycle/season calendar (future; see Future candidates)
-@hoard-engine/input      key bindings, action dispatch, touch gestures (future; see Future candidates)
+@hoard-engine/input      key bindings, action dispatch, touch gestures
+@hoard-engine/camera     follow smoothing + viewport coordinate transforms
 @hoard-engine/primitives text, geometry, clipping, theme tokens
 @hoard-engine/uikit      UI chrome: widgets, components       (source: src/uikit/)
 @hoard-engine/scene      world canvas: tiles, walls, light composite, sprites, VFX
 game              logic + content + adapters             (this repo)
 ```
 
-Dependency graph — nine leaves, one composition root:
+Dependency graph — twelve leaves (eleven present, one proposed), one composition root:
 
 ```
 @hoard-engine/rng        (deps: none)
@@ -57,10 +61,13 @@ Dependency graph — nine leaves, one composition root:
 @hoard-engine/audio      (deps: none)
 @hoard-engine/saves      (deps: none; game registers migrators)
 @hoard-engine/directors  (deps: none)
+@hoard-engine/time       (deps: none; proposed)
+@hoard-engine/input      (deps: none)
+@hoard-engine/camera     (deps: none)
 @hoard-engine/primitives (deps: none)
 @hoard-engine/uikit      (deps: @hoard-engine/primitives)
 @hoard-engine/scene      (deps: @hoard-engine/primitives)
-game              (deps: all — the only node with edges)
+game              (deps: all present leaves — the only node with edges)
 ```
 
 The only inter-package edges are the deliberate ones into `@hoard-engine/primitives`,
@@ -648,6 +655,28 @@ step-9 gate ("view-model contracts in place") is being built under
   `@hoard-engine/scene` (v0.1.0), consumed as a dependency like every
   other engine package.
 
+### @hoard-engine/input — source: `../input` — EXTRACTED LOCALLY
+
+Generic key-binding, action-dispatch, held-action and touch-gesture
+mechanics extracted from both games. The package uses plain input data and
+consumer callbacks; action names, browser event wiring, default bindings,
+and screen-relative movement remain in the games.
+
+**Current state:** standalone and consumed locally by both games, not yet
+published. Its boundary, public-surface and browser/i18n sentinel tests
+enforce the package rules; game-specific mechanics remain in the adapters.
+
+### @hoard-engine/camera — source: `../camera` — EXTRACTED LOCALLY
+
+Exponential camera-follow smoothing and centered/panned world-to-screen
+and screen-to-world transforms. It accepts plain positions, viewport
+dimensions and offsets; projection, zoom, rendering, resize, board bounds
+and camera lifecycle remain consumer-owned.
+
+**Current state:** standalone and consumed locally by both games, not yet
+published. Its boundary, public-surface and browser/i18n sentinel tests
+enforce the package rules; the package has no runtime dependencies.
+
 ## Prerequisites (cross-cutting)
 
 These apply to most packages and are the bulk of the real work. They mirror
@@ -705,8 +734,9 @@ later:
    **Done:** published as `@hoard-engine/uikit` (v0.1.0), consumed as
    a dependency; `src/uikit/` has left this repo.
 9. `scene` — last and largest: needs the render/logic separation complete and
-   view-model contracts in place. Camera/viewport and map streaming are
-   out-of-scope extensions for a future consumer, not part of the extraction.
+   view-model contracts in place. Map streaming remains an out-of-scope
+   extension for a future consumer, not part of the extraction; camera
+   follow and viewport transforms are provided by `@hoard-engine/camera`.
    **Done:** published as `@hoard-engine/scene` (v0.1.0), consumed as a
    dependency, with the consumer-defined contract drains the spec named —
    corner data and the sealed grid arrive in the view
@@ -716,6 +746,18 @@ later:
    effects) are package-local const duplicates behind structural
    compatibility. The engine knowledge that is composition glue (the
    corner/sealed derivation, the light view builder) stays in the game.
+
+10. `@hoard-engine/input` — generic bindings, action dispatch, held-action
+    state and touch gestures, extracted from both games. **Done locally:**
+    the standalone `../input` package is consumed by both games; game action
+    names, DOM event wiring and screen-relative movement remain in consumers.
+    It is not yet published.
+11. `@hoard-engine/camera` — follow smoothing and centered/panned viewport
+    transforms, extracted from Metroidvania's camera and Drakriddarna's
+    coordinate conversion and canvas transform math. **Done locally:** the
+    standalone `../camera` package is consumed by both games; projection,
+    zoom, resize, canvas lifecycle and board bounds remain consumer-owned.
+    It is not yet published.
 
 ## What stays in the game
 
@@ -738,36 +780,18 @@ policy; the packages contain no game content by construction.
   Low priority: the machinery is small and works fine behind its
   `GameState`-typed facade, and the timer's dungeon/campaign semantics
   stay with the game regardless.
-- `@hoard-engine/input` — the framework half of `src/input/`. The
-  `InputManager` class is a generic leaf in game costume: a rebindable
-  key-binding registry (bind/unbind/set/query, guarded against
-  re-entrancy by cloning), an action-to-handlers dispatcher with
-  enable/disable, a key handler that ignores text-field targets, and a
-  swipe classifier (distance/time thresholds, octant angles, optional
-  diagonals). `TouchPanLogic.ts` is already pure: the two-finger-centroid
-  pan state machine has no imports at all. The extraction has the same
-  shape as audio's: the `InputAction` enum values and default key
-  bindings are game vocabulary, `registerDefaultDispatchers` wires the
-  store actions, and `$app/env` supplies the browser flag. The package
-  would be generic over the action type with injected bindings and
-  dispatch; the game keeps the enum, the defaults, the dispatchers, the
-  `$app` seam and the singleton, mirroring the `SoundEffectManager`
-  facade pattern. Like uikit it is browser-bound by nature
-  (Keyboard/Touch events); its tests run in plain Node over stub events.
-  Two-consumer check: weaker than most — the second consumer is the
-  benchmark's `bot.ts` turn injector, which currently builds its own
-  DIRECTIONS table.
 
 ## Evaluated and rejected (November 2026 review)
 
 A November 2026 review pass compared this spec with what remains in
-`src/`. The published packages and their facades match the spec above,
-including the open-item ledger: the sound-cue inversion is done (logic
+`src/`. The published packages and their facades match the spec above;
+input and camera have since been extracted as local, unpublished packages.
+The open-item ledger includes the sound-cue inversion (logic
 emits cue data; only the adapter, the UI shell and `AppSettings` import
 the `soundEffectManager` facade) and the scene extraction (step 9) is
 complete — published as `@hoard-engine/scene`, with the game keeping
 the adapters and the render facades (see the scene section). Besides
-the two future candidates
+the future candidate
 above, these framework-looking modules were examined and stay in the
 game:
 
