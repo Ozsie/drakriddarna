@@ -45,6 +45,8 @@ import { ACTOR_SPRITE_ANIMATION_ORDER } from '../core';
 import { ACTOR_TILES, ITEM_TILES, type TileRef } from '../dungeon/tiles';
 import {
   TERRAIN_OVERLAY,
+  drawColourBar,
+  drawHealthBar,
   getSpriteSourceRect,
   renderActorView,
   type SceneActorView,
@@ -438,14 +440,14 @@ const toActorView = (
 // centered on the actor's cell and anchored to the cell floor, so scales
 // above 1 tower into the cells above without sinking into the ground or
 // sliding sideways. Crop windows are bottom-aligned to the feet, which
-// makes the floor anchor correct.
+// makes the floor anchor correct. Returns whether a frame was drawn.
 export const drawActorViewSprite = (
   ctx: CanvasRenderingContext2D,
   view: SceneActorView,
   cellSize: number,
-): void => {
+): boolean => {
   const frame = view.sprite;
-  if (!frame) return;
+  if (!frame) return false;
   const scale = (view as GameActorView).spriteDraw?.scale ?? 1;
   const size = cellSize * scale;
   const dx = view.position.x * cellSize + (cellSize - size) / 2;
@@ -461,20 +463,32 @@ export const drawActorViewSprite = (
     size,
     size,
   );
+  return true;
 };
 
 // One actor view drawn through both paths: the game-side scaled sprite
 // when the view carries a draw scale (the scene package's sprite path
 // always draws into exactly one cell), then the package's own flash,
-// bars and debug extras.
+// bars and debug extras. The fallback tile only draws while the scaled
+// sheets are still loading; once the sprite has drawn at its larger
+// size, drawing the cell-sized tile underneath would show a duplicate
+// silhouette behind the figure.
 export const renderActorViewWithSprite = (
   ctx: CanvasRenderingContext2D,
   view: SceneActorView,
   cellSize: number,
 ): boolean => {
   if ((view as GameActorView).spriteDraw) {
-    drawActorViewSprite(ctx, view, cellSize);
-    return renderActorView(ctx, { ...view, sprite: null }, cellSize);
+    const drew = drawActorViewSprite(ctx, view, cellSize);
+    return renderActorView(
+      ctx,
+      {
+        ...view,
+        sprite: null,
+        ...(drew ? { tile: null } : {}),
+      },
+      cellSize,
+    );
   }
   return renderActorView(ctx, view, cellSize);
 };
@@ -621,10 +635,87 @@ export const buildWalkableCells = (
 
 // Hero bars, pips and the current-actor reticule for the hero overlay
 // layer, at the heroes' visual (animated) positions.
+// A hero overlay bar with the game-side sprite scale attached: bars of
+// scaled-sprite heroes draw game-side (see drawScaledHeroBar), because
+// their health bar must sit above the sprite instead of above its cell.
+export type GameHeroOverlayBar = SceneHeroOverlayView['bars'][number] & {
+  spriteDraw?: { scale: number };
+};
+
+export type GameHeroOverlayView = Omit<SceneHeroOverlayView, 'bars'> & {
+  bars: GameHeroOverlayBar[];
+};
+
+// One scaled-sprite hero's bar stack: the action/move pips and the
+// colour bar stay at the hero's cell, while the health bar lifts to the
+// sprite's top edge — a drawScale N sprite tops out (N - 1) cells above
+// its cell.
+export const drawScaledHeroBar = (
+  ctx: CanvasRenderingContext2D,
+  bar: GameHeroOverlayBar,
+  cellSize: number,
+): void => {
+  const scale = bar.spriteDraw?.scale ?? 1;
+  drawHeroBarPips(ctx, bar, cellSize);
+  drawColourBar(ctx, bar.position, bar.colour, cellSize);
+  drawHealthBar(
+    ctx,
+    { x: bar.position.x, y: bar.position.y - (scale - 1) },
+    bar.health,
+    cellSize,
+  );
+};
+
+// The package's pip rendering is module-private (actorCanvas.js
+// renderActionPips); this mirrors its geometry for the scaled-sprite
+// bars, which draw game-side. Keep in sync with the package until the
+// pip primitive is exported.
+const drawHeroBarPips = (
+  ctx: CanvasRenderingContext2D,
+  bar: GameHeroOverlayBar,
+  cellSize: number,
+): void => {
+  const { position, actionPips, movePips } = bar;
+  const x = position.x;
+  const y = position.y;
+  const prevFillStyle = ctx.fillStyle;
+  const prevStrokeStyle = ctx.strokeStyle;
+  ctx.strokeStyle = '#080808';
+  ctx.fillStyle = 'darkred';
+  for (let index = 0; index < (actionPips ?? 0); index++) {
+    ctx.fillRect(
+      x * cellSize + 4 + 6 * index,
+      y * cellSize + cellSize - 12,
+      5,
+      5,
+    );
+    ctx.rect(x * cellSize + 4 + 6 * index, y * cellSize + cellSize - 12, 5, 5);
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'blue';
+  for (let index = 0; index < (movePips ?? 0); index++) {
+    ctx.fillRect(
+      x * cellSize + cellSize - 22 + 6 * index,
+      y * cellSize + cellSize - 12,
+      5,
+      5,
+    );
+    ctx.rect(
+      x * cellSize + cellSize - 22 + 6 * index,
+      y * cellSize + cellSize - 12,
+      5,
+      5,
+    );
+    ctx.stroke();
+  }
+  ctx.fillStyle = prevFillStyle;
+  ctx.strokeStyle = prevStrokeStyle;
+};
+
 export const buildHeroOverlayViewModel = (
   state: GameState,
   currentTime: number = Date.now(),
-): SceneHeroOverlayView => {
+): GameHeroOverlayView => {
   const currentActor = state.currentActor;
   return {
     walkableCells: buildWalkableCells(state),
@@ -643,6 +734,9 @@ export const buildHeroOverlayViewModel = (
       },
       actionPips: hero.actions,
       movePips: hero.movement,
+      ...(hero.sprite?.drawScale && hero.sprite.drawScale > 1
+        ? { spriteDraw: { scale: hero.sprite.drawScale } }
+        : {}),
     })),
   };
 };

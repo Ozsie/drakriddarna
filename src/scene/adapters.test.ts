@@ -5,6 +5,7 @@ import {
   buildHeroOverlayViewModel,
   buildItemViewModels,
   drawActorViewSprite,
+  drawScaledHeroBar,
   renderActorViewWithSprite,
   type GameActorView,
 } from './adapters';
@@ -410,14 +411,21 @@ describe('scaled actor sprites', () => {
     );
   });
 
-  it('draws through the facade helper and strips the sprite for the package path', () => {
+  it('draws through the facade helper and strips the sprite and tile for the package path', () => {
     const drawImage = vi.fn();
     const image = {} as CanvasImageSource;
     const ctx = { drawImage } as unknown as CanvasRenderingContext2D;
+    const tile = {
+      sheet: {} as CanvasImageSource,
+      sx: 0,
+      sy: 0,
+      size: 32,
+      drawSize: 32,
+    };
     const view = {
       position: { x: 0, y: 0 },
       sprite: { image, sx: 0, sy: 0, sw: 70, sh: 70 },
-      tile: null,
+      tile,
       flashIntensity: 0,
       active: false,
       colourBar: '',
@@ -428,6 +436,123 @@ describe('scaled actor sprites', () => {
     } as unknown as GameActorView;
 
     expect(renderActorViewWithSprite(ctx, view, 48)).toBe(false);
+    // Only the scaled sprite's own drawImage: the unscaled fallback tile
+    // must not render a duplicate behind the larger figure.
     expect(drawImage).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the fallback tile while the scaled sprite has not loaded', () => {
+    const drawImage = vi.fn();
+    const ctx = { drawImage } as unknown as CanvasRenderingContext2D;
+    const tile = {
+      sheet: {} as CanvasImageSource,
+      sx: 0,
+      sy: 0,
+      size: 32,
+      drawSize: 32,
+    };
+    const view = {
+      position: { x: 0, y: 0 },
+      sprite: null,
+      tile,
+      flashIntensity: 0,
+      active: false,
+      colourBar: '',
+      healthBar: null,
+      debugLabel: null,
+      debugLines: [],
+      spriteDraw: { scale: 2 },
+    } as unknown as GameActorView;
+
+    expect(renderActorViewWithSprite(ctx, view, 48)).toBe(false);
+    // The tile draw falls through the package path (drawCachedTile ends
+    // in a drawImage call under the test environment).
+    expect(drawImage).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('scaled hero bars', () => {
+  const barCtx = () => {
+    const fillRects: number[][] = [];
+    const ctx = {
+      beginPath: () => {},
+      rect: () => {},
+      stroke: () => {},
+      fillRect: (...args: number[]) => {
+        fillRects.push(args);
+      },
+      fillStyle: 'black',
+      strokeStyle: 'black',
+    } as unknown as CanvasRenderingContext2D;
+    return { ctx, fillRects };
+  };
+
+  it('carries the sprite draw scale on the bars of scaled heroes', () => {
+    const state = createState({
+      heroes: [
+        {
+          ...hero('Big', 1, 2),
+          sprite: { frameWidth: 128, frameHeight: 128, drawScale: 2 },
+        },
+      ],
+    });
+    const view = buildHeroOverlayViewModel(state);
+    expect(view.bars[0].spriteDraw).toEqual({ scale: 2 });
+  });
+
+  it('leaves bars without a scaled sprite for the package path', () => {
+    const state = createState({ heroes: [hero('Plain', 1, 1)] });
+    const view = buildHeroOverlayViewModel(state);
+    expect(view.bars[0].spriteDraw).toBeUndefined();
+  });
+
+  it('lifts the health bar above the sprite while the colour bar stays at the cell', () => {
+    const { ctx, fillRects } = barCtx();
+    drawScaledHeroBar(
+      ctx,
+      {
+        position: { x: 2, y: 3 },
+        colour: Colour.Red,
+        health: { current: 5, max: 10 },
+        actionPips: 0,
+        movePips: 0,
+        spriteDraw: { scale: 2 },
+      },
+      48,
+    );
+
+    // Health bar capacity rect: at the top of the doubled sprite, one
+    // cell above the hero's own cell top.
+    expect(fillRects).toContainEqual([2 * 48 + 4, (3 - 1) * 48, 48 - 8, 4]);
+    // Colour bar: still at the hero's own cell floor.
+    expect(fillRects).toContainEqual([2 * 48 + 4, 3 * 48 + 48 - 6, 48 - 8, 4]);
+  });
+
+  it('draws action and move pips at the hero cell floor', () => {
+    const { ctx, fillRects } = barCtx();
+    drawScaledHeroBar(
+      ctx,
+      {
+        position: { x: 2, y: 3 },
+        colour: Colour.Red,
+        health: { current: 5, max: 10 },
+        actionPips: 2,
+        movePips: 1,
+        spriteDraw: { scale: 2 },
+      },
+      48,
+    );
+
+    // Action pips line the cell bottom-left...
+    expect(fillRects).toContainEqual([2 * 48 + 4, 3 * 48 + 48 - 12, 5, 5]);
+    expect(fillRects).toContainEqual([2 * 48 + 4 + 6, 3 * 48 + 48 - 12, 5, 5]);
+    // ...and the move pips the bottom-right, mirroring the package's
+    // own pip rendering.
+    expect(fillRects).toContainEqual([
+      2 * 48 + 48 - 22,
+      3 * 48 + 48 - 12,
+      5,
+      5,
+    ]);
   });
 });

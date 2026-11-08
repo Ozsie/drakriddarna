@@ -186,8 +186,9 @@ const knightSprite: ActorSprite = Object.freeze({
   },
   facings: KNIGHT_SPRITE_FACINGS,
   frameCrops: KNIGHT_SPRITE_CROPS,
-  // Two cells tall: the pack's figures read as heroes rather than tokens
-  // on a board, towering into the cell above (anchored to the floor).
+  // Taller than one cell, so the pack's figures read as heroes rather
+  // than tokens on a board: the draw is centered on the cell, anchored
+  // to the floor, and towers (scale - 1) cells into the row above.
   drawScale: 1.2,
 });
 

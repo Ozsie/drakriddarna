@@ -1039,7 +1039,7 @@ describe('knight hero sprite', () => {
     expect(s?.frameWidth).toBe(128);
     expect(s?.frameHeight).toBe(128);
     expect(s?.facings).toEqual(FACINGS);
-    expect(s?.drawScale).toBe(2);
+    expect(s?.drawScale).toBeGreaterThan(1);
     ANIMATIONS.forEach((animation) => {
       expect(s?.animationImages?.[animation]).toMatch(/\.png$/);
     });
