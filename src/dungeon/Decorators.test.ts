@@ -72,6 +72,16 @@ describe('decorator presets', () => {
         ({ image }) => image === 'decorators/Objects.png',
       ),
     ).toHaveLength(45);
+    expect(createDecoratorPreset('objectsObject021', { x: 4, y: 5 })).toEqual({
+      position: { x: 4, y: 5 },
+      alignment: CellAlignment.CENTER,
+      sprite: {
+        image: 'decorators/Objects.png',
+        size: 29,
+        index: 0,
+        sourceRect: { x: 163, y: 36, width: 29, height: 22 },
+      },
+    });
   });
 
   it('keeps a requested cell alignment on a preset', () => {

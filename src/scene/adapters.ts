@@ -18,7 +18,7 @@ import type {
   Monster,
   Position,
 } from '../types';
-import { CellAlignment, MonsterType, TerrainType } from '../types';
+import { CellAlignment, MonsterType, SecretType, TerrainType } from '../types';
 import {
   DEFAULT_ACTOR_SPRITE_FACING,
   getActorFacing,
@@ -46,6 +46,7 @@ import {
 } from '../hero/HeroLogic';
 import { getReadyImage } from '../core/ImageCache';
 import { ACTOR_SPRITE_ANIMATION_ORDER } from '../core';
+import { createDecoratorPreset } from '../dungeon/Decorators';
 import { ACTOR_TILES, ITEM_TILES, type TileRef } from '../dungeon/tiles';
 import {
   TERRAIN_OVERLAY,
@@ -747,7 +748,11 @@ export type GameHeroOverlayBar = SceneHeroOverlayView['bars'][number] & {
   spriteDraw?: { scale: number };
 };
 
-export type GameHeroOverlayView = Omit<SceneHeroOverlayView, 'bars'> & {
+export type GameHeroOverlayView = Omit<
+  SceneHeroOverlayView,
+  'bars' | 'walkableCellColor'
+> & {
+  walkableCellColor?: string;
   bars: GameHeroOverlayBar[];
 };
 
@@ -824,6 +829,11 @@ export const buildHeroOverlayViewModel = (
   const currentActor = state.currentActor;
   return {
     walkableCells: buildWalkableCells(state),
+    ...(currentActor &&
+    state.dungeon.portal &&
+    isSamePosition(currentActor.position, state.dungeon.portal)
+      ? { walkableCellColor: 'lightblue' }
+      : {}),
     marker: currentActor
       ? getActorVisualPosition(currentActor, currentTime)
       : null,
@@ -860,6 +870,7 @@ export type GameItemView = SceneItemView & {
 // Item sprites draw at 75% of the cell so the items don't fill their
 // cells completely.
 export const ITEM_SPRITE_SCALE = 0.75;
+export const FOUND_SECRET_SPRITE_SCALE = 0.6;
 
 // Decorative sprites share the floor-item footprint and discovery behavior.
 export const buildDecoratorViewModels = (
@@ -893,6 +904,32 @@ export const buildDecoratorViewModels = (
         },
       ];
     });
+
+export const buildFoundSecretViewModels = (
+  dungeon: SceneDungeonView,
+  groundSheet: CanvasImageSource,
+  cellSize: number,
+): GameItemView[] => {
+  const sprite = getItemSpriteFrame(
+    createDecoratorPreset('objectsObject021', { x: 0, y: 0 }).sprite,
+  );
+  return dungeon.layout.secrets
+    .filter((secret) => secret.found && secret.type !== SecretType.TRAP_DOOR)
+    .map((secret) => ({
+      position: secret.position,
+      sprite,
+      spriteDraw: {
+        scale: FOUND_SECRET_SPRITE_SCALE,
+        alignment: CellAlignment.CENTER_TOP,
+      },
+      fallbackTile: actorTileFrame(
+        groundSheet,
+        ITEM_TILES.ITEM_GENERIC,
+        cellSize,
+      ),
+      label: null,
+    }));
+};
 
 export const buildLightSpriteViewModels = (
   state: GameState,
@@ -1054,17 +1091,23 @@ export const drawItemViewSprite = (
         ? cellSize - height
         : (cellSize - height) / 2) +
     (offset?.y ?? 0);
-  ctx.drawImage(
-    frame.image,
-    frame.sx,
-    frame.sy,
-    frame.sw,
-    frame.sh,
-    dx,
-    dy,
-    width,
-    height,
-  );
+  const imageSmoothingEnabled = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = false;
+  try {
+    ctx.drawImage(
+      frame.image,
+      frame.sx,
+      frame.sy,
+      frame.sw,
+      frame.sh,
+      dx,
+      dy,
+      width,
+      height,
+    );
+  } finally {
+    ctx.imageSmoothingEnabled = imageSmoothingEnabled;
+  }
   return true;
 };
 

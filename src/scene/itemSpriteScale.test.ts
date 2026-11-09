@@ -1,12 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
+  buildFoundSecretViewModels,
   buildItemViewModels,
   drawItemViewSprite,
   renderItemViewWithSprite,
   ITEM_SPRITE_SCALE,
 } from './adapters';
 import type { GameState, Hero } from '../types';
-import { Colour, ItemType, Level } from '../types';
+import { Colour, ItemType, Level, SecretType } from '../types';
 import { weapons } from '../items/weapons';
 
 // Item sprite frames need a loaded sheet to resolve, which never happens
@@ -150,6 +151,44 @@ describe('item sprite scale', () => {
       36,
       36,
     );
+  });
+
+  it('draws item sprites without smoothing and restores the context setting', () => {
+    const [view] = buildItemViewModels(
+      createState(),
+      {} as CanvasImageSource,
+      48,
+      false,
+    );
+    const ctx = fakeContext();
+    ctx.imageSmoothingEnabled = true;
+    (ctx.drawImage as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      expect(ctx.imageSmoothingEnabled).toBe(false);
+    });
+
+    drawItemViewSprite(ctx, view, 48);
+
+    expect(ctx.imageSmoothingEnabled).toBe(true);
+  });
+
+  it('uses the objectsObject021 atlas crop for discovered secrets', () => {
+    const state = createState();
+    state.dungeon.layout.secrets = [
+      {
+        name: 'Found note',
+        type: SecretType.NOTE,
+        position: { x: 1, y: 0 },
+        found: true,
+      },
+    ];
+
+    const [view] = buildFoundSecretViewModels(
+      state.dungeon,
+      {} as CanvasImageSource,
+      48,
+    );
+
+    expect(view.sprite).toMatchObject({ sx: 163, sy: 36, sw: 29, sh: 22 });
   });
 
   it('draws no fallback tile duplicate behind the scaled sprite', () => {

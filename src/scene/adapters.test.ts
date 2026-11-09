@@ -6,6 +6,7 @@ import {
   buildMonsterViewModels,
   buildHeroOverlayViewModel,
   buildItemViewModels,
+  buildFoundSecretViewModels,
   drawActorViewSprite,
   drawScaledHeroBar,
   renderActorViewWithSprite,
@@ -357,6 +358,20 @@ describe('buildCorpseViewModels', () => {
 });
 
 describe('buildHeroOverlayViewModel', () => {
+  it('uses the hexagram highlight for a hero standing on the portal', () => {
+    const current = hero('Fearik', 0, 0);
+    const state = createState({
+      heroes: [current],
+      currentActor: current,
+    });
+    state.dungeon.portal = { x: 0, y: 0 };
+
+    const view = buildHeroOverlayViewModel(state, now);
+
+    expect(view.walkableCellColor).toBe('lightblue');
+    expect(view.walkableCells).toContainEqual({ x: 1, y: 0 });
+  });
+
   it('walkable cells exclude the hero cell and cells no game rule allows, and health is scaled by the game master', () => {
     const current = hero('Fearik', 0, 0);
     const state = createState({
@@ -370,6 +385,7 @@ describe('buildHeroOverlayViewModel', () => {
 
     const view = buildHeroOverlayViewModel(state, now);
 
+    expect(view.walkableCellColor).toBeUndefined();
     expect(view.walkableCells).not.toContainEqual({ x: 0, y: 0 });
     expect(view.walkableCells).toContainEqual({ x: 1, y: 0 });
     // The 'B' cell at (1, 1) is undiscovered and out of the movement range.
@@ -425,6 +441,45 @@ describe('buildItemViewModels', () => {
     );
 
     expect(views[0].label).toBe('Potion');
+  });
+});
+
+describe('buildFoundSecretViewModels', () => {
+  it('creates item views for found non-trap secrets only', () => {
+    const state = createState();
+    state.dungeon.layout.secrets = [
+      {
+        name: 'Found note',
+        type: SecretType.NOTE,
+        position: { x: 1, y: 0 },
+        found: true,
+      },
+      {
+        name: 'Trap door',
+        type: SecretType.TRAP_DOOR,
+        position: { x: 0, y: 1 },
+        found: true,
+      },
+      {
+        name: 'Unfound note',
+        type: SecretType.NOTE,
+        position: { x: 1, y: 1 },
+        found: false,
+      },
+    ];
+
+    const views = buildFoundSecretViewModels(
+      state.dungeon,
+      {} as CanvasImageSource,
+      48,
+    );
+
+    expect(views).toHaveLength(1);
+    expect(views[0]).toMatchObject({
+      position: { x: 1, y: 0 },
+      spriteDraw: { scale: 0.6 },
+      label: null,
+    });
   });
 });
 

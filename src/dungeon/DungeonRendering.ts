@@ -23,12 +23,17 @@ import {
   renderPillars,
   renderPortal,
   renderRoomFog,
-  renderSecrets,
+  renderSecrets as sceneRenderSecrets,
   renderTerrain as sceneRenderTerrain,
   renderTerrainAnimation as sceneRenderTerrainAnimation,
   renderWalls as sceneRenderWalls,
 } from '@hoard-engine/scene';
-import { buildDungeonView } from '../scene/adapters';
+import {
+  buildDungeonView,
+  buildFoundSecretViewModels,
+  renderItemViewWithSprite,
+} from '../scene/adapters';
+import { SecretType } from '../types';
 
 export {
   DEFAULT_WALL_COLOUR,
@@ -43,7 +48,34 @@ export {
   renderPillars,
   renderPortal,
   renderRoomFog,
-  renderSecrets,
+};
+
+export const renderSecrets = (
+  ctx: CanvasRenderingContext2D,
+  ground: CanvasImageSource,
+  cellSize: number,
+  dungeon: SceneDungeonView,
+  debugMode: boolean,
+): void => {
+  const foundSecrets = dungeon.layout.secrets.filter(
+    (secret) => secret.found && secret.type !== SecretType.TRAP_DOOR,
+  );
+  const secretsToRender = foundSecrets.length
+    ? {
+        ...dungeon,
+        layout: {
+          ...dungeon.layout,
+          secrets: dungeon.layout.secrets.filter(
+            (secret) => !secret.found || secret.type === SecretType.TRAP_DOOR,
+          ),
+        },
+      }
+    : dungeon;
+
+  sceneRenderSecrets(ctx, ground, cellSize, secretsToRender, debugMode);
+  buildFoundSecretViewModels(dungeon, ground, cellSize).forEach((view) =>
+    renderItemViewWithSprite(ctx, view, cellSize),
+  );
 };
 
 // The sealed-corner grid derivation is game knowledge (its fog-of-war
