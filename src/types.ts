@@ -612,6 +612,8 @@ export type LightSprite = {
   image?: string;
   // Maximum sprite size as a fraction of the cell size (default 1).
   scale?: number;
+  // Per-alignment drawing offsets in pixels, applied after cell alignment.
+  alignmentOffsets?: Partial<Record<CellAlignment, Position>>;
   // Number of row-major frames in the image (default 1).
   frameCount?: number;
   // Playback speed for animated image frames (default 8 frames per second).

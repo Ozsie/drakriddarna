@@ -208,6 +208,40 @@ describe('renderLightSprites', () => {
     expect(drawImage).toHaveBeenCalledTimes(1);
   });
 
+  it('applies the offset for the light sprite alignment', () => {
+    const state = {
+      dungeon: {
+        discoveredRooms: ['A'],
+        layout: {
+          grid: ['A'],
+          lights: [
+            {
+              position: { x: 0, y: 0 },
+              alignment: CellAlignment.TOP_RIGHT,
+              sprite: {
+                image: 'decorators/Torch Animated.png',
+                x: 0,
+                y: 0,
+                size: 64,
+                scale: 0.75,
+                alignmentOffsets: {
+                  [CellAlignment.TOP_RIGHT]: { x: 4, y: -3 },
+                  [CellAlignment.CENTER]: { x: 100, y: 100 },
+                },
+              },
+            },
+          ],
+        },
+      },
+    } as GameState;
+    const drawImage = vi.fn();
+    const ctx = { drawImage } as unknown as CanvasRenderingContext2D;
+
+    renderLightSprites(ctx, {} as CanvasImageSource, 48, state);
+
+    expect(drawImage.mock.calls[0]?.slice(5)).toEqual([16, -3, 36, 36]);
+  });
+
   it('draws the animated torch frame selected by time', () => {
     const state = {
       dungeon: {

@@ -10,6 +10,7 @@ import {
   TerrainType,
 } from '../types';
 import { defineDungeon } from './dungeonParser';
+import { torch } from './LightSources';
 import { weapons } from '../items/weapons';
 import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { magicItems } from '../items/magicItems';
@@ -51,26 +52,26 @@ export const testingGrounds: Dungeon = defineDungeon({
     [1, 9],
     [1, 10],
   ],
-  discoveredRooms: ['A', 'D', 'I'],
+  discoveredRooms: ['A', 'D', 'I', 'K'],
   // Dim dungeon to demo light sources illuminating their surroundings.
   ambientLight: 0.2,
   layout: {
     grid: [
-      '###########',
-      '#CCCCCCCCC#',
-      '#C#CCCCCCC#',
-      '#C#CCCCCCC#',
-      '#J#####E###',
-      '#J#####EDDD',
-      '#J#FFFFE##D',
-      '###F###AA#D',
-      '#AAAAAAAA#D',
-      '#AAAAAAAA#D',
-      '#AAAAAAAA#D',
-      '##G########',
-      ' #G#IIIIII#',
-      ' #GIIIII#I#',
-      ' ##########',
+      '###############',
+      '#CCCCCCCCC#####',
+      '#C#CCCCCCC#####',
+      '#C#CCCCCCC#####',
+      '#J#####E#######',
+      '#J#####EDDDKKK#',
+      '#J#FFFFE##DKKK#',
+      '###F###AA#DKKK#',
+      '#AAAAAAAA#D####',
+      '#AAAAAAAA#D####',
+      '#AAAAAAAA#D####',
+      '##G############',
+      ' #G#IIIIII#####',
+      ' #GIIIII#I#####',
+      ' ##############',
     ],
     pillars: [
       [8, 3],
@@ -108,6 +109,16 @@ export const testingGrounds: Dungeon = defineDungeon({
           rate: 0.5,
         },
       ],
+      // Room K: a torch in every cell.
+      [11, 5, CellAlignment.TOP_LEFT, torch],
+      [12, 5, CellAlignment.CENTER_TOP, torch],
+      [13, 5, CellAlignment.TOP_RIGHT, torch],
+      [11, 6, CellAlignment.CENTER_LEFT, torch],
+      [12, 6, CellAlignment.CENTER, torch],
+      [13, 6, CellAlignment.CENTER_RIGHT, torch],
+      [11, 7, CellAlignment.BOTTOM_LEFT, torch],
+      [12, 7, CellAlignment.CENTER_BOTTOM, torch],
+      [13, 7, CellAlignment.BOTTOM_RIGHT, torch],
       // Corridor D: slowly sweeping beam.
       [10, 7, CellAlignment.CENTER, { effect: LightEffect.SWEEP, rate: 0.25 }],
       // Room I: steady ceiling fixture, illuminating everything below it
@@ -241,6 +252,7 @@ export const testingGrounds: Dungeon = defineDungeon({
       G: { blocksLight: true },
     },
     doors: [
+      [Side.RIGHT, 10, 6],
       [Side.UP, 3, 8, { trapped: 1, hidden: true }],
       [Side.LEFT, 7, 6, { locked: true }],
       [Side.UP, 7, 7, { trapped: 1 }],
@@ -248,6 +260,10 @@ export const testingGrounds: Dungeon = defineDungeon({
       [Side.DOWN, 2, 10, { hidden: true }],
       [Side.DOWN, 1, 3],
       [Side.RIGHT, 1, 3],
+    ],
+    walls: [
+      [Side.RIGHT, 10, 5],
+      [Side.RIGHT, 10, 7],
     ],
     monsters: [
       [MonsterType.ORC, Colour.Green, 1, 1],

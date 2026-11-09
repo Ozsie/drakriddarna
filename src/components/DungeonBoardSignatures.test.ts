@@ -119,6 +119,29 @@ describe('DungeonBoardSignatures', () => {
     expect(getDynamicSignature(state, false, 48)).not.toBe(before);
   });
 
+  it('dynamic signature changes when a light sprite alignment offset changes', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      {
+        position: { x: 1, y: 0 },
+        sprite: {
+          x: 576,
+          y: 96,
+          size: 48,
+          alignmentOffsets: {
+            [CellAlignment.TOP_RIGHT]: { x: 2, y: -1 },
+          },
+        },
+      },
+    ];
+    const before = getDynamicSignature(state, false, 48);
+    state.dungeon.layout.lights[0].sprite!.alignmentOffsets = {
+      [CellAlignment.TOP_RIGHT]: { x: 3, y: -1 },
+    };
+
+    expect(getDynamicSignature(state, false, 48)).not.toBe(before);
+  });
+
   it('animates discovered light sprites at their configured frame rate', () => {
     const state = createState();
     state.dungeon.layout.lights = [

@@ -148,7 +148,7 @@ export const getDynamicSignature = (
                 l.sprite.frameHeight ?? '',
               )},${String(l.sprite.scale ?? '')},${String(
                 l.sprite.image ?? '',
-              )},${String(
+              )},${JSON.stringify(l.sprite.alignmentOffsets ?? {})},${String(
                 l.sprite.frameCount ?? '',
               )},${String(l.sprite.frameRate ?? '')}`
             : ''

@@ -158,6 +158,8 @@ first frame's source rectangle. Optional `frameWidth` and `frameHeight`
 override the square `size` for rectangular frames; each defaults to `size`.
 `scale` sets the maximum drawn size as a fraction of the cell (default `1`); the
 shared torch uses `0.75`, and the brazier uses `0.6`.
+`alignmentOffsets` optionally maps each `CellAlignment` to an `{ x, y }` pixel
+offset applied after alignment; omitted alignments use zero offsets.
 `frameCount` (default `1`) plays row-major frames from that origin, and
 `frameRate` (default `8`) sets frames per second; the image dimensions
 determine the number of columns. The shared torch uses all eight 64-pixel

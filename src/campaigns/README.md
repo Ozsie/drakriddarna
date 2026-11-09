@@ -779,6 +779,8 @@ image. A light sprite's bounds align to the selected cell edge: top and bottom
 values place it against the corresponding horizontal edge, and `CENTER_LEFT`
 or `CENTER_RIGHT` place it against that side. `CENTER` and `CEILING` center
 the sprite within the cell.
+`alignmentOffsets` optionally maps each `CellAlignment` to an `{ x, y }` pixel
+offset applied after alignment; omitted alignments use zero offsets.
 
 For performance, lights are only rendered on discovered cells in rooms where
 a living hero currently stands (debug mode renders every enabled light), and

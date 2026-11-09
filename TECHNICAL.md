@@ -372,7 +372,8 @@ shares the dynamic layer's time-based repaint loop. Light sprites align their
 bounds to the cell edge selected by `CellAlignment`; `CENTER` and `CEILING`
 center the sprite within the cell. Rectangular frame dimensions are supported
 for static images such as the brazier sprite, and a per-sprite scale controls
-its maximum size relative to the cell.
+its maximum size relative to the cell. Optional per-`CellAlignment` pixel
+offsets fine-tune each sprite's placement after its bounds are aligned.
 
 Terrain cells (water, lava, …) are declarative floor materials: each cell
 tints the floor, can carry a light (lava glows through the same lighting

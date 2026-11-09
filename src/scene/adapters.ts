@@ -853,6 +853,7 @@ export type GameItemView = SceneItemView & {
   spriteDraw?: {
     scale: number;
     alignment?: CellAlignment;
+    offset?: { x: number; y: number };
   };
 };
 
@@ -932,6 +933,7 @@ export const buildLightSpriteViewModels = (
         image && frameRate > 0
           ? Math.floor((Math.max(0, timeMs) * frameRate) / 1000) % frameCount
           : 0;
+      const alignment = light.alignment ?? CellAlignment.CENTER;
       return {
         position: light.position,
         sprite:
@@ -946,7 +948,8 @@ export const buildLightSpriteViewModels = (
             : null,
         spriteDraw: {
           scale: sprite.scale ?? 1,
-          alignment: light.alignment ?? CellAlignment.CENTER,
+          alignment,
+          offset: sprite.alignmentOffsets?.[alignment] ?? { x: 0, y: 0 },
         },
         fallbackTile: actorTileFrame(
           groundSheet,
@@ -1034,20 +1037,23 @@ export const drawItemViewSprite = (
     alignment === CellAlignment.BOTTOM_LEFT ||
     alignment === CellAlignment.BOTTOM_RIGHT ||
     alignment === CellAlignment.CENTER_BOTTOM;
+  const offset = (view as GameItemView).spriteDraw?.offset;
   const dx =
     view.position.x * cellSize +
     (leftAligned
       ? 0
       : rightAligned
         ? cellSize - width
-        : (cellSize - width) / 2);
+        : (cellSize - width) / 2) +
+    (offset?.x ?? 0);
   const dy =
     view.position.y * cellSize +
     (topAligned
       ? 0
       : bottomAligned
         ? cellSize - height
-        : (cellSize - height) / 2);
+        : (cellSize - height) / 2) +
+    (offset?.y ?? 0);
   ctx.drawImage(
     frame.image,
     frame.sx,
