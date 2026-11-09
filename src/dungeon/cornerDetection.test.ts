@@ -60,11 +60,11 @@ describe('Corner Detection Algorithm', () => {
 
     // Verify key corners on testingGrounds
     expect(detectCornerType(grid, 0, 0)).toBe(CornerType.INNER_TOP_LEFT);
-    expect(detectCornerType(grid, 10, 0)).toBe(CornerType.INNER_TOP_RIGHT);
+    expect(detectCornerType(grid, 10, 0)).toBe(CornerType.INNER_TOP_LEFT);
     expect(detectCornerType(grid, 0, 4)).toBe(CornerType.NOT_CORNER);
     expect(detectCornerType(grid, 6, 4)).toBe(CornerType.OUTER_TOP_RIGHT);
     expect(detectCornerType(grid, 8, 4)).toBe(CornerType.LEFT_END);
-    expect(detectCornerType(grid, 10, 4)).toBe(CornerType.INNER_BOTTOM_RIGHT);
+    expect(detectCornerType(grid, 10, 4)).toBe(CornerType.INNER_BOTTOM_LEFT);
     // The cell (2,5) sits inside a thick wall mass beside corridor J; it
     // renders as the corner cap of room F's floor at (3,6), not as a junction
     // whose stem is embedded in the mass

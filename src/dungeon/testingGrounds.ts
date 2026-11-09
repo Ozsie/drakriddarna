@@ -10,7 +10,7 @@ import {
   TerrainType,
 } from '../types';
 import { defineDungeon } from './dungeonParser';
-import { torch } from './LightSources';
+import { brazier, torch } from './LightSources';
 import { weapons } from '../items/weapons';
 import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { magicItems } from '../items/magicItems';
@@ -52,15 +52,15 @@ export const testingGrounds: Dungeon = defineDungeon({
     [1, 9],
     [1, 10],
   ],
-  discoveredRooms: ['A', 'D', 'I', 'K'],
+  discoveredRooms: ['A', 'B', 'D', 'I', 'K'],
   // Dim dungeon to demo light sources illuminating their surroundings.
   ambientLight: 0.2,
   layout: {
     grid: [
       '###############',
-      '#CCCCCCCCC#####',
-      '#C#CCCCCCC#####',
-      '#C#CCCCCCC#####',
+      '#CCCCCCCCC#BBB#',
+      '#C#CCCCCCC#BBB#',
+      '#C#CCCCCCC#BBB#',
       '#J#####E#######',
       '#J#####EDDDKKK#',
       '#J#FFFFE##DKKK#',
@@ -119,6 +119,16 @@ export const testingGrounds: Dungeon = defineDungeon({
       [11, 7, CellAlignment.BOTTOM_LEFT, torch],
       [12, 7, CellAlignment.CENTER_BOTTOM, torch],
       [13, 7, CellAlignment.BOTTOM_RIGHT, torch],
+      // Room B: a brazier in every cell.
+      [11, 1, CellAlignment.TOP_LEFT, brazier],
+      [12, 1, CellAlignment.CENTER_TOP, brazier],
+      [13, 1, CellAlignment.TOP_RIGHT, brazier],
+      [11, 2, CellAlignment.CENTER_LEFT, brazier],
+      [12, 2, CellAlignment.CENTER, brazier],
+      [13, 2, CellAlignment.CENTER_RIGHT, brazier],
+      [11, 3, CellAlignment.BOTTOM_LEFT, brazier],
+      [12, 3, CellAlignment.CENTER_BOTTOM, brazier],
+      [13, 3, CellAlignment.BOTTOM_RIGHT, brazier],
       // Corridor D: slowly sweeping beam.
       [10, 7, CellAlignment.CENTER, { effect: LightEffect.SWEEP, rate: 0.25 }],
       // Room I: steady ceiling fixture, illuminating everything below it
