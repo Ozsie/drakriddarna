@@ -388,6 +388,7 @@ describe('dungeonParser', () => {
       });
       expect(layout.doors).toEqual([]);
       expect(layout.monsters).toEqual([]);
+      expect(layout.decorators).toEqual([]);
       expect(layout.secrets).toEqual([]);
       expect(layout.notes).toEqual([]);
       expect(layout.items).toEqual([]);
@@ -447,6 +448,7 @@ describe('dungeonParser', () => {
       expect(dungeon.ambientLight).toBe(1);
       expect(dungeon.layout.doors).toEqual([]);
       expect(dungeon.layout.monsters).toEqual([]);
+      expect(dungeon.layout.decorators).toEqual([]);
       expect(dungeon.layout.secrets).toEqual([]);
       expect(dungeon.layout.notes).toEqual([]);
       expect(dungeon.layout.items).toEqual([]);
@@ -457,6 +459,96 @@ describe('dungeonParser', () => {
       expect(dungeon.layout.corners).toEqual(
         autoDetectCorners(dungeon.layout.grid),
       );
+    });
+
+    it('keeps declared decorators in the layout', () => {
+      const decorator = {
+        position: { x: 1, y: 1 },
+        sprite: { image: '/decorations.png', size: 32, index: 2 },
+      };
+      const layout = defineLayout({
+        grid: ['###', '#A#', '###'],
+        decorators: [decorator],
+      });
+
+      expect(layout.decorators).toEqual([decorator]);
+    });
+
+    it('resolves named decorator presets in the layout', () => {
+      const layout = defineLayout({
+        grid: ['###', '#A#', '###'],
+        decorators: [
+          [1, 1, 'bonesVariant1'],
+          { preset: 'bonesVariant1', position: [1, 1] },
+          { preset: 'suppliesObject', position: [1, 1], index: 12 },
+        ],
+      });
+
+      expect(layout.decorators).toEqual([
+        {
+          position: { x: 1, y: 1 },
+          alignment: CellAlignment.CENTER,
+          sprite: {
+            image: 'decorators/Bones_shadow3_1.png',
+            size: 32,
+            index: 0,
+          },
+        },
+        {
+          position: { x: 1, y: 1 },
+          alignment: CellAlignment.CENTER,
+          sprite: {
+            image: 'decorators/Bones_shadow3_1.png',
+            size: 32,
+            index: 0,
+          },
+        },
+        {
+          position: { x: 1, y: 1 },
+          alignment: CellAlignment.CENTER,
+          sprite: {
+            image: 'decorators/supplies_objects.png',
+            size: 16,
+            index: 12,
+          },
+        },
+      ]);
+    });
+
+    it('parses decorator alignment in tuples and preset descriptors', () => {
+      const layout = defineLayout({
+        grid: ['###', '#A#', '###'],
+        decorators: [
+          [1, 1, CellAlignment.TOP_RIGHT, 'bonesVariant1'],
+          {
+            preset: 'suppliesObject',
+            position: [1, 1],
+            index: 12,
+            alignment: CellAlignment.BOTTOM_LEFT,
+          },
+        ],
+      });
+
+      expect(layout.decorators).toEqual([
+        {
+          position: { x: 1, y: 1 },
+          alignment: CellAlignment.TOP_RIGHT,
+          sprite: {
+            image: 'decorators/Bones_shadow3_1.png',
+            size: 32,
+            index: 0,
+          },
+        },
+        {
+          position: { x: 1, y: 1 },
+          alignment: CellAlignment.BOTTOM_LEFT,
+          sprite: {
+            image: 'decorators/supplies_objects.png',
+            size: 16,
+            index: 12,
+          },
+        },
+      ]);
     });
 
     it('parses corridor cells declared as tuples or position objects', () => {

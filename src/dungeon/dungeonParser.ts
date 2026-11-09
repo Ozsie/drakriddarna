@@ -1,6 +1,7 @@
 import type {
   CellAlignment,
   Corner,
+  Decorator,
   Door,
   Dungeon,
   InteractableCell,
@@ -21,6 +22,7 @@ import type {
   WallEdge,
   WinCondition,
 } from '../types';
+import type { DecoratorPresetName } from './Decorators';
 import { Colour, Level, MonsterType, SecretType, Side } from '../types';
 import {
   createDoor,
@@ -40,6 +42,7 @@ import {
 import { assertValidDungeon } from './dungeonValidator';
 import { findRoomCells } from '../core';
 import { autoDetectCorners } from './cornerDetection';
+import { createDecoratorPreset, suppliesObject } from './Decorators';
 
 export type PositionTuple = [x: number, y: number];
 
@@ -279,10 +282,36 @@ export type DeclarativeTerrain =
 // default styling, or keyed by letter with per-room options.
 export type DeclarativeRoomFog = string[] | Record<string, RoomFogOptions>;
 
+export type DeclarativeDecoratorPreset =
+  | {
+      preset: DecoratorPresetName;
+      position: DeclarativePosition;
+      alignment?: CellAlignment;
+    }
+  | {
+      preset: 'suppliesObject';
+      position: DeclarativePosition;
+      index: number;
+      alignment?: CellAlignment;
+    };
+
+export type DeclarativeDecoratorTuple =
+  | [x: number, y: number, preset: DecoratorPresetName]
+  | [
+      x: number,
+      y: number,
+      alignment: CellAlignment,
+      preset: DecoratorPresetName,
+    ];
+
+export type DeclarativeDecorator =
+  Decorator | DeclarativeDecoratorPreset | DeclarativeDecoratorTuple;
+
 export type DeclarativeLayout = {
   grid: string[];
   doors?: DeclarativeDoor[];
   monsters?: DeclarativeMonster[];
+  decorators?: DeclarativeDecorator[];
   secrets?: DeclarativeSecret[];
   notes?: DeclarativeNote[];
   items?: DeclarativeItem[];
@@ -327,6 +356,30 @@ export const parsePosition = (pos: DeclarativePosition): Position => {
     return { x: pos[0], y: pos[1] };
   }
   return { x: pos.x, y: pos.y };
+};
+
+export const parseDecorator = (
+  decoratorDef: DeclarativeDecorator,
+): Decorator => {
+  if (Array.isArray(decoratorDef)) {
+    if (decoratorDef.length === 4) {
+      const [x, y, alignment, preset] = decoratorDef;
+      return createDecoratorPreset(preset, { x, y }, alignment);
+    }
+    const [x, y, preset] = decoratorDef;
+    return createDecoratorPreset(preset, { x, y });
+  }
+
+  if (!('preset' in decoratorDef)) return decoratorDef;
+
+  const position = parsePosition(decoratorDef.position);
+  return decoratorDef.preset === 'suppliesObject'
+    ? suppliesObject(position, decoratorDef.index, decoratorDef.alignment)
+    : createDecoratorPreset(
+        decoratorDef.preset,
+        position,
+        decoratorDef.alignment,
+      );
 };
 
 export const parseDoor = (doorDef: DeclarativeDoor): Door => {
@@ -787,6 +840,7 @@ export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
   grid: layoutDef.grid,
   doors: (layoutDef.doors ?? []).map(parseDoor),
   monsters: (layoutDef.monsters ?? []).map(parseMonster),
+  decorators: (layoutDef.decorators ?? []).map(parseDecorator),
   secrets: (layoutDef.secrets ?? []).map(parseSecret),
   notes: (layoutDef.notes ?? []).map(parseNote),
   items: (layoutDef.items ?? []).map(parseItem),

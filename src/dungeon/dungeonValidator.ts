@@ -1,5 +1,6 @@
 import type {
   Corner,
+  Decorator,
   Door,
   Dungeon,
   InteractableCell,
@@ -143,6 +144,11 @@ export const validateLayout = (
       }
       seenMonsterIds.add(monster.id);
     }
+  });
+
+  // Decorators
+  (layout.decorators || []).forEach((decorator: Decorator) => {
+    checkPositionInBounds(decorator.position, 'Decorator');
   });
 
   // 4. Doors

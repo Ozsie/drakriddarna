@@ -25,6 +25,12 @@ describe('dungeonValidator', () => {
       layout: {
         grid: ['###', '#A#', '###'],
         monsters: [[MonsterType.ORC, Colour.Green, 1, 1]],
+        decorators: [
+          {
+            position: { x: 1, y: 1 },
+            sprite: { image: '/decorations.png', size: 32, index: 2 },
+          },
+        ],
         secrets: [[SecretType.EQUIPMENT, 1, 1]],
         doors: [[Side.RIGHT, 1, 1]],
       },
@@ -86,6 +92,34 @@ describe('dungeonValidator', () => {
     expect(
       result.errors.filter((e) => e.type === 'boundary').length,
     ).toBeGreaterThanOrEqual(2);
+  });
+
+  it('detects decorators outside the grid or on non-floor cells', () => {
+    const result = validateLayout({
+      grid: ['###', '#A#', '###'],
+      doors: [],
+      monsters: [],
+      decorators: [
+        {
+          position: { x: 5, y: 1 },
+          sprite: { image: '/decorations.png', size: 32, index: 2 },
+        },
+        {
+          position: { x: 0, y: 0 },
+          sprite: { image: '/decorations.png', size: 32, index: 2 },
+        },
+      ],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corners: [],
+    });
+
+    expect(result.valid).toBe(false);
+    expect(
+      result.errors.filter((error) => error.entity === 'Decorator'),
+    ).toHaveLength(2);
   });
 
   it('detects entities overlapping walls and empty cells', () => {

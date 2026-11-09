@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameState, Hero } from '../types';
-import { Side } from '../types';
+import { CellAlignment, Side } from '../types';
 import {
   getDynamicSignature,
   getOverlaySignature,
@@ -57,6 +57,58 @@ describe('DungeonBoardSignatures', () => {
     ];
     const after = getStaticSignature(state, false, 48);
     expect(after).not.toBe(before);
+  });
+
+  it('static signature changes when a decorator is added', () => {
+    const state = createState();
+    const before = getStaticSignature(state, false, 48);
+    state.dungeon.layout.decorators = [
+      {
+        position: { x: 1, y: 0 },
+        sprite: { image: 'decorators/bones.png', size: 32, index: 0 },
+      },
+    ];
+
+    expect(getStaticSignature(state, false, 48)).not.toBe(before);
+  });
+
+  it('static signature changes when a decorator crop changes', () => {
+    const state = createState();
+    state.dungeon.layout.decorators = [
+      {
+        position: { x: 1, y: 0 },
+        sprite: {
+          image: 'decorators/supplies_objects.png',
+          size: 45,
+          index: 0,
+          sourceRect: { x: 146, y: 10, width: 29, height: 45 },
+        },
+      },
+    ];
+    const before = getStaticSignature(state, false, 48);
+    state.dungeon.layout.decorators[0].sprite.sourceRect = {
+      x: 178,
+      y: 11,
+      width: 29,
+      height: 44,
+    };
+
+    expect(getStaticSignature(state, false, 48)).not.toBe(before);
+  });
+
+  it('static signature changes when a decorator alignment changes', () => {
+    const state = createState();
+    state.dungeon.layout.decorators = [
+      {
+        position: { x: 1, y: 0 },
+        alignment: CellAlignment.CENTER,
+        sprite: { image: 'decorators/bones.png', size: 32, index: 0 },
+      },
+    ];
+    const before = getStaticSignature(state, false, 48);
+    state.dungeon.layout.decorators[0].alignment = CellAlignment.TOP_LEFT;
+
+    expect(getStaticSignature(state, false, 48)).not.toBe(before);
   });
 
   it('static signature changes when a corridor collapses and when it is restored', () => {

@@ -257,6 +257,18 @@ export type ItemSprite = {
   image: string;
   size: number;
   index: number;
+  sourceRect?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+};
+
+export type Decorator = {
+  position: Position;
+  alignment?: CellAlignment;
+  sprite: ItemSprite;
 };
 
 // The facings a directional sprite pack carries, one sheet row each:
@@ -654,6 +666,7 @@ export type Layout = {
   grid: string[];
   doors: Door[];
   monsters: Monster[];
+  decorators?: Decorator[];
   secrets: Secret[];
   notes: Note[];
   items: ItemLocation[];

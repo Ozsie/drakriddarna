@@ -70,6 +70,10 @@ export const e1m0: Dungeon = defineDungeon({
       [2, 9, 'campaign.iceDragon.e1m0.notes.tutorial1'],
       [3, 9, 'campaign.iceDragon.e1m0.notes.tutorial2'],
     ],
+    decorators: [
+      [2, 8, CellAlignment.CENTER_TOP, 'suppliesObject072'],
+      [3, 8, CellAlignment.TOP_RIGHT, 'bonesVariant1'],
+    ],
   },
   events: [1, 2, 3, 4, 5, 6],
 });

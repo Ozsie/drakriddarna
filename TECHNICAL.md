@@ -202,8 +202,14 @@ deep-merged into i18n namespaces.
 
 Dungeons themselves are authored in a declarative DSL built on plain
 TypeScript helpers. A layout is an ASCII string matrix (one character per
-cell) plus declarative lists of doors, monsters, items, secrets, lights and
-terrain cells:
+cell) plus declarative lists of doors, monsters, decorators, items, secrets,
+lights and terrain cells. Decorators can refer to named image presets with
+`[x, y, presetName]` tuples or add a `CellAlignment` as `[x, y, alignment,
+presetName]`; descriptors also accept alignment. Decorator alignment positions
+the sprite bounds within its cell, and defaults to `CENTER`. The supplies-object
+atlas presets carry explicit pixel crop rectangles for their irregular sprite
+bounds, while indexed frames remain available through a descriptor. The parser
+resolves these forms to sprite data:
 
 ```ts
 export const e1m1: Dungeon = defineDungeon({
@@ -340,7 +346,8 @@ is active, not every frame. Idle dungeons cost zero CPU.
 
 The scene is composed from several stacked `<canvas>` elements
 (ground/tiles, actors, UI overlays) plus offscreen canvases that are never in
-the DOM:
+the DOM. The cached ground layer includes positioned decorator sprites from
+the dungeon layout, resolved through the same image-frame path as floor items:
 
 - **Tile texture cache** (`TileTextureCache.ts`) — pre-rasterizes tile
   variants once instead of re-drawing sprites every paint.

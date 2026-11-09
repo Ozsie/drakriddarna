@@ -16,7 +16,7 @@ import type {
   Monster,
   Position,
 } from '../types';
-import { MonsterType, TerrainType } from '../types';
+import { CellAlignment, MonsterType, TerrainType } from '../types';
 import {
   DEFAULT_ACTOR_SPRITE_FACING,
   getActorFacing,
@@ -366,6 +366,10 @@ const getItemSpriteFrame = (sprite: ItemSprite): SceneSpriteFrame | null => {
   if (!image) return null;
   const width = image.naturalWidth || image.width;
   const height = image.naturalHeight || image.height;
+  if (sprite.sourceRect) {
+    const { x, y, width: sw, height: sh } = sprite.sourceRect;
+    return { image, sx: x, sy: y, sw, sh };
+  }
   const { sx, sy } = getSpriteSourceRect(sprite, width, height);
   return {
     image,
@@ -844,12 +848,45 @@ export const buildHeroOverlayViewModel = (
 // author art at the full cell footprint, so the cell draw shrink stays on
 // the game side (the scene package's item path always fills the cell).
 export type GameItemView = SceneItemView & {
-  spriteDraw?: { scale: number };
+  spriteDraw?: { scale: number; alignment?: CellAlignment };
 };
 
 // Item sprites draw at 75% of the cell so the items don't fill their
 // cells completely.
 export const ITEM_SPRITE_SCALE = 0.75;
+
+// Decorative sprites share the floor-item footprint and discovery behavior.
+export const buildDecoratorViewModels = (
+  state: GameState,
+  groundSheet: CanvasImageSource,
+  cellSize: number,
+): GameItemView[] =>
+  (state.dungeon.layout.decorators ?? [])
+    .filter((decorator) => {
+      const { x, y } = decorator.position;
+      const cell = state.dungeon.layout.grid[y]?.[x] ?? '';
+      return Boolean(cell) && isRoomDiscovered(state.dungeon, cell);
+    })
+    .flatMap((decorator) => {
+      const sprite = getItemSpriteFrame(decorator.sprite);
+      if (!sprite) return [];
+      return [
+        {
+          position: decorator.position,
+          sprite,
+          spriteDraw: {
+            scale: ITEM_SPRITE_SCALE,
+            alignment: decorator.alignment ?? CellAlignment.CENTER,
+          },
+          fallbackTile: actorTileFrame(
+            groundSheet,
+            ITEM_TILES.ITEM_GENERIC,
+            cellSize,
+          ),
+          label: null,
+        },
+      ];
+    });
 
 // Item views for the item layer: discovered items only (all of them in
 // debug mode), each with its sheet frame (or the generic tile while the
@@ -894,9 +931,9 @@ export const buildItemViewModels = (
     });
 };
 
-// Draws one item view's sprite centered in its cell at the view's draw
-// scale: unlike actors the items lie flat on the floor tile, so the
-// shrink centers on the cell instead of anchoring to its bottom edge.
+// Draws one item view's sprite at its draw scale, aligned within the cell.
+// Unlike actors, items lie flat on the floor tile, so their default center
+// alignment does not anchor them to the cell's bottom edge.
 // Returns whether a frame was drawn.
 export const drawItemViewSprite = (
   ctx: CanvasRenderingContext2D,
@@ -906,9 +943,41 @@ export const drawItemViewSprite = (
   const frame = view.sprite;
   if (!frame) return false;
   const scale = (view as GameItemView).spriteDraw?.scale ?? 1;
-  const size = cellSize * scale;
-  const dx = view.position.x * cellSize + (cellSize - size) / 2;
-  const dy = view.position.y * cellSize + (cellSize - size) / 2;
+  const maxSize = cellSize * scale;
+  const frameScale = Math.min(maxSize / frame.sw, maxSize / frame.sh);
+  const width = frame.sw * frameScale;
+  const height = frame.sh * frameScale;
+  const alignment = (view as GameItemView).spriteDraw?.alignment;
+  const leftAligned =
+    alignment === CellAlignment.TOP_LEFT ||
+    alignment === CellAlignment.BOTTOM_LEFT ||
+    alignment === CellAlignment.CENTER_LEFT;
+  const rightAligned =
+    alignment === CellAlignment.TOP_RIGHT ||
+    alignment === CellAlignment.BOTTOM_RIGHT ||
+    alignment === CellAlignment.CENTER_RIGHT;
+  const topAligned =
+    alignment === CellAlignment.TOP_LEFT ||
+    alignment === CellAlignment.TOP_RIGHT ||
+    alignment === CellAlignment.CENTER_TOP;
+  const bottomAligned =
+    alignment === CellAlignment.BOTTOM_LEFT ||
+    alignment === CellAlignment.BOTTOM_RIGHT ||
+    alignment === CellAlignment.CENTER_BOTTOM;
+  const dx =
+    view.position.x * cellSize +
+    (leftAligned
+      ? 0
+      : rightAligned
+        ? cellSize - width
+        : (cellSize - width) / 2);
+  const dy =
+    view.position.y * cellSize +
+    (topAligned
+      ? 0
+      : bottomAligned
+        ? cellSize - height
+        : (cellSize - height) / 2);
   ctx.drawImage(
     frame.image,
     frame.sx,
@@ -917,8 +986,8 @@ export const drawItemViewSprite = (
     frame.sh,
     dx,
     dy,
-    size,
-    size,
+    width,
+    height,
   );
   return true;
 };

@@ -62,7 +62,7 @@ import {
   animatedLightsSignature,
 } from '../dungeon/LightRendering';
 import type { LightViewport } from '@hoard-engine/lighting';
-import { renderItems } from '../items/ItemRendering';
+import { renderDecorators, renderItems } from '../items/ItemRendering';
 import {
   renderRadialMenu,
   findHoveredRadialButton,
@@ -1094,6 +1094,7 @@ export class DungeonBoardController {
       this.activeState.dungeon,
       this.debugMode ?? false,
     );
+    renderDecorators(ctx, this.ground, this.cellSize, this.activeState);
     renderSecrets(
       ctx,
       this.ground,

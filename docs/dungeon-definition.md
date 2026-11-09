@@ -136,6 +136,7 @@ runtime type. Positions may always be written as `[x, y]` tuples or
 | `grid`            | `string[]` (required)                        | The ASCII matrix (see above).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `doors`           | `DeclarativeDoor[]`                          | Doors on cell edges. Tuple: `[side, x, y, options?]`; options: `locked`, `hidden`, `open`, `reinforced`, `id`, `trapped`, and `level` — `trapped: true` gives one trap attack, a number gives that many; `level` (a `Level`) selects the rank-coloured dice a sprung trap rolls (`KNIGHT` = 4+, `LORD` = 3+; unset means the default apprentice/white dice at 5+). Object form: `{ side, x, y, locked?, hidden?, trapped?, open?, reinforced?, id?, level? }`. The door sits on the `side` edge of `(x, y)`, conventionally between two floor cells of different letters. Hidden doors are invisible until searched for; trapped doors attack the opener; locked doors need the right key/item to open. |
 | `monsters`        | `DeclarativeMonster[]`                       | Tuple: `[type, colour, x, y, inventory?, id?]` (what `createMonster` / `createMonsterWithInventory` in `src/dungeon/DungeonLogic.ts` produce). `type` is any registered monster type — the built-ins (`MonsterType.ORC`, `TROLL`, the four Dark Lords) or a campaign-registered type (see [Adding new monsters](../src/campaigns/README.md#adding-new-monsters-optional)).                                                                                                                                                                                                                                                                                                                              |
+| `decorators`      | `DeclarativeDecorator[]`                     | Positioned sprites may use `[x, y, presetName]` or `[x, y, alignment, presetName]` tuples; `alignment` is a `CellAlignment` and defaults to `CENTER`. Preset descriptors accept the same optional `alignment`, and a full `Decorator` object accepts `{ position, sprite, alignment? }`.                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `secrets`         | `DeclarativeSecret[]`                        | Tuple: `[SecretType, x, y, nameOrItem?, id?]` where `nameOrItem` is a name translation key or an `Item` the secret hides. Types (`SecretType`): `EQUIPMENT`, `MAGIC_ITEM`, `TRAP_DOOR`, `NOTE`. Secrets are found by hero search actions. The object form additionally accepts `revealedBy` (an item id): while unfound, the secret is revealed automatically when a hero carrying an item with that id shares its room, and a hero downed while carrying such an item drops it on the floor where they fell so the reveal cannot be softlocked by the carrier death.                                                                                                                                   |
 | `notes`           | `DeclarativeNote[]`                          | Tuple: `[x, y, message, id?]` — flavour text read when a hero steps on the cell; `message` is a translation key.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `items`           | `DeclarativeItem[]`                          | Tuple: `[x, y, item?]` or `[x, y, item, { onlyIfNotCarried?: boolean }]` — a specific `Item` on the floor, or with no item a random draw from the campaign's `itemDeck` / `magicItemDeck`. `onlyIfNotCarried` marks a fallback item: it is removed at dungeon start when any hero already carries an item with the same id (e.g. a win-condition item placed so a party that missed it cannot softlock, without duplicating it for a party that already has it). The object form accepts `onlyIfNotCarried` as a field alongside `x`/`y`/`item`.                                                                                                                                                        |
@@ -149,6 +150,43 @@ runtime type. Positions may always be written as `[x, y]` tuples or
 | `walls`           | `DeclarativeWall[]`                          | Thin walls on the edge between two adjacent floor cells — for rooms not separated by a whole `#` cell. Tuple: `[side, x, y, options?]` (options: `colour`), or object `{ x, y, side, colour? }`. A wall on `(x, y, Side.RIGHT)` blocks between `(x, y)` and `(x+1, y)`. Blocks like a closed door and renders as a flat strip.                                                                                                                                                                                                                                                                                                                                                                          |
 | `wallColour`      | `string`                                     | Fill colour of edge walls dungeon-wide; per-wall `colour` wins.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `corners`         | `Corner[]`                                   | Wall-corner render hints. **Auto-detected** from the grid by `autoDetectCorners` (`src/dungeon/cornerDetection.ts`) — you normally never author these.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+
+`src/dungeon/Decorators.ts` provides named presets for the standalone images
+in `static/decorators/`: `bonesVariant1`, `bonesVariant2`, `bonesVariant3`,
+`bonesVariant15`, `bonesVariant16`, `bonesVariant18`, `plantVariant4`,
+`rockVariant4` and `ruinVariant5`. The atlas
+`supplies_objects.png` also has 123 numbered crop presets (`suppliesObject001`
+through `suppliesObject123`), with each crop stored as its own pixel rectangle.
+The names follow the image's broad visual reading order; the preset table in
+`src/dungeon/Decorators.ts` contains the exact pixel bounds. Use a preset name
+in the third element of a tuple, or provide a `CellAlignment` as the third
+element and the preset name as the fourth; `defineLayout` resolves the tuple
+to a runtime `Decorator`:
+
+```ts
+decorators: [
+  [2, 3, 'plantVariant4'],
+  [2, 3, CellAlignment.BOTTOM_RIGHT, 'bonesVariant1'],
+  [5, 6, 'suppliesObject001'],
+  {
+    preset: 'suppliesObject',
+    position: [4, 5],
+    index: 12,
+    alignment: CellAlignment.TOP_LEFT,
+  },
+];
+```
+
+Decorator alignment positions the sprite bounds within the cell: corner and
+edge values place the corresponding sprite edge against the cell edge, while
+`CENTER` and `CEILING` center the sprite.
+
+`suppliesObject` remains available to select a 16-pixel frame by index from
+`supplies_objects.png`. Atlas crop presets preserve the sprite's aspect ratio
+when drawn in a cell. Full `Decorator` objects with a custom `{ image, size,
+index }` sprite remain supported; sprites may also specify a `sourceRect` with
+`x`, `y`, `width` and `height`. Position-taking preset functions remain
+available for imperative use.
 
 ### `parseTileMap`
 
@@ -212,7 +250,7 @@ Additional fields on `WinCondition`:
 invalid dungeon throws at module load with the full error list. The rules:
 
 - All grid rows have the same non-zero length.
-- Every placed entity (monster, item, secret, note, interactable, light,
+- Every placed entity (monster, decorator, item, secret, note, interactable, light,
   starting position) is inside the grid and on a floor cell — not on `#`,
   `?` or a void cell.
 - Doors are in bounds, not on void cells, have a valid side and unique ids.

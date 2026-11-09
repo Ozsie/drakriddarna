@@ -1,5 +1,6 @@
 import type { GameState } from '../types';
 import {
+  buildDecoratorViewModels,
   buildItemViewModels,
   renderItemViewWithSprite,
 } from '../scene/adapters';
@@ -21,5 +22,15 @@ export const renderItems = (
   debugMode: boolean,
 ) => {
   const views = buildItemViewModels(state, ground, cellSize, debugMode);
+  views.forEach((view) => renderItemViewWithSprite(ctx, view, cellSize));
+};
+
+export const renderDecorators = (
+  ctx: CanvasRenderingContext2D,
+  ground: CanvasImageSource,
+  cellSize: number,
+  state: GameState,
+) => {
+  const views = buildDecoratorViewModels(state, ground, cellSize);
   views.forEach((view) => renderItemViewWithSprite(ctx, view, cellSize));
 };

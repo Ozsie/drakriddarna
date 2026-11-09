@@ -59,10 +59,18 @@ src/campaigns/
 2. **Add dungeons**: create `dungeons/*.ts` files, each exporting a
    `Dungeon` object (see `src/types.ts` for the full type; mirror the shape
    used in `iceDragonTreasure/dungeons/`). The most important fields are:
-   - `layout: Layout` — `grid` (the room/corridor ASCII layout), `doors`,
-     `monsters` (placed via `createMonster`, see
+   - `layout` — the declarative layout passed to `defineDungeon`: `grid` (the
+     room/corridor ASCII layout), `doors`, `monsters` (placed via
+     `createMonster`, see
      [Adding new monsters](#adding-new-monsters-optional)), `secrets`,
-     `notes`, `items` (placed via `ItemLocation`), `interactables` (placed
+     `decorators` (reusable sprites can be placed with tuples such as
+     `[2, 3, 'plantVariant4']` or `[2, 3, CellAlignment.TOP_RIGHT, 'plantVariant4']`;
+     alignment defaults to `CENTER` and positions the sprite bounds within
+     the cell. The supplies atlas has numbered crop presets `suppliesObject001`
+     through `suppliesObject123`. The indexed supplies descriptor remains
+     available: `{ preset: 'suppliesObject', position: [3, 3], index: 12,
+     alignment: CellAlignment.BOTTOM_LEFT }`), `notes`,
+     `items` (placed via `ItemLocation`), `interactables` (placed
      via `defineLayout` or `parseTileMap`, see
      [Adding interactable cells](#adding-interactable-cells-optional)),
      `corridors`, `corridorCells` (cells of a room letter that are corridors
