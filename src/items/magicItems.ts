@@ -28,6 +28,11 @@ export const magicItems: Item[] = [
     effect: 'magicHerbsOnUse',
     reset: 'magicHerbsOnReset',
     useSound: 'sfx/buff.mp3',
+    sprite: {
+      image: 'items/herb.png',
+      size: 32,
+      index: 0,
+    },
   },
   {
     id: 'boots_of_speed',
@@ -52,6 +57,11 @@ export const magicItems: Item[] = [
       rate: 0.4,
       enabled: true,
     },
+    sprite: {
+      image: 'items/leather_boots.png',
+      size: 32,
+      index: 0,
+    },
   },
   {
     id: 'giants_glove',
@@ -74,6 +84,11 @@ export const magicItems: Item[] = [
       effect: LightEffect.AURA,
       rate: 0.3,
       enabled: true,
+    },
+    sprite: {
+      image: 'items/gauntlets.png',
+      size: 32,
+      index: 0,
     },
   },
   {
@@ -100,6 +115,11 @@ export const magicItems: Item[] = [
       rate: 0.5,
       enabled: true,
     },
+    sprite: {
+      image: 'items/copper_ring.png',
+      size: 32,
+      index: 0,
+    },
   },
   {
     id: 'crown_of_wisdom',
@@ -122,6 +142,11 @@ export const magicItems: Item[] = [
       rate: 0.35,
       enabled: true,
     },
+    sprite: {
+      image: 'items/gold_ring.png',
+      size: 32,
+      index: 0,
+    },
   },
   {
     id: 'sword_of_chaos',
@@ -141,6 +166,11 @@ export const magicItems: Item[] = [
     useHearHeroes: true,
     ignoresShield: true,
     ignoresArmour: true,
+    sprite: {
+      image: 'items/sword5border.png',
+      size: 32,
+      index: 0,
+    },
   } as Item & Weapon,
   {
     id: 'potion_of_speed',
@@ -161,6 +191,11 @@ export const magicItems: Item[] = [
     effect: 'potionOfSpeedOnUse',
     reset: 'potionOfSpeedOnReset',
     useSound: 'sfx/buff.mp3',
+    sprite: {
+      image: 'items/potion_full_2.png',
+      size: 32,
+      index: 0,
+    },
   },
   {
     id: 'necklace_of_light',
@@ -180,5 +215,10 @@ export const magicItems: Item[] = [
     effect: 'necklaceOfLightOnUse',
     reset: 'necklaceOfLightOnReset',
     useSound: 'sfx/buff.mp3',
+    sprite: {
+      image: 'items/tile048.png',
+      size: 32,
+      index: 0,
+    },
   },
 ];

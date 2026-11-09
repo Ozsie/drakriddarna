@@ -16,6 +16,11 @@ export const weapons: Weapon[] = [
     ignoresShield: false,
     ignoresArmour: false,
     attackSound: 'sfx/attack_knight.wav',
+    sprite: {
+      image: 'items/sword1.png',
+      size: 32,
+      index: 0,
+    },
   },
   {
     id: 'two_handed_sword',
@@ -31,6 +36,11 @@ export const weapons: Weapon[] = [
     ignoresShield: false,
     ignoresArmour: false,
     attackSound: 'sfx/attack_knight.wav',
+    sprite: {
+      image: 'items/sword4.png',
+      size: 32,
+      index: 0,
+    },
   },
   {
     id: 'halberd',
@@ -46,6 +56,11 @@ export const weapons: Weapon[] = [
     ignoresShield: false,
     ignoresArmour: false,
     attackSound: 'sfx/attack_knight.wav',
+    sprite: {
+      image: 'items/polearm3.png',
+      size: 32,
+      index: 0,
+    },
   },
   {
     id: 'flail',
@@ -61,6 +76,11 @@ export const weapons: Weapon[] = [
     ignoresShield: false,
     ignoresArmour: false,
     attackSound: 'sfx/attack_knight.wav',
+    sprite: {
+      image: 'items/flail.png',
+      size: 32,
+      index: 0,
+    },
   },
   {
     id: 'double_headed_axe',
@@ -76,6 +96,11 @@ export const weapons: Weapon[] = [
     ignoresShield: false,
     ignoresArmour: false,
     attackSound: 'sfx/attack_knight.wav',
+    sprite: {
+      image: 'items/axe1.png',
+      size: 32,
+      index: 0,
+    },
   },
 ];
 

@@ -12,6 +12,11 @@ export const armour: Armour[] = [
     magicProtection: false,
     movementReduction: 0,
     value: 2,
+    sprite: {
+      image: 'items/chainmail_jacket.png',
+      size: 32,
+      index: 0,
+    },
   },
   {
     id: 'plate_mail',
@@ -23,6 +28,11 @@ export const armour: Armour[] = [
     magicProtection: false,
     movementReduction: 1,
     value: 3,
+    sprite: {
+      image: 'items/breastplate.png',
+      size: 32,
+      index: 0,
+    },
   },
   {
     id: 'dragon_skin_mail',
@@ -34,6 +44,11 @@ export const armour: Armour[] = [
     magicProtection: true,
     movementReduction: 0,
     value: 4,
+    sprite: {
+      image: 'items/leather_jacket_alt.png',
+      size: 32,
+      index: 0,
+    },
   },
 ];
 

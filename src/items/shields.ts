@@ -11,6 +11,11 @@ export const shields: Shield[] = [
     dice: 2,
     value: 2,
     blockSound: 'sfx/shield_block.mp3',
+    sprite: {
+      image: 'items/kite_shield.png',
+      size: 32,
+      index: 0,
+    },
   },
   {
     id: 'small_shield',
@@ -21,6 +26,11 @@ export const shields: Shield[] = [
     dice: 1,
     value: 1,
     blockSound: 'sfx/shield_block.mp3',
+    sprite: {
+      image: 'items/wooden_buckler.png',
+      size: 32,
+      index: 0,
+    },
   },
 ];
 

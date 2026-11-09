@@ -4,7 +4,7 @@
 
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc
 - [ ] Graphics
-  - [ ] Sprites for actors
+  - [x] Sprites for actors
   - [ ] Tileset for dungeons
   - [ ] Sprites for items etc
 - [ ] Alvkonungens Borg - [Official Dungeon and Heroes](<https://cf.geekdo-images.com/vmuWDOTFI7ZB5ekSB21-IQ__imagepagezoom/img/GiEIZp0p97dhk9TawLzxLWxjIiA=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic1072132.jpg>)
