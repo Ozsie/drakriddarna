@@ -581,6 +581,8 @@ export type LightSource = {
   id?: string;
   position: Position;
   alignment?: CellAlignment;
+  // Optional square crop from the built-in dungeon tilesheet, in source pixels.
+  sprite?: LightSprite;
   // CSS color of the light glow.
   color?: string;
   // Reach of the light in grid cells (from its position).
@@ -595,6 +597,25 @@ export type LightSource = {
   // How many times per second the effect loops (default 1).
   rate?: number;
   enabled?: boolean;
+};
+
+export type LightSprite = {
+  x: number;
+  y: number;
+  // Square frame size, used when frameWidth or frameHeight is omitted.
+  size: number;
+  // Optional rectangular frame dimensions, in source pixels.
+  frameWidth?: number;
+  frameHeight?: number;
+  // Optional image path relative to the static asset root; omitted means
+  // the dungeon tilesheet.
+  image?: string;
+  // Maximum sprite size as a fraction of the cell size (default 1).
+  scale?: number;
+  // Number of row-major frames in the image (default 1).
+  frameCount?: number;
+  // Playback speed for animated image frames (default 8 frames per second).
+  frameRate?: number;
 };
 
 // Terrain cell types. 'water' and 'lava' are the built-ins; the set is

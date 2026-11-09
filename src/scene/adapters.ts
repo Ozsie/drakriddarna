@@ -13,6 +13,8 @@ import type {
   Hero,
   ItemLocation,
   ItemSprite,
+  LightSource,
+  LightSprite,
   Monster,
   Position,
 } from '../types';
@@ -848,7 +850,10 @@ export const buildHeroOverlayViewModel = (
 // author art at the full cell footprint, so the cell draw shrink stays on
 // the game side (the scene package's item path always fills the cell).
 export type GameItemView = SceneItemView & {
-  spriteDraw?: { scale: number; alignment?: CellAlignment };
+  spriteDraw?: {
+    scale: number;
+    alignment?: CellAlignment;
+  };
 };
 
 // Item sprites draw at 75% of the cell so the items don't fill their
@@ -886,6 +891,70 @@ export const buildDecoratorViewModels = (
           label: null,
         },
       ];
+    });
+
+export const buildLightSpriteViewModels = (
+  state: GameState,
+  groundSheet: CanvasImageSource,
+  cellSize: number,
+  debugMode = false,
+  timeMs = Date.now(),
+): GameItemView[] =>
+  (state.dungeon.layout.lights ?? [])
+    .filter(
+      (light): light is LightSource & { sprite: LightSprite } =>
+        Boolean(light.sprite) &&
+        (debugMode ||
+          isDiscovered(state.dungeon, light.position.x, light.position.y)),
+    )
+    .map((light) => {
+      const { sprite } = light;
+      const image = sprite.image ? getReadyImage(sprite.image) : null;
+      const sourceImage = image ?? groundSheet;
+      const frameWidth = sprite.frameWidth ?? sprite.size;
+      const frameHeight = sprite.frameHeight ?? sprite.size;
+      const columns = image
+        ? Math.max(1, Math.floor((image.naturalWidth - sprite.x) / frameWidth))
+        : 1;
+      const availableFrames = image
+        ? columns *
+          Math.max(
+            1,
+            Math.floor((image.naturalHeight - sprite.y) / frameHeight),
+          )
+        : 1;
+      const frameCount = Math.min(
+        availableFrames,
+        Math.max(1, Math.floor(sprite.frameCount ?? 1)),
+      );
+      const frameRate = Math.max(0, sprite.frameRate ?? 8);
+      const frameIndex =
+        image && frameRate > 0
+          ? Math.floor((Math.max(0, timeMs) * frameRate) / 1000) % frameCount
+          : 0;
+      return {
+        position: light.position,
+        sprite:
+          image || !sprite.image
+            ? {
+                image: sourceImage,
+                sx: sprite.x + (frameIndex % columns) * frameWidth,
+                sy: sprite.y + Math.floor(frameIndex / columns) * frameHeight,
+                sw: frameWidth,
+                sh: frameHeight,
+              }
+            : null,
+        spriteDraw: {
+          scale: sprite.scale ?? 1,
+          alignment: light.alignment ?? CellAlignment.CENTER,
+        },
+        fallbackTile: actorTileFrame(
+          groundSheet,
+          ITEM_TILES.ITEM_GENERIC,
+          cellSize,
+        ),
+        label: null,
+      };
     });
 
 // Item views for the item layer: discovered items only (all of them in
@@ -931,7 +1000,8 @@ export const buildItemViewModels = (
     });
 };
 
-// Draws one item view's sprite at its draw scale, aligned within the cell.
+// Draws one item view's sprite at its draw scale. Sprites align their bounds
+// within the cell according to CellAlignment.
 // Unlike actors, items lie flat on the floor tile, so their default center
 // alignment does not anchor them to the cell's bottom edge.
 // Returns whether a frame was drawn.

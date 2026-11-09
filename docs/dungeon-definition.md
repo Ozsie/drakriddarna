@@ -151,6 +151,24 @@ runtime type. Positions may always be written as `[x, y]` tuples or
 | `wallColour`      | `string`                                     | Fill colour of edge walls dungeon-wide; per-wall `colour` wins.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `corners`         | `Corner[]`                                   | Wall-corner render hints. **Auto-detected** from the grid by `autoDetectCorners` (`src/dungeon/cornerDetection.ts`) — you normally never author these.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
+A light's optional `sprite` is `{ x, y, size }`, a square crop in source
+pixels from the dungeon tilesheet. To use a separate image, add `image` as a
+static asset path (relative to `static/`) and set `x`, `y` and `size` to the
+first frame's source rectangle. Optional `frameWidth` and `frameHeight`
+override the square `size` for rectangular frames; each defaults to `size`.
+`scale` sets the maximum drawn size as a fraction of the cell (default `1`); the
+shared torch uses `0.75`, and the brazier uses `0.6`.
+`frameCount` (default `1`) plays row-major frames from that origin, and
+`frameRate` (default `8`) sets frames per second; the image dimensions
+determine the number of columns. The shared torch uses all eight 64-pixel
+frames in `decorators/Torch Animated.png`, while the brazier uses the full
+540-by-639 image in
+`decorators/nobg-1293999211a5-1791660715455_1791660715455_dw9f2h0x.png`.
+Light sprites align their bounds to the selected cell edge: all top values
+place the sprite against the top edge, all bottom values against the bottom
+edge, and `CENTER_LEFT` / `CENTER_RIGHT` against the corresponding side.
+`CENTER` and `CEILING` center the sprite within the cell.
+
 `src/dungeon/Decorators.ts` provides named presets for the standalone images
 in `static/decorators/`: `bonesVariant1`, `bonesVariant2`, `bonesVariant3`,
 `bonesVariant15`, `bonesVariant16`, `bonesVariant18`, `plantVariant4`,

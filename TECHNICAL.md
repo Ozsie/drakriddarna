@@ -363,6 +363,17 @@ heroes — so a figure standing in the cell behind a pillar is occluded by the
 rising shaft — but before the ambient darkness veil, so unlit shafts darken
 with the rest of the scene.
 
+Wall-mounted light sprites are drawn on the dynamic layer above the static
+dungeon tiles. They follow the light glow and animated-terrain passes but
+precede actors; pillar shafts, room fog and the ambient darkness veil still
+overlay them. Light sprites can use a separate image and animate row-major
+frames; the built-in torch uses the eight-frame `Torch Animated.png` sheet and
+shares the dynamic layer's time-based repaint loop. Light sprites align their
+bounds to the cell edge selected by `CellAlignment`; `CENTER` and `CEILING`
+center the sprite within the cell. Rectangular frame dimensions are supported
+for static images such as the brazier sprite, and a per-sprite scale controls
+its maximum size relative to the cell.
+
 Terrain cells (water, lava, …) are declarative floor materials: each cell
 tints the floor, can carry a light (lava glows through the same lighting
 system as torches), and can be configured with gameplay effects — damage on
@@ -394,9 +405,10 @@ alpha-scaled `drawImage`; and the visibility-polygon cache underneath is keyed
 by the light's stable geometry rather than object identity, so recreating
 derived lights as fresh objects every pass stays cheap. Ambient redraws are
 driven by a quantized animation signature instead of the frame clock: each
-animated effect contributes its stepped visible output, and the dynamic layer
-only clears and repaints when the signature actually changes — a flickering
-brazier repaints only a handful of times per second. The whole dynamic
+animated effect and light-sprite frame contributes its stepped visible output,
+and the dynamic layer only clears and repaints when the signature actually
+changes — a flickering brazier repaints only a handful of times per second.
+The whole dynamic
 loop is frame-rate locked by a small governor
 (`src/components/DungeonBoardFrameRate.ts`): actor-driven frames
 (movement, projectiles) render at most 60 times per second regardless of

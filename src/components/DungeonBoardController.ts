@@ -62,7 +62,11 @@ import {
   animatedLightsSignature,
 } from '../dungeon/LightRendering';
 import type { LightViewport } from '@hoard-engine/lighting';
-import { renderDecorators, renderItems } from '../items/ItemRendering';
+import {
+  renderDecorators,
+  renderItems,
+  renderLightSprites,
+} from '../items/ItemRendering';
 import {
   renderRadialMenu,
   findHoveredRadialButton,
@@ -181,6 +185,7 @@ import { inputManager } from '../input/InputManager';
 import { musicManager, soundEffectManager } from '../audio';
 import { selectMusicIntensity } from '../audio/MusicIntensity';
 import {
+  getAnimatedLightSpriteSignature,
   getStaticSignature,
   getDynamicSignature,
   getOverlaySignature,
@@ -782,13 +787,12 @@ export class DungeonBoardController {
       this.renderDynamicLayer(true);
       this.renderOverlayLayer(true);
     };
-    // Item and interactable sprite sheets load lazily through the shared
-    // image cache: the first draw that references a sheet starts the
-    // load and shows the fallback art meanwhile. Without this hook the
-    // cached static and UI layers would keep showing their fallbacks
-    // until the next state change; a completed load repaints them.
+    // Item, interactable and light sprite images load lazily through the
+    // shared image cache: the first draw shows fallback art meanwhile, and
+    // a completed load repaints every layer that can use those sprites.
     setImageLoadedListener(() => {
       this.renderStaticLayer(true);
+      this.renderDynamicLayer(true);
       this.renderUiLayer(true);
     });
 
@@ -1171,9 +1175,9 @@ export class DungeonBoardController {
     // light animates within the viewport. The active light list is
     // computed once per frame and shared by every lighting call below.
     const frameLights = activeLights(this.activeState, currentTime);
-    // Quantized animation state of the visible lights: two renders with
-    // the same signature paint identical light output, so the dynamic
-    // layer repaints only when it changes — a flickering brazier
+    // Quantized animation state of the visible lights and light sprites:
+    // two renders with the same signature paint identical output, so the
+    // dynamic layer repaints only when it changes — a flickering brazier
     // repaints about 8 times per second instead of every frame.
     const lightSig = animatedLightsSignature(
       this.activeState,
@@ -1183,6 +1187,12 @@ export class DungeonBoardController {
       frameLights,
     );
     const hasLightEffects = lightSig !== '';
+    const lightSpriteSig = getAnimatedLightSpriteSignature(
+      this.activeState,
+      debugMode,
+      currentTime,
+    );
+    const hasAnimatedLightSprites = lightSpriteSig !== '';
     // Animated terrain overlays (water shimmer, lava pulse) and room fog
     // change their output slowly, so their animation state is stepped by
     // time instead of quantized per effect.
@@ -1203,8 +1213,8 @@ export class DungeonBoardController {
       this.actorCanvas?.height ?? 0,
     )}`;
     const ambientSig =
-      hasLightEffects || hasTerrainEffects
-        ? `${lightSig}|${
+      hasLightEffects || hasAnimatedLightSprites || hasTerrainEffects
+        ? `${lightSig}|${lightSpriteSig}|${
             hasTerrainEffects
               ? Math.floor(currentTime / TERRAIN_ANIMATION_STEP_MS)
               : ''
@@ -1219,6 +1229,7 @@ export class DungeonBoardController {
       !force &&
       !hasActiveAnimations &&
       !hasLightEffects &&
+      !hasAnimatedLightSprites &&
       !hasTerrainEffects &&
       sig === this.lastDynamicSignature
     )
@@ -1230,7 +1241,7 @@ export class DungeonBoardController {
     if (
       force &&
       !hasActiveAnimations &&
-      (hasLightEffects || hasTerrainEffects) &&
+      (hasLightEffects || hasAnimatedLightSprites || hasTerrainEffects) &&
       ambientSig === this.lastAmbientSignature &&
       sig === this.lastDynamicSignature
     ) {
@@ -1252,6 +1263,18 @@ export class DungeonBoardController {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.actorCanvas.width, this.actorCanvas.height);
     ctx.restore();
+
+    // Draw the light fixtures first so their glow is composited over them.
+    if (this.ground) {
+      renderLightSprites(
+        ctx,
+        this.ground,
+        this.cellSize,
+        this.activeState,
+        debugMode,
+        currentTime,
+      );
+    }
 
     // Lights render into their own offscreen mask, which is composited
     // onto the scene here and then reused to punch the ambient darkness
@@ -1448,6 +1471,7 @@ export class DungeonBoardController {
     if (
       hasActiveActors ||
       hasLightEffects ||
+      hasAnimatedLightSprites ||
       hasTerrainEffects ||
       hasActiveActorAnimations(currentTime)
     ) {

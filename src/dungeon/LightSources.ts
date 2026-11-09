@@ -1,6 +1,16 @@
 import type { DeclarativeLightOptions } from './dungeonParser';
 
 export const brazier: DeclarativeLightOptions = {
+  sprite: {
+    image:
+      'decorators/nobg-1293999211a5-1791660715455_1791660715455_dw9f2h0x.png',
+    x: 0,
+    y: 0,
+    size: 540,
+    frameWidth: 540,
+    frameHeight: 639,
+    scale: 0.6,
+  },
   color: '#c29042',
   radius: 3,
   intensity: 0.5,
@@ -18,6 +28,15 @@ export const chandelier: DeclarativeLightOptions = {
 };
 
 export const torch: DeclarativeLightOptions = {
+  sprite: {
+    image: 'decorators/Torch Animated.png',
+    x: 0,
+    y: 0,
+    size: 64,
+    scale: 0.75,
+    frameCount: 8,
+    frameRate: 8,
+  },
   color: '#e8963c',
   radius: 2,
   intensity: 0.45,

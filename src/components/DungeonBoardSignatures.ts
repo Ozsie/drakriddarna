@@ -11,6 +11,7 @@ import type {
   Secret,
   TerrainCell,
 } from '../types';
+import { isDiscovered } from '../core';
 
 // Signature helpers for the Dungeon board's layered render loop: each
 // layer only redraws when its signature changes, so the signature must
@@ -137,7 +138,21 @@ export const getDynamicSignature = (
       (l: LightSource) =>
         `${String(String(String(l.position.x)))},${String(
           String(l.position.y),
-        )},${String(String(l.alignment))},${String(String(String(l.enabled)))}`,
+        )},${String(String(l.alignment))},${String(
+          String(String(l.enabled)),
+        )},${
+          l.sprite
+            ? `${String(l.sprite.x)},${String(l.sprite.y)},${String(
+                l.sprite.size,
+              )},${String(l.sprite.frameWidth ?? '')},${String(
+                l.sprite.frameHeight ?? '',
+              )},${String(l.sprite.scale ?? '')},${String(
+                l.sprite.image ?? '',
+              )},${String(
+                l.sprite.frameCount ?? '',
+              )},${String(l.sprite.frameRate ?? '')}`
+            : ''
+        }`,
     )
     .join(';');
   const itemLights = [
@@ -197,6 +212,31 @@ export const getDynamicSignature = (
     String(interactableLights),
   )}|${String(String(size))}|${String(String(String(dbg)))}`;
 };
+
+export const getAnimatedLightSpriteSignature = (
+  st: GameState,
+  dbg: boolean,
+  timeMs: number,
+): string =>
+  (st?.dungeon?.layout?.lights ?? [])
+    .map((light) => {
+      const { sprite, position } = light;
+      if (
+        !sprite?.image ||
+        Math.floor(sprite.frameCount ?? 1) <= 1 ||
+        (sprite.frameRate ?? 8) <= 0 ||
+        (!dbg && !isDiscovered(st.dungeon, position.x, position.y))
+      ) {
+        return null;
+      }
+      const frameCount = Math.max(1, Math.floor(sprite.frameCount ?? 1));
+      const frameRate = sprite.frameRate ?? 8;
+      const frameIndex =
+        Math.floor((Math.max(0, timeMs) * frameRate) / 1000) % frameCount;
+      return `${String(position.x)},${String(position.y)}:${String(frameIndex)}`;
+    })
+    .filter((signature): signature is string => signature !== null)
+    .join(';');
 
 export const getOverlaySignature = (
   st: GameState,

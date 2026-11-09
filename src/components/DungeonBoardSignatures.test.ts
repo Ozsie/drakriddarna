@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameState, Hero } from '../types';
 import { CellAlignment, Side } from '../types';
 import {
+  getAnimatedLightSpriteSignature,
   getDynamicSignature,
   getOverlaySignature,
   getStaticSignature,
@@ -70,6 +71,75 @@ describe('DungeonBoardSignatures', () => {
     ];
 
     expect(getStaticSignature(state, false, 48)).not.toBe(before);
+  });
+
+  it('static signature ignores light sprites drawn on the dynamic layer', () => {
+    const state = createState();
+    const before = getStaticSignature(state, false, 48);
+    state.dungeon.layout.lights = [
+      {
+        position: { x: 1, y: 0 },
+        sprite: { x: 576, y: 96, size: 48 },
+      },
+    ];
+
+    expect(getStaticSignature(state, false, 48)).toBe(before);
+  });
+
+  it('dynamic signature changes when a light sprite crop changes', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      {
+        position: { x: 1, y: 0 },
+        sprite: { x: 576, y: 96, size: 48 },
+      },
+    ];
+    const before = getDynamicSignature(state, false, 48);
+    state.dungeon.layout.lights[0].sprite = { x: 624, y: 96, size: 48 };
+
+    expect(getDynamicSignature(state, false, 48)).not.toBe(before);
+  });
+
+  it('dynamic signature changes when a light sprite scale changes', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      {
+        position: { x: 1, y: 0 },
+        sprite: { x: 576, y: 96, size: 48, scale: 0.75 },
+      },
+    ];
+    const before = getDynamicSignature(state, false, 48);
+    state.dungeon.layout.lights[0].sprite = {
+      x: 576,
+      y: 96,
+      size: 48,
+      scale: 0.6,
+    };
+
+    expect(getDynamicSignature(state, false, 48)).not.toBe(before);
+  });
+
+  it('animates discovered light sprites at their configured frame rate', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      {
+        position: { x: 1, y: 0 },
+        sprite: {
+          image: 'decorators/Torch Animated.png',
+          x: 0,
+          y: 0,
+          size: 64,
+          frameCount: 8,
+          frameRate: 8,
+        },
+      },
+    ];
+
+    const firstFrame = getAnimatedLightSpriteSignature(state, false, 0);
+    const secondFrame = getAnimatedLightSpriteSignature(state, false, 125);
+
+    expect(firstFrame).not.toBe('');
+    expect(secondFrame).not.toBe(firstFrame);
   });
 
   it('static signature changes when a decorator crop changes', () => {

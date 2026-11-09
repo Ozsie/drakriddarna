@@ -765,6 +765,21 @@ their cells, so light also passes between diagonally adjacent actors) —
 with the darkness starting behind it. Lights render on the dynamic canvas
 layer, below the actors, so shadows update as actors move.
 
+A light can also have a visible `sprite`: `{ x, y, size }` selects a square
+crop from the dungeon tilesheet. Set `image` to a static asset path to use a
+separate image; optional `frameWidth` and `frameHeight` override the square
+`size` for rectangular frames, each defaulting to `size`. Optional `frameCount`
+and `frameRate` animate row-major frames (defaults: `1` and `8` frames per
+second). `scale` sets the maximum drawn size as a fraction of the cell
+(default `1`); the built-in `torch` and `brazier` presets use `0.75` and `0.6`,
+respectively. The `torch` preset uses the eight-frame
+`decorators/Torch Animated.png` sheet, and `brazier` uses the full
+540-by-639 `decorators/nobg-1293999211a5-1791660715455_1791660715455_dw9f2h0x.png`
+image. A light sprite's bounds align to the selected cell edge: top and bottom
+values place it against the corresponding horizontal edge, and `CENTER_LEFT`
+or `CENTER_RIGHT` place it against that side. `CENTER` and `CEILING` center
+the sprite within the cell.
+
 For performance, lights are only rendered on discovered cells in rooms where
 a living hero currently stands (debug mode renders every enabled light), and
 light polygons are cached between frames while the occlusion state — actor

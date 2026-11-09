@@ -10,6 +10,7 @@ import type {
   ItemLocation,
   Layout,
   LightEffect,
+  LightSprite,
   LightSource,
   Monster,
   Note,
@@ -231,6 +232,7 @@ export type DeclarativeInteractable =
   | DeclarativeInteractableTuple;
 
 export type DeclarativeLightOptions = {
+  sprite?: LightSprite;
   color?: string;
   radius?: number;
   intensity?: number;
@@ -758,10 +760,15 @@ export const parseLight = (lightDef: DeclarativeLight): LightSource => {
 
   if (Array.isArray(lightDef)) {
     const [x, y, alignmentOrOptions, options] = lightDef;
-    if (typeof alignmentOrOptions === 'string') {
-      return createLight(x, y, alignmentOrOptions, options);
-    }
-    return createLight(x, y, undefined, alignmentOrOptions);
+    const light =
+      typeof alignmentOrOptions === 'string'
+        ? createLight(x, y, alignmentOrOptions, options)
+        : createLight(x, y, undefined, alignmentOrOptions);
+    const sprite =
+      typeof alignmentOrOptions === 'string'
+        ? options?.sprite
+        : alignmentOrOptions?.sprite;
+    return sprite ? { ...light, sprite } : light;
   }
 
   const {
@@ -776,8 +783,9 @@ export const parseLight = (lightDef: DeclarativeLight): LightSource => {
     rate,
     enabled,
     id,
+    sprite,
   } = lightDef;
-  return createLight(x, y, alignment, {
+  const light = createLight(x, y, alignment, {
     ...(color !== undefined ? { color } : {}),
     ...(radius !== undefined ? { radius } : {}),
     ...(intensity !== undefined ? { intensity } : {}),
@@ -787,6 +795,7 @@ export const parseLight = (lightDef: DeclarativeLight): LightSource => {
     ...(enabled !== undefined ? { enabled } : {}),
     ...(id !== undefined ? { id } : {}),
   });
+  return sprite ? { ...light, sprite } : light;
 };
 
 export const parseTerrain = (terrainDef: DeclarativeTerrain): TerrainCell => {

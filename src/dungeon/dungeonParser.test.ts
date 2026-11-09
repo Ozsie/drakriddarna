@@ -289,6 +289,13 @@ describe('dungeonParser', () => {
       expect(light.id).toBe('brazier');
     });
 
+    it('preserves a sprite declared in light options', () => {
+      const sprite = { x: 576, y: 96, size: 48 };
+      const light = parseLight([5, 6, { sprite }]);
+
+      expect(light.sprite).toEqual(sprite);
+    });
+
     it('parses object format', () => {
       const light = parseLight({
         x: 2,

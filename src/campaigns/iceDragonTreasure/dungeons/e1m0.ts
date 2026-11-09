@@ -73,6 +73,11 @@ export const e1m0: Dungeon = defineDungeon({
     decorators: [
       [2, 8, CellAlignment.CENTER_TOP, 'suppliesObject072'],
       [3, 8, CellAlignment.TOP_RIGHT, 'bonesVariant1'],
+      [9, 2, CellAlignment.TOP_RIGHT, 'bonesVariant3'],
+      [9, 3, CellAlignment.TOP_RIGHT, 'bonesVariant16'],
+      [6, 1, CellAlignment.TOP_RIGHT, 'bonesVariant18'],
+      [8, 7, CellAlignment.TOP_RIGHT, 'ruinVariant5'],
+      [7, 9, CellAlignment.TOP_RIGHT, 'rockVariant4'],
     ],
   },
   events: [1, 2, 3, 4, 5, 6],
