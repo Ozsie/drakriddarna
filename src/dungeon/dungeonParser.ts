@@ -1,5 +1,4 @@
 import type {
-  CellAlignment,
   Corner,
   Decorator,
   Door,
@@ -24,7 +23,14 @@ import type {
   WinCondition,
 } from '../types';
 import type { DecoratorPresetName } from './Decorators';
-import { Colour, Level, MonsterType, SecretType, Side } from '../types';
+import {
+  CellAlignment,
+  Colour,
+  Level,
+  MonsterType,
+  SecretType,
+  Side,
+} from '../types';
 import {
   createDoor,
   createEquipment,
@@ -845,32 +851,159 @@ export const parseRoomFog = (
   return { ...fogDef };
 };
 
-export const defineLayout = (layoutDef: DeclarativeLayout): Layout => ({
-  grid: layoutDef.grid,
-  doors: (layoutDef.doors ?? []).map(parseDoor),
-  monsters: (layoutDef.monsters ?? []).map(parseMonster),
-  decorators: (layoutDef.decorators ?? []).map(parseDecorator),
-  secrets: (layoutDef.secrets ?? []).map(parseSecret),
-  notes: (layoutDef.notes ?? []).map(parseNote),
-  items: (layoutDef.items ?? []).map(parseItem),
-  interactables: (layoutDef.interactables ?? []).map(parseInteractable),
-  lights: (layoutDef.lights ?? []).map(parseLight),
-  terrain: (layoutDef.terrain ?? []).map(parseTerrain),
-  roomFog: parseRoomFog(layoutDef.roomFog ?? {}),
-  corridors: layoutDef.corridors ?? [],
-  corridorCells: (layoutDef.corridorCells ?? []).map(parsePosition),
-  pillars: (layoutDef.pillars ?? []).map(parsePosition),
-  pits: (layoutDef.pits ?? []).map(parsePosition),
-  walls: (layoutDef.walls ?? []).map(parseWall),
-  ...(layoutDef.wallColour ? { wallColour: layoutDef.wallColour } : {}),
-  corners: autoDetectCorners(layoutDef.grid),
-});
+const DEFAULT_DECORATOR_PRESETS: readonly DecoratorPresetName[] = [
+  'ruinVariant5',
+  'rockVariant4',
+  'plantVariant4',
+  'bonesVariant3',
+  'objectsObject037',
+  'objectsObject016',
+];
+
+const createGridRandom = (grid: string[]): (() => number) => {
+  let state = 2166136261;
+  for (const character of grid.join('\n')) {
+    state = Math.imul(state ^ character.charCodeAt(0), 16777619);
+  }
+  state >>>= 0;
+  if (state === 0) state = 0x9e3779b9;
+
+  return () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return (state >>> 0) / 0x100000000;
+  };
+};
+
+const generateDefaultDecorators = (
+  grid: string[],
+  occupiedPositions: readonly Position[],
+): Decorator[] => {
+  const random = createGridRandom(grid);
+  const occupiedKeys = new Set(
+    occupiedPositions.map(({ x, y }) => `${x},${y}`),
+  );
+  const isBlocked = (x: number, y: number): boolean => {
+    const tile = grid[y]?.[x];
+    return tile === undefined || tile === '#' || tile === ' ';
+  };
+  const candidates = grid.flatMap((row, y) =>
+    Array.from(row, (tile, x) => {
+      if (tile === '#' || tile === ' ' || occupiedKeys.has(`${x},${y}`)) {
+        return undefined;
+      }
+
+      const blocked = {
+        top: isBlocked(x, y - 1),
+        right: isBlocked(x + 1, y),
+        bottom: isBlocked(x, y + 1),
+        left: isBlocked(x - 1, y),
+      };
+      const corner: CellAlignment | undefined =
+        blocked.top && blocked.left
+          ? CellAlignment.TOP_LEFT
+          : blocked.top && blocked.right
+            ? CellAlignment.TOP_RIGHT
+            : blocked.bottom && blocked.left
+              ? CellAlignment.BOTTOM_LEFT
+              : blocked.bottom && blocked.right
+                ? CellAlignment.BOTTOM_RIGHT
+                : undefined;
+      const wallAdjacent = Object.values(blocked).some(Boolean);
+      return { x, y, corner, wallAdjacent };
+    }).filter((candidate) => candidate !== undefined),
+  );
+  const available = [...candidates];
+  const presets = [...DEFAULT_DECORATOR_PRESETS];
+  for (let index = presets.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [presets[index], presets[swapIndex]] = [presets[swapIndex], presets[index]];
+  }
+
+  return presets.flatMap((preset) => {
+    if (available.length === 0) return [];
+    const cornerCells = available.filter((cell) => cell.corner);
+    const wallCells = available.filter((cell) => cell.wallAdjacent);
+    const placementPool =
+      cornerCells.length > 0
+        ? cornerCells
+        : wallCells.length > 0
+          ? wallCells
+          : available;
+    const selected = placementPool[Math.floor(random() * placementPool.length)];
+    available.splice(available.indexOf(selected), 1);
+    return [
+      createDecoratorPreset(
+        preset,
+        { x: selected.x, y: selected.y },
+        selected.corner ?? CellAlignment.CENTER,
+      ),
+    ];
+  });
+};
+
+export const defineLayout = (
+  layoutDef: DeclarativeLayout,
+  reservedPositions: readonly Position[] = [],
+): Layout => {
+  const monsters = (layoutDef.monsters ?? []).map(parseMonster);
+  const secrets = (layoutDef.secrets ?? []).map(parseSecret);
+  const notes = (layoutDef.notes ?? []).map(parseNote);
+  const items = (layoutDef.items ?? []).map(parseItem);
+  const interactables = (layoutDef.interactables ?? []).map(parseInteractable);
+  const lights = (layoutDef.lights ?? []).map(parseLight);
+  const terrain = (layoutDef.terrain ?? []).map(parseTerrain);
+  const corridorCells = (layoutDef.corridorCells ?? []).map(parsePosition);
+  const pillars = (layoutDef.pillars ?? []).map(parsePosition);
+  const pits = (layoutDef.pits ?? []).map(parsePosition);
+  const decorators =
+    layoutDef.decorators && layoutDef.decorators.length > 0
+      ? layoutDef.decorators.map(parseDecorator)
+      : generateDefaultDecorators(layoutDef.grid, [
+          ...reservedPositions,
+          ...monsters.map(({ position }) => position),
+          ...secrets.map(({ position }) => position),
+          ...notes.map(({ position }) => position),
+          ...items.map(({ position }) => position),
+          ...interactables.map(({ position }) => position),
+          ...lights.map(({ position }) => position),
+          ...terrain.map(({ position }) => position),
+          ...corridorCells,
+          ...pillars,
+          ...pits,
+        ]);
+
+  return {
+    grid: layoutDef.grid,
+    doors: (layoutDef.doors ?? []).map(parseDoor),
+    monsters,
+    decorators,
+    secrets,
+    notes,
+    items,
+    interactables,
+    lights,
+    terrain,
+    roomFog: parseRoomFog(layoutDef.roomFog ?? {}),
+    corridors: layoutDef.corridors ?? [],
+    corridorCells,
+    pillars,
+    pits,
+    walls: (layoutDef.walls ?? []).map(parseWall),
+    ...(layoutDef.wallColour ? { wallColour: layoutDef.wallColour } : {}),
+    corners: autoDetectCorners(layoutDef.grid),
+  };
+};
 
 export const defineDungeon = (
   dungeonDef: DeclarativeDungeon,
   options: DefineDungeonOptions = { validate: true },
 ): Dungeon => {
-  const layout = defineLayout(dungeonDef.layout);
+  const layout = defineLayout(
+    dungeonDef.layout,
+    dungeonDef.startingPositions.map(parsePosition),
+  );
   const dungeon: Dungeon = {
     name: dungeonDef.name,
     intro: dungeonDef.intro,

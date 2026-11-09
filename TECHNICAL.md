@@ -209,7 +209,10 @@ presetName]`; descriptors also accept alignment. Decorator alignment positions
 the sprite bounds within its cell, and defaults to `CENTER`. The supplies-object
 atlas presets carry explicit pixel crop rectangles for their irregular sprite
 bounds, while indexed frames remain available through a descriptor. The parser
-resolves these forms to sprite data:
+resolves these forms to sprite data. When the decorator list is omitted or
+empty, it deterministically places up to six designated presets in unoccupied
+floor cells, preferring room corners and then wall-adjacent cells; explicit
+decorator lists take precedence.
 
 ```ts
 export const e1m1: Dungeon = defineDungeon({
@@ -252,11 +255,11 @@ seed drives a rejection-sampling loop that grows organic room blobs on a
 jittered lattice, carves a spanning tree of doorways, and populates each floor
 from a depth table — monster XP budgets shaped to the hero level curve,
 progressively better loot, one light per room on floors that get strictly
-darker every level, and thematic blockers placed so they never wall in a
-monster, item or hero. A checked-in fallback seed, verified by tests, means
-app start can never throw. Same auto-discovery, same validation — the
-generator is just another campaign folder whose dungeons happen to be built
-by code.
+darker every level, environmental decorators from existing sprite presets,
+and thematic blockers placed so they never wall in a monster, item or hero.
+A checked-in fallback seed, verified by tests, means app start can never
+throw. Same auto-discovery, same validation — the generator is just another
+campaign folder whose dungeons happen to be built by code.
 
 ## Determinism: a seeded RNG everywhere it matters
 

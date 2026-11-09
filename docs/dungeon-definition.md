@@ -201,6 +201,15 @@ Decorator alignment positions the sprite bounds within the cell: corner and
 edge values place the corresponding sprite edge against the cell edge, while
 `CENTER` and `CEILING` center the sprite.
 
+When `decorators` is omitted or empty, `defineLayout` deterministically places
+up to six default presets: `ruinVariant5`, `rockVariant4`, `plantVariant4`,
+`bonesVariant3`, `objectsObject037` and `objectsObject016`. The grid seeds the
+placement, which prefers room-corner cells, then other wall-adjacent cells,
+then any remaining floor cells. Generated decorators use distinct, unoccupied
+cells (including cells reserved for dungeon starting positions); fewer than six
+are placed when the dungeon has fewer eligible cells. Any non-empty explicit
+decorator list disables this fallback.
+
 `suppliesObject` remains available to select a 16-pixel frame by index from
 `supplies_objects.png`. Atlas crop presets preserve the sprite's aspect ratio
 when drawn in a cell. Full `Decorator` objects with a custom `{ image, size,

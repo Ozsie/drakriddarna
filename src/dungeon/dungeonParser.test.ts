@@ -395,7 +395,7 @@ describe('dungeonParser', () => {
       });
       expect(layout.doors).toEqual([]);
       expect(layout.monsters).toEqual([]);
-      expect(layout.decorators).toEqual([]);
+      expect(layout.decorators).toHaveLength(1);
       expect(layout.secrets).toEqual([]);
       expect(layout.notes).toEqual([]);
       expect(layout.items).toEqual([]);
@@ -479,6 +479,66 @@ describe('dungeonParser', () => {
       });
 
       expect(layout.decorators).toEqual([decorator]);
+    });
+
+    it('places deterministic default decorators in room corners first', () => {
+      const layoutDefinition = {
+        grid: [
+          '##########',
+          '#AAAAAAAA#',
+          '#AAAAAAAA#',
+          '#AAAAAAAA#',
+          '#AAAAAAAA#',
+          '##########',
+        ],
+        decorators: [],
+      };
+
+      const first = defineLayout(layoutDefinition);
+      const second = defineLayout(layoutDefinition);
+      const positionKeys = first.decorators?.map(
+        ({ position }) => `${position.x},${position.y}`,
+      );
+
+      expect(first.decorators).toEqual(second.decorators);
+      expect(first.decorators).toHaveLength(6);
+      expect(new Set(positionKeys).size).toBe(6);
+      expect(positionKeys).toEqual(
+        expect.arrayContaining(['1,1', '8,1', '1,4', '8,4']),
+      );
+      expect(first.decorators?.map(({ sprite }) => sprite.image)).toEqual(
+        expect.arrayContaining([
+          'decorators/Ruin_shadow2_5.png',
+          'decorators/Rock_shadow2_4.png',
+          'decorators/Plant__shadow2_4.png',
+          'decorators/Bones_shadow3_3.png',
+          'decorators/Objects.png',
+        ]),
+      );
+      expect(
+        first.decorators?.filter(
+          ({ sprite }) =>
+            sprite.image === 'decorators/Objects.png' &&
+            (sprite.sourceRect?.x === 368 || sprite.sourceRect?.x === 258),
+        ),
+      ).toHaveLength(2);
+    });
+
+    it('never places generated decorators on occupied cells', () => {
+      const layout = defineLayout({
+        grid: ['########', '#AAAAAA#', '#AAAAAA#', '#AAAAAA#', '########'],
+        monsters: [[MonsterType.ORC, Colour.Red, 1, 1]],
+        items: [[2, 1, weapons[0]]],
+        decorators: [],
+      });
+
+      expect(
+        layout.decorators?.some(
+          ({ position }) =>
+            (position.x === 1 && position.y === 1) ||
+            (position.x === 2 && position.y === 1),
+        ),
+      ).toBe(false);
     });
 
     it('resolves named decorator presets in the layout', () => {

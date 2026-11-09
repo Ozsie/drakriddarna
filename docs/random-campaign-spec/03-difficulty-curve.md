@@ -48,6 +48,10 @@ Interpretation:
   pits on the sunken shaft (3) and the abyss (9), pillars in the crystal
   chamber (6), the graves (7) and the temple hall around the final boss
   (10). They shape movement but never wall anything in.
+- **Decorators** are visual-only details selected from the existing bone,
+  plant, rock and ruin presets. Population tries to place one in each room
+  on an unoccupied cell, preferring the wall edge and avoiding doorways and
+  lights; a crowded room may remain undecorated.
 - **Secrets, items** scale modestly with depth.
 - **Events**: every floor's deck contains all 16 shared world events.
   `getEventsForDungeon` (`src/events/EventsLogic.ts`) shuffles the deck at

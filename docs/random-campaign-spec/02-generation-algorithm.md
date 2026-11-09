@@ -158,8 +158,19 @@ Placement rules, enforced before any monster, item or secret is placed:
   the room's rim); pillars on boss floors prefer the boss room.
 - Fewer blockers than configured is acceptable (placement stops when no
   valid candidate remains); the floor is never rejected over blockers.
-- Later placements see blockers as occupied, so monsters, items, secrets
-  and lights never share a cell with a pillar or pit.
+- Later placements see blockers as occupied, so monsters, items, secrets,
+  lights and decorators never share a cell with a pillar or pit.
+
+## Step 5c — Environmental decorators (population)
+
+Population adds one decorator per room when a suitable cell is available,
+choosing from the existing bone, plant, rock and ruin presets in
+`src/dungeon/Decorators.ts`. Placement prefers a wall-adjacent floor cell;
+the fallback is any eligible floor cell in that room. Decorators avoid
+occupied cells, doors and cells orthogonally adjacent to doors, as well as
+existing lights. They are visual-only and do not reserve cells or affect
+walkability. If a room has no eligible cell, it is left undecorated rather
+than rejecting the dungeon.
 
 ## Step 6 — Rejection sampling
 
@@ -195,7 +206,8 @@ the start room letter, the starting positions (distinct non-door cells of
 the start room, one per hero) and the cells doors sit on (the carved
 doorway cells and their targets, which population keeps free of entities).
 `populationGenerator` (see 03) fills monsters, items and secrets, places
-the blockers from step 5b, places one light per room on the cell closest
+the blockers from step 5b, places one decorator per room when a free cell
+is available, places one light per room on the cell closest
 to the room's centre on floors with `ambientLight < 1` — drawn from the
 floor's light rig (`lightRig` in `config.ts`; mine torches high up,
 chandeliers in the crystal chamber and the temple, a warm golden glow in
@@ -216,6 +228,9 @@ the grid.
 - Pillars and pits lie on room floor cells, never on or orthogonally
   adjacent to a door cell, and never cut any free floor cell off from
   the hero start cells (see step 5b).
+- Decorators use existing presets and lie on unoccupied room floor cells,
+  away from door cells, door approaches and lights; they do not affect
+  movement or dungeon validation.
 - The start room contains no monsters on depth 1 (and at most one on any
   depth) so a campaign never opens with an unavoidable first-round fight.
 - Grid rows are all the same length (the validator enforces bounds; the

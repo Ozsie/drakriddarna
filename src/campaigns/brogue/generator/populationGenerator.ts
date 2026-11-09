@@ -1,5 +1,6 @@
 import type { Item } from '../../../types';
 import { CellAlignment, Colour, SecretType, Side } from '../../../types';
+import type { DecoratorPresetName } from '../../../dungeon/Decorators';
 import type {
   DeclarativeDoor,
   DeclarativeItem,
@@ -36,14 +37,14 @@ import {
 /**
  * Population generator (docs/random-campaign-spec/03-difficulty-curve.md):
  * budget-based monster selection and placement, depth-progressive floor
- * loot, secrets, per-room lights with hidden-door ember hints, and the
- * per-floor event deck (all shared world events).
+ * loot, secrets, per-room lights and decorators, hidden-door ember hints,
+ * and the per-floor event deck (all shared world events).
  */
 
 export class PopulationError extends Error {}
 
 export type PopulationResult = {
-  /** The complete declarative layout: grid, doors, monsters, items, secrets, lights. */
+  /** The complete declarative layout, including generated decorations. */
   layout: DeclarativeLayout;
   /** Shared world event numbers allowed in this dungeon (always non-empty). */
   events: number[];
@@ -70,6 +71,17 @@ const ORTHOGONAL_OFFSETS = [
 const EQUIPMENT_SECRET_NAME = 'campaign.brogue.secrets.randomEquipment';
 const TRAP_DOOR_SECRET_NAME = 'campaign.brogue.secrets.trapDoor';
 const EQUIPMENT_SECRET_SHARE = 0.7;
+const BROGUE_DECORATOR_PRESETS: DecoratorPresetName[] = [
+  'bonesVariant1',
+  'bonesVariant2',
+  'bonesVariant3',
+  'bonesVariant15',
+  'bonesVariant16',
+  'bonesVariant18',
+  'plantVariant4',
+  'rockVariant4',
+  'ruinVariant5',
+];
 
 const cellKey = (cell: Cell): string => `${cell.x},${cell.y}`;
 
@@ -608,6 +620,39 @@ export const populate = (
     lights.push([hint.x, hint.y, alignment, ember]);
   }
 
+  // Add one existing environmental sprite per room where a free cell is
+  // available. Prefer the wall edge, but treat decoration as best-effort
+  // so crowded rooms never make an otherwise valid floor fail to generate.
+  const doorAdjacentKeys = new Set<string>();
+  for (const cell of doorCells) {
+    for (const { dx, dy } of ORTHOGONAL_OFFSETS) {
+      doorAdjacentKeys.add(cellKey({ x: cell.x + dx, y: cell.y + dy }));
+    }
+  }
+  const lightKeys = new Set(
+    lights.map((light) => {
+      const [x, y] = light as [number, number];
+      return `${x},${y}`;
+    }),
+  );
+  const decorators: NonNullable<DeclarativeLayout['decorators']> = [];
+  for (const letter of letters) {
+    const candidates = freeCellsIn(letter).filter((cell) => {
+      const key = cellKey(cell);
+      return (
+        !doorCellKeys.has(key) &&
+        !doorAdjacentKeys.has(key) &&
+        !lightKeys.has(key)
+      );
+    });
+    const wallCandidates = candidates.filter(isWallAdjacent);
+    const placementCandidates =
+      wallCandidates.length > 0 ? wallCandidates : candidates;
+    if (placementCandidates.length === 0) continue;
+    const cell = rig.pick(placementCandidates);
+    decorators.push([cell.x, cell.y, rig.pick(BROGUE_DECORATOR_PRESETS)]);
+  }
+
   // --- Events -----------------------------------------------------------------
   // The deck always contains every shared world event: the runtime
   // shuffles it and reshuffles when exhausted, so a full deck gives the
@@ -620,6 +665,7 @@ export const populate = (
       monsters,
       items,
       secrets,
+      ...(decorators.length > 0 ? { decorators } : {}),
       ...(lights.length > 0 ? { lights } : {}),
       ...(pillars.length > 0 ? { pillars } : {}),
       ...(pits.length > 0 ? { pits } : {}),
