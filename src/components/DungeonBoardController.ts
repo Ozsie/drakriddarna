@@ -145,6 +145,7 @@ import {
   i18n,
   DEFAULT_GAME_MASTER_ID,
 } from '../core';
+import { setImageLoadedListener } from '../core/ImageCache';
 import { MAX_SAVE_NAME_LENGTH } from '../saves/SavesLogic';
 import { onChangeLanguage, onNewGame, onSaveGame } from '../menu/MenuLogic';
 import { DEFAULT_CAMPAIGN_ID } from '../campaigns';
@@ -781,6 +782,15 @@ export class DungeonBoardController {
       this.renderDynamicLayer(true);
       this.renderOverlayLayer(true);
     };
+    // Item and interactable sprite sheets load lazily through the shared
+    // image cache: the first draw that references a sheet starts the
+    // load and shows the fallback art meanwhile. Without this hook the
+    // cached static and UI layers would keep showing their fallbacks
+    // until the next state change; a completed load repaints them.
+    setImageLoadedListener(() => {
+      this.renderStaticLayer(true);
+      this.renderUiLayer(true);
+    });
 
     this.ground.src = this.props.tileset;
     this.lastTileset = this.props.tileset;
@@ -846,6 +856,10 @@ export class DungeonBoardController {
       cancelAnimationFrame(this.panRenderAnimationId);
       this.panRenderAnimationId = null;
     }
+    // The image-cache listener points at this board; drop it so a
+    // teardown cannot repaint into detached canvases if a lazily loaded
+    // sheet completes afterwards.
+    setImageLoadedListener(null);
     clearFogCloudCaches();
     clearLightSpriteCache();
     setLightBlurDisabled(false);

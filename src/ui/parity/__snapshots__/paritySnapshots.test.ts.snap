@@ -1808,7 +1808,7 @@ exports[`parity snapshots > snapshots the hero cards, including an open inventor
   "font="bold 11px Arial, Helvetica, sans-serif"",
   "measureText("Chain mail")",
   "restore()",
-  "fillText("Chain mail", 14, 636)",
+  "fillText("Chain mail", 48, 636)",
   "restore()",
 ]
 `;

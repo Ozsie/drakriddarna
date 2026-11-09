@@ -49,8 +49,10 @@ import {
   TERRAIN_OVERLAY,
   drawColourBar,
   drawHealthBar,
+  drawLabelBox,
   getSpriteSourceRect,
   renderActorView,
+  renderItemView,
   spriteDirectionRow,
   type SceneActorView,
   type SceneCorner,
@@ -838,6 +840,17 @@ export const buildHeroOverlayViewModel = (
   };
 };
 
+// An item view plus the game-side sprite drawing demand: item sprites are
+// author art at the full cell footprint, so the cell draw shrink stays on
+// the game side (the scene package's item path always fills the cell).
+export type GameItemView = SceneItemView & {
+  spriteDraw?: { scale: number };
+};
+
+// Item sprites draw at 75% of the cell so the items don't fill their
+// cells completely.
+export const ITEM_SPRITE_SCALE = 0.75;
+
 // Item views for the item layer: discovered items only (all of them in
 // debug mode), each with its sheet frame (or the generic tile while the
 // sheet loads) and the inventory label resolved through i18n.
@@ -846,7 +859,7 @@ export const buildItemViewModels = (
   groundSheet: CanvasImageSource,
   cellSize: number,
   debugMode: boolean,
-): SceneItemView[] => {
+): GameItemView[] => {
   const actor = state.currentActor;
   return state.dungeon.layout.items
     .filter(
@@ -858,21 +871,75 @@ export const buildItemViewModels = (
           itemLocation.position.y,
         ),
     )
-    .map((itemLocation: ItemLocation) => ({
-      position: itemLocation.position,
-      sprite: itemLocation.item?.sprite
+    .map((itemLocation: ItemLocation) => {
+      const sprite = itemLocation.item?.sprite
         ? getItemSpriteFrame(itemLocation.item.sprite)
-        : null,
-      fallbackTile: actorTileFrame(
-        groundSheet,
-        ITEM_TILES.ITEM_GENERIC,
-        cellSize,
-      ),
-      label:
-        actor && isSamePosition(actor.position, itemLocation.position)
-          ? itemLocation.item
-            ? i18n(itemLocation.item.name)
-            : i18n('campaign.iceDragon.randomItem')
-          : null,
-    }));
+        : null;
+      return {
+        position: itemLocation.position,
+        sprite,
+        ...(sprite ? { spriteDraw: { scale: ITEM_SPRITE_SCALE } } : {}),
+        fallbackTile: actorTileFrame(
+          groundSheet,
+          ITEM_TILES.ITEM_GENERIC,
+          cellSize,
+        ),
+        label:
+          actor && isSamePosition(actor.position, itemLocation.position)
+            ? itemLocation.item
+              ? i18n(itemLocation.item.name)
+              : i18n('campaign.iceDragon.randomItem')
+            : null,
+      };
+    });
+};
+
+// Draws one item view's sprite centered in its cell at the view's draw
+// scale: unlike actors the items lie flat on the floor tile, so the
+// shrink centers on the cell instead of anchoring to its bottom edge.
+// Returns whether a frame was drawn.
+export const drawItemViewSprite = (
+  ctx: CanvasRenderingContext2D,
+  view: SceneItemView,
+  cellSize: number,
+): boolean => {
+  const frame = view.sprite;
+  if (!frame) return false;
+  const scale = (view as GameItemView).spriteDraw?.scale ?? 1;
+  const size = cellSize * scale;
+  const dx = view.position.x * cellSize + (cellSize - size) / 2;
+  const dy = view.position.y * cellSize + (cellSize - size) / 2;
+  ctx.drawImage(
+    frame.image,
+    frame.sx,
+    frame.sy,
+    frame.sw,
+    frame.sh,
+    dx,
+    dy,
+    size,
+    size,
+  );
+  return true;
+};
+
+// One item view drawn through both paths: the game-side scaled sprite
+// when the view carries a draw scale (the scene package's sprite path
+// always fills the cell), then the package's label box. The package item
+// path has no sprite-less variant without the fallback tile, so the
+// label draws game-side alongside the scaled sprite; the fallback tile
+// only shows through the plain path while the sheet is still loading.
+export const renderItemViewWithSprite = (
+  ctx: CanvasRenderingContext2D,
+  view: SceneItemView,
+  cellSize: number,
+): void => {
+  if (!(view as GameItemView).spriteDraw || !view.sprite) {
+    renderItemView(ctx, view, cellSize);
+    return;
+  }
+  drawItemViewSprite(ctx, view, cellSize);
+  if (view.label) {
+    drawLabelBox(ctx, view.label, view.position, cellSize);
+  }
 };

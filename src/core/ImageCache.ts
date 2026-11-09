@@ -1,7 +1,7 @@
 // Shared cache of images loaded by URL, used by actor sprite sheets, item
 // sprite sheets and any other per-URL image asset. Images are loaded on
 // demand the first time they are requested and reused afterwards.
-import { isImageReady } from '../dungeon/TileTextureCache';
+import { isImageReady } from '@hoard-engine/scene';
 
 const cachedImages = new Map<string, HTMLImageElement>();
 
@@ -15,6 +15,19 @@ export const setImageUrlResolver = (
   resolver: ((url: string) => string) | null,
 ): void => {
   relativeUrlResolver = resolver;
+};
+
+// Notified once per image when its load completes. The board wires this
+// (see DungeonBoardController): lazily loaded sheets first referenced by
+// a cached-layer draw would otherwise keep that layer's fallback art
+// until the next state change. Unset means no consumer cares (headless
+// tests, benchmarks).
+let imageLoadedListener: ((url: string) => void) | null = null;
+
+export const setImageLoadedListener = (
+  listener: ((url: string) => void) | null,
+): void => {
+  imageLoadedListener = listener;
 };
 
 // Only bare relative paths go through the resolver; rooted paths,
@@ -34,6 +47,10 @@ export const getCachedImage = (url: string): HTMLImageElement | null => {
   let image = cachedImages.get(resolved);
   if (!image) {
     image = new Image();
+    // The load notification fires once per cached image; images are
+    // reused afterwards, so the listener never re-fires for the same
+    // URL while the cache entry lives.
+    image.addEventListener('load', () => imageLoadedListener?.(resolved));
     image.src = resolved;
     cachedImages.set(resolved, image);
   }
