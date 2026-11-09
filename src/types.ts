@@ -177,25 +177,17 @@ export type ProjectileAnimation = {
   id: string;
   from: Position;
   to: Position;
+  sprite?: 'arrow' | 'fireSpell';
   timestamp?: number;
   durationMs?: number;
   color?: string;
 };
 
-export type FlameParticle = {
-  offsetX: number;
-  offsetY: number;
-  speedY: number;
-  driftX: number;
-  radius: number;
-  color: string;
-  delay: number;
-};
-
 export type FlameEffect = {
   id: string;
   position: Position;
-  particles: FlameParticle[];
+  sprite: 'fireAoE';
+  scale?: number;
   timestamp?: number;
   durationMs?: number;
 };

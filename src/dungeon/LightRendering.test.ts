@@ -1971,11 +1971,14 @@ describe('interactable and combat lights', () => {
       {
         id: 'flame-1',
         position: { x: 3, y: 2 },
-        particles: [],
+        sprite: 'fireAoE',
         timestamp: 1000,
         durationMs: 600,
       },
     ];
+    expect(
+      activeLights(state, 999).some((l) => l.id?.startsWith('flame_light')),
+    ).toBe(false);
     const flameLight = activeLights(state, 1100).find((l) =>
       l.id?.startsWith('flame_light'),
     );
@@ -1984,6 +1987,9 @@ describe('interactable and combat lights', () => {
     expect(flameLight!.intensity).toBeGreaterThan(0.7);
     expect(flameLight!.radius).toBeLessThanOrEqual(2);
     expect(hasAnimatedLights(state, false, 1100)).toBe(true);
+    expect(
+      activeLights(state, 1601).some((l) => l.id?.startsWith('flame_light')),
+    ).toBe(false);
   });
 
   it('is snuffed by the dragon breath like every other light', () => {
@@ -1992,7 +1998,7 @@ describe('interactable and combat lights', () => {
       {
         id: 'flame-1',
         position: { x: 3, y: 2 },
-        particles: [],
+        sprite: 'fireAoE',
         timestamp: 1000,
         durationMs: 600,
       },

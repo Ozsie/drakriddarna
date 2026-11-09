@@ -15,7 +15,7 @@ export {
   setLightBlurDisabled,
 };
 
-import { PROJECTILE_DURATION_MS } from '../combat';
+import { FLAME_EFFECT_DURATION_MS, PROJECTILE_DURATION_MS } from '../combat';
 import {
   COLLAPSED,
   WALL,
@@ -521,6 +521,9 @@ export const activeLights = (
 
   // Dark lord flames burn with an intense, short-range light.
   (state.flameEffects ?? []).forEach((flame) => {
+    const timestamp = flame.timestamp ?? now;
+    const duration = flame.durationMs ?? FLAME_EFFECT_DURATION_MS;
+    if (now < timestamp || now > timestamp + duration) return;
     lights.push(
       createLight(flame.position.x, flame.position.y, CellAlignment.CENTER, {
         id: `flame_light_${flame.id}`,

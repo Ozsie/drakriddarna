@@ -426,7 +426,10 @@ small state machines in `core/ActorAnimation.ts`, driven by
 also leaves a corpse (`layout.corpses`, placed by `processActorDowned`): plain
 game state, one per cell — a later death on the same cell replaces it — drawn
 by the actor pass as the frozen last frame of the actor's death animation,
-after the dying animation itself finishes. Screen shakes
+after the dying animation itself finishes. Orc arrows and dark lord fireballs
+use numbered image sequences from `static/vfx`; fireball impact draws one
+three-cell-wide area effect centered on the target and starts at projectile
+arrival. Screen shakes
 (`shakeEffects`, `src/combat/CombatEffects.ts`) are transient state effects,
 but render differently: the board controller jitters the world canvases with a
 CSS `translate` per frame while a shake runs — cached layers are never redrawn

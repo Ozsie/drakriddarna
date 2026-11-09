@@ -3,32 +3,22 @@ import type {
   BloodParticle,
   BloodSplatter,
   FlameEffect,
-  FlameParticle,
   GameState,
   Position,
   ProjectileAnimation,
   ShakeEffect,
 } from '../types';
-import { getActorFlashIntensity } from '../core/ActorAnimation';
+import { getActorFlashIntensity } from '../core';
+import { getReadyImage } from '../core/ImageCache';
 
 export const BLOOD_SPLATTER_DURATION_MS = 500;
 export const PROJECTILE_DURATION_MS = 220;
 export const FLAME_EFFECT_DURATION_MS = 600;
 export const SHAKE_DURATION_MS = 450;
+const VFX_FRAME_COUNT = 15;
 
 // Default reach of an epicenter shake, in cells from the epicenter.
 export const SHAKE_DEFAULT_RADIUS_CELLS = 8;
-
-export const FLAME_COLORS = [
-  '#fff3b0',
-  '#ffe066',
-  '#ffd166',
-  '#ffb703',
-  '#fb8500',
-  '#f77f00',
-  '#d62828',
-  '#e63946',
-];
 
 export const BLOOD_COLORS = [
   '#7a0000',
@@ -87,6 +77,7 @@ export const createProjectile = (
     timestamp?: number;
     durationMs?: number;
     color?: string;
+    sprite?: ProjectileAnimation['sprite'];
   },
 ): ProjectileAnimation => {
   const dx = to.x - from.x;
@@ -104,48 +95,37 @@ export const createProjectile = (
     timestamp: options?.timestamp ?? Date.now(),
     durationMs: options?.durationMs ?? calculatedDuration,
     color: options?.color ?? '#ffdd44',
+    sprite: options?.sprite,
   };
 };
 
-export const createFlameEffect = (
+export const createFireAoEEffect = (
   position: Position,
-  options?: {
-    timestamp?: number;
-    durationMs?: number;
-    particleCount?: number;
-    colors?: string[];
-  },
-): FlameEffect => {
-  const count = options?.particleCount ?? 22;
-  const colors = options?.colors ?? FLAME_COLORS;
-  const particles: FlameParticle[] = [];
+  options?: { timestamp?: number; durationMs?: number; scale?: number },
+): FlameEffect => ({
+  id: `flame-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+  position: { x: position.x, y: position.y },
+  sprite: 'fireAoE',
+  scale: options?.scale ?? 3,
+  timestamp: options?.timestamp ?? Date.now(),
+  durationMs: options?.durationMs ?? FLAME_EFFECT_DURATION_MS,
+});
 
-  for (let i = 0; i < count; i++) {
-    const offsetX = (Math.random() - 0.5) * 0.7; // spreading within cell
-    const offsetY = (Math.random() - 0.2) * 0.4;
-    const speedY = 0.35 + Math.random() * 0.45;
-    const driftX = (Math.random() - 0.5) * 0.25;
-    const radius = 2.0 + Math.random() * 3.5;
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const delay = Math.random() * 0.25;
-    particles.push({
-      offsetX,
-      offsetY,
-      speedY,
-      driftX,
-      radius,
-      color,
-      delay,
-    });
-  }
-
-  return {
-    id: `flame-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-    position: { x: position.x, y: position.y },
-    particles,
-    timestamp: options?.timestamp ?? Date.now(),
-    durationMs: options?.durationMs ?? FLAME_EFFECT_DURATION_MS,
-  };
+const getVfxFrame = (
+  sprite: 'arrow' | 'fireSpell' | 'fireAoE',
+  progress: number,
+): HTMLImageElement | null => {
+  const frame = Math.min(
+    VFX_FRAME_COUNT - 1,
+    Math.floor(progress * VFX_FRAME_COUNT),
+  );
+  const fileNumber = String(frame * 2 + 1).padStart(4, '0');
+  const directory = {
+    arrow: 'Arrow',
+    fireSpell: 'FireSpell',
+    fireAoE: 'FireAoE',
+  }[sprite];
+  return getReadyImage(`vfx/${directory}/${fileNumber}.png`);
 };
 
 export const createShake = (options?: {
@@ -330,6 +310,25 @@ export const renderProjectiles = (
 
     ctx.save();
 
+    const spriteImage = proj.sprite ? getVfxFrame(proj.sprite, progress) : null;
+    if (spriteImage) {
+      const spriteWidth = cellSize * (proj.sprite === 'arrow' ? 1.15 : 0.75);
+      const aspectRatio =
+        spriteImage.naturalWidth / Math.max(1, spriteImage.naturalHeight);
+      const spriteHeight = spriteWidth / aspectRatio;
+      ctx.translate(currX, currY);
+      ctx.rotate(angle);
+      ctx.drawImage(
+        spriteImage,
+        -spriteWidth / 2,
+        -spriteHeight / 2,
+        spriteWidth,
+        spriteHeight,
+      );
+      ctx.restore();
+      return;
+    }
+
     const totalDistTravelled = Math.hypot(currX - startX, currY - startY);
     const trailLength = Math.min(cellSize * 0.4, totalDistTravelled);
     if (trailLength > 1) {
@@ -393,66 +392,21 @@ export const renderFlameEffects = (
 
     hasActive = true;
     const progress = Math.min(Math.max(elapsed / duration, 0), 1);
-    const overallAlpha = Math.sin(progress * Math.PI); // Smooth in & out
 
     const centerX = (flame.position.x + 0.5) * cellSize;
-    const bottomY = (flame.position.y + 0.85) * cellSize;
-
-    ctx.save();
-
-    // Central flame glow
-    const glowRadius = cellSize * (0.35 + 0.15 * Math.sin(progress * Math.PI));
-    if (ctx.createRadialGradient) {
-      const gradient = ctx.createRadialGradient(
-        centerX,
-        bottomY - cellSize * 0.25,
-        cellSize * 0.05,
-        centerX,
-        bottomY - cellSize * 0.25,
-        glowRadius,
-      );
-      gradient.addColorStop(0, `rgba(255, 230, 100, ${0.75 * overallAlpha})`);
-      gradient.addColorStop(0.4, `rgba(255, 120, 0, ${0.5 * overallAlpha})`);
-      gradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
-
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(centerX, bottomY - cellSize * 0.25, glowRadius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Rising flame tongue particles
-    flame.particles.forEach((p) => {
-      if (progress < p.delay) return;
-      const particleProgress = (progress - p.delay) / (1 - p.delay);
-      if (particleProgress > 1) return;
-
-      const px =
-        centerX +
-        p.offsetX * cellSize +
-        Math.sin(particleProgress * Math.PI * 2 + p.offsetX) *
-          p.driftX *
-          cellSize;
-      const py =
-        bottomY +
-        p.offsetY * cellSize -
-        particleProgress * p.speedY * cellSize * 1.1;
-
-      const pAlpha = Math.max(0, 1 - particleProgress) * overallAlpha * 1.2;
-      const radius = Math.max(0.8, p.radius * (1 - particleProgress * 0.55));
-
+    const spriteImage = getVfxFrame(flame.sprite, progress);
+    if (spriteImage) {
+      const size = cellSize * (flame.scale ?? 3);
       ctx.save();
-      ctx.globalAlpha = Math.max(0, Math.min(1, pAlpha));
-      ctx.fillStyle = p.color;
-      ctx.shadowColor = '#ff6600';
-      ctx.shadowBlur = Math.max(2, cellSize * 0.08);
-      ctx.beginPath();
-      ctx.arc(px, py, radius, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.drawImage(
+        spriteImage,
+        centerX - size / 2,
+        (flame.position.y + 0.5) * cellSize - size / 2,
+        size,
+        size,
+      );
       ctx.restore();
-    });
-
-    ctx.restore();
+    }
   });
 
   return hasActive;

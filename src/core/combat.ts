@@ -301,7 +301,8 @@ export const takeDamage = (
   source: Actor & { rangedWeapon?: Weapon },
   target: Actor,
   ranged: boolean,
-): void => {
+  projectileSprite?: 'arrow' | 'fireSpell',
+): number => {
   let weapon = source.weapon;
   if (ranged && source.rangedWeapon) {
     weapon = source.rangedWeapon;
@@ -427,10 +428,15 @@ export const takeDamage = (
     );
   const now = Date.now();
   let impactTime = now;
-  if (isRanged && source.position && target.position) {
+  if (
+    (isRanged || projectileSprite === 'fireSpell') &&
+    source.position &&
+    target.position
+  ) {
     const projectile = createProjectile(source.position, target.position, {
       timestamp: now,
       color: weapon.elemental ? '#ff7700' : '#ffdd44',
+      sprite: projectileSprite ?? 'arrow',
     });
     if (!state.projectiles) {
       state.projectiles = [];
@@ -506,4 +512,5 @@ export const takeDamage = (
       emitSoundCue(state, { cue: 'paralyze' });
     }
   }
+  return impactTime;
 };

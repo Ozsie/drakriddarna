@@ -822,6 +822,13 @@ describe('dark lord fire spray', () => {
     expect(helga.roundTargetCount).toBe(1);
     expect(althea.roundTargetCount).toBe(0);
     expect(state.flameEffects).toHaveLength(2);
+    expect(state.flameEffects?.[0].sprite).toBe('fireAoE');
+    expect(state.flameEffects?.[0].scale).toBe(3);
+    expect(state.projectiles?.[0].sprite).toBe('fireSpell');
+    expect(state.flameEffects?.[0].timestamp).toBe(
+      (state.projectiles?.[0].timestamp ?? 0) +
+        (state.projectiles?.[0].durationMs ?? 0),
+    );
   });
 
   it('line-of-sight-blocked monster targets are not sprayed', async () => {

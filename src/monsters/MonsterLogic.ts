@@ -56,7 +56,7 @@ import {
   selectBehavior,
   selectScoredTarget,
 } from './behavior';
-import { createFlameEffect } from '../combat';
+import { createFireAoEEffect, createProjectile } from '../combat';
 import {
   applyRoomFogEnterEffects,
   applyRoomFogTurnEndEffects,
@@ -995,11 +995,23 @@ const performFireAttack = (
 ) => {
   targets.forEach((target) => {
     emitSoundCue(state, { cue: 'fireBall' });
+    let impactTime: number;
     if (target.position) {
-      if (!state.flameEffects) {
-        state.flameEffects = [];
+      if (target.armour?.magicProtection) {
+        const projectile = createProjectile(source.position, target.position, {
+          sprite: 'fireSpell',
+        });
+        if (!state.projectiles) state.projectiles = [];
+        state.projectiles.push(projectile);
+        impactTime =
+          (projectile.timestamp ?? Date.now()) + (projectile.durationMs ?? 0);
+      } else {
+        impactTime = takeDamage(state, source, target, true, 'fireSpell');
       }
-      state.flameEffects.push(createFlameEffect(target.position));
+      if (!state.flameEffects) state.flameEffects = [];
+      state.flameEffects.push(
+        createFireAoEEffect(target.position, { timestamp: impactTime }),
+      );
     }
     if (state.heroes.includes(target)) {
       target.roundTargetCount = (target.roundTargetCount ?? 0) + 1;
@@ -1016,8 +1028,6 @@ const performFireAttack = (
         target: i18n(target.name),
         armour: i18n(target.armour?.name),
       });
-    } else {
-      takeDamage(state, source, target, true);
     }
   });
 };

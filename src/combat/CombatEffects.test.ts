@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   createBloodSplatter,
-  createFlameEffect,
+  createFireAoEEffect,
   createProjectile,
   renderBloodSplatters,
   renderFlameEffects,
@@ -29,6 +29,18 @@ import { Colour, Level, MonsterType } from '../types';
 import { resetRng, setRng } from '../core';
 import { weapons, monsterWeapons } from '../items/weapons';
 import { createMonster } from '../dungeon/DungeonLogic';
+import { getReadyImage } from '../core/ImageCache';
+
+vi.mock('../core/ImageCache', () => ({
+  getReadyImage: vi.fn((url: string) => ({
+    naturalWidth: url.includes('FireSpell') ? 256 : 512,
+    naturalHeight: url.includes('Arrow')
+      ? 26
+      : url.includes('FireSpell')
+        ? 64
+        : 512,
+  })),
+}));
 
 const createMockCtx = () => {
   const calls: { method: string; args: unknown[] }[] = [];
@@ -58,6 +70,11 @@ const createMockCtx = () => {
     ),
     clip: vi.fn(() => calls.push({ method: 'clip', args: [] })),
     fillRect: fillRectMock,
+    drawImage: vi.fn((...args: unknown[]) =>
+      calls.push({ method: 'drawImage', args }),
+    ),
+    translate: vi.fn(),
+    rotate: vi.fn(),
     arc: arcMock,
     fill: vi.fn(() => calls.push({ method: 'fill', args: [] })),
     moveTo: vi.fn((x: number, y: number) =>
@@ -84,6 +101,7 @@ const createMockCtx = () => {
     calls: typeof calls;
     arc: typeof arcMock;
     fillRect: typeof fillRectMock;
+    drawImage: ReturnType<typeof vi.fn>;
     save: ReturnType<typeof vi.fn>;
     restore: ReturnType<typeof vi.fn>;
     clip: ReturnType<typeof vi.fn>;
@@ -278,6 +296,41 @@ describe('CombatEffects', () => {
       expect(proj.to).toEqual({ x: 4, y: 5 });
       expect(proj.durationMs).toBeGreaterThan(0);
       expect(proj.color).toBeDefined();
+      expect(proj.sprite).toBeUndefined();
+    });
+
+    it('renders the numbered Arrow animation frames for ranged projectiles', () => {
+      const ctx = createMockCtx();
+      const state = createTestState();
+      const now = 1000;
+      state.projectiles = [
+        createProjectile(
+          { x: 0, y: 0 },
+          { x: 2, y: 0 },
+          { timestamp: now, durationMs: 200, sprite: 'arrow' },
+        ),
+      ];
+
+      expect(renderProjectiles(ctx, 48, state, now)).toBe(true);
+      expect(getReadyImage).toHaveBeenCalledWith('vfx/Arrow/0001.png');
+      expect(ctx.drawImage).toHaveBeenCalled();
+    });
+
+    it('renders FireSpell frames for dark lord projectiles', () => {
+      const ctx = createMockCtx();
+      const state = createTestState();
+      const now = 1000;
+      state.projectiles = [
+        createProjectile(
+          { x: 0, y: 0 },
+          { x: 2, y: 0 },
+          { timestamp: now, durationMs: 200, sprite: 'fireSpell' },
+        ),
+      ];
+
+      expect(renderProjectiles(ctx, 48, state, now)).toBe(true);
+      expect(getReadyImage).toHaveBeenCalledWith('vfx/FireSpell/0001.png');
+      expect(ctx.drawImage).toHaveBeenCalled();
     });
 
     it('renderProjectiles interpolates bullet position, draws motion trail and bullet head', () => {
@@ -311,42 +364,39 @@ describe('CombatEffects', () => {
   });
 
   describe('Flame Effects', () => {
-    it('createFlameEffect creates flame particle effect at position with correct properties', () => {
-      const pos = { x: 3, y: 4 };
-      const flame = createFlameEffect(pos, {
-        durationMs: 400,
-        particleCount: 15,
-      });
-
-      expect(flame.id).toContain('flame-');
-      expect(flame.position).toEqual({ x: 3, y: 4 });
-      expect(flame.durationMs).toBe(400);
-      expect(flame.particles).toHaveLength(15);
-
-      flame.particles.forEach((p) => {
-        expect(p.radius).toBeGreaterThan(0);
-        expect(p.speedY).toBeGreaterThan(0);
-        expect(typeof p.color).toBe('string');
-      });
-    });
-
-    it('renderFlameEffects draws flame particles while active and returns false when expired', () => {
+    it('renders one enlarged FireAoE image centered on its target cell', () => {
       const ctx = createMockCtx();
       const state = createTestState();
       const now = 1000;
-      const flame = createFlameEffect(
+      state.flameEffects = [
+        createFireAoEEffect({ x: 2, y: 1 }, { timestamp: now, scale: 3 }),
+      ];
+
+      expect(renderFlameEffects(ctx, 48, state, now + 100)).toBe(true);
+      expect(getReadyImage).toHaveBeenCalledWith('vfx/FireAoE/0005.png');
+      expect(ctx.drawImage).toHaveBeenCalledWith(
+        expect.anything(),
+        48,
+        0,
+        144,
+        144,
+      );
+    });
+    it('renders the FireAoE while active and returns false when expired', () => {
+      const ctx = createMockCtx();
+      const state = createTestState();
+      const now = 1000;
+      const flame = createFireAoEEffect(
         { x: 2, y: 2 },
         { timestamp: now, durationMs: FLAME_EFFECT_DURATION_MS },
       );
       state.flameEffects = [flame];
 
-      // At progress ~0.5
       const isActive = renderFlameEffects(ctx, 48, state, now + 300);
       expect(isActive).toBe(true);
-      expect(ctx.arc).toHaveBeenCalled();
+      expect(ctx.drawImage).toHaveBeenCalled();
 
-      // At expiration
-      ctx.arc.mockClear();
+      ctx.drawImage.mockClear();
       const isExpired = renderFlameEffects(
         ctx,
         48,
@@ -354,7 +404,7 @@ describe('CombatEffects', () => {
         now + FLAME_EFFECT_DURATION_MS + 100,
       );
       expect(isExpired).toBe(false);
-      expect(ctx.arc).not.toHaveBeenCalled();
+      expect(ctx.drawImage).not.toHaveBeenCalled();
     });
   });
 
@@ -501,6 +551,7 @@ describe('CombatEffects', () => {
       const proj = state.projectiles![0];
       expect(proj.from).toEqual({ x: 1, y: 1 });
       expect(proj.to).toEqual({ x: 5, y: 1 });
+      expect(proj.sprite).toBe('arrow');
 
       // Blood and damage indicator are timed to bullet arrival (timestamp = proj.timestamp + duration)
       expect(state.bloodSplatters?.length).toBe(1);
