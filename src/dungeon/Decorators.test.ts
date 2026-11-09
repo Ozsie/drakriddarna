@@ -4,6 +4,7 @@ import {
   bonesVariant1,
   bonesVariant2,
   createDecoratorPreset,
+  DECORATOR_PRESETS,
   plantVariant4,
   rockVariant4,
   ruinVariant5,
@@ -53,6 +54,24 @@ describe('decorator presets', () => {
         sourceRect: { x: 146, y: 10, width: 29, height: 45 },
       },
     });
+  });
+
+  it('creates a precisely cropped objects atlas preset', () => {
+    expect(createDecoratorPreset('objectsObject001', { x: 4, y: 5 })).toEqual({
+      position: { x: 4, y: 5 },
+      alignment: CellAlignment.CENTER,
+      sprite: {
+        image: 'decorators/Objects.png',
+        size: 16,
+        index: 0,
+        sourceRect: { x: 0, y: 0, width: 16, height: 16 },
+      },
+    });
+    expect(
+      Object.values(DECORATOR_PRESETS).filter(
+        ({ image }) => image === 'decorators/Objects.png',
+      ),
+    ).toHaveLength(45);
   });
 
   it('keeps a requested cell alignment on a preset', () => {

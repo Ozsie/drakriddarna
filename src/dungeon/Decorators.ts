@@ -189,9 +189,71 @@ const suppliesObjectSprites = Object.fromEntries(
   ]),
 ) as Record<keyof typeof suppliesObjectFrames, ItemSprite>;
 
+// Each entry is an alpha-bounds crop in Objects.png, in visual reading order.
+const objectFrames = {
+  objectsObject001: { x: 0, y: 0, width: 16, height: 16 },
+  objectsObject002: { x: 14, y: 0, width: 32, height: 52 },
+  objectsObject003: { x: 50, y: 0, width: 12, height: 8 },
+  objectsObject004: { x: 59, y: 0, width: 35, height: 52 },
+  objectsObject005: { x: 98, y: 1, width: 12, height: 49 },
+  objectsObject006: { x: 135, y: 4, width: 19, height: 18 },
+  objectsObject007: { x: 66, y: 4, width: 12, height: 8 },
+  objectsObject008: { x: 167, y: 8, width: 19, height: 14 },
+  objectsObject009: { x: 199, y: 7, width: 19, height: 17 },
+  objectsObject010: { x: 224, y: 7, width: 16, height: 12 },
+  objectsObject011: { x: 241, y: 8, width: 14, height: 10 },
+  objectsObject012: { x: 258, y: 10, width: 25, height: 30 },
+  objectsObject013: { x: 290, y: 5, width: 28, height: 36 },
+  objectsObject014: { x: 328, y: 0, width: 19, height: 27 },
+  objectsObject015: { x: 353, y: 3, width: 14, height: 19 },
+  objectsObject016: { x: 368, y: 0, width: 16, height: 24 },
+  objectsObject017: { x: 114, y: 12, width: 12, height: 49 },
+  objectsObject018: { x: 320, y: 32, width: 29, height: 32 },
+  objectsObject019: { x: 359, y: 32, width: 21, height: 24 },
+  objectsObject020: { x: 133, y: 36, width: 21, height: 20 },
+  objectsObject021: { x: 163, y: 36, width: 29, height: 22 },
+  objectsObject022: { x: 197, y: 38, width: 22, height: 17 },
+  objectsObject023: { x: 225, y: 40, width: 15, height: 13 },
+  objectsObject024: { x: 243, y: 41, width: 10, height: 7 },
+  objectsObject025: { x: 292, y: 48, width: 27, height: 30 },
+  objectsObject026: { x: 256, y: 49, width: 16, height: 12 },
+  objectsObject027: { x: 273, y: 49, width: 15, height: 13 },
+  objectsObject028: { x: 80, y: 64, width: 32, height: 24 },
+  objectsObject029: { x: 160, y: 64, width: 32, height: 24 },
+  objectsObject030: { x: 193, y: 64, width: 14, height: 19 },
+  objectsObject031: { x: 241, y: 64, width: 14, height: 19 },
+  objectsObject032: { x: 325, y: 64, width: 22, height: 29 },
+  objectsObject033: { x: 353, y: 64, width: 30, height: 20 },
+  objectsObject034: { x: 66, y: 67, width: 13, height: 18 },
+  objectsObject035: { x: 146, y: 67, width: 13, height: 18 },
+  objectsObject036: { x: 210, y: 67, width: 11, height: 16 },
+  objectsObject037: { x: 258, y: 67, width: 11, height: 16 },
+  objectsObject038: { x: 4, y: 69, width: 24, height: 24 },
+  objectsObject039: { x: 39, y: 69, width: 19, height: 27 },
+  objectsObject040: { x: 119, y: 69, width: 19, height: 27 },
+  objectsObject041: { x: 228, y: 70, width: 9, height: 12 },
+  objectsObject042: { x: 276, y: 70, width: 9, height: 12 },
+  objectsObject043: { x: 368, y: 80, width: 13, height: 10 },
+  objectsObject044: { x: 289, y: 82, width: 14, height: 10 },
+  objectsObject045: { x: 307, y: 84, width: 10, height: 7 },
+} as const;
+
+const objectSprites = Object.fromEntries(
+  Object.entries(objectFrames).map(([name, sourceRect]) => [
+    name,
+    {
+      image: 'decorators/Objects.png',
+      size: Math.max(sourceRect.width, sourceRect.height),
+      index: 0,
+      sourceRect,
+    },
+  ]),
+) as Record<keyof typeof objectFrames, ItemSprite>;
+
 export const DECORATOR_PRESETS = {
   ...decoratorSprites,
   ...suppliesObjectSprites,
+  ...objectSprites,
 } satisfies Record<string, ItemSprite>;
 
 export type DecoratorPresetName = keyof typeof DECORATOR_PRESETS;
