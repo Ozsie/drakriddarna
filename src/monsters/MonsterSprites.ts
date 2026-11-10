@@ -13,6 +13,7 @@ import {
 // Same figure scale as the heroes, so monsters and heroes read as one
 // art set on the board.
 const MONSTER_DRAW_SCALE = 1.2;
+const TROLL_DRAW_SCALE = 2;
 
 // Measured from the troll pack's frames (72px windows; figures 52-64px
 // tall): horizontally centred on each facing's median silhouette,
@@ -190,7 +191,7 @@ export const trollSprite: ActorSprite = characterPackSprite({
     death: 'Die 1.png',
   },
   crops: TROLL_SPRITE_CROPS,
-  drawScale: MONSTER_DRAW_SCALE,
+  drawScale: TROLL_DRAW_SCALE,
 });
 
 export const orcSprite: ActorSprite = characterPackSprite({
