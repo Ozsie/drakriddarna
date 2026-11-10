@@ -54,7 +54,9 @@ export const getStaticSignature = (
       (it: ItemLocation) =>
         `${String(String(String(it.position.x)))},${String(
           String(it.position.y),
-        )},${String(String(it.item?.id ?? it.item?.name ?? 'random'))}`,
+        )},${String(String(it.item?.id ?? it.item?.name ?? 'random'))},${String(
+          JSON.stringify(it.decorator ?? ''),
+        )}`,
     )
     .join(';')}|${(d.layout?.decorators ?? [])
     .map(

@@ -28,6 +28,7 @@ import {
 import { weapons } from '../items/weapons';
 import { magicItems } from '../items/magicItems';
 import { autoDetectCorners } from './cornerDetection';
+import { DECORATOR_PRESETS } from './Decorators';
 
 describe('dungeonParser', () => {
   describe('parsePosition', () => {
@@ -235,6 +236,22 @@ describe('dungeonParser', () => {
       // Without the option nothing is set
       const i3 = parseItem([2, 3, weapons[0]]);
       expect(i3).toEqual({ position: { x: 2, y: 3 }, item: weapons[0] });
+    });
+
+    it('resolves decorator presets for items and random chests', () => {
+      expect(parseItem({ x: 4, y: 5, decorator: 'suppliesObject085' })).toEqual(
+        {
+          position: { x: 4, y: 5 },
+          decorator: DECORATOR_PRESETS.suppliesObject085,
+        },
+      );
+      expect(
+        parseItem([2, 3, weapons[0], { decorator: 'bonesVariant1' }]),
+      ).toEqual({
+        position: { x: 2, y: 3 },
+        item: weapons[0],
+        decorator: DECORATOR_PRESETS.bonesVariant1,
+      });
     });
   });
 

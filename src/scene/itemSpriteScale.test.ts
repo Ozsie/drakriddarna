@@ -99,6 +99,32 @@ const fakeContext = () =>
   }) as unknown as CanvasRenderingContext2D;
 
 describe('item sprite scale', () => {
+  it.each([true, false])(
+    'prefers the decorator sprite over an item or random chest (%s)',
+    (hasItem) => {
+      const state = createState();
+      const itemLocation = state.dungeon.layout.items[0];
+      itemLocation.decorator = {
+        image: 'decorators/Bones_shadow3_1.png',
+        size: 32,
+        index: 0,
+      };
+      if (!hasItem) delete itemLocation.item;
+
+      const [view] = buildItemViewModels(
+        state,
+        {} as CanvasImageSource,
+        48,
+        false,
+      );
+
+      expect(view.sprite?.image).toMatchObject({
+        src: 'decorators/Bones_shadow3_1.png',
+      });
+      expect(view.spriteDraw).toEqual({ scale: ITEM_SPRITE_SCALE });
+    },
+  );
+
   it('carries the shrink on views with a resolved sprite frame', () => {
     const views = buildItemViewModels(
       createState(),

@@ -761,6 +761,8 @@ export type { Corner };
 
 export type ItemLocation = {
   item?: Item;
+  // Optional decorator sprite replaces the item's sprite or random-item tile.
+  decorator?: ItemSprite;
   position: Position;
   // A fallback floor item: kept at dungeon start only while no hero
   // carries an item with the same id (see `applyFallbackItems`).

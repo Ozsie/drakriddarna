@@ -1018,9 +1018,8 @@ export const buildItemViewModels = (
         ),
     )
     .map((itemLocation: ItemLocation) => {
-      const sprite = itemLocation.item?.sprite
-        ? getItemSpriteFrame(itemLocation.item.sprite)
-        : null;
+      const spriteSource = itemLocation.decorator ?? itemLocation.item?.sprite;
+      const sprite = spriteSource ? getItemSpriteFrame(spriteSource) : null;
       return {
         position: itemLocation.position,
         sprite,

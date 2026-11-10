@@ -5,7 +5,8 @@ import { CellAlignment } from '../types.ts';
 describe('light source sprites', () => {
   it('uses the full brazier image', () => {
     expect(brazier.sprite).toEqual({
-      image: 'decorators/pixor-library-brazier-standing-selout-64px-8-sides.png',
+      image:
+        'decorators/pixor-library-brazier-standing-selout-64px-8-sides.png',
       x: 0,
       y: 0,
       size: 64,

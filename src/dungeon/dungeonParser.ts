@@ -49,7 +49,11 @@ import {
 import { assertValidDungeon } from './dungeonValidator';
 import { findRoomCells } from '../core';
 import { autoDetectCorners } from './cornerDetection';
-import { createDecoratorPreset, suppliesObject } from './Decorators';
+import {
+  createDecoratorPreset,
+  DECORATOR_PRESETS,
+  suppliesObject,
+} from './Decorators';
 
 export type PositionTuple = [x: number, y: number];
 
@@ -169,19 +173,21 @@ export type DeclarativeNote =
 
 export type ItemLocationOptions = {
   onlyIfNotCarried?: boolean;
+  decorator?: DecoratorPresetName;
 };
 
 export type DeclarativeItemObject = {
   x: number;
   y: number;
   item?: Item;
-  onlyIfNotCarried?: boolean;
-};
+} & ItemLocationOptions;
 
-export type DeclarativeItemTuple =
-  | [x: number, y: number, item: Item]
-  | [x: number, y: number, item: Item, options?: ItemLocationOptions]
-  | [x: number, y: number];
+export type DeclarativeItemTuple = [
+  x: number,
+  y: number,
+  item?: Item,
+  options?: ItemLocationOptions,
+];
 
 export type DeclarativeItem =
   ItemLocation | DeclarativeItemObject | DeclarativeItemTuple;
@@ -608,16 +614,27 @@ export const parseItem = (itemDef: DeclarativeItem): ItemLocation => {
   }
 
   if (Array.isArray(itemDef)) {
-    if (itemDef.length === 2) {
-      return createRandomItem(itemDef[0], itemDef[1]);
-    }
-    return createEquipment(itemDef[0], itemDef[1], itemDef[2], itemDef[3]);
+    const [x, y, item, options] = itemDef;
+    const parsedOptions = {
+      ...(options?.onlyIfNotCarried ? { onlyIfNotCarried: true } : {}),
+      ...(options?.decorator
+        ? { decorator: DECORATOR_PRESETS[options.decorator] }
+        : {}),
+    };
+    return item
+      ? createEquipment(x, y, item, parsedOptions)
+      : createRandomItem(x, y, parsedOptions);
   }
 
-  if (!itemDef.item) {
-    return createRandomItem(itemDef.x, itemDef.y);
-  }
-  return createEquipment(itemDef.x, itemDef.y, itemDef.item, itemDef);
+  const parsedOptions = {
+    ...(itemDef.onlyIfNotCarried ? { onlyIfNotCarried: true } : {}),
+    ...(itemDef.decorator
+      ? { decorator: DECORATOR_PRESETS[itemDef.decorator] }
+      : {}),
+  };
+  return itemDef.item
+    ? createEquipment(itemDef.x, itemDef.y, itemDef.item, parsedOptions)
+    : createRandomItem(itemDef.x, itemDef.y, parsedOptions);
 };
 
 export const parseInteractable = (

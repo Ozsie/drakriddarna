@@ -4,6 +4,7 @@ import type {
   InteractableCell,
   Item,
   ItemLocation,
+  ItemSprite,
   Monster,
   Secret,
   WinCondition,
@@ -118,15 +119,22 @@ export const createEquipment = (
   x: number,
   y: number,
   item: Item,
-  options?: { onlyIfNotCarried?: boolean },
+  options?: { onlyIfNotCarried?: boolean; decorator?: ItemSprite },
 ): ItemLocation => ({
   item,
   position: { x, y },
   ...(options?.onlyIfNotCarried ? { onlyIfNotCarried: true } : {}),
+  ...(options?.decorator ? { decorator: options.decorator } : {}),
 });
 
-export const createRandomItem = (x: number, y: number): ItemLocation => ({
+export const createRandomItem = (
+  x: number,
+  y: number,
+  options?: { onlyIfNotCarried?: boolean; decorator?: ItemSprite },
+): ItemLocation => ({
   position: { x, y },
+  ...(options?.onlyIfNotCarried ? { onlyIfNotCarried: true } : {}),
+  ...(options?.decorator ? { decorator: options.decorator } : {}),
 });
 
 // Fallback floor items (declared `onlyIfNotCarried`) are removed at

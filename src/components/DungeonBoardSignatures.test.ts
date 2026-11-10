@@ -73,6 +73,24 @@ describe('DungeonBoardSignatures', () => {
     expect(getStaticSignature(state, false, 48)).not.toBe(before);
   });
 
+  it('static signature changes when an item decorator changes', () => {
+    const state = createState();
+    state.dungeon.layout.items = [
+      {
+        position: { x: 1, y: 0 },
+        decorator: {
+          image: 'decorators/Bones_shadow3_1.png',
+          size: 32,
+          index: 0,
+        },
+      },
+    ];
+    const before = getStaticSignature(state, false, 48);
+    state.dungeon.layout.items[0].decorator!.index = 1;
+
+    expect(getStaticSignature(state, false, 48)).not.toBe(before);
+  });
+
   it('static signature ignores light sprites drawn on the dynamic layer', () => {
     const state = createState();
     const before = getStaticSignature(state, false, 48);

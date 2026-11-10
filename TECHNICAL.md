@@ -209,7 +209,9 @@ presetName]`; descriptors also accept alignment. Decorator alignment positions
 the sprite bounds within its cell, and defaults to `CENTER`. The supplies-object
 atlas presets carry explicit pixel crop rectangles for their irregular sprite
 bounds, while indexed frames remain available through a descriptor. The parser
-resolves these forms to sprite data. When the decorator list is omitted or
+resolves these forms to sprite data. Item definitions can also specify a
+decorator preset to replace the drawn sprite of an item or random chest without
+changing its item behavior. When the decorator list is omitted or
 empty, it deterministically places up to six designated presets in unoccupied
 floor cells, preferring room corners and then wall-adjacent cells; explicit
 decorator lists take precedence.
