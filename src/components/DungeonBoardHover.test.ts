@@ -8,6 +8,7 @@ import {
   updateDungeonIntroHover,
   updateEventCardHover,
   updateHeroCardsHover,
+  updateHeroStatusHover,
   updateDebugMenuHover,
   updateMonsterCardsHover,
   updateNewGameDialogHover,
@@ -91,8 +92,9 @@ describe('dungeon intro hover', () => {
     hover.isDebugHovered = true;
     hover.isLogHovered = true;
     hover.hoveredInventoryHeroName = 'Fearik';
-    hover.hoveredCloseHeroName = 'Fearik';
-    hover.hoveredUseItem = { heroName: 'Fearik', itemIndex: 0 };
+    hover.isStatusCloseHovered = true;
+    hover.isStatusUseHovered = true;
+    hover.isStatusPointableHovered = true;
     hover.isEventCardToggleHovered = true;
     hover.hoveredRadialIndex = 2;
 
@@ -102,8 +104,9 @@ describe('dungeon intro hover', () => {
     expect(hover.isDebugHovered).toBe(false);
     expect(hover.isLogHovered).toBe(false);
     expect(hover.hoveredInventoryHeroName).toBeNull();
-    expect(hover.hoveredCloseHeroName).toBeNull();
-    expect(hover.hoveredUseItem).toBeNull();
+    expect(hover.isStatusCloseHovered).toBe(false);
+    expect(hover.isStatusUseHovered).toBe(false);
+    expect(hover.isStatusPointableHovered).toBe(false);
     expect(hover.isEventCardToggleHovered).toBe(false);
     expect(hover.hoveredRadialIndex).toBeNull();
     expect(hover.isDungeonIntroCloseHovered).toBe(true);
@@ -198,18 +201,15 @@ describe('hero cards hover', () => {
     expect(result.cursor).toBe('pointer');
   });
 
-  it('tracks the hovered use-item button by hero and item index', () => {
+  it('clears the use-item hover when the pointer moves elsewhere', () => {
     const hover = createBoardHoverState();
     hover.hoveredInventoryHeroName = 'Fearik';
     const result = updateHeroCardsHover(hover, {
-      type: 'inventoryUseItem',
+      type: 'card',
       hero: hero('Helbran'),
-      item: {} as never,
-      itemIndex: 3,
     });
     expect(hover.hoveredInventoryHeroName).toBeNull();
-    expect(hover.hoveredUseItem).toEqual({ heroName: 'Helbran', itemIndex: 3 });
-    expect(result.cursor).toBe('pointer');
+    expect(result.cursor).toBe('default');
     expect(result.changed).toBe(true);
   });
 
@@ -221,6 +221,64 @@ describe('hero cards hover', () => {
     });
     expect(result.cursor).toBe('default');
     expect(result.changed).toBe(false);
+  });
+});
+
+describe('hero status hover', () => {
+  it('tracks the close button and shows the pointer cursor', () => {
+    const hover = createBoardHoverState();
+    const result = updateHeroStatusHover(hover, {
+      type: 'close',
+      hero: hero('Fearik'),
+    });
+    expect(hover.isStatusCloseHovered).toBe(true);
+    expect(result.cursor).toBe('pointer');
+  });
+
+  it('tracks the use button over the selected active item', () => {
+    const hover = createBoardHoverState();
+    const result = updateHeroStatusHover(hover, {
+      type: 'use',
+      hero: hero('Fearik'),
+      item: {} as never,
+      itemIndex: 2,
+    });
+    expect(hover.isStatusUseHovered).toBe(true);
+    expect(result.cursor).toBe('pointer');
+  });
+
+  it('points at filled slots and inventory cells but not empty slots', () => {
+    const hover = createBoardHoverState();
+    const filled = updateHeroStatusHover(hover, {
+      type: 'slot',
+      hero: hero('Fearik'),
+      slotId: 'weapon',
+      item: { id: 'sword' } as never,
+    });
+    expect(filled.cursor).toBe('pointer');
+
+    const empty = updateHeroStatusHover(hover, {
+      type: 'slot',
+      hero: hero('Fearik'),
+      slotId: 'armour',
+      item: null,
+    });
+    expect(empty.cursor).toBe('default');
+  });
+
+  it('shows the default cursor over the panel and backdrop', () => {
+    const hover = createBoardHoverState();
+    hover.isStatusCloseHovered = true;
+    const result = updateHeroStatusHover(hover, {
+      type: 'panel',
+      hero: hero('Fearik'),
+    });
+    expect(hover.isStatusCloseHovered).toBe(false);
+    expect(result.cursor).toBe('default');
+
+    const backdrop = updateHeroStatusHover(hover, null);
+    expect(backdrop.cursor).toBe('default');
+    expect(backdrop.changed).toBe(false);
   });
 });
 
@@ -328,8 +386,8 @@ describe('clearBoardHovers', () => {
     hover.isDungeonIntroCloseHovered = true;
     hover.hoveredMenuItemId = 'x';
     hover.hoveredInventoryHeroName = 'Fearik';
-    hover.hoveredCloseHeroName = 'Fearik';
-    hover.hoveredUseItem = { heroName: 'Fearik', itemIndex: 0 };
+    hover.isStatusCloseHovered = true;
+    hover.isStatusPointableHovered = true;
     hover.isEventCardToggleHovered = true;
     hover.hoveredNgCampaignId = 'iceDragonTreasure';
     hover.hoveredNgGameMasterId = 'tactician';

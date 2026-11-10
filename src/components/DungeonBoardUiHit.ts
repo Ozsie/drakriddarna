@@ -6,6 +6,7 @@ import {
   getDungeonIntroHit,
   getEventCardHit,
   getHeroCardsHit,
+  getHeroStatusHit,
   getDebugMenuHit,
   getMonsterCardsHit,
   getNewGameDialogHit,
@@ -14,6 +15,10 @@ import {
 } from '../ui/UIRendering';
 import type { BetweenDungeonsHitResult } from '../ui/BetweenDungeonsRendering';
 import type { TopBarHitElement } from '@hoard-engine/uikit';
+import type {
+  HeroStatusHitResult,
+  HeroStatusSelection,
+} from '../ui/HeroStatusRendering';
 import type { DebugMenuHitResult } from '../ui/DebugMenuRendering';
 import type {
   SaveLoadDialogHitResult,
@@ -32,9 +37,10 @@ import type { DungeonIntroHitResult } from '../ui/DungeonIntroRendering';
 // The first UI element under a board position, in the fixed cascade order
 // the board dispatches UI input: new-game dialog and save/load dialog (the
 // topmost centered modals — the load dialog can be opened on top of the
-// between-dungeons/party-wipe overlay), between-dungeons overlay, dungeon
-// intro, top bar, canvas debug menu, hero cards, monster cards, diary and
-// event card.
+// between-dungeons/party-wipe overlay), the hero status screen (the
+// full-board inventory/status modal, above everything it dims),
+// between-dungeons overlay, dungeon intro, top bar, canvas debug menu,
+// hero cards, monster cards, diary and event card.
 export type UiHit =
   | { kind: 'betweenDungeons'; hit: BetweenDungeonsHitResult }
   | { kind: 'dungeonIntro'; hit: DungeonIntroHitResult }
@@ -42,6 +48,7 @@ export type UiHit =
   | { kind: 'newGameDialog'; hit: NewGameDialogHitResult }
   | { kind: 'topBar'; hit: TopBarHitElement }
   | { kind: 'debugMenu'; hit: DebugMenuHitResult }
+  | { kind: 'heroStatus'; hit: HeroStatusHitResult }
   | { kind: 'heroCards'; hit: HeroCardsHitResult }
   | { kind: 'monsterCards'; hit: MonsterCardsHitResult }
   | { kind: 'diary'; hit: DiaryAndWinConditionsHitResult }
@@ -71,6 +78,8 @@ export interface UiHitContext {
   isNewGameDialogOpen: boolean;
   /** Selection/hover state of the new-game dialog. */
   newGameDialog: NewGameDialogOptions;
+  /** The selected item (slot or inventory index) on the open hero status screen. */
+  heroStatusSelection: HeroStatusSelection | null;
 }
 
 // The individual hit testers, injectable so the cascade order itself can
@@ -82,6 +91,7 @@ export interface UiHitTesters {
   newGameDialog: typeof getNewGameDialogHit;
   topBar: typeof getTopBarHit;
   debugMenu: typeof getDebugMenuHit;
+  heroStatus: typeof getHeroStatusHit;
   heroCards: typeof getHeroCardsHit;
   monsterCards: typeof getMonsterCardsHit;
   diary: typeof getDiaryAndWinConditionsHit;
@@ -95,6 +105,7 @@ export const defaultUiHitTesters: UiHitTesters = {
   newGameDialog: getNewGameDialogHit,
   topBar: getTopBarHit,
   debugMenu: getDebugMenuHit,
+  heroStatus: getHeroStatusHit,
   heroCards: getHeroCardsHit,
   monsterCards: getMonsterCardsHit,
   diary: getDiaryAndWinConditionsHit,
@@ -132,6 +143,20 @@ export const findUiHit = (
     if (hit) {
       return { kind: 'saveLoadDialog', hit };
     }
+  }
+  // The hero status screen is a full-board modal: while it is open it wins
+  // over every board and corner surface, including the top bar behind its
+  // scrim (only the centered dialogs stack above it).
+  const heroStatusHit = testers.heroStatus(
+    context.viewWidth,
+    context.viewHeight,
+    context.state,
+    context.heroStatusSelection,
+    context.x,
+    context.y,
+  );
+  if (heroStatusHit) {
+    return { kind: 'heroStatus', hit: heroStatusHit };
   }
   if (context.state.betweenDungeons) {
     const hit = testers.betweenDungeons(

@@ -108,10 +108,13 @@ import {
   getCreditsHit,
   getSettingsLayout,
   getSliderValueFromX,
+  renderHeroStatus,
   emojiCursor,
   isCompactUi,
   type HeroSelectionHitResult,
   type HeroSelectionOptions,
+  type HeroStatusHitResult,
+  type HeroStatusSelection,
   type NewGameDialogHitResult,
   type SaveLoadDialogHitResult,
   type SettingsRowId,
@@ -134,6 +137,7 @@ import {
 } from '../dungeon/BetweenDungeonsLogic';
 import { restartDungeonAfterWipe, DEFAULT_SPEEDRUN_SEED } from '../game';
 import { useItem } from '../items/ItemLogic';
+import { heroWithOpenStatus } from '../ui/viewmodels/heroStatus';
 import {
   renderDamageIndicators,
   renderBloodSplatters,
@@ -432,6 +436,10 @@ export class DungeonBoardController {
   // ignored.
   private mobileEventsOpen = false;
   private mobileDiaryOpen = false;
+  // The selected item on the open hero status screen (the full-screen
+  // status and inventory overlay). Owned by the controller because the
+  // selection is canvas-drawn UI state, not part of the save.
+  private heroStatusSelection: HeroStatusSelection | null = null;
   // --- welcome phase --------------------------------------------------------
   // The app phase and the welcome sub view, pushed from the stores by the
   // Svelte component (same glue as the radial menu and locale). In the
@@ -1764,9 +1772,17 @@ export class DungeonBoardController {
     );
     const hoverSig = `${String(
       String(this.hover.hoveredInventoryHeroName),
-    )}:${String(String(this.hover.hoveredCloseHeroName))}:${String(
-      String(this.hover.hoveredUseItem?.heroName),
-    )}-${String(String(this.hover.hoveredUseItem?.itemIndex))}`;
+    )}:${String(String(this.hover.isStatusCloseHovered))}:${String(
+      String(this.hover.isStatusUseHovered),
+    )}:${String(String(this.hover.isStatusPointableHovered))}:${String(
+      String(this.heroStatusSelection?.heroId),
+    )}-${String(String(this.heroStatusSelection?.source.kind))}-${String(
+      String(
+        this.heroStatusSelection?.source.kind === 'inventory'
+          ? this.heroStatusSelection.source.itemIndex
+          : '',
+      ),
+    )}`;
     const targetSig = `${String(
       String(this.activeState?.targetActor?.name),
     )}:${String(String(this.activeState?.currentActor?.name))}`;
@@ -1897,8 +1913,6 @@ export class DungeonBoardController {
         this.activeState,
         {
           hoveredInventoryHeroName: this.hover.hoveredInventoryHeroName,
-          hoveredCloseHeroName: this.hover.hoveredCloseHeroName,
-          hoveredUseItem: this.hover.hoveredUseItem,
           env: uiEnv,
         },
       );
@@ -1930,6 +1944,18 @@ export class DungeonBoardController {
         {
           isCollapsed: eventCardCollapsed,
           isToggleHovered: this.hover.isEventCardToggleHovered,
+          env: uiEnv,
+        },
+      );
+      renderHeroStatus(
+        ctx,
+        this.containerWidth,
+        this.containerHeight,
+        this.activeState,
+        {
+          selection: this.heroStatusSelection,
+          isCloseHovered: this.hover.isStatusCloseHovered,
+          isUseHovered: this.hover.isStatusUseHovered,
           env: uiEnv,
         },
       );
@@ -2379,6 +2405,14 @@ export class DungeonBoardController {
       this.hover.hoveredRadialIndex = null;
       this.renderUiLayer(true);
     }
+    if (event.key === 'Escape') {
+      const statusHero = this.activeState
+        ? heroWithOpenStatus(this.activeState)
+        : null;
+      if (statusHero) {
+        this.closeHeroStatus(statusHero);
+      }
+    }
     // Board zoom: '+' (or '=' on unshifted-plus layouts) zooms in, '-'
     // (or '_') zooms out, anchored at the view centre. The dialogs and
     // welcome views above capture their keys first, so the board owns
@@ -2710,7 +2744,68 @@ export class DungeonBoardController {
       saveName: this.saveNameInput,
       isNewGameDialogOpen: this.isNewGameDialogOpen,
       newGameDialog: this.newGameDialogOptions(),
+      heroStatusSelection: this.heroStatusSelection,
     });
+  }
+
+  /** Closes the hero status screen and drops its selection. */
+  private closeHeroStatus(hero: Hero): void {
+    hero.isInventoryOpen = false;
+    this.heroStatusSelection = null;
+    if (this.externalState) {
+      gameStateStore.set(this.externalState);
+    } else {
+      this.syncStore();
+    }
+    this.renderUiLayer(true);
+  }
+
+  /**
+   * Dispatches a hero status screen click: slots and inventory cells
+   * select the item whose detail the description panel shows, the use
+   * button applies the selected active item, and the close button or
+   * the backdrop dismiss the screen.
+   */
+  private handleHeroStatusHit(hit: HeroStatusHitResult): void {
+    switch (hit.type) {
+      case 'close':
+      case 'backdrop':
+        soundEffectManager.playButtonClick();
+        this.closeHeroStatus(hit.hero);
+        return;
+      case 'slot': {
+        if (!hit.item) return;
+        soundEffectManager.playButtonClick();
+        this.heroStatusSelection = {
+          heroId: hit.hero.name,
+          source: { kind: hit.slotId },
+        };
+        this.renderUiLayer(true);
+        return;
+      }
+      case 'item': {
+        soundEffectManager.playButtonClick();
+        this.heroStatusSelection = {
+          heroId: hit.hero.name,
+          source: { kind: 'inventory', itemIndex: hit.itemIndex },
+        };
+        this.renderUiLayer(true);
+        return;
+      }
+      case 'use': {
+        soundEffectManager.playButtonClick();
+        if (this.externalState) {
+          useItem(this.externalState, hit.item);
+          gameStateStore.set(this.externalState);
+        } else {
+          useHeroItem(hit.item);
+        }
+        this.renderCanvas(true);
+        return;
+      }
+      case 'panel':
+        return;
+    }
   }
 
   /** Publishes the active state to the store unless externally controlled. */
@@ -3547,35 +3642,26 @@ export class DungeonBoardController {
         return;
       }
 
+      if (hit?.kind === 'heroStatus') {
+        this.handleHeroStatusHit(hit.hit);
+        return;
+      }
+
       if (hit?.kind === 'heroCards') {
         const heroHit = hit.hit;
         if (heroHit.type === 'inventoryButton') {
           soundEffectManager.playButtonClick();
           if (this.externalState) {
-            heroHit.hero.isInventoryOpen = !heroHit.hero.isInventoryOpen;
+            // The status screen is modal: opening one closes every other.
+            (this.externalState.heroes as Hero[]).forEach((hero) => {
+              hero.isInventoryOpen = false;
+            });
+            heroHit.hero.isInventoryOpen = true;
+            this.heroStatusSelection = null;
             gameStateStore.set(this.externalState);
           } else {
             toggleHeroInventory(heroHit.hero);
-          }
-          this.renderCanvas(true);
-        } else if (heroHit.type === 'inventoryClose') {
-          soundEffectManager.playButtonClick();
-          if (this.externalState) {
-            heroHit.hero.isInventoryOpen = false;
-            gameStateStore.set(this.externalState);
-          } else {
-            if (heroHit.hero.isInventoryOpen) {
-              toggleHeroInventory(heroHit.hero);
-            }
-          }
-          this.renderCanvas(true);
-        } else if (heroHit.type === 'inventoryUseItem') {
-          soundEffectManager.playButtonClick();
-          if (this.externalState) {
-            useItem(this.externalState, heroHit.item);
-            gameStateStore.set(this.externalState);
-          } else {
-            useHeroItem(heroHit.item);
+            this.heroStatusSelection = null;
           }
           this.renderCanvas(true);
         }

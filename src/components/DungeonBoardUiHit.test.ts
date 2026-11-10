@@ -5,6 +5,7 @@ import type {
   DungeonIntroHitResult,
   EventCardHitResult,
   HeroCardsHitResult,
+  HeroStatusHitResult,
   DebugMenuHitResult,
   MonsterCardsHitResult,
   DiaryAndWinConditionsHitResult,
@@ -69,6 +70,7 @@ const createContext = (overrides?: Partial<UiHitContext>): UiHitContext => ({
   saveName: '',
   isNewGameDialogOpen: false,
   newGameDialog: {},
+  heroStatusSelection: null,
   ...overrides,
 });
 
@@ -101,6 +103,7 @@ const noHitTesters: UiHitTesters = {
   newGameDialog: () => null,
   topBar: () => null,
   debugMenu: () => null,
+  heroStatus: () => null,
   heroCards: () => null,
   monsterCards: () => null,
   diary: () => null,
@@ -227,6 +230,22 @@ describe('findUiHit cascade', () => {
 
     const hit = findUiHit(createContext({ isDebugMenuOpen: true }), testers);
     expect(hit).toEqual({ kind: 'debugMenu', hit: debugMenuHit });
+  });
+
+  it('orders the hero status screen before the top bar and hero cards', () => {
+    const statusHit: HeroStatusHitResult = {
+      type: 'close',
+      hero: { name: 'Fearik' } as never,
+    };
+    const testers: UiHitTesters = {
+      ...noHitTesters,
+      heroStatus: vi.fn(() => statusHit),
+      topBar: () => 'menu',
+      heroCards: vi.fn(() => heroHit),
+    };
+    const hit = findUiHit(createContext(), testers);
+    expect(hit).toEqual({ kind: 'heroStatus', hit: statusHit });
+    expect(testers.heroCards).not.toHaveBeenCalled();
   });
 
   it('orders hero cards before monster cards, diary and event card', () => {

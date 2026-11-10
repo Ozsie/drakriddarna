@@ -2,12 +2,13 @@
 // render over the view model) lives in the kit; the adapter in
 // ./viewmodels/heroCards is the only place that reads GameState. This
 // module keeps the historical entry points — including the Hero-carrying
-// layout items and hits, and the shared text/rect helpers used by the
-// sibling chrome modules — so the board controller, the hit cascade and
-// existing tests work unchanged, with the exact same pixels: parity
-// snapshots cover the whole chain.
+// layout items and hits — so the board controller, the hit cascade and
+// existing tests work unchanged. The inventory button opens the
+// full-screen hero status screen (see ./HeroStatusRendering); the cards
+// themselves carry no inventory view, with parity snapshots covering the
+// whole chain.
 
-import type { GameState, Hero, Item } from '../types';
+import type { GameState, Hero } from '../types';
 import { liveHeroes } from '../hero/HeroLogic';
 import type { UiEnv, UiContext } from '@hoard-engine/uikit';
 import {
@@ -45,44 +46,18 @@ export interface HeroCardLayoutItem {
   shieldText?: string;
 }
 
-export interface InventoryItemLayout {
-  item: Item;
-  itemIndex: number;
-  bounds: CardBounds;
-  nameText: string;
-  descriptionText: string;
-  useButtonBounds?: CardBounds;
-  isUsable: boolean;
-  isUsed: boolean;
-}
-
-export interface InventoryPopoverLayout {
-  hero: Hero;
-  bounds: CardBounds;
-  closeButtonBounds: CardBounds;
-  titleText: string;
-  items: InventoryItemLayout[];
-}
-
 export interface HeroCardsLayout {
   containerBounds: CardBounds;
   cards: HeroCardLayoutItem[];
-  inventories: InventoryPopoverLayout[];
 }
 
 export interface RenderHeroCardsOptions {
   hoveredInventoryHeroName?: string | null;
-  hoveredCloseHeroName?: string | null;
-  hoveredUseItem?: { heroName: string; itemIndex: number } | null;
   env?: UiEnv;
 }
 
 export type HeroCardsHitResult =
-  | { type: 'inventoryButton'; hero: Hero }
-  | { type: 'inventoryClose'; hero: Hero }
-  | { type: 'inventoryUseItem'; hero: Hero; item: Item; itemIndex: number }
-  | { type: 'inventory'; hero: Hero }
-  | { type: 'card'; hero: Hero };
+  { type: 'inventoryButton'; hero: Hero } | { type: 'card'; hero: Hero };
 
 /** The compact rule a legacy call implies: the env's mode, else width-derived. */
 const legacyCompact = (env: UiEnv | undefined, viewWidth: number): boolean =>
@@ -133,7 +108,6 @@ export const getHeroCardsLayout = (
   const emptyLayout: HeroCardsLayout = {
     containerBounds: { x: 0, y: 0, width: 0, height: 0 },
     cards: [],
-    inventories: [],
   };
 
   const kitLayout = kitLayoutFor(viewWidth, viewHeight, state, env);
@@ -156,33 +130,6 @@ export const getHeroCardsLayout = (
       armourText: item.card.armourText,
       shieldText: item.card.shieldText,
     })),
-    inventories: kitLayout.inventories.map((inv) => {
-      const hero = heroById(state, inv.heroId) ?? liveHeroes(state)[0];
-      const heroInventory = hero.inventory ?? [];
-      return {
-        hero,
-        bounds: inv.bounds,
-        closeButtonBounds: inv.closeButtonBounds,
-        titleText: inv.titleText,
-        items: inv.items.flatMap((itemLayout) => {
-          const item = heroInventory[itemLayout.item.itemIndex];
-          return item
-            ? [
-                {
-                  item,
-                  itemIndex: itemLayout.item.itemIndex,
-                  bounds: itemLayout.bounds,
-                  nameText: itemLayout.item.nameText,
-                  descriptionText: itemLayout.item.descriptionText,
-                  useButtonBounds: itemLayout.useButtonBounds,
-                  isUsable: itemLayout.item.isUsable,
-                  isUsed: itemLayout.item.isUsed,
-                },
-              ]
-            : [];
-        }),
-      };
-    }),
   };
 };
 
@@ -215,13 +162,6 @@ export const renderHeroCards = (
   };
   renderHeroCardsComponent(layout, vm, ui, {
     hoveredInventoryHeroId: options?.hoveredInventoryHeroName ?? null,
-    hoveredCloseHeroId: options?.hoveredCloseHeroName ?? null,
-    hoveredUseItem: options?.hoveredUseItem
-      ? {
-          heroId: options.hoveredUseItem.heroName,
-          itemIndex: options.hoveredUseItem.itemIndex,
-        }
-      : null,
   });
 };
 
@@ -246,18 +186,8 @@ export const getHeroCardsHit = (
   switch (hit.kind) {
     case 'inventoryButton':
       return { type: 'inventoryButton', hero };
-    case 'inventoryClose':
-      return { type: 'inventoryClose', hero };
-    case 'inventory':
-      return { type: 'inventory', hero };
     case 'card':
       return { type: 'card', hero };
-    case 'inventoryUseItem': {
-      const item = (hero.inventory ?? [])[hit.itemIndex];
-      return item
-        ? { type: 'inventoryUseItem', hero, item, itemIndex: hit.itemIndex }
-        : null;
-    }
   }
   return null;
 };

@@ -156,6 +156,20 @@ describe('gameStateStore and state management', () => {
     expect((getState().heroes[0] as Hero).isInventoryOpen).toBe(initialOpen);
   });
 
+  it('toggleHeroInventory closes every other hero status screen (modal)', () => {
+    const state = getState();
+    const first = state.heroes[0] as Hero;
+    const second = state.heroes[1] as Hero;
+    expect(second).toBeDefined();
+
+    first.isInventoryOpen = true;
+    toggleHeroInventory(second);
+
+    const after = getState();
+    expect((after.heroes[0] as Hero).isInventoryOpen).toBe(false);
+    expect((after.heroes[1] as Hero).isInventoryOpen).toBe(true);
+  });
+
   it('actions like endHeroAction, moveHero, pickLockAction, searchAction modify state and notify store', async () => {
     const hero = get(currentHero);
     expect(hero).toBeDefined();

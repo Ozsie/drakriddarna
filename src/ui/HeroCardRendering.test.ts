@@ -10,15 +10,7 @@ import {
   isPointInRect as isPointInBounds,
   drawRoundedRect,
 } from '@hoard-engine/primitives';
-import {
-  Colour,
-  Level,
-  ItemType,
-  type GameState,
-  type Hero,
-  type Item,
-} from '../types';
-import { ACTIVE, DESCRIPTION, USED } from '../items/ItemLogic';
+import { Colour, Level, ItemType, type GameState, type Hero } from '../types';
 
 const createMockHero = (
   name: string,
@@ -284,38 +276,6 @@ describe('HeroCardRendering', () => {
 
       expect(layout.cards).toHaveLength(3);
     });
-
-    it('positions open inventory above the corresponding hero card', () => {
-      const hero = createMockHero('Fearik', Colour.Yellow, {
-        isInventoryOpen: true,
-        inventory: [
-          {
-            name: 'Health Potion',
-            amountInDeck: 1,
-            type: ItemType.MAGIC,
-            value: 10,
-            properties: {
-              [ACTIVE]: true,
-              [DESCRIPTION]: 'Restores 4 HP',
-            },
-          },
-        ],
-      });
-      const state = createMockState([hero]);
-
-      const layout = getHeroCardsLayout(600, 500, state);
-      expect(layout.inventories).toHaveLength(1);
-
-      const inv = layout.inventories[0];
-      const card = layout.cards[0];
-
-      expect(inv.hero.name).toBe('Fearik');
-      // Must be positioned above the card
-      expect(inv.bounds.y + inv.bounds.height).toBeLessThan(card.bounds.y);
-      expect(inv.items).toHaveLength(1);
-      expect(inv.items[0].isUsable).toBe(true);
-      expect(inv.items[0].useButtonBounds).toBeDefined();
-    });
   });
 
   describe('getHeroCardsHit', () => {
@@ -347,57 +307,6 @@ describe('HeroCardRendering', () => {
       });
     });
 
-    it('detects click on inventory close button and use item button', () => {
-      const potion: Item = {
-        name: 'Health Potion',
-        amountInDeck: 1,
-        type: ItemType.MAGIC,
-        value: 10,
-        properties: {
-          [ACTIVE]: true,
-          [DESCRIPTION]: 'Restores HP',
-        },
-      };
-      const hero = createMockHero('Fearik', Colour.Yellow, {
-        isInventoryOpen: true,
-        inventory: [potion],
-      });
-      const state = createMockState([hero]);
-
-      const layout = getHeroCardsLayout(600, 500, state);
-      const inv = layout.inventories[0];
-
-      // Test close button
-      const closeBtn = inv.closeButtonBounds;
-      const closeHit = getHeroCardsHit(
-        600,
-        500,
-        state,
-        closeBtn.x + 2,
-        closeBtn.y + 2,
-      );
-      expect(closeHit).toEqual({
-        type: 'inventoryClose',
-        hero,
-      });
-
-      // Test use button
-      const useBtn = inv.items[0].useButtonBounds!;
-      const useHit = getHeroCardsHit(
-        600,
-        500,
-        state,
-        useBtn.x + 2,
-        useBtn.y + 2,
-      );
-      expect(useHit).toEqual({
-        type: 'inventoryUseItem',
-        hero,
-        item: potion,
-        itemIndex: 0,
-      });
-    });
-
     it('returns null when clicking outside hero cards', () => {
       const hero = createMockHero('Fearik');
       const state = createMockState([hero]);
@@ -423,36 +332,6 @@ describe('HeroCardRendering', () => {
       expect(ctx.stroke).toHaveBeenCalled();
       expect(ctx.fillText).toHaveBeenCalled();
       expect(ctx.restore).toHaveBeenCalled();
-    });
-
-    it('renders open inventory popover with used and unused items', () => {
-      const usableItem: Item = {
-        name: 'Health Potion',
-        amountInDeck: 1,
-        type: ItemType.MAGIC,
-        value: 10,
-        properties: { [ACTIVE]: true, [DESCRIPTION]: 'Restores HP' },
-      };
-      const usedItem: Item = {
-        name: 'Empty Scroll',
-        amountInDeck: 1,
-        type: ItemType.MAGIC,
-        value: 0,
-        properties: { [ACTIVE]: true, [USED]: true },
-      };
-      const hero = createMockHero('Fearik', Colour.Yellow, {
-        isInventoryOpen: true,
-        inventory: [usableItem, usedItem],
-      });
-      const state = createMockState([hero]);
-      const ctx = createMockCtx();
-
-      renderHeroCards(ctx, 600, 500, state, {
-        hoveredCloseHeroName: 'Fearik',
-        hoveredUseItem: { heroName: 'Fearik', itemIndex: 0 },
-      });
-
-      expect(ctx.fillText).toHaveBeenCalled();
     });
   });
 });

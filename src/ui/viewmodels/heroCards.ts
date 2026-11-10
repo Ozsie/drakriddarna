@@ -1,18 +1,16 @@
 // Hero cards view model adapter: the only place that reads GameState for
 // the hero cards. Live heroes, the compact filter, current/target
-// highlighting and every card text — including the inventory popover's
-// titles, labels and sprite references — are prebuilt here.
+// highlighting and every card text are prebuilt here. The cards' inventory
+// button opens the full-screen hero status screen; the cards themselves
+// carry no inventory view (see ./heroStatus for that screen's adapter).
 
 import type { GameState, Hero, Item } from '../../types';
 import { liveHeroes } from '../../hero/HeroLogic';
-import { ACTIVE, DESCRIPTION, USED } from '../../items/ItemLogic';
-import type { Translator } from '@hoard-engine/uikit';
 import type {
-  HeroCardSpriteRef,
   HeroCardVm,
   HeroCardsViewModel,
-  HeroInventoryItemVm,
-  HeroInventoryVm,
+  SpriteRef,
+  Translator,
 } from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 
@@ -61,14 +59,11 @@ const heroCardVm = (
         }`
       : undefined,
     inventoryButtonIcon: '🎒',
-    inventory: hero.isInventoryOpen
-      ? heroInventoryVm(hero, heroNameTranslated, t)
-      : null,
   };
 };
 
 /** Maps an item's sprite sheet to a sprite ref for the asset port. */
-export const itemSpriteRef = (item: Item): HeroCardSpriteRef | undefined =>
+export const itemSpriteRef = (item: Item): SpriteRef | undefined =>
   item.sprite
     ? {
         assetId: item.sprite.image,
@@ -76,34 +71,6 @@ export const itemSpriteRef = (item: Item): HeroCardSpriteRef | undefined =>
         size: item.sprite.size,
       }
     : undefined;
-
-const heroInventoryVm = (
-  hero: Hero,
-  heroNameTranslated: string,
-  t: Translator,
-): HeroInventoryVm => ({
-  heroId: hero.name,
-  titleText: t('content.inventory.label', { hero: heroNameTranslated }),
-  emptyText: '(Empty)',
-  closeIcon: '✕',
-  items: (hero.inventory ?? []).map((item, itemIndex): HeroInventoryItemVm => {
-    const isActive = Boolean(item.properties?.[ACTIVE]);
-    return {
-      itemIndex,
-      nameText: t(item.nameTranslationKey ?? item.name),
-      descriptionText: item.properties?.[DESCRIPTION]
-        ? t(String(item.properties[DESCRIPTION]))
-        : '',
-      hasUseButton: isActive,
-      isUsable: isActive && !item.properties?.[USED],
-      isUsed: isActive && Boolean(item.properties?.[USED]),
-      useText: t('content.inventory.use') || 'Use',
-      usedText: t('content.inventory.used') || 'Used',
-      sprite: itemSpriteRef(item),
-      icon: item.icon,
-    };
-  }),
-});
 
 export const toHeroCardsViewModel = (
   state: GameState | null | undefined,

@@ -315,7 +315,13 @@ export const toggleHeroInventory = (hero: Hero): void => {
   const foundHero = state.heroes.find((h) => h.name === hero.name) as
     Hero | undefined;
   if (foundHero) {
-    foundHero.isInventoryOpen = !foundHero.isInventoryOpen;
+    // The hero status screen is a full-board modal: opening one hero's
+    // screen closes every other hero's.
+    const opening = !foundHero.isInventoryOpen;
+    (state.heroes as Hero[]).forEach((h) => {
+      h.isInventoryOpen = false;
+    });
+    foundHero.isInventoryOpen = opening;
   } else {
     hero.isInventoryOpen = !hero.isInventoryOpen;
   }

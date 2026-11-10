@@ -226,5 +226,17 @@
   },
   "fog": {
     "name": "fog"
+  },
+  "status": {
+    "description": "Description",
+    "statusEffects": "Status effects",
+    "inventory": "Inventory",
+    "health": "Health",
+    "experience": "Experience",
+    "steps": "Steps",
+    "weapon": "Weapon",
+    "armour": "Armour",
+    "shield": "Shield",
+    "incapacitated": "Incapacitated"
   }
 }

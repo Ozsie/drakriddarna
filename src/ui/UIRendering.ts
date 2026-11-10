@@ -123,12 +123,18 @@ export {
   getHeroCardsHit,
   type CardBounds,
   type HeroCardLayoutItem,
-  type InventoryItemLayout,
-  type InventoryPopoverLayout,
   type HeroCardsLayout,
   type RenderHeroCardsOptions,
   type HeroCardsHitResult,
 } from './HeroCardRendering';
+export {
+  renderHeroStatus,
+  getHeroStatusHit,
+  type HeroStatusHitResult,
+  type HeroStatusSelection,
+  type HeroStatusSelectionSource,
+  type RenderHeroStatusOptions,
+} from './HeroStatusRendering';
 export {
   renderMonsterCards,
   getMonsterCardsLayout,

@@ -53,7 +53,7 @@
 		"@hoard-engine/rng": "^0.1.0",
 		"@hoard-engine/saves": "^0.1.0",
 		"@hoard-engine/scene": "^0.3.0",
-		"@hoard-engine/uikit": "^0.1.0",
+		"@hoard-engine/uikit": "../uikit",
 		"@sveltekit-i18n/extension-stores": "^3.2.1",
 		"sveltekit-i18n": "^3.4.1"
 	},

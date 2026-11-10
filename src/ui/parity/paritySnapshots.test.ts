@@ -32,6 +32,7 @@ import {
 } from '../HeroSelectionRendering';
 import { renderTopBar } from '../TopBarRendering';
 import { renderHeroCards } from '../HeroCardRendering';
+import { renderHeroStatus } from '../HeroStatusRendering';
 import { renderMonsterCards } from '../MonsterCardRendering';
 import { renderDiaryAndWinConditions } from '../DiaryAndWinConditionRendering';
 import { renderEventCard } from '../EventCardRendering';
@@ -74,17 +75,11 @@ describe('parity snapshots', () => {
     expect([...compact.log]).toMatchSnapshot('topbar-compact');
   });
 
-  it('snapshots the hero cards, including an open inventory popover', () => {
+  it('snapshots the hero cards in regular and compact mode', () => {
     const state = midCampaignState();
     const regular = createRecordingContext();
     renderHeroCards(regular.ctx, REGULAR_WIDTH, REGULAR_HEIGHT, state);
     expect([...regular.log]).toMatchSnapshot('herocards-regular');
-
-    const withInventory = midCampaignState();
-    (withInventory.heroes as Hero[])[0].isInventoryOpen = true;
-    const popover = createRecordingContext();
-    renderHeroCards(popover.ctx, REGULAR_WIDTH, REGULAR_HEIGHT, withInventory);
-    expect([...popover.log]).toMatchSnapshot('herocards-inventory-open');
 
     const compact = createRecordingContext();
     renderHeroCards(
@@ -94,6 +89,35 @@ describe('parity snapshots', () => {
       midCampaignState(),
     );
     expect([...compact.log]).toMatchSnapshot('herocards-compact');
+  });
+
+  it('snapshots the hero status screen for the open hero', async () => {
+    const state = midCampaignState();
+    const hero = (state.heroes as Hero[])[0];
+    hero.isInventoryOpen = true;
+    hero.blinded = true;
+    hero.ignoredByMonsters = true;
+    const selection = {
+      heroId: hero.name,
+      source: { kind: 'inventory' as const, itemIndex: 0 },
+    };
+
+    const screen = createRecordingContext();
+    renderHeroStatus(screen.ctx, REGULAR_WIDTH, REGULAR_HEIGHT, state, {
+      selection,
+    });
+    expect([...screen.log]).toMatchSnapshot('herostatus-open');
+
+    // The same screen under the Swedish locale: the labels translate.
+    await loadTranslations('sv');
+    const swedish = createRecordingContext();
+    renderHeroStatus(swedish.ctx, REGULAR_WIDTH, REGULAR_HEIGHT, state, {
+      selection,
+    });
+    expect([...swedish.log]).toMatchSnapshot('herostatus-swedish');
+
+    // Back to the default locale for the tests that follow.
+    await loadTranslations('en');
   });
 
   it('snapshots the monster cards for visible monsters', () => {
