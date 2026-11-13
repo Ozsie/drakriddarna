@@ -8,18 +8,69 @@ import type { GameState, Hero, Item } from '../../types';
 import { liveHeroes } from '../../hero/HeroLogic';
 import { ACTIVE, DESCRIPTION, USED } from '../../items/ItemLogic';
 import { LEVEL_THRESHOLDS } from '../../dungeon/BetweenDungeonsLogic';
-import type {
-  HeroStatusDetailVm,
-  HeroStatusEffectVm,
-  HeroStatusItemVm,
-  HeroStatusSlotId,
-  HeroStatusSlotVm,
-  HeroStatusStatVm,
-  HeroStatusViewModel,
-  Translator,
-} from '@hoard-engine/uikit';
+import type { SpriteRef, Translator } from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 import { itemSpriteRef } from './heroCards';
+
+export type HeroStatusSlotId = 'weapon' | 'armour' | 'shield';
+
+export interface HeroStatusSlotVm {
+  slotId: HeroStatusSlotId;
+  labelText: string;
+  isEmpty: boolean;
+  nameText: string;
+  effectText: string;
+  isSelected: boolean;
+  sprite: SpriteRef | undefined;
+  icon: string | undefined;
+}
+
+export interface HeroStatusItemVm {
+  itemIndex: number;
+  nameText: string;
+  isSelected: boolean;
+  sprite: SpriteRef | undefined;
+  icon: string | undefined;
+}
+
+export interface HeroStatusStatVm {
+  statId: 'health' | 'experience' | 'actions' | 'steps';
+  labelText: string;
+  valueText: string;
+  maxText: string;
+}
+
+export interface HeroStatusEffectVm {
+  effectId:
+    'blinded' | 'weakened' | 'incapacitated' | 'invisible' | 'elemental';
+  labelText: string;
+}
+
+export interface HeroStatusDetailVm {
+  nameText: string;
+  effectText: string | undefined;
+  descriptionText: string;
+  hasUse: boolean;
+  isUsable: boolean;
+  isUsed: boolean;
+  useText: string;
+  usedText: string;
+}
+
+export interface HeroStatusViewModel {
+  heroId: string;
+  headerText: string;
+  closeIcon: string;
+  slots: readonly HeroStatusSlotVm[];
+  descriptionHeaderText: string;
+  detail: HeroStatusDetailVm | null;
+  statusEffectsHeaderText: string;
+  effects: readonly HeroStatusEffectVm[];
+  inventoryLabelText: string;
+  inventory: readonly HeroStatusItemVm[];
+  inventoryEmptyText: string;
+  stats: readonly HeroStatusStatVm[];
+}
 
 /** The item a status-screen selection refers to, as a slot id or an inventory index. */
 export type HeroStatusSelectionSource =

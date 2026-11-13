@@ -263,6 +263,15 @@ describe('HeroSelectionRendering', () => {
         { selectedHeroIds: rosterIds, names: {} },
       );
       expect(inputHit).toEqual({ type: 'nameInput', heroId: row.heroId });
+      const rowHit = getHeroSelectionHit(
+        800,
+        600,
+        'iceDragonTreasure',
+        row.rowBounds.x + 2,
+        row.rowBounds.y + 2,
+        { selectedHeroIds: rosterIds, names: {} },
+      );
+      expect(rowHit).toEqual({ type: 'row', heroId: row.heroId });
     });
 
     it('hits Start and Back in their corners', () => {

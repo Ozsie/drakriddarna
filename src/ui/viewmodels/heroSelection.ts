@@ -5,9 +5,21 @@
 import { getCampaign } from '../../campaigns';
 import type { Campaign, Hero } from '../../types';
 import type { Translator } from '@hoard-engine/uikit';
-import type { HeroSelectionViewModel } from '@hoard-engine/uikit';
 import { applyTextInputKey, clampTextInput } from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
+
+export interface HeroSelectionViewModel {
+  headerText: string;
+  startButtonLabel: string;
+  backButtonLabel: string;
+  minHeroes: number;
+  maxHeroes: number;
+  rows: {
+    id: string;
+    defaultLabel: string;
+    colour: string;
+  }[];
+}
 
 /** Player-typed names are clamped but never corrected or generated. */
 export const MAX_HERO_NAME_LENGTH = 20;

@@ -5,8 +5,25 @@
 import type { GameState, Monster } from '../../types';
 import { findVisibleMonsters } from '../../monsters/MonsterLogic';
 import type { Translator } from '@hoard-engine/uikit';
-import type { MonsterCardsViewModel } from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
+
+export interface MonsterCardVm {
+  id: string;
+  title: string;
+  colour: Monster['colour'];
+  isCurrent: boolean;
+  isTarget: boolean;
+  hpText: string;
+  hasRangedWeapon: boolean;
+  weaponText: string;
+  rangedWeaponText: string;
+  armourText: string;
+  shieldText: string;
+}
+
+export interface MonsterCardsViewModel {
+  cards: MonsterCardVm[];
+}
 
 const translateOrFallback = (
   key: string,

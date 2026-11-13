@@ -6,13 +6,28 @@
 
 import type { GameState, Hero, Item } from '../../types';
 import { liveHeroes } from '../../hero/HeroLogic';
-import type {
-  HeroCardVm,
-  HeroCardsViewModel,
-  SpriteRef,
-  Translator,
-} from '@hoard-engine/uikit';
+import type { SpriteRef, Translator } from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
+
+export interface HeroCardVm {
+  heroId: string;
+  title: string;
+  colour: Hero['colour'];
+  isCurrent: boolean;
+  isTarget: boolean;
+  hpText: string;
+  actionsText?: string;
+  movesText?: string;
+  equipmentText?: string;
+  weaponText?: string;
+  armourText?: string;
+  shieldText?: string;
+  inventoryButtonIcon: string;
+}
+
+export interface HeroCardsViewModel {
+  cards: HeroCardVm[];
+}
 
 const heroCardVm = (
   hero: Hero,

@@ -13,21 +13,12 @@ import {
   type Item,
 } from '../types';
 import { ACTIVE, DESCRIPTION } from '../items/ItemLogic';
-import {
-  layoutHeroStatus,
-  hitTestHeroStatus,
-  defaultTheme,
-} from '@hoard-engine/uikit';
-import type { UiEnv } from '@hoard-engine/uikit';
-import { toHeroStatusViewModel } from './viewmodels/heroStatus';
 
-const identityT = (key: string) => key;
-const viewBounds = { x: 0, y: 0, width: 600, height: 500 };
-const env: UiEnv = {
-  theme: defaultTheme,
-  mode: 'regular',
-  t: identityT,
-  measure: { width: (text: string) => text.length * 6.5 },
+const hitPoints = {
+  close: { x: 546, y: 34 },
+  weapon: { x: 50, y: 79 },
+  item: { x: 363, y: 99 },
+  use: { x: 251, y: 223 },
 };
 
 const createMockHero = (name: string, overrides: Partial<Hero> = {}): Hero => ({
@@ -156,35 +147,39 @@ describe('HeroStatusRendering', () => {
       inventory: [potion],
     });
     const state = createMockState([hero]);
-    const vm = toHeroStatusViewModel(state, null, identityT);
-    expect(vm).not.toBeNull();
-    const layout = layoutHeroStatus(vm!, viewBounds, env);
-    expect(layout.hasContent).toBe(true);
 
     // Close button
-    const closeHit = hitTestHeroStatus(layout, {
-      x: layout.closeButtonBounds.x + 2,
-      y: layout.closeButtonBounds.y + 2,
-    });
-    expect(closeHit).toEqual({ kind: 'close' });
+    expect(
+      getHeroStatusHit(
+        600,
+        500,
+        state,
+        null,
+        hitPoints.close.x,
+        hitPoints.close.y,
+      ),
+    ).toMatchObject({ type: 'close' });
 
     // Weapon slot
-    const slotBounds = layout.slots[0].bounds;
-    const slotHit = hitTestHeroStatus(layout, {
-      x: slotBounds.x + 4,
-      y: slotBounds.y + 4,
-    });
-    expect(slotHit).toEqual({ kind: 'slot', slotId: 'weapon' });
+    expect(
+      getHeroStatusHit(
+        600,
+        500,
+        state,
+        null,
+        hitPoints.weapon.x,
+        hitPoints.weapon.y,
+      ),
+    ).toMatchObject({ type: 'slot', slotId: 'weapon', item: hero.weapon });
 
     // Inventory cell through the facade (resolves the hero and item)
-    const cell = layout.inventoryGrid[0];
     const itemHit = getHeroStatusHit(
       600,
       500,
       state,
       null,
-      cell.bounds.x + 2,
-      cell.bounds.y + 2,
+      hitPoints.item.x,
+      hitPoints.item.y,
     );
     expect(itemHit).toMatchObject({
       type: 'item',
@@ -201,17 +196,13 @@ describe('HeroStatusRendering', () => {
       heroId: 'Fearik',
       source: { kind: 'inventory', itemIndex: 0 },
     } as const;
-    const selectedVm = toHeroStatusViewModel(state, selection, identityT);
-    const selectedLayout = layoutHeroStatus(selectedVm!, viewBounds, env);
-    const useBounds = selectedLayout.detail?.useButtonBounds;
-    expect(useBounds).toBeDefined();
     const useHit = getHeroStatusHit(
       600,
       500,
       state,
       selection,
-      useBounds!.x + 2,
-      useBounds!.y + 2,
+      hitPoints.use.x,
+      hitPoints.use.y,
     );
     expect(useHit).toMatchObject({ type: 'use', item: potion });
 
@@ -221,8 +212,8 @@ describe('HeroStatusRendering', () => {
       500,
       state,
       null,
-      useBounds!.x + 2,
-      useBounds!.y + 2,
+      hitPoints.use.x,
+      hitPoints.use.y,
     );
     expect(noUseHit).toMatchObject({ type: 'panel' });
   });

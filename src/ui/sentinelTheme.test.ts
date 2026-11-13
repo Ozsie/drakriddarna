@@ -278,6 +278,7 @@ const GLYPH_ALLOWLIST = new Set([
   '⚡',
   '✨',
   '→',
+  '●',
   '(Empty)',
 ]);
 
