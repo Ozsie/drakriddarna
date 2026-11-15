@@ -16,21 +16,81 @@
   },
   "wallShapes": {
     "none": ["stoneWall_E"],
+    "ITL": ["stoneWallColumn_N"],
+    "ITR": ["stoneWallColumn_E"],
+    "IBL": ["stoneWallColumn_W"],
+    "IBR": ["stoneWallColumn_S"],
+    "OTL": ["stoneWallCorner_S"],
+    "OTR": ["stoneWallCorner_W"],
+    "OBL": ["stoneWallCorner_E"],
+    "OBR": ["stoneWallCorner_N"],
+    "TE": ["stoneWall_E", "stoneWall_S", "stoneWall_W"],
+    "RE": ["stoneWall_S", "stoneWall_N", "stoneWall_W"],
+    "BE": ["stoneWall_E", "stoneWall_N", "stoneWall_W"],
+    "LE": ["stoneWall_E", "stoneWall_S", "stoneWall_N"],
+    "ITL+ITR": ["stoneWallColumn_E", "stoneWallColumn_N"],
+    "ITL+IBL": ["stoneWallColumn_W", "stoneWallColumn_N"],
+    "ITL+IBR": ["stoneWallColumn_S", "stoneWallColumn_N"],
+    "ITR+IBL": ["stoneWallColumn_E", "stoneWallColumn_W"],
+    "ITR+IBR": ["stoneWallColumn_S", "stoneWallColumn_E"],
+    "IBL+IBR": ["stoneWallColumn_S", "stoneWallColumn_W"],
+    "ITL+ITR+IBL": [
+      "stoneWallColumn_E",
+      "stoneWallColumn_W",
+      "stoneWallColumn_N"
+    ],
+    "ITL+ITR+IBR": [
+      "stoneWallColumn_S",
+      "stoneWallColumn_E",
+      "stoneWallColumn_N"
+    ],
+    "ITL+IBL+IBR": [
+      "stoneWallColumn_S",
+      "stoneWallColumn_W",
+      "stoneWallColumn_N"
+    ],
+    "ITR+IBL+IBR": [
+      "stoneWallColumn_S",
+      "stoneWallColumn_E",
+      "stoneWallColumn_W"
+    ],
+    "ITL+ITR+IBL+IBR": [
+      "stoneWallColumn_S",
+      "stoneWallColumn_E",
+      "stoneWallColumn_W",
+      "stoneWallColumn_N"
+    ],
+    "n+IBL": ["stoneWallColumn_W", "stoneWall_N"],
+    "n+IBR": ["stoneWallColumn_S", "stoneWall_N"],
+    "n+IBL+IBR": ["stoneWallColumn_S", "stoneWallColumn_W", "stoneWall_N"],
+    "e+ITL": ["stoneWall_E", "stoneWallColumn_N"],
+    "e+IBL": ["stoneWall_E", "stoneWallColumn_W"],
+    "e+ITL+IBL": ["stoneWall_E", "stoneWallColumn_W", "stoneWallColumn_N"],
+    "s+ITL": ["stoneWall_S", "stoneWallColumn_N"],
+    "s+ITR": ["stoneWall_S", "stoneWallColumn_E"],
+    "s+ITL+ITR": ["stoneWall_S", "stoneWallColumn_E", "stoneWallColumn_N"],
+    "w+ITR": ["stoneWallColumn_E", "stoneWall_W"],
+    "w+IBR": ["stoneWallColumn_S", "stoneWall_W"],
+    "w+ITR+IBR": ["stoneWallColumn_S", "stoneWallColumn_E", "stoneWall_W"],
+    "ne+IBL": ["stoneWall_E", "stoneWallColumn_W", "stoneWall_N"],
+    "es+ITL": ["stoneWall_E", "stoneWall_S", "stoneWallColumn_N"],
+    "sw+ITR": ["stoneWall_S", "stoneWallColumn_E", "stoneWall_W"],
+    "nw+IBR": ["stoneWallColumn_S", "stoneWall_N", "stoneWall_W"],
     "n": ["stoneWall_N"],
     "e": ["stoneWall_E"],
     "s": ["stoneWall_S"],
     "w": ["stoneWall_W"],
-    "ns": ["stoneWall_N", "stoneWall_S"],
+    "ns": ["stoneWall_S", "stoneWall_N"],
     "ew": ["stoneWall_E", "stoneWall_W"],
-    "ne": ["stoneWallCorner_E"],
-    "es": ["stoneWallCorner_S"],
-    "sw": ["stoneWallCorner_W"],
-    "nw": ["stoneWallCorner_N"],
-    "nes": ["stoneWallCorner_E", "stoneWall_S"],
-    "new": ["stoneWallCorner_N", "stoneWall_E"],
-    "nsw": ["stoneWallCorner_W", "stoneWall_N"],
-    "esw": ["stoneWallCorner_S", "stoneWall_W"],
-    "nesw": ["stoneWall_E", "stoneWall_N"]
+    "ne": ["stoneWall_E", "stoneWall_N"],
+    "es": ["stoneWall_E", "stoneWall_S"],
+    "sw": ["stoneWall_S", "stoneWall_W"],
+    "nw": ["stoneWall_N", "stoneWall_W"],
+    "nes": ["stoneWall_E", "stoneWall_S", "stoneWall_N"],
+    "new": ["stoneWall_E", "stoneWall_N", "stoneWall_W"],
+    "nsw": ["stoneWall_S", "stoneWall_N", "stoneWall_W"],
+    "esw": ["stoneWall_E", "stoneWall_S", "stoneWall_W"],
+    "nesw": ["stoneWall_E", "stoneWall_S", "stoneWall_N", "stoneWall_W"]
   },
   "tiles": {
     "stoneFloor": {
@@ -64,22 +124,42 @@
       "anchor": { "x": 0.5, "y": 1 }
     },
     "stoneWallCorner_E": {
-      "image": "walls/stoneWallColumn_W.png",
+      "image": "walls/stoneWallCorner_E.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },
     "stoneWallCorner_N": {
-      "image": "walls/stoneWallColumn_S.png",
+      "image": "walls/stoneWallCorner_N.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },
     "stoneWallCorner_S": {
-      "image": "walls/stoneWallColumn_N.png",
+      "image": "walls/stoneWallCorner_S.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },
     "stoneWallCorner_W": {
+      "image": "walls/stoneWallCorner_W.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWallColumn_E": {
       "image": "walls/stoneWallColumn_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWallColumn_N": {
+      "image": "walls/stoneWallColumn_N.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWallColumn_S": {
+      "image": "walls/stoneWallColumn_S.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWallColumn_W": {
+      "image": "walls/stoneWallColumn_W.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },

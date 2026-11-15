@@ -189,12 +189,14 @@ export const resolveIsometricDoorTileId = (
 export const resolveIsometricWallTileIds = (
   graphics: ResolvedIsometricGraphics,
   neighbors: { north: boolean; east: boolean; south: boolean; west: boolean },
+  cornerType?: string,
 ): string[] => {
   const shape = (['north', 'east', 'south', 'west'] as const)
     .filter((direction) => neighbors[direction])
     .map((direction) => direction[0])
     .join('');
   return (
+    (cornerType ? graphics.wallShapes[cornerType] : undefined) ??
     graphics.wallShapes[shape || 'none'] ??
     [graphics.cells.wall].filter((tileId): tileId is string => !!tileId)
   );

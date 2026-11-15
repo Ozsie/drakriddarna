@@ -1,5 +1,6 @@
 import {
   COLLAPSED,
+  CornerType,
   EMPTY,
   SEALED_DOOR,
   WALL,
@@ -48,6 +49,7 @@ const ISO_WALL = 'W';
 const ISO_DOOR = 'D';
 const ISO_FLOOR = 'F';
 const ISO_HIDDEN = 'H';
+type IsometricDoorSide = 'Left' | 'Right' | 'Up' | 'Down';
 
 export const getIsometricTileDimensions = (
   cellSize: number,
@@ -65,8 +67,10 @@ export const getIsometricWallShape = (
   x: number,
   y: number,
 ): { north: boolean; east: boolean; south: boolean; west: boolean } => {
-  const isCell = (cellX: number, cellY: number, cell: string): boolean =>
-    toArray(worldRows[cellY] ?? '')[cellX] === cell;
+  const isCell = (cellX: number, cellY: number, cell: string): boolean => {
+    const neighbor = toArray(worldRows[cellY] ?? '')[cellX];
+    return neighbor === cell || (cell === ISO_FLOOR && neighbor === ISO_DOOR);
+  };
   const wallFaces = {
     north: isCell(x, y + 1, ISO_FLOOR),
     east: isCell(x - 1, y, ISO_FLOOR),
@@ -80,6 +84,125 @@ export const getIsometricWallShape = (
     east: isCell(x + 1, y, ISO_WALL),
     south: isCell(x, y + 1, ISO_WALL),
     west: isCell(x - 1, y, ISO_WALL),
+  };
+};
+
+const getIsometricWallCornerShape = (
+  worldRows: string[],
+  grid: string[],
+  x: number,
+  y: number,
+): string | undefined => {
+  const isFloor = (cellX: number, cellY: number): boolean => {
+    const cell = toArray(worldRows[cellY] ?? '')[cellX];
+    return cell === ISO_FLOOR || cell === ISO_DOOR;
+  };
+  const isWallOrEmpty = (cellX: number, cellY: number): boolean => {
+    const cell = toArray(worldRows[cellY] ?? '')[cellX];
+    const sourceCell = toArray(grid[cellY] ?? '')[cellX];
+    return (
+      cell === ISO_WALL ||
+      ((cell === ISO_HIDDEN || cell === undefined) &&
+        (sourceCell === EMPTY || sourceCell === undefined))
+    );
+  };
+  const corners = (
+    [
+      [CornerType.INNER_TOP_LEFT, 1, 1],
+      [CornerType.INNER_TOP_RIGHT, -1, 1],
+      [CornerType.INNER_BOTTOM_LEFT, 1, -1],
+      [CornerType.INNER_BOTTOM_RIGHT, -1, -1],
+    ] as const
+  )
+    .filter(
+      ([, offsetX, offsetY]) =>
+        isFloor(x + offsetX, y + offsetY) &&
+        isWallOrEmpty(x + offsetX, y) &&
+        isWallOrEmpty(x, y + offsetY),
+    )
+    .map(([type]) => type);
+  if (corners.length === 0) return undefined;
+
+  const faces = (
+    [
+      ['n', 0, 1],
+      ['e', -1, 0],
+      ['s', 0, -1],
+      ['w', 1, 0],
+    ] as const
+  )
+    .filter(([, offsetX, offsetY]) => isFloor(x + offsetX, y + offsetY))
+    .map(([side]) => side)
+    .join('');
+  return [faces, ...corners].filter(Boolean).join('+');
+};
+
+export const getIsometricDoorPlacement = (
+  grid: string[],
+  x: number,
+  y: number,
+  side: IsometricDoorSide,
+): { x: number; y: number; side: IsometricDoorSide } => {
+  const directions: Record<
+    IsometricDoorSide,
+    { x: number; y: number; flanks: { x: number; y: number }[] }
+  > = {
+    Left: {
+      x: -1,
+      y: 0,
+      flanks: [
+        { x: 0, y: -1 },
+        { x: 0, y: 1 },
+      ],
+    },
+    Right: {
+      x: 1,
+      y: 0,
+      flanks: [
+        { x: 0, y: -1 },
+        { x: 0, y: 1 },
+      ],
+    },
+    Up: {
+      x: 0,
+      y: -1,
+      flanks: [
+        { x: -1, y: 0 },
+        { x: 1, y: 0 },
+      ],
+    },
+    Down: {
+      x: 0,
+      y: 1,
+      flanks: [
+        { x: -1, y: 0 },
+        { x: 1, y: 0 },
+      ],
+    },
+  };
+  const direction = directions[side];
+  const wallCount = (cellX: number, cellY: number): number =>
+    direction.flanks.filter(({ x: offsetX, y: offsetY }) => {
+      const cell = toArray(grid[cellY + offsetY] ?? '')[cellX + offsetX];
+      return cell === WALL || cell === COLLAPSED;
+    }).length;
+  const adjacentX = x + direction.x;
+  const adjacentY = y + direction.y;
+
+  if (wallCount(adjacentX, adjacentY) <= wallCount(x, y)) {
+    return { x, y, side };
+  }
+
+  const oppositeSides: Record<IsometricDoorSide, IsometricDoorSide> = {
+    Left: 'Right',
+    Right: 'Left',
+    Up: 'Down',
+    Down: 'Up',
+  };
+  return {
+    x: adjacentX,
+    y: adjacentY,
+    side: oppositeSides[side],
   };
 };
 
@@ -122,17 +245,18 @@ export const buildIsometricWorldView = (
             toArray(rows[door.y] ?? '')[door.x] ?? '',
           ),
       )
-      .map(
-        (
-          door,
-        ): [
-          string,
-          { open: boolean; side: 'Left' | 'Right' | 'Up' | 'Down' },
-        ] => [
-          `${String(door.x)},${String(door.y)}`,
-          { open: door.open, side: door.side },
-        ],
-      ),
+      .map((door) => {
+        const placement = getIsometricDoorPlacement(
+          resolvedDungeon.layout.grid,
+          door.x,
+          door.y,
+          door.side,
+        );
+        return [
+          `${String(placement.x)},${String(placement.y)}`,
+          { open: door.open, side: placement.side },
+        ] as const;
+      }),
   );
   const terrain = new Map(
     (resolvedDungeon.layout.terrain ?? []).map((cell) => [
@@ -143,14 +267,20 @@ export const buildIsometricWorldView = (
   const worldRows = rows.map((row, y) =>
     toArray(row)
       .map((cell, x) => {
-        if (!isVisibleCell(x, y, cell)) return ISO_HIDDEN;
         if (doors.has(`${String(x)},${String(y)}`)) return ISO_DOOR;
+        if (!isVisibleCell(x, y, cell)) return ISO_HIDDEN;
         if (cell === WALL || cell === SEALED_DOOR || cell === COLLAPSED) {
           return ISO_WALL;
         }
         return ISO_FLOOR;
       })
       .join(''),
+  );
+  const cornerTypes = new Map(
+    (resolvedDungeon.layout.corners ?? []).map(({ position, type }) => [
+      `${String(position.x)},${String(position.y)}`,
+      type,
+    ]),
   );
   const buildPainter = (
     x: number,
@@ -198,10 +328,14 @@ export const buildIsometricWorldView = (
   const wallPainters = worldRows.map((row, y) =>
     toArray(row).map((cell, x) => {
       if (cell !== ISO_WALL) return undefined;
+      const cornerShape = getIsometricWallCornerShape(worldRows, rows, x, y);
       const tileIds = graphics
         ? resolveIsometricWallTileIds(
             graphics,
             getIsometricWallShape(worldRows, x, y),
+            cornerShape && graphics.wallShapes[cornerShape]
+              ? cornerShape
+              : cornerTypes.get(`${String(x)},${String(y)}`),
           )
         : [];
       return buildPainter(x, y, tileIds);

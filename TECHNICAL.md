@@ -393,13 +393,29 @@ folder under `static/campaigns/<campaignId>/` overriding matching cell, tile,
 and wall-shape keys. Image dimensions follow the active projection and cell
 size, so a tile is drawn at its projected footprint instead of being reduced
 by the logical cell count. Floor images replace flat floor diamonds; wall
-images are selected from the four-way room-facing wall-side mask (a north wall
-has floor immediately south of it), with connected-wall masks as a fallback
-for cells without an adjacent visible floor. Optional multi-image composites
-cover corners and intersections. Wall and open/closed,
-side-specific door images join the depth-sorted scene queue so actors can pass
-in front of or behind their geometry; missing images retain the scene palette
-fallback.
+images use the visible geometry of the sealed, discovery-aware grid: inner
+room corners use oriented column posts, while outer turns use L-shaped wall
+art facing the adjoining floors. Wall cells bordering multiple inner corners
+or a mix of full faces and inner corners select compound wall-shape keys:
+the optional room-facing mask followed by corner codes in `ITL`, `ITR`,
+`IBL`, `IBR` order, joined by `+` (for example `n+IBL` or `ITR+IBR`). Only
+visible floor and door cells contribute; hidden neighbours cannot confirm a
+corner. Missing compound mappings fall back to the original corner
+classification. Artwork suffixes describe sprite rotations, not exposed grid
+sides; convex turns use the opposite rotation to the corresponding inner
+posts. Wall ends combine their three exposed faces. Unclassified cells use the
+four-way room-facing wall-side mask (a north wall has floor
+immediately south of it), with connected-wall masks as a fallback for cells
+without an adjacent visible floor. Multi-image composites draw rear faces
+on the north/west grid edges before front faces on the south/east edges,
+covering every exposed side rather than substituting isolated posts. Closed
+doors use their framed sprite without separate column overlays. The adapter
+places each door on the adjacent side with more physical flanking walls and
+reverses its side-specific image; ties keep the authored side and position.
+This check uses the original grid rather than discovery-sealing markers. Wall
+and open/closed, side-specific door images join the depth-sorted scene queue
+so actors can pass in front of or behind their geometry; missing images
+retain the scene palette fallback.
 
 Tall props fake height by splitting across layers: a pillar's base tile is
 static, while its shaft tile is drawn on the actor layer after monsters and

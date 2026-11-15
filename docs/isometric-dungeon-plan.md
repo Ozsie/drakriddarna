@@ -40,11 +40,13 @@ relative to the index folder. Grid-character mappings take precedence over
 the `floor`, `wall`, and `door` cell-kind mappings. `wallShapes` covers the
 16 possible four-way wall-side masks; the renderer derives sides from adjacent
 visible room floors (for example, a north wall has floor immediately south)
-and falls back to connected-wall masks when no floor is visible. Entries can
-list multiple image layers for compositing corners or intersections. Door mappings can distinguish open and
-closed art for each side. The scene package draws image-backed floors in its
-floor pass and image-backed walls and doors in the same depth queue as actors
-and props; image sizing follows the active projection and cell size.
+and falls back to connected-wall masks when no floor is visible. Cardinal
+column sprites mark room turns and corridor ends; closed doors retain their
+door sprite and add column caps where adjoining walls terminate. Entries can
+list multiple image layers for composites. Door mappings can distinguish open
+and closed art for each side. The scene package draws image-backed floors in
+its floor pass and image-backed walls and doors in the same depth queue as
+actors and props; image sizing follows the active projection and cell size.
 
 ## Settings flow
 
