@@ -19,6 +19,7 @@ export type SettingsRowId =
   | 'musicVolume'
   | 'audioVolume'
   | 'debug'
+  | 'renderMode'
   | 'language'
   | 'credits';
 
@@ -119,6 +120,15 @@ export const toSettingsViewModel = (
       dimmed: false,
     });
   }
+  rows.push({
+    id: 'renderMode',
+    kind: 'toggle',
+    label: formatToggleLabel(
+      t('content.menu.settings.renderMode'),
+      appSettings.renderMode === 'isometric',
+    ),
+    dimmed: false,
+  });
   rows.push(
     {
       // The label names the language being switched to (e.g.

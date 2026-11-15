@@ -1,6 +1,7 @@
 import type { CameraView } from '@hoard-engine/camera';
 import { get } from 'svelte/store';
 import { browser } from '$app/env';
+import { drawIsoLights, worldToScreen } from '@hoard-engine/scene';
 import actorSprites from '#lib/Dungeon_Character_3.png';
 import buildInfo from '#lib/buildInfo.json';
 import { locale } from '#lib/translations/index.js';
@@ -33,6 +34,17 @@ import {
 import { renderHeroOverlays } from '../hero/HeroRendering';
 import { renderActors, renderMonsterHealthBars } from '../scene/ActorRendering';
 import {
+  createIsometricCameraView,
+  screenToIsometricGridPosition,
+  screenToIsometricWorldPosition,
+  zoomIsometricCameraAtAnchor,
+} from '../camera/IsometricCamera';
+import {
+  renderIsometricActorOverlays,
+  renderIsometricDungeonPrototype,
+} from '../dungeon/IsometricDungeonRendering';
+import { buildHeroOverlayViewModel } from '../scene/adapters';
+import {
   background,
   dungeonViewBackdrop,
   renderDoors,
@@ -53,6 +65,8 @@ import {
 import {
   activeLights,
   clearLightSpriteCache,
+  buildIsometricLightViews,
+  hasIsometricLightEffects,
   renderAmbientDarkness,
   renderAnimatedLights,
   renderLights,
@@ -136,6 +150,7 @@ import { restartDungeonAfterWipe, DEFAULT_SPEEDRUN_SEED } from '../game';
 import { useItem } from '../items/ItemLogic';
 import {
   renderDamageIndicators,
+  renderIsometricDamageIndicators,
   renderBloodSplatters,
   renderProjectiles,
   renderFlameEffects,
@@ -976,6 +991,107 @@ export class DungeonBoardController {
     panY: this.panY,
   });
 
+  private isometricCameraOptions = (width: number, height: number) => {
+    const camera = this.cameraView(width, height);
+    return {
+      width,
+      height,
+      center: { x: camera.centerX, y: camera.centerY },
+      cellSize: this.cellSize,
+      panX: this.panX,
+      panY: this.panY,
+      zoom: this.zoom,
+    };
+  };
+
+  private gridPositionAtScreen = (
+    screenX: number,
+    screenY: number,
+    width: number,
+    height: number,
+  ) => {
+    if (get(appSettingsStore).renderMode === 'isometric') {
+      return screenToIsometricGridPosition(
+        screenX,
+        screenY,
+        this.isometricCameraOptions(width, height),
+      );
+    }
+    return screenToGridPosition(
+      screenX,
+      screenY,
+      width,
+      height,
+      this.panX,
+      this.panY,
+      this.cellSize,
+      this.startPosition,
+      this.zoom,
+    );
+  };
+
+  private worldPositionAtScreen = (
+    screenX: number,
+    screenY: number,
+    width: number,
+    height: number,
+  ) => {
+    if (get(appSettingsStore).renderMode === 'isometric') {
+      return screenToIsometricWorldPosition(
+        screenX,
+        screenY,
+        this.isometricCameraOptions(width, height),
+      );
+    }
+    return screenToWorldPosition(
+      screenX,
+      screenY,
+      width,
+      height,
+      this.panX,
+      this.panY,
+      this.cellSize,
+      this.startPosition,
+      this.zoom,
+    );
+  };
+
+  private screenToGridAdapter = (
+    screenX: number,
+    screenY: number,
+    width: number,
+    height: number,
+  ) => this.gridPositionAtScreen(screenX, screenY, width, height);
+
+  private radialMenuForScreen = (
+    menu: RadialMenuState,
+    width: number,
+    height: number,
+  ): RadialMenuState => {
+    if (!menu || get(appSettingsStore).renderMode !== 'isometric') return menu;
+    const camera = this.cameraView(width, height);
+    const view = createIsometricCameraView({
+      width,
+      height,
+      center: { x: camera.centerX, y: camera.centerY },
+      cellSize: this.cellSize,
+      panX: this.panX,
+      panY: this.panY,
+      zoom: this.zoom,
+    });
+    const screen = worldToScreen(
+      view,
+      (menu.x + 0.5) * this.cellSize,
+      (menu.y + 0.5) * this.cellSize,
+    );
+    const topDownWorld = screenToWorldZoomed(screen, camera, this.zoom);
+    return {
+      ...menu,
+      x: topDownWorld.x / this.cellSize - 0.5,
+      y: topDownWorld.y / this.cellSize - 0.5,
+    };
+  };
+
   // Applies a zoom step around a screen-space anchor (the cursor for the
   // wheel, the touch centroid for pinch, the view centre for the
   // keyboard): the world point under the anchor stays under it. Returns
@@ -988,10 +1104,18 @@ export class DungeonBoardController {
     anchorX: number,
     anchorY: number,
   ): boolean => {
-    const next = zoomAtAnchor(this.cameraView(), this.zoom, nextZoomRaw, {
-      x: anchorX,
-      y: anchorY,
-    });
+    const anchor = { x: anchorX, y: anchorY };
+    const next =
+      get(appSettingsStore).renderMode === 'isometric'
+        ? zoomIsometricCameraAtAnchor(
+            this.isometricCameraOptions(
+              this.containerWidth,
+              this.containerHeight,
+            ),
+            nextZoomRaw,
+            anchor,
+          )
+        : zoomAtAnchor(this.cameraView(), this.zoom, nextZoomRaw, anchor);
     if (next.zoom === this.zoom) return false;
     this.zoom = next.zoom;
     this.panX = next.panX;
@@ -1057,11 +1181,18 @@ export class DungeonBoardController {
     if (!this.activeState || !browser || !this.ground || !this.staticCanvas)
       return;
     if (!this.isReady(this.ground)) return;
-    const sig = getStaticSignature(
+    const renderMode = get(appSettingsStore).renderMode;
+    if (
+      renderMode === 'isometric' &&
+      (!this.actors || !this.isReady(this.actors))
+    ) {
+      return;
+    }
+    const sig = `${getStaticSignature(
       this.activeState,
       this.debugMode ?? false,
       this.cellSize,
-    );
+    )}|${renderMode}`;
     if (!force && sig === this.lastStaticSignature) return;
     this.lastStaticSignature = sig;
 
@@ -1083,6 +1214,7 @@ export class DungeonBoardController {
 
     const gridCols = this.activeState.dungeon?.layout?.grid?.[0]?.length ?? 40;
     const gridRows = this.activeState.dungeon?.layout?.grid?.length ?? 30;
+    if (renderMode === 'isometric') return;
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, this.cellSize * gridCols, this.cellSize * gridRows);
     renderGrid(
@@ -1153,6 +1285,7 @@ export class DungeonBoardController {
       return;
     if (!this.isReady(this.actors)) return;
     const currentTime = Date.now();
+    const renderMode = get(appSettingsStore).renderMode;
     trackFps(this.dynamicFpsTracker, currentTime);
     this.lastDynamicFrameTs = performance.now();
     const debugMode = this.debugMode ?? false;
@@ -1170,6 +1303,19 @@ export class DungeonBoardController {
       width: this.containerWidth / this.zoom / this.cellSize,
       height: this.containerHeight / this.zoom / this.cellSize,
     };
+    const camera = this.cameraView();
+    const isometricView =
+      renderMode === 'isometric'
+        ? createIsometricCameraView({
+            width: this.containerWidth,
+            height: this.containerHeight,
+            center: { x: camera.centerX, y: camera.centerY },
+            cellSize: this.cellSize,
+            panX: this.panX,
+            panY: this.panY,
+            zoom: this.zoom,
+          })
+        : null;
     const hasActiveAnimations = hasActiveActorAnimations();
     // Light effects (pulse, flicker, sweep, blink, sway) animate while any
     // light animates within the viewport. The active light list is
@@ -1183,10 +1329,17 @@ export class DungeonBoardController {
       this.activeState,
       debugMode,
       currentTime,
-      lightViewport,
+      renderMode === 'isometric' ? undefined : lightViewport,
       frameLights,
     );
-    const hasLightEffects = lightSig !== '';
+    const hasLightEffects = isometricView
+      ? hasIsometricLightEffects(
+          this.activeState,
+          this.cellSize,
+          currentTime,
+          isometricView,
+        )
+      : lightSig !== '';
     const lightSpriteSig = getAnimatedLightSpriteSignature(
       this.activeState,
       debugMode,
@@ -1199,7 +1352,7 @@ export class DungeonBoardController {
     const hasTerrainEffects = hasAnimatedTerrainEffects(
       this.activeState.dungeon,
       debugMode,
-      lightViewport,
+      isometricView ? undefined : lightViewport,
     );
     // The painted frame also depends on where the view sits and which
     // surface it was painted on: panning moves every world pixel (the
@@ -1220,11 +1373,11 @@ export class DungeonBoardController {
               : ''
           }|${surfaceSig}`
         : '';
-    const sig = getDynamicSignature(
+    const sig = `${getDynamicSignature(
       this.activeState,
       this.debugMode ?? false,
       this.cellSize,
-    );
+    )}|${renderMode}`;
     if (
       !force &&
       !hasActiveAnimations &&
@@ -1263,6 +1416,97 @@ export class DungeonBoardController {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.actorCanvas.width, this.actorCanvas.height);
     ctx.restore();
+
+    if (renderMode === 'isometric') {
+      for (const canvas of [
+        this.lightCanvas,
+        this.staticLightCanvas,
+        this.darknessCanvas,
+      ]) {
+        const layer = canvas?.getContext('2d');
+        if (!canvas || !layer) continue;
+        layer.save();
+        layer.setTransform(1, 0, 0, 1, 0, 0);
+        layer.clearRect(0, 0, canvas.width, canvas.height);
+        layer.restore();
+      }
+      this.lastStaticLightKey = '';
+      if (this.dynamicAnimationId) {
+        cancelAnimationFrame(this.dynamicAnimationId);
+        this.dynamicAnimationId = null;
+      }
+      this.lastAmbientSignature = '';
+      if (!isometricView) return;
+      ctx.save();
+      ctx.setTransform(this.canvasRatio, 0, 0, this.canvasRatio, 0, 0);
+      const actors = renderIsometricDungeonPrototype(
+        ctx,
+        this.activeState,
+        this.actors,
+        this.ground ?? this.actors,
+        this.cellSize,
+        isometricView,
+        this.debugMode ?? false,
+        currentTime,
+      );
+      ctx.restore();
+
+      const lightCanvas = this.lightCanvas;
+      const lightCtx = lightCanvas?.getContext('2d');
+      if (lightCanvas && lightCtx) {
+        lightCtx.save();
+        lightCtx.setTransform(1, 0, 0, 1, 0, 0);
+        lightCtx.clearRect(0, 0, lightCanvas.width, lightCanvas.height);
+        lightCtx.restore();
+        lightCtx.save();
+        lightCtx.setTransform(this.canvasRatio, 0, 0, this.canvasRatio, 0, 0);
+        drawIsoLights(
+          lightCtx,
+          isometricView,
+          buildIsometricLightViews(
+            this.activeState,
+            this.cellSize,
+            false,
+            currentTime,
+            isometricView,
+          ),
+        );
+        lightCtx.restore();
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.drawImage(lightCanvas, 0, 0);
+        ctx.restore();
+        if (this.darknessCanvas) {
+          renderAmbientDarkness(
+            ctx,
+            this.darknessCanvas,
+            lightCanvas,
+            this.activeState,
+          );
+        }
+      }
+
+      ctx.save();
+      ctx.setTransform(this.canvasRatio, 0, 0, this.canvasRatio, 0, 0);
+      renderIsometricActorOverlays(
+        ctx,
+        isometricView,
+        buildHeroOverlayViewModel(this.activeState, currentTime),
+        actors.filter((actor) => Boolean(actor.healthBar)),
+        this.cellSize,
+      );
+      ctx.restore();
+
+      if (
+        hasActiveAnimations ||
+        hasLightEffects ||
+        hasAnimatedLightSprites ||
+        hasTerrainEffects
+      ) {
+        this.scheduleDynamicFrame(true);
+      }
+      return;
+    }
 
     // Draw the light fixtures first so their glow is composited over them.
     if (this.ground) {
@@ -1522,11 +1766,12 @@ export class DungeonBoardController {
       hasBloodSplatters ||
       hasProjectiles ||
       hasFlameEffects;
-    const sig = getOverlaySignature(
+    const renderMode = get(appSettingsStore).renderMode;
+    const sig = `${getOverlaySignature(
       this.activeState,
       this.debugMode ?? false,
       this.cellSize,
-    );
+    )}|${renderMode}`;
     if (
       !force &&
       !hasOverlayEffects &&
@@ -1546,37 +1791,111 @@ export class DungeonBoardController {
 
     const now = Date.now();
     trackFps(this.overlayFpsTracker, now);
-    const hasActiveProjectiles = renderProjectiles(
-      ctx,
-      this.cellSize,
-      this.activeState,
-      now,
-    );
-    const hasActiveBlood = renderBloodSplatters(
-      ctx,
-      this.cellSize,
-      this.activeState,
-      now,
-    );
-    const hasActiveDamage = renderDamageIndicators(
-      ctx,
-      this.cellSize,
-      this.activeState,
-      now,
-    );
-    const hasActiveFlames = renderFlameEffects(
-      ctx,
-      this.cellSize,
-      this.activeState,
-      now,
-    );
-    const hasActiveEffects =
-      hasActiveProjectiles ||
-      hasActiveBlood ||
-      hasActiveDamage ||
-      hasActiveFlames;
+    let hasActiveEffects: boolean;
+    if (renderMode === 'isometric') {
+      const camera = this.cameraView();
+      const view = createIsometricCameraView({
+        width: this.containerWidth,
+        height: this.containerHeight,
+        center: { x: camera.centerX, y: camera.centerY },
+        cellSize: this.cellSize,
+        panX: this.panX,
+        panY: this.panY,
+        zoom: this.zoom,
+      });
+      const { ax, by } = view.projection;
+      const translateX =
+        view.width / 2 - ax * view.camera.x + ax * view.camera.y;
+      const translateY =
+        view.height / 2 - by * view.camera.x - by * view.camera.y;
+      const applyIsometricTransform = (): void => {
+        ctx.setTransform(
+          this.canvasRatio * ax,
+          this.canvasRatio * by,
+          -this.canvasRatio * ax,
+          this.canvasRatio * by,
+          this.canvasRatio * translateX,
+          this.canvasRatio * translateY,
+        );
+      };
+      ctx.save();
+      applyIsometricTransform();
+      const hasActiveProjectiles = renderProjectiles(
+        ctx,
+        this.cellSize,
+        this.activeState,
+        now,
+      );
+      const hasActiveBlood = renderBloodSplatters(
+        ctx,
+        this.cellSize,
+        this.activeState,
+        now,
+      );
+      ctx.restore();
+
+      ctx.save();
+      ctx.setTransform(this.canvasRatio, 0, 0, this.canvasRatio, 0, 0);
+      const hasActiveDamage = renderIsometricDamageIndicators(
+        ctx,
+        view,
+        this.cellSize,
+        this.activeState,
+        now,
+      );
+      ctx.restore();
+
+      ctx.save();
+      applyIsometricTransform();
+      const hasActiveFlames = renderFlameEffects(
+        ctx,
+        this.cellSize,
+        this.activeState,
+        now,
+      );
+      ctx.restore();
+      hasActiveEffects =
+        hasActiveProjectiles ||
+        hasActiveBlood ||
+        hasActiveDamage ||
+        hasActiveFlames;
+    } else {
+      const hasActiveProjectiles = renderProjectiles(
+        ctx,
+        this.cellSize,
+        this.activeState,
+        now,
+      );
+      const hasActiveBlood = renderBloodSplatters(
+        ctx,
+        this.cellSize,
+        this.activeState,
+        now,
+      );
+      const hasActiveDamage = renderDamageIndicators(
+        ctx,
+        this.cellSize,
+        this.activeState,
+        now,
+      );
+      const hasActiveFlames = renderFlameEffects(
+        ctx,
+        this.cellSize,
+        this.activeState,
+        now,
+      );
+      hasActiveEffects =
+        hasActiveProjectiles ||
+        hasActiveBlood ||
+        hasActiveDamage ||
+        hasActiveFlames;
+    }
 
     if (this.debugMode) {
+      ctx.save();
+      if (renderMode === 'isometric') {
+        ctx.setTransform(this.canvasRatio, 0, 0, this.canvasRatio, 0, 0);
+      }
       renderDebugPrintout(
         ctx,
         this.containerWidth,
@@ -1592,6 +1911,7 @@ export class DungeonBoardController {
         },
         this.uiEnv.theme,
       );
+      ctx.restore();
     }
 
     if (this.overlayAnimationId) {
@@ -2006,7 +2326,11 @@ export class DungeonBoardController {
       renderRadialMenu(
         ctx,
         this.cellSize,
-        menu,
+        this.radialMenuForScreen(
+          menu,
+          this.containerWidth,
+          this.containerHeight,
+        ),
         this.hover.hoveredRadialIndex,
         uiEnv,
       );
@@ -2258,12 +2582,17 @@ export class DungeonBoardController {
     const pinch = handlePinchZoomMove(event.touches, this.pinchZoomState);
     const centroid = pinch ? getTouchCentroid(event.touches) : null;
     if (pinch && centroid) {
-      const next = zoomAtAnchor(
-        this.cameraView(),
-        this.zoom,
-        pinch.zoom,
-        centroid,
-      );
+      const next =
+        get(appSettingsStore).renderMode === 'isometric'
+          ? zoomIsometricCameraAtAnchor(
+              this.isometricCameraOptions(
+                this.containerWidth,
+                this.containerHeight,
+              ),
+              pinch.zoom,
+              centroid,
+            )
+          : zoomAtAnchor(this.cameraView(), this.zoom, pinch.zoom, centroid);
       this.zoom = next.zoom;
       this.panX = next.panX;
       this.panY = next.panY;
@@ -3056,6 +3385,16 @@ export class DungeonBoardController {
         this.renderUiLayer(true);
         return;
       }
+      if (hit.type === 'toggle' && hit.rowId === 'renderMode') {
+        soundEffectManager.playButtonClick();
+        updateAppSettings({
+          renderMode:
+            settings.renderMode === 'isometric' ? 'topDown' : 'isometric',
+        });
+        this.renderCanvas(true);
+        this.renderUiLayer(true);
+        return;
+      }
       if (hit.type === 'slider') {
         if (!sliderPressHandled) {
           this.setSliderValueFromPoint(hit.rowId, point);
@@ -3619,18 +3958,29 @@ export class DungeonBoardController {
       const rect = this.uiCanvas.getBoundingClientRect();
       const screenX = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
-      const worldPos = screenToWorldPosition(
-        screenX,
-        screenY,
+      const menuForScreen = this.radialMenuForScreen(
+        menu,
         rect.width,
         rect.height,
-        this.panX,
-        this.panY,
-        this.cellSize,
-        this.startPosition,
-        this.zoom,
       );
-      const clickedBtn = findHoveredRadialButton(menu, this.cellSize, worldPos);
+      const worldPos =
+        get(appSettingsStore).renderMode === 'isometric'
+          ? screenToWorldZoomed(
+              { x: screenX, y: screenY },
+              this.cameraView(rect.width, rect.height),
+              this.zoom,
+            )
+          : this.worldPositionAtScreen(
+              screenX,
+              screenY,
+              rect.width,
+              rect.height,
+            );
+      const clickedBtn = findHoveredRadialButton(
+        menuForScreen,
+        this.cellSize,
+        worldPos,
+      );
       radialMenuStore.set(null);
       this.hover.hoveredRadialIndex = null;
       this.renderUiLayer(true);
@@ -3664,6 +4014,7 @@ export class DungeonBoardController {
         viewWidth: this.containerWidth,
         viewHeight: this.containerHeight,
         centerPosition: this.startPosition,
+        screenToGrid: this.screenToGridAdapter,
       });
       gameStateStore.set(this.externalState);
     } else {
@@ -3674,6 +4025,7 @@ export class DungeonBoardController {
         viewWidth: this.containerWidth,
         viewHeight: this.containerHeight,
         centerPosition: this.startPosition,
+        screenToGrid: this.screenToGridAdapter,
       });
     }
   };
@@ -3734,18 +4086,29 @@ export class DungeonBoardController {
 
     const menu = get(radialMenuStore);
     if (menu) {
-      const worldPos = screenToWorldPosition(
-        screenX,
-        screenY,
+      const menuForScreen = this.radialMenuForScreen(
+        menu,
         rect.width,
         rect.height,
-        this.panX,
-        this.panY,
-        this.cellSize,
-        this.startPosition,
-        this.zoom,
       );
-      const hoveredBtn = findHoveredRadialButton(menu, this.cellSize, worldPos);
+      const worldPos =
+        get(appSettingsStore).renderMode === 'isometric'
+          ? screenToWorldZoomed(
+              { x: screenX, y: screenY },
+              this.cameraView(rect.width, rect.height),
+              this.zoom,
+            )
+          : this.worldPositionAtScreen(
+              screenX,
+              screenY,
+              rect.width,
+              rect.height,
+            );
+      const hoveredBtn = findHoveredRadialButton(
+        menuForScreen,
+        this.cellSize,
+        worldPos,
+      );
       if (hoveredBtn) {
         this.boardCursor = 'pointer';
         if (this.hover.hoveredRadialIndex !== hoveredBtn.index) {
@@ -3763,16 +4126,11 @@ export class DungeonBoardController {
       }
     }
 
-    const pos = screenToGridPosition(
+    const pos = this.gridPositionAtScreen(
       screenX,
       screenY,
       rect.width,
       rect.height,
-      this.panX,
-      this.panY,
-      this.cellSize,
-      this.startPosition,
-      this.zoom,
     );
 
     const grid = this.activeState.dungeon?.layout?.grid;

@@ -3,8 +3,8 @@
 // adapter in ./viewmodels/settings is the only place that reads
 // AppSettings and owns the credits row definitions. This module keeps
 // the historical entry points so the board controller and the hit
-// cascade work unchanged, with the exact same pixels: parity snapshots
-// cover the whole chain.
+// cascade work unchanged, compacting rows only when the kit layout would
+// otherwise place them below the Back button.
 
 import type { AppSettings } from '../settings/AppSettings';
 import type { UiEnv } from '@hoard-engine/uikit';
@@ -52,7 +52,7 @@ export interface RenderSettingsOptions {
 }
 
 export type SettingsHitResult =
-  | { type: 'toggle'; rowId: 'music' | 'audio' | 'debug' }
+  | { type: 'toggle'; rowId: 'music' | 'audio' | 'debug' | 'renderMode' }
   | { type: 'slider'; rowId: 'musicVolume' | 'audioVolume' }
   | { type: 'button'; rowId: 'language' | 'credits' }
   | { type: 'back' }
@@ -76,13 +76,65 @@ const settingsLayoutFor = (
   viewHeight: number,
   appSettings: AppSettings,
   env?: UiEnv,
-): KitSettingsLayout =>
-  layoutSettings(toSettingsViewModel(appSettings, env?.t ?? i18nTranslator), {
-    x: 0,
-    y: 0,
-    width: viewWidth,
-    height: viewHeight,
-  });
+): KitSettingsLayout => {
+  const layout = layoutSettings(
+    toSettingsViewModel(appSettings, env?.t ?? i18nTranslator),
+    {
+      x: 0,
+      y: 0,
+      width: viewWidth,
+      height: viewHeight,
+    },
+  );
+  if (layout.rows.length === 0) return layout;
+
+  const firstRow = layout.rows[0];
+  const secondRow = layout.rows[1];
+  const rowGap =
+    firstRow && secondRow
+      ? secondRow.bounds.y - firstRow.bounds.y - firstRow.bounds.height
+      : 0;
+  const availableHeight =
+    layout.backButtonBounds.y -
+    firstRow.bounds.y -
+    rowGap * Math.max(0, layout.rows.length - 1) -
+    rowGap;
+  const rowHeight = Math.floor(availableHeight / layout.rows.length);
+  if (rowHeight >= firstRow.bounds.height) return layout;
+
+  return {
+    ...layout,
+    rows: layout.rows.map((row, index) => {
+      const y = firstRow.bounds.y + index * (rowHeight + rowGap);
+      const trackBounds = row.slider
+        ? {
+            ...row.slider.trackBounds,
+            y: y + (rowHeight - row.slider.trackBounds.height) / 2,
+          }
+        : undefined;
+      const fillBounds = row.slider
+        ? {
+            ...row.slider.fillBounds,
+            y: trackBounds?.y ?? row.slider.fillBounds.y,
+          }
+        : undefined;
+      const handleBounds = row.slider
+        ? {
+            ...row.slider.handleBounds,
+            y: y + (rowHeight - row.slider.handleBounds.height) / 2,
+          }
+        : undefined;
+      return {
+        ...row,
+        bounds: { ...row.bounds, y, height: rowHeight },
+        slider:
+          row.slider && trackBounds && fillBounds && handleBounds
+            ? { ...row.slider, trackBounds, fillBounds, handleBounds }
+            : row.slider,
+      };
+    }),
+  };
+};
 
 const creditsLayoutFor = (
   viewWidth: number,
@@ -118,7 +170,7 @@ export const getSettingsHit = (
     case 'toggle':
       return {
         type: 'toggle',
-        rowId: hit.rowId as 'music' | 'audio' | 'debug',
+        rowId: hit.rowId as 'music' | 'audio' | 'debug' | 'renderMode',
       };
     case 'slider':
       return {

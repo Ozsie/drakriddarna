@@ -445,7 +445,7 @@ describe('buildItemViewModels', () => {
 });
 
 describe('buildFoundSecretViewModels', () => {
-  it('creates item views for found non-trap secrets only', () => {
+  it('creates item views only for found non-trap secrets in discovered rooms', () => {
     const state = createState();
     state.dungeon.layout.secrets = [
       {
@@ -465,6 +465,12 @@ describe('buildFoundSecretViewModels', () => {
         type: SecretType.NOTE,
         position: { x: 1, y: 1 },
         found: false,
+      },
+      {
+        name: 'Undiscovered found note',
+        type: SecretType.NOTE,
+        position: { x: 1, y: 1 },
+        found: true,
       },
     ];
 

@@ -56,15 +56,23 @@ describe('SettingsRendering', () => {
       expect(getSettingsLayout(0, 0, settings).hasContent).toBe(false);
     });
 
-    it('builds the seven rows and centers the panel', () => {
+    it('builds the eight rows and centers the panel', () => {
       const layout = getSettingsLayout(800, 600, settings);
       expect(layout.hasContent).toBe(true);
+      const lastRow = layout.rows.at(-1);
+      expect(lastRow).toBeDefined();
+      if (lastRow) {
+        expect(lastRow.bounds.y + lastRow.bounds.height).toBeLessThanOrEqual(
+          layout.backButtonBounds.y,
+        );
+      }
       expect(layout.rows.map((row) => row.id)).toEqual([
         'music',
         'audio',
         'musicVolume',
         'audioVolume',
         'debug',
+        'renderMode',
         'language',
         'credits',
       ]);
@@ -85,6 +93,21 @@ describe('SettingsRendering', () => {
         musicOn: false,
       });
       expect(off.rows[0]?.label).toContain(': Off');
+
+      const topDown = getSettingsLayout(800, 600, {
+        ...settings,
+        renderMode: 'topDown',
+      });
+      const cameraMode = topDown.rows.find((row) => row.id === 'renderMode');
+      expect(cameraMode?.label).toBe('Camera Mode: Off');
+
+      const isometric = getSettingsLayout(800, 600, {
+        ...settings,
+        renderMode: 'isometric',
+      });
+      expect(isometric.rows.find((row) => row.id === 'renderMode')?.label).toBe(
+        'Camera Mode: On',
+      );
     });
 
     it('dims a muted channel slider and formats volumes as percent', () => {
@@ -112,6 +135,7 @@ describe('SettingsRendering', () => {
         'audio',
         'musicVolume',
         'audioVolume',
+        'renderMode',
         'language',
         'credits',
       ]);
@@ -155,6 +179,18 @@ describe('SettingsRendering', () => {
           debug.bounds.y + debug.bounds.height / 2,
         );
         expect(hit).toEqual({ type: 'toggle', rowId: 'debug' });
+      }
+      const renderMode = layout.rows.find((row) => row.id === 'renderMode');
+      expect(renderMode).toBeDefined();
+      if (renderMode) {
+        const hit = getSettingsHit(
+          800,
+          600,
+          settings,
+          renderMode.bounds.x + 20,
+          renderMode.bounds.y + renderMode.bounds.height / 2,
+        );
+        expect(hit).toEqual({ type: 'toggle', rowId: 'renderMode' });
       }
       const credits = layout.rows.find((row) => row.id === 'credits');
       if (credits) {

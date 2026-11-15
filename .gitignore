@@ -12,3 +12,7 @@ build/**
 packages/*/dist
 .svelte-kit/env.d.ts
 .svelte-kit/non-ambient.d.ts
+/voices/en_GB-alba-medium.onnx
+/voices/en_GB-alba-medium.onnx.json
+/voices/sv_SE-alma-medium.onnx
+/voices/sv_SE-alma-medium.onnx.json

@@ -58,6 +58,13 @@ describe('AppSettings', () => {
       const clamped = parseAppSettings('{"musicVolume": 2, "sfxVolume": -1}');
       expect(clamped.musicVolume).toBe(1);
       expect(clamped.sfxVolume).toBe(0);
+      expect(partial.renderMode).toBe('topDown');
+      expect(parseAppSettings('{"renderMode":"unknown"}').renderMode).toBe(
+        'topDown',
+      );
+      expect(parseAppSettings('{"renderMode":"isometric"}').renderMode).toBe(
+        'isometric',
+      );
     });
   });
 
@@ -70,6 +77,7 @@ describe('AppSettings', () => {
         musicVolume: 0.25,
         sfxVolume: 0.8,
         debugOn: false,
+        renderMode: 'topDown',
       });
       appSettingsStore.set({ ...DEFAULT_APP_SETTINGS });
       const loaded = loadAppSettings();
@@ -101,6 +109,7 @@ describe('AppSettings', () => {
         musicVolume: 0.3,
         sfxVolume: 0.4,
         debugOn: false,
+        renderMode: 'topDown',
       });
       expect(musicMute).toHaveBeenCalledWith(true);
       expect(musicVolume).toHaveBeenCalledWith(0.3);
@@ -119,6 +128,17 @@ describe('AppSettings', () => {
       expect(soundEffectManager.isSoundMuted()).toBe(true);
       expect(soundEffectManager.getVolume()).toBeCloseTo(0.1);
       expect(get(appSettingsStore).sfxOn).toBe(false);
+    });
+
+    it('persists a renderer preference without mirroring it into run settings', () => {
+      initGame();
+      updateAppSettings({ renderMode: 'isometric' });
+
+      expect(
+        parseAppSettings(storageMock['appSettings'] ?? null).renderMode,
+      ).toBe('isometric');
+      expect(get(appSettingsStore).renderMode).toBe('isometric');
+      expect(get(gameStateStore)?.settings).not.toHaveProperty('renderMode');
     });
   });
 

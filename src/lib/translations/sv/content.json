@@ -17,6 +17,7 @@
       "musicVolume": "Musikvolym",
       "audioVolume": "Volym för ljudeffekter",
       "debug": "Debug",
+      "renderMode": "Kameraläge",
       "language": "-> English",
       "credits": "Eftertexter"
     },

@@ -471,6 +471,7 @@ const debugLabelFor = (
 // exactly one cell.
 export type GameActorView = SceneActorView & {
   spriteDraw?: { scale: number };
+  floorMarkerColor?: string;
 };
 
 const toActorView = (
@@ -579,15 +580,16 @@ export const buildHeroViewModels = (
         isActorDeathAnimating(hero, currentTime),
     ),
   ];
-  return heroes.map((hero) =>
-    toActorView(
+  return heroes.map((hero) => ({
+    ...toActorView(
       hero,
       actorTileFrame(actorsSheet, ACTOR_TILES.HERO),
       debugMode,
       currentTime,
       { colourBar: '', healthBar: null },
     ),
-  );
+    floorMarkerColor: String(hero.colour),
+  }));
 };
 
 // Monster views for the actor layer: discovered live monsters from the
@@ -909,12 +911,18 @@ export const buildFoundSecretViewModels = (
   dungeon: SceneDungeonView,
   groundSheet: CanvasImageSource,
   cellSize: number,
+  debugMode = false,
 ): GameItemView[] => {
   const sprite = getItemSpriteFrame(
     createDecoratorPreset('objectsObject021', { x: 0, y: 0 }).sprite,
   );
   return dungeon.layout.secrets
-    .filter((secret) => secret.found && secret.type !== SecretType.TRAP_DOOR)
+    .filter((secret) => {
+      if (!secret.found || secret.type === SecretType.TRAP_DOOR) return false;
+      const cell =
+        dungeon.layout.grid[secret.position.y]?.[secret.position.x] ?? '';
+      return debugMode || isDiscoveredRoom(dungeon, cell);
+    })
     .map((secret) => ({
       position: secret.position,
       sprite,

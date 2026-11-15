@@ -1,8 +1,13 @@
 import type { Actor, GameState, Item, LightSource, Position } from '../types';
 import { CellAlignment, LightEffect, Side } from '../types';
-import type { SceneLightView } from '@hoard-engine/scene';
+import type {
+  SceneIsoLightView,
+  SceneIsoView,
+  SceneLightView,
+} from '@hoard-engine/scene';
 import {
   MAX_LIGHT_SPRITE_CACHE_ENTRIES,
+  screenWorldBounds,
   clearLightSpriteCache,
   renderSceneAmbientDarkness,
   renderSceneLights,
@@ -816,6 +821,54 @@ export const renderLights = (
     viewport,
   );
   renderSceneLights(ctx, cellSize, views, debugMode);
+};
+
+export const buildIsometricLightViews = (
+  state: GameState,
+  cellSize: number,
+  debugMode: boolean,
+  timeMs: number,
+  view: SceneIsoView,
+): SceneIsoLightView[] => {
+  const bounds = screenWorldBounds(view, cellSize * 2);
+  const viewport: LightViewport = {
+    x: bounds.minX / cellSize,
+    y: bounds.minY / cellSize,
+    width: (bounds.maxX - bounds.minX) / cellSize,
+    height: (bounds.maxY - bounds.minY) / cellSize,
+  };
+  return buildLightViews(
+    activeLights(state, timeMs),
+    state,
+    cellSize,
+    debugMode,
+    timeMs,
+    viewport,
+  ).map((light) => ({
+    center: light.center,
+    radius: light.radius,
+    color: light.color,
+    intensity: light.intensity * light.intensityScale,
+    polygon: light.polygon,
+  }));
+};
+
+export const hasIsometricLightEffects = (
+  state: GameState,
+  cellSize: number,
+  timeMs: number,
+  view: SceneIsoView,
+): boolean => {
+  const bounds = screenWorldBounds(view, cellSize * 2);
+  const viewport: LightViewport = {
+    x: bounds.minX / cellSize,
+    y: bounds.minY / cellSize,
+    width: (bounds.maxX - bounds.minX) / cellSize,
+    height: (bounds.maxY - bounds.minY) / cellSize,
+  };
+  return activeLights(state, timeMs).some(
+    (light) => isAnimatedLight(light) && lightInViewport(light, viewport),
+  );
 };
 
 // Facade with the historical signature: resolves the ambient level from

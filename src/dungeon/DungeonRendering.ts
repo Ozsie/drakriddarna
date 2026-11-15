@@ -73,8 +73,8 @@ export const renderSecrets = (
     : dungeon;
 
   sceneRenderSecrets(ctx, ground, cellSize, secretsToRender, debugMode);
-  buildFoundSecretViewModels(dungeon, ground, cellSize).forEach((view) =>
-    renderItemViewWithSprite(ctx, view, cellSize),
+  buildFoundSecretViewModels(dungeon, ground, cellSize, debugMode).forEach(
+    (view) => renderItemViewWithSprite(ctx, view, cellSize),
   );
 };
 

@@ -17,6 +17,7 @@
       "musicVolume": "Music Volume",
       "audioVolume": "SFX Volume",
       "debug": "Debug",
+      "renderMode": "Camera Mode",
       "language": "-> Svenska",
       "credits": "Credits"
     },

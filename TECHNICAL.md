@@ -22,24 +22,24 @@ works through a chain of scenarios ("dungeons") forming a campaign.
 
 ## Tech stack at a glance
 
-| Layer         | Technology                           | Notes                                                   |
-| ------------- | ------------------------------------ | ------------------------------------------------------- |
-| App framework | SvelteKit + Svelte (static adapter)  | Renders to static files; no server at runtime           |
-| Language      | TypeScript (strict mode)             | No `any`, no console, enforced by ESLint                |
-| Rendering     | Custom Canvas 2D code                | No game engine (no Phaser/Three.js), no DOM-based tiles |
-| State         | Svelte stores + `localStorage`       | Single serializable `GameState`                         |
-| i18n          | sveltekit-i18n (English/Swedish)     | Translation files auto-discovered at build time         |
-| Content       | TypeScript-as-data                   | Dungeons, campaigns and AI opponents are code modules   |
-| Testing       | Vitest, colocated tests              | Plus headless game benchmarks and balance analysis      |
-| Tooling       | Vite, ESLint, Prettier, svelte-check |                                                         |
-| CI/CD         | GitHub Actions → GitHub Pages        | Deploy on push to `main`                                |
+| Layer         | Technology                           | Notes                                                 |
+| ------------- | ------------------------------------ | ----------------------------------------------------- |
+| App framework | SvelteKit + Svelte (static adapter)  | Renders to static files; no server at runtime         |
+| Language      | TypeScript (strict mode)             | No `any`, no console, enforced by ESLint              |
+| Rendering     | Custom Canvas 2D over HOARD scene    | No Phaser/Three.js or DOM-based tiles                 |
+| State         | Svelte stores + `localStorage`       | Single serializable `GameState`                       |
+| i18n          | sveltekit-i18n (English/Swedish)     | Translation files auto-discovered at build time       |
+| Content       | TypeScript-as-data                   | Dungeons, campaigns and AI opponents are code modules |
+| Testing       | Vitest, colocated tests              | Plus headless game benchmarks and balance analysis    |
+| Tooling       | Vite, ESLint, Prettier, svelte-check |                                                       |
+| CI/CD         | GitHub Actions → GitHub Pages        | Deploy on push to `main`                              |
 
 Runtime dependencies are the i18n stack (`sveltekit-i18n` with its
 `@sveltekit-i18n/extension-stores` store surface) and the standalone HOARD
 engine packages (`@hoard-engine/rng`, `@hoard-engine/grid`,
 `@hoard-engine/primitives`, `@hoard-engine/audio`,
-`@hoard-engine/lighting`, `@hoard-engine/saves` and
-`@hoard-engine/directors`). Everything else is dev tooling.
+`@hoard-engine/lighting`, `@hoard-engine/saves`, `@hoard-engine/directors` and
+`@hoard-engine/scene`). Everything else is dev tooling.
 
 ## Architecture: logic engine behind a thin UI
 
@@ -58,7 +58,7 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/gameMasters/   difficulty "personalities" (auto-discovered)
 ├── src/saves/         named-save storage facade over @hoard-engine/saves (labels, hints)
 ├── src/store/         Svelte stores wrapping the game state and the app phase
-├── src/settings/      app-level audio settings (persistence + live application)
+├── src/settings/      app-level audio and renderer preferences
 ├── src/ui/            pure functions that draw UI panels onto canvases
 ├── src/components/    Dungeon.svelte (thin shell) + DungeonBoardController
 └── src/audio/         game audio facades: sound-cue table, fallback tracks, intensity heuristic (over @hoard-engine/audio)
@@ -361,6 +361,32 @@ the dungeon layout, resolved through the same image-frame path as floor items:
 - **Static light layer cache** — lights that never move (fixed torches,
   braziers) are rendered once and cached; only dynamic lights (swaying
   chandeliers, carried items) recompute per animation frame.
+
+The app-level `Camera Mode` preference (`src/settings/AppSettings.ts`) keeps
+the top-down renderer as its default and can select an optional isometric
+presentation. Both modes use the same logical grid, game state, fog discovery,
+and saves. The isometric path builds its world from the same sealed dungeon
+view, then sends floor cells, terrain colours, room overlays, pits, extruded
+walls, doors, actors, items, decorators and other visible props through
+`@hoard-engine/scene`'s projected frame and depth-sorted painter queue. The
+adapter masks undiscovered cells and their terrain, fog overlays, and props;
+the scene compositor skips the hidden-cell token. Debug overlays do not bypass
+room discovery, and the isometric light pass excludes undiscovered rooms. The
+controller invalidates the relevant cached layers when the preference changes.
+
+Isometric input uses the inverse of the active scene projection for grid
+picking and screen-to-world mapping; pan, zoom and pointer-anchored zoom share
+the same camera transform. The radial menu keeps its logical grid anchor but
+adapts only its display copy for the projected position. Light visibility
+polygons use the existing lighting system and are projected into the isometric
+light mask. Turn overlays and transient combat effects use that same
+projection; floating damage and info text is placed at projected positions but
+drawn upright in screen space. Actor health bars are positioned above sprite
+tops, and hero colour strips are replaced by ground markers at their feet. The
+top-down actor/light/overlay passes remain unchanged in the default mode. The
+game-side isometric adapter lives in
+`src/dungeon/IsometricDungeonRendering.ts`; reusable projection, occlusion
+ordering and compositing are implemented in the sibling `../scene` package.
 
 Tall props fake height by splitting across layers: a pillar's base tile is
 static, while its shaft tile is drawn on the actor layer after monsters and
