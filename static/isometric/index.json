@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "cells": {
+    "floor": "stoneFloor",
+    "wall": "stoneWall",
+    "door": "stoneDoorClosed_E",
+    "openDoor": "stoneDoorOpen_E",
+    "doorClosed_E": "stoneDoorClosed_W",
+    "doorClosed_N": "stoneDoorClosed_S",
+    "doorClosed_S": "stoneDoorClosed_N",
+    "doorClosed_W": "stoneDoorClosed_E",
+    "doorOpen_E": "stoneDoorOpen_W",
+    "doorOpen_N": "stoneDoorOpen_S",
+    "doorOpen_S": "stoneDoorOpen_N",
+    "doorOpen_W": "stoneDoorOpen_E"
+  },
+  "wallShapes": {
+    "none": ["stoneWall_E"],
+    "n": ["stoneWall_N"],
+    "e": ["stoneWall_E"],
+    "s": ["stoneWall_S"],
+    "w": ["stoneWall_W"],
+    "ns": ["stoneWall_N", "stoneWall_S"],
+    "ew": ["stoneWall_E", "stoneWall_W"],
+    "ne": ["stoneWallCorner_E"],
+    "es": ["stoneWallCorner_S"],
+    "sw": ["stoneWallCorner_W"],
+    "nw": ["stoneWallCorner_N"],
+    "nes": ["stoneWallCorner_E", "stoneWall_S"],
+    "new": ["stoneWallCorner_N", "stoneWall_E"],
+    "nsw": ["stoneWallCorner_W", "stoneWall_N"],
+    "esw": ["stoneWallCorner_S", "stoneWall_W"],
+    "nesw": ["stoneWall_E", "stoneWall_N"]
+  },
+  "tiles": {
+    "stoneFloor": {
+      "image": "floors/stone_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWall": {
+      "image": "walls/stoneWall_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWall_E": {
+      "image": "walls/stoneWall_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWall_N": {
+      "image": "walls/stoneWall_N.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWall_S": {
+      "image": "walls/stoneWall_S.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWall_W": {
+      "image": "walls/stoneWall_W.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWallCorner_E": {
+      "image": "walls/stoneWallColumn_W.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWallCorner_N": {
+      "image": "walls/stoneWallColumn_S.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWallCorner_S": {
+      "image": "walls/stoneWallColumn_N.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneWallCorner_W": {
+      "image": "walls/stoneWallColumn_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneDoorClosed_E": {
+      "image": "doors/stoneWallDoorClosed_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneDoorClosed_N": {
+      "image": "doors/stoneWallDoorClosed_N.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneDoorClosed_S": {
+      "image": "doors/stoneWallDoorClosed_S.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneDoorClosed_W": {
+      "image": "doors/stoneWallDoorClosed_W.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneDoorOpen_E": {
+      "image": "doors/stoneWallDoorOpen_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneDoorOpen_N": {
+      "image": "doors/stoneWallDoorOpen_N.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneDoorOpen_S": {
+      "image": "doors/stoneWallDoorOpen_S.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneDoorOpen_W": {
+      "image": "doors/stoneWallDoorOpen_W.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    }
+  }
+}

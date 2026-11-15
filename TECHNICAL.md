@@ -387,6 +387,19 @@ top-down actor/light/overlay passes remain unchanged in the default mode. The
 game-side isometric adapter lives in
 `src/dungeon/IsometricDungeonRendering.ts`; reusable projection, occlusion
 ordering and compositing are implemented in the sibling `../scene` package.
+Isometric floor and wall art is resolved from the shared
+`static/isometric/index.json`, with an optional per-dungeon `isometricGraphics`
+folder under `static/campaigns/<campaignId>/` overriding matching cell, tile,
+and wall-shape keys. Image dimensions follow the active projection and cell
+size, so a tile is drawn at its projected footprint instead of being reduced
+by the logical cell count. Floor images replace flat floor diamonds; wall
+images are selected from the four-way room-facing wall-side mask (a north wall
+has floor immediately south of it), with connected-wall masks as a fallback
+for cells without an adjacent visible floor. Optional multi-image composites
+cover corners and intersections. Wall and open/closed,
+side-specific door images join the depth-sorted scene queue so actors can pass
+in front of or behind their geometry; missing images retain the scene palette
+fallback.
 
 Tall props fake height by splitting across layers: a pillar's base tile is
 static, while its shaft tile is drawn on the actor layer after monsters and

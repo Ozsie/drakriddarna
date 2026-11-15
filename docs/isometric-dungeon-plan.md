@@ -29,6 +29,23 @@ default safely to `topDown`; it is not copied into a saved run.
   screen-to-world/grid projection. Pan, zoom, and pointer-anchored zoom use the
   same projection as rendering.
 
+## Cell graphics indexes
+
+The renderer loads its default `version: 1` tile catalog from
+`static/isometric/index.json`. A dungeon may set `isometricGraphics` to a
+folder relative to `static/campaigns/<campaignId>/`; that folder contains its
+own `index.json` and image files. Campaign `cells`, `wallShapes`, and `tiles`
+entries merge over the shared catalog by key, and each tile image path is
+relative to the index folder. Grid-character mappings take precedence over
+the `floor`, `wall`, and `door` cell-kind mappings. `wallShapes` covers the
+16 possible four-way wall-side masks; the renderer derives sides from adjacent
+visible room floors (for example, a north wall has floor immediately south)
+and falls back to connected-wall masks when no floor is visible. Entries can
+list multiple image layers for compositing corners or intersections. Door mappings can distinguish open and
+closed art for each side. The scene package draws image-backed floors in its
+floor pass and image-backed walls and doors in the same depth queue as actors
+and props; image sizing follows the active projection and cell size.
+
 ## Settings flow
 
 `src/settings/AppSettings.ts` persists `renderMode: 'topDown' | 'isometric'`

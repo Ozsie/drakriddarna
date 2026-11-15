@@ -677,6 +677,21 @@ describe('dungeonParser', () => {
       });
       expect(dungeon.ambientLight).toBe(0.2);
     });
+
+    it('passes the isometric graphics folder through to the dungeon', () => {
+      const dungeon = defineDungeon({
+        name: 'graphics-test',
+        intro: 'test-dungeon',
+        isometricGraphics: 'crypt/graphics',
+        winConditions: [{ type: ConditionType.KILL_ALL, fulfilled: false }],
+        startingPositions: [[1, 1]],
+        layout: {
+          grid: ['###', '#A#', '###'],
+        },
+      });
+
+      expect(dungeon.isometricGraphics).toBe('crypt/graphics');
+    });
   });
 
   describe('parseTileMap', () => {

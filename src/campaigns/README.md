@@ -96,6 +96,9 @@ src/campaigns/
      campaign's dungeon.
    - `tileset?: string` — overrides the tileset image used to render this
      dungeon (see [Tilesets](#tilesets-optional)).
+   - `isometricGraphics?: string` — campaign-relative folder under
+     `static/campaigns/<campaignId>/` containing this dungeon's isometric
+     graphics index and images (see [Isometric cell graphics](#isometric-cell-graphics-optional)).
 3. **Add heroes**: reuse the shared hero templates, or define
    campaign-specific ones if the campaign needs its own roster. The
    simplest way is `newHero(name, colour)` (exported from
@@ -219,6 +222,89 @@ const campaignMyNewCampaign: Campaign = {
   tileset: iceTiles, // Vite turns the import into a runtime URL
 };
 ```
+
+## Isometric cell graphics (optional)
+
+Isometric mode uses the shared `static/isometric/index.json` as its fallback
+graphics catalog. A dungeon can override selected graphics by setting
+`isometricGraphics` to a folder relative to
+`static/campaigns/<campaignId>/`:
+
+```ts
+export const e1m1: Dungeon = defineDungeon({
+  // ...
+  isometricGraphics: 'e1m1/graphics',
+  // ...
+});
+```
+
+For campaign `myNewCampaign`, the path above loads
+`static/campaigns/myNewCampaign/e1m1/graphics/index.json`. Paths in `image`
+are relative to that index's folder; use the same subfolder organization as
+`static/isometric` where practical. The version 1 index maps grid characters
+or fallback cell kinds `floor`, `wall`, and `door` to named tile definitions.
+`openDoor` can select an open-door fallback, while `doorClosed_E` and
+`doorOpen_E` (also `_N`, `_S`, and `_W`) select state- and side-specific door
+art. `wallShapes` maps the exposed wall sides of a wall cell to one or more
+tile IDs; direction letters use `n`, `e`, `s`, `w` order and name the wall
+side, not the neighboring wall. For example, a north wall is selected when a
+floor cell lies immediately south of it. When no adjacent floor is visible,
+the renderer falls back to the connected-wall shape; `none` means no adjacent
+walls. Multiple IDs are composited at the same cell anchor.
+
+```json
+{
+  "version": 1,
+  "cells": {
+    "floor": "stoneFloor",
+    "wall": "stoneWall",
+    "door": "stoneDoor",
+    "openDoor": "openStoneDoor",
+    "doorClosed_E": "closedEastDoor",
+    "doorOpen_E": "openEastDoor",
+    "A": "iceFloor"
+  },
+  "wallShapes": {
+    "ne": ["northEastCorner"],
+    "nesw": ["eastWallFace", "northWallFace"]
+  },
+  "tiles": {
+    "iceFloor": {
+      "image": "floors/ice_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "openStoneDoor": {
+      "image": "doors/stoneWallDoorOpen_E.png"
+    },
+    "closedEastDoor": {
+      "image": "doors/stoneWallDoorClosed_E.png"
+    },
+    "openEastDoor": {
+      "image": "doors/stoneWallDoorOpen_E.png"
+    },
+    "northEastCorner": {
+      "image": "walls/stoneWallCorner_E.png"
+    },
+    "eastWallFace": {
+      "image": "walls/stoneWall_E.png"
+    },
+    "northWallFace": {
+      "image": "walls/stoneWall_N.png"
+    }
+  }
+}
+```
+
+The original grid character mapping takes precedence over the cell-kind
+mapping. Campaign `cells`, `wallShapes`, and `tiles` entries override matching
+shared entries independently, so an index can supply only changed artwork;
+all unmentioned mappings and tiles continue to use `static/isometric`. Every
+four-way wall-side mask is supported, including straight runs, corners, tees,
+and crossings. `scale` is relative to the projected tile width and defaults to
+`1`; normalized `anchor` values default to bottom-center (`{ "x": 0.5,
+"y": 1 }`). Keep image paths relative and within the graphics folder. Missing
+or invalid campaign indexes fall back to the shared catalog.
 
 ## Actor sprites (optional)
 

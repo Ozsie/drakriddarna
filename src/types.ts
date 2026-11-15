@@ -472,6 +472,9 @@ export type Dungeon = {
   // to the global default tension track when omitted.
   musicTension?: string;
   tileset?: string;
+  // Optional folder under static/campaigns/<campaignId>/ containing an
+  // isometric graphics index.json and its image files.
+  isometricGraphics?: string;
   // Base light level of the whole dungeon: 1 = fully lit (default), 0 =
   // pitch black. Light sources illuminate their surroundings.
   ambientLight?: number;

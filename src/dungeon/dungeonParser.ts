@@ -358,6 +358,7 @@ export type DeclarativeDungeon = {
   onRoomDiscovered?: Record<string, string>;
   music?: string;
   tileset?: string;
+  isometricGraphics?: string;
   ambientLight?: number;
 };
 
@@ -1048,6 +1049,7 @@ export const defineDungeon = (
       : {}),
     music: dungeonDef.music,
     tileset: dungeonDef.tileset,
+    isometricGraphics: dungeonDef.isometricGraphics,
     ambientLight: dungeonDef.ambientLight ?? 1,
   };
 

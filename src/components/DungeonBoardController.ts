@@ -43,6 +43,7 @@ import {
   renderIsometricActorOverlays,
   renderIsometricDungeonPrototype,
 } from '../dungeon/IsometricDungeonRendering';
+import { setIsometricGraphicsLoadedListener } from '../dungeon/IsometricGraphics';
 import { buildHeroOverlayViewModel } from '../scene/adapters';
 import {
   background,
@@ -810,6 +811,7 @@ export class DungeonBoardController {
       this.renderDynamicLayer(true);
       this.renderUiLayer(true);
     });
+    setIsometricGraphicsLoadedListener(() => this.renderDynamicLayer(true));
 
     this.ground.src = this.props.tileset;
     this.lastTileset = this.props.tileset;
@@ -879,6 +881,7 @@ export class DungeonBoardController {
     // teardown cannot repaint into detached canvases if a lazily loaded
     // sheet completes afterwards.
     setImageLoadedListener(null);
+    setIsometricGraphicsLoadedListener(null);
     clearFogCloudCaches();
     clearLightSpriteCache();
     setLightBlurDisabled(false);

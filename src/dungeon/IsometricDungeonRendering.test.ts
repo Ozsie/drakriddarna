@@ -5,6 +5,8 @@ import {
   buildHeroPainters,
   buildIsometricWorldView,
   feetPosition,
+  getIsometricWallShape,
+  getIsometricTileDimensions,
   renderIsometricActorOverlays,
 } from './IsometricDungeonRendering';
 
@@ -105,6 +107,41 @@ describe('isometric actor indicators', () => {
 });
 
 describe('buildIsometricWorldView', () => {
+  it('selects wall faces from the room side rather than connected wall sides', () => {
+    const rows = ['WWWWW', 'WFFFW', 'WWWWW'];
+
+    expect(getIsometricWallShape(rows, 2, 0)).toEqual({
+      north: true,
+      east: false,
+      south: false,
+      west: false,
+    });
+    expect(getIsometricWallShape(rows, 4, 1)).toEqual({
+      north: false,
+      east: true,
+      south: false,
+      west: false,
+    });
+    expect(getIsometricWallShape(rows, 2, 2)).toEqual({
+      north: false,
+      east: false,
+      south: true,
+      west: false,
+    });
+    expect(getIsometricWallShape(rows, 0, 1)).toEqual({
+      north: false,
+      east: false,
+      south: false,
+      west: true,
+    });
+  });
+
+  it('scales image-backed cells to the projected tile width', () => {
+    expect(getIsometricTileDimensions(48, { ax: 1 }, 1, 256, 512)).toEqual({
+      width: 96,
+      height: 192,
+    });
+  });
   it('uses the sealed grid and marks visible closed doors', () => {
     const dungeon: SceneDungeonView = {
       name: 'hidden-door-test',
@@ -163,7 +200,7 @@ describe('buildIsometricWorldView', () => {
     expect(debugWorld.pitCells).toEqual([]);
   });
 
-  it('keeps hidden or open doors as their underlying floor cell', () => {
+  it('hides hidden doors and keeps visible open doors as door cells', () => {
     const dungeon: SceneDungeonView = {
       name: 'hidden-or-open-door-test',
       discoveredRooms: ['A'],
@@ -177,7 +214,7 @@ describe('buildIsometricWorldView', () => {
       },
     };
 
-    expect(buildIsometricWorldView(dungeon, 48).rows).toEqual(['FFF']);
+    expect(buildIsometricWorldView(dungeon, 48).rows).toEqual(['FDF']);
   });
 
   it('adapts terrain colours, room fog and pits from the dungeon view', () => {

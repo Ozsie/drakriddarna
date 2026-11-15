@@ -35,16 +35,60 @@ import {
   type GameHeroOverlayView,
   type GameItemView,
 } from '../scene/adapters';
+import {
+  getIsometricGraphics,
+  getIsometricTileImage,
+  resolveIsometricCellTileId,
+  resolveIsometricDoorTileId,
+  resolveIsometricWallTileIds,
+  type ResolvedIsometricGraphics,
+} from './IsometricGraphics';
 
 const ISO_WALL = 'W';
 const ISO_DOOR = 'D';
 const ISO_FLOOR = 'F';
 const ISO_HIDDEN = 'H';
 
+export const getIsometricTileDimensions = (
+  cellSize: number,
+  projection: { ax: number },
+  scale: number,
+  naturalWidth: number,
+  naturalHeight: number,
+): { width: number; height: number } => {
+  const width = cellSize * projection.ax * 2 * scale;
+  return { width, height: width * (naturalHeight / naturalWidth) };
+};
+
+export const getIsometricWallShape = (
+  worldRows: string[],
+  x: number,
+  y: number,
+): { north: boolean; east: boolean; south: boolean; west: boolean } => {
+  const isCell = (cellX: number, cellY: number, cell: string): boolean =>
+    toArray(worldRows[cellY] ?? '')[cellX] === cell;
+  const wallFaces = {
+    north: isCell(x, y + 1, ISO_FLOOR),
+    east: isCell(x - 1, y, ISO_FLOOR),
+    south: isCell(x, y - 1, ISO_FLOOR),
+    west: isCell(x + 1, y, ISO_FLOOR),
+  };
+  if (Object.values(wallFaces).some(Boolean)) return wallFaces;
+
+  return {
+    north: isCell(x, y - 1, ISO_WALL),
+    east: isCell(x + 1, y, ISO_WALL),
+    south: isCell(x, y + 1, ISO_WALL),
+    west: isCell(x - 1, y, ISO_WALL),
+  };
+};
+
 export const buildIsometricWorldView = (
   dungeon: SceneDungeonView,
   cellSize: number,
   debugMode = false,
+  graphics?: ResolvedIsometricGraphics,
+  view?: SceneIsoView,
 ): SceneIsoWorldView => {
   const resolvedDungeon = dungeon;
   const rows = resolvedDungeon.layout.sealedGrid ?? resolvedDungeon.layout.grid;
@@ -67,11 +111,10 @@ export const buildIsometricWorldView = (
     }
     return isDiscoveredCell(x, y);
   };
-  const closedDoors = new Set(
+  const doors = new Map(
     (resolvedDungeon.layout.doors ?? [])
       .filter(
         (door) =>
-          !door.open &&
           !door.hidden &&
           isVisibleCell(
             door.x,
@@ -79,7 +122,17 @@ export const buildIsometricWorldView = (
             toArray(rows[door.y] ?? '')[door.x] ?? '',
           ),
       )
-      .map((door) => `${String(door.x)},${String(door.y)}`),
+      .map(
+        (
+          door,
+        ): [
+          string,
+          { open: boolean; side: 'Left' | 'Right' | 'Up' | 'Down' },
+        ] => [
+          `${String(door.x)},${String(door.y)}`,
+          { open: door.open, side: door.side },
+        ],
+      ),
   );
   const terrain = new Map(
     (resolvedDungeon.layout.terrain ?? []).map((cell) => [
@@ -87,19 +140,86 @@ export const buildIsometricWorldView = (
       cell.color,
     ]),
   );
+  const worldRows = rows.map((row, y) =>
+    toArray(row)
+      .map((cell, x) => {
+        if (!isVisibleCell(x, y, cell)) return ISO_HIDDEN;
+        if (doors.has(`${String(x)},${String(y)}`)) return ISO_DOOR;
+        if (cell === WALL || cell === SEALED_DOOR || cell === COLLAPSED) {
+          return ISO_WALL;
+        }
+        return ISO_FLOOR;
+      })
+      .join(''),
+  );
+  const buildPainter = (
+    x: number,
+    y: number,
+    tileIds: string[],
+  ): SceneIsoPainterView | undefined => {
+    if (!graphics) return undefined;
+    const tiles = tileIds
+      .map((tileId) => getIsometricTileImage(graphics, tileId))
+      .filter((tile): tile is NonNullable<typeof tile> => tile !== null);
+    if (tiles.length === 0) return undefined;
+    const projection = view?.projection ?? { ax: 1, by: 0.5 };
+    const groundOffset = projection.by * cellSize;
+    return {
+      position: { x: (x + 0.5) * cellSize, y: (y + 0.5) * cellSize },
+      draw: (ctx, center) => {
+        for (const tile of tiles) {
+          const { width, height } = getIsometricTileDimensions(
+            cellSize,
+            projection,
+            tile.scale,
+            tile.image.naturalWidth,
+            tile.image.naturalHeight,
+          );
+          ctx.drawImage(
+            tile.image,
+            center.x - width * tile.anchor.x,
+            center.y + groundOffset - height * tile.anchor.y,
+            width,
+            height,
+          );
+        }
+      },
+    };
+  };
+  const floorPainters = worldRows.map((row, y) =>
+    toArray(row).map((cell, x) => {
+      if (cell === ISO_HIDDEN || cell === ISO_WALL || !graphics)
+        return undefined;
+      const sourceCell = toArray(resolvedDungeon.layout.grid[y] ?? '')[x];
+      const tileId = resolveIsometricCellTileId(graphics, 'floor', sourceCell);
+      return buildPainter(x, y, tileId ? [tileId] : []);
+    }),
+  );
+  const wallPainters = worldRows.map((row, y) =>
+    toArray(row).map((cell, x) => {
+      if (cell !== ISO_WALL) return undefined;
+      const tileIds = graphics
+        ? resolveIsometricWallTileIds(
+            graphics,
+            getIsometricWallShape(worldRows, x, y),
+          )
+        : [];
+      return buildPainter(x, y, tileIds);
+    }),
+  );
+  const doorPainters = worldRows.map((row, y) =>
+    toArray(row).map((cell, x) => {
+      if (cell !== ISO_DOOR || !graphics) return undefined;
+      const door = doors.get(`${String(x)},${String(y)}`);
+      const tileId = door
+        ? resolveIsometricDoorTileId(graphics, door.open, door.side)
+        : resolveIsometricCellTileId(graphics, 'door');
+      return buildPainter(x, y, tileId ? [tileId] : []);
+    }),
+  );
   return {
-    rows: rows.map((row, y) =>
-      toArray(row)
-        .map((cell, x) => {
-          if (!isVisibleCell(x, y, cell)) return ISO_HIDDEN;
-          if (closedDoors.has(`${String(x)},${String(y)}`)) return ISO_DOOR;
-          if (cell === WALL || cell === SEALED_DOOR || cell === COLLAPSED) {
-            return ISO_WALL;
-          }
-          return ISO_FLOOR;
-        })
-        .join(''),
-    ),
+    rows: worldRows,
+    ...(graphics ? { floorPainters, wallPainters, doorPainters } : {}),
     floorColors: rows.map((row, y) =>
       toArray(row).map((cell, x) =>
         isVisibleCell(x, y, cell)
@@ -514,7 +634,17 @@ export const renderIsometricDungeonPrototype = (
   currentTime: number = Date.now(),
 ): SceneActorView[] => {
   const dungeon = buildDungeonView(state.dungeon);
-  const world = buildIsometricWorldView(dungeon, cellSize, debugMode);
+  const graphics = getIsometricGraphics(
+    state.campaignId,
+    state.dungeon.isometricGraphics,
+  );
+  const world = buildIsometricWorldView(
+    dungeon,
+    cellSize,
+    debugMode,
+    graphics,
+    view,
+  );
   const heroes = buildHeroViewModels(
     state,
     actorsSheet,
