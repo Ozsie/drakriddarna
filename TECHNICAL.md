@@ -387,12 +387,15 @@ top-down actor/light/overlay passes remain unchanged in the default mode. The
 game-side isometric adapter lives in
 `src/dungeon/IsometricDungeonRendering.ts`; reusable projection, occlusion
 ordering and compositing are implemented in the sibling `../scene` package.
-Isometric floor and wall art is resolved from the shared
+Isometric floor, wall and pillar art is resolved from the shared
 `static/isometric/index.json`, with an optional per-dungeon `isometricGraphics`
 folder under `static/campaigns/<campaignId>/` overriding matching cell, tile,
-and wall-shape keys. Image dimensions follow the active projection and cell
+wall-shape and pillar-variant keys. Pillars use the optional `pillarVariants`
+list, falling back to the configured `cells.pillar` tile. A stable hash of
+grid coordinates selects each sprite independently of painter order and
+gameplay randomness. Image dimensions follow the active projection and cell
 size, so a tile is drawn at its projected footprint instead of being reduced
-by the logical cell count. Floor images replace flat floor diamonds; wall
+by the logical cell count. Floor images replace flat floor diamonds. Wall
 images use the visible geometry of the sealed, discovery-aware grid: inner
 room corners use oriented column posts, while outer turns use L-shaped wall
 art facing the adjoining floors. Wall cells bordering multiple inner corners
@@ -417,11 +420,14 @@ and open/closed, side-specific door images join the depth-sorted scene queue
 so actors can pass in front of or behind their geometry; missing images
 retain the scene palette fallback.
 
-Tall props fake height by splitting across layers: a pillar's base tile is
-static, while its shaft tile is drawn on the actor layer after monsters and
-heroes — so a figure standing in the cell behind a pillar is occluded by the
-rising shaft — but before the ambient darkness veil, so unlit shafts darken
-with the rest of the scene.
+Top-down tall props fake height by splitting across layers: a pillar's base
+tile is static, while its shaft tile is drawn on the actor layer after
+monsters and heroes — so a figure standing in the cell behind a pillar is
+occluded by the rising shaft — but before the ambient darkness veil, so unlit
+shafts darken with the rest of the scene. In isometric mode a pillar uses one
+full sprite in the depth-sorted painter queue, anchored at its logical cell;
+the split base-and-shaft tiles remain the fallback while that sprite is
+missing or loading.
 
 Wall-mounted light sprites are drawn on the dynamic layer above the static
 dungeon tiles. They follow the light glow and animated-terrain passes but

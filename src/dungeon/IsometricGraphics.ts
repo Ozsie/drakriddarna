@@ -13,11 +13,13 @@ export type IsometricGraphicsManifest = {
   cells: Record<string, string>;
   tiles: Record<string, IsometricGraphicsTile>;
   wallShapes?: Record<string, string[]>;
+  pillarVariants?: string[];
 };
 
 export type ResolvedIsometricGraphics = {
   cells: Record<string, string>;
   wallShapes: Record<string, string[]>;
+  pillarVariants?: string[];
   tiles: Record<
     string,
     {
@@ -116,7 +118,27 @@ export const parseIsometricGraphicsManifest = (
     }
   }
 
-  return { version: 1, cells, tiles, wallShapes };
+  let pillarVariants: string[] | undefined;
+  if (value.pillarVariants !== undefined) {
+    if (
+      !Array.isArray(value.pillarVariants) ||
+      value.pillarVariants.length === 0 ||
+      value.pillarVariants.some(
+        (tileId) => typeof tileId !== 'string' || !tileId,
+      )
+    ) {
+      return null;
+    }
+    pillarVariants = value.pillarVariants as string[];
+  }
+
+  return {
+    version: 1,
+    cells,
+    tiles,
+    wallShapes,
+    ...(pillarVariants ? { pillarVariants } : {}),
+  };
 };
 
 export const resolveIsometricGraphics = (
@@ -156,12 +178,44 @@ export const resolveIsometricGraphics = (
   for (const [shape, tileIds] of Object.entries(override?.wallShapes ?? {})) {
     if (tileIds.every((tileId) => tiles[tileId])) wallShapes[shape] = tileIds;
   }
+  const fallbackPillarVariants = (fallback.pillarVariants ?? []).filter(
+    (tileId) => tiles[tileId],
+  );
+  const overridePillarVariants = (override?.pillarVariants ?? []).filter(
+    (tileId) => tiles[tileId],
+  );
+  const overridePillar = override?.cells.pillar;
+  const pillarVariants =
+    overridePillarVariants.length > 0
+      ? overridePillarVariants
+      : overridePillar && tiles[overridePillar]
+        ? [overridePillar]
+        : fallbackPillarVariants.length > 0
+          ? fallbackPillarVariants
+          : cells.pillar && tiles[cells.pillar]
+            ? [cells.pillar]
+            : undefined;
 
   return {
     cells,
     wallShapes,
     tiles,
+    ...(pillarVariants ? { pillarVariants } : {}),
   };
+};
+
+export const resolveIsometricPillarTileId = (
+  graphics: ResolvedIsometricGraphics,
+  x: number,
+  y: number,
+): string | undefined => {
+  const variants = graphics.pillarVariants?.filter(
+    (tileId) => graphics.tiles[tileId],
+  );
+  if (!variants || variants.length === 0) return graphics.cells.pillar;
+  const coordinateHash =
+    (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
+  return variants[coordinateHash % variants.length];
 };
 
 export const resolveIsometricCellTileId = (

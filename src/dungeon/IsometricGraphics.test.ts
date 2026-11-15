@@ -4,6 +4,7 @@ import {
   resolveIsometricCellTileId,
   resolveIsometricDoorTileId,
   resolveIsometricGraphics,
+  resolveIsometricPillarTileId,
   resolveIsometricWallTileIds,
   parseIsometricGraphicsManifest,
   type IsometricGraphicsManifest,
@@ -94,6 +95,133 @@ describe('isometric graphics indexes', () => {
     expect(resolveIsometricCellTileId(graphics, 'door')).toBe('stoneDoor');
     expect(graphics.tiles.stoneFloor?.imageUrl).toBe(
       'isometric/floors/stone_E.png',
+    );
+  });
+
+  it('resolves pillar variants deterministically from the grid position', () => {
+    const manifest = parseIsometricGraphicsManifest(
+      JSON.parse(
+        readFileSync(
+          new URL('../../static/isometric/index.json', import.meta.url),
+          'utf8',
+        ),
+      ),
+    );
+
+    expect(manifest).not.toBeNull();
+    if (!manifest) return;
+
+    expect(manifest.pillarVariants).toEqual([
+      'stoneColumn_E',
+      'stoneColumn_N',
+      'stoneColumn_S',
+      'stoneColumn_W',
+      'stoneColumnWood_E',
+      'stoneColumnWood_N',
+      'stoneColumnWood_S',
+      'stoneColumnWood_W',
+    ]);
+    expect(manifest.cells.pillar).toBe('stoneColumn_E');
+    expect(
+      manifest.pillarVariants?.map((tileId) => manifest.tiles[tileId]?.image),
+    ).toEqual([
+      'pillars/stoneColumn_E.png',
+      'pillars/stoneColumn_N.png',
+      'pillars/stoneColumn_S.png',
+      'pillars/stoneColumn_W.png',
+      'pillars/stoneColumnWood_E.png',
+      'pillars/stoneColumnWood_N.png',
+      'pillars/stoneColumnWood_S.png',
+      'pillars/stoneColumnWood_W.png',
+    ]);
+
+    const graphics = resolveIsometricGraphics(manifest, 'isometric');
+    const selected = Array.from({ length: 8 }, (_, x) =>
+      resolveIsometricPillarTileId(graphics, x, 0),
+    );
+
+    expect(new Set(selected)).toEqual(new Set(manifest.pillarVariants));
+    expect(resolveIsometricPillarTileId(graphics, 3, 5)).toBe(
+      resolveIsometricPillarTileId(graphics, 3, 5),
+    );
+  });
+
+  it.each([
+    { pillarVariants: [] },
+    { pillarVariants: [''] },
+    { pillarVariants: ['pillar', 1] },
+    { pillarVariants: 'pillar' },
+  ])(
+    'rejects invalid pillar variant definitions: $pillarVariants',
+    ({ pillarVariants }) => {
+      expect(
+        parseIsometricGraphicsManifest({
+          version: 1,
+          cells: {},
+          tiles: {},
+          pillarVariants,
+        }),
+      ).toBeNull();
+    },
+  );
+
+  it('lets campaign pillar variants or a single pillar mapping override shared variants', () => {
+    const shared: IsometricGraphicsManifest = {
+      ...fallback,
+      cells: { ...fallback.cells, pillar: 'sharedPillar' },
+      tiles: {
+        ...fallback.tiles,
+        sharedPillar: { image: 'pillars/shared.png' },
+        sharedVariantA: { image: 'pillars/shared-a.png' },
+        sharedVariantB: { image: 'pillars/shared-b.png' },
+      },
+      pillarVariants: ['sharedVariantA', 'sharedVariantB'],
+    };
+    const campaignVariants: IsometricGraphicsManifest = {
+      version: 1,
+      cells: { pillar: 'campaignPillar' },
+      tiles: {
+        campaignPillar: { image: 'pillars/campaign.png' },
+        campaignVariantA: { image: 'pillars/a.png' },
+        campaignVariantB: { image: 'pillars/b.png' },
+      },
+      pillarVariants: ['campaignVariantA', 'campaignVariantB'],
+    };
+    const variantGraphics = resolveIsometricGraphics(
+      shared,
+      'isometric',
+      campaignVariants,
+      'campaigns/ice/crypt',
+    );
+
+    expect(variantGraphics.pillarVariants).toEqual([
+      'campaignVariantA',
+      'campaignVariantB',
+    ]);
+    expect(resolveIsometricPillarTileId(variantGraphics, 0, 0)).toBe(
+      'campaignVariantA',
+    );
+    expect(variantGraphics.tiles.campaignVariantA?.imageUrl).toBe(
+      'campaigns/ice/crypt/pillars/a.png',
+    );
+
+    const singleGraphics = resolveIsometricGraphics(
+      shared,
+      'isometric',
+      {
+        version: 1,
+        cells: { pillar: 'campaignPillar' },
+        tiles: { campaignPillar: { image: 'pillars/campaign.png' } },
+      },
+      'campaigns/ice/crypt',
+    );
+
+    expect(singleGraphics.pillarVariants).toEqual(['campaignPillar']);
+    expect(resolveIsometricPillarTileId(singleGraphics, 4, 9)).toBe(
+      'campaignPillar',
+    );
+    expect(singleGraphics.tiles.campaignPillar?.imageUrl).toBe(
+      'campaigns/ice/crypt/pillars/campaign.png',
     );
   });
 

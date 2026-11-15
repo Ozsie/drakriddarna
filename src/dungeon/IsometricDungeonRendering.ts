@@ -41,6 +41,7 @@ import {
   getIsometricTileImage,
   resolveIsometricCellTileId,
   resolveIsometricDoorTileId,
+  resolveIsometricPillarTileId,
   resolveIsometricWallTileIds,
   type ResolvedIsometricGraphics,
 } from './IsometricGraphics';
@@ -665,6 +666,70 @@ const buildDungeonTilePainter = (
   };
 };
 
+export const buildIsometricPillarPainters = (
+  dungeon: Dungeon,
+  groundSheet: CanvasImageSource,
+  cellSize: number,
+  projection: { ax: number; by: number },
+  graphics?: ResolvedIsometricGraphics,
+): SceneIsoPainterView[] => {
+  const painters: SceneIsoPainterView[] = [];
+  for (const pillar of dungeon.layout.pillars ?? []) {
+    if (!isDiscovered(dungeon, pillar.x, pillar.y)) continue;
+
+    const position = {
+      x: (pillar.x + 0.5) * cellSize,
+      y: (pillar.y + 0.5) * cellSize,
+    };
+    const tile = graphics
+      ? getIsometricTileImage(
+          graphics,
+          resolveIsometricPillarTileId(graphics, pillar.x, pillar.y),
+        )
+      : null;
+
+    if (tile) {
+      painters.push({
+        position,
+        draw: (ctx, center) => {
+          const { width, height } = getIsometricTileDimensions(
+            cellSize,
+            projection,
+            tile.scale,
+            tile.image.naturalWidth,
+            tile.image.naturalHeight,
+          );
+          ctx.drawImage(
+            tile.image,
+            center.x - width * tile.anchor.x,
+            center.y + projection.by * cellSize - height * tile.anchor.y,
+            width,
+            height,
+          );
+        },
+      });
+    } else {
+      painters.push(
+        buildDungeonTilePainter(
+          DUNGEON_TILES.PILLAR_BASE,
+          groundSheet,
+          position,
+          cellSize,
+          projection.ax,
+        ),
+        buildDungeonTilePainter(
+          DUNGEON_TILES.PILLAR_TOP,
+          groundSheet,
+          { x: position.x, y: position.y - cellSize },
+          cellSize,
+          projection.ax,
+        ),
+      );
+    }
+  }
+  return painters;
+};
+
 const buildDungeonObjectPainters = (
   dungeon: Dungeon,
   view: SceneDungeonView,
@@ -672,31 +737,19 @@ const buildDungeonObjectPainters = (
   cellSize: number,
   zoom: number,
   debugMode: boolean,
+  graphics: ResolvedIsometricGraphics | undefined,
+  projection: { ax: number; by: number },
 ): SceneIsoPainterView[] => {
   const painters: SceneIsoPainterView[] = [];
-  for (const pillar of dungeon.layout.pillars ?? []) {
-    if (!isDiscovered(dungeon, pillar.x, pillar.y)) continue;
-    const position = {
-      x: (pillar.x + 0.5) * cellSize,
-      y: (pillar.y + 0.5) * cellSize,
-    };
-    painters.push(
-      buildDungeonTilePainter(
-        DUNGEON_TILES.PILLAR_BASE,
-        groundSheet,
-        position,
-        cellSize,
-        zoom,
-      ),
-      buildDungeonTilePainter(
-        DUNGEON_TILES.PILLAR_TOP,
-        groundSheet,
-        { x: position.x, y: position.y - cellSize },
-        cellSize,
-        zoom,
-      ),
-    );
-  }
+  painters.push(
+    ...buildIsometricPillarPainters(
+      dungeon,
+      groundSheet,
+      cellSize,
+      projection,
+      graphics,
+    ),
+  );
 
   for (const interactable of dungeon.layout.interactables ?? []) {
     const { x, y } = interactable.position;
@@ -819,6 +872,8 @@ export const renderIsometricDungeonPrototype = (
         cellSize,
         view.projection.ax,
         debugMode,
+        graphics,
+        view.projection,
       ),
     ],
   );

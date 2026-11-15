@@ -15,6 +15,7 @@ import {
   resolveIsometricGraphics,
 } from './IsometricGraphics';
 import {
+  buildIsometricPillarPainters,
   buildHeroPainters,
   buildIsometricWorldView,
   feetPosition,
@@ -1100,5 +1101,146 @@ describe('buildIsometricWorldView', () => {
       { color: '#ffffff', opacity: 0.2 },
     ]);
     expect(world.pitCells).toEqual([{ x: 2, y: 0 }]);
+  });
+});
+
+describe('isometric pillar painters', () => {
+  const pillarPosition = (): { x: number; y: number } => {
+    const y = e1m1.layout.grid.findIndex((row) => row.includes('A'));
+    return { x: e1m1.layout.grid[y]?.indexOf('A') ?? 0, y };
+  };
+
+  const pillarDungeon = (discovered: boolean) => {
+    const position = pillarPosition();
+    return {
+      ...e1m1,
+      discoveredRooms: discovered ? ['A'] : [],
+      layout: { ...e1m1.layout, pillars: [position] },
+    };
+  };
+
+  it('draws a discovered pillar as one anchored full sprite', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 256;
+        naturalHeight = 512;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+
+    try {
+      const graphics = {
+        cells: { pillar: 'pillar' },
+        wallShapes: {},
+        pillarVariants: ['pillar'],
+        tiles: {
+          pillar: {
+            imageUrl: 'test-isometric-pillar.png',
+            scale: 0.5,
+            anchor: { x: 0.25, y: 0.75 },
+          },
+        },
+      };
+      const painters = buildIsometricPillarPainters(
+        pillarDungeon(true),
+        {} as CanvasImageSource,
+        48,
+        { ax: 1, by: 0.5 },
+        graphics,
+      );
+      const draws: unknown[][] = [];
+      const context = {
+        drawImage: (...args: unknown[]) => draws.push(args),
+      } as unknown as CanvasRenderingContext2D;
+
+      expect(painters).toHaveLength(1);
+      painters[0]?.draw(context, { x: 100, y: 100 });
+
+      expect(draws).toHaveLength(1);
+      expect(draws[0]?.[0]).toMatchObject({ src: 'test-isometric-pillar.png' });
+      expect(draws[0]?.slice(1)).toEqual([88, 52, 48, 96]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('hides undiscovered pillars even in debug mode', () => {
+    const painters = buildIsometricPillarPainters(
+      pillarDungeon(false),
+      {} as CanvasImageSource,
+      48,
+      { ax: 1, by: 0.5 },
+    );
+
+    expect(painters).toEqual([]);
+  });
+
+  it('keeps the split pillar fallback while the full sprite is unavailable', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = false;
+        naturalWidth = 0;
+        naturalHeight = 0;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+
+    try {
+      const groundSheet = {} as CanvasImageSource;
+      const graphics = {
+        cells: { pillar: 'loadingPillar' },
+        wallShapes: {},
+        pillarVariants: ['loadingPillar'],
+        tiles: {
+          loadingPillar: {
+            imageUrl: 'loading-isometric-pillar.png',
+            scale: 1,
+            anchor: { x: 0.5, y: 1 },
+          },
+        },
+      };
+      const painters = buildIsometricPillarPainters(
+        pillarDungeon(true),
+        groundSheet,
+        48,
+        { ax: 1, by: 0.5 },
+        graphics,
+      );
+      const drawnImages: CanvasImageSource[] = [];
+      const context = {
+        drawImage: (image: CanvasImageSource) => drawnImages.push(image),
+      } as unknown as CanvasRenderingContext2D;
+
+      expect(painters).toHaveLength(2);
+      painters.forEach((painter) => painter.draw(context, { x: 24, y: 24 }));
+
+      expect(drawnImages).toEqual([groundSheet, groundSheet]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('keeps the split pillar fallback when its tile definition is missing', () => {
+    const painters = buildIsometricPillarPainters(
+      pillarDungeon(true),
+      {} as CanvasImageSource,
+      48,
+      { ax: 1, by: 0.5 },
+      {
+        cells: { pillar: 'missingPillar' },
+        wallShapes: {},
+        pillarVariants: ['missingPillar'],
+        tiles: {},
+      },
+    );
+
+    expect(painters).toHaveLength(2);
   });
 });

@@ -12,8 +12,19 @@
     "doorOpen_E": "stoneDoorOpen_W",
     "doorOpen_N": "stoneDoorOpen_S",
     "doorOpen_S": "stoneDoorOpen_N",
-    "doorOpen_W": "stoneDoorOpen_E"
+    "doorOpen_W": "stoneDoorOpen_E",
+    "pillar": "stoneColumn_E"
   },
+  "pillarVariants": [
+    "stoneColumn_E",
+    "stoneColumn_N",
+    "stoneColumn_S",
+    "stoneColumn_W",
+    "stoneColumnWood_E",
+    "stoneColumnWood_N",
+    "stoneColumnWood_S",
+    "stoneColumnWood_W"
+  ],
   "wallShapes": {
     "none": ["stoneWall_E"],
     "ITL": ["stoneWallColumn_N"],
@@ -95,6 +106,46 @@
   "tiles": {
     "stoneFloor": {
       "image": "floors/stone_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneColumn_E": {
+      "image": "pillars/stoneColumn_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneColumn_N": {
+      "image": "pillars/stoneColumn_N.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneColumn_S": {
+      "image": "pillars/stoneColumn_S.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneColumn_W": {
+      "image": "pillars/stoneColumn_W.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneColumnWood_E": {
+      "image": "pillars/stoneColumnWood_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneColumnWood_N": {
+      "image": "pillars/stoneColumnWood_N.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneColumnWood_S": {
+      "image": "pillars/stoneColumnWood_S.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "stoneColumnWood_W": {
+      "image": "pillars/stoneColumnWood_W.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },
