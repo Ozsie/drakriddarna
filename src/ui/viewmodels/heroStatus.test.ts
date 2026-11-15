@@ -13,6 +13,8 @@ import {
 } from './heroStatus';
 
 const identityT = (key: string): string => key;
+const effectT = (key: string): string =>
+  key.endsWith('.effect') ? `translated:${key}` : key;
 
 const sword: Hero['weapon'] = {
   name: 'Long Sword',
@@ -191,8 +193,156 @@ describe('hero status view model', () => {
       'invisible',
       'elemental',
     ]);
+    expect(vm?.effects.map((effect) => effect.labelText)).toEqual([
+      'events.dragonsBreath.effect',
+      'events.weakness.effect',
+      'content.status.incapacitated',
+      'content.indicators.invisible',
+      'events.elementalWeapon.effect',
+    ]);
     expect(vm?.effects[2].labelText).toBe('content.status.incapacitated');
     expect(heroStatusEffects(createHero('Fearik'), identityT)).toEqual([]);
+  });
+
+  it('lists passive effects from carried items', () => {
+    const hero = createHero('Fearik', {
+      isInventoryOpen: true,
+      inventory: [
+        {
+          id: 'boots_of_speed',
+          name: 'Thousand League Boots',
+          nameTranslationKey: 'items.magicItems.boots.name',
+          amountInDeck: 1,
+          type: ItemType.MAGIC,
+          value: 0,
+          properties: {
+            DESCRIPTION: 'items.magicItems.boots.description',
+            MOVEMENT_BONUS: 1,
+          },
+        },
+        {
+          id: 'giants_glove',
+          name: 'Giants Glove',
+          nameTranslationKey: 'items.magicItems.giantsGlove.name',
+          amountInDeck: 1,
+          type: ItemType.MAGIC,
+          value: 0,
+          properties: {
+            DESCRIPTION: 'items.magicItems.giantsGlove.description',
+            ATTACK_BONUS: 1,
+          },
+        },
+        {
+          id: 'ring_of_precision',
+          name: 'Ring of Precision',
+          nameTranslationKey: 'items.magicItems.ringOfPrecision.name',
+          amountInDeck: 1,
+          type: ItemType.MAGIC,
+          value: 0,
+          properties: {
+            DESCRIPTION: 'items.magicItems.ringOfPrecision.description',
+            RE_ROLL_ATTACK: true,
+            USED: true,
+          },
+        },
+      ],
+    });
+
+    expect(heroStatusEffects(hero, effectT)).toEqual([
+      {
+        effectId: 'item:boots_of_speed',
+        labelText: 'translated:items.magicItems.boots.effect',
+      },
+      {
+        effectId: 'item:giants_glove',
+        labelText: 'translated:items.magicItems.giantsGlove.effect',
+      },
+    ]);
+  });
+
+  it('lists effects from currently equipped items', () => {
+    const hero = createHero('Fearik', {
+      isInventoryOpen: true,
+      armour: {
+        ...chainMail,
+        id: 'plate_mail',
+        name: 'items.armour.plateMail.name',
+        nameTranslationKey: 'items.armour.plateMail.name',
+        movementReduction: 1,
+      },
+    });
+
+    expect(heroStatusEffects(hero, effectT)).toContainEqual({
+      effectId: 'equipment:plate_mail',
+      labelText: 'translated:items.armour.plateMail.effect',
+    });
+  });
+
+  it('lists current event effects using their translated effect labels', () => {
+    const hero = createHero('Fearik', { isInventoryOpen: true });
+    const state = createState([hero]);
+    state.currentEvent = {
+      id: 'time_portal',
+      name: 'events.timePortal.name',
+      nameTranslationKey: 'events.timePortal.name',
+      number: 3,
+      description: 'events.timePortal.description',
+      descriptionTranslationKey: 'events.timePortal.description',
+      effect: 'timePortal',
+      used: true,
+    };
+
+    const vm = toHeroStatusViewModel(state, null, effectT);
+
+    expect(vm?.effects).toContainEqual({
+      effectId: 'event:time_portal',
+      labelText: 'translated:events.timePortal.effect',
+    });
+  });
+
+  it('includes the translated name of the item disabled by the magic storm', () => {
+    const disabledItem: Item = {
+      id: 'boots_of_speed',
+      name: 'Boots',
+      nameTranslationKey: 'items.magicItems.boots.name',
+      amountInDeck: 1,
+      type: ItemType.MAGIC,
+      value: 0,
+      disabled: true,
+    };
+    const hero = createHero('Fearik', {
+      isInventoryOpen: true,
+      inventory: [disabledItem],
+    });
+    const state = createState([hero]);
+    state.currentEvent = {
+      id: 'magic_storm',
+      name: 'events.magicStorm.name',
+      nameTranslationKey: 'events.magicStorm.name',
+      number: 12,
+      description: 'events.magicStorm.description',
+      descriptionTranslationKey: 'events.magicStorm.description',
+      effect: 'theMagicStorm',
+      used: true,
+    };
+    const t = (
+      key: string,
+      params?: Record<string, string | number>,
+    ): string => {
+      if (key === 'events.magicStorm.effect') {
+        return `${params?.item} cannot be used`;
+      }
+      if (key.endsWith('.name')) return `translated:${key}`;
+      return key;
+    };
+
+    const vm = toHeroStatusViewModel(state, null, t);
+
+    expect(vm?.effects).toContainEqual({
+      effectId: 'event:magic_storm',
+      labelText: 'translated:items.magicItems.boots.name cannot be used',
+    });
+    expect(vm?.inventory[0].isDisabled).toBe(true);
   });
 
   it('maps the inventory into grid-ready entries', () => {
@@ -243,6 +393,40 @@ describe('hero status view model', () => {
       descriptionText: '',
       hasUse: false,
       isUsable: false,
+    });
+  });
+
+  it('builds selected item details from effect, description and thematic translations', () => {
+    const item: Item = {
+      id: 'boots_of_speed',
+      name: 'items.magicItems.boots.name',
+      nameTranslationKey: 'items.magicItems.boots.name',
+      amountInDeck: 1,
+      type: ItemType.MAGIC,
+      value: 0,
+    };
+    const hero = createHero('Fearik', {
+      isInventoryOpen: true,
+      inventory: [item],
+    });
+    const translations = new Map([
+      ['items.magicItems.boots.name', 'Boots'],
+      ['items.magicItems.boots.effect', 'Faster movement'],
+      ['items.magicItems.boots.description', 'Move one extra step.'],
+      ['items.magicItems.boots.thematicDescription', 'A gift from the wind.'],
+    ]);
+
+    const vm = toHeroStatusViewModel(
+      createState([hero]),
+      { heroId: 'Fearik', source: { kind: 'inventory', itemIndex: 0 } },
+      (key) => translations.get(key) ?? key,
+    );
+
+    expect(vm?.detail).toMatchObject({
+      nameText: 'Boots',
+      effectText: 'Faster movement',
+      descriptionText: 'Move one extra step.',
+      thematicDescriptionText: 'A gift from the wind.',
     });
   });
 

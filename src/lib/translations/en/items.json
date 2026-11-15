@@ -1,61 +1,168 @@
 {
   "armour": {
-    "chainMail": "Chain mail",
-    "plateMail": "Plate mail",
-    "dragonSkinMail": "Dragon Skin mail",
-    "orchMail": "Orch mail",
-    "trollSkin": "Troll skin",
-    "darkLordCape": "Dark Lord Cape"
+    "chainMail": {
+      "name": "Chain mail",
+      "effect": "",
+      "description": "Simple chain mail that removes 1 damage.",
+      "thematicDescription": "Thousands of tiny iron rings, riveted together by a smith who never got to see his work in battle. It clinks with every step, but has saved more lives than many a hero's song would admit."
+    },
+    "plateMail": {
+      "name": "Plate mail",
+      "effect": "-1 step",
+      "description": "Full-body armor that removes 2 damage.",
+      "thematicDescription": "Polished steel from crown to heel. Sword blades slide off it like rain from a roof, but its wearer trudges along like a walking bell tower. No one hears you coming, but everyone hears you."
+    },
+    "dragonSkinMail": {
+      "name": "Dragon Skin mail",
+      "effect": "Protection from fire",
+      "description": "Full-body armor that removes 2 damage and protects against fire magic.",
+      "thematicDescription": "The scales are still warm to the touch, as if the dragon's fire had never quite gone out. Fireballs and flames die against it, and legend says the beast that once wore it never fell to a mortal hand."
+    },
+    "orchMail": {
+      "name": "Orch mail",
+      "effect": "",
+      "description": "Simple leather armor that offers no more protection than ordinary clothes.",
+      "thematicDescription": "Stitched together from rotting hides and rusty buckles, it reeks of old smoke and wet dog. It's more a threat than protection, but an orc doesn't complain about such things."
+    },
+    "trollSkin": {
+      "name": "Troll skin",
+      "effect": "",
+      "description": "Thick troll hide that removes 1 damage.",
+      "thematicDescription": "Its green, knobbly surface looks more like moss than flesh. The troll wearing it feels neither sword blows nor cold."
+    },
+    "darkLordCape": {
+      "name": "Dark Lord Cape",
+      "effect": "",
+      "description": "The Dark Lords' uniform, removes 2 damage.",
+      "thematicDescription": "Black as a starless night, it moves of its own accord even when there's no wind. Whoever wears it feels the room's shadows turn toward him, as if waiting for orders."
+    }
   },
   "shields": {
-    "largeShield": "Large shield",
-    "smallShield": "Small shield",
-    "blueDarkLordShield": "Dark Magic Shield"
+    "largeShield": {
+      "name": "Large shield",
+      "effect": "",
+      "description": "A large shield that can remove up to 2 damage.",
+      "thematicDescription": "A wall of oak and iron carried on your arm. Blows and arrows thunder against it, and behind it you dare to breathe out for a moment. The marks in the wood tell of battles its previous bearers did not survive."
+    },
+    "smallShield": {
+      "name": "Small shield",
+      "effect": "",
+      "description": "A small round shield that can remove up to 1 damage.",
+      "thematicDescription": "Round, light, and quick, made for those who'd rather parry than hide. Its rim is dented by countless blows, but the shield has never yet failed its bearer when it mattered."
+    },
+    "blueDarkLordShield": {
+      "name": "Dark Magic Shield",
+      "effect": "",
+      "description": "A magical shield that can remove up to 1 damage.",
+      "thematicDescription": "Its surface glows with a cold blue light, and when a blow strikes it, light ripples across the metal like rings on black water. It whispers softly in a language no one speaks anymore."
+    }
   },
   "weapons": {
-    "sword": "Sword",
-    "twoHandedSword": "Two-handed Sword",
-    "halberd": "Halberd",
-    "flail": "Flail",
-    "doubleHeadedAxe": "Double Headed Axe",
-    "orchSword": "Orch Sword",
-    "orchBow": "Orch Bow",
-    "trollClub": "Troll Club",
-    "darkLordSword": "Dark Sword",
-    "greenDarkLordSword": "Paralysing Dark Sword"
+    "sword": {
+      "name": "Sword",
+      "effect": "",
+      "description": "A simple sword.",
+      "thematicDescription": "An honest piece of steel, neither beautiful nor remarkable. An adventurer's oldest friend, and one that rarely lets you down when it really matters."
+    },
+    "twoHandedSword": {
+      "name": "Two-handed Sword",
+      "effect": "Cannot be used near allies",
+      "description": "A long two-handed sword.",
+      "thematicDescription": "So long that its tip nearly reaches a man's waist. Every swing cleaves the air with a whistle, and anyone standing too close, friend or foe, would do well to take a step back."
+    },
+    "halberd": {
+      "name": "Halberd",
+      "effect": "+1 range",
+      "description": "A halberd whose shaft gives this weapon extra range.",
+      "thematicDescription": "An axe, a point, and a hook on a long shaft. City guards kept enemies at a distance with it, and a skilled hand can still unhorse a knight."
+    },
+    "flail": {
+      "name": "Flail",
+      "effect": "",
+      "description": "A dangerous melee weapon. +1 attack die.",
+      "thematicDescription": "A spiked ball on a rusty chain, swinging in wild arcs. It's hard to tame and impossible to parry, and anyone who sees it whirling knows there's nowhere good to stand."
+    },
+    "doubleHeadedAxe": {
+      "name": "Double Headed Axe",
+      "effect": "",
+      "description": "A dangerous melee weapon. +1 attack die.",
+      "thematicDescription": "Two blades, two deadly crescents. Dwarves forged it for battles where there was no time to turn around, and it offers what was once called the hangman's mercy: one blow in each direction."
+    },
+    "orchSword": {
+      "name": "Orch Sword",
+      "effect": "",
+      "description": "A simple sword of orcish design.",
+      "thematicDescription": "A crooked, jagged blade, carelessly sharpened but cruel in its simplicity. It smells of blood and tar, and wounds from it hurt more than the steel deserves."
+    },
+    "orchBow": {
+      "name": "Orch Bow",
+      "effect": "",
+      "description": "A simple bow of orcish design.",
+      "thematicDescription": "Carved from rough wood and strung with sinew from something no one wants to know the name of. The arrows rarely fly straight, but there are many of them, and they always fly toward whoever gets in the way."
+    },
+    "trollClub": {
+      "name": "Troll Club",
+      "effect": "",
+      "description": "A simple but powerful wooden club.",
+      "thematicDescription": "An uprooted tree trunk, bark and all. It has no finesse and needs none: the ground shakes when it comes down, and even the bravest think twice about staying put."
+    },
+    "darkLordSword": {
+      "name": "Dark Sword",
+      "effect": "",
+      "description": "The Dark Lords' ornate sword.",
+      "thematicDescription": "The blade is fine as a woman's eyelash, engraved with runes that crawl across the steel when no one's watching. It's too beautiful to be innocent."
+    },
+    "greenDarkLordSword": {
+      "name": "Paralysing Dark Sword",
+      "effect": "",
+      "description": "The Green Dark Lord's magical sword, which paralyzes anyone it hits.",
+      "thematicDescription": "A poisonous green glow lies over the edge. Whoever is cut first feels an icy chill, then nothing at all, and then watches helplessly as the fight goes on without him."
+    }
   },
   "magicItems": {
     "healingHerbs": {
       "name": "Healing Herbs",
-      "description": "Chance to heal up to 3 wounds on one hero."
+      "description": "Chance to heal up to 3 wounds on one hero.",
+      "thematicDescription": "A bundle of dried leaves and roots, gathered by moonlight by someone who knew what they were doing. They smell of forest and honey, and are often enough to get a hero back on their feet."
     },
     "boots": {
       "name": "Thousand League Boots",
-      "description": "Gives one additional step for each move action."
+      "description": "Gives one additional step for each move action.",
+      "effect": "+1 step",
+      "thematicDescription": "Worn, patched, and impossibly comfortable. They say they've carried their owners over a thousand miles, and still remember every step and long for more."
     },
     "giantsGlove": {
       "name": "Giants Glove",
-      "description": "One additional attack die. Breaks locked doors."
+      "description": "One additional attack die. Breaks locked doors.",
+      "effect": "+1 attack die",
+      "thematicDescription": "It hangs heavy on the hand, like a small stone, but when the fingers close, a giant's strength fills the arm. Locks, bars, and bones give way to a fist like this."
     },
     "ringOfPrecision": {
       "name": "Ring of Precision",
-      "description": "May re-roll one completely missed attack."
+      "description": "May re-roll one completely missed attack.",
+      "effect": "Re-roll a failed attack",
+      "thematicDescription": "A smooth silver ring that slowly grows warm just as you're about to miss. Time seems to slow for a moment, and you get a second chance to aim true."
     },
     "crownOfWisdom": {
       "name": "Crown of Wisdom",
-      "description": "One additional die roll when searching."
+      "description": "One additional die roll when searching.",
+      "effect": "+1 when searching",
+      "thematicDescription": "A modest golden circlet, more like a laurel wreath than a king's crown. Its wearer notices what others miss: a loose stone in the wall, a hidden hinge, a play of shadows that doesn't add up."
     },
     "swordOfChaos": {
       "name": "Sword of Chaos",
-      "description": "A sword with a will of it's own. Use at your own peril."
+      "description": "A sword with a will of it's own. Use at your own peril.",
+      "thematicDescription": "The blade shifts color and shape in the corner of your eye, and sometimes you think you hear it laugh. It can slay a dragon or your best friend, and it decides which. Whoever draws it does so at their own peril."
     },
     "potionOfSpeed": {
       "name": "Potion of Speed",
-      "description": "Gives 2 additional actions. Can only be used once."
+      "description": "Gives 2 additional actions. Can only be used once.",
+      "thematicDescription": "A sparkling, yellow-green elixir bubbles in the flask. After the first sip, the world almost stands still, and you do what others only dream of. But the flask is soon empty."
     },
     "necklaceOfLight": {
       "name": "Necklace of Light",
-      "description": ""
+      "description": "Makes its wearer invisible to enemies for one round.",
+      "thematicDescription": "A silver band with a small crystal that catches every ray of light. When awakened, light bends around its wearer like water around a stone, and for a brief moment you're only a hint, a faint flicker in the corner of the eye. Then the crystal lets go, and the world sees you again."
     }
   }
 }

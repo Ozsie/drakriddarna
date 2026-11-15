@@ -4,8 +4,8 @@ import { ItemType } from '../types';
 export const weapons: Weapon[] = [
   {
     id: 'sword',
-    name: 'items.weapons.sword',
-    nameTranslationKey: 'items.weapons.sword',
+    name: 'items.weapons.sword.name',
+    nameTranslationKey: 'items.weapons.sword.name',
     range: 1,
     dice: 3,
     twoHanded: false,
@@ -24,8 +24,8 @@ export const weapons: Weapon[] = [
   },
   {
     id: 'two_handed_sword',
-    name: 'items.weapons.twoHandedSword',
-    nameTranslationKey: 'items.weapons.twoHandedSword',
+    name: 'items.weapons.twoHandedSword.name',
+    nameTranslationKey: 'items.weapons.twoHandedSword.name',
     range: 1,
     dice: 4,
     twoHanded: true,
@@ -44,8 +44,8 @@ export const weapons: Weapon[] = [
   },
   {
     id: 'halberd',
-    name: 'items.weapons.halberd',
-    nameTranslationKey: 'items.weapons.halberd',
+    name: 'items.weapons.halberd.name',
+    nameTranslationKey: 'items.weapons.halberd.name',
     range: 2,
     dice: 3,
     twoHanded: true,
@@ -64,8 +64,8 @@ export const weapons: Weapon[] = [
   },
   {
     id: 'flail',
-    name: 'items.weapons.flail',
-    nameTranslationKey: 'items.weapons.flail',
+    name: 'items.weapons.flail.name',
+    nameTranslationKey: 'items.weapons.flail.name',
     range: 1,
     dice: 4,
     twoHanded: false,
@@ -84,8 +84,8 @@ export const weapons: Weapon[] = [
   },
   {
     id: 'double_headed_axe',
-    name: 'items.weapons.doubleHeadedAxe',
-    nameTranslationKey: 'items.weapons.doubleHeadedAxe',
+    name: 'items.weapons.doubleHeadedAxe.name',
+    nameTranslationKey: 'items.weapons.doubleHeadedAxe.name',
     range: 1,
     dice: 4,
     twoHanded: true,
@@ -107,8 +107,8 @@ export const weapons: Weapon[] = [
 export const monsterWeapons: Weapon[] = [
   {
     id: 'orc_sword',
-    name: 'items.weapons.orchSword',
-    nameTranslationKey: 'items.weapons.orchSword',
+    name: 'items.weapons.orchSword.name',
+    nameTranslationKey: 'items.weapons.orchSword.name',
     range: 1,
     dice: 3,
     twoHanded: false,
@@ -122,8 +122,8 @@ export const monsterWeapons: Weapon[] = [
   },
   {
     id: 'orc_bow',
-    name: 'items.weapons.orchBow',
-    nameTranslationKey: 'items.weapons.orchBow',
+    name: 'items.weapons.orchBow.name',
+    nameTranslationKey: 'items.weapons.orchBow.name',
     range: 999,
     dice: 3,
     twoHanded: false,
@@ -137,8 +137,8 @@ export const monsterWeapons: Weapon[] = [
   },
   {
     id: 'troll_club',
-    name: 'items.weapons.trollClub',
-    nameTranslationKey: 'items.weapons.trollClub',
+    name: 'items.weapons.trollClub.name',
+    nameTranslationKey: 'items.weapons.trollClub.name',
     range: 1,
     dice: 3,
     twoHanded: false,
@@ -152,8 +152,8 @@ export const monsterWeapons: Weapon[] = [
   },
   {
     id: 'dark_lord_sword',
-    name: 'items.weapons.darkLordSword',
-    nameTranslationKey: 'items.weapons.darkLordSword',
+    name: 'items.weapons.darkLordSword.name',
+    nameTranslationKey: 'items.weapons.darkLordSword.name',
     range: 1,
     dice: 3,
     twoHanded: false,
@@ -167,8 +167,8 @@ export const monsterWeapons: Weapon[] = [
   },
   {
     id: 'green_dark_lord_sword',
-    name: 'items.weapons.greenDarkLordSword',
-    nameTranslationKey: 'items.weapons.greenDarkLordSword',
+    name: 'items.weapons.greenDarkLordSword.name',
+    nameTranslationKey: 'items.weapons.greenDarkLordSword.name',
     range: 1,
     dice: 3,
     twoHanded: false,

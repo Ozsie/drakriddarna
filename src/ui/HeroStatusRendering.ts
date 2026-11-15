@@ -101,7 +101,9 @@ interface HeroStatusDetailLayout {
   vm: NonNullable<HeroStatusViewModel['detail']>;
   bounds: Rect;
   useButtonBounds?: Rect;
+  effectText: string | undefined;
   descriptionLines: readonly string[];
+  thematicDescriptionLines: readonly string[];
 }
 
 interface HeroStatusLayout {
@@ -183,18 +185,62 @@ const layoutHeroStatus = (
     width: middleColumnWidth,
     height: Math.max(0, contentY + contentHeight - statsTop),
   };
-  const effectsMaxRows = Math.floor((statusEffectsBounds.height - 6) / 26);
-  const effects = vm.effects
-    .slice(0, Math.max(0, effectsMaxRows))
-    .map((effect, index) => ({
-      vm: effect,
-      bounds: {
-        x: statusEffectsBounds.x + 16,
-        y: statusEffectsBounds.y + 6 + index * 26,
-        width: statusEffectsBounds.width - 32,
-        height: 20,
-      },
-    }));
+  const effectInnerHeight = Math.max(0, statusEffectsBounds.height - 12);
+  const maxEffectRowsPerColumn = Math.max(
+    1,
+    Math.floor((effectInnerHeight + 6) / 26),
+  );
+  const effectRowsPerColumn =
+    vm.effects.length > maxEffectRowsPerColumn * 2
+      ? Math.ceil(vm.effects.length / 2)
+      : Math.min(vm.effects.length, maxEffectRowsPerColumn);
+  const effectGap =
+    effectRowsPerColumn > 1
+      ? Math.min(
+          6,
+          Math.max(
+            0,
+            (effectInnerHeight - effectRowsPerColumn * 20) /
+              (effectRowsPerColumn - 1),
+          ),
+        )
+      : 0;
+  const effectHeight =
+    vm.effects.length > 0
+      ? Math.min(
+          20,
+          Math.max(
+            0,
+            (effectInnerHeight - effectGap * (effectRowsPerColumn - 1)) /
+              effectRowsPerColumn,
+          ),
+        )
+      : 0;
+  const effectColumnGap = 8;
+  const effectColumnCount = vm.effects.length > effectRowsPerColumn ? 2 : 1;
+  const effectColumnWidth = Math.max(
+    0,
+    (statusEffectsBounds.width -
+      32 -
+      effectColumnGap * (effectColumnCount - 1)) /
+      effectColumnCount,
+  );
+  const effects = vm.effects.map((effect, index) => ({
+    vm: effect,
+    bounds: {
+      x:
+        statusEffectsBounds.x +
+        16 +
+        Math.floor(index / effectRowsPerColumn) *
+          (effectColumnWidth + effectColumnGap),
+      y:
+        statusEffectsBounds.y +
+        6 +
+        (index % effectRowsPerColumn) * (effectHeight + effectGap),
+      width: effectColumnWidth,
+      height: effectHeight,
+    },
+  }));
   let detail: HeroStatusDetailLayout | null = null;
   if (vm.detail) {
     const useButtonBounds = vm.detail.hasUse
@@ -209,19 +255,62 @@ const layoutHeroStatus = (
     const textBottom = useButtonBounds
       ? useButtonBounds.y - 10
       : descriptionBounds.y + descriptionBounds.height - 16;
-    const maxLines = Math.max(0, Math.floor((textBottom - textTop) / 16));
+    let rows = Math.max(0, Math.floor((textBottom - textTop) / 16));
     const inset = (useButtonBounds ? 84 + 30 : 0) + 16;
     const widthForText = Math.max(32, descriptionBounds.width - inset);
+    const bodyFont = composeFont(env.theme, env.theme.typography.sizes.xxs);
+    const italicFont = composeFont(
+      env.theme,
+      env.theme.typography.sizes.xxs,
+      env.theme.typography.weights.italic,
+    );
+    const allDescriptionLines = wrapTextMeasured(
+      env.measure,
+      vm.detail.descriptionText,
+      widthForText,
+      bodyFont,
+    );
+    const allThematicDescriptionLines = wrapTextMeasured(
+      env.measure,
+      vm.detail.thematicDescriptionText,
+      widthForText,
+      italicFont,
+    );
+    const effectText =
+      vm.detail.effectText && rows > 0
+        ? truncateText(
+            undefined,
+            vm.detail.effectText,
+            widthForText,
+            composeFont(env.theme, env.theme.typography.sizes.sm),
+            PER_CHAR_WIDTH_FALLBACK,
+          )
+        : undefined;
+    if (effectText && rows > 0) rows -= 1;
+    const hasFurtherText =
+      allDescriptionLines.length > 0 || allThematicDescriptionLines.length > 0;
+    if (effectText && hasFurtherText && rows > 0) rows -= 1;
+    const reserveThematicRows = allThematicDescriptionLines.length
+      ? Math.min(allThematicDescriptionLines.length, Math.max(0, rows - 1))
+      : 0;
+    const descriptionRows = Math.max(0, rows - reserveThematicRows);
+    const descriptionLines = allDescriptionLines.slice(0, descriptionRows);
+    rows -= descriptionLines.length;
+    if (
+      descriptionLines.length > 0 &&
+      allThematicDescriptionLines.length > 0 &&
+      rows > 0
+    ) {
+      rows -= 1;
+    }
+    const thematicDescriptionLines = allThematicDescriptionLines.slice(0, rows);
     detail = {
       vm: vm.detail,
       bounds: descriptionBounds,
       useButtonBounds,
-      descriptionLines: wrapTextMeasured(
-        env.measure,
-        vm.detail.descriptionText,
-        widthForText,
-        composeFont(env.theme, env.theme.typography.sizes.xxs),
-      ).slice(0, Math.max(0, maxLines)),
+      effectText,
+      descriptionLines,
+      thematicDescriptionLines,
     };
   }
   const inventoryGrid: HeroStatusCellLayout[] = [];
@@ -481,7 +570,12 @@ const compositionFor = (
     );
   }
   if (layout.detail && description.height > 0) {
-    const { vm: detail, descriptionLines } = layout.detail;
+    const {
+      vm: detail,
+      effectText,
+      descriptionLines,
+      thematicDescriptionLines,
+    } = layout.detail;
     const detailNameFont = composeFont(
       theme,
       theme.typography.sizes.lg,
@@ -504,24 +598,17 @@ const compositionFor = (
       }),
     );
     let textTop = description.y + 36;
-    if (detail.effectText) {
-      const effectFont = composeFont(theme, theme.typography.sizes.sm);
-      const effect = ctx
-        ? truncateText(
-            ctx,
-            detail.effectText,
-            description.width - 32,
-            effectFont,
-            PER_CHAR_WIDTH_FALLBACK,
-          )
-        : detail.effectText;
+    if (effectText) {
       children.push(
-        textAt(effect, description.x + 16, textTop, {
+        textAt(effectText, description.x + 16, textTop, {
           text: 'body',
           fontSize: 'sm',
         }),
       );
-      textTop += 20;
+      textTop += 16;
+      if (descriptionLines.length > 0 || thematicDescriptionLines.length > 0) {
+        textTop += 16;
+      }
     }
     if (descriptionLines.length > 0) {
       children.push(
@@ -530,6 +617,21 @@ const compositionFor = (
           description.x + 16,
           textTop,
           { text: 'secondary', fontSize: 'xxs' },
+          'left',
+          'top',
+          16,
+        ),
+      );
+      textTop += descriptionLines.length * 16;
+      if (thematicDescriptionLines.length > 0) textTop += 16;
+    }
+    if (thematicDescriptionLines.length > 0) {
+      children.push(
+        textAt(
+          thematicDescriptionLines.join('\n'),
+          description.x + 16,
+          textTop,
+          { text: 'secondary', fontSize: 'xxs', fontWeight: 'italic' },
           'left',
           'top',
           16,
@@ -605,10 +707,10 @@ const compositionFor = (
         }),
         textAt(
           label,
-          bounds.x + bounds.width / 2,
+          bounds.x + 8,
           bounds.y + bounds.height / 2,
           { text: 'body', ...statStyle },
-          'center',
+          'left',
           'middle',
         ),
       );
@@ -667,6 +769,23 @@ const compositionFor = (
           iconStyle,
           'center',
           'middle',
+        ),
+      );
+    }
+    if (item.isDisabled) {
+      children.push(
+        positioned(
+          {
+            type: 'line',
+            orientation: 'horizontal',
+            themeStyle: { border: 'divider', strokeWidth: 'regular' },
+          },
+          {
+            x: iconBounds.x,
+            y: iconBounds.y + Math.floor(iconBounds.height / 2),
+            width: iconBounds.width,
+            height: 1,
+          },
         ),
       );
     }

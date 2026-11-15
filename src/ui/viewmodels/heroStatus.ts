@@ -4,7 +4,8 @@
 // status effects and every text — including the use/used labels and sprite
 // references — are prebuilt here from the open hero's state.
 
-import type { GameState, Hero, Item } from '../../types';
+import { ItemType } from '../../types';
+import type { GameState, Hero, Item, TurnEvent } from '../../types';
 import { liveHeroes } from '../../hero/HeroLogic';
 import { ACTIVE, DESCRIPTION, USED } from '../../items/ItemLogic';
 import { LEVEL_THRESHOLDS } from '../../dungeon/BetweenDungeonsLogic';
@@ -29,6 +30,7 @@ export interface HeroStatusItemVm {
   itemIndex: number;
   nameText: string;
   isSelected: boolean;
+  isDisabled: boolean;
   sprite: SpriteRef | undefined;
   icon: string | undefined;
 }
@@ -41,8 +43,7 @@ export interface HeroStatusStatVm {
 }
 
 export interface HeroStatusEffectVm {
-  effectId:
-    'blinded' | 'weakened' | 'incapacitated' | 'invisible' | 'elemental';
+  effectId: string;
   labelText: string;
 }
 
@@ -50,6 +51,7 @@ export interface HeroStatusDetailVm {
   nameText: string;
   effectText: string | undefined;
   descriptionText: string;
+  thematicDescriptionText: string;
   hasUse: boolean;
   isUsable: boolean;
   isUsed: boolean;
@@ -203,18 +205,27 @@ const statusStats = (
 export const heroStatusEffects = (
   hero: Hero,
   t: Translator,
+  currentEvent?: TurnEvent,
 ): readonly HeroStatusEffectVm[] => {
   const effects: HeroStatusEffectVm[] = [];
+  const addTranslatedEffect = (item: Item, effectId: string): void => {
+    const nameKey = item.nameTranslationKey ?? item.name;
+    if (!nameKey.endsWith('.name')) return;
+    const effectKey = `${nameKey.slice(0, -'.name'.length)}.effect`;
+    const labelText = t(effectKey);
+    if (!labelText || labelText === effectKey) return;
+    effects.push({ effectId, labelText });
+  };
   if (hero.blinded) {
     effects.push({
       effectId: 'blinded',
-      labelText: t('content.indicators.blinded'),
+      labelText: t('events.dragonsBreath.effect'),
     });
   }
   if (hero.weakened) {
     effects.push({
       effectId: 'weakened',
-      labelText: t('content.indicators.weakened'),
+      labelText: t('events.weakness.effect'),
     });
   }
   if (hero.incapacitated) {
@@ -232,9 +243,60 @@ export const heroStatusEffects = (
   if (hero.weapon.elemental) {
     effects.push({
       effectId: 'elemental',
-      labelText: t('content.indicators.elemental'),
+      labelText: t('events.elementalWeapon.effect'),
     });
   }
+  [hero.weapon, hero.armour, hero.shield].forEach((item) => {
+    if (!item || item.disabled) return;
+    addTranslatedEffect(item, `equipment:${item.id ?? item.name}`);
+  });
+  if (
+    currentEvent &&
+    (currentEvent.effect === 'timePortal' ||
+      currentEvent.effect === 'sleepingGasCloud' ||
+      currentEvent.effect === 'theMagicStorm')
+  ) {
+    const nameKey = currentEvent.nameTranslationKey;
+    if (nameKey?.endsWith('.name')) {
+      const effectKey = `${nameKey.slice(0, -'.name'.length)}.effect`;
+      const disabledMagicItem =
+        currentEvent.effect === 'theMagicStorm'
+          ? hero.inventory.find(
+              (item) => item?.disabled && item.type === ItemType.MAGIC,
+            )
+          : undefined;
+      if (currentEvent.effect !== 'theMagicStorm' || disabledMagicItem) {
+        const labelText = t(
+          effectKey,
+          disabledMagicItem
+            ? {
+                item: t(
+                  disabledMagicItem.nameTranslationKey ??
+                    disabledMagicItem.name,
+                ),
+              }
+            : undefined,
+        );
+        if (labelText && labelText !== effectKey) {
+          effects.push({
+            effectId: `event:${currentEvent.id ?? currentEvent.effect}`,
+            labelText,
+          });
+        }
+      }
+    }
+  }
+  hero.inventory.forEach((item, index) => {
+    if (!item || item.disabled || !item.properties) return;
+    const properties = item.properties;
+    const grantsPassiveEffect =
+      Number(properties.MOVEMENT_BONUS) > 0 ||
+      Number(properties.ATTACK_BONUS) > 0 ||
+      Number(properties.SEARCH_BONUS) > 0 ||
+      (Boolean(properties.RE_ROLL_ATTACK) && !properties[USED]);
+    if (!grantsPassiveEffect) return;
+    addTranslatedEffect(item, `item:${item.id ?? index}`);
+  });
   return effects;
 };
 
@@ -246,12 +308,26 @@ const detailVm = (
 ): HeroStatusDetailVm => {
   const isActive = isActiveInventoryItem && Boolean(item.properties?.[ACTIVE]);
   const isUsed = isActiveInventoryItem && Boolean(item.properties?.[USED]);
+  const nameKey = item.nameTranslationKey ?? item.name;
+  const translationPrefix = nameKey.endsWith('.name')
+    ? nameKey.slice(0, -'.name'.length)
+    : null;
+  const translatedField = (field: string): string => {
+    if (!translationPrefix) return '';
+    const key = `${translationPrefix}.${field}`;
+    const value = t(key);
+    return value === key ? '' : value;
+  };
+  const effectText = translatedField('effect');
+  const translatedDescription = translatedField('description');
+  const legacyDescription = item.properties?.[DESCRIPTION]
+    ? t(String(item.properties[DESCRIPTION]))
+    : '';
   return {
-    nameText: t(item.nameTranslationKey ?? item.name),
-    effectText: undefined,
-    descriptionText: item.properties?.[DESCRIPTION]
-      ? t(String(item.properties[DESCRIPTION]))
-      : '',
+    nameText: t(nameKey),
+    effectText: effectText || undefined,
+    descriptionText: translatedDescription || legacyDescription,
+    thematicDescriptionText: translatedField('thematicDescription'),
     hasUse: isActive,
     isUsable: isActive && !isUsed,
     isUsed,
@@ -314,6 +390,7 @@ export const toHeroStatusViewModel = (
       itemIndex,
       nameText: t(item.nameTranslationKey ?? item.name),
       isSelected: itemSelected(itemIndex),
+      isDisabled: Boolean(item.disabled),
       sprite: itemSpriteRef(item),
       icon: item.icon,
     }),
@@ -328,7 +405,10 @@ export const toHeroStatusViewModel = (
       if (!isInventoryItem) {
         detail = {
           ...detail,
-          effectText: equipmentEffectText(hero, selection.source.kind),
+          effectText:
+            detail.effectText ||
+            equipmentEffectText(hero, selection.source.kind) ||
+            undefined,
           hasUse: false,
           isUsable: false,
           isUsed: false,
@@ -345,7 +425,7 @@ export const toHeroStatusViewModel = (
     descriptionHeaderText: t('content.status.description'),
     detail,
     statusEffectsHeaderText: t('content.status.statusEffects'),
-    effects: heroStatusEffects(hero, t),
+    effects: heroStatusEffects(hero, t, state?.currentEvent),
     inventoryLabelText: t('content.status.inventory'),
     inventory,
     inventoryEmptyText: '(Empty)',

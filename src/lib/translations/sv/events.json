@@ -9,7 +9,8 @@
   },
   "timePortal": {
     "name": "Tidsportalen",
-    "description": "Du märker hur allt runt omkring dig verkar röra sig långsammare, som om tiden själv hade saktat ner."
+    "description": "Du märker hur allt runt omkring dig verkar röra sig långsammare, som om tiden själv hade saktat ner.",
+    "effect": "+1 handling"
   },
   "fountainOfYouth": {
     "name": "Ungdomens Fontän",
@@ -17,7 +18,8 @@
   },
   "sleepingGas": {
     "name": "Sömngasmolnet",
-    "description": "Giftig gas sipprar genom ett hål i väggen, vilket får dig att känna dig tung och sömnig."
+    "description": "Giftig gas sipprar genom ett hål i väggen, vilket får dig att känna dig tung och sömnig.",
+    "effect": "-1 handling"
   },
   "lostOrch": {
     "name": "Den Vilsna Orchen",
@@ -25,7 +27,8 @@
   },
   "dragonsBreath": {
     "name": "Drakens Andedräkt",
-    "description": "Facklornas lågor börjar fladdra och snart är allt helt mörkt omkring dig."
+    "description": "Facklornas lågor börjar fladdra och snart är allt helt mörkt omkring dig.",
+    "effect": "Kan ej söka"
   },
   "landslide": {
     "name": "Jordskred",
@@ -45,11 +48,13 @@
   },
   "magicStorm": {
     "name": "Den Magiska Stormen",
-    "description": "En ryslig vind blåser genom korridorerna. Du stelnar till när en grön glöd strålar från ett av dina magiska föremål."
+    "description": "En ryslig vind blåser genom korridorerna. Du stelnar till när en grön glöd strålar från ett av dina magiska föremål.",
+    "effect": "{{item}} kan inte användas"
   },
   "elementalWeapon": {
     "name": "Det Elementära Vapnet",
-    "description": "En låga skjuter plötsligt ut från en silverklädd sten i taket och rör sig mot ett av dina vapen. Vapnet omsluts av lågor och känns mäktigare än tidigare."
+    "description": "En låga skjuter plötsligt ut från en silverklädd sten i taket och rör sig mot ett av dina vapen. Vapnet omsluts av lågor och känns mäktigare än tidigare.",
+    "effect": "+1 attacktärning"
   },
   "orchDrums": {
     "name": "Orchtrummorna",
@@ -57,7 +62,8 @@
   },
   "weakness": {
     "name": "Svaghetens Symbol",
-    "description": "Du går förbi en konstig symbol på väggen. En ond, gul glöd strålar från den. Plötsligt känner ni er alla svagare."
+    "description": "Du går förbi en konstig symbol på väggen. En ond, gul glöd strålar från den. Plötsligt känner ni er alla svagare.",
+    "effect": "-1 försvar"
   },
   "hexagram": {
     "name": "Hexagrammet",

@@ -1,7 +1,11 @@
-import i18n from 'sveltekit-i18n';
-import type { Config } from 'sveltekit-i18n';
-import stores from '@sveltekit-i18n/extension-stores';
+import {
+  createI18n,
+  deepMerge,
+  type I18nConfig,
+} from '@hoard-engine/i18n';
 import lang from './lang.json';
+
+export { deepMerge, isObject } from '@hoard-engine/i18n';
 
 // Dynamically discover translations for every campaign under src/campaigns/*/translations/{en,sv}.json
 // so that additional, self-contained campaigns automatically have their translations included
@@ -30,24 +34,6 @@ const campaignLogsEnModules = import.meta.glob<{
 const campaignLogsSvModules = import.meta.glob<{
   default: Record<string, unknown>;
 }>('../../campaigns/*/translations/logs.sv.json');
-
-export const isObject = (item: unknown): item is Record<string, unknown> =>
-  typeof item === 'object' && item !== null && !Array.isArray(item);
-
-export const deepMerge = (
-  target: Record<string, unknown>,
-  source: Record<string, unknown>,
-): Record<string, unknown> => {
-  const result: Record<string, unknown> = { ...target };
-  for (const [key, value] of Object.entries(source)) {
-    if (isObject(value) && isObject(result[key])) {
-      result[key] = deepMerge(result[key], value);
-    } else {
-      result[key] = value;
-    }
-  }
-  return result;
-};
 
 const loadCampaignTranslations = async (
   modules: Record<string, () => Promise<{ default: Record<string, unknown> }>>,
@@ -84,7 +70,8 @@ const loadLogsWithCampaigns = async (
   return deepMerge(base, campaignLogs);
 };
 
-export const config: Config = {
+export const config: I18nConfig = {
+  fallbackLocale: 'en',
   translations: {
     en: { lang },
     sv: { lang },
@@ -169,10 +156,5 @@ export const config: Config = {
   ],
 };
 
-// The stores extension carries the Svelte store surface ($t, $locale,
-// $loading) that sveltekit-i18n 2 had built in; `t.get()` returns the
-// translation function itself.
 export const { t, loading, locales, locale, loadTranslations, setLocale } =
-  new i18n({ ...config, extensions: [stores] });
-
-loading.subscribe(($loading) => $loading);
+  createI18n(config);

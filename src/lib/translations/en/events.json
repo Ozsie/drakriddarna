@@ -9,7 +9,8 @@
   },
   "timePortal": {
     "name": "The Time Portal",
-    "description": "You notice how everything around you seem to move slower, as if time it self had slowed down."
+    "description": "You notice how everything around you seem to move slower, as if time it self had slowed down.",
+    "effect": "+1 action"
   },
   "fountainOfYouth": {
     "name": "The Fountain of Youth",
@@ -17,7 +18,8 @@
   },
   "sleepingGas": {
     "name": "Sleeping Gas Cloud",
-    "description": "Noxious gas seeps through a hole in the wall, making you feel heavy and sleepy."
+    "description": "Noxious gas seeps through a hole in the wall, making you feel heavy and sleepy.",
+    "effect": "-1 action"
   },
   "lostOrch": {
     "name": "The Lost Orch",
@@ -25,7 +27,8 @@
   },
   "dragonsBreath": {
     "name": "The Dragons Breath",
-    "description": "The flames of your torches start to flicker and soon the dungeon is completely dark."
+    "description": "The flames of your torches start to flicker and soon the dungeon is completely dark.",
+    "effect": "Cannot search"
   },
   "landslide": {
     "name": "Landslide",
@@ -45,11 +48,13 @@
   },
   "magicStorm": {
     "name": "The Magic Storm",
-    "description": "An unsettling wind blows through the dungeon. You freeze as a green glow emanates from one of your magical items."
+    "description": "An unsettling wind blows through the dungeon. You freeze as a green glow emanates from one of your magical items.",
+    "effect": "{{item}} cannot be used"
   },
   "elementalWeapon": {
     "name": "The Elemental Weapon",
-    "description": "A flame suddenly shoots from a silver clad stone in the ceiling, moving towards one of your weapons. The weapon becomes engulfed in flames, feeling more powerful than before."
+    "description": "A flame suddenly shoots from a silver clad stone in the ceiling, moving towards one of your weapons. The weapon becomes engulfed in flames, feeling more powerful than before.",
+    "effect": "+1 attack die"
   },
   "orchDrums": {
     "name": "The Orch Drums",
@@ -57,7 +62,8 @@
   },
   "weakness": {
     "name": "The Symbol of Weakness",
-    "description": "You walk past a strange symbol on the wall. An evil, yellow glow emanates from it. All of you suddenly feel weaker."
+    "description": "You walk past a strange symbol on the wall. An evil, yellow glow emanates from it. All of you suddenly feel weaker.",
+    "effect": "-1 defense"
   },
   "hexagram": {
     "name": "The Hexagram",

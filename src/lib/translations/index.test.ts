@@ -1,6 +1,35 @@
 import { describe, it, expect } from 'vitest';
 import { deepMerge, isObject, loadTranslations, t } from './index';
 import { DifficultLevels } from '../../core';
+import { armour, monsterArmour } from '../../items/armours';
+import { magicItems } from '../../items/magicItems';
+import { shields, monsterShields } from '../../items/shields';
+import { weapons, monsterWeapons } from '../../items/weapons';
+
+const equipment = [
+  ...armour,
+  ...monsterArmour,
+  ...shields,
+  ...monsterShields,
+  ...weapons,
+  ...monsterWeapons,
+];
+
+const effectTranslationKeys = [
+  'items.armour.plateMail.effect',
+  'items.armour.dragonSkinMail.effect',
+  'items.weapons.twoHandedSword.effect',
+  'items.weapons.halberd.effect',
+  'items.magicItems.boots.effect',
+  'items.magicItems.giantsGlove.effect',
+  'items.magicItems.ringOfPrecision.effect',
+  'items.magicItems.crownOfWisdom.effect',
+  'events.timePortal.effect',
+  'events.sleepingGas.effect',
+  'events.dragonsBreath.effect',
+  'events.elementalWeapon.effect',
+  'events.weakness.effect',
+];
 
 describe('translations', () => {
   describe('isObject', () => {
@@ -95,6 +124,33 @@ describe('translations', () => {
           const translatedDesc = t.get()(descKey);
           expect(translatedDesc).toBeDefined();
           expect(translatedDesc).not.toBe(descKey);
+        }
+      }
+    });
+  });
+
+  describe('item and event translations', () => {
+    it('resolves updated item names and effect labels in both locales', async () => {
+      for (const locale of ['en', 'sv']) {
+        await loadTranslations(locale);
+        const translate = t.get();
+
+        for (const item of [...equipment, ...magicItems]) {
+          const nameKey = item.nameTranslationKey;
+          expect(nameKey).toBeDefined();
+          expect(translate(nameKey!)).not.toBe(nameKey);
+
+          const itemTranslationPrefix = nameKey!.slice(0, -'.name'.length);
+          for (const field of ['description', 'thematicDescription']) {
+            const fieldKey = `${itemTranslationPrefix}.${field}`;
+            expect(translate(fieldKey)).not.toBe(fieldKey);
+          }
+        }
+
+        for (const key of effectTranslationKeys) {
+          const label = translate(key);
+          expect(label).not.toBe(key);
+          expect(label.length).toBeGreaterThan(0);
         }
       }
     });

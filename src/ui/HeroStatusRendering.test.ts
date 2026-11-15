@@ -4,6 +4,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { renderHeroStatus, getHeroStatusHit } from './HeroStatusRendering';
+import { defaultUiEnv } from './env';
 import {
   Colour,
   Level,
@@ -139,6 +140,160 @@ describe('HeroStatusRendering', () => {
     expect(ctx.stroke).toHaveBeenCalled();
     expect(ctx.fillText).toHaveBeenCalled();
     expect(ctx.restore).toHaveBeenCalled();
+  });
+
+  it('renders item details in order with thematic text italicized and line spacing', () => {
+    const ctx = createMockCtx();
+    const renderedText: { text: string; y: number; font: string }[] = [];
+    ctx.fillText = vi.fn((text: string, _x: number, y: number) => {
+      renderedText.push({ text, y, font: ctx.font });
+    });
+    const item: Item = {
+      name: 'items.magicItems.boots.name',
+      nameTranslationKey: 'items.magicItems.boots.name',
+      amountInDeck: 1,
+      type: ItemType.MAGIC,
+      value: 0,
+    };
+    const hero = createMockHero('Fearik', {
+      isInventoryOpen: true,
+      inventory: [item],
+    });
+    const translations = new Map([
+      ['items.magicItems.boots.name', 'Boots'],
+      ['items.magicItems.boots.effect', 'Effect line'],
+      ['items.magicItems.boots.description', 'Description line'],
+      ['items.magicItems.boots.thematicDescription', 'Thematic line'],
+    ]);
+
+    renderHeroStatus(ctx, 600, 500, createMockState([hero]), {
+      selection: {
+        heroId: 'Fearik',
+        source: { kind: 'inventory', itemIndex: 0 },
+      },
+      env: {
+        ...defaultUiEnv,
+        t: (key) => translations.get(key) ?? key,
+      },
+    });
+
+    const detailText = renderedText.filter(({ text }) =>
+      ['Boots', 'Effect line', 'Description line', 'Thematic line'].includes(
+        text,
+      ),
+    );
+    expect(detailText.map(({ text }) => text)).toEqual([
+      'Boots',
+      'Effect line',
+      'Description line',
+      'Thematic line',
+    ]);
+    expect(detailText[0].font).toContain('bold');
+    expect(detailText[2].y - detailText[1].y).toBeGreaterThan(16);
+    expect(detailText[3].y - detailText[2].y).toBeGreaterThan(16);
+    expect(detailText[3].font).toContain('italic');
+  });
+
+  it('draws a strike-through over disabled inventory items', () => {
+    const renderItem = (disabled: boolean) => {
+      const ctx = createMockCtx();
+      const lineTo = vi.spyOn(ctx, 'lineTo');
+      const hero = createMockHero('Fearik', {
+        isInventoryOpen: true,
+        inventory: [{ ...potion, disabled }],
+      });
+      renderHeroStatus(ctx, 600, 500, createMockState([hero]));
+      return lineTo;
+    };
+
+    const enabledItemLineTo = renderItem(false);
+    const disabledItemLineTo = renderItem(true);
+
+    expect(disabledItemLineTo.mock.calls).toHaveLength(
+      enabledItemLineTo.mock.calls.length + 1,
+    );
+  });
+
+  it('renders status effects in left-aligned columns, filling the first before the second', () => {
+    const ctx = createMockCtx();
+    const effectLabels = new Map([
+      ['events.dragonsBreath.effect', 'Blinded'],
+      ['events.weakness.effect', 'Weakened'],
+      ['content.status.incapacitated', 'Down'],
+      ['content.indicators.invisible', 'Invisible'],
+      ['events.elementalWeapon.effect', 'Elemental'],
+      ['items.magicItems.boots.effect', 'Boots'],
+      ['items.magicItems.giantsGlove.effect', 'Gloves'],
+    ]);
+    const renderedText: {
+      text: string;
+      x: number;
+      y: number;
+      align: string;
+    }[] = [];
+    ctx.fillText = vi.fn((text: string, x: number, y: number) => {
+      renderedText.push({
+        text,
+        x,
+        y,
+        align: ctx.textAlign,
+      });
+    });
+    const hero = createMockHero('Fearik', {
+      isInventoryOpen: true,
+      blinded: true,
+      weakened: true,
+      incapacitated: true,
+      ignoredByMonsters: true,
+      inventory: [
+        {
+          id: 'boots_of_speed',
+          name: 'Boots',
+          nameTranslationKey: 'items.magicItems.boots.name',
+          amountInDeck: 1,
+          type: ItemType.MAGIC,
+          value: 0,
+          properties: { MOVEMENT_BONUS: 1 },
+        },
+        {
+          id: 'giants_glove',
+          name: 'Glove',
+          nameTranslationKey: 'items.magicItems.giantsGlove.name',
+          amountInDeck: 1,
+          type: ItemType.MAGIC,
+          value: 0,
+          properties: { ATTACK_BONUS: 1 },
+        },
+      ],
+    });
+    hero.weapon.elemental = true;
+
+    renderHeroStatus(ctx, 600, 500, createMockState([hero]), {
+      env: {
+        ...defaultUiEnv,
+        t: (key) => effectLabels.get(key) ?? key,
+      },
+    });
+
+    const effectTexts = [...effectLabels.values()];
+    const effects = renderedText.filter(({ text }) =>
+      effectTexts.includes(text),
+    );
+
+    expect(effects.map(({ text }) => text)).toEqual(effectTexts);
+    expect(effects.map(({ align }) => align)).toEqual(
+      effectTexts.map(() => 'left'),
+    );
+    const secondColumnStart = effects.findIndex(({ x }) => x > effects[0].x);
+    expect(secondColumnStart).toBeGreaterThan(0);
+    expect(secondColumnStart).toBeLessThan(effects.length);
+    expect(
+      effects.slice(0, secondColumnStart).every(({ x }) => x === effects[0].x),
+    ).toBe(true);
+    expect(effects[1].y).toBeGreaterThan(effects[0].y);
+    expect(
+      effects.slice(secondColumnStart).every(({ x }) => x > effects[0].x),
+    ).toBe(true);
   });
 
   it('hit-tests slots, items, the close button and the backdrop', () => {
