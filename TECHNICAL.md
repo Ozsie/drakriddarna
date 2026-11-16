@@ -369,6 +369,9 @@ and saves. The isometric path builds its world from the same sealed dungeon
 view, then sends floor cells, terrain colours, room overlays, pits, extruded
 walls, doors, actors, items, decorators and other visible props through
 `@hoard-engine/scene`'s projected frame and depth-sorted painter queue. The
+isometric adapter projects directional actor sprite facings through the camera
+axes for heroes, monsters and frozen corpses; this is presentation-only, so
+the grid-facing animation state and saved corpse facing remain unchanged. The
 adapter masks undiscovered cells and their terrain, fog overlays, and props;
 the scene compositor skips the hidden-cell token. Debug overlays do not bypass
 room discovery, and the isometric light pass excludes undiscovered rooms.

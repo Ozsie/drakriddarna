@@ -7,6 +7,7 @@
 
 import type {
   Actor,
+  ActorSpriteFacing,
   Corpse,
   Dungeon,
   GameState,
@@ -25,7 +26,6 @@ import {
   getActorFlashIntensity,
   getActorAnimationFrameIndex,
   getActorAnimationName,
-  getActorSpriteFacingRow,
   getActorVisualPosition,
   getDyingActors,
   hasLineOfSight,
@@ -70,6 +70,25 @@ import { autoDetectCorners, findCell } from '@hoard-engine/grid';
 import { COLLAPSED, EMPTY, SEALED_DOOR, WALL } from '@hoard-engine/grid';
 import { TERRAIN_DEFAULT_STYLING } from '../dungeon/TerrainLogic';
 import type { TerrainCell } from '../types';
+
+export type ActorFacingProjection = 'grid' | 'isometric';
+
+const ISOMETRIC_ACTOR_FACING: Record<ActorSpriteFacing, ActorSpriteFacing> = {
+  east: 'southEast',
+  southEast: 'south',
+  south: 'southWest',
+  southWest: 'west',
+  west: 'northWest',
+  northWest: 'north',
+  north: 'northEast',
+  northEast: 'east',
+};
+
+const projectActorFacing = (
+  facing: ActorSpriteFacing,
+  projection: ActorFacingProjection,
+): ActorSpriteFacing =>
+  projection === 'isometric' ? ISOMETRIC_ACTOR_FACING[facing] : facing;
 
 // --- Dungeon plane view ----------------------------------------------------
 
@@ -248,6 +267,7 @@ const actorTileFrame = (
 const getActorSpriteFrame = (
   actor: Actor,
   currentTime: number,
+  facingProjection: ActorFacingProjection,
 ): SceneSpriteFrame | null => {
   const sprite = actor.sprite;
   if (!sprite) return null;
@@ -273,10 +293,14 @@ const getActorSpriteFrame = (
       currentTime,
     );
     const frameX = frameIndex * sprite.frameWidth;
-    const frameY = getActorSpriteFacingRow(actor) * sprite.frameHeight;
+    const facing = projectActorFacing(getActorFacing(actor), facingProjection);
+    const frameY =
+      (sprite.facings?.length
+        ? spriteDirectionRow(sprite.facings, facing)
+        : 0) * sprite.frameHeight;
     // Packs whose figures occupy only part of each frame declare a
     // per-facing source window so the figure fills the cell.
-    const crop = sprite.frameCrops?.[animation]?.[getActorFacing(actor)];
+    const crop = sprite.frameCrops?.[animation]?.[facing];
     return {
       image,
       sx: frameX + (crop?.x ?? 0),
@@ -317,7 +341,10 @@ const getActorSpriteFrame = (
 // the death row of the shared sheet or the facing row it fell at (the
 // per-animation-pack model), with the same crop window a living actor
 // of that sprite would draw.
-const getCorpseSpriteFrame = (corpse: Corpse): SceneSpriteFrame | null => {
+const getCorpseSpriteFrame = (
+  corpse: Corpse,
+  facingProjection: ActorFacingProjection,
+): SceneSpriteFrame | null => {
   const sprite = corpse.sprite;
   const configured = sprite.animations?.death;
   const lastFrameIndex = (image: HTMLImageElement): number => {
@@ -334,7 +361,10 @@ const getCorpseSpriteFrame = (corpse: Corpse): SceneSpriteFrame | null => {
   if (animationImage) {
     const image = getReadyImage(animationImage);
     if (!image) return null;
-    const facing = corpse.facing ?? DEFAULT_ACTOR_SPRITE_FACING;
+    const facing = projectActorFacing(
+      corpse.facing ?? DEFAULT_ACTOR_SPRITE_FACING,
+      facingProjection,
+    );
     const crop = sprite.frameCrops?.death?.[facing];
     return {
       image,
@@ -480,9 +510,10 @@ const toActorView = (
   showDebugLabel: boolean,
   currentTime: number,
   bars: Pick<SceneActorView, 'colourBar' | 'healthBar'>,
+  facingProjection: ActorFacingProjection,
 ): GameActorView => ({
   position: getActorVisualPosition(actor, currentTime),
-  sprite: getActorSpriteFrame(actor, currentTime),
+  sprite: getActorSpriteFrame(actor, currentTime, facingProjection),
   ...(actor.sprite?.drawScale && actor.sprite.drawScale > 1
     ? { spriteDraw: { scale: actor.sprite.drawScale } }
     : {}),
@@ -570,6 +601,7 @@ export const buildHeroViewModels = (
   actorsSheet: CanvasImageSource,
   debugMode: boolean,
   currentTime: number = Date.now(),
+  facingProjection: ActorFacingProjection = 'grid',
 ): SceneActorView[] => {
   const heroes: Hero[] = [
     ...liveHeroes(state),
@@ -587,6 +619,7 @@ export const buildHeroViewModels = (
       debugMode,
       currentTime,
       { colourBar: '', healthBar: null },
+      facingProjection,
     ),
     floorMarkerColor: String(hero.colour),
   }));
@@ -600,6 +633,7 @@ export const buildMonsterViewModels = (
   actorsSheet: CanvasImageSource,
   debugMode: boolean,
   currentTime: number = Date.now(),
+  facingProjection: ActorFacingProjection = 'grid',
 ): SceneActorView[] => {
   const visible = state.dungeon.layout.monsters
     .filter((monster) => isMonsterVisible(state.dungeon, monster, currentTime))
@@ -613,6 +647,7 @@ export const buildMonsterViewModels = (
           colourBar: '',
           healthBar: { current: monster.health, max: monster.maxHealth },
         },
+        facingProjection,
       );
       if (debugMode) {
         const visualPos = getActorVisualPosition(monster, currentTime);
@@ -647,6 +682,7 @@ export const buildMonsterViewModels = (
           colourBar: '',
           healthBar: { current: monster.health, max: monster.maxHealth },
         },
+        facingProjection,
       );
       if (debugMode) {
         const visualPos = getActorVisualPosition(monster, currentTime);
@@ -673,6 +709,7 @@ export const buildMonsterViewModels = (
 export const buildCorpseViewModels = (
   state: GameState,
   currentTime: number = Date.now(),
+  facingProjection: ActorFacingProjection = 'grid',
 ): GameActorView[] => {
   const dying = getDyingActors(currentTime);
   return (state.dungeon.layout.corpses ?? [])
@@ -687,7 +724,7 @@ export const buildCorpseViewModels = (
     })
     .map((corpse) => ({
       position: { x: corpse.position.x, y: corpse.position.y },
-      sprite: getCorpseSpriteFrame(corpse),
+      sprite: getCorpseSpriteFrame(corpse, facingProjection),
       ...(corpse.sprite.drawScale && corpse.sprite.drawScale > 1
         ? { spriteDraw: { scale: corpse.sprite.drawScale } }
         : {}),

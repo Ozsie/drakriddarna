@@ -122,4 +122,51 @@ describe('corpse frames', () => {
       sh: 28,
     });
   });
+
+  it('projects the frozen corpse facing for isometric rendering without changing saved facing', () => {
+    const corpse: Corpse = {
+      position: { x: 0, y: 0 },
+      sprite: {
+        frameWidth: 32,
+        frameHeight: 32,
+        animations: { death: 4 },
+        animationImages: { death: 'characters/knight/Die.png' },
+        facings: [
+          'east',
+          'southEast',
+          'south',
+          'southWest',
+          'west',
+          'northWest',
+          'north',
+          'northEast',
+        ],
+        frameCrops: {
+          death: {
+            south: { x: 1, y: 2, size: 30 },
+            southWest: { x: 3, y: 4, size: 28 },
+          },
+        },
+      },
+      facing: 'south',
+    };
+    const state = stateWithCorpses([corpse]);
+
+    const [topDown] = buildCorpseViewModels(state, now);
+    const [isometric] = buildCorpseViewModels(state, now, 'isometric');
+
+    expect(topDown.sprite).toMatchObject({
+      sx: 3 * 32 + 1,
+      sy: 2 * 32 + 2,
+      sw: 30,
+      sh: 30,
+    });
+    expect(isometric.sprite).toMatchObject({
+      sx: 3 * 32 + 3,
+      sy: 3 * 32 + 4,
+      sw: 28,
+      sh: 28,
+    });
+    expect(corpse.facing).toBe('south');
+  });
 });

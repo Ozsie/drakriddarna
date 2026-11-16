@@ -1982,13 +1982,20 @@ export const renderIsometricDungeonPrototype = (
     actorsSheet,
     debugMode,
     currentTime,
+    'isometric',
   );
   const heroPainters = buildHeroPainters(heroes, cellSize, view.projection.ax);
   const liveActors = [
     ...heroes,
-    ...buildMonsterViewModels(state, actorsSheet, debugMode, currentTime),
+    ...buildMonsterViewModels(
+      state,
+      actorsSheet,
+      debugMode,
+      currentTime,
+      'isometric',
+    ),
   ];
-  const corpses = buildCorpseViewModels(state, currentTime);
+  const corpses = buildCorpseViewModels(state, currentTime, 'isometric');
   const actors = [...liveActors, ...corpses];
   const decorators = buildDecoratorViewModels(
     state,
