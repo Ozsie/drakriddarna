@@ -56,6 +56,7 @@ const ISO_FLOOR_OUTLINE_DEPTH_BIAS = 0.01;
 const ISO_GROUND_PAINTER_DEPTH_BIAS = 0.01;
 const ISO_OPEN_DOOR_DEPTH_BIAS = 0.001;
 const ISOMETRIC_WALL_LIGHT_SEAM_DEVICE_PX = 1;
+const ISO_FOREGROUND_WALL_OPACITY = 0.35;
 type IsometricDoorSide = 'Left' | 'Right' | 'Up' | 'Down';
 type IsometricWorldView = SceneIsoWorldView & {
   wallFaceHeightsPx?: (number | undefined)[][];
@@ -414,6 +415,108 @@ export const prepareDepthSortedIsometricDoorPainters = (
     world: { ...world, ...(doorPainters ? { doorPainters } : {}) },
     painters,
   };
+};
+
+const drawIsometricWallFallback = (
+  ctx: CanvasRenderingContext2D,
+  world: SceneIsoWorldView,
+  view: SceneIsoView,
+  cellX: number,
+  cellY: number,
+): void => {
+  const { cellSize, wallHeightPx, palette } = world;
+  const left = cellX * cellSize;
+  const top = cellY * cellSize;
+  const north = worldToScreen(view, left, top);
+  const east = worldToScreen(view, left + cellSize, top);
+  const south = worldToScreen(view, left + cellSize, top + cellSize);
+  const west = worldToScreen(view, left, top + cellSize);
+  const wallHeight = wallHeightPx * view.projection.by;
+  const lift = (point: { x: number; y: number }) => ({
+    x: point.x,
+    y: point.y - wallHeight,
+  });
+
+  ctx.fillStyle = palette.wallSouth;
+  ctx.beginPath();
+  ctx.moveTo(west.x, west.y);
+  ctx.lineTo(south.x, south.y);
+  ctx.lineTo(lift(south).x, lift(south).y);
+  ctx.lineTo(lift(west).x, lift(west).y);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = palette.wallEast;
+  ctx.beginPath();
+  ctx.moveTo(south.x, south.y);
+  ctx.lineTo(east.x, east.y);
+  ctx.lineTo(lift(east).x, lift(east).y);
+  ctx.lineTo(lift(south).x, lift(south).y);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = palette.wallTop;
+  ctx.beginPath();
+  ctx.moveTo(lift(north).x, lift(north).y);
+  ctx.lineTo(lift(east).x, lift(east).y);
+  ctx.lineTo(lift(south).x, lift(south).y);
+  ctx.lineTo(lift(west).x, lift(west).y);
+  ctx.closePath();
+  ctx.fill();
+};
+
+export const prepareIsometricForegroundWallPainters = (
+  world: SceneIsoWorldView,
+  heroes: SceneIsoPainterView[],
+  view: SceneIsoView,
+): SceneIsoWorldView => {
+  if (heroes.length === 0) return world;
+
+  let hasForegroundWall = false;
+  const wallPainters = world.rows.map((row, y) =>
+    toArray(row).map((cell, x) => {
+      if (cell !== world.wallCell) return world.wallPainters?.[y]?.[x];
+
+      const position = {
+        x: (x + 0.5) * world.cellSize,
+        y: (y + 0.5) * world.cellSize,
+      };
+      const inFrontOfNearbyHero = heroes.some((hero) => {
+        const dx = Math.abs(position.x - hero.position.x);
+        const dy = Math.abs(position.y - hero.position.y);
+        return (
+          dx <= world.cellSize * 2 &&
+          dy <= world.cellSize * 2 &&
+          position.x + position.y > hero.position.x + hero.position.y
+        );
+      });
+      if (!inFrontOfNearbyHero) return world.wallPainters?.[y]?.[x];
+
+      hasForegroundWall = true;
+      const painter = world.wallPainters?.[y]?.[x];
+      return {
+        position: painter?.position ?? position,
+        draw: (
+          ctx: CanvasRenderingContext2D,
+          screenPosition: { x: number; y: number },
+        ) => {
+          ctx.save();
+          ctx.globalAlpha *= ISO_FOREGROUND_WALL_OPACITY;
+          try {
+            if (painter) {
+              painter.draw(ctx, screenPosition);
+            } else {
+              drawIsometricWallFallback(ctx, world, view, x, y);
+            }
+          } finally {
+            ctx.restore();
+          }
+        },
+      };
+    }),
+  );
+
+  return hasForegroundWall ? { ...world, wallPainters } : world;
 };
 
 export const buildIsometricFloorLightPainter = (
@@ -1750,6 +1853,7 @@ export const renderIsometricDungeonPrototype = (
     debugMode,
     currentTime,
   );
+  const heroPainters = buildHeroPainters(heroes, cellSize, view.projection.ax);
   const liveActors = [
     ...heroes,
     ...buildMonsterViewModels(state, actorsSheet, debugMode, currentTime),
@@ -1817,9 +1921,14 @@ export const renderIsometricDungeonPrototype = (
     lightCanvas && !hasDepthAwareLightMask
       ? buildIsometricWallLightPainters(world, view, lightCanvas, pixelRatio)
       : [];
+  const foregroundWallWorld = prepareIsometricForegroundWallPainters(
+    depthSortedFloors.world,
+    heroPainters,
+    view,
+  );
   drawIsoWorldFrame(
     ctx,
-    depthSortedFloors.world,
+    foregroundWallWorld,
     view,
     [],
     [

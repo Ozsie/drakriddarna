@@ -30,6 +30,7 @@ import {
   buildIsometricFloorLightPainter,
   buildIsometricWallLightPainters,
   buildIsometricWorldView,
+  prepareIsometricForegroundWallPainters,
   feetPosition,
   getIsometricWallShape,
   getIsometricTileDimensions,
@@ -133,6 +134,125 @@ describe('isometric actor indicators', () => {
 
     expect(fillRects).toContainEqual([82, 70, 36, 4]);
     expect(fillRects).toContainEqual([82, 22, 36, 4]);
+  });
+});
+
+describe('isometric foreground wall transparency', () => {
+  const cellSize = 48;
+  const view = createIsoView({ x: 192, y: 24 }, 600, 300, cellSize);
+  const heroPainter = (x: number, y = 0) => ({
+    position: { x: (x + 0.5) * cellSize, y: (y + 0.5) * cellSize },
+    draw: () => {},
+  });
+  const world: SceneIsoWorldView = {
+    rows: ['WWWWWWWW'],
+    cellSize,
+    wallCell: 'W',
+    doorCell: 'D',
+    wallHeightPx: cellSize * 0.75,
+    palette: {
+      background: '#000',
+      floor: '#333',
+      door: '#654',
+      wallTop: '#555',
+      wallSouth: '#444',
+      wallEast: '#222',
+    },
+  };
+
+  it('fades only nearby foreground walls for any hero and tracks their movement', () => {
+    const prepared = prepareIsometricForegroundWallPainters(
+      world,
+      [heroPainter(2), heroPainter(5)],
+      view,
+    );
+
+    expect(
+      prepared.wallPainters?.[0]?.flatMap((painter, x) => (painter ? [x] : [])),
+    ).toEqual([3, 4, 6, 7]);
+
+    const moved = prepareIsometricForegroundWallPainters(
+      world,
+      [heroPainter(3)],
+      view,
+    );
+    expect(
+      moved.wallPainters?.[0]?.flatMap((painter, x) => (painter ? [x] : [])),
+    ).toEqual([4, 5]);
+    expect(prepareIsometricForegroundWallPainters(world, [], view)).toBe(world);
+  });
+
+  it('preserves the caller alpha while fading wall art and fallback geometry', () => {
+    const calls: { fillStyle: string; alpha: number }[] = [];
+    const alphaStack: number[] = [];
+    let alpha = 0.8;
+    let fillStyle = '';
+    const context = {
+      get globalAlpha() {
+        return alpha;
+      },
+      set globalAlpha(value: number) {
+        alpha = value;
+      },
+      get fillStyle() {
+        return fillStyle;
+      },
+      set fillStyle(value: string) {
+        fillStyle = value;
+      },
+      save: () => alphaStack.push(alpha),
+      restore: () => {
+        alpha = alphaStack.pop() ?? 1;
+      },
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      fill: () => calls.push({ fillStyle, alpha }),
+    } as unknown as CanvasRenderingContext2D;
+    const worldWithArt: SceneIsoWorldView = {
+      ...world,
+      rows: ['W'],
+      wallPainters: [
+        [
+          {
+            position: { x: cellSize / 2, y: cellSize / 2 },
+            draw: (ctx) =>
+              calls.push({ fillStyle: 'art', alpha: ctx.globalAlpha }),
+          },
+        ],
+      ],
+    };
+    const preparedArt = prepareIsometricForegroundWallPainters(
+      worldWithArt,
+      [heroPainter(0, -1)],
+      view,
+    );
+    preparedArt.wallPainters?.[0]?.[0]?.draw(context, { x: 0, y: 0 });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ fillStyle: 'art' });
+    expect(calls[0]?.alpha).toBeCloseTo(0.28);
+    expect(alpha).toBe(0.8);
+
+    calls.length = 0;
+    const preparedFallback = prepareIsometricForegroundWallPainters(
+      { ...worldWithArt, wallPainters: undefined },
+      [heroPainter(0, -1)],
+      view,
+    );
+    preparedFallback.wallPainters?.[0]?.[0]?.draw(context, {
+      x: cellSize / 2,
+      y: cellSize / 2,
+    });
+    expect(calls.map(({ fillStyle: style }) => style)).toEqual([
+      world.palette.wallSouth,
+      world.palette.wallEast,
+      world.palette.wallTop,
+    ]);
+    calls.forEach(({ alpha: drawAlpha }) =>
+      expect(drawAlpha).toBeCloseTo(0.28),
+    );
+    expect(alpha).toBe(0.8);
   });
 });
 

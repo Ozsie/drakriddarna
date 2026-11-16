@@ -462,6 +462,11 @@ and door geometry. Ground decorators and corpses receive a small backward
 sort-depth bias without changing their screen position, so walls can occlude
 them and live actors render over them; live actors follow the other depth-
 sorted objects on equal-depth ties.
+Foreground walls within two cells of a hero draw at 35% opacity when their
+cell-center depth is in front of the hero's interpolated position. This also
+applies to the geometric wall fallback when isometric artwork is unavailable;
+door rendering and the opaque wall silhouettes used by the light mask are
+unchanged.
 Discovered pits render as lowered openings: connected pit cells share one
 aperture clip, shaded bottoms and textured north/west inner faces omit shared
 edges, and each texture is clipped to its own lowered face inside the opening.
