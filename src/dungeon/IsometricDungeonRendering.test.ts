@@ -8,6 +8,8 @@ import {
 } from '../scene/adapters';
 import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
+import { e1m2 } from '../campaigns/iceDragonTreasure/dungeons/e1m2';
+import { e1m3 } from '../campaigns/iceDragonTreasure/dungeons/e1m3';
 import { CornerType } from '../types';
 import { autoDetectCorners } from './cornerDetection';
 import {
@@ -121,6 +123,182 @@ describe('isometric actor indicators', () => {
 });
 
 describe('buildIsometricWorldView', () => {
+  it('uses existing masonry sprites for discovered e1m3 pits', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 256;
+        naturalHeight = 512;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+
+    try {
+      const manifest = parseIsometricGraphicsManifest(
+        JSON.parse(
+          readFileSync(
+            new URL('../../static/isometric/index.json', import.meta.url),
+            'utf8',
+          ),
+        ),
+      );
+      expect(manifest).not.toBeNull();
+      if (!manifest) return;
+
+      const graphics = resolveIsometricGraphics(manifest, 'isometric');
+      const dungeon = buildDungeonView({
+        ...e1m3,
+        discoveredRooms: ['I'],
+      });
+      const world = buildIsometricWorldView(dungeon, 48, false, graphics);
+      const drawnImages: CanvasImageSource[] = [];
+      const drawImageCalls: [
+        CanvasImageSource,
+        number,
+        number,
+        number,
+        number,
+      ][] = [];
+      const context = {
+        save: () => undefined,
+        restore: () => undefined,
+        translate: vi.fn(),
+        scale: vi.fn(),
+        drawImage: (
+          image: CanvasImageSource,
+          x: number,
+          y: number,
+          width: number,
+          height: number,
+        ) => {
+          drawnImages.push(image);
+          drawImageCalls.push([image, x, y, width, height]);
+        },
+      } as unknown as CanvasRenderingContext2D;
+      const pit = world.pitPainters?.[6]?.[16];
+
+      expect(world.pitCells).toEqual([
+        { x: 16, y: 6 },
+        { x: 17, y: 6 },
+        { x: 18, y: 6 },
+        { x: 15, y: 8 },
+        { x: 16, y: 8 },
+        { x: 17, y: 8 },
+      ]);
+      expect(pit).toBeDefined();
+      pit?.drawFace(context, {
+        edge: 'north',
+        points: [
+          { x: 100, y: 120 },
+          { x: 148, y: 144 },
+          { x: 148, y: 158 },
+          { x: 100, y: 134 },
+        ],
+      });
+      pit?.drawFace(context, {
+        edge: 'west',
+        points: [
+          { x: 100, y: 168 },
+          { x: 148, y: 144 },
+          { x: 148, y: 130 },
+          { x: 100, y: 154 },
+        ],
+      });
+
+      expect(drawnImages).toEqual([
+        expect.objectContaining({ src: 'isometric/walls/stoneWall_N.png' }),
+        expect.objectContaining({ src: 'isometric/walls/stoneWall_W.png' }),
+      ]);
+      const sourceRims = [
+        [
+          { x: 28, y: 275 },
+          { x: 157, y: 339 },
+        ],
+        [
+          { x: 98, y: 339 },
+          { x: 226, y: 275 },
+        ],
+      ];
+      const targetRims = [
+        [
+          { x: 100, y: 120 },
+          { x: 148, y: 144 },
+        ],
+        [
+          { x: 100, y: 168 },
+          { x: 148, y: 144 },
+        ],
+      ];
+      const expectRimsAligned = (
+        expectedRims: Array<Array<{ x: number; y: number }>>,
+      ): void => {
+        drawImageCalls.forEach((call, index) => {
+          const [, x, y, width, height] = call;
+          sourceRims[index]?.forEach((sourcePoint, pointIndex) => {
+            const targetPoint = expectedRims[index]?.[pointIndex];
+            if (!targetPoint) return;
+            expect(x + (sourcePoint.x * width) / 256).toBeCloseTo(
+              targetPoint.x,
+            );
+            expect(y + (sourcePoint.y * height) / 512).toBeCloseTo(
+              targetPoint.y,
+            );
+          });
+        });
+      };
+      expectRimsAligned(targetRims);
+
+      drawImageCalls.length = 0;
+      pit?.drawFace(context, {
+        edge: 'north',
+        points: [
+          { x: 210, y: 74 },
+          { x: 270, y: 89 },
+          { x: 270, y: 103 },
+          { x: 210, y: 88 },
+        ],
+      });
+      pit?.drawFace(context, {
+        edge: 'west',
+        points: [
+          { x: 210, y: 149 },
+          { x: 270, y: 134 },
+          { x: 270, y: 120 },
+          { x: 210, y: 135 },
+        ],
+      });
+      expect(drawImageCalls).toHaveLength(2);
+      expectRimsAligned([
+        [
+          { x: 210, y: 74 },
+          { x: 270, y: 89 },
+        ],
+        [
+          { x: 210, y: 149 },
+          { x: 270, y: 134 },
+        ],
+      ]);
+      expect(context.translate).not.toHaveBeenCalled();
+      expect(context.scale).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('does not expose undiscovered pit painters, including in debug mode', () => {
+    const dungeon = buildDungeonView({
+      ...e1m3,
+      discoveredRooms: ['A'],
+    });
+    const world = buildIsometricWorldView(dungeon, 48, true);
+
+    expect(world.pitCells).toEqual([]);
+    expect(world.pitPainters?.flat().filter(Boolean) ?? []).toEqual([]);
+  });
+
   it('passes classified visible corners into wall tile selection', () => {
     vi.stubGlobal(
       'Image',
@@ -184,6 +362,250 @@ describe('buildIsometricWorldView', () => {
       world.wallPainters?.[0]?.[0]?.draw(context, { x: 24, y: 24 });
 
       expect(drawnImages[0]).toMatchObject({ src: 'classifiedCorner.png' });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('joins corner doors to the adjoining wall face in every orientation', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 256;
+        naturalHeight = 512;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+
+    try {
+      const manifest = parseIsometricGraphicsManifest(
+        JSON.parse(
+          readFileSync(
+            new URL('../../static/isometric/index.json', import.meta.url),
+            'utf8',
+          ),
+        ),
+      );
+      expect(manifest).not.toBeNull();
+      if (!manifest) return;
+
+      const graphics = resolveIsometricGraphics(manifest, 'isometric');
+      const cases = [
+        {
+          door: { x: 3, y: 2, side: 'Right' },
+          sourceDoor: { x: 4, y: 2, side: 'Left' },
+          doorFlank: { x: 3, y: 1 },
+          diagonal: { x: 3, y: 3 },
+          flank: { x: 2, y: 3 },
+          corner: CornerType.INNER_TOP_LEFT,
+          wallImages: ['stoneWallColumn_N.png', 'stoneWall_W.png'],
+        },
+        {
+          door: { x: 1, y: 2, side: 'Left' },
+          sourceDoor: { x: 0, y: 2, side: 'Right' },
+          doorFlank: { x: 1, y: 1 },
+          diagonal: { x: 1, y: 3 },
+          flank: { x: 2, y: 3 },
+          corner: CornerType.INNER_TOP_RIGHT,
+          wallImages: ['stoneWall_E.png', 'stoneWallColumn_E.png'],
+        },
+        {
+          door: { x: 2, y: 1, side: 'Up' },
+          sourceDoor: { x: 2, y: 0, side: 'Down' },
+          doorFlank: { x: 3, y: 1 },
+          diagonal: { x: 1, y: 1 },
+          flank: { x: 1, y: 2 },
+          corner: CornerType.INNER_BOTTOM_RIGHT,
+          wallImages: ['stoneWall_S.png', 'stoneWallColumn_S.png'],
+        },
+        {
+          door: { x: 2, y: 3, side: 'Down' },
+          sourceDoor: { x: 2, y: 4, side: 'Up' },
+          doorFlank: { x: 1, y: 3 },
+          diagonal: { x: 3, y: 3 },
+          flank: { x: 3, y: 2 },
+          corner: CornerType.INNER_TOP_LEFT,
+          wallImages: ['stoneWallColumn_N.png', 'stoneWall_N.png'],
+        },
+      ] as const;
+
+      for (const {
+        door,
+        sourceDoor,
+        doorFlank,
+        diagonal,
+        flank,
+        corner,
+        wallImages,
+      } of cases) {
+        for (const open of [false, true]) {
+          const grid = Array.from({ length: 5 }, () =>
+            Array.from({ length: 5 }, () => ' '),
+          );
+          grid[2][2] = '#';
+          grid[flank.y][flank.x] = '#';
+          grid[doorFlank.y][doorFlank.x] = '#';
+          grid[sourceDoor.y][sourceDoor.x] = 'A';
+          grid[door.y][door.x] = 'A';
+          grid[diagonal.y][diagonal.x] = 'A';
+          const rows = grid.map((row) => row.join(''));
+          const dungeon: SceneDungeonView = {
+            name: 'corner-door-test',
+            discoveredRooms: ['A'],
+            layout: {
+              grid: rows,
+              sealedGrid: rows,
+              corners: [{ position: { x: 2, y: 2 }, type: corner }],
+              doors: [{ ...sourceDoor, open, hidden: false }],
+              secrets: [],
+            },
+          };
+          const world = buildIsometricWorldView(dungeon, 48, false, graphics);
+          const drawnWallImages: CanvasImageSource[] = [];
+          const wallContext = {
+            drawImage: (image: CanvasImageSource) =>
+              drawnWallImages.push(image),
+          } as unknown as CanvasRenderingContext2D;
+
+          world.wallPainters?.[2]?.[2]?.draw(wallContext, { x: 24, y: 24 });
+
+          expect(
+            drawnWallImages.map((image) => (image as HTMLImageElement).src),
+          ).toEqual(wallImages.map((image) => `isometric/walls/${image}`));
+
+          const drawnDoorImages: CanvasImageSource[] = [];
+          const doorContext = {
+            drawImage: (image: CanvasImageSource) =>
+              drawnDoorImages.push(image),
+          } as unknown as CanvasRenderingContext2D;
+          world.doorPainters?.[door.y]?.[door.x]?.draw(doorContext, {
+            x: 24,
+            y: 24,
+          });
+          expect(drawnDoorImages[0]).toHaveProperty(
+            'src',
+            `isometric/doors/stoneWallDoor${open ? 'Open' : 'Closed'}_${
+              door.side === 'Right'
+                ? 'W'
+                : door.side === 'Left'
+                  ? 'E'
+                  : door.side === 'Up'
+                    ? 'S'
+                    : 'N'
+            }.png`,
+          );
+        }
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('joins the e1m2 corridor F doorway to both compound wall corners', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 256;
+        naturalHeight = 512;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+
+    try {
+      const manifest = parseIsometricGraphicsManifest(
+        JSON.parse(
+          readFileSync(
+            new URL('../../static/isometric/index.json', import.meta.url),
+            'utf8',
+          ),
+        ),
+      );
+      expect(manifest).not.toBeNull();
+      if (!manifest) return;
+
+      const graphics = resolveIsometricGraphics(manifest, 'isometric');
+      const dungeon = buildDungeonView({
+        ...e1m2,
+        discoveredRooms: ['E', 'F'],
+      });
+      const world = buildIsometricWorldView(dungeon, 48, false, graphics);
+      expect(world.rows[8]?.[17]).toBe('D');
+
+      const walls = [
+        {
+          x: 16,
+          images: [
+            'stoneWall_S.png',
+            'stoneWallColumn_N.png',
+            'stoneWall_W.png',
+          ],
+        },
+        {
+          x: 18,
+          images: [
+            'stoneWall_E.png',
+            'stoneWall_S.png',
+            'stoneWallColumn_E.png',
+          ],
+        },
+      ];
+      for (const { x, images } of walls) {
+        const drawnImages: CanvasImageSource[] = [];
+        const drawCalls: [string, number, number, number, number][] = [];
+        const context = {
+          drawImage: (
+            image: HTMLImageElement,
+            left: number,
+            top: number,
+            width: number,
+            height: number,
+          ) => {
+            drawnImages.push(image);
+            drawCalls.push([image.src, left, top, width, height]);
+          },
+        } as unknown as CanvasRenderingContext2D;
+
+        const wallPainter = world.wallPainters?.[8]?.[x];
+        wallPainter?.draw(context, { x: 24, y: 24 });
+
+        expect(
+          drawnImages.map((image) => (image as HTMLImageElement).src),
+        ).toEqual(images.map((image) => `isometric/walls/${image}`));
+        expect(drawCalls).toEqual(
+          images.map((image) => [
+            `isometric/walls/${image}`,
+            -24,
+            -144,
+            96,
+            192,
+          ]),
+        );
+        expect(wallPainter?.position).toEqual({
+          x: (x + 0.5) * 48,
+          y: (8 + 0.5) * 48,
+        });
+      }
+
+      const doorPainter = world.doorPainters?.[8]?.[17];
+      const doorDrawCalls: number[][] = [];
+      const doorContext = {
+        drawImage: (
+          _image: CanvasImageSource,
+          left: number,
+          top: number,
+          width: number,
+          height: number,
+        ) => doorDrawCalls.push([left, top, width, height]),
+      } as unknown as CanvasRenderingContext2D;
+      doorPainter?.draw(doorContext, { x: 24, y: 24 });
+      expect(doorPainter?.position).toEqual({ x: 840, y: 408 });
+      expect(doorDrawCalls).toEqual([[-24, -144, 96, 192]]);
     } finally {
       vi.unstubAllGlobals();
     }
@@ -310,13 +732,13 @@ describe('buildIsometricWorldView', () => {
       const graphics = resolveIsometricGraphics(manifest, 'isometric');
       const world = buildIsometricWorldView(opened, 48, false, graphics);
       const turns = [
-        [6, 4, CornerType.OUTER_TOP_RIGHT, 'stoneWallCorner_W.png'],
-        [8, 4, CornerType.OUTER_TOP_LEFT, 'stoneWallCorner_S.png'],
-        [8, 6, CornerType.OUTER_BOTTOM_LEFT, 'stoneWallCorner_E.png'],
-        [6, 8, CornerType.OUTER_BOTTOM_RIGHT, 'stoneWallCorner_N.png'],
+        [6, 4, CornerType.OUTER_TOP_RIGHT, ['stoneWallCorner_W.png']],
+        [8, 4, CornerType.OUTER_TOP_LEFT, ['stoneWallCorner_S.png']],
+        [8, 6, CornerType.OUTER_BOTTOM_LEFT, ['stoneWallCorner_E.png']],
+        [6, 8, CornerType.OUTER_BOTTOM_RIGHT, ['stoneWallCorner_N.png']],
       ] as const;
 
-      for (const [x, y, type, image] of turns) {
+      for (const [x, y, type, images] of turns) {
         expect(opened.layout.corners).toContainEqual({
           position: { x, y },
           type,
@@ -328,9 +750,9 @@ describe('buildIsometricWorldView', () => {
 
         world.wallPainters?.[y]?.[x]?.draw(context, { x: 24, y: 24 });
 
-        expect(drawnImages).toEqual([
-          expect.objectContaining({ src: `isometric/walls/${image}` }),
-        ]);
+        expect(
+          drawnImages.map((image) => (image as HTMLImageElement).src),
+        ).toEqual(images.map((image) => `isometric/walls/${image}`));
       }
     } finally {
       vi.unstubAllGlobals();
@@ -439,8 +861,12 @@ describe('buildIsometricWorldView', () => {
         IBL: { x: 2, y: 0 },
         IBR: { x: 0, y: 0 },
       };
-      const shapes = Object.keys(manifest.wallShapes ?? {}).filter((shape) =>
-        shape.includes('+'),
+      const shapes = Object.keys(manifest.wallShapes ?? {}).filter(
+        (shape) =>
+          shape.includes('+') &&
+          !['n+ITL', 'e+ITR', 's+IBR', 'w+ITL', 'es+ITR', 'sw+ITL'].includes(
+            shape,
+          ),
       );
       expect(shapes).toHaveLength(27);
 
@@ -546,6 +972,216 @@ describe('buildIsometricWorldView', () => {
           expect.objectContaining({ src: `isometric/walls/${image}` }),
         ]);
       }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('keeps e1m3 corridor J wall faces when corridor B’s false door opens or closes', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 256;
+        naturalHeight = 512;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+
+    try {
+      const manifest = parseIsometricGraphicsManifest(
+        JSON.parse(
+          readFileSync(
+            new URL('../../static/isometric/index.json', import.meta.url),
+            'utf8',
+          ),
+        ),
+      );
+      expect(manifest).not.toBeNull();
+      if (!manifest) return;
+
+      const graphics = resolveIsometricGraphics(manifest, 'isometric');
+      for (const open of [false, true]) {
+        const dungeon = buildDungeonView({
+          ...e1m3,
+          discoveredRooms: ['A', 'B', 'C', 'J'],
+          layout: {
+            ...e1m3.layout,
+            doors: e1m3.layout.doors.map((door) => ({
+              ...door,
+              open:
+                !(door.x === 6 && door.y === 5 && door.side === 'Down') || open,
+            })),
+          },
+        });
+        const world = buildIsometricWorldView(dungeon, 48, false, graphics);
+        const drawnImages: string[] = [];
+        const context = {
+          drawImage: (image: HTMLImageElement) => drawnImages.push(image.src),
+        } as unknown as CanvasRenderingContext2D;
+
+        expect(world.rows[6]?.[6]).toBe('D');
+        expect(world.rows[6]?.[7]).toBe('W');
+        world.wallPainters?.[6]?.[7]?.draw(context, { x: 24, y: 24 });
+
+        expect(drawnImages).toEqual([
+          'isometric/walls/stoneWallColumn_S.png',
+          'isometric/walls/stoneWall_W.png',
+        ]);
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('treats relocated doors in physical wall cells as walls for neighboring shapes', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 256;
+        naturalHeight = 512;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+
+    try {
+      const manifest = parseIsometricGraphicsManifest(
+        JSON.parse(
+          readFileSync(
+            new URL('../../static/isometric/index.json', import.meta.url),
+            'utf8',
+          ),
+        ),
+      );
+      expect(manifest).not.toBeNull();
+      if (!manifest) return;
+
+      const graphics = resolveIsometricGraphics(manifest, 'isometric');
+      const cases = [
+        {
+          side: 'Right',
+          grid: ['AAAAA', 'AAA#A', 'AAA#A', 'AAA#A', 'AAAAA'],
+          target: { x: 3, y: 2 },
+          wall: { x: 3, y: 1 },
+          images: ['stoneWall_E.png', 'stoneWall_S.png', 'stoneWall_W.png'],
+        },
+        {
+          side: 'Left',
+          grid: ['AAAAA', 'A#AAA', 'A#AAA', 'A#AAA', 'AAAAA'],
+          target: { x: 1, y: 2 },
+          wall: { x: 1, y: 1 },
+          images: ['stoneWall_E.png', 'stoneWall_S.png', 'stoneWall_W.png'],
+        },
+        {
+          side: 'Up',
+          grid: ['AAAAA', 'A###A', 'AAAAA', 'AAAAA', 'AAAAA'],
+          target: { x: 2, y: 1 },
+          wall: { x: 1, y: 1 },
+          images: ['stoneWall_E.png', 'stoneWall_S.png', 'stoneWall_N.png'],
+        },
+        {
+          side: 'Down',
+          grid: ['AAAAA', 'AAAAA', 'AAAAA', 'A###A', 'AAAAA'],
+          target: { x: 2, y: 3 },
+          wall: { x: 1, y: 3 },
+          images: ['stoneWall_E.png', 'stoneWall_S.png', 'stoneWall_N.png'],
+        },
+      ] as const;
+
+      for (const { side, grid, target, wall, images } of cases) {
+        for (const open of [false, true]) {
+          const dungeon: SceneDungeonView = {
+            name: 'door-wall-shape-test',
+            discoveredRooms: ['A'],
+            layout: {
+              grid: [...grid],
+              sealedGrid: [...grid],
+              doors: [{ x: 2, y: 2, side, open, hidden: false }],
+              secrets: [],
+            },
+          };
+          const world = buildIsometricWorldView(dungeon, 48, false, graphics);
+          const drawnImages: string[] = [];
+          const context = {
+            drawImage: (image: HTMLImageElement) => drawnImages.push(image.src),
+          } as unknown as CanvasRenderingContext2D;
+
+          expect(world.rows[target.y]?.[target.x]).toBe('D');
+          world.wallPainters?.[wall.y]?.[wall.x]?.draw(context, {
+            x: 24,
+            y: 24,
+          });
+
+          expect(
+            drawnImages.map((src) => src.split('/').pop()),
+            `${side}, open=${String(open)}`,
+          ).toEqual(images);
+        }
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('keeps floor doors available as adjoining floor when selecting wall shapes', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 256;
+        naturalHeight = 512;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+
+    try {
+      const manifest = parseIsometricGraphicsManifest(
+        JSON.parse(
+          readFileSync(
+            new URL('../../static/isometric/index.json', import.meta.url),
+            'utf8',
+          ),
+        ),
+      );
+      expect(manifest).not.toBeNull();
+      if (!manifest) return;
+
+      const dungeon: SceneDungeonView = {
+        name: 'floor-door-wall-shape-test',
+        discoveredRooms: ['A'],
+        layout: {
+          grid: ['AAAAA', 'A#AAA', 'AAAAA'],
+          doors: [{ x: 2, y: 1, side: 'Right', open: false, hidden: false }],
+          secrets: [],
+        },
+      };
+      const world = buildIsometricWorldView(
+        dungeon,
+        48,
+        false,
+        resolveIsometricGraphics(manifest, 'isometric'),
+      );
+      const drawnImages: string[] = [];
+      const context = {
+        drawImage: (image: HTMLImageElement) => drawnImages.push(image.src),
+      } as unknown as CanvasRenderingContext2D;
+
+      expect(world.rows[1]?.[2]).toBe('D');
+      world.wallPainters?.[1]?.[1]?.draw(context, { x: 24, y: 24 });
+
+      expect(drawnImages.map((src) => src.split('/').pop())).toEqual([
+        'stoneWall_E.png',
+        'stoneWall_S.png',
+        'stoneWall_N.png',
+        'stoneWall_W.png',
+      ]);
     } finally {
       vi.unstubAllGlobals();
     }

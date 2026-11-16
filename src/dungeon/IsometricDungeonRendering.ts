@@ -16,6 +16,8 @@ import {
   type SceneActorView,
   type SceneDungeonView,
   type SceneIsoPainterView,
+  type SceneIsoPitFaceView,
+  type SceneIsoPitPainterView,
   type SceneIsoView,
   type SceneIsoWorldView,
   type SceneSpriteFrame,
@@ -51,6 +53,10 @@ const ISO_DOOR = 'D';
 const ISO_FLOOR = 'F';
 const ISO_HIDDEN = 'H';
 type IsometricDoorSide = 'Left' | 'Right' | 'Up' | 'Down';
+const PIT_WALL_SOURCE_RIM = {
+  north: { width: 129, height: 64 },
+  west: { width: 128, height: 64 },
+};
 
 export const getIsometricTileDimensions = (
   cellSize: number,
@@ -93,6 +99,7 @@ const getIsometricWallCornerShape = (
   grid: string[],
   x: number,
   y: number,
+  doorWallCells: Set<string>,
 ): string | undefined => {
   const isFloor = (cellX: number, cellY: number): boolean => {
     const cell = toArray(worldRows[cellY] ?? '')[cellX];
@@ -103,6 +110,8 @@ const getIsometricWallCornerShape = (
     const sourceCell = toArray(grid[cellY] ?? '')[cellX];
     return (
       cell === ISO_WALL ||
+      (cell === ISO_DOOR &&
+        doorWallCells.has(`${String(cellX)},${String(cellY)}`)) ||
       ((cell === ISO_HIDDEN || cell === undefined) &&
         (sourceCell === EMPTY || sourceCell === undefined))
     );
@@ -253,11 +262,17 @@ export const buildIsometricWorldView = (
           door.y,
           door.side,
         );
+        const wallFrame = placement.x !== door.x || placement.y !== door.y;
         return [
           `${String(placement.x)},${String(placement.y)}`,
-          { open: door.open, side: placement.side },
+          { open: door.open, side: placement.side, wallFrame },
         ] as const;
       }),
+  );
+  const doorWallCells = new Set(
+    [...doors]
+      .filter(([, door]) => door.wallFrame)
+      .map(([position]) => position),
   );
   const terrain = new Map(
     (resolvedDungeon.layout.terrain ?? []).map((cell) => [
@@ -274,6 +289,17 @@ export const buildIsometricWorldView = (
           return ISO_WALL;
         }
         return ISO_FLOOR;
+      })
+      .join(''),
+  );
+  const wallShapeRows = worldRows.map((row, y) =>
+    toArray(row)
+      .map((cell, x) => {
+        const sourceCell = toArray(resolvedDungeon.layout.grid[y] ?? '')[x];
+        return cell === ISO_DOOR &&
+          (sourceCell === WALL || sourceCell === COLLAPSED)
+          ? ISO_WALL
+          : cell;
       })
       .join(''),
   );
@@ -317,6 +343,50 @@ export const buildIsometricWorldView = (
       },
     };
   };
+  const buildPitPainter = (): SceneIsoPitPainterView | undefined => {
+    if (!graphics) return undefined;
+    const tileIds = {
+      north: resolveIsometricCellTileId(graphics, 'wall', 'pitNorth'),
+      west: resolveIsometricCellTileId(graphics, 'wall', 'pitWest'),
+    };
+    const tiles = {
+      north: tileIds.north
+        ? getIsometricTileImage(graphics, tileIds.north)
+        : null,
+      west: tileIds.west ? getIsometricTileImage(graphics, tileIds.west) : null,
+    };
+    if (!tiles.north && !tiles.west) return undefined;
+    return {
+      drawFace: (ctx, face: SceneIsoPitFaceView) => {
+        const tile = tiles[face.edge];
+        if (!tile) return;
+        const first = face.points[0];
+        const second = face.points[1];
+        const center = {
+          x: (first.x + second.x) / 2,
+          y: (first.y + second.y) / 2,
+        };
+        const sourceRim = PIT_WALL_SOURCE_RIM[face.edge];
+        const width =
+          (Math.abs(second.x - first.x) *
+            tile.image.naturalWidth *
+            tile.scale) /
+          sourceRim.width;
+        const height =
+          (Math.abs(second.y - first.y) *
+            tile.image.naturalHeight *
+            tile.scale) /
+          sourceRim.height;
+        ctx.drawImage(
+          tile.image,
+          center.x - width * tile.anchor.x,
+          center.y - height * tile.anchor.y,
+          width,
+          height,
+        );
+      },
+    };
+  };
   const floorPainters = worldRows.map((row, y) =>
     toArray(row).map((cell, x) => {
       if (cell === ISO_HIDDEN || cell === ISO_WALL || !graphics)
@@ -329,11 +399,17 @@ export const buildIsometricWorldView = (
   const wallPainters = worldRows.map((row, y) =>
     toArray(row).map((cell, x) => {
       if (cell !== ISO_WALL) return undefined;
-      const cornerShape = getIsometricWallCornerShape(worldRows, rows, x, y);
+      const cornerShape = getIsometricWallCornerShape(
+        wallShapeRows,
+        resolvedDungeon.layout.grid,
+        x,
+        y,
+        doorWallCells,
+      );
       const tileIds = graphics
         ? resolveIsometricWallTileIds(
             graphics,
-            getIsometricWallShape(worldRows, x, y),
+            getIsometricWallShape(wallShapeRows, x, y),
             cornerShape && graphics.wallShapes[cornerShape]
               ? cornerShape
               : cornerTypes.get(`${String(x)},${String(y)}`),
@@ -352,9 +428,24 @@ export const buildIsometricWorldView = (
       return buildPainter(x, y, tileId ? [tileId] : []);
     }),
   );
+  const pitCells = (resolvedDungeon.layout.pits ?? []).filter((pit) =>
+    isDiscoveredCell(pit.x, pit.y),
+  );
+  const pitCellKeys = new Set(
+    pitCells.map((pit) => `${String(pit.x)},${String(pit.y)}`),
+  );
+  const pitPainters = worldRows.map((row, y) =>
+    toArray(row).map((_, x) =>
+      pitCellKeys.has(`${String(x)},${String(y)}`)
+        ? buildPitPainter()
+        : undefined,
+    ),
+  );
   return {
     rows: worldRows,
-    ...(graphics ? { floorPainters, wallPainters, doorPainters } : {}),
+    ...(graphics
+      ? { floorPainters, wallPainters, doorPainters, pitPainters }
+      : {}),
     floorColors: rows.map((row, y) =>
       toArray(row).map((cell, x) =>
         isVisibleCell(x, y, cell)
@@ -373,9 +464,8 @@ export const buildIsometricWorldView = (
         };
       }),
     ),
-    pitCells: (resolvedDungeon.layout.pits ?? []).filter((pit) =>
-      isDiscoveredCell(pit.x, pit.y),
-    ),
+    pitCells,
+    pitDepthPx: cellSize * 0.6,
     cellSize,
     wallCell: ISO_WALL,
     doorCell: ISO_DOOR,
@@ -389,6 +479,8 @@ export const buildIsometricWorldView = (
       wallSouth: '#4c4944',
       wallEast: '#5a5650',
       pit: '#080808',
+      pitNorth: '#383530',
+      pitWest: '#292724',
     },
   };
 };

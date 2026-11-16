@@ -416,9 +416,23 @@ doors use their framed sprite without separate column overlays. The adapter
 places each door on the adjacent side with more physical flanking walls and
 reverses its side-specific image; ties keep the authored side and position.
 This check uses the original grid rather than discovery-sealing markers. Wall
-and open/closed, side-specific door images join the depth-sorted scene queue
+shape selection likewise retains a visible door's original wall or collapsed-
+wall footprint in a separate geometry grid. Relocated door frames on floor
+cells also count as wall boundaries when classifying adjacent corner
+composites, while remaining floor-facing for wall-side masks; doors authored
+on wall cells retain their existing wall footprint. The corresponding
+face-and-post composites keep corner jambs joined. Wall and open/closed,
+side-specific door images join the depth-sorted scene queue
 so actors can pass in front of or behind their geometry; missing images
 retain the scene palette fallback.
+Discovered pits render as lowered openings: connected pit cells share one
+aperture clip, shaded bottoms and textured north/west inner faces omit shared
+edges, and each texture is clipped to its own lowered face inside the opening.
+The existing north/west masonry sprites use mirrored anchors at their measured
+rim midpoints and are scaled from the projected edge, so camera and projection
+changes preserve alignment. Separate pit groups remain independently clipped;
+the pit pass draws under standing walls and actors, with recessed palette faces
+as the missing-image fallback.
 
 Top-down tall props fake height by splitting across layers: a pillar's base
 tile is static, while its shaft tile is drawn on the actor layer after

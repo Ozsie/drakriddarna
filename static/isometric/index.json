@@ -13,7 +13,9 @@
     "doorOpen_N": "stoneDoorOpen_S",
     "doorOpen_S": "stoneDoorOpen_N",
     "doorOpen_W": "stoneDoorOpen_E",
-    "pillar": "stoneColumn_E"
+    "pillar": "stoneColumn_E",
+    "pitNorth": "pitStoneWall_N",
+    "pitWest": "pitStoneWall_W"
   },
   "pillarVariants": [
     "stoneColumn_E",
@@ -74,17 +76,23 @@
     "n+IBL": ["stoneWallColumn_W", "stoneWall_N"],
     "n+IBR": ["stoneWallColumn_S", "stoneWall_N"],
     "n+IBL+IBR": ["stoneWallColumn_S", "stoneWallColumn_W", "stoneWall_N"],
+    "n+ITL": ["stoneWallColumn_N", "stoneWall_N"],
     "e+ITL": ["stoneWall_E", "stoneWallColumn_N"],
+    "e+ITR": ["stoneWall_E", "stoneWallColumn_E"],
     "e+IBL": ["stoneWall_E", "stoneWallColumn_W"],
     "e+ITL+IBL": ["stoneWall_E", "stoneWallColumn_W", "stoneWallColumn_N"],
     "s+ITL": ["stoneWall_S", "stoneWallColumn_N"],
     "s+ITR": ["stoneWall_S", "stoneWallColumn_E"],
+    "s+IBR": ["stoneWall_S", "stoneWallColumn_S"],
     "s+ITL+ITR": ["stoneWall_S", "stoneWallColumn_E", "stoneWallColumn_N"],
+    "w+ITL": ["stoneWallColumn_N", "stoneWall_W"],
     "w+ITR": ["stoneWallColumn_E", "stoneWall_W"],
     "w+IBR": ["stoneWallColumn_S", "stoneWall_W"],
     "w+ITR+IBR": ["stoneWallColumn_S", "stoneWallColumn_E", "stoneWall_W"],
+    "es+ITR": ["stoneWall_E", "stoneWall_S", "stoneWallColumn_E"],
     "ne+IBL": ["stoneWall_E", "stoneWallColumn_W", "stoneWall_N"],
     "es+ITL": ["stoneWall_E", "stoneWall_S", "stoneWallColumn_N"],
+    "sw+ITL": ["stoneWall_S", "stoneWallColumn_N", "stoneWall_W"],
     "sw+ITR": ["stoneWall_S", "stoneWallColumn_E", "stoneWall_W"],
     "nw+IBR": ["stoneWallColumn_S", "stoneWall_N", "stoneWall_W"],
     "n": ["stoneWall_N"],
@@ -173,6 +181,16 @@
       "image": "walls/stoneWall_W.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
+    },
+    "pitStoneWall_N": {
+      "image": "walls/stoneWall_N.png",
+      "scale": 1,
+      "anchor": { "x": 0.361328125, "y": 0.599609375 }
+    },
+    "pitStoneWall_W": {
+      "image": "walls/stoneWall_W.png",
+      "scale": 1,
+      "anchor": { "x": 0.6328125, "y": 0.599609375 }
     },
     "stoneWallCorner_E": {
       "image": "walls/stoneWallCorner_E.png",
