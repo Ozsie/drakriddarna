@@ -67,6 +67,7 @@ import {
   activeLights,
   clearLightSpriteCache,
   buildIsometricLightViews,
+  ambientLightLevel,
   hasIsometricLightEffects,
   renderAmbientDarkness,
   renderAnimatedLights,
@@ -710,13 +711,13 @@ export class DungeonBoardController {
     this.ground = new Image();
     this.actors = new Image();
     // Offscreen canvas for the light mask: same size and world transform
-    // as the actor canvas, never attached to the DOM. Holds the lights
-    // for one frame, composited onto the scene and reused to punch the
-    // darkness veil.
+    // as the actor canvas, never attached to the DOM. The top-down path
+    // composites it over the scene and reuses it to punch the darkness
+    // veil; the isometric path clips it to floor cells in the world pass.
     this.lightCanvas = document.createElement('canvas');
-    // Offscreen canvas for the cached static light layer: the static
-    // lights are redrawn into it only when their cache key changes, and
-    // copied into the light mask every frame.
+    // Offscreen canvas for the cached top-down static light layer: static
+    // lights are redrawn only when their cache key changes and copied into
+    // the light mask every frame.
     this.staticLightCanvas = document.createElement('canvas');
     // Offscreen canvas for the ambient darkness veil: same size and world
     // transform as the actor canvas, never attached to the DOM.
@@ -1421,26 +1422,64 @@ export class DungeonBoardController {
     ctx.restore();
 
     if (renderMode === 'isometric') {
-      for (const canvas of [
-        this.lightCanvas,
-        this.staticLightCanvas,
-        this.darknessCanvas,
-      ]) {
-        const layer = canvas?.getContext('2d');
-        if (!canvas || !layer) continue;
-        layer.save();
-        layer.setTransform(1, 0, 0, 1, 0, 0);
-        layer.clearRect(0, 0, canvas.width, canvas.height);
-        layer.restore();
-      }
       this.lastStaticLightKey = '';
       if (this.dynamicAnimationId) {
         cancelAnimationFrame(this.dynamicAnimationId);
         this.dynamicAnimationId = null;
       }
-      this.lastAmbientSignature = '';
       if (!isometricView) return;
+      const lightCanvas = this.lightCanvas;
+      const lightCtx = lightCanvas?.getContext('2d');
+      const lightMaskCanvas = this.staticLightCanvas;
+      const lightMaskCtx = lightMaskCanvas?.getContext('2d');
+      const hasIsometricLightMask = Boolean(
+        lightCanvas &&
+        lightCtx &&
+        lightCanvas.width > 0 &&
+        lightCanvas.height > 0 &&
+        lightMaskCanvas &&
+        lightMaskCtx &&
+        lightMaskCanvas.width > 0 &&
+        lightMaskCanvas.height > 0,
+      );
+      const isometricLightViews =
+        lightCanvas && lightCtx
+          ? buildIsometricLightViews(
+              this.activeState,
+              this.cellSize,
+              false,
+              currentTime,
+              isometricView,
+            )
+          : [];
+      const ambientBrightness = ambientLightLevel(this.activeState);
+      const needsAmbientFilterFallback =
+        !this.darknessCanvas || !hasIsometricLightMask;
+      if (lightCanvas && lightCtx) {
+        lightCtx.save();
+        lightCtx.setTransform(1, 0, 0, 1, 0, 0);
+        lightCtx.clearRect(0, 0, lightCanvas.width, lightCanvas.height);
+        lightCtx.restore();
+        lightCtx.save();
+        lightCtx.setTransform(this.canvasRatio, 0, 0, this.canvasRatio, 0, 0);
+        drawIsoLights(lightCtx, isometricView, isometricLightViews);
+        lightCtx.restore();
+      }
+      if (lightMaskCanvas && lightMaskCtx && isometricLightViews.length === 0) {
+        lightMaskCtx.save();
+        lightMaskCtx.setTransform(1, 0, 0, 1, 0, 0);
+        lightMaskCtx.clearRect(
+          0,
+          0,
+          lightMaskCanvas.width,
+          lightMaskCanvas.height,
+        );
+        lightMaskCtx.restore();
+      }
       ctx.save();
+      if (needsAmbientFilterFallback) {
+        ctx.filter = `brightness(${String(ambientBrightness * 100)}%)`;
+      }
       ctx.setTransform(this.canvasRatio, 0, 0, this.canvasRatio, 0, 0);
       const actors = renderIsometricDungeonPrototype(
         ctx,
@@ -1451,45 +1490,27 @@ export class DungeonBoardController {
         isometricView,
         this.debugMode ?? false,
         currentTime,
+        lightCanvas && lightCtx && isometricLightViews.length > 0
+          ? lightCanvas
+          : undefined,
+        this.canvasRatio,
+        hasIsometricLightMask ? (lightMaskCanvas ?? undefined) : undefined,
       );
       ctx.restore();
 
-      const lightCanvas = this.lightCanvas;
-      const lightCtx = lightCanvas?.getContext('2d');
-      if (lightCanvas && lightCtx) {
-        lightCtx.save();
-        lightCtx.setTransform(1, 0, 0, 1, 0, 0);
-        lightCtx.clearRect(0, 0, lightCanvas.width, lightCanvas.height);
-        lightCtx.restore();
-        lightCtx.save();
-        lightCtx.setTransform(this.canvasRatio, 0, 0, this.canvasRatio, 0, 0);
-        drawIsoLights(
-          lightCtx,
-          isometricView,
-          buildIsometricLightViews(
-            this.activeState,
-            this.cellSize,
-            false,
-            currentTime,
-            isometricView,
-          ),
+      if (this.darknessCanvas && hasIsometricLightMask && lightMaskCanvas) {
+        renderAmbientDarkness(
+          ctx,
+          this.darknessCanvas,
+          lightMaskCanvas,
+          this.activeState,
         );
-        lightCtx.restore();
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.drawImage(lightCanvas, 0, 0);
-        ctx.restore();
-        if (this.darknessCanvas) {
-          renderAmbientDarkness(
-            ctx,
-            this.darknessCanvas,
-            lightCanvas,
-            this.activeState,
-          );
-        }
       }
 
       ctx.save();
+      if (needsAmbientFilterFallback) {
+        ctx.filter = `brightness(${String(ambientBrightness * 100)}%)`;
+      }
       ctx.setTransform(this.canvasRatio, 0, 0, this.canvasRatio, 0, 0);
       renderIsometricActorOverlays(
         ctx,
@@ -1506,7 +1527,7 @@ export class DungeonBoardController {
         hasAnimatedLightSprites ||
         hasTerrainEffects
       ) {
-        this.scheduleDynamicFrame(true);
+        this.scheduleDynamicFrame(hasActiveAnimations);
       }
       return;
     }

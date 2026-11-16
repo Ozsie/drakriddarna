@@ -44,12 +44,30 @@ describe('dungeon board render order', () => {
       topDownStart,
     );
     const isoPasses = [
-      'renderIsometricDungeonPrototype(',
       'drawIsoLights(',
-      'ctx.drawImage(lightCanvas, 0, 0)',
+      'renderIsometricDungeonPrototype(',
       'renderAmbientDarkness(',
     ].map((pass) => isoRender.indexOf(pass));
     expect(isoPasses.every((pass) => pass >= 0)).toBe(true);
     expect(isoPasses).toEqual([...isoPasses].sort((a, b) => a - b));
+    expect(isoRender).toContain(
+      'const lightMaskCanvas = this.staticLightCanvas',
+    );
+    expect(isoRender).toContain(
+      '!this.darknessCanvas || !hasIsometricLightMask',
+    );
+    expect(isoRender).toContain('if (needsAmbientFilterFallback)');
+    expect(isoRender).not.toContain('ctx.drawImage(lightCanvas, 0, 0)');
+    expect(isoRender).toContain(
+      'this.darknessCanvas,\n          lightMaskCanvas,',
+    );
+    expect(isoRender).not.toContain(
+      'this.darknessCanvas,\n          lightCanvas,',
+    );
+    expect(isoRender).toContain(
+      'this.scheduleDynamicFrame(hasActiveAnimations)',
+    );
+    expect(isoRender).not.toContain("this.lastAmbientSignature = ''");
+    expect(isoRender).not.toContain('for (const canvas of [');
   });
 });

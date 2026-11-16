@@ -379,7 +379,17 @@ picking and screen-to-world mapping; pan, zoom and pointer-anchored zoom share
 the same camera transform. The radial menu keeps its logical grid anchor but
 adapts only its display copy for the projected position. Light visibility
 polygons use the existing lighting system and are projected into the isometric
-light mask. Turn overlays and transient combat effects use that same
+light mask. The isometric path builds a separate depth-aware mask: projected
+glow is clipped to discovered floor and door diamonds, then removed by visible
+wall silhouettes before light from adjacent floor cells is mapped onto exposed
+wall faces. Wall-face light follows the wall painter depth, so nearer walls
+continue to occlude it. The same mask supplies the visible additive glow and
+the ambient-darkness cutout, preventing floor light from brightening hidden
+wall pixels. Ambient darkness is composited once over the completed world,
+rather than filtering each individual draw; ambient-only animation uses the
+quantized repaint gate and does not force full-rate world redraws. Turn
+overlays and transient combat
+effects use that same
 projection; floating damage and info text is placed at projected positions but
 drawn upright in screen space. Actor health bars are positioned above sprite
 tops, and hero colour strips are replaced by ground markers at their feet. The

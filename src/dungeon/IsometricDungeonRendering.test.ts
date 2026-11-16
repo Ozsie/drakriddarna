@@ -26,11 +26,14 @@ import {
 import {
   buildIsometricPillarPainters,
   buildHeroPainters,
+  buildIsometricFloorLightPainter,
+  buildIsometricWallLightPainters,
   buildIsometricWorldView,
   feetPosition,
   getIsometricWallShape,
   getIsometricTileDimensions,
   prepareDepthSortedIsometricFloorPainters,
+  renderIsometricLightMask,
   renderIsometricActorOverlays,
 } from './IsometricDungeonRendering';
 
@@ -397,21 +400,32 @@ describe('buildIsometricWorldView', () => {
       moveTo: () => {},
       lineTo: () => {},
       closePath: () => {},
+      clip: () => {},
+      drawImage: () => calls.push('light'),
       fill: () => {},
       stroke: () => calls.push('outline'),
     } as unknown as CanvasRenderingContext2D;
     const prepared = prepareDepthSortedIsometricFloorPainters(world, view);
+    const lightPainter = buildIsometricFloorLightPainter(
+      world,
+      view,
+      { width: 400, height: 300 } as HTMLCanvasElement,
+      2,
+    );
     const actor = {
       position: { x: 24, y: 24 },
       draw: () => calls.push('actor'),
     };
+
+    expect(lightPainter).toBeDefined();
+    if (!lightPainter) return;
 
     drawIsoWorldFrame(
       context,
       prepared.world,
       view,
       [],
-      [...prepared.painters, actor],
+      [...prepared.painters, lightPainter, actor],
     );
 
     expect(calls.slice(0, 5)).toEqual([
@@ -421,8 +435,349 @@ describe('buildIsometricWorldView', () => {
       'floor-1-1',
       'floor-2-1',
     ]);
+    expect(calls.indexOf('light')).toBeGreaterThan(calls.indexOf('floor-2-1'));
+    expect(calls.indexOf('light')).toBeLessThan(calls.indexOf('actor'));
     expect(calls.indexOf('outline')).toBeLessThan(calls.indexOf('actor'));
     expect(calls.indexOf('actor')).toBeLessThan(calls.indexOf('wall'));
+  });
+
+  it('clips light to discovered floor and door diamonds but not hidden cells or pits', () => {
+    const world: SceneIsoWorldView = {
+      rows: ['FHF', 'FDW'],
+      cellSize: 48,
+      wallCell: 'W',
+      doorCell: 'D',
+      hiddenCell: 'H',
+      wallHeightPx: 36,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+      pitCells: [{ x: 0, y: 0 }],
+    };
+    const view = createIsoView({ x: 72, y: 48 }, 300, 200, 48);
+    const lightCanvas = { width: 400, height: 300 } as HTMLCanvasElement;
+    const painter = buildIsometricFloorLightPainter(
+      world,
+      view,
+      lightCanvas,
+      2,
+    );
+    const moveToCalls: number[][] = [];
+    const drawImageCalls: unknown[][] = [];
+    const savedStates: {
+      filter: string;
+      composite: GlobalCompositeOperation;
+    }[] = [];
+    let filter = 'brightness(0%)';
+    let globalCompositeOperation: GlobalCompositeOperation = 'source-over';
+    const context = {
+      get filter() {
+        return filter;
+      },
+      set filter(value: string) {
+        filter = value;
+      },
+      get globalCompositeOperation() {
+        return globalCompositeOperation;
+      },
+      set globalCompositeOperation(value: GlobalCompositeOperation) {
+        globalCompositeOperation = value;
+      },
+      save: () =>
+        savedStates.push({ filter, composite: globalCompositeOperation }),
+      restore: () => {
+        const state = savedStates.pop();
+        if (state) {
+          filter = state.filter;
+          globalCompositeOperation = state.composite;
+        }
+      },
+      beginPath: () => {},
+      moveTo: (...args: number[]) => moveToCalls.push(args),
+      lineTo: () => {},
+      closePath: () => {},
+      clip: () => {},
+      drawImage: (...args: unknown[]) =>
+        drawImageCalls.push([...args, filter, globalCompositeOperation]),
+    } as unknown as CanvasRenderingContext2D;
+
+    expect(painter).toBeDefined();
+    if (!painter) return;
+    painter.draw(context, { x: 0, y: 0 });
+
+    expect(moveToCalls).toHaveLength(3);
+    expect(drawImageCalls).toEqual([
+      [lightCanvas, 0, 0, 200, 150, 'none', 'lighter'],
+    ]);
+    expect(filter).toBe('brightness(0%)');
+    expect(globalCompositeOperation).toBe('source-over');
+  });
+
+  it('limits the floor-light clip path to cells in the viewport', () => {
+    const world: SceneIsoWorldView = {
+      rows: ['F'.repeat(40)],
+      cellSize: 48,
+      wallCell: 'W',
+      doorCell: 'D',
+      hiddenCell: 'H',
+      wallHeightPx: 36,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+    };
+    const view = createIsoView({ x: 24, y: 24 }, 300, 200, 48);
+    const painter = buildIsometricFloorLightPainter(
+      world,
+      view,
+      { width: 600, height: 400 } as HTMLCanvasElement,
+      2,
+    );
+    const moveToCalls: number[][] = [];
+    const context = {
+      save: () => {},
+      restore: () => {},
+      beginPath: () => {},
+      moveTo: (...args: number[]) => moveToCalls.push(args),
+      lineTo: () => {},
+      closePath: () => {},
+      clip: () => {},
+      drawImage: () => {},
+    } as unknown as CanvasRenderingContext2D;
+
+    expect(painter).toBeDefined();
+    painter?.draw(context, { x: 0, y: 0 });
+
+    expect(moveToCalls.length).toBeGreaterThan(0);
+    expect(moveToCalls.length).toBeLessThan(10);
+  });
+
+  it('projects light onto exposed wall faces and keeps nearer walls in front', () => {
+    const calls: string[] = [];
+    const world: SceneIsoWorldView = {
+      rows: ['WF', 'WF'],
+      cellSize: 48,
+      wallCell: 'W',
+      doorCell: 'D',
+      hiddenCell: 'H',
+      wallHeightPx: 36,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+      wallPainters: [
+        [
+          {
+            position: { x: 24, y: 24 },
+            draw: () => calls.push('rear-wall'),
+          },
+        ],
+        [
+          {
+            position: { x: 24, y: 72 },
+            draw: () => calls.push('front-wall'),
+          },
+        ],
+      ],
+    };
+    const view = createIsoView({ x: 48, y: 48 }, 300, 200, 48);
+    const lightCanvas = { width: 600, height: 400 } as HTMLCanvasElement;
+    const wallLightPainters = buildIsometricWallLightPainters(
+      world,
+      view,
+      lightCanvas,
+      2,
+    );
+    const context = {
+      fillRect: () => {},
+      save: () => {},
+      restore: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      clip: () => {},
+      transform: () => {},
+      drawImage: () => calls.push('wall-light'),
+      fill: () => {},
+    } as unknown as CanvasRenderingContext2D;
+
+    expect(wallLightPainters).toHaveLength(2);
+    drawIsoWorldFrame(context, world, view, [], wallLightPainters);
+
+    expect(calls).toEqual([
+      'rear-wall',
+      'wall-light',
+      'front-wall',
+      'wall-light',
+    ]);
+  });
+
+  it('maps adjacent floor light onto the projected wall face', () => {
+    const transforms: number[][] = [];
+    const world: SceneIsoWorldView = {
+      rows: ['WF'],
+      cellSize: 48,
+      wallCell: 'W',
+      doorCell: 'D',
+      hiddenCell: 'H',
+      wallHeightPx: 36,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+    };
+    const view = createIsoView({ x: 48, y: 24 }, 200, 160, 48);
+    const painter = buildIsometricWallLightPainters(
+      world,
+      view,
+      { width: 400, height: 320 } as HTMLCanvasElement,
+      2,
+    )[0];
+    const context = {
+      save: () => {},
+      restore: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      clip: () => {},
+      transform: (...args: number[]) => transforms.push(args),
+      drawImage: () => {},
+    } as unknown as CanvasRenderingContext2D;
+
+    painter?.draw(context, { x: 0, y: 0 });
+
+    expect(transforms).toHaveLength(1);
+    expect(transforms[0]).not.toEqual([1, 0, 0, 1, 0, 0]);
+  });
+
+  it('clips floor light and rebuilds wall light after wall occlusion', () => {
+    const calls: string[] = [];
+    let compositeOperation: GlobalCompositeOperation = 'source-over';
+    const savedOperations: GlobalCompositeOperation[] = [];
+    const maskContext = {
+      get globalCompositeOperation() {
+        return compositeOperation;
+      },
+      set globalCompositeOperation(value: GlobalCompositeOperation) {
+        compositeOperation = value;
+      },
+      save: () => savedOperations.push(compositeOperation),
+      restore: () => {
+        compositeOperation = savedOperations.pop() ?? 'source-over';
+      },
+      setTransform: () => {},
+      clearRect: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      clip: () => {},
+      transform: () => {},
+      drawImage: (...args: unknown[]) =>
+        calls.push(args.length === 5 ? 'floor-light' : 'wall-light'),
+    } as unknown as CanvasRenderingContext2D;
+    const world: SceneIsoWorldView = {
+      rows: ['WF'],
+      cellSize: 48,
+      wallCell: 'W',
+      doorCell: 'D',
+      hiddenCell: 'H',
+      wallHeightPx: 36,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+      wallPainters: [
+        [
+          {
+            position: { x: 24, y: 24 },
+            draw: (ctx) => calls.push(`wall:${ctx.globalCompositeOperation}`),
+          },
+        ],
+      ],
+    };
+    const view = createIsoView({ x: 48, y: 24 }, 200, 160, 48);
+    const lightCanvas = { width: 400, height: 320 } as HTMLCanvasElement;
+    const lightMaskCanvas = {
+      width: 400,
+      height: 320,
+      getContext: () => maskContext,
+    } as unknown as HTMLCanvasElement;
+
+    expect(
+      renderIsometricLightMask(world, view, lightCanvas, lightMaskCanvas, 2),
+    ).toBe(true);
+    expect(calls).toEqual([
+      'floor-light',
+      'wall:destination-out',
+      'wall-light',
+    ]);
+  });
+
+  it('excludes hidden, nonadjacent, and pit cells from wall-face light', () => {
+    const world: SceneIsoWorldView = {
+      rows: ['HWF', 'FHF'],
+      cellSize: 48,
+      wallCell: 'W',
+      doorCell: 'D',
+      hiddenCell: 'H',
+      wallHeightPx: 36,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+    };
+    const view = createIsoView({ x: 48, y: 48 }, 300, 200, 48);
+    const lightCanvas = { width: 600, height: 400 } as HTMLCanvasElement;
+    const visibleFacePainters = buildIsometricWallLightPainters(
+      world,
+      view,
+      lightCanvas,
+      2,
+    );
+    const pitFacePainters = buildIsometricWallLightPainters(
+      {
+        ...world,
+        rows: ['HWF', 'HFH'],
+        pitCells: [
+          { x: 2, y: 0 },
+          { x: 1, y: 1 },
+        ],
+      },
+      view,
+      lightCanvas,
+      2,
+    );
+
+    expect(visibleFacePainters).toHaveLength(1);
+    expect(pitFacePainters).toHaveLength(0);
   });
 
   it('draws the outline when floor images are unavailable', () => {
