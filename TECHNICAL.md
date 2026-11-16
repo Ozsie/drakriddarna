@@ -413,17 +413,21 @@ top-down actor/light/overlay passes remain unchanged in the default mode. The
 game-side isometric adapter lives in
 `src/dungeon/IsometricDungeonRendering.ts`; reusable projection, occlusion
 ordering and compositing are implemented in the sibling `../scene` package.
-Isometric floor, wall, pillar and chest art is resolved from the shared
+Isometric floor, wall, pillar, chest and decorator art is resolved from the shared
 `static/isometric/index.json`, with an optional per-dungeon `isometricGraphics`
 folder under `static/campaigns/<campaignId>/` overriding matching cell, tile,
-wall-shape, pillar-variant and chest-direction keys. Chests use the indexed
-open or closed variants and tile placement metadata; found-secret chests are
-open. Pillars use the optional `pillarVariants` list, falling back to the
-configured `cells.pillar` tile. A stable hash of
-grid coordinates selects each sprite independently of painter order and
-gameplay randomness. Image dimensions follow the active projection and cell
-size, so a tile is drawn at its projected footprint instead of being reduced
-by the logical cell count. Floor images replace flat floor diamonds and draw
+wall-shape, pillar-variant, chest-direction and decorator-variant keys.
+Chests use the indexed open or closed variants and tile placement metadata;
+found-secret chests are open. Pillars use the optional `pillarVariants` list,
+falling back to the configured `cells.pillar` tile. Ordinary decorators use
+the indexed four-facing `decoratorVariants` families, selected by a stable
+hash of their grid coordinates, and retain their original sprite or generic
+fallback while the indexed art loads. Their tile scale, anchor and cell
+alignment determine placement; the top-down renderer continues to use the
+original decorator sprites. Sprite selection is independent of painter order
+and gameplay randomness. Image dimensions follow the active projection and
+cell size, so a tile is drawn at its projected footprint instead of being
+reduced by the logical cell count. Floor images replace flat floor diamonds and draw
 in depth order before the outlines and upright scene objects, so neighboring
 sprites can overlap naturally without covering grid lines. Visible
 floor and door cells receive a rounded diamond outline after the cell's floor

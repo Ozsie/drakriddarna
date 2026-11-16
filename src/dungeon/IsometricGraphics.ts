@@ -14,12 +14,14 @@ export type IsometricGraphicsManifest = {
   tiles: Record<string, IsometricGraphicsTile>;
   wallShapes?: Record<string, string[]>;
   pillarVariants?: string[];
+  decoratorVariants?: string[];
 };
 
 export type ResolvedIsometricGraphics = {
   cells: Record<string, string>;
   wallShapes: Record<string, string[]>;
   pillarVariants?: string[];
+  decoratorVariants?: string[];
   tiles: Record<
     string,
     {
@@ -132,12 +134,27 @@ export const parseIsometricGraphicsManifest = (
     pillarVariants = value.pillarVariants as string[];
   }
 
+  let decoratorVariants: string[] | undefined;
+  if (value.decoratorVariants !== undefined) {
+    if (
+      !Array.isArray(value.decoratorVariants) ||
+      value.decoratorVariants.length === 0 ||
+      value.decoratorVariants.some(
+        (tileId) => typeof tileId !== 'string' || !tileId,
+      )
+    ) {
+      return null;
+    }
+    decoratorVariants = value.decoratorVariants as string[];
+  }
+
   return {
     version: 1,
     cells,
     tiles,
     wallShapes,
     ...(pillarVariants ? { pillarVariants } : {}),
+    ...(decoratorVariants ? { decoratorVariants } : {}),
   };
 };
 
@@ -195,12 +212,27 @@ export const resolveIsometricGraphics = (
           : cells.pillar && tiles[cells.pillar]
             ? [cells.pillar]
             : undefined;
+  const isCompleteDecoratorVariant = (variant: string): boolean =>
+    (['N', 'E', 'S', 'W'] as const).every(
+      (direction) => tiles[`${variant}_${direction}`],
+    );
+  const fallbackDecoratorVariants = (fallback.decoratorVariants ?? []).filter(
+    isCompleteDecoratorVariant,
+  );
+  const overrideDecoratorVariants = (override?.decoratorVariants ?? []).filter(
+    isCompleteDecoratorVariant,
+  );
+  const decoratorVariants =
+    overrideDecoratorVariants.length > 0
+      ? overrideDecoratorVariants
+      : fallbackDecoratorVariants;
 
   return {
     cells,
     wallShapes,
     tiles,
     ...(pillarVariants ? { pillarVariants } : {}),
+    ...(decoratorVariants.length > 0 ? { decoratorVariants } : {}),
   };
 };
 
@@ -216,6 +248,25 @@ export const resolveIsometricPillarTileId = (
   const coordinateHash =
     (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
   return variants[coordinateHash % variants.length];
+};
+
+export const resolveIsometricDecoratorTileId = (
+  graphics: ResolvedIsometricGraphics,
+  x: number,
+  y: number,
+): string | undefined => {
+  const variants = graphics.decoratorVariants?.filter((variant) =>
+    (['N', 'E', 'S', 'W'] as const).every(
+      (direction) => graphics.tiles[`${variant}_${direction}`],
+    ),
+  );
+  if (!variants || variants.length === 0) return undefined;
+
+  const coordinateHash =
+    (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
+  const variant = variants[coordinateHash % variants.length];
+  const direction = (['N', 'E', 'S', 'W'] as const)[(coordinateHash >>> 8) % 4];
+  return variant && direction ? `${variant}_${direction}` : undefined;
 };
 
 export const resolveIsometricCellTileId = (

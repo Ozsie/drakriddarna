@@ -43,6 +43,7 @@ import {
   getIsometricTileImage,
   resolveIsometricCellTileId,
   resolveIsometricChestTileId,
+  resolveIsometricDecoratorTileId,
   resolveIsometricDoorTileId,
   resolveIsometricPillarTileId,
   resolveIsometricWallTileIds,
@@ -1650,6 +1651,77 @@ const buildItemPainters = (
     ];
   });
 
+export const buildIsometricDecoratorPainters = (
+  decorators: GameItemView[],
+  cellSize: number,
+  projection: { ax: number; by: number },
+  graphics?: ResolvedIsometricGraphics,
+  getDecoratorTileImage: typeof getIsometricTileImage = getIsometricTileImage,
+): SceneIsoPainterView[] =>
+  decorators.flatMap((decorator) => {
+    const tileId = graphics
+      ? resolveIsometricDecoratorTileId(
+          graphics,
+          decorator.position.x,
+          decorator.position.y,
+        )
+      : undefined;
+    const tile = graphics ? getDecoratorTileImage(graphics, tileId) : null;
+    if (!tile) return buildItemPainters([decorator], cellSize, projection.ax);
+
+    const { width, height } = getIsometricTileDimensions(
+      cellSize,
+      projection,
+      tile.scale,
+      tile.image.naturalWidth,
+      tile.image.naturalHeight,
+    );
+    const alignment = decorator.spriteDraw?.alignment;
+    const leftAligned =
+      alignment === CellAlignment.TOP_LEFT ||
+      alignment === CellAlignment.BOTTOM_LEFT ||
+      alignment === CellAlignment.CENTER_LEFT;
+    const rightAligned =
+      alignment === CellAlignment.TOP_RIGHT ||
+      alignment === CellAlignment.BOTTOM_RIGHT ||
+      alignment === CellAlignment.CENTER_RIGHT;
+    const topAligned =
+      alignment === CellAlignment.TOP_LEFT ||
+      alignment === CellAlignment.TOP_RIGHT ||
+      alignment === CellAlignment.CENTER_TOP;
+    const bottomAligned =
+      alignment === CellAlignment.BOTTOM_LEFT ||
+      alignment === CellAlignment.BOTTOM_RIGHT ||
+      alignment === CellAlignment.CENTER_BOTTOM;
+    const horizontalOffset =
+      ((leftAligned ? -1 : rightAligned ? 1 : 0) * cellSize * projection.ax) /
+      2;
+    const verticalOffset =
+      ((topAligned ? -1 : bottomAligned ? 1 : 0) * cellSize * projection.ax) /
+      2;
+    const groundOffset = projection.by * cellSize;
+
+    return [
+      {
+        position: {
+          x: (decorator.position.x + 0.5) * cellSize,
+          y: (decorator.position.y + 0.5) * cellSize,
+        },
+        draw: (
+          ctx: CanvasRenderingContext2D,
+          center: { x: number; y: number },
+        ) =>
+          ctx.drawImage(
+            tile.image,
+            center.x + horizontalOffset - width * tile.anchor.x,
+            center.y + groundOffset + verticalOffset - height * tile.anchor.y,
+            width,
+            height,
+          ),
+      },
+    ];
+  });
+
 const ISOMETRIC_CHEST_DIRECTIONS = ['N', 'E', 'S', 'W'] as const;
 
 const getIsometricChestDirection = (x: number, y: number) => {
@@ -1922,6 +1994,7 @@ export const renderIsometricDungeonPrototype = (
     state,
     groundSheet,
     cellSize,
+    true,
   ).filter((item) =>
     isDiscovered(state.dungeon, item.position.x, item.position.y),
   );
@@ -1955,7 +2028,12 @@ export const renderIsometricDungeonPrototype = (
     view,
   );
   const decoratorPainters = prepareDepthBiasedIsometricPainters(
-    buildItemPainters(decorators, cellSize, view.projection.ax),
+    buildIsometricDecoratorPainters(
+      decorators,
+      cellSize,
+      view.projection,
+      graphics,
+    ),
     view,
   );
   const depthSortedDoors = prepareDepthSortedIsometricDoorPainters(world, view);

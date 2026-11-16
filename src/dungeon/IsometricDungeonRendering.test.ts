@@ -19,7 +19,7 @@ import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
 import { e1m2 } from '../campaigns/iceDragonTreasure/dungeons/e1m2';
 import { e1m3 } from '../campaigns/iceDragonTreasure/dungeons/e1m3';
-import { CornerType, SecretType } from '../types';
+import { CellAlignment, CornerType, SecretType } from '../types';
 import { autoDetectCorners } from './cornerDetection';
 import {
   parseIsometricGraphicsManifest,
@@ -28,6 +28,7 @@ import {
 } from './IsometricGraphics';
 import {
   buildIsometricPillarPainters,
+  buildIsometricDecoratorPainters,
   buildHeroPainters,
   buildIsometricFloorLightPainter,
   buildIsometricFoundSecretPainters,
@@ -3944,5 +3945,81 @@ describe('isometric found-secret chest painters', () => {
     expect(drawImage.mock.calls[0]?.[0]).toBe(
       item.sprite?.image ?? item.fallbackTile?.sheet,
     );
+  });
+
+  describe('isometric decorator painters', () => {
+    const decoratorGraphics = (): ResolvedIsometricGraphics => {
+      const tiles: ResolvedIsometricGraphics['tiles'] = {};
+      for (const direction of ['N', 'E', 'S', 'W'] as const) {
+        tiles[`decorator_barrel_${direction}`] = {
+          imageUrl: `isometric/decorators/barrel_${direction}.png`,
+          scale: 1.25,
+          anchor: { x: 0.4, y: 0.9 },
+        };
+      }
+      return {
+        cells: {},
+        wallShapes: {},
+        decoratorVariants: ['decorator_barrel'],
+        tiles,
+      };
+    };
+
+    it('draws indexed art with tile placement and decorator alignment', () => {
+      const [item] = foundSecretItems();
+      expect(item).toBeDefined();
+      if (!item) return;
+      const image = {
+        naturalWidth: 256,
+        naturalHeight: 512,
+      } as HTMLImageElement;
+      const graphics = decoratorGraphics();
+      const painters = buildIsometricDecoratorPainters(
+        [
+          {
+            ...item,
+            position: { x: 2, y: 3 },
+            spriteDraw: { scale: 0.75, alignment: CellAlignment.CENTER },
+          },
+        ],
+        48,
+        { ax: 1, by: 0.5 },
+        graphics,
+        (currentGraphics, tileId) => {
+          const tile = tileId ? currentGraphics.tiles[tileId] : undefined;
+          return tile ? { ...tile, image } : null;
+        },
+      );
+      const drawImage = vi.fn();
+      const context = { drawImage } as unknown as CanvasRenderingContext2D;
+
+      expect(painters[0]?.position).toEqual({ x: 120, y: 168 });
+      painters[0]?.draw(context, { x: 100, y: 100 });
+      expect(drawImage).toHaveBeenCalledWith(image, 52, -92, 120, 240);
+    });
+
+    it('keeps the generic fallback while indexed art is unavailable', () => {
+      const [item] = foundSecretItems();
+      expect(item).toBeDefined();
+      if (!item) return;
+      const painters = buildIsometricDecoratorPainters(
+        [{ ...item, sprite: null }],
+        48,
+        { ax: 1, by: 0.5 },
+        {
+          cells: {},
+          wallShapes: {},
+          decoratorVariants: ['missingDecorator'],
+          tiles: {},
+        },
+      );
+      const drawImage = vi.fn();
+      const context = { drawImage } as unknown as CanvasRenderingContext2D;
+
+      painters[0]?.draw(context, { x: 24, y: 24 });
+
+      expect(drawImage).toHaveBeenCalled();
+      expect(drawImage.mock.calls[0]?.[0]).toBe(item.fallbackTile?.sheet);
+    });
   });
 });

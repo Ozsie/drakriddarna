@@ -5,6 +5,7 @@ import {
   buildHeroViewModels,
   buildMonsterViewModels,
   buildHeroOverlayViewModel,
+  buildDecoratorViewModels,
   buildItemViewModels,
   buildFoundSecretViewModels,
   drawActorViewSprite,
@@ -827,5 +828,29 @@ describe('scaled hero bars', () => {
       5,
       5,
     ]);
+  });
+});
+
+describe('decorator view models', () => {
+  it('retains a discovered decorator fallback while its sprite loads in isometric mode', () => {
+    const state = createState();
+    state.dungeon.layout.decorators = [
+      {
+        position: { x: 0, y: 0 },
+        sprite: { image: 'decorators/not-loaded-test.png', size: 32, index: 0 },
+      },
+      {
+        position: { x: 1, y: 1 },
+        sprite: { image: 'decorators/hidden-test.png', size: 32, index: 0 },
+      },
+    ];
+    const groundSheet = {} as CanvasImageSource;
+
+    expect(buildDecoratorViewModels(state, groundSheet, 32)).toHaveLength(0);
+
+    const views = buildDecoratorViewModels(state, groundSheet, 32, true);
+    expect(views).toHaveLength(1);
+    expect(views[0]?.sprite).toBeNull();
+    expect(views[0]?.fallbackTile).toBeDefined();
   });
 });

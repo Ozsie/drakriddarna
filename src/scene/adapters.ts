@@ -879,6 +879,7 @@ export const buildDecoratorViewModels = (
   state: GameState,
   groundSheet: CanvasImageSource,
   cellSize: number,
+  retainFallbackWhileLoading = false,
 ): GameItemView[] =>
   (state.dungeon.layout.decorators ?? [])
     .filter((decorator) => {
@@ -888,7 +889,7 @@ export const buildDecoratorViewModels = (
     })
     .flatMap((decorator) => {
       const sprite = getItemSpriteFrame(decorator.sprite);
-      if (!sprite) return [];
+      if (!sprite && !retainFallbackWhileLoading) return [];
       return [
         {
           position: decorator.position,

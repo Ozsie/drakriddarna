@@ -1,8 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   resolveIsometricCellTileId,
   resolveIsometricChestTileId,
+  resolveIsometricDecoratorTileId,
   resolveIsometricDoorTileId,
   resolveIsometricGraphics,
   resolveIsometricPillarTileId,
@@ -679,5 +680,116 @@ describe('isometric graphics indexes', () => {
     expect(resolveIsometricChestTileId(graphics, true, 'E')).toBe(
       'campaignChestOpen_E',
     );
+  });
+
+  it('indexes every directional decorator sprite in the isometric folder', () => {
+    const manifest = parseIsometricGraphicsManifest(
+      JSON.parse(
+        readFileSync(
+          new URL('../../static/isometric/index.json', import.meta.url),
+          'utf8',
+        ),
+      ),
+    );
+
+    expect(manifest?.decoratorVariants).toHaveLength(55);
+    if (!manifest?.decoratorVariants) return;
+    const indexedPaths = manifest.decoratorVariants.flatMap((variant) =>
+      (['N', 'E', 'S', 'W'] as const).map((direction) => {
+        const tileId = `${variant}_${direction}`;
+        const tile = manifest.tiles[tileId];
+        expect(tile?.image).toBe(
+          `decorators/${variant.replace('decorator_', '')}_${direction}.png`,
+        );
+        return tile?.image;
+      }),
+    );
+    const imagePaths = readdirSync(
+      new URL('../../static/isometric/decorators', import.meta.url),
+    ).map((file) => `decorators/${file}`);
+
+    expect(indexedPaths).toHaveLength(220);
+    expect(new Set(indexedPaths).size).toBe(220);
+    expect(indexedPaths.sort()).toEqual(imagePaths.sort());
+  });
+
+  it('selects stable decorator variants and facings from cell coordinates', () => {
+    const variants = ['propA', 'propB'];
+    const tiles = Object.fromEntries(
+      variants.flatMap((variant) =>
+        (['N', 'E', 'S', 'W'] as const).map((direction) => [
+          `${variant}_${direction}`,
+          { image: `decorators/${variant}_${direction}.png` },
+        ]),
+      ),
+    );
+    const graphics = resolveIsometricGraphics(
+      {
+        version: 1,
+        cells: {},
+        decoratorVariants: variants,
+        tiles,
+      },
+      'isometric',
+    );
+
+    const first = resolveIsometricDecoratorTileId(graphics, 7, 11);
+    expect(first).toMatch(/^prop[AB]_[NESW]$/);
+    expect(resolveIsometricDecoratorTileId(graphics, 7, 11)).toBe(first);
+    expect(resolveIsometricDecoratorTileId(graphics, 8, 11)).not.toBe(first);
+    expect(
+      resolveIsometricDecoratorTileId(
+        { ...graphics, decoratorVariants: ['missing'] },
+        7,
+        11,
+      ),
+    ).toBeUndefined();
+  });
+
+  it('allows campaign indexes to replace the decorator variant list and art', () => {
+    const shared = parseIsometricGraphicsManifest(
+      JSON.parse(
+        readFileSync(
+          new URL('../../static/isometric/index.json', import.meta.url),
+          'utf8',
+        ),
+      ),
+    );
+    expect(shared).not.toBeNull();
+    if (!shared) return;
+    const campaign = parseIsometricGraphicsManifest({
+      version: 1,
+      cells: {},
+      decoratorVariants: ['decorator_campaignProp'],
+      tiles: Object.fromEntries(
+        (['N', 'E', 'S', 'W'] as const).map((direction) => [
+          `decorator_campaignProp_${direction}`,
+          {
+            image: `decorators/campaignProp_${direction}.png`,
+            scale: 1.25,
+            anchor: { x: 0.4, y: 0.9 },
+          },
+        ]),
+      ),
+    });
+    expect(campaign).not.toBeNull();
+    if (!campaign) return;
+
+    const graphics = resolveIsometricGraphics(
+      shared,
+      'isometric',
+      campaign,
+      'campaigns/test/dungeon',
+    );
+    const tileId = resolveIsometricDecoratorTileId(graphics, 7, 11);
+    const tile = tileId ? graphics.tiles[tileId] : undefined;
+
+    expect(graphics.decoratorVariants).toEqual(['decorator_campaignProp']);
+    expect(tileId).toMatch(/^decorator_campaignProp_[NESW]$/);
+    expect(tile?.imageUrl).toBe(
+      `campaigns/test/dungeon/decorators/campaignProp_${tileId?.slice(-1)}.png`,
+    );
+    expect(tile?.scale).toBe(1.25);
+    expect(tile?.anchor).toEqual({ x: 0.4, y: 0.9 });
   });
 });
