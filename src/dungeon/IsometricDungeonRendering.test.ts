@@ -33,6 +33,8 @@ import {
   feetPosition,
   getIsometricWallShape,
   getIsometricTileDimensions,
+  prepareDepthBiasedIsometricPainters,
+  prepareDepthSortedIsometricDoorPainters,
   prepareDepthSortedIsometricFloorPainters,
   renderIsometricLightMask,
   renderIsometricActorOverlays,
@@ -265,6 +267,428 @@ describe('buildIsometricWorldView', () => {
     );
 
     expect(drawnFloorCenters).toEqual(expectedFloorCenters);
+  });
+
+  it('batches door floor graphics with neighboring floor graphics', () => {
+    const calls: string[] = [];
+    const floorPainters = ['FD', 'FF'].map((row, y) =>
+      [...row].map((cell, x) =>
+        cell === 'F' || cell === 'D'
+          ? {
+              position: { x: (x + 0.5) * 48, y: (y + 0.5) * 48 },
+              draw: () => calls.push(`floor-${String(x)}-${String(y)}`),
+            }
+          : undefined,
+      ),
+    );
+    const world: SceneIsoWorldView = {
+      rows: ['FD', 'FF'],
+      cellSize: 48,
+      wallCell: 'W',
+      doorCell: 'D',
+      wallHeightPx: 36,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+      floorPainters,
+      doorPainters: [
+        [
+          undefined,
+          {
+            position: { x: 72, y: 24 },
+            draw: () => calls.push('door'),
+          },
+        ],
+      ],
+    };
+    const view = createIsoView({ x: 48, y: 48 }, 300, 200, 48, {
+      ax: 1,
+      by: 0.5,
+    });
+    const context = {
+      fillRect: () => {},
+      save: () => {},
+      restore: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      fill: () => {},
+      stroke: () => {},
+    } as unknown as CanvasRenderingContext2D;
+    const prepared = prepareDepthSortedIsometricFloorPainters(world, view);
+
+    drawIsoWorldFrame(context, prepared.world, view, [], prepared.painters);
+
+    expect(calls).toEqual([
+      'floor-0-0',
+      'floor-1-0',
+      'floor-0-1',
+      'floor-1-1',
+      'door',
+    ]);
+  });
+
+  it('orders open door frames around actors at every orientation and placement', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 256;
+        naturalHeight = 512;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+
+    try {
+      const manifest = parseIsometricGraphicsManifest(
+        JSON.parse(
+          readFileSync(
+            new URL('../../static/isometric/index.json', import.meta.url),
+            'utf8',
+          ),
+        ),
+      );
+      expect(manifest).not.toBeNull();
+      if (!manifest) return;
+      const graphics = resolveIsometricGraphics(manifest, 'isometric');
+      const view = createIsoView({ x: 168, y: 168 }, 600, 400, 48, {
+        ax: 1,
+        by: 0.5,
+      });
+      const directions = [
+        { side: 'Left', x: -1, y: 0 },
+        { side: 'Right', x: 1, y: 0 },
+        { side: 'Up', x: 0, y: -1 },
+        { side: 'Down', x: 0, y: 1 },
+      ] as const;
+      for (const { side, x: dx, y: dy } of directions) {
+        for (const attached of [false, true]) {
+          for (const open of [false, true]) {
+            const grid = Array.from(
+              { length: 7 },
+              () => Array(7).fill('A') as string[],
+            );
+            const frame = attached ? { x: 3 + dx, y: 3 + dy } : { x: 3, y: 3 };
+            if (attached) {
+              grid[frame.y + dx][frame.x + dy] = WALL;
+              grid[frame.y - dx][frame.x - dy] = WALL;
+            }
+            const dungeon: SceneDungeonView = {
+              name: 'door-depth-test',
+              discoveredRooms: ['A'],
+              layout: {
+                grid: grid.map((row) => row.join('')),
+                doors: [{ x: 3, y: 3, side, open, hidden: false }],
+                secrets: [],
+              },
+            };
+            const world = buildIsometricWorldView(
+              dungeon,
+              48,
+              false,
+              graphics,
+              view,
+            );
+            expect(world.rows[frame.y]?.[frame.x]).toBe('D');
+            const original = world.doorPainters?.[frame.y]?.[frame.x];
+            expect(original).toBeDefined();
+            if (!original) continue;
+            const originalImage: number[][] = [];
+            original.draw(
+              {
+                drawImage: (_image: CanvasImageSource, ...args: number[]) =>
+                  originalImage.push(args),
+              } as unknown as CanvasRenderingContext2D,
+              worldToScreen(view, original.position.x, original.position.y),
+            );
+            const prepared = prepareDepthSortedIsometricDoorPainters(
+              world,
+              view,
+            );
+
+            for (const offset of [-0.3, 0, 0.3, 0.6]) {
+              const calls: string[] = [];
+              const doorImages: number[][] = [];
+              const actorImage = {} as CanvasImageSource;
+              const context = {
+                fillRect: () => {},
+                save: () => {},
+                restore: () => {},
+                beginPath: () => {},
+                moveTo: () => {},
+                lineTo: () => {},
+                closePath: () => {},
+                fill: () => {},
+                stroke: () => {},
+                drawImage: (image: CanvasImageSource, ...args: number[]) => {
+                  if (image === actorImage) {
+                    calls.push('actor');
+                  } else if (
+                    (image as HTMLImageElement).src?.includes('/doors/')
+                  ) {
+                    calls.push('door');
+                    doorImages.push(args);
+                  }
+                },
+              } as unknown as CanvasRenderingContext2D;
+              const actor: GameActorView = {
+                position: { x: frame.x + offset, y: frame.y + offset },
+                sprite: { image: actorImage, sx: 0, sy: 0, sw: 32, sh: 32 },
+                tile: null,
+                flashIntensity: 0,
+                active: false,
+                colourBar: '',
+                healthBar: null,
+                debugLabel: null,
+                debugLines: [],
+              };
+              drawIsoWorldFrame(
+                context,
+                prepared.world,
+                view,
+                [],
+                [
+                  ...prepared.painters,
+                  ...buildHeroPainters([actor], 48, view.projection.ax),
+                ],
+              );
+              const actorFirst = open ? offset <= 0.3 : offset < 0;
+              expect(
+                calls,
+                `${side} attached=${String(attached)} open=${String(open)} offset=${String(offset)}`,
+              ).toEqual(actorFirst ? ['actor', 'door'] : ['door', 'actor']);
+              expect(doorImages).toEqual(originalImage);
+            }
+          }
+        }
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('draws open door frames behind foreground walls and in front of rear walls', () => {
+    const calls: string[] = [];
+    const cellSize = 48;
+    const cells = Array.from({ length: 7 }, () => Array<string>(7).fill('.'));
+    const wallCells = [
+      { x: 2, y: 3, name: 'rear-wall' },
+      { x: 4, y: 3, name: 'front-east-wall' },
+      { x: 3, y: 4, name: 'front-south-wall' },
+    ];
+    const setCell = (x: number, y: number, cell: string): void => {
+      const row = cells[y];
+      if (row) row[x] = cell;
+    };
+    setCell(3, 3, 'D');
+    wallCells.forEach(({ x, y }) => setCell(x, y, 'W'));
+    const rows = cells.map((row) => row.join(''));
+    const wallPainters = cells.map((row, y) =>
+      row.map((_, x) => {
+        const wall = wallCells.find(
+          (candidate) => candidate.x === x && candidate.y === y,
+        );
+        return wall
+          ? {
+              position: { x: (x + 0.5) * cellSize, y: (y + 0.5) * cellSize },
+              draw: () => calls.push(wall.name),
+            }
+          : undefined;
+      }),
+    );
+    const doorPainters = cells.map((row, y) =>
+      row.map((_, x) =>
+        x === 3 && y === 3
+          ? {
+              position: { x: 3.5 * cellSize, y: 3.5 * cellSize },
+              draw: () => calls.push('door'),
+            }
+          : undefined,
+      ),
+    );
+    const world: SceneIsoWorldView & {
+      openDoorCells: { x: number; y: number }[];
+    } = {
+      rows,
+      cellSize,
+      wallCell: 'W',
+      doorCell: 'D',
+      wallHeightPx: cellSize,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+      wallPainters,
+      doorPainters,
+      openDoorCells: [{ x: 3, y: 3 }],
+    };
+    const view = createIsoView({ x: 168, y: 168 }, 600, 400, cellSize, {
+      ax: 1,
+      by: 0.5,
+    });
+    const prepared = prepareDepthSortedIsometricDoorPainters(world, view);
+    const actorPainter = {
+      position: { x: 3.8 * cellSize, y: 3.8 * cellSize },
+      draw: () => calls.push('actor'),
+    };
+    const context = {
+      fillRect: () => {},
+      save: () => {},
+      restore: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      fill: () => {},
+      stroke: () => {},
+    } as unknown as CanvasRenderingContext2D;
+
+    drawIsoWorldFrame(
+      context,
+      prepared.world,
+      view,
+      [],
+      [...prepared.painters, actorPainter],
+    );
+
+    expect(calls).toEqual([
+      'rear-wall',
+      'actor',
+      'door',
+      'front-east-wall',
+      'front-south-wall',
+    ]);
+  });
+
+  it('preserves missing-door graphics and pit exclusions', () => {
+    const view = createIsoView({ x: 24, y: 24 }, 200, 200, 48, {
+      ax: 1,
+      by: 0.5,
+    });
+    const dungeon: SceneDungeonView = {
+      name: 'open-door-fallback-test',
+      discoveredRooms: ['A'],
+      layout: {
+        grid: ['A'],
+        doors: [{ x: 0, y: 0, side: 'Up', open: true, hidden: false }],
+        secrets: [],
+      },
+    };
+    const world = buildIsometricWorldView(dungeon, 48);
+    const missing = prepareDepthSortedIsometricDoorPainters(world, view);
+    expect(missing.painters).toEqual([]);
+    expect(missing.world.doorPainters).toBeUndefined();
+    expect(missing.world.rows).toEqual(['D']);
+
+    const painter = { position: { x: 24, y: 24 }, draw: () => {} };
+    const pit = prepareDepthSortedIsometricDoorPainters(
+      { ...world, doorPainters: [[painter]], pitCells: [{ x: 0, y: 0 }] },
+      view,
+    );
+    expect(pit.painters).toEqual([]);
+    expect(pit.world.doorPainters?.[0]?.[0]).toBe(painter);
+  });
+
+  it('draws corpses and decorators behind live actors without shifting them', () => {
+    const calls: string[] = [];
+    const drawPositions: { x: number; y: number }[] = [];
+    const actor: GameActorView = {
+      position: { x: 0.25, y: 0.25 },
+      sprite: { image: {} as CanvasImageSource, sx: 0, sy: 0, sw: 32, sh: 32 },
+      tile: null,
+      flashIntensity: 0,
+      active: false,
+      colourBar: '',
+      healthBar: null,
+      debugLabel: null,
+      debugLines: [],
+    };
+    const view = createIsoView({ x: 48, y: 48 }, 300, 200, 48, {
+      ax: 1,
+      by: 0.5,
+    });
+    const position = feetPosition(actor, 48);
+    const backedPainters = prepareDepthBiasedIsometricPainters(
+      ['corpse', 'decorator'].map((name) => ({
+        position,
+        draw: (
+          _ctx: CanvasRenderingContext2D,
+          screenPosition: { x: number; y: number },
+        ) => {
+          calls.push(name);
+          drawPositions.push(screenPosition);
+        },
+      })),
+      view,
+    );
+    const [liveActorPainter] = buildHeroPainters(
+      [actor],
+      48,
+      view.projection.ax,
+    );
+    const world: SceneIsoWorldView = {
+      rows: ['FW'],
+      cellSize: 48,
+      wallCell: 'W',
+      doorCell: 'D',
+      wallHeightPx: 36,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+      wallPainters: [
+        [
+          undefined,
+          {
+            position: { x: 72, y: 24 },
+            draw: () => calls.push('wall'),
+          },
+        ],
+      ],
+    };
+    const context = {
+      fillRect: () => {},
+      fill: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      drawImage: () => calls.push('live actor'),
+      imageSmoothingEnabled: false,
+    } as unknown as CanvasRenderingContext2D;
+
+    expect(liveActorPainter).toBeDefined();
+    if (!liveActorPainter) return;
+
+    drawIsoWorldFrame(
+      context,
+      world,
+      view,
+      [],
+      [liveActorPainter, ...backedPainters],
+    );
+
+    expect(calls).toEqual(['corpse', 'decorator', 'live actor', 'wall']);
+    expect(drawPositions).toEqual([
+      worldToScreen(view, position.x, position.y),
+      worldToScreen(view, position.x, position.y),
+    ]);
   });
 
   it('draws the complete floor tile before its rounded outline', () => {

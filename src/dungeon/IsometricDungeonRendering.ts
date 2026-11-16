@@ -53,10 +53,13 @@ const ISO_DOOR = 'D';
 const ISO_FLOOR = 'F';
 const ISO_HIDDEN = 'H';
 const ISO_FLOOR_OUTLINE_DEPTH_BIAS = 0.01;
+const ISO_GROUND_PAINTER_DEPTH_BIAS = 0.01;
+const ISO_OPEN_DOOR_DEPTH_BIAS = 0.001;
 const ISOMETRIC_WALL_LIGHT_SEAM_DEVICE_PX = 1;
 type IsometricDoorSide = 'Left' | 'Right' | 'Up' | 'Down';
 type IsometricWorldView = SceneIsoWorldView & {
   wallFaceHeightsPx?: (number | undefined)[][];
+  openDoorCells?: { x: number; y: number }[];
 };
 
 const PIT_WALL_SOURCE_RIM = {
@@ -287,7 +290,7 @@ export const prepareDepthSortedIsometricFloorPainters = (
             view.projection,
           ),
       };
-      if (cell !== ISO_FLOOR || !painter) {
+      if (!painter) {
         painters.push(outlinePainter);
         return painter;
       }
@@ -319,7 +322,7 @@ export const prepareDepthSortedIsometricFloorPainters = (
   );
   const floorOverlays = world.floorOverlays?.map((row, y) =>
     toArray(world.rows[y] ?? '').map((cell, x) =>
-      cell === ISO_FLOOR &&
+      (cell === ISO_FLOOR || cell === ISO_DOOR) &&
       world.floorPainters?.[y]?.[x] &&
       !pitCells.has(`${String(x)},${String(y)}`)
         ? undefined
@@ -351,6 +354,64 @@ export const prepareDepthSortedIsometricFloorPainters = (
       ...(floorPainters ? { floorPainters } : {}),
       ...(floorOverlays ? { floorOverlays } : {}),
     },
+    painters,
+  };
+};
+
+export const prepareDepthBiasedIsometricPainters = (
+  painters: SceneIsoPainterView[],
+  view: SceneIsoView,
+): SceneIsoPainterView[] =>
+  painters.map((painter) => {
+    const position = { ...painter.position };
+    return {
+      position: {
+        x: position.x,
+        y: position.y - ISO_GROUND_PAINTER_DEPTH_BIAS,
+      },
+      draw: (ctx) =>
+        painter.draw(ctx, worldToScreen(view, position.x, position.y)),
+    };
+  });
+
+export const prepareDepthSortedIsometricDoorPainters = (
+  world: IsometricWorldView,
+  view: SceneIsoView,
+): { world: IsometricWorldView; painters: SceneIsoPainterView[] } => {
+  const painters: SceneIsoPainterView[] = [];
+  const openDoors = new Set(
+    (world.openDoorCells ?? []).map(({ x, y }) => `${String(x)},${String(y)}`),
+  );
+  const pitCells = new Set(
+    (world.pitCells ?? []).map(({ x, y }) => `${String(x)},${String(y)}`),
+  );
+  const doorPainters = world.doorPainters?.map((row, y) =>
+    row.map((painter, x) => {
+      const key = `${String(x)},${String(y)}`;
+      if (
+        !painter ||
+        !openDoors.has(key) ||
+        pitCells.has(key) ||
+        toArray(world.rows[y] ?? '')[x] !== world.doorCell
+      ) {
+        return painter;
+      }
+      const position = painter.position;
+      painters.push({
+        position: {
+          x: (x + 1) * world.cellSize,
+          y:
+            (y + 1) * world.cellSize -
+            world.cellSize * ISO_OPEN_DOOR_DEPTH_BIAS,
+        },
+        draw: (ctx) =>
+          painter.draw(ctx, worldToScreen(view, position.x, position.y)),
+      });
+      return undefined;
+    }),
+  );
+  return {
+    world: { ...world, ...(doorPainters ? { doorPainters } : {}) },
     painters,
   };
 };
@@ -1168,6 +1229,13 @@ export const buildIsometricWorldView = (
     rows: worldRows,
     floorPainters,
     ...(graphics ? { wallPainters, doorPainters, pitPainters } : {}),
+    openDoorCells: worldRows.flatMap((row, y) =>
+      toArray(row).flatMap((cell, x) =>
+        cell === ISO_DOOR && doors.get(`${String(x)},${String(y)}`)?.open
+          ? [{ x, y }]
+          : [],
+      ),
+    ),
     wallFaceHeightsPx,
     floorColors: rows.map((row, y) =>
       toArray(row).map((cell, x) =>
@@ -1657,14 +1725,28 @@ export const renderIsometricDungeonPrototype = (
     debugMode,
     currentTime,
   );
-  const actors = [
+  const liveActors = [
     ...heroes,
     ...buildMonsterViewModels(state, actorsSheet, debugMode, currentTime),
-    ...buildCorpseViewModels(state, currentTime),
   ];
-  const items = [
-    ...buildItemViewModels(state, groundSheet, cellSize, debugMode),
-    ...buildDecoratorViewModels(state, groundSheet, cellSize),
+  const corpses = buildCorpseViewModels(state, currentTime);
+  const actors = [...liveActors, ...corpses];
+  const decorators = buildDecoratorViewModels(
+    state,
+    groundSheet,
+    cellSize,
+  ).filter((item) =>
+    isDiscovered(state.dungeon, item.position.x, item.position.y),
+  );
+  const items = buildItemViewModels(
+    state,
+    groundSheet,
+    cellSize,
+    debugMode,
+  ).filter((item) =>
+    isDiscovered(state.dungeon, item.position.x, item.position.y),
+  );
+  const itemsAfterDecorators = [
     ...buildFoundSecretViewModels(dungeon, groundSheet, cellSize, debugMode),
     ...buildLightSpriteViewModels(
       state,
@@ -1676,8 +1758,17 @@ export const renderIsometricDungeonPrototype = (
   ].filter((item) =>
     isDiscovered(state.dungeon, item.position.x, item.position.y),
   );
+  const corpsePainters = prepareDepthBiasedIsometricPainters(
+    buildHeroPainters(corpses, cellSize, view.projection.ax),
+    view,
+  );
+  const decoratorPainters = prepareDepthBiasedIsometricPainters(
+    buildItemPainters(decorators, cellSize, view.projection.ax),
+    view,
+  );
+  const depthSortedDoors = prepareDepthSortedIsometricDoorPainters(world, view);
   const depthSortedFloors = prepareDepthSortedIsometricFloorPainters(
-    world,
+    depthSortedDoors.world,
     view,
   );
   const hasDepthAwareLightMask = Boolean(
@@ -1708,10 +1799,13 @@ export const renderIsometricDungeonPrototype = (
     [],
     [
       ...depthSortedFloors.painters,
+      ...depthSortedDoors.painters,
       ...(lightPainter ? [lightPainter] : []),
       ...wallLightPainters,
-      ...buildHeroPainters(actors, cellSize, view.projection.ax),
+      ...corpsePainters,
       ...buildItemPainters(items, cellSize, view.projection.ax),
+      ...decoratorPainters,
+      ...buildItemPainters(itemsAfterDecorators, cellSize, view.projection.ax),
       ...buildDungeonObjectPainters(
         state.dungeon,
         dungeon,
@@ -1722,6 +1816,7 @@ export const renderIsometricDungeonPrototype = (
         graphics,
         view.projection,
       ),
+      ...buildHeroPainters(liveActors, cellSize, view.projection.ax),
     ],
   );
   if (hasDepthAwareLightMask && lightMaskCanvas) {

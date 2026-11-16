@@ -448,7 +448,17 @@ on wall cells retain their existing wall footprint. The corresponding
 face-and-post composites keep corner jambs joined. Wall and open/closed,
 side-specific door images join the depth-sorted scene queue
 so actors can pass in front of or behind their geometry; missing images
-retain the scene palette fallback.
+retain the scene palette fallback. Open door frames sort just behind the
+front-corner depth of their cell, without shifting their image, so foreground
+walls at that tied depth occlude the frame; actors inside the opening appear
+behind it and actors beyond it appear in front. Their single sprite cannot
+interleave its individual jambs with an actor. Closed doors keep the scene's
+cell-center depth. Door-opening floor sprites share the
+depth-sorted floor batch with neighboring floor tiles, before the queued wall
+and door geometry. Ground decorators and corpses receive a small backward
+sort-depth bias without changing their screen position, so walls can occlude
+them and live actors render over them; live actors follow the other depth-
+sorted objects on equal-depth ties.
 Discovered pits render as lowered openings: connected pit cells share one
 aperture clip, shaded bottoms and textured north/west inner faces omit shared
 edges, and each texture is clipped to its own lowered face inside the opening.
@@ -549,8 +559,10 @@ small state machines in `core/ActorAnimation.ts`, driven by
 `requestAnimationFrame` only while an animation is in flight. A downed actor
 also leaves a corpse (`layout.corpses`, placed by `processActorDowned`): plain
 game state, one per cell — a later death on the same cell replaces it — drawn
-by the actor pass as the frozen last frame of the actor's death animation,
-after the dying animation itself finishes. Orc arrows and dark lord fireballs
+as a depth-sorted ground object from the frozen last frame of the actor's
+death animation, after the dying animation itself finishes. Its small backward
+sort bias keeps it beneath live actors without shifting its sprite. Orc arrows
+and dark lord fireballs
 use numbered image sequences from `static/vfx`; fireball impact draws one
 three-cell-wide area effect centered on the target and starts at projectile
 arrival. Screen shakes
