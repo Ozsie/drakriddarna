@@ -42,6 +42,7 @@ import {
   getIsometricGraphics,
   getIsometricTileImage,
   resolveIsometricCellTileId,
+  resolveIsometricChestTileId,
   resolveIsometricDoorTileId,
   resolveIsometricPillarTileId,
   resolveIsometricWallTileIds,
@@ -1649,6 +1650,63 @@ const buildItemPainters = (
     ];
   });
 
+const ISOMETRIC_CHEST_DIRECTIONS = ['N', 'E', 'S', 'W'] as const;
+
+const getIsometricChestDirection = (x: number, y: number) => {
+  const coordinateHash =
+    (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
+  return ISOMETRIC_CHEST_DIRECTIONS[
+    coordinateHash % ISOMETRIC_CHEST_DIRECTIONS.length
+  ];
+};
+
+export const buildIsometricFoundSecretPainters = (
+  items: GameItemView[],
+  cellSize: number,
+  projection: { ax: number; by: number },
+  graphics?: ResolvedIsometricGraphics,
+  getChestTileImage: typeof getIsometricTileImage = getIsometricTileImage,
+): SceneIsoPainterView[] =>
+  items.flatMap((item) => {
+    const direction = getIsometricChestDirection(
+      item.position.x,
+      item.position.y,
+    );
+    const tileId = graphics
+      ? resolveIsometricChestTileId(graphics, true, direction)
+      : undefined;
+    const tile = graphics ? getChestTileImage(graphics, tileId) : null;
+    if (!tile) return buildItemPainters([item], cellSize, projection.ax);
+
+    const { width, height } = getIsometricTileDimensions(
+      cellSize,
+      projection,
+      tile.scale,
+      tile.image.naturalWidth,
+      tile.image.naturalHeight,
+    );
+    const groundOffset = projection.by * cellSize;
+    return [
+      {
+        position: {
+          x: (item.position.x + 0.5) * cellSize,
+          y: (item.position.y + 0.5) * cellSize,
+        },
+        draw: (
+          ctx: CanvasRenderingContext2D,
+          center: { x: number; y: number },
+        ) =>
+          ctx.drawImage(
+            tile.image,
+            center.x - width * tile.anchor.x,
+            center.y + groundOffset - height * tile.anchor.y,
+            width,
+            height,
+          ),
+      },
+    ];
+  });
+
 const buildDungeonTilePainter = (
   tile: (typeof DUNGEON_TILES)[keyof typeof DUNGEON_TILES],
   sheet: CanvasImageSource,
@@ -1875,16 +1933,21 @@ export const renderIsometricDungeonPrototype = (
   ).filter((item) =>
     isDiscovered(state.dungeon, item.position.x, item.position.y),
   );
-  const itemsAfterDecorators = [
-    ...buildFoundSecretViewModels(dungeon, groundSheet, cellSize, debugMode),
-    ...buildLightSpriteViewModels(
-      state,
-      groundSheet,
-      cellSize,
-      debugMode,
-      currentTime,
-    ),
-  ].filter((item) =>
+  const foundSecretItems = buildFoundSecretViewModels(
+    dungeon,
+    groundSheet,
+    cellSize,
+    debugMode,
+  ).filter((item) =>
+    isDiscovered(state.dungeon, item.position.x, item.position.y),
+  );
+  const itemsAfterDecorators = buildLightSpriteViewModels(
+    state,
+    groundSheet,
+    cellSize,
+    debugMode,
+    currentTime,
+  ).filter((item) =>
     isDiscovered(state.dungeon, item.position.x, item.position.y),
   );
   const corpsePainters = prepareDepthBiasedIsometricPainters(
@@ -1939,6 +2002,12 @@ export const renderIsometricDungeonPrototype = (
       ...corpsePainters,
       ...buildItemPainters(items, cellSize, view.projection.ax),
       ...decoratorPainters,
+      ...buildIsometricFoundSecretPainters(
+        foundSecretItems,
+        cellSize,
+        view.projection,
+        graphics,
+      ),
       ...buildItemPainters(itemsAfterDecorators, cellSize, view.projection.ax),
       ...buildDungeonObjectPainters(
         state.dungeon,

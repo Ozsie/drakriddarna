@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   resolveIsometricCellTileId,
+  resolveIsometricChestTileId,
   resolveIsometricDoorTileId,
   resolveIsometricGraphics,
   resolveIsometricPillarTileId,
@@ -601,6 +602,82 @@ describe('isometric graphics indexes', () => {
     );
     expect(resolveIsometricDoorTileId(graphics, true, 'Left')).toBe(
       'stoneDoor',
+    );
+  });
+
+  it('indexes all directional open and closed chest sprites', () => {
+    const manifest = parseIsometricGraphicsManifest(
+      JSON.parse(
+        readFileSync(
+          new URL('../../static/isometric/index.json', import.meta.url),
+          'utf8',
+        ),
+      ),
+    );
+
+    expect(manifest).not.toBeNull();
+    if (!manifest) return;
+    const graphics = resolveIsometricGraphics(manifest, 'isometric');
+
+    for (const state of ['Open', 'Closed']) {
+      for (const direction of ['N', 'E', 'S', 'W'] as const) {
+        const tileId = `chest${state}_${direction}`;
+        expect(manifest.cells[tileId]).toBe(tileId);
+        expect(manifest.tiles[tileId]).toEqual({
+          image: `chests/${tileId}.png`,
+          scale: 1,
+          anchor: { x: 0.5, y: 1 },
+        });
+        expect(graphics.tiles[tileId]?.imageUrl).toBe(
+          `isometric/chests/${tileId}.png`,
+        );
+        expect(
+          resolveIsometricChestTileId(graphics, state === 'Open', direction),
+        ).toBe(tileId);
+      }
+    }
+  });
+
+  it('allows campaign chest graphics to override tile paths and placement', () => {
+    const shared = parseIsometricGraphicsManifest(
+      JSON.parse(
+        readFileSync(
+          new URL('../../static/isometric/index.json', import.meta.url),
+          'utf8',
+        ),
+      ),
+    );
+    expect(shared).not.toBeNull();
+    if (!shared) return;
+    const campaign = parseIsometricGraphicsManifest({
+      version: 1,
+      cells: { chestOpen_E: 'campaignChestOpen_E' },
+      tiles: {
+        campaignChestOpen_E: {
+          image: 'chests/specialOpen.png',
+          scale: 1.25,
+          anchor: { x: 0.4, y: 0.9 },
+        },
+      },
+    });
+    expect(campaign).not.toBeNull();
+    if (!campaign) return;
+
+    const graphics = resolveIsometricGraphics(
+      shared,
+      'isometric',
+      campaign,
+      'campaigns/test/dungeon',
+    );
+
+    expect(graphics.cells.chestOpen_E).toBe('campaignChestOpen_E');
+    expect(graphics.tiles.campaignChestOpen_E).toEqual({
+      imageUrl: 'campaigns/test/dungeon/chests/specialOpen.png',
+      scale: 1.25,
+      anchor: { x: 0.4, y: 0.9 },
+    });
+    expect(resolveIsometricChestTileId(graphics, true, 'E')).toBe(
+      'campaignChestOpen_E',
     );
   });
 });

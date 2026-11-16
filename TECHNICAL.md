@@ -371,8 +371,12 @@ walls, doors, actors, items, decorators and other visible props through
 `@hoard-engine/scene`'s projected frame and depth-sorted painter queue. The
 adapter masks undiscovered cells and their terrain, fog overlays, and props;
 the scene compositor skips the hidden-cell token. Debug overlays do not bypass
-room discovery, and the isometric light pass excludes undiscovered rooms. The
-controller invalidates the relevant cached layers when the preference changes.
+room discovery, and the isometric light pass excludes undiscovered rooms.
+Found secrets use coordinate-oriented open chest sprites in isometric mode,
+resolved through the shared graphics index (and campaign overrides), with the
+existing decorator retained until the indexed chest image loads; hidden and
+trap-door secrets remain unpainted. The controller invalidates the relevant
+cached layers when the preference changes.
 
 Isometric input uses the inverse of the active scene projection for grid
 picking and screen-to-world mapping; pan, zoom and pointer-anchored zoom share
@@ -409,11 +413,13 @@ top-down actor/light/overlay passes remain unchanged in the default mode. The
 game-side isometric adapter lives in
 `src/dungeon/IsometricDungeonRendering.ts`; reusable projection, occlusion
 ordering and compositing are implemented in the sibling `../scene` package.
-Isometric floor, wall and pillar art is resolved from the shared
+Isometric floor, wall, pillar and chest art is resolved from the shared
 `static/isometric/index.json`, with an optional per-dungeon `isometricGraphics`
 folder under `static/campaigns/<campaignId>/` overriding matching cell, tile,
-wall-shape and pillar-variant keys. Pillars use the optional `pillarVariants`
-list, falling back to the configured `cells.pillar` tile. A stable hash of
+wall-shape, pillar-variant and chest-direction keys. Chests use the indexed
+open or closed variants and tile placement metadata; found-secret chests are
+open. Pillars use the optional `pillarVariants` list, falling back to the
+configured `cells.pillar` tile. A stable hash of
 grid coordinates selects each sprite independently of painter order and
 gameplay randomness. Image dimensions follow the active projection and cell
 size, so a tile is drawn at its projected footprint instead of being reduced

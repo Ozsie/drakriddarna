@@ -13,6 +13,14 @@
     "doorOpen_N": "stoneDoorOpen_S",
     "doorOpen_S": "stoneDoorOpen_N",
     "doorOpen_W": "stoneDoorOpen_E",
+    "chestOpen_N": "chestOpen_N",
+    "chestOpen_E": "chestOpen_E",
+    "chestOpen_S": "chestOpen_S",
+    "chestOpen_W": "chestOpen_W",
+    "chestClosed_N": "chestClosed_N",
+    "chestClosed_E": "chestClosed_E",
+    "chestClosed_S": "chestClosed_S",
+    "chestClosed_W": "chestClosed_W",
     "pillar": "stoneColumn_E",
     "pitNorth": "pitStoneWall_N",
     "pitWest": "pitStoneWall_W"
@@ -269,6 +277,46 @@
     },
     "stoneDoorOpen_W": {
       "image": "doors/stoneWallGate_W.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "chestOpen_N": {
+      "image": "chests/chestOpen_N.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "chestOpen_E": {
+      "image": "chests/chestOpen_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "chestOpen_S": {
+      "image": "chests/chestOpen_S.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "chestOpen_W": {
+      "image": "chests/chestOpen_W.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "chestClosed_N": {
+      "image": "chests/chestClosed_N.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "chestClosed_E": {
+      "image": "chests/chestClosed_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "chestClosed_S": {
+      "image": "chests/chestClosed_S.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "chestClosed_W": {
+      "image": "chests/chestClosed_W.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     }

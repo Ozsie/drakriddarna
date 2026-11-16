@@ -11,6 +11,7 @@ import {
 import { WALL } from '@hoard-engine/grid';
 import {
   buildDungeonView,
+  buildFoundSecretViewModels,
   type GameActorView,
   type GameHeroOverlayView,
 } from '../scene/adapters';
@@ -18,16 +19,18 @@ import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
 import { e1m2 } from '../campaigns/iceDragonTreasure/dungeons/e1m2';
 import { e1m3 } from '../campaigns/iceDragonTreasure/dungeons/e1m3';
-import { CornerType } from '../types';
+import { CornerType, SecretType } from '../types';
 import { autoDetectCorners } from './cornerDetection';
 import {
   parseIsometricGraphicsManifest,
   resolveIsometricGraphics,
+  type ResolvedIsometricGraphics,
 } from './IsometricGraphics';
 import {
   buildIsometricPillarPainters,
   buildHeroPainters,
   buildIsometricFloorLightPainter,
+  buildIsometricFoundSecretPainters,
   buildIsometricWallLightPainters,
   buildIsometricWorldView,
   prepareIsometricForegroundWallPainters,
@@ -3749,5 +3752,197 @@ describe('isometric pillar painters', () => {
     );
 
     expect(painters).toHaveLength(2);
+  });
+});
+
+describe('isometric found-secret chest painters', () => {
+  const chestGraphics = (): ResolvedIsometricGraphics => {
+    const cells: Record<string, string> = {};
+    const tiles: ResolvedIsometricGraphics['tiles'] = {};
+    for (const direction of ['N', 'E', 'S', 'W'] as const) {
+      const tileId = `chestOpen_${direction}`;
+      cells[tileId] = tileId;
+      tiles[tileId] = {
+        imageUrl: `isometric/chests/${tileId}.png`,
+        scale: 1,
+        anchor: { x: 0.5, y: 1 },
+      };
+    }
+    return { cells, wallShapes: {}, tiles };
+  };
+
+  const foundSecretItems = () => {
+    const dungeon: SceneDungeonView = {
+      name: 'isometric-chest-test',
+      discoveredRooms: ['A'],
+      layout: {
+        grid: ['AB'],
+        sealedGrid: ['AB'],
+        doors: [],
+        secrets: [
+          {
+            type: SecretType.NOTE,
+            position: { x: 0, y: 0 },
+            found: true,
+          },
+          {
+            type: SecretType.TRAP_DOOR,
+            position: { x: 0, y: 0 },
+            found: true,
+          },
+          {
+            type: SecretType.NOTE,
+            position: { x: 0, y: 0 },
+            found: false,
+          },
+          {
+            type: SecretType.NOTE,
+            position: { x: 1, y: 0 },
+            found: true,
+          },
+        ],
+      },
+    };
+    return buildFoundSecretViewModels(dungeon, {} as CanvasImageSource, 48);
+  };
+
+  it('only paints found non-trap secrets in discovered rooms', () => {
+    const image = { naturalWidth: 256, naturalHeight: 512 } as HTMLImageElement;
+    const tileIds: Array<string | undefined> = [];
+    const painters = buildIsometricFoundSecretPainters(
+      foundSecretItems(),
+      48,
+      { ax: 1, by: 0.5 },
+      chestGraphics(),
+      (graphics, tileId) => {
+        tileIds.push(tileId);
+        const tile = tileId ? graphics.tiles[tileId] : undefined;
+        return tile ? { ...tile, image } : null;
+      },
+    );
+
+    expect(painters).toHaveLength(1);
+    expect(tileIds).toHaveLength(1);
+  });
+
+  it('uses each open chest direction deterministically from the cell coordinates', () => {
+    const [item] = foundSecretItems();
+    expect(item).toBeDefined();
+    if (!item) return;
+    const items = Array.from({ length: 40 }, (_, index) => ({
+      ...item,
+      position: { x: index % 10, y: Math.floor(index / 10) },
+    }));
+    const graphics = chestGraphics();
+    const image = { naturalWidth: 256, naturalHeight: 512 } as HTMLImageElement;
+    const tileIds: Array<string | undefined> = [];
+    const getChestTile = (
+      currentGraphics: ResolvedIsometricGraphics,
+      tileId: string | undefined,
+    ) => {
+      tileIds.push(tileId);
+      const tile = tileId ? currentGraphics.tiles[tileId] : undefined;
+      return tile ? { ...tile, image } : null;
+    };
+
+    buildIsometricFoundSecretPainters(
+      items,
+      48,
+      { ax: 1, by: 0.5 },
+      graphics,
+      getChestTile,
+    );
+    const firstPass = [...tileIds];
+    tileIds.length = 0;
+    buildIsometricFoundSecretPainters(
+      items,
+      48,
+      { ax: 1, by: 0.5 },
+      graphics,
+      getChestTile,
+    );
+
+    expect(new Set(firstPass)).toEqual(
+      new Set(['chestOpen_N', 'chestOpen_E', 'chestOpen_S', 'chestOpen_W']),
+    );
+    expect(tileIds).toEqual(firstPass);
+  });
+
+  it('uses indexed chest scale and anchor when drawing the sprite', () => {
+    const [item] = foundSecretItems();
+    expect(item).toBeDefined();
+    if (!item) return;
+    const graphics = chestGraphics();
+    for (const direction of ['N', 'E', 'S', 'W']) {
+      const tile = graphics.tiles[`chestOpen_${direction}`];
+      if (tile) {
+        tile.scale = 1.25;
+        tile.anchor = { x: 0.4, y: 0.9 };
+      }
+    }
+    const image = {
+      naturalWidth: 256,
+      naturalHeight: 512,
+    } as HTMLImageElement;
+    const painters = buildIsometricFoundSecretPainters(
+      [{ ...item, position: { x: 2, y: 3 } }],
+      48,
+      { ax: 1, by: 0.5 },
+      graphics,
+      (currentGraphics, tileId) => {
+        const tile = tileId ? currentGraphics.tiles[tileId] : undefined;
+        return tile ? { ...tile, image } : null;
+      },
+    );
+    const drawImage = vi.fn();
+    const context = { drawImage } as unknown as CanvasRenderingContext2D;
+
+    expect(painters[0]?.position).toEqual({ x: 120, y: 168 });
+    painters[0]?.draw(context, { x: 100, y: 100 });
+
+    expect(drawImage).toHaveBeenCalledWith(image, 52, -92, 120, 240);
+  });
+
+  it('keeps the existing secret decorator painter while the chest image loads', () => {
+    const [item] = foundSecretItems();
+    expect(item).toBeDefined();
+    if (!item) return;
+    const painters = buildIsometricFoundSecretPainters(
+      [item],
+      48,
+      { ax: 1, by: 0.5 },
+      chestGraphics(),
+      () => null,
+    );
+    const drawImage = vi.fn();
+    const context = { drawImage } as unknown as CanvasRenderingContext2D;
+
+    painters[0]?.draw(context, { x: 24, y: 24 });
+
+    expect(drawImage).toHaveBeenCalled();
+    expect(drawImage.mock.calls[0]?.[0]).toBe(
+      item.sprite?.image ?? item.fallbackTile?.sheet,
+    );
+  });
+
+  it('keeps the existing secret decorator when the index has no chest mapping', () => {
+    const [item] = foundSecretItems();
+    expect(item).toBeDefined();
+    if (!item) return;
+    const painters = buildIsometricFoundSecretPainters(
+      [item],
+      48,
+      { ax: 1, by: 0.5 },
+      { cells: {}, wallShapes: {}, tiles: {} },
+    );
+    const drawImage = vi.fn();
+    const context = { drawImage } as unknown as CanvasRenderingContext2D;
+
+    painters[0]?.draw(context, { x: 24, y: 24 });
+
+    expect(drawImage).toHaveBeenCalled();
+    expect(drawImage.mock.calls[0]?.[0]).toBe(
+      item.sprite?.image ?? item.fallbackTile?.sheet,
+    );
   });
 });

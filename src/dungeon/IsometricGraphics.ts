@@ -240,6 +240,16 @@ export const resolveIsometricDoorTileId = (
   );
 };
 
+export const resolveIsometricChestTileId = (
+  graphics: ResolvedIsometricGraphics,
+  open: boolean,
+  direction: 'N' | 'E' | 'S' | 'W',
+): string | undefined => {
+  const tileId =
+    graphics.cells[`chest${open ? 'Open' : 'Closed'}_${direction}`];
+  return tileId && graphics.tiles[tileId] ? tileId : undefined;
+};
+
 export const resolveIsometricWallTileIds = (
   graphics: ResolvedIsometricGraphics,
   neighbors: { north: boolean; east: boolean; south: boolean; west: boolean },
