@@ -382,14 +382,17 @@ polygons use the existing lighting system and are projected into the isometric
 light mask. The isometric path builds a separate depth-aware mask: projected
 glow is clipped to discovered floor and door diamonds, then removed by visible
 wall silhouettes before light from adjacent floor cells is mapped onto exposed
-wall faces. Wall-face light follows the wall painter depth, so nearer walls
-continue to occlude it. Its projection spans the anchored wall sprite bounds
-and is clipped to the sprite's alpha using reusable tile-sized scratch canvases,
-so transparent image padding cannot glow; walls without loaded sprites use the
-projected geometric height instead. Adjacent same-height exposed wall faces
+wall faces. In depth order, each wall sprite receives exposed-face light from
+its own cell and orthogonally adjacent wall cells. The face projections use
+replacement compositing in reusable tile-sized scratch canvases before they
+are clipped to the sprite alpha, so overlapping faces do not stack brightness
+or light transparent image padding. Direct wall-face painting and walls
+without loaded sprites retain additive compositing; the latter use the
+projected geometric fallback. Wall-face light follows the wall painter depth,
+so nearer walls continue to occlude it. Adjacent same-height exposed wall faces
 overlap by one device pixel at shared edges, with padded source and scratch
 crops preventing raster gaps; isolated ends, hidden neighbors and pits do not
-receive this extension.
+receive this edge extension.
 Unchanged light-mask inputs reuse the mask across dynamic frames; changes to
 lights, discovery/layout, camera projection, canvas surfaces or loaded art
 invalidate it. The same mask supplies the visible additive glow and the

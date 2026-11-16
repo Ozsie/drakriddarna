@@ -488,12 +488,19 @@ export const buildIsometricFloorLightPainter = (
   };
 };
 
+type IsometricWallLightPainterView = SceneIsoPainterView & {
+  drawReplacing: (
+    ctx: CanvasRenderingContext2D,
+    origin: { x: number; y: number },
+  ) => void;
+};
+
 export const buildIsometricWallLightPainters = (
   world: IsometricWorldView,
   view: SceneIsoView,
   lightCanvas: HTMLCanvasElement,
   pixelRatio: number,
-): SceneIsoPainterView[] => {
+): IsometricWallLightPainterView[] => {
   if (
     pixelRatio <= 0 ||
     lightCanvas.width <= 0 ||
@@ -537,7 +544,7 @@ export const buildIsometricWallLightPainters = (
     points: { x: number; y: number }[],
     sharedStart = false,
     sharedEnd = false,
-  ): SceneIsoPainterView | undefined => {
+  ): IsometricWallLightPainterView | undefined => {
     const facePoints = points.map(({ x, y }) => ({ x, y }));
     const faceDirection = {
       x: points[1].x - points[0].x,
@@ -660,34 +667,40 @@ export const buildIsometricWallLightPainters = (
       ctx.closePath();
     };
 
+    const drawWithCompositeOperation = (
+      ctx: CanvasRenderingContext2D,
+      compositeOperation: GlobalCompositeOperation,
+    ) => {
+      ctx.save();
+      facePath(ctx);
+      ctx.clip();
+      ctx.filter = 'none';
+      ctx.globalCompositeOperation = compositeOperation;
+      ctx.transform(a, b, c, d, e, f);
+      ctx.drawImage(
+        lightCanvas,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        sourceX / pixelRatio,
+        sourceY / pixelRatio,
+        sourceWidth / pixelRatio,
+        sourceHeight / pixelRatio,
+      );
+      ctx.restore();
+    };
+
     return {
       position: {
         x: (wallX + 0.5) * cellSize,
         y: (wallY + 0.5) * cellSize,
       },
-      draw: (ctx) => {
-        ctx.save();
-        facePath(ctx);
-        ctx.clip();
-        ctx.filter = 'none';
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.transform(a, b, c, d, e, f);
-        ctx.drawImage(
-          lightCanvas,
-          sourceX,
-          sourceY,
-          sourceWidth,
-          sourceHeight,
-          sourceX / pixelRatio,
-          sourceY / pixelRatio,
-          sourceWidth / pixelRatio,
-          sourceHeight / pixelRatio,
-        );
-        ctx.restore();
-      },
+      draw: (ctx) => drawWithCompositeOperation(ctx, 'lighter'),
+      drawReplacing: (ctx) => drawWithCompositeOperation(ctx, 'copy'),
     };
   };
-  const wallLightPainters: SceneIsoPainterView[] = [];
+  const wallLightPainters: IsometricWallLightPainterView[] = [];
   world.rows.forEach((row, y) =>
     toArray(row).forEach((cell, x) => {
       if (cell !== ISO_WALL) return;
@@ -863,7 +876,7 @@ export const renderIsometricLightMask = (
   );
   floorLightPainter?.draw(maskCtx, { x: 0, y: 0 });
 
-  const wallLightsByCell = new Map<string, SceneIsoPainterView[]>();
+  const wallLightsByCell = new Map<string, IsometricWallLightPainterView[]>();
   buildIsometricWallLightPainters(world, view, lightCanvas, pixelRatio).forEach(
     (painter) => {
       const x = Math.round(painter.position.x / world.cellSize - 0.5);
@@ -874,6 +887,17 @@ export const renderIsometricLightMask = (
       wallLightsByCell.set(key, painters);
     },
   );
+  const wallLightsAt = (
+    x: number,
+    y: number,
+  ): IsometricWallLightPainterView[] =>
+    [
+      `${String(x)},${String(y)}`,
+      `${String(x - 1)},${String(y)}`,
+      `${String(x + 1)},${String(y)}`,
+      `${String(x)},${String(y - 1)}`,
+      `${String(x)},${String(y + 1)}`,
+    ].flatMap((key) => wallLightsByCell.get(key) ?? []);
 
   const walls: { x: number; y: number }[] = [];
   world.rows.forEach((row, y) =>
@@ -897,14 +921,15 @@ export const renderIsometricLightMask = (
       eraseIsometricWallSilhouette(maskCtx, world, view, x, y);
     }
     maskCtx.restore();
-    const wallLights = wallLightsByCell.get(`${String(x)},${String(y)}`);
-    if (!wallLights?.length) return;
+    const ownWallLights = wallLightsByCell.get(`${String(x)},${String(y)}`);
     if (!painter || !lightMaskCanvas.ownerDocument) {
-      wallLights.forEach((wallLight) =>
+      ownWallLights?.forEach((wallLight) =>
         wallLight.draw(maskCtx, { x: 0, y: 0 }),
       );
       return;
     }
+    const wallLights = wallLightsAt(x, y);
+    if (!wallLights.length) return;
 
     let scratch = wallLightScratchCanvases.get(lightMaskCanvas);
     if (!scratch) {
@@ -960,7 +985,7 @@ export const renderIsometricLightMask = (
       context.setTransform(pixelRatio, 0, 0, pixelRatio, -left, -top);
     }
     wallLights.forEach((wallLight) =>
-      wallLight.draw(lightScratchCtx, { x: 0, y: 0 }),
+      wallLight.drawReplacing(lightScratchCtx, { x: 0, y: 0 }),
     );
     painter.draw(silhouetteCtx, center);
     silhouetteCtx.restore();

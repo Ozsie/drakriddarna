@@ -1116,6 +1116,9 @@ describe('buildIsometricWorldView', () => {
   it('maps adjacent floor light onto the projected wall face', () => {
     const transforms: number[][] = [];
     const sourceDraws: unknown[][] = [];
+    const compositeOperations: GlobalCompositeOperation[] = [];
+    const savedCompositeOperations: GlobalCompositeOperation[] = [];
+    let compositeOperation: GlobalCompositeOperation = 'source-over';
     const world: SceneIsoWorldView = {
       rows: ['WF'],
       cellSize: 48,
@@ -1140,20 +1143,32 @@ describe('buildIsometricWorldView', () => {
       2,
     )[0];
     const context = {
-      save: () => {},
-      restore: () => {},
+      get globalCompositeOperation() {
+        return compositeOperation;
+      },
+      set globalCompositeOperation(value: GlobalCompositeOperation) {
+        compositeOperation = value;
+      },
+      save: () => savedCompositeOperations.push(compositeOperation),
+      restore: () => {
+        compositeOperation = savedCompositeOperations.pop() ?? 'source-over';
+      },
       beginPath: () => {},
       moveTo: () => {},
       lineTo: () => {},
       closePath: () => {},
       clip: () => {},
       transform: (...args: number[]) => transforms.push(args),
-      drawImage: (...args: unknown[]) => sourceDraws.push(args),
+      drawImage: (...args: unknown[]) => {
+        sourceDraws.push(args);
+        compositeOperations.push(compositeOperation);
+      },
     } as unknown as CanvasRenderingContext2D;
 
     painter?.draw(context, { x: 0, y: 0 });
 
     expect(transforms).toHaveLength(1);
+    expect(compositeOperations).toEqual(['lighter']);
     expect(transforms[0]).not.toEqual([1, 0, 0, 1, 0, 0]);
     const floorCorners = [
       worldToScreen(view, 48, 0),
@@ -1433,7 +1448,7 @@ describe('buildIsometricWorldView', () => {
     expect(calls).toEqual([
       'mask:lighter',
       'wall:destination-out',
-      'light:lighter',
+      'light:copy',
       'wall:source-over',
       'light:destination-in',
       'mask:source-over',
@@ -1463,6 +1478,171 @@ describe('buildIsometricWorldView', () => {
       2,
     );
     expect(created).toBe(2);
+  });
+
+  it('keeps sprite-less wall-face light additive', () => {
+    const calls: string[] = [];
+    let operation: GlobalCompositeOperation = 'source-over';
+    const saved: GlobalCompositeOperation[] = [];
+    const maskContext = {
+      get globalCompositeOperation() {
+        return operation;
+      },
+      set globalCompositeOperation(value: GlobalCompositeOperation) {
+        operation = value;
+      },
+      save: () => saved.push(operation),
+      restore: () => {
+        operation = saved.pop() ?? 'source-over';
+      },
+      setTransform: () => {},
+      clearRect: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      fill: () => {},
+      clip: () => {},
+      transform: () => {},
+      drawImage: () => calls.push(operation),
+    } as unknown as CanvasRenderingContext2D;
+    const world: SceneIsoWorldView = {
+      rows: ['WF'],
+      cellSize: 48,
+      wallCell: 'W',
+      doorCell: 'D',
+      hiddenCell: 'H',
+      wallHeightPx: 36,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+    };
+    const lightCanvas = { width: 400, height: 320 } as HTMLCanvasElement;
+    const lightMaskCanvas = {
+      width: 400,
+      height: 320,
+      getContext: () => maskContext,
+    } as unknown as HTMLCanvasElement;
+
+    renderIsometricLightMask(
+      world,
+      createIsoView({ x: 48, y: 24 }, 200, 160, 48),
+      lightCanvas,
+      lightMaskCanvas,
+      2,
+    );
+
+    expect(calls.length).toBeGreaterThan(1);
+    expect(
+      calls.every((compositeOperation) => compositeOperation === 'lighter'),
+    ).toBe(true);
+  });
+
+  it('projects exposed light onto overlapping adjacent wall sprites', () => {
+    const getScratchLightDraws = (rows: string[]) => {
+      const lightCanvas = { width: 800, height: 600 } as HTMLCanvasElement;
+      let lightDraws = 0;
+      const compositeOperations: GlobalCompositeOperation[] = [];
+      const makeContext = (countLightDraws: boolean) => {
+        let operation: GlobalCompositeOperation = 'source-over';
+        const saved: GlobalCompositeOperation[] = [];
+        return {
+          get globalCompositeOperation() {
+            return operation;
+          },
+          set globalCompositeOperation(value: GlobalCompositeOperation) {
+            operation = value;
+          },
+          save: () => saved.push(operation),
+          restore: () => {
+            operation = saved.pop() ?? 'source-over';
+          },
+          setTransform: () => {},
+          clearRect: () => {},
+          beginPath: () => {},
+          moveTo: () => {},
+          lineTo: () => {},
+          closePath: () => {},
+          clip: () => {},
+          transform: () => {},
+          drawImage: (...args: unknown[]) => {
+            if (countLightDraws && args[0] === lightCanvas) {
+              lightDraws += 1;
+              compositeOperations.push(operation);
+            }
+          },
+        } as unknown as CanvasRenderingContext2D;
+      };
+      const maskContext = makeContext(false);
+      const scratchCanvases = Array.from({ length: 2 }, () => ({
+        width: 0,
+        height: 0,
+        getContext: () => makeContext(true),
+      }));
+      const world: SceneIsoWorldView = {
+        rows,
+        cellSize: 48,
+        wallCell: 'W',
+        doorCell: 'D',
+        hiddenCell: 'H',
+        wallHeightPx: 36,
+        palette: {
+          background: '#000',
+          floor: '#333',
+          door: '#654',
+          wallTop: '#555',
+          wallSouth: '#444',
+          wallEast: '#222',
+        },
+        wallPainters: rows.map((row, y) =>
+          Array.from(row, (cell, x) =>
+            cell === 'W'
+              ? {
+                  position: { x: (x + 0.5) * 48, y: (y + 0.5) * 48 },
+                  draw: () => {},
+                }
+              : undefined,
+          ),
+        ),
+      };
+      const lightMaskCanvas = {
+        width: 800,
+        height: 600,
+        getContext: () => maskContext,
+        ownerDocument: {
+          createElement: () => scratchCanvases.shift(),
+        },
+      } as unknown as HTMLCanvasElement;
+
+      renderIsometricLightMask(
+        world,
+        createIsoView({ x: 96, y: 72 }, 400, 300, 48),
+        lightCanvas,
+        lightMaskCanvas,
+        2,
+      );
+      return { lightDraws, compositeOperations };
+    };
+
+    const horizontalWalls = getScratchLightDraws(['WWF', 'FFF']);
+    expect(horizontalWalls.lightDraws).toBe(6);
+    expect(horizontalWalls.compositeOperations).toEqual(Array(6).fill('copy'));
+    const verticalWalls = getScratchLightDraws(['WF', 'WF']);
+    expect(verticalWalls.lightDraws).toBe(4);
+    expect(verticalWalls.compositeOperations).toEqual(Array(4).fill('copy'));
+    const cornerWalls = getScratchLightDraws(['FFF', 'FWW', 'FWF']);
+    expect(cornerWalls.lightDraws).toBeGreaterThan(0);
+    expect(
+      cornerWalls.compositeOperations.every(
+        (compositeOperation) => compositeOperation === 'copy',
+      ),
+    ).toBe(true);
+    expect(getScratchLightDraws(['WWW']).lightDraws).toBe(0);
   });
 
   it('clips floor light and rebuilds wall light after wall occlusion', () => {
