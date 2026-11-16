@@ -4,6 +4,7 @@ import {
   createIsoView,
   drawIsoWorldFrame,
   worldToScreen,
+  type SceneIsoActorView,
   type SceneDungeonView,
   type SceneIsoWorldView,
 } from '@hoard-engine/scene';
@@ -200,7 +201,7 @@ describe('buildIsometricWorldView', () => {
     expect(drawnFloorCenters).toEqual(expectedFloorCenters);
   });
 
-  it('draws a rounded outline after the floor tile painter', () => {
+  it('draws the complete floor tile before its rounded outline', () => {
     vi.stubGlobal(
       'Image',
       class {
@@ -235,6 +236,7 @@ describe('buildIsometricWorldView', () => {
     const world = buildIsometricWorldView(dungeon, 48, false, graphics, view);
     const calls: string[] = [];
     const context = {
+      fillRect: () => {},
       drawImage: () => calls.push('tile'),
       save: () => {},
       restore: () => {},
@@ -243,6 +245,7 @@ describe('buildIsometricWorldView', () => {
       lineTo: () => calls.push('lineTo'),
       closePath: () => calls.push('closePath'),
       clip: () => calls.push('clip'),
+      fill: () => {},
       stroke: () => calls.push('stroke'),
       strokeStyle: '',
       lineWidth: 0,
@@ -253,17 +256,173 @@ describe('buildIsometricWorldView', () => {
       view,
     );
 
-    depthSortedFloors.painters[0]?.draw(context, { x: 100, y: 100 });
+    drawIsoWorldFrame(
+      context,
+      depthSortedFloors.world,
+      view,
+      [],
+      depthSortedFloors.painters,
+    );
 
     expect(calls).not.toContain('clip');
-    expect(calls.indexOf('tile')).toBeLessThan(calls.indexOf('beginPath'));
+    expect(calls.indexOf('tile')).toBeLessThan(calls.lastIndexOf('beginPath'));
     expect(calls.indexOf('beginPath')).toBeLessThan(calls.indexOf('closePath'));
     expect(calls.indexOf('closePath')).toBeLessThan(calls.indexOf('stroke'));
     expect(calls.indexOf('tile')).toBeLessThan(calls.indexOf('stroke'));
     expect(calls.at(-1)).toBe('stroke');
-    expect(context.strokeStyle).toBe('rgba(25, 22, 18, 0.85)');
+    expect(context.strokeStyle).toBe('rgba(25, 22, 18, 0.15)');
     expect(context.lineWidth).toBe(1.25);
     expect(context.lineJoin).toBe('round');
+  });
+
+  it('draws all adjacent floor images before the outlines without clipping', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 128;
+        naturalHeight = 64;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+    const graphics = {
+      cells: { floor: 'adjacentFloorTile' },
+      wallShapes: {},
+      tiles: {
+        adjacentFloorTile: {
+          imageUrl: 'isometric/adjacent-floor-outline.png',
+          scale: 1,
+          anchor: { x: 0.5, y: 1 },
+        },
+      },
+    };
+    const dungeon: SceneDungeonView = {
+      name: 'adjacent-floor-outline-test',
+      discoveredRooms: ['A'],
+      layout: { grid: ['AA'], doors: [], secrets: [] },
+    };
+    const cellSize = 48;
+    const view = createIsoView({ x: 48, y: 24 }, 300, 200, cellSize, {
+      ax: 1.25,
+      by: 0.4,
+    });
+    const world = buildIsometricWorldView(
+      dungeon,
+      cellSize,
+      false,
+      graphics,
+      view,
+    );
+    const calls: string[] = [];
+    const context = {
+      fillRect: () => {},
+      drawImage: () => calls.push('tile'),
+      save: () => {},
+      restore: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      clip: () => calls.push('clip'),
+      fill: () => {},
+      stroke: () => calls.push('outline'),
+      strokeStyle: '',
+      lineWidth: 0,
+      lineJoin: '',
+    } as unknown as CanvasRenderingContext2D;
+    const depthSortedFloors = prepareDepthSortedIsometricFloorPainters(
+      world,
+      view,
+    );
+
+    drawIsoWorldFrame(
+      context,
+      depthSortedFloors.world,
+      view,
+      [],
+      depthSortedFloors.painters,
+    );
+    expect(calls).toEqual(['tile', 'tile', 'outline', 'outline']);
+    calls.length = 0;
+    drawIsoWorldFrame(
+      context,
+      depthSortedFloors.world,
+      view,
+      [],
+      depthSortedFloors.painters,
+    );
+    expect(calls).toEqual(['tile', 'tile', 'outline', 'outline']);
+  });
+
+  it('depth sorts textured floor images before walls, outlines and actors', () => {
+    const calls: string[] = [];
+    const floor = (x: number, y: number) => ({
+      position: { x: (x + 0.5) * 48, y: (y + 0.5) * 48 },
+      draw: () => calls.push(`floor-${String(x)}-${String(y)}`),
+    });
+    const world: SceneIsoWorldView = {
+      rows: ['FFW', 'FFF'],
+      cellSize: 48,
+      wallCell: 'W',
+      doorCell: 'D',
+      wallHeightPx: 36,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+      floorPainters: [
+        [floor(0, 0), floor(1, 0)],
+        [floor(0, 1), floor(1, 1), floor(2, 1)],
+      ],
+      wallPainters: [
+        [
+          undefined,
+          undefined,
+          { position: { x: 120, y: 24 }, draw: () => calls.push('wall') },
+        ],
+      ],
+    };
+    const view = createIsoView({ x: 72, y: 48 }, 300, 200, 48);
+    const context = {
+      fillRect: () => {},
+      save: () => {},
+      restore: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      fill: () => {},
+      stroke: () => calls.push('outline'),
+    } as unknown as CanvasRenderingContext2D;
+    const prepared = prepareDepthSortedIsometricFloorPainters(world, view);
+    const actor = {
+      position: { x: 24, y: 24 },
+      draw: () => calls.push('actor'),
+    };
+
+    drawIsoWorldFrame(
+      context,
+      prepared.world,
+      view,
+      [],
+      [...prepared.painters, actor],
+    );
+
+    expect(calls.slice(0, 5)).toEqual([
+      'floor-0-0',
+      'floor-1-0',
+      'floor-0-1',
+      'floor-1-1',
+      'floor-2-1',
+    ]);
+    expect(calls.indexOf('outline')).toBeLessThan(calls.indexOf('actor'));
+    expect(calls.indexOf('actor')).toBeLessThan(calls.indexOf('wall'));
   });
 
   it('draws the outline when floor images are unavailable', () => {
@@ -310,7 +469,7 @@ describe('buildIsometricWorldView', () => {
     expect(calls).toEqual(['background', 'floor', 'outline']);
   });
 
-  it('draws the floor outline before a same-cell door painter', () => {
+  it('keeps floor outlines, doors, walls and actors depth sorted', () => {
     const world: SceneIsoWorldView = {
       rows: ['DW'],
       cellSize: 48,
@@ -343,12 +502,22 @@ describe('buildIsometricWorldView', () => {
       ax: 1,
       by: 0.5,
     });
+    const actor: SceneIsoActorView = {
+      feet: { x: 24, y: 24 },
+      halfWidth: 4,
+      halfHeight: 8,
+      color: '#f00',
+      shadowColor: '#000',
+    };
     const calls: string[] = [];
     const context = {
-      fillRect: () => {},
+      fillRect: (_x: number, _y: number, width: number, height: number) => {
+        if (width !== view.width || height !== view.height) calls.push('actor');
+      },
       save: () => {},
       restore: () => {},
       beginPath: () => {},
+      ellipse: () => {},
       moveTo: () => {},
       lineTo: () => {},
       closePath: () => {},
@@ -367,11 +536,11 @@ describe('buildIsometricWorldView', () => {
       context,
       depthSortedFloors.world,
       view,
-      [],
+      [actor],
       depthSortedFloors.painters,
     );
 
-    expect(calls).toEqual(['floor', 'outline', 'door', 'wall']);
+    expect(calls).toEqual(['floor', 'outline', 'door', 'actor', 'wall']);
   });
 
   it('uses existing masonry sprites for discovered e1m3 pits', () => {

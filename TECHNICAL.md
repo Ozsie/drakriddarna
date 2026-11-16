@@ -395,8 +395,9 @@ list, falling back to the configured `cells.pillar` tile. A stable hash of
 grid coordinates selects each sprite independently of painter order and
 gameplay randomness. Image dimensions follow the active projection and cell
 size, so a tile is drawn at its projected footprint instead of being reduced
-by the logical cell count. Floor images replace flat floor diamonds and join
-the depth-sorted queue so each tile follows the isometric draw order. Visible
+by the logical cell count. Floor images replace flat floor diamonds and draw
+in depth order before the outlines and upright scene objects, so neighboring
+sprites can overlap naturally without covering grid lines. Visible
 floor and door cells receive a rounded diamond outline after the cell's floor
 image or fallback fill; a slight depth bias places it before same-depth wall
 and door painters.

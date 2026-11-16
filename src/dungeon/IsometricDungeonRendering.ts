@@ -238,7 +238,7 @@ const drawIsometricCellOutline = (
   projection: { ax: number; by: number },
 ): void => {
   ctx.save();
-  ctx.strokeStyle = 'rgba(25, 22, 18, 0.85)';
+  ctx.strokeStyle = 'rgba(25, 22, 18, 0.15)';
   ctx.lineWidth = Math.max(1, projection.ax * 1.25);
   ctx.lineJoin = 'round';
   traceIsometricCellDiamond(ctx, center, cellSize, projection);
@@ -254,6 +254,7 @@ export const prepareDepthSortedIsometricFloorPainters = (
     (world.pitCells ?? []).map(({ x, y }) => `${String(x)},${String(y)}`),
   );
   const painters: SceneIsoPainterView[] = [];
+  const floorImages: SceneIsoPainterView[] = [];
   const floorPainters = world.floorPainters?.map((row, y) =>
     toArray(world.rows[y] ?? '').map((cell, x) => {
       const painter = row[x];
@@ -286,8 +287,9 @@ export const prepareDepthSortedIsometricFloorPainters = (
       }
 
       const overlay = world.floorOverlays?.[y]?.[x];
-      painters.push({
-        position: outlinePosition,
+      painters.push(outlinePainter);
+      floorImages.push({
+        position,
         draw: (ctx) => {
           const center = worldToScreen(view, position.x, position.y);
           painter.draw(ctx, center);
@@ -304,12 +306,6 @@ export const prepareDepthSortedIsometricFloorPainters = (
             ctx.fill();
             ctx.restore();
           }
-          drawIsometricCellOutline(
-            ctx,
-            center,
-            world.cellSize,
-            view.projection,
-          );
         },
       });
       return undefined;
@@ -324,6 +320,24 @@ export const prepareDepthSortedIsometricFloorPainters = (
         : row[x],
     ),
   );
+
+  floorImages.sort(
+    (a, b) => a.position.x + a.position.y - b.position.x - b.position.y,
+  );
+  if (floorImages.length > 0) {
+    // Keep floor sprites together beneath all depth-sorted outlines and objects.
+    painters.push({
+      position: { x: -Number.MAX_SAFE_INTEGER, y: 0 },
+      draw: (ctx) => {
+        floorImages.forEach((painter) =>
+          painter.draw(
+            ctx,
+            worldToScreen(view, painter.position.x, painter.position.y),
+          ),
+        );
+      },
+    });
+  }
 
   return {
     world: {
