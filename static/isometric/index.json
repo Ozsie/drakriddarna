@@ -233,42 +233,42 @@
       "anchor": { "x": 0.5, "y": 1 }
     },
     "stoneDoorClosed_E": {
-      "image": "doors/stoneWallDoorClosed_E.png",
+      "image": "doors/stoneWallGateClosed_E.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },
     "stoneDoorClosed_N": {
-      "image": "doors/stoneWallDoorClosed_N.png",
+      "image": "doors/stoneWallGateClosed_N.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },
     "stoneDoorClosed_S": {
-      "image": "doors/stoneWallDoorClosed_S.png",
+      "image": "doors/stoneWallGateClosed_S.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },
     "stoneDoorClosed_W": {
-      "image": "doors/stoneWallDoorClosed_W.png",
+      "image": "doors/stoneWallGateClosed_W.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },
     "stoneDoorOpen_E": {
-      "image": "doors/stoneWallDoorOpen_E.png",
+      "image": "doors/stoneWallGate_E.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },
     "stoneDoorOpen_N": {
-      "image": "doors/stoneWallDoorOpen_N.png",
+      "image": "doors/stoneWallGate_N.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },
     "stoneDoorOpen_S": {
-      "image": "doors/stoneWallDoorOpen_S.png",
+      "image": "doors/stoneWallGate_S.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },
     "stoneDoorOpen_W": {
-      "image": "doors/stoneWallDoorOpen_W.png",
+      "image": "doors/stoneWallGate_W.png",
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     }

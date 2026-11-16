@@ -8,6 +8,7 @@ import {
   type SceneDungeonView,
   type SceneIsoWorldView,
 } from '@hoard-engine/scene';
+import { WALL } from '@hoard-engine/grid';
 import {
   buildDungeonView,
   type GameActorView,
@@ -134,6 +135,68 @@ describe('isometric actor indicators', () => {
 });
 
 describe('buildIsometricWorldView', () => {
+  it('uses the rendered wall sprite height for wall-face light projection', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 64;
+        naturalHeight = 128;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+    try {
+      const graphics = {
+        cells: { wall: 'tallWall' },
+        wallShapes: {},
+        tiles: {
+          tallWall: {
+            imageUrl: 'isometric/test-tall-wall-light.png',
+            scale: 1,
+            anchor: { x: 0.5, y: 1 },
+          },
+        },
+      };
+      const dungeon: SceneDungeonView = {
+        name: 'tall-wall-light-test',
+        discoveredRooms: ['A'],
+        layout: { grid: [`A${WALL}`], doors: [], secrets: [] },
+      };
+      const view = createIsoView({ x: 48, y: 24 }, 200, 160, 48, {
+        ax: 1,
+        by: 0.5,
+      });
+
+      const world = buildIsometricWorldView(dungeon, 48, false, graphics, view);
+
+      expect(world.wallFaceHeightsPx?.[0]?.[1]).toBe(192);
+      expect(world.wallFaceHeightsPx?.[0]?.[1]).toBeGreaterThan(
+        world.wallHeightPx * view.projection.by,
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('falls back to geometric wall height when no wall sprite is ready', () => {
+    const dungeon: SceneDungeonView = {
+      name: 'wall-light-fallback-test',
+      discoveredRooms: ['A'],
+      layout: { grid: [`A${WALL}`], doors: [], secrets: [] },
+    };
+    const view = createIsoView({ x: 48, y: 24 }, 200, 160, 48, {
+      ax: 1,
+      by: 0.5,
+    });
+
+    const world = buildIsometricWorldView(dungeon, 48, false, undefined, view);
+
+    expect(world.wallFaceHeightsPx?.[0]?.[1]).toBeUndefined();
+    expect(world.wallHeightPx * view.projection.by).toBe(18);
+  });
+
   it('draws floor graphics in isometric depth order', () => {
     const dungeon: SceneDungeonView = {
       name: 'floor-depth-order-test',
@@ -628,6 +691,7 @@ describe('buildIsometricWorldView', () => {
 
   it('maps adjacent floor light onto the projected wall face', () => {
     const transforms: number[][] = [];
+    const sourceDraws: unknown[][] = [];
     const world: SceneIsoWorldView = {
       rows: ['WF'],
       cellSize: 48,
@@ -660,13 +724,321 @@ describe('buildIsometricWorldView', () => {
       closePath: () => {},
       clip: () => {},
       transform: (...args: number[]) => transforms.push(args),
-      drawImage: () => {},
+      drawImage: (...args: unknown[]) => sourceDraws.push(args),
     } as unknown as CanvasRenderingContext2D;
 
     painter?.draw(context, { x: 0, y: 0 });
 
     expect(transforms).toHaveLength(1);
     expect(transforms[0]).not.toEqual([1, 0, 0, 1, 0, 0]);
+    const floorCorners = [
+      worldToScreen(view, 48, 0),
+      worldToScreen(view, 96, 0),
+      worldToScreen(view, 96, 48),
+      worldToScreen(view, 48, 48),
+    ];
+    const left = Math.max(
+      0,
+      Math.floor(Math.min(...floorCorners.map(({ x }) => x * 2))) - 1,
+    );
+    const top = Math.max(
+      0,
+      Math.floor(Math.min(...floorCorners.map(({ y }) => y * 2))) - 1,
+    );
+    const right = Math.min(
+      400,
+      Math.ceil(Math.max(...floorCorners.map(({ x }) => x * 2))) + 1,
+    );
+    const bottom = Math.min(
+      320,
+      Math.ceil(Math.max(...floorCorners.map(({ y }) => y * 2))) + 1,
+    );
+    expect(sourceDraws[0]?.slice(1, 5)).toEqual([
+      left,
+      top,
+      right - left,
+      bottom - top,
+    ]);
+  });
+
+  it('overlaps only shared exposed wall-light edges by one device pixel', () => {
+    const cases = [
+      {
+        rows: ['WW', 'FF'],
+        sharedPoint: { x: 48, y: 48 },
+        firstSharedVertex: 1,
+        secondSharedVertex: 0,
+        direction: 'x' as const,
+      },
+      {
+        rows: ['WF', 'WF'],
+        sharedPoint: { x: 48, y: 48 },
+        firstSharedVertex: 0,
+        secondSharedVertex: 1,
+        direction: 'y' as const,
+      },
+    ];
+    for (const {
+      rows,
+      sharedPoint,
+      firstSharedVertex,
+      secondSharedVertex,
+      direction,
+    } of cases) {
+      for (const pixelRatio of [1, 2]) {
+        const world: SceneIsoWorldView = {
+          rows,
+          cellSize: 48,
+          wallCell: 'W',
+          doorCell: 'D',
+          hiddenCell: 'H',
+          wallHeightPx: 36,
+          palette: {
+            background: '#000',
+            floor: '#333',
+            door: '#654',
+            wallTop: '#555',
+            wallSouth: '#444',
+            wallEast: '#222',
+          },
+        };
+        const view = createIsoView({ x: 96, y: 72 }, 400, 300, 48, {
+          ax: 1,
+          by: 0.5,
+        });
+        const paths: { x: number; y: number }[][] = [];
+        let currentPath: { x: number; y: number }[] = [];
+        const context = {
+          save: () => {},
+          restore: () => {},
+          beginPath: () => {
+            currentPath = [];
+          },
+          moveTo: (x: number, y: number) => currentPath.push({ x, y }),
+          lineTo: (x: number, y: number) => currentPath.push({ x, y }),
+          closePath: () => paths.push(currentPath),
+          clip: () => {},
+          transform: () => {},
+          drawImage: () => {},
+        } as unknown as CanvasRenderingContext2D;
+        const painters = buildIsometricWallLightPainters(
+          world,
+          view,
+          { width: 800, height: 600 } as HTMLCanvasElement,
+          pixelRatio,
+        );
+        painters.forEach((painter) => painter.draw(context, { x: 0, y: 0 }));
+
+        expect(paths).toHaveLength(2);
+        const sharedScreenPoint = worldToScreen(
+          view,
+          sharedPoint.x,
+          sharedPoint.y,
+        );
+        const faceDirection =
+          direction === 'x'
+            ? {
+                x: view.projection.ax * world.cellSize,
+                y: view.projection.by * world.cellSize,
+              }
+            : {
+                x: view.projection.ax * world.cellSize,
+                y: -view.projection.by * world.cellSize,
+              };
+        const directionLength = Math.hypot(faceDirection.x, faceDirection.y);
+        const overlap = 1 / pixelRatio;
+        const offset = {
+          x: (faceDirection.x / directionLength) * overlap,
+          y: (faceDirection.y / directionLength) * overlap,
+        };
+        const firstPoint = paths[0][firstSharedVertex];
+        const secondPoint = paths[1][secondSharedVertex];
+        expect(firstPoint?.x).toBeCloseTo(
+          sharedScreenPoint.x + (direction === 'x' ? offset.x : -offset.x),
+        );
+        expect(firstPoint?.y).toBeCloseTo(
+          sharedScreenPoint.y + (direction === 'x' ? offset.y : -offset.y),
+        );
+        expect(secondPoint?.x).toBeCloseTo(
+          sharedScreenPoint.x + (direction === 'x' ? -offset.x : offset.x),
+        );
+        expect(secondPoint?.y).toBeCloseTo(
+          sharedScreenPoint.y + (direction === 'x' ? -offset.y : offset.y),
+        );
+      }
+    }
+  });
+
+  it('does not overlap wall-light edges toward isolated, hidden, or pit cells', () => {
+    const cases: { rows: string[]; pitCells?: { x: number; y: number }[] }[] = [
+      { rows: ['W', 'F'] },
+      { rows: ['WW', 'FH'] },
+      { rows: ['WW', 'FF'], pitCells: [{ x: 1, y: 1 }] },
+    ];
+    for (const { rows, pitCells } of cases) {
+      const world: SceneIsoWorldView = {
+        rows,
+        cellSize: 48,
+        wallCell: 'W',
+        doorCell: 'D',
+        hiddenCell: 'H',
+        wallHeightPx: 36,
+        ...(pitCells ? { pitCells } : {}),
+        palette: {
+          background: '#000',
+          floor: '#333',
+          door: '#654',
+          wallTop: '#555',
+          wallSouth: '#444',
+          wallEast: '#222',
+        },
+      };
+      const view = createIsoView({ x: 96, y: 72 }, 400, 300, 48, {
+        ax: 1,
+        by: 0.5,
+      });
+      const paths: { x: number; y: number }[][] = [];
+      let currentPath: { x: number; y: number }[] = [];
+      const context = {
+        save: () => {},
+        restore: () => {},
+        beginPath: () => {
+          currentPath = [];
+        },
+        moveTo: (x: number, y: number) => currentPath.push({ x, y }),
+        lineTo: (x: number, y: number) => currentPath.push({ x, y }),
+        closePath: () => paths.push(currentPath),
+        clip: () => {},
+        transform: () => {},
+        drawImage: () => {},
+      } as unknown as CanvasRenderingContext2D;
+      const painters = buildIsometricWallLightPainters(
+        world,
+        view,
+        { width: 800, height: 600 } as HTMLCanvasElement,
+        2,
+      );
+      painters.forEach((painter) => painter.draw(context, { x: 0, y: 0 }));
+
+      expect(paths).toHaveLength(1);
+      const base = worldToScreen(view, 48, 48);
+      expect(paths[0][1]?.x).toBeCloseTo(base.x);
+      expect(paths[0][1]?.y).toBeCloseTo(base.y);
+    }
+  });
+
+  it('clips wall light to the sprite alpha before adding it to the mask', () => {
+    const calls: string[] = [];
+    const maskDraws: unknown[][] = [];
+    const makeContext = (name: string) => {
+      let operation: GlobalCompositeOperation = 'source-over';
+      const saved: GlobalCompositeOperation[] = [];
+      return {
+        get globalCompositeOperation() {
+          return operation;
+        },
+        set globalCompositeOperation(value: GlobalCompositeOperation) {
+          operation = value;
+        },
+        save: () => saved.push(operation),
+        restore: () => {
+          operation = saved.pop() ?? 'source-over';
+        },
+        setTransform: () => {},
+        clearRect: () => {},
+        beginPath: () => {},
+        moveTo: () => {},
+        lineTo: () => {},
+        closePath: () => {},
+        clip: () => {},
+        transform: () => {},
+        drawImage: (...args: unknown[]) => {
+          calls.push(`${name}:${operation}`);
+          if (name === 'mask') maskDraws.push(args);
+        },
+      } as unknown as CanvasRenderingContext2D;
+    };
+    const maskContext = makeContext('mask');
+    const scratchContexts = [makeContext('light'), makeContext('silhouette')];
+    const scratchCanvases = scratchContexts.map((context) => ({
+      width: 0,
+      height: 0,
+      getContext: () => context,
+    }));
+    let created = 0;
+    const lightMaskCanvas = {
+      width: 400,
+      height: 320,
+      getContext: () => maskContext,
+      ownerDocument: { createElement: () => scratchCanvases[created++] },
+    } as unknown as HTMLCanvasElement;
+    const world: SceneIsoWorldView = {
+      rows: ['WF'],
+      cellSize: 48,
+      wallCell: 'W',
+      doorCell: 'D',
+      hiddenCell: 'H',
+      wallHeightPx: 36,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+      wallPainters: [
+        [
+          {
+            position: { x: 24, y: 24 },
+            draw: (ctx) => calls.push(`wall:${ctx.globalCompositeOperation}`),
+          },
+        ],
+      ],
+    };
+    const view = createIsoView({ x: 48, y: 24 }, 200, 160, 48);
+
+    renderIsometricLightMask(
+      world,
+      view,
+      { width: 400, height: 320 } as HTMLCanvasElement,
+      lightMaskCanvas,
+      2,
+    );
+
+    expect(calls).toEqual([
+      'mask:lighter',
+      'wall:destination-out',
+      'light:lighter',
+      'wall:source-over',
+      'light:destination-in',
+      'mask:source-over',
+    ]);
+    expect(scratchCanvases[0].width).toBeLessThan(lightMaskCanvas.width);
+    expect(scratchCanvases[0].height).toBeLessThan(lightMaskCanvas.height);
+    const center = worldToScreen(view, 24, 24);
+    const left = Math.max(0, Math.floor((center.x - 48) * 2) - 1);
+    const top = Math.max(0, Math.floor((center.y - 24 - 18) * 2) - 1);
+    const right = Math.min(400, Math.ceil((center.x + 48) * 2) + 1);
+    const bottom = Math.min(320, Math.ceil((center.y + 24) * 2) + 1);
+    expect(maskDraws[maskDraws.length - 1]?.slice(1, 9)).toEqual([
+      0,
+      0,
+      right - left,
+      bottom - top,
+      left / 2,
+      top / 2,
+      (right - left) / 2,
+      (bottom - top) / 2,
+    ]);
+    renderIsometricLightMask(
+      world,
+      view,
+      { width: 400, height: 320 } as HTMLCanvasElement,
+      lightMaskCanvas,
+      2,
+    );
+    expect(created).toBe(2);
   });
 
   it('clips floor light and rebuilds wall light after wall occlusion', () => {
@@ -1262,7 +1634,7 @@ describe('buildIsometricWorldView', () => {
           });
           expect(drawnDoorImages[0]).toHaveProperty(
             'src',
-            `isometric/doors/stoneWallDoor${open ? 'Open' : 'Closed'}_${
+            `isometric/doors/stoneWallGate${open ? '' : 'Closed'}_${
               door.side === 'Right'
                 ? 'W'
                 : door.side === 'Left'
@@ -2262,7 +2634,7 @@ describe('buildIsometricWorldView', () => {
           expect(drawnImages).toHaveLength(1);
           expect(drawnImages[0]).toHaveProperty(
             'src',
-            `isometric/doors/stoneWallDoor${open ? 'Open' : 'Closed'}_${imageSide}.png`,
+            `isometric/doors/stoneWallGate${open ? '' : 'Closed'}_${imageSide}.png`,
           );
         }
       }
@@ -2335,7 +2707,7 @@ describe('buildIsometricWorldView', () => {
         expect(drawnImages).toHaveLength(1);
         expect(drawnImages[0]).toHaveProperty(
           'src',
-          `isometric/doors/stoneWallDoorClosed_${imageSide}.png`,
+          `isometric/doors/stoneWallGateClosed_${imageSide}.png`,
         );
       }
     } finally {
@@ -2385,10 +2757,10 @@ describe('buildIsometricWorldView', () => {
       expect(world.rows[4]?.[7]).toBe('D');
 
       for (const [x, y, image] of [
-        [4, 9, 'stoneWallDoorClosed_E.png'],
-        [6, 9, 'stoneWallDoorClosed_W.png'],
-        [7, 6, 'stoneWallDoorClosed_N.png'],
-        [7, 4, 'stoneWallDoorClosed_S.png'],
+        [4, 9, 'stoneWallGateClosed_E.png'],
+        [6, 9, 'stoneWallGateClosed_W.png'],
+        [7, 6, 'stoneWallGateClosed_N.png'],
+        [7, 4, 'stoneWallGateClosed_S.png'],
       ] as const) {
         const drawnImages: CanvasImageSource[] = [];
         const context = {

@@ -52,8 +52,13 @@ const ISO_WALL = 'W';
 const ISO_DOOR = 'D';
 const ISO_FLOOR = 'F';
 const ISO_HIDDEN = 'H';
-type IsometricDoorSide = 'Left' | 'Right' | 'Up' | 'Down';
 const ISO_FLOOR_OUTLINE_DEPTH_BIAS = 0.01;
+const ISOMETRIC_WALL_LIGHT_SEAM_DEVICE_PX = 1;
+type IsometricDoorSide = 'Left' | 'Right' | 'Up' | 'Down';
+type IsometricWorldView = SceneIsoWorldView & {
+  wallFaceHeightsPx?: (number | undefined)[][];
+};
+
 const PIT_WALL_SOURCE_RIM = {
   north: { width: 129, height: 64 },
   west: { width: 128, height: 64 },
@@ -423,7 +428,7 @@ export const buildIsometricFloorLightPainter = (
 };
 
 export const buildIsometricWallLightPainters = (
-  world: SceneIsoWorldView,
+  world: IsometricWorldView,
   view: SceneIsoView,
   lightCanvas: HTMLCanvasElement,
   pixelRatio: number,
@@ -447,7 +452,19 @@ export const buildIsometricWallLightPainters = (
       !pitCells.has(`${String(x)},${String(y)}`)
     );
   };
-  const wallHeight = world.wallHeightPx * view.projection.by;
+  const wallHeightAt = (x: number, y: number): number =>
+    world.wallFaceHeightsPx?.[y]?.[x] ??
+    world.wallHeightPx * view.projection.by;
+  const hasSharedWallFace = (
+    x: number,
+    y: number,
+    floorX: number,
+    floorY: number,
+    wallHeight: number,
+  ): boolean =>
+    toArray(world.rows[y] ?? '')[x] === ISO_WALL &&
+    floorAt(floorX, floorY) &&
+    wallHeightAt(x, y) === wallHeight;
   const lightFacePainter = (
     wallX: number,
     wallY: number,
@@ -457,12 +474,47 @@ export const buildIsometricWallLightPainters = (
     targetX: { x: number; y: number },
     targetY: { x: number; y: number },
     points: { x: number; y: number }[],
+    sharedStart = false,
+    sharedEnd = false,
   ): SceneIsoPainterView | undefined => {
+    const facePoints = points.map(({ x, y }) => ({ x, y }));
+    const faceDirection = {
+      x: points[1].x - points[0].x,
+      y: points[1].y - points[0].y,
+    };
+    const faceLength = Math.hypot(faceDirection.x, faceDirection.y);
+    if (faceLength > 0) {
+      const overlap = ISOMETRIC_WALL_LIGHT_SEAM_DEVICE_PX / pixelRatio;
+      const offset = {
+        x: (faceDirection.x / faceLength) * overlap,
+        y: (faceDirection.y / faceLength) * overlap,
+      };
+      if (sharedStart) {
+        facePoints[0] = {
+          x: facePoints[0].x - offset.x,
+          y: facePoints[0].y - offset.y,
+        };
+        facePoints[3] = {
+          x: facePoints[3].x - offset.x,
+          y: facePoints[3].y - offset.y,
+        };
+      }
+      if (sharedEnd) {
+        facePoints[1] = {
+          x: facePoints[1].x + offset.x,
+          y: facePoints[1].y + offset.y,
+        };
+        facePoints[2] = {
+          x: facePoints[2].x + offset.x,
+          y: facePoints[2].y + offset.y,
+        };
+      }
+    }
     let minX = Number.POSITIVE_INFINITY;
     let minY = Number.POSITIVE_INFINITY;
     let maxX = Number.NEGATIVE_INFINITY;
     let maxY = Number.NEGATIVE_INFINITY;
-    points.forEach(({ x, y }) => {
+    facePoints.forEach(({ x, y }) => {
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
       maxX = Math.max(maxX, x);
@@ -494,15 +546,22 @@ export const buildIsometricWallLightPainters = (
     const sourceMinY = Math.min(...floorCorners.map(({ y }) => y));
     const sourceMaxX = Math.max(...floorCorners.map(({ x }) => x));
     const sourceMaxY = Math.max(...floorCorners.map(({ y }) => y));
-    const sourceX = Math.max(0, Math.floor(sourceMinX * pixelRatio));
-    const sourceY = Math.max(0, Math.floor(sourceMinY * pixelRatio));
+    const sourcePadding = ISOMETRIC_WALL_LIGHT_SEAM_DEVICE_PX;
+    const sourceX = Math.max(
+      0,
+      Math.floor(sourceMinX * pixelRatio) - sourcePadding,
+    );
+    const sourceY = Math.max(
+      0,
+      Math.floor(sourceMinY * pixelRatio) - sourcePadding,
+    );
     const sourceRight = Math.min(
       lightCanvas.width,
-      Math.ceil(sourceMaxX * pixelRatio),
+      Math.ceil(sourceMaxX * pixelRatio) + sourcePadding,
     );
     const sourceBottom = Math.min(
       lightCanvas.height,
-      Math.ceil(sourceMaxY * pixelRatio),
+      Math.ceil(sourceMaxY * pixelRatio) + sourcePadding,
     );
     const sourceWidth = sourceRight - sourceX;
     const sourceHeight = sourceBottom - sourceY;
@@ -529,9 +588,13 @@ export const buildIsometricWallLightPainters = (
     const f = targetOrigin.y - b * sourceOrigin.x - d * sourceOrigin.y;
     const facePath = (ctx: CanvasRenderingContext2D) => {
       ctx.beginPath();
-      ctx.moveTo(points[0].x, points[0].y);
-      for (let pointIndex = 1; pointIndex < points.length; pointIndex += 1) {
-        ctx.lineTo(points[pointIndex].x, points[pointIndex].y);
+      ctx.moveTo(facePoints[0].x, facePoints[0].y);
+      for (
+        let pointIndex = 1;
+        pointIndex < facePoints.length;
+        pointIndex += 1
+      ) {
+        ctx.lineTo(facePoints[pointIndex].x, facePoints[pointIndex].y);
       }
       ctx.closePath();
     };
@@ -567,6 +630,9 @@ export const buildIsometricWallLightPainters = (
   world.rows.forEach((row, y) =>
     toArray(row).forEach((cell, x) => {
       if (cell !== ISO_WALL) return;
+      const wallHeight =
+        world.wallFaceHeightsPx?.[y]?.[x] ??
+        world.wallHeightPx * view.projection.by;
 
       const east = worldToScreen(
         view,
@@ -600,6 +666,8 @@ export const buildIsometricWallLightPainters = (
           },
           { x: 0, y: -wallHeight },
           [west, south, lift(south), lift(west)],
+          hasSharedWallFace(x - 1, y, x - 1, y + 1, wallHeight),
+          hasSharedWallFace(x + 1, y, x + 1, y + 1, wallHeight),
         );
         if (painter) wallLightPainters.push(painter);
       }
@@ -616,6 +684,8 @@ export const buildIsometricWallLightPainters = (
             y: view.projection.by * world.cellSize,
           },
           [south, east, lift(east), lift(south)],
+          hasSharedWallFace(x, y + 1, x + 1, y + 1, wallHeight),
+          hasSharedWallFace(x, y - 1, x + 1, y - 1, wallHeight),
         );
         if (painter) wallLightPainters.push(painter);
       }
@@ -627,7 +697,7 @@ export const buildIsometricWallLightPainters = (
 
 const eraseIsometricWallSilhouette = (
   ctx: CanvasRenderingContext2D,
-  world: SceneIsoWorldView,
+  world: IsometricWorldView,
   view: SceneIsoView,
   x: number,
   y: number,
@@ -648,7 +718,9 @@ const eraseIsometricWallSilhouette = (
     x * world.cellSize,
     (y + 1) * world.cellSize,
   );
-  const wallHeight = world.wallHeightPx * view.projection.by;
+  const wallHeight =
+    world.wallFaceHeightsPx?.[y]?.[x] ??
+    world.wallHeightPx * view.projection.by;
   const lift = (point: { x: number; y: number }) => ({
     x: point.x,
     y: point.y - wallHeight,
@@ -671,7 +743,7 @@ const eraseIsometricWallSilhouette = (
 };
 
 const isometricWallInViewport = (
-  world: SceneIsoWorldView,
+  world: IsometricWorldView,
   view: SceneIsoView,
   x: number,
   y: number,
@@ -682,7 +754,9 @@ const isometricWallInViewport = (
     worldToScreen(view, (x + 1) * world.cellSize, (y + 1) * world.cellSize),
     worldToScreen(view, x * world.cellSize, (y + 1) * world.cellSize),
   ];
-  const wallHeight = world.wallHeightPx * view.projection.by;
+  const wallHeight =
+    world.wallFaceHeightsPx?.[y]?.[x] ??
+    world.wallHeightPx * view.projection.by;
   const minX = Math.min(...corners.map(({ x: pointX }) => pointX));
   const maxX = Math.max(...corners.map(({ x: pointX }) => pointX));
   const minY = Math.min(...corners.map(({ y: pointY }) => pointY)) - wallHeight;
@@ -690,8 +764,13 @@ const isometricWallInViewport = (
   return minX <= view.width && maxX >= 0 && minY <= view.height && maxY >= 0;
 };
 
+const wallLightScratchCanvases = new WeakMap<
+  HTMLCanvasElement,
+  [HTMLCanvasElement, HTMLCanvasElement]
+>();
+
 export const renderIsometricLightMask = (
-  world: SceneIsoWorldView,
+  world: IsometricWorldView,
   view: SceneIsoView,
   lightCanvas: HTMLCanvasElement,
   lightMaskCanvas: HTMLCanvasElement,
@@ -757,9 +836,88 @@ export const renderIsometricLightMask = (
       eraseIsometricWallSilhouette(maskCtx, world, view, x, y);
     }
     maskCtx.restore();
-    wallLightsByCell
-      .get(`${String(x)},${String(y)}`)
-      ?.forEach((wallLight) => wallLight.draw(maskCtx, { x: 0, y: 0 }));
+    const wallLights = wallLightsByCell.get(`${String(x)},${String(y)}`);
+    if (!wallLights?.length) return;
+    if (!painter || !lightMaskCanvas.ownerDocument) {
+      wallLights.forEach((wallLight) =>
+        wallLight.draw(maskCtx, { x: 0, y: 0 }),
+      );
+      return;
+    }
+
+    let scratch = wallLightScratchCanvases.get(lightMaskCanvas);
+    if (!scratch) {
+      scratch = [
+        lightMaskCanvas.ownerDocument.createElement('canvas'),
+        lightMaskCanvas.ownerDocument.createElement('canvas'),
+      ];
+      wallLightScratchCanvases.set(lightMaskCanvas, scratch);
+    }
+    const [lightScratch, silhouetteScratch] = scratch;
+    const lightScratchCtx = lightScratch.getContext('2d');
+    const silhouetteCtx = silhouetteScratch.getContext('2d');
+    if (!lightScratchCtx || !silhouetteCtx) return;
+
+    const center = worldToScreen(view, painter.position.x, painter.position.y);
+    const halfWidth = Math.abs(view.projection.ax * world.cellSize);
+    const halfHeight = Math.abs(view.projection.by * world.cellSize);
+    const wallHeight =
+      world.wallFaceHeightsPx?.[y]?.[x] ??
+      world.wallHeightPx * view.projection.by;
+    const scratchPadding = ISOMETRIC_WALL_LIGHT_SEAM_DEVICE_PX;
+    const left = Math.max(
+      0,
+      Math.floor((center.x - halfWidth) * pixelRatio) - scratchPadding,
+    );
+    const top = Math.max(
+      0,
+      Math.floor((center.y - halfHeight - wallHeight) * pixelRatio) -
+        scratchPadding,
+    );
+    const right = Math.min(
+      lightMaskCanvas.width,
+      Math.ceil((center.x + halfWidth) * pixelRatio) + scratchPadding,
+    );
+    const bottom = Math.min(
+      lightMaskCanvas.height,
+      Math.ceil((center.y + halfHeight) * pixelRatio) + scratchPadding,
+    );
+    const width = right - left;
+    const height = bottom - top;
+    if (width <= 0 || height <= 0) return;
+    for (const canvas of scratch) {
+      if (canvas.width < width) canvas.width = width;
+      if (canvas.height < height) canvas.height = height;
+    }
+    for (const [context, canvas] of [
+      [lightScratchCtx, lightScratch],
+      [silhouetteCtx, silhouetteScratch],
+    ] as const) {
+      context.save();
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, -left, -top);
+    }
+    wallLights.forEach((wallLight) =>
+      wallLight.draw(lightScratchCtx, { x: 0, y: 0 }),
+    );
+    painter.draw(silhouetteCtx, center);
+    silhouetteCtx.restore();
+    lightScratchCtx.setTransform(1, 0, 0, 1, 0, 0);
+    lightScratchCtx.globalCompositeOperation = 'destination-in';
+    lightScratchCtx.drawImage(silhouetteScratch, 0, 0);
+    lightScratchCtx.restore();
+    maskCtx.drawImage(
+      lightScratch,
+      0,
+      0,
+      width,
+      height,
+      left / pixelRatio,
+      top / pixelRatio,
+      width / pixelRatio,
+      height / pixelRatio,
+    );
   });
   maskCtx.restore();
   return true;
@@ -771,7 +929,7 @@ export const buildIsometricWorldView = (
   debugMode = false,
   graphics?: ResolvedIsometricGraphics,
   view?: SceneIsoView,
-): SceneIsoWorldView => {
+): IsometricWorldView => {
   const resolvedDungeon = dungeon;
   const rows = resolvedDungeon.layout.sealedGrid ?? resolvedDungeon.layout.grid;
   const isDiscoveredCell = (x: number, y: number): boolean => {
@@ -862,7 +1020,7 @@ export const buildIsometricWorldView = (
     x: number,
     y: number,
     tileIds: string[],
-  ): SceneIsoPainterView | undefined => {
+  ): (SceneIsoPainterView & { wallFaceHeightPx: number }) | undefined => {
     if (!graphics) return undefined;
     const tiles = tileIds
       .map((tileId) => getIsometricTileImage(graphics, tileId))
@@ -872,6 +1030,19 @@ export const buildIsometricWorldView = (
     const groundOffset = projection.by * cellSize;
     return {
       position: { x: (x + 0.5) * cellSize, y: (y + 0.5) * cellSize },
+      wallFaceHeightPx: Math.max(
+        cellSize * 0.75 * projection.by,
+        ...tiles.map((tile) => {
+          const { height } = getIsometricTileDimensions(
+            cellSize,
+            projection,
+            tile.scale,
+            tile.image.naturalWidth,
+            tile.image.naturalHeight,
+          );
+          return height * tile.anchor.y;
+        }),
+      ),
       draw: (ctx, center) => {
         for (const tile of tiles) {
           const { width, height } = getIsometricTileDimensions(
@@ -967,6 +1138,9 @@ export const buildIsometricWorldView = (
       return buildPainter(x, y, tileIds);
     }),
   );
+  const wallFaceHeightsPx = wallPainters.map((row) =>
+    row.map((painter) => painter?.wallFaceHeightPx),
+  );
   const doorPainters = worldRows.map((row, y) =>
     toArray(row).map((cell, x) => {
       if (cell !== ISO_DOOR || !graphics) return undefined;
@@ -994,6 +1168,7 @@ export const buildIsometricWorldView = (
     rows: worldRows,
     floorPainters,
     ...(graphics ? { wallPainters, doorPainters, pitPainters } : {}),
+    wallFaceHeightsPx,
     floorColors: rows.map((row, y) =>
       toArray(row).map((cell, x) =>
         isVisibleCell(x, y, cell)
@@ -1462,6 +1637,7 @@ export const renderIsometricDungeonPrototype = (
   lightCanvas?: HTMLCanvasElement,
   pixelRatio = 1,
   lightMaskCanvas?: HTMLCanvasElement,
+  reuseLightMask = false,
 ): SceneActorView[] => {
   const dungeon = buildDungeonView(state.dungeon);
   const graphics = getIsometricGraphics(
@@ -1507,13 +1683,14 @@ export const renderIsometricDungeonPrototype = (
   const hasDepthAwareLightMask = Boolean(
     lightCanvas &&
     lightMaskCanvas &&
-    renderIsometricLightMask(
-      world,
-      view,
-      lightCanvas,
-      lightMaskCanvas,
-      pixelRatio,
-    ),
+    (reuseLightMask ||
+      renderIsometricLightMask(
+        world,
+        view,
+        lightCanvas,
+        lightMaskCanvas,
+        pixelRatio,
+      )),
   );
   const lightPainter = lightCanvas
     ? hasDepthAwareLightMask

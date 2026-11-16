@@ -383,11 +383,20 @@ light mask. The isometric path builds a separate depth-aware mask: projected
 glow is clipped to discovered floor and door diamonds, then removed by visible
 wall silhouettes before light from adjacent floor cells is mapped onto exposed
 wall faces. Wall-face light follows the wall painter depth, so nearer walls
-continue to occlude it. The same mask supplies the visible additive glow and
-the ambient-darkness cutout, preventing floor light from brightening hidden
-wall pixels. Ambient darkness is composited once over the completed world,
-rather than filtering each individual draw; ambient-only animation uses the
-quantized repaint gate and does not force full-rate world redraws. Turn
+continue to occlude it. Its projection spans the anchored wall sprite bounds
+and is clipped to the sprite's alpha using reusable tile-sized scratch canvases,
+so transparent image padding cannot glow; walls without loaded sprites use the
+projected geometric height instead. Adjacent same-height exposed wall faces
+overlap by one device pixel at shared edges, with padded source and scratch
+crops preventing raster gaps; isolated ends, hidden neighbors and pits do not
+receive this extension.
+Unchanged light-mask inputs reuse the mask across dynamic frames; changes to
+lights, discovery/layout, camera projection, canvas surfaces or loaded art
+invalidate it. The same mask supplies the visible additive glow and the
+ambient-darkness cutout, preventing floor light from brightening hidden wall
+pixels. Ambient darkness is composited once over the completed world, rather
+than filtering each individual draw; ambient-only animation uses the quantized
+repaint gate and does not force full-rate world redraws. Turn
 overlays and transient combat
 effects use that same
 projection; floating damage and info text is placed at projected positions but

@@ -54,6 +54,22 @@ describe('dungeon board render order', () => {
       'const lightMaskCanvas = this.staticLightCanvas',
     );
     expect(isoRender).toContain(
+      'const isometricLightMaskSignature = JSON.stringify({',
+    );
+    expect(isoRender).toContain('debugMode,');
+    expect(isoRender).toContain('lightSig,');
+    expect(isoRender).toContain('frameLights,');
+    expect(isoRender).toContain('isometricGraphics:');
+    expect(isoRender).toContain('discoveredRooms:');
+    expect(isoRender).toContain('view: isometricView');
+    expect(isoRender).toContain('maskCanvas:');
+    expect(isoRender).not.toContain('state: sig,');
+    expect(isoRender).toContain('const reuseIsometricLightMask =');
+    expect(isoRender).toContain('!reuseIsometricLightMask');
+    expect(isoRender).toContain(
+      'reuseIsometricLightMask && hasIsometricLightViews',
+    );
+    expect(isoRender).toContain(
       '!this.darknessCanvas || !hasIsometricLightMask',
     );
     expect(isoRender).toContain('if (needsAmbientFilterFallback)');
@@ -69,5 +85,11 @@ describe('dungeon board render order', () => {
     );
     expect(isoRender).not.toContain("this.lastAmbientSignature = ''");
     expect(isoRender).not.toContain('for (const canvas of [');
+    expect(renderDynamicLayer).toContain(
+      "this.lastIsometricLightMaskSignature = ''",
+    );
+    expect(controller).toContain(
+      'this.lastIsometricLightMaskHasLights = false',
+    );
   });
 });

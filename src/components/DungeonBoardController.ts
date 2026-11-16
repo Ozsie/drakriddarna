@@ -332,6 +332,8 @@ export class DungeonBoardController {
   private staticRenderCount = 0;
   private dynamicRenderCount = 0;
   private lastStaticLightKey = '';
+  private lastIsometricLightMaskSignature = '';
+  private lastIsometricLightMaskHasLights = false;
   // The world transform last applied to the canvases, as a signature. The
   // static light layer's pixels are baked under that transform and copied
   // in device space, and its cache key is built from props — the two can
@@ -808,11 +810,17 @@ export class DungeonBoardController {
     // shared image cache: the first draw shows fallback art meanwhile, and
     // a completed load repaints every layer that can use those sprites.
     setImageLoadedListener(() => {
+      this.lastIsometricLightMaskSignature = '';
+      this.lastIsometricLightMaskHasLights = false;
       this.renderStaticLayer(true);
       this.renderDynamicLayer(true);
       this.renderUiLayer(true);
     });
-    setIsometricGraphicsLoadedListener(() => this.renderDynamicLayer(true));
+    setIsometricGraphicsLoadedListener(() => {
+      this.lastIsometricLightMaskSignature = '';
+      this.lastIsometricLightMaskHasLights = false;
+      this.renderDynamicLayer(true);
+    });
 
     this.ground.src = this.props.tileset;
     this.lastTileset = this.props.tileset;
@@ -927,6 +935,8 @@ export class DungeonBoardController {
       );
     }
     this.lastStaticLightKey = '';
+    this.lastIsometricLightMaskSignature = '';
+    this.lastIsometricLightMaskHasLights = false;
   };
 
   // Switches to reduced quality on the first actual pan movement of a
@@ -1442,8 +1452,28 @@ export class DungeonBoardController {
         lightMaskCanvas.width > 0 &&
         lightMaskCanvas.height > 0,
       );
+      const isometricLightMaskSignature = JSON.stringify({
+        debugMode,
+        lightSig,
+        frameLights,
+        dungeon: {
+          grid: this.activeState.dungeon.layout.grid,
+          doors: this.activeState.dungeon.layout.doors,
+          pits: this.activeState.dungeon.layout.pits,
+          corners: this.activeState.dungeon.layout.corners,
+          isometricGraphics: this.activeState.dungeon.isometricGraphics,
+          discoveredRooms: this.activeState.dungeon.discoveredRooms,
+        },
+        view: isometricView,
+        pixelRatio: this.canvasRatio,
+        lightCanvas: [lightCanvas?.width ?? 0, lightCanvas?.height ?? 0],
+        maskCanvas: [lightMaskCanvas?.width ?? 0, lightMaskCanvas?.height ?? 0],
+      });
+      const reuseIsometricLightMask =
+        hasIsometricLightMask &&
+        this.lastIsometricLightMaskSignature === isometricLightMaskSignature;
       const isometricLightViews =
-        lightCanvas && lightCtx
+        lightCanvas && lightCtx && !reuseIsometricLightMask
           ? buildIsometricLightViews(
               this.activeState,
               this.cellSize,
@@ -1452,10 +1482,13 @@ export class DungeonBoardController {
               isometricView,
             )
           : [];
+      const hasIsometricLightViews = reuseIsometricLightMask
+        ? this.lastIsometricLightMaskHasLights
+        : isometricLightViews.length > 0;
       const ambientBrightness = ambientLightLevel(this.activeState);
       const needsAmbientFilterFallback =
         !this.darknessCanvas || !hasIsometricLightMask;
-      if (lightCanvas && lightCtx) {
+      if (lightCanvas && lightCtx && !reuseIsometricLightMask) {
         lightCtx.save();
         lightCtx.setTransform(1, 0, 0, 1, 0, 0);
         lightCtx.clearRect(0, 0, lightCanvas.width, lightCanvas.height);
@@ -1465,7 +1498,12 @@ export class DungeonBoardController {
         drawIsoLights(lightCtx, isometricView, isometricLightViews);
         lightCtx.restore();
       }
-      if (lightMaskCanvas && lightMaskCtx && isometricLightViews.length === 0) {
+      if (
+        lightMaskCanvas &&
+        lightMaskCtx &&
+        !reuseIsometricLightMask &&
+        isometricLightViews.length === 0
+      ) {
         lightMaskCtx.save();
         lightMaskCtx.setTransform(1, 0, 0, 1, 0, 0);
         lightMaskCtx.clearRect(
@@ -1490,13 +1528,22 @@ export class DungeonBoardController {
         isometricView,
         this.debugMode ?? false,
         currentTime,
-        lightCanvas && lightCtx && isometricLightViews.length > 0
+        lightCanvas && lightCtx && hasIsometricLightViews
           ? lightCanvas
           : undefined,
         this.canvasRatio,
         hasIsometricLightMask ? (lightMaskCanvas ?? undefined) : undefined,
+        reuseIsometricLightMask && hasIsometricLightViews,
       );
       ctx.restore();
+
+      if (hasIsometricLightMask) {
+        this.lastIsometricLightMaskSignature = isometricLightMaskSignature;
+        this.lastIsometricLightMaskHasLights = hasIsometricLightViews;
+      } else {
+        this.lastIsometricLightMaskSignature = '';
+        this.lastIsometricLightMaskHasLights = false;
+      }
 
       if (this.darknessCanvas && hasIsometricLightMask && lightMaskCanvas) {
         renderAmbientDarkness(
@@ -1531,6 +1578,9 @@ export class DungeonBoardController {
       }
       return;
     }
+
+    this.lastIsometricLightMaskSignature = '';
+    this.lastIsometricLightMaskHasLights = false;
 
     // Draw the light fixtures first so their glow is composited over them.
     if (this.ground) {
