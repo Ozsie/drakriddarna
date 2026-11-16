@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { createIsoView, type SceneDungeonView } from '@hoard-engine/scene';
+import {
+  createIsoView,
+  drawIsoWorldFrame,
+  worldToScreen,
+  type SceneDungeonView,
+  type SceneIsoWorldView,
+} from '@hoard-engine/scene';
 import {
   buildDungeonView,
   type GameActorView,
@@ -23,6 +29,7 @@ import {
   feetPosition,
   getIsometricWallShape,
   getIsometricTileDimensions,
+  prepareDepthSortedIsometricFloorPainters,
   renderIsometricActorOverlays,
 } from './IsometricDungeonRendering';
 
@@ -123,6 +130,250 @@ describe('isometric actor indicators', () => {
 });
 
 describe('buildIsometricWorldView', () => {
+  it('draws floor graphics in isometric depth order', () => {
+    const dungeon: SceneDungeonView = {
+      name: 'floor-depth-order-test',
+      discoveredRooms: ['A'],
+      layout: { grid: ['AAA', 'AAA'], doors: [], secrets: [] },
+    };
+    const world = buildIsometricWorldView(dungeon, 48);
+    const view = createIsoView({ x: 0, y: 0 }, 300, 200, 48, {
+      ax: 1,
+      by: 0.5,
+    });
+    const drawnFloorCenters: number[][] = [];
+    let firstPathPoint: { x: number; y: number } | undefined;
+    const context = {
+      fillRect: () => {},
+      save: () => {},
+      restore: () => {},
+      beginPath: () => {
+        firstPathPoint = undefined;
+      },
+      moveTo: (x: number, y: number) => {
+        firstPathPoint ??= { x, y };
+      },
+      lineTo: () => {},
+      closePath: () => {},
+      clip: () => {},
+      fill: () => {},
+      stroke: () => {
+        if (firstPathPoint) {
+          drawnFloorCenters.push([firstPathPoint.x, firstPathPoint.y + 24]);
+        }
+      },
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 0,
+      lineJoin: '',
+    } as unknown as CanvasRenderingContext2D;
+    const depthOrder: [number, number][] = [
+      [0, 0],
+      [1, 0],
+      [0, 1],
+      [2, 0],
+      [1, 1],
+      [2, 1],
+    ];
+    const expectedFloorCenters = depthOrder.map(([x, y]) => {
+      const center = worldToScreen(view, (x + 0.5) * 48, (y + 0.5) * 48);
+      return [center.x, center.y];
+    });
+
+    drawIsoWorldFrame(context, world, view, []);
+    expect(drawnFloorCenters).not.toEqual(expectedFloorCenters);
+    drawnFloorCenters.length = 0;
+
+    const depthSortedFloors = prepareDepthSortedIsometricFloorPainters(
+      world,
+      view,
+    );
+
+    drawIsoWorldFrame(
+      context,
+      depthSortedFloors.world,
+      view,
+      [],
+      depthSortedFloors.painters,
+    );
+
+    expect(drawnFloorCenters).toEqual(expectedFloorCenters);
+  });
+
+  it('draws a rounded outline after the floor tile painter', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 128;
+        naturalHeight = 64;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+    const graphics = {
+      cells: { floor: 'floorTile' },
+      wallShapes: {},
+      tiles: {
+        floorTile: {
+          imageUrl: 'isometric/test-floor-outline.png',
+          scale: 1,
+          anchor: { x: 0.5, y: 1 },
+        },
+      },
+    };
+    const dungeon: SceneDungeonView = {
+      name: 'floor-outline-test',
+      discoveredRooms: ['A'],
+      layout: { grid: ['A'], doors: [], secrets: [] },
+    };
+    const view = createIsoView({ x: 24, y: 24 }, 200, 200, 48, {
+      ax: 1,
+      by: 0.5,
+    });
+    const world = buildIsometricWorldView(dungeon, 48, false, graphics, view);
+    const calls: string[] = [];
+    const context = {
+      drawImage: () => calls.push('tile'),
+      save: () => {},
+      restore: () => {},
+      beginPath: () => calls.push('beginPath'),
+      moveTo: () => calls.push('moveTo'),
+      lineTo: () => calls.push('lineTo'),
+      closePath: () => calls.push('closePath'),
+      clip: () => calls.push('clip'),
+      stroke: () => calls.push('stroke'),
+      strokeStyle: '',
+      lineWidth: 0,
+      lineJoin: '',
+    } as unknown as CanvasRenderingContext2D;
+    const depthSortedFloors = prepareDepthSortedIsometricFloorPainters(
+      world,
+      view,
+    );
+
+    depthSortedFloors.painters[0]?.draw(context, { x: 100, y: 100 });
+
+    expect(calls).not.toContain('clip');
+    expect(calls.indexOf('tile')).toBeLessThan(calls.indexOf('beginPath'));
+    expect(calls.indexOf('beginPath')).toBeLessThan(calls.indexOf('closePath'));
+    expect(calls.indexOf('closePath')).toBeLessThan(calls.indexOf('stroke'));
+    expect(calls.indexOf('tile')).toBeLessThan(calls.indexOf('stroke'));
+    expect(calls.at(-1)).toBe('stroke');
+    expect(context.strokeStyle).toBe('rgba(25, 22, 18, 0.85)');
+    expect(context.lineWidth).toBe(1.25);
+    expect(context.lineJoin).toBe('round');
+  });
+
+  it('draws the outline when floor images are unavailable', () => {
+    const dungeon: SceneDungeonView = {
+      name: 'floor-outline-fallback-test',
+      discoveredRooms: ['A'],
+      layout: { grid: ['A'], doors: [], secrets: [] },
+    };
+    const world = buildIsometricWorldView(dungeon, 48);
+    const view = createIsoView({ x: 24, y: 24 }, 200, 200, 48, {
+      ax: 1,
+      by: 0.5,
+    });
+    const depthSortedFloors = prepareDepthSortedIsometricFloorPainters(
+      world,
+      view,
+    );
+    const calls: string[] = [];
+    const context = {
+      fillRect: () => calls.push('background'),
+      save: () => {},
+      restore: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      clip: () => {},
+      fill: () => calls.push('floor'),
+      stroke: () => calls.push('outline'),
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 0,
+      lineJoin: '',
+    } as unknown as CanvasRenderingContext2D;
+
+    drawIsoWorldFrame(
+      context,
+      depthSortedFloors.world,
+      view,
+      [],
+      depthSortedFloors.painters,
+    );
+
+    expect(calls).toEqual(['background', 'floor', 'outline']);
+  });
+
+  it('draws the floor outline before a same-cell door painter', () => {
+    const world: SceneIsoWorldView = {
+      rows: ['DW'],
+      cellSize: 48,
+      wallCell: 'W',
+      doorCell: 'D',
+      hiddenCell: 'H',
+      wallHeightPx: 36,
+      palette: {
+        background: '#000',
+        floor: '#333',
+        door: '#654',
+        wallTop: '#555',
+        wallSouth: '#444',
+        wallEast: '#222',
+      },
+      floorPainters: [
+        [{ position: { x: 24, y: 24 }, draw: () => calls.push('floor') }],
+      ],
+      doorPainters: [
+        [{ position: { x: 24, y: 24 }, draw: () => calls.push('door') }],
+      ],
+      wallPainters: [
+        [
+          undefined,
+          { position: { x: 72, y: 24 }, draw: () => calls.push('wall') },
+        ],
+      ],
+    };
+    const view = createIsoView({ x: 24, y: 24 }, 200, 200, 48, {
+      ax: 1,
+      by: 0.5,
+    });
+    const calls: string[] = [];
+    const context = {
+      fillRect: () => {},
+      save: () => {},
+      restore: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      fill: () => {},
+      stroke: () => calls.push('outline'),
+      strokeStyle: '',
+      lineWidth: 0,
+      lineJoin: '',
+    } as unknown as CanvasRenderingContext2D;
+    const depthSortedFloors = prepareDepthSortedIsometricFloorPainters(
+      world,
+      view,
+    );
+
+    drawIsoWorldFrame(
+      context,
+      depthSortedFloors.world,
+      view,
+      [],
+      depthSortedFloors.painters,
+    );
+
+    expect(calls).toEqual(['floor', 'outline', 'door', 'wall']);
+  });
+
   it('uses existing masonry sprites for discovered e1m3 pits', () => {
     vi.stubGlobal(
       'Image',

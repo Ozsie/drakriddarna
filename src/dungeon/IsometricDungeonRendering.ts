@@ -53,6 +53,7 @@ const ISO_DOOR = 'D';
 const ISO_FLOOR = 'F';
 const ISO_HIDDEN = 'H';
 type IsometricDoorSide = 'Left' | 'Right' | 'Up' | 'Down';
+const ISO_FLOOR_OUTLINE_DEPTH_BIAS = 0.01;
 const PIT_WALL_SOURCE_RIM = {
   north: { width: 129, height: 64 },
   west: { width: 128, height: 64 },
@@ -213,6 +214,124 @@ export const getIsometricDoorPlacement = (
     x: adjacentX,
     y: adjacentY,
     side: oppositeSides[side],
+  };
+};
+
+const traceIsometricCellDiamond = (
+  ctx: CanvasRenderingContext2D,
+  center: { x: number; y: number },
+  cellSize: number,
+  projection: { ax: number; by: number },
+): void => {
+  ctx.beginPath();
+  ctx.moveTo(center.x, center.y - projection.by * cellSize);
+  ctx.lineTo(center.x + projection.ax * cellSize, center.y);
+  ctx.lineTo(center.x, center.y + projection.by * cellSize);
+  ctx.lineTo(center.x - projection.ax * cellSize, center.y);
+  ctx.closePath();
+};
+
+const drawIsometricCellOutline = (
+  ctx: CanvasRenderingContext2D,
+  center: { x: number; y: number },
+  cellSize: number,
+  projection: { ax: number; by: number },
+): void => {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(25, 22, 18, 0.85)';
+  ctx.lineWidth = Math.max(1, projection.ax * 1.25);
+  ctx.lineJoin = 'round';
+  traceIsometricCellDiamond(ctx, center, cellSize, projection);
+  ctx.stroke();
+  ctx.restore();
+};
+
+export const prepareDepthSortedIsometricFloorPainters = (
+  world: SceneIsoWorldView,
+  view: SceneIsoView,
+): { world: SceneIsoWorldView; painters: SceneIsoPainterView[] } => {
+  const pitCells = new Set(
+    (world.pitCells ?? []).map(({ x, y }) => `${String(x)},${String(y)}`),
+  );
+  const painters: SceneIsoPainterView[] = [];
+  const floorPainters = world.floorPainters?.map((row, y) =>
+    toArray(world.rows[y] ?? '').map((cell, x) => {
+      const painter = row[x];
+      const cellKey = `${String(x)},${String(y)}`;
+      if ((cell !== ISO_FLOOR && cell !== ISO_DOOR) || pitCells.has(cellKey)) {
+        return painter;
+      }
+
+      const position = painter?.position ?? {
+        x: (x + 0.5) * world.cellSize,
+        y: (y + 0.5) * world.cellSize,
+      };
+      const outlinePosition = {
+        x: position.x,
+        y: position.y - ISO_FLOOR_OUTLINE_DEPTH_BIAS,
+      };
+      const outlinePainter: SceneIsoPainterView = {
+        position: outlinePosition,
+        draw: (ctx) =>
+          drawIsometricCellOutline(
+            ctx,
+            worldToScreen(view, position.x, position.y),
+            world.cellSize,
+            view.projection,
+          ),
+      };
+      if (cell !== ISO_FLOOR || !painter) {
+        painters.push(outlinePainter);
+        return painter;
+      }
+
+      const overlay = world.floorOverlays?.[y]?.[x];
+      painters.push({
+        position: outlinePosition,
+        draw: (ctx) => {
+          const center = worldToScreen(view, position.x, position.y);
+          painter.draw(ctx, center);
+          if (overlay) {
+            ctx.save();
+            ctx.globalAlpha = overlay.opacity;
+            ctx.fillStyle = overlay.color;
+            traceIsometricCellDiamond(
+              ctx,
+              center,
+              world.cellSize,
+              view.projection,
+            );
+            ctx.fill();
+            ctx.restore();
+          }
+          drawIsometricCellOutline(
+            ctx,
+            center,
+            world.cellSize,
+            view.projection,
+          );
+        },
+      });
+      return undefined;
+    }),
+  );
+  const floorOverlays = world.floorOverlays?.map((row, y) =>
+    toArray(world.rows[y] ?? '').map((cell, x) =>
+      cell === ISO_FLOOR &&
+      world.floorPainters?.[y]?.[x] &&
+      !pitCells.has(`${String(x)},${String(y)}`)
+        ? undefined
+        : row[x],
+    ),
+  );
+
+  return {
+    world: {
+      ...world,
+      ...(floorPainters ? { floorPainters } : {}),
+      ...(floorOverlays ? { floorOverlays } : {}),
+    },
+    painters,
   };
 };
 
@@ -443,9 +562,8 @@ export const buildIsometricWorldView = (
   );
   return {
     rows: worldRows,
-    ...(graphics
-      ? { floorPainters, wallPainters, doorPainters, pitPainters }
-      : {}),
+    floorPainters,
+    ...(graphics ? { wallPainters, doorPainters, pitPainters } : {}),
     floorColors: rows.map((row, y) =>
       toArray(row).map((cell, x) =>
         isVisibleCell(x, y, cell)
@@ -949,12 +1067,17 @@ export const renderIsometricDungeonPrototype = (
   ].filter((item) =>
     isDiscovered(state.dungeon, item.position.x, item.position.y),
   );
+  const depthSortedFloors = prepareDepthSortedIsometricFloorPainters(
+    world,
+    view,
+  );
   drawIsoWorldFrame(
     ctx,
-    world,
+    depthSortedFloors.world,
     view,
     [],
     [
+      ...depthSortedFloors.painters,
       ...buildHeroPainters(actors, cellSize, view.projection.ax),
       ...buildItemPainters(items, cellSize, view.projection.ax),
       ...buildDungeonObjectPainters(

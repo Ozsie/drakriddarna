@@ -395,8 +395,12 @@ list, falling back to the configured `cells.pillar` tile. A stable hash of
 grid coordinates selects each sprite independently of painter order and
 gameplay randomness. Image dimensions follow the active projection and cell
 size, so a tile is drawn at its projected footprint instead of being reduced
-by the logical cell count. Floor images replace flat floor diamonds. Wall
-images use the visible geometry of the sealed, discovery-aware grid: inner
+by the logical cell count. Floor images replace flat floor diamonds and join
+the depth-sorted queue so each tile follows the isometric draw order. Visible
+floor and door cells receive a rounded diamond outline after the cell's floor
+image or fallback fill; a slight depth bias places it before same-depth wall
+and door painters.
+Wall images use the visible geometry of the sealed, discovery-aware grid: inner
 room corners use oriented column posts, while outer turns use L-shaped wall
 art facing the adjoining floors. Wall cells bordering multiple inner corners
 or a mix of full faces and inner corners select compound wall-shape keys:
