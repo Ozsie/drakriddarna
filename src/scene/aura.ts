@@ -23,7 +23,7 @@
 
 export const AURA_SIZE = 64;
 
-export type AuraMode = "topdown" | "isometric";
+export type AuraMode = 'topdown' | 'isometric';
 
 export interface AuraOptions {
   /** 'topdown' (circle) or 'isometric' (2:1 ellipse). Default: 'topdown'. */
@@ -102,7 +102,7 @@ function deriveParams(input: string): AuraParams {
   const rnd = mulberry32(hashString(input));
   const range = (a: number, b: number) => a + (b - a) * rnd();
   const int = (a: number, b: number) => Math.floor(range(a, b + 1));
-  const pick = <T,>(arr: T[]) => arr[Math.floor(rnd() * arr.length)];
+  const pick = <T>(arr: T[]) => arr[Math.floor(rnd() * arr.length)];
 
   const ringCount = int(2, 4);
   const rings: RingParams[] = [];
@@ -174,7 +174,12 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
 }
 
 /** Separable 5-tap binomial blur, zero outside the image. */
-function blur(src: Float32Array, dst: Float32Array, tmp: Float32Array, n: number): void {
+function blur(
+  src: Float32Array,
+  dst: Float32Array,
+  tmp: Float32Array,
+  n: number,
+): void {
   const k = [1 / 16, 4 / 16, 6 / 16, 4 / 16, 1 / 16];
   for (let c = 0; c < 3; c++) {
     for (let y = 0; y < n; y++) {
@@ -205,8 +210,9 @@ function blur(src: Float32Array, dst: Float32Array, tmp: Float32Array, n: number
 /* ------------------------------------------------------------------ */
 
 export function createAura(input: string, options: AuraOptions = {}): Aura {
-  const mode: AuraMode = options.mode ?? "topdown";
-  const loopSeconds = options.loopSeconds && options.loopSeconds > 0 ? options.loopSeconds : 6;
+  const mode: AuraMode = options.mode ?? 'topdown';
+  const loopSeconds =
+    options.loopSeconds && options.loopSeconds > 0 ? options.loopSeconds : 6;
   const N = AURA_SIZE;
   const p = deriveParams(input);
   const sector = TAU / p.n;
@@ -214,7 +220,11 @@ export function createAura(input: string, options: AuraOptions = {}): Aura {
   // Palette LUT (colour as a function of normalised radius).
   const pal = new Float32Array(PAL_SIZE * 3);
   for (let i = 0; i < PAL_SIZE; i++) {
-    const [r, g, b] = hslToRgb(p.hue + (p.hueSpread * i) / (PAL_SIZE - 1), p.sat, 0.55);
+    const [r, g, b] = hslToRgb(
+      p.hue + (p.hueSpread * i) / (PAL_SIZE - 1),
+      p.sat,
+      0.55,
+    );
     pal[i * 3] = r;
     pal[i * 3 + 1] = g;
     pal[i * 3 + 2] = b;
@@ -225,7 +235,7 @@ export function createAura(input: string, options: AuraOptions = {}): Aura {
   const R = new Float32Array(N * N);
   const TH = new Float32Array(N * N);
   const halfW = N / 2;
-  const halfH = mode === "isometric" ? N / 4 : N / 2;
+  const halfH = mode === 'isometric' ? N / 4 : N / 2;
   for (let y = 0; y < N; y++) {
     for (let x = 0; x < N; x++) {
       const px = (x + 0.5 - N / 2) / halfW;
@@ -271,13 +281,15 @@ export function createAura(input: string, options: AuraOptions = {}): Aura {
         const u = fold(th + spin(ring.rot), sector);
         const rr = ring.radius + ring.amp * Math.cos(Math.PI * u * ring.freq);
         const d = (r - rr) / ring.width;
-        I += ring.gain * (Math.exp(-d * d) + 0.25 * Math.exp(-0.35 * Math.abs(d)));
+        I +=
+          ring.gain * (Math.exp(-d * d) + 0.25 * Math.exp(-0.35 * Math.abs(d)));
       }
 
       // Petals (lotus-like outline with faint fill)
       {
         const u = fold(th + spin(p.petalRot), sector);
-        const rp = p.petalRadius * (0.35 + 0.65 * (0.5 + 0.5 * Math.cos(Math.PI * u)));
+        const rp =
+          p.petalRadius * (0.35 + 0.65 * (0.5 + 0.5 * Math.cos(Math.PI * u)));
         const d = (r - rp) / 0.03;
         I += p.petalGain * Math.exp(-d * d);
         if (r < rp) I += 0.12 * (1 - r / rp);
@@ -296,9 +308,27 @@ export function createAura(input: string, options: AuraOptions = {}): Aura {
     blur(bloomA, bloomB, tmp, N);
 
     for (let i = 0; i < N * N; i++) {
-      const r = 1 - Math.exp(-1.2 * (light[i * 3] + 0.5 * bloomA[i * 3] + 0.9 * bloomB[i * 3]));
-      const g = 1 - Math.exp(-1.2 * (light[i * 3 + 1] + 0.5 * bloomA[i * 3 + 1] + 0.9 * bloomB[i * 3 + 1]));
-      const b = 1 - Math.exp(-1.2 * (light[i * 3 + 2] + 0.5 * bloomA[i * 3 + 2] + 0.9 * bloomB[i * 3 + 2]));
+      const r =
+        1 -
+        Math.exp(
+          -1.2 * (light[i * 3] + 0.5 * bloomA[i * 3] + 0.9 * bloomB[i * 3]),
+        );
+      const g =
+        1 -
+        Math.exp(
+          -1.2 *
+            (light[i * 3 + 1] +
+              0.5 * bloomA[i * 3 + 1] +
+              0.9 * bloomB[i * 3 + 1]),
+        );
+      const b =
+        1 -
+        Math.exp(
+          -1.2 *
+            (light[i * 3 + 2] +
+              0.5 * bloomA[i * 3 + 2] +
+              0.9 * bloomB[i * 3 + 2]),
+        );
       const a = Math.max(r, g, b);
       const o = i * 4;
       if (a < 1 / 512) {
@@ -327,13 +357,13 @@ export function createAura(input: string, options: AuraOptions = {}): Aura {
 export function animateAura(
   canvas: HTMLCanvasElement,
   input: string,
-  options: AuraOptions = {}
+  options: AuraOptions = {},
 ): () => void {
   const aura = createAura(input, options);
   canvas.width = aura.size;
   canvas.height = aura.size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2D canvas context unavailable");
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('2D canvas context unavailable');
   const image = ctx.createImageData(aura.size, aura.size);
   let raf = 0;
   const start = performance.now();
@@ -345,4 +375,94 @@ export function animateAura(
   };
   raf = requestAnimationFrame(frame);
   return () => cancelAnimationFrame(raf);
+}
+
+/* ------------------------------------------------------------------ */
+/* Caching                                                             */
+/* ------------------------------------------------------------------ */
+
+export interface BakeOptions extends AuraOptions {
+  /** Frames per loop. More = smoother, but more memory (16 KB per frame). Default: 48. */
+  frameCount?: number;
+}
+
+export interface BakedAura {
+  readonly size: number;
+  readonly frameCount: number;
+  readonly loopSeconds: number;
+  /** One full seamless loop of RGBA frames. */
+  readonly frames: readonly Uint8ClampedArray[];
+  /** Frame to show at `time` seconds (wraps automatically). */
+  frameAt(time: number): Uint8ClampedArray;
+}
+
+/** Pre-renders one full loop. Playback afterwards costs nothing. */
+export function bakeAura(input: string, options: BakeOptions = {}): BakedAura {
+  const frameCount = Math.max(1, Math.floor(options.frameCount ?? 48));
+  const aura = createAura(input, options);
+  const frames: Uint8ClampedArray[] = [];
+  for (let i = 0; i < frameCount; i++) {
+    frames.push(aura.render((i / frameCount) * aura.loopSeconds));
+  }
+  return {
+    size: aura.size,
+    frameCount,
+    loopSeconds: aura.loopSeconds,
+    frames,
+    frameAt(time: number) {
+      const phase = (((time / aura.loopSeconds) % 1) + 1) % 1;
+      return frames[Math.floor(phase * frameCount) % frameCount];
+    },
+  };
+}
+
+const auraCache = new Map<string, BakedAura>();
+
+/** Returns a baked aura, baking it only the first time this combination is requested. */
+export function getCachedAura(
+  input: string,
+  options: BakeOptions = {},
+): BakedAura {
+  const key = [
+    options.mode ?? 'topdown',
+    options.loopSeconds ?? 6,
+    options.frameCount ?? 48,
+    input,
+  ].join('|');
+  let baked = auraCache.get(key);
+  if (!baked) {
+    baked = bakeAura(input, options);
+    auraCache.set(key, baked);
+  }
+  return baked;
+}
+
+export function clearAuraCache(): void {
+  auraCache.clear();
+}
+
+/**
+ * Packs the baked loop into a horizontal sprite sheet (frameCount*64 x 64) —
+ * handy for GPU-friendly `ctx.drawImage(sheet, frame*64, 0, 64, 64, x, y, 64, 64)`
+ * or for uploading as a single texture.
+ */
+export function auraSpriteSheet(baked: BakedAura): HTMLCanvasElement {
+  const sheet = document.createElement('canvas');
+  sheet.width = baked.size * baked.frameCount;
+  sheet.height = baked.size;
+  const ctx = sheet.getContext('2d');
+  if (!ctx) throw new Error('2D canvas context unavailable');
+  baked.frames.forEach((data, i) => {
+    // Cast: TS's lib.dom typings are picky about ArrayBufferLike vs ArrayBuffer.
+    ctx.putImageData(
+      new ImageData(
+        data as unknown as Uint8ClampedArray<ArrayBuffer>,
+        baked.size,
+        baked.size,
+      ),
+      i * baked.size,
+      0,
+    );
+  });
+  return sheet;
 }

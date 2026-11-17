@@ -26,6 +26,7 @@ import {
 import { CellAlignment, type Dungeon, type GameState } from '../types';
 import { isDiscovered } from '../core';
 import { lightCenter } from './LightRendering';
+import { drawAura } from '../scene/AuraRendering';
 import {
   buildCorpseViewModels,
   buildDecoratorViewModels,
@@ -1937,6 +1938,8 @@ const buildDungeonObjectPainters = (
   debugMode: boolean,
   graphics: ResolvedIsometricGraphics | undefined,
   projection: { ax: number; by: number },
+  currentTime: number,
+  screenView: SceneIsoView,
 ): SceneIsoPainterView[] => {
   const painters: SceneIsoPainterView[] = [];
   painters.push(
@@ -1982,26 +1985,22 @@ const buildDungeonObjectPainters = (
       y: (portal.y + 0.5) * cellSize,
     };
     painters.push({
-      position: center,
-      draw: (ctx, screenPosition) => {
-        const radius = cellSize * 0.4 * zoom;
-        ctx.save();
-        ctx.fillStyle = 'rgba(155, 89, 182, 0.35)';
-        ctx.beginPath();
-        ctx.ellipse(
+      position: {
+        x: center.x,
+        y: center.y - 2 * ISO_GROUND_PAINTER_DEPTH_BIAS,
+      },
+      draw: (ctx) => {
+        const screenPosition = worldToScreen(screenView, center.x, center.y);
+        drawAura(
+          ctx,
+          'hexagram',
+          'isometric',
           screenPosition.x,
           screenPosition.y,
-          radius,
-          radius * 0.5,
-          0,
-          0,
-          Math.PI * 2,
+          cellSize * 0.8 * zoom,
+          cellSize * 0.4 * zoom,
+          currentTime / 1000,
         );
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(210, 170, 255, 0.9)';
-        ctx.lineWidth = 1.5 * zoom;
-        ctx.stroke();
-        ctx.restore();
       },
     });
   }
@@ -2167,6 +2166,8 @@ export const renderIsometricDungeonPrototype = (
         debugMode,
         graphics,
         view.projection,
+        currentTime,
+        view,
       ),
       ...buildHeroPainters(liveActors, cellSize, view.projection.ax),
     ],

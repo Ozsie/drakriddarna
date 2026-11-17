@@ -54,7 +54,6 @@ import {
   renderInteractables,
   renderPillars,
   renderPillarTops,
-  renderPortal,
   renderRoomFog,
   renderSecrets,
   renderTerrain,
@@ -136,6 +135,7 @@ import {
 import { createUiEnv, defaultUiEnv, envIdentity } from '../ui/env';
 import type { UiEnv } from '@hoard-engine/uikit';
 import { getCampaign } from '../campaigns';
+import { drawAura } from '../scene/AuraRendering';
 import {
   appSettingsStore,
   applyAppSettings,
@@ -203,6 +203,7 @@ import { musicManager, soundEffectManager } from '../audio';
 import { selectMusicIntensity } from '../audio/MusicIntensity';
 import {
   getAnimatedLightSpriteSignature,
+  getPortalAuraSignature,
   getStaticSignature,
   getDynamicSignature,
   getOverlaySignature,
@@ -1286,12 +1287,6 @@ export class DungeonBoardController {
       this.activeState.dungeon,
       this.debugMode ?? false,
     );
-    renderPortal(
-      ctx,
-      this.cellSize,
-      this.activeState.dungeon,
-      this.debugMode ?? false,
-    );
   };
 
   private renderDynamicLayer = (force = false) => {
@@ -1369,6 +1364,12 @@ export class DungeonBoardController {
       debugMode,
       isometricView ? undefined : lightViewport,
     );
+    const portalAuraSig = getPortalAuraSignature(
+      this.activeState.dungeon,
+      currentTime,
+      isometricView ? undefined : lightViewport,
+    );
+    const hasPortalAura = portalAuraSig !== '';
     // The painted frame also depends on where the view sits and which
     // surface it was painted on: panning moves every world pixel (the
     // canvas transform only affects new draws, not existing ones), and
@@ -1381,12 +1382,15 @@ export class DungeonBoardController {
       this.actorCanvas?.height ?? 0,
     )}`;
     const ambientSig =
-      hasLightEffects || hasAnimatedLightSprites || hasTerrainEffects
+      hasLightEffects ||
+      hasAnimatedLightSprites ||
+      hasTerrainEffects ||
+      hasPortalAura
         ? `${lightSig}|${lightSpriteSig}|${
             hasTerrainEffects
               ? Math.floor(currentTime / TERRAIN_ANIMATION_STEP_MS)
               : ''
-          }|${surfaceSig}`
+          }|${portalAuraSig}|${surfaceSig}`
         : '';
     const sig = `${getDynamicSignature(
       this.activeState,
@@ -1399,6 +1403,7 @@ export class DungeonBoardController {
       !hasLightEffects &&
       !hasAnimatedLightSprites &&
       !hasTerrainEffects &&
+      !hasPortalAura &&
       sig === this.lastDynamicSignature
     )
       return;
@@ -1409,7 +1414,10 @@ export class DungeonBoardController {
     if (
       force &&
       !hasActiveAnimations &&
-      (hasLightEffects || hasAnimatedLightSprites || hasTerrainEffects) &&
+      (hasLightEffects ||
+        hasAnimatedLightSprites ||
+        hasTerrainEffects ||
+        hasPortalAura) &&
       ambientSig === this.lastAmbientSignature &&
       sig === this.lastDynamicSignature
     ) {
@@ -1573,7 +1581,8 @@ export class DungeonBoardController {
         hasActiveAnimations ||
         hasLightEffects ||
         hasAnimatedLightSprites ||
-        hasTerrainEffects
+        hasTerrainEffects ||
+        hasPortalAura
       ) {
         this.scheduleDynamicFrame(hasActiveAnimations);
       }
@@ -1582,6 +1591,20 @@ export class DungeonBoardController {
 
     this.lastIsometricLightMaskSignature = '';
     this.lastIsometricLightMaskHasLights = false;
+
+    const portal = this.activeState.dungeon.portal;
+    if (hasPortalAura && portal) {
+      drawAura(
+        ctx,
+        'hexagram',
+        'topdown',
+        (portal.x + 0.5) * this.cellSize,
+        (portal.y + 0.5) * this.cellSize,
+        this.cellSize * 0.8,
+        this.cellSize * 0.8,
+        currentTime / 1000,
+      );
+    }
 
     // Draw the light fixtures first so their glow is composited over them.
     if (this.ground) {
@@ -1792,6 +1815,7 @@ export class DungeonBoardController {
       hasLightEffects ||
       hasAnimatedLightSprites ||
       hasTerrainEffects ||
+      hasPortalAura ||
       hasActiveActorAnimations(currentTime)
     ) {
       // Actor movement renders at the governor's locked target rate

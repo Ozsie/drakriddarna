@@ -399,6 +399,10 @@ the grid-facing animation state and saved corpse facing remain unchanged. The
 adapter masks undiscovered cells and their terrain, fog overlays, and props;
 the scene compositor skips the hidden-cell token. Debug overlays do not bypass
 room discovery, and the isometric light pass excludes undiscovered rooms.
+The hexagram portal uses its event ID to seed a procedural floor aura. Its
+animation loop is baked and cached for each projection, then drawn below actors
+at the portal position; the existing ambient repaint gate advances visible
+frames without consuming gameplay randomness.
 Found secrets use coordinate-oriented open chest sprites in isometric mode,
 resolved through the shared graphics index (and campaign overrides), with the
 existing decorator retained until the indexed chest image loads; hidden and

@@ -23,10 +23,11 @@ describe('dungeon board render order', () => {
     const renderEnd = controller.indexOf('private scheduleDynamicFrame =');
     const renderDynamicLayer = controller.slice(renderStart, renderEnd);
     const topDownStart = renderDynamicLayer.indexOf(
-      '// Draw the light fixtures first',
+      'const portal = this.activeState.dungeon.portal',
     );
     const topDownRender = renderDynamicLayer.slice(topDownStart);
     const passes = [
+      'drawAura(',
       'renderLightSprites(',
       'ctx.drawImage(this.lightCanvas, 0, 0)',
       'renderTerrainAnimation(',

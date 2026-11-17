@@ -5,6 +5,7 @@ import {
   getAnimatedLightSpriteSignature,
   getDynamicSignature,
   getOverlaySignature,
+  getPortalAuraSignature,
   getStaticSignature,
 } from './DungeonBoardSignatures';
 
@@ -40,6 +41,22 @@ const createState = (overrides?: Partial<GameState>): GameState =>
   }) as GameState;
 
 describe('DungeonBoardSignatures', () => {
+  it('animates the portal only while it is discovered and in the viewport', () => {
+    const state = createState();
+    const viewport = { x: 0, y: 0, width: 3, height: 1 };
+    expect(getPortalAuraSignature(state.dungeon, 0, viewport)).toBe('');
+    state.dungeon.portal = { x: 1, y: 0 };
+    expect(getPortalAuraSignature(state.dungeon, 0, viewport)).toBe('0');
+    expect(getPortalAuraSignature(state.dungeon, 124, viewport)).toBe('0');
+    expect(getPortalAuraSignature(state.dungeon, 125, viewport)).toBe('1');
+    expect(
+      getPortalAuraSignature(state.dungeon, 125, { ...viewport, x: 10 }),
+    ).toBe('');
+    state.dungeon.discoveredRooms = [];
+    expect(getPortalAuraSignature(state.dungeon, 125, viewport)).toBe('');
+    state.dungeon.portal = undefined;
+    expect(getPortalAuraSignature(state.dungeon, 125)).toBe('');
+  });
   it('static signature changes when a door opens', () => {
     const state = createState();
     const before = getStaticSignature(state, false, 48);

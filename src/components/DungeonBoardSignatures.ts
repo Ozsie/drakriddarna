@@ -3,6 +3,7 @@ import type {
   CollapsedCorridor,
   Decorator,
   Door,
+  Dungeon,
   GameState,
   InteractableCell,
   ItemLocation,
@@ -14,10 +15,29 @@ import type {
 } from '../types';
 import { isDiscovered } from '../core';
 import { resolveLightSprite } from '../scene/adapters';
+import type { LightViewport } from '@hoard-engine/lighting';
 
 // Signature helpers for the Dungeon board's layered render loop: each
 // layer only redraws when its signature changes, so the signature must
 // capture every piece of state the layer draws from.
+
+export const getPortalAuraSignature = (
+  dungeon: Dungeon,
+  timeMs: number,
+  viewport?: LightViewport,
+): string => {
+  const portal = dungeon.portal;
+  if (!portal || !isDiscovered(dungeon, portal.x, portal.y)) return '';
+  if (
+    viewport &&
+    (portal.x + 1 < viewport.x ||
+      portal.y + 1 < viewport.y ||
+      portal.x > viewport.x + viewport.width ||
+      portal.y > viewport.y + viewport.height)
+  )
+    return '';
+  return String(Math.floor(timeMs / 125) % 48);
+};
 
 export const getStaticSignature = (
   st: GameState,
