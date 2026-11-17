@@ -3,7 +3,7 @@ import { renderDecorators, renderLightSprites } from '../items/ItemRendering';
 import { buildDecoratorViewModels } from './adapters';
 import { CellAlignment, type GameState } from '../types';
 import { parseDecorator } from '../dungeon/dungeonParser';
-import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
+import e1m0 from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { buildIsometricDecoratorPainters } from '../dungeon/IsometricDungeonRendering';
 
 vi.mock('../core/ImageCache', () => ({

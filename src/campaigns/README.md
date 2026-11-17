@@ -73,8 +73,9 @@ src/campaigns/
      descriptor; the parser uses them in that order as the compatibility
      fallback. A projection-specific sprite takes precedence while rendering,
      and an explicit isometric sprite takes precedence over catalog decorator
-     tiles. The shared `bones` options are exported from
-     `src/dungeon/Decorators.ts`), `notes`,
+     tiles. `bones` and a named option for every shared image in
+     `static/isometric/decorators/` (for example, `barrel_E`) are exported
+     from `src/dungeon/Decorators.ts`), `notes`,
      `items` (placed via `ItemLocation`), `interactables` (placed
      via `defineLayout` or `parseTileMap`, see
      [Adding interactable cells](#adding-interactable-cells-optional)),

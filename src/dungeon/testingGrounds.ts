@@ -12,7 +12,7 @@ import {
 import { defineDungeon } from './dungeonParser';
 import { brazier, torch } from './LightSources';
 import { weapons } from '../items/weapons';
-import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
+import e1m0 from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { magicItems } from '../items/magicItems';
 
 export const testingGrounds: Dungeon = defineDungeon({

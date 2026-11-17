@@ -1,11 +1,15 @@
 <script lang="ts">
+  import groundSprites from '#lib/DungeonTiles.png';
   import { campaigns } from '../../campaigns';
   import { CellAlignment } from '../../types';
   import type { CellAlignment as CellAlignmentType } from '../../types';
   import { t } from '../../lib/translations';
+  import PlacementSpritePreview from '../../editor/PlacementSpritePreview.svelte';
   import {
-    createDungeonEditorExport,
+    copyDungeonEditorPlacements,
+    createDungeonEditorExportSource,
     createDungeonEditorState,
+    DECORATOR_OPTIONS,
     decoratorOptionNames,
     type DecoratorOptionName,
     isFloorCell,
@@ -14,6 +18,13 @@
     placeLight,
     removePlacement,
   } from '../../editor/dungeonEditor';
+  import { parseDecorator, parseLight } from '../../dungeon/dungeonParser';
+  import {
+    getDecoratorSpritePreviews,
+    getLightSpritePreviews,
+    loadPlacementPreviewGraphics,
+  } from '../../editor/placementSpritePreview';
+  import type { ResolvedIsometricGraphics } from '../../dungeon/IsometricGraphics';
   import type {
     DungeonEditorState,
     LightPresetName,
@@ -32,9 +43,57 @@
   let selectedDecoratorOption = $state<DecoratorOptionName>('bones');
   let selectedAlignment = $state<CellAlignmentType>(CellAlignment.CENTER);
   let editor = $state<DungeonEditorState | null>(null);
+  let placementCopyFallback = $state('');
+  let gridScrollElement = $state<HTMLDivElement | undefined>();
+  let gridViewportHeight = $state(0);
+  let previewGraphics = $state<ResolvedIsometricGraphics | null>(null);
 
   const selectedCampaign = $derived(campaigns[campaignId]);
   const selectedDungeon = $derived(selectedCampaign?.dungeons[dungeonIndex]);
+  const gridRowCount = $derived(editor?.grid.length ?? 0);
+  const gridColumnCount = $derived(
+    editor?.grid.reduce((max, row) => Math.max(max, row.length), 0) ?? 0,
+  );
+  const cellSize = $derived(
+    gridRowCount > 0 && gridViewportHeight > 0
+      ? gridViewportHeight / gridRowCount
+      : 28,
+  );
+  const gridWidth = $derived(gridColumnCount * cellSize);
+  const selectedLightPreviews = $derived(
+    getLightSpritePreviews(
+      parseLight({
+        ...LIGHT_PRESETS[selectedLightPreset],
+        x: 0,
+        y: 0,
+        alignment: selectedAlignment,
+      }),
+      previewGraphics,
+      groundSprites,
+    ),
+  );
+  const selectedDecoratorPreviews = $derived(
+    getDecoratorSpritePreviews(
+      parseDecorator({
+        ...DECORATOR_OPTIONS[selectedDecoratorOption],
+        position: { x: 0, y: 0 },
+        alignment: selectedAlignment,
+      }),
+    ),
+  );
+
+  $effect(() => {
+    if (!gridScrollElement) return;
+
+    const element = gridScrollElement;
+    const observer = new ResizeObserver(() => {
+      gridViewportHeight = element.clientHeight;
+    });
+    observer.observe(element);
+    gridViewportHeight = element.clientHeight;
+
+    return () => observer.disconnect();
+  });
 
   $effect(() => {
     const campaign = campaigns[campaignId];
@@ -43,6 +102,27 @@
       campaign && dungeon
         ? createDungeonEditorState(campaign.id, dungeon)
         : null;
+    placementCopyFallback = '';
+  });
+
+  $effect(() => {
+    const campaign = campaigns[campaignId];
+    const dungeon = campaign?.dungeons[dungeonIndex];
+    let active = true;
+    previewGraphics = null;
+
+    if (campaign && dungeon) {
+      void loadPlacementPreviewGraphics(
+        campaign.id,
+        dungeon.isometricGraphics,
+      ).then((graphics) => {
+        if (active) previewGraphics = graphics;
+      });
+    }
+
+    return () => {
+      active = false;
+    };
   });
 
   function chooseCampaign() {
@@ -71,15 +151,29 @@
   function exportDungeon() {
     if (!editor) return;
 
-    const json = JSON.stringify(createDungeonEditorExport(editor), null, 2);
+    const source = createDungeonEditorExportSource(editor);
     const url = URL.createObjectURL(
-      new Blob([json], { type: 'application/json' }),
+      new Blob([source], { type: 'text/typescript' }),
     );
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${editor.campaignId}-${dungeonIndex}.json`;
+    link.download = `${editor.campaignId}-${dungeonIndex}.ts`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function copyPlacements() {
+    if (!editor) return;
+
+    const currentEditor = editor;
+    const clipboard =
+      typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+    const fallback = await copyDungeonEditorPlacements(
+      currentEditor,
+      clipboard?.writeText.bind(clipboard),
+    );
+    if (editor !== currentEditor) return;
+    placementCopyFallback = fallback ?? '';
   }
 </script>
 
@@ -87,13 +181,29 @@
   <title>{$t('content.editor.heading')}</title>
 </svelte:head>
 
-<main class="editor">
+<main
+  class="editor"
+  style={`--grid-width: ${gridWidth}px; --cell-size: ${cellSize}px`}
+>
   <header class="topbar">
     <h1>{$t('content.editor.heading')}</h1>
+    <button class="export" onclick={copyPlacements} disabled={!editor}>
+      {$t('content.editor.copy')}
+    </button>
     <button class="export" onclick={exportDungeon} disabled={!editor}>
       {$t('content.editor.export')}
     </button>
   </header>
+
+  {#if placementCopyFallback}
+    <label class="copy-fallback">
+      {$t('content.editor.copy')}
+      <textarea
+        readonly
+        value={placementCopyFallback}
+        onfocus={(event) => event.currentTarget.select()}></textarea>
+    </label>
+  {/if}
 
   {#if editor && selectedCampaign && selectedDungeon}
     <section class="controls">
@@ -128,23 +238,41 @@
         </label>
 
         {#if selectedToolKind === 'light'}
-          <label>
-            {$t('content.editor.light')}
-            <select bind:value={selectedLightPreset}>
-              {#each lightPresetNames as preset (preset)}
-                <option value={preset}>{preset}</option>
-              {/each}
-            </select>
-          </label>
+          <div class="selected-option">
+            <label>
+              {$t('content.editor.light')}
+              <select bind:value={selectedLightPreset}>
+                {#each lightPresetNames as preset (preset)}
+                  <option value={preset}>{preset}</option>
+                {/each}
+              </select>
+            </label>
+            <span class="selected-previews">
+              <PlacementSpritePreview sprite={selectedLightPreviews.topDown} />
+              <PlacementSpritePreview
+                sprite={selectedLightPreviews.isometric}
+              />
+            </span>
+          </div>
         {:else}
-          <label>
-            {$t('content.editor.decorator')}
-            <select bind:value={selectedDecoratorOption}>
-              {#each decoratorOptionNames as option (option)}
-                <option value={option}>{option}</option>
-              {/each}
-            </select>
-          </label>
+          <div class="selected-option">
+            <label>
+              {$t('content.editor.decorator')}
+              <select bind:value={selectedDecoratorOption}>
+                {#each decoratorOptionNames as option (option)}
+                  <option value={option}>{option}</option>
+                {/each}
+              </select>
+            </label>
+            <span class="selected-previews">
+              <PlacementSpritePreview
+                sprite={selectedDecoratorPreviews.topDown}
+              />
+              <PlacementSpritePreview
+                sprite={selectedDecoratorPreviews.isometric}
+              />
+            </span>
+          </div>
         {/if}
 
         <label>
@@ -159,12 +287,12 @@
     </section>
 
     <section class="workspace">
-      <div class="grid-scroll">
+      <div class="grid-scroll" bind:this={gridScrollElement}>
         <div class="grid" aria-label={$t('content.editor.dungeon')}>
           {#each editor.grid as row, y (y)}
             <div
               class="row"
-              style={`grid-template-columns: repeat(${row.length}, 28px)`}
+              style={`grid-template-columns: repeat(${row.length}, var(--cell-size))`}
             >
               {#each Array.from(row) as cell, x (`${x}-${y}`)}
                 {@const position = { x, y }}
@@ -207,19 +335,37 @@
       <aside class="placements">
         <h2>{$t('content.editor.light')}</h2>
         {#each editor.lights as light, index (`${index}-${light.position.x}-${light.position.y}`)}
+          {@const previews = getLightSpritePreviews(
+            light,
+            previewGraphics,
+            groundSprites,
+          )}
           <button class="placement" onclick={() => removeAt('light', index)}>
-            × {light.id ?? light.effect ?? light.color ?? 'static'}
-            ({light.position.x}, {light.position.y})
+            <span class="placement-previews">
+              <PlacementSpritePreview sprite={previews.topDown} />
+              <PlacementSpritePreview sprite={previews.isometric} />
+            </span>
+            <span class="placement-label">
+              × {light.id ?? light.effect ?? light.color ?? 'static'}
+              ({light.position.x}, {light.position.y})
+            </span>
           </button>
         {/each}
         <h2>{$t('content.editor.decorator')}</h2>
         {#each editor.decorators as decorator, index (`${index}-${decorator.position.x}-${decorator.position.y}`)}
+          {@const previews = getDecoratorSpritePreviews(decorator)}
           <button
             class="placement"
             onclick={() => removeAt('decorator', index)}
           >
-            × {decorator.sprite.image} ({decorator.position.x}, {decorator
-              .position.y})
+            <span class="placement-previews">
+              <PlacementSpritePreview sprite={previews.topDown} />
+              <PlacementSpritePreview sprite={previews.isometric} />
+            </span>
+            <span class="placement-label">
+              × {decorator.sprite.image} ({decorator.position.x}, {decorator
+                .position.y})
+            </span>
           </button>
         {/each}
       </aside>
@@ -232,8 +378,14 @@
 <style>
   .editor {
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: min(100vw, max(700px, calc(var(--grid-width) + 266px)));
+    height: 100vh;
     min-height: 100vh;
+    max-width: 100vw;
     padding: 16px;
+    overflow-y: auto;
     background: var(--color-bg-app, #1a1d24);
     color: var(--color-text-primary, #e2e8f0);
     font-family: sans-serif;
@@ -248,6 +400,7 @@
 
   .topbar {
     align-items: center;
+    flex-wrap: wrap;
     justify-content: space-between;
     margin-bottom: 12px;
   }
@@ -276,6 +429,18 @@
   fieldset {
     display: flex;
     flex-direction: column;
+    gap: 4px;
+  }
+
+  .selected-option {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  .selected-previews {
+    display: flex;
+    flex: 0 0 auto;
     gap: 4px;
   }
 
@@ -309,13 +474,39 @@
     padding-inline: 16px;
   }
 
+  .copy-fallback {
+    display: flex;
+    max-width: 100%;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  .copy-fallback textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 12rem;
+    border: 1px solid var(--color-panel-border, #3a414d);
+    border-radius: 4px;
+    padding: 8px;
+    background: var(--color-bg-dungeon, #121418);
+    color: inherit;
+    font: 12px monospace;
+    resize: vertical;
+  }
+
   .workspace {
-    align-items: flex-start;
-    min-height: 0;
+    flex: 1;
+    align-items: stretch;
+    min-width: 0;
+    min-height: 200px;
   }
 
   .grid-scroll {
-    max-width: 100%;
+    box-sizing: border-box;
+    flex: 0 1 calc(var(--grid-width) + 2px);
+    min-width: 0;
+    min-height: 0;
     overflow: auto;
     border: 1px solid var(--color-panel-border, #3a414d);
     background: #08090c;
@@ -332,8 +523,9 @@
   .cell {
     position: relative;
     display: flex;
-    width: 28px;
-    height: 28px;
+    box-sizing: border-box;
+    width: var(--cell-size);
+    height: var(--cell-size);
     min-height: 0;
     align-items: center;
     justify-content: center;
@@ -385,17 +577,30 @@
 
   .placements {
     display: flex;
-    flex: 1;
+    flex: 0 0 220px;
     flex-direction: column;
     gap: 4px;
-    max-height: 70vh;
-    min-width: 220px;
+    min-height: 0;
+    min-width: 0;
     overflow: auto;
   }
 
   .placement {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     text-align: left;
     overflow-wrap: anywhere;
+  }
+
+  .placement-previews {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 4px;
+  }
+
+  .placement-label {
+    min-width: 0;
   }
 
   @media (max-width: 700px) {
@@ -403,9 +608,16 @@
       flex-direction: column;
     }
 
+    .grid-scroll {
+      flex: 1;
+      width: 100%;
+      min-height: min(40vh, 320px);
+    }
+
     .placements {
       width: 100%;
-      min-width: 0;
+      flex: 0 1 auto;
+      max-height: 20vh;
     }
   }
 </style>

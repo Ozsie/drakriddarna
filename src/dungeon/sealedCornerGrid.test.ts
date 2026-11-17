@@ -4,7 +4,7 @@ import { autoDetectCorners } from './cornerDetection';
 import type { Dungeon } from '../types';
 import { SEALED_DOOR } from '../core';
 import { CornerType } from '../types';
-import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
+import e1m0 from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
 import { e2m2 } from '../campaigns/earthHour/dungeons/e2m2';
 import { e1m2 } from '../campaigns/iceDragonTreasure/dungeons/e1m2';

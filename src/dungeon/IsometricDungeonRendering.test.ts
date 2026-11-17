@@ -16,7 +16,7 @@ import {
   type GameActorView,
   type GameHeroOverlayView,
 } from '../scene/adapters';
-import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
+import e1m0 from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
 import { e1m2 } from '../campaigns/iceDragonTreasure/dungeons/e1m2';
 import { e1m3 } from '../campaigns/iceDragonTreasure/dungeons/e1m3';

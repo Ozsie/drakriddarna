@@ -190,15 +190,18 @@ Isometric rendering selects `sprites.isometric`, then `sprites.topDown`, then
 decorator tiles from the isometric graphics catalog. If the selected image is
 still loading, the generic fallback remains visible until it is ready.
 
-`src/dungeon/Decorators.ts` exports the `bones` declarative sprite options.
-Options can be supplied in either tuple form or a positioned object, and the
-parser resolves them to a runtime `Decorator`:
+`src/dungeon/Decorators.ts` exports the `bones` declarative sprite options and
+named options for every image in `static/isometric/decorators/` (for example,
+`barrel_E`). Each isometric image is cropped to its visible pixels. Options
+can be supplied in either tuple form or a positioned object, and the parser
+resolves them to a runtime `Decorator`:
 
 ```ts
-import { bones } from '../../../dungeon/Decorators';
+import { barrel_E, bones } from '../../../dungeon/Decorators';
 
 decorators: [
   [2, 3, bones],
+  [3, 2, barrel_E],
   [
     2,
     3,

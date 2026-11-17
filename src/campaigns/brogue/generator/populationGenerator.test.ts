@@ -43,7 +43,7 @@ const generatePopulated = (
       const generated = generateLayout(seed, depth);
       return { generated, populated: populate(generated, seed, depth, decks) };
     } catch {
-      continue;
+
     }
   }
   throw new Error(

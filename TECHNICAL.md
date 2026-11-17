@@ -249,8 +249,17 @@ app specified in [docs/editor-spec/](./docs/editor-spec/)) is planned to
 _generate_ complete campaign modules. The browser route at `/editor` is a
 smaller placement editor: it selects discovered campaign dungeons, edits
 resolved lights and decorators on floor cells, and exports the grid and
-placement arrays as JSON for manual integration. It does not generate or
-rewrite campaign TypeScript.
+placement arrays as TypeScript for manual integration. Recognized lights and
+decorators use references to the shared declarative options; custom placements
+remain inline objects. The copied layout fragment and the exported object use
+`CellAlignment` references for alignments, so the target dungeon module needs
+imports for the referenced alignment and options. Its decorator selector is
+populated from the declarative options exported by `src/dungeon/Decorators.ts`,
+including the directional isometric assets, and the selected light or
+decorator displays its top-down and isometric sprites next to the selector. It
+does not generate or rewrite campaign TypeScript. If clipboard access is
+unavailable, the same short-format layout fragment is shown in a selectable
+field for manual copying.
 
 One campaign breaks the "authored by hand" rule on purpose: `brogue` is
 _generated at load time_ by a deterministic, Brogue-inspired dungeon
@@ -268,9 +277,10 @@ campaign folder whose dungeons happen to be built by code.
 
 The placement editor operates on each campaign's resolved dungeon object, so
 it can inspect runtime-generated floors such as `brogue` without adding a
-campaign registration path. Its JSON export includes the exact grid and the
-resolved light/decorator objects; apply those arrays to the resolved layout,
-not an empty declarative decorator list, because an empty list asks the
+campaign registration path. Its TypeScript export includes the exact grid and
+placement definitions with references where a known option matches; custom
+placements are emitted inline. Apply the placement properties to the resolved
+layout, not an empty declarative decorator list, because an empty list asks the
 dungeon parser to generate default decorators.
 
 ## Determinism: a seeded RNG everywhere it matters

@@ -9,9 +9,9 @@ import {
 import { defineDungeon } from '../../../dungeon/dungeonParser';
 import { e1m1 } from './e1m1';
 import { brazier, chandelier } from '../../../dungeon/LightSources';
-import { bones } from '../../../dungeon/Decorators.ts';
+import { barrelsStacked_E, barrelsStacked_N, barrelsStacked_S, barrelsStacked_W, bones, hay_N, sack_E, sack_W } from '../../../dungeon/Decorators.ts';
 
-export const e1m0: Dungeon = defineDungeon({
+const e1m0: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m0.name',
   intro: 'campaign.iceDragon.e1m0.intro',
   winConditions: [
@@ -44,15 +44,6 @@ export const e1m0: Dungeon = defineDungeon({
       '#AAA###BB# ',
       '##### #### ',
     ],
-    lights: [
-      [2, 9, CellAlignment.CEILING, chandelier],
-      [8, 10, CellAlignment.BOTTOM_RIGHT, brazier],
-      [8, 7, CellAlignment.TOP_RIGHT, brazier],
-      [9, 1, CellAlignment.TOP_RIGHT, brazier],
-      [9, 3, CellAlignment.BOTTOM_RIGHT, brazier],
-      [6, 1, CellAlignment.TOP_LEFT, brazier],
-      [6, 3, CellAlignment.BOTTOM_LEFT, brazier],
-    ],
     doors: [
       [Side.RIGHT, 3, 9],
       [Side.RIGHT, 6, 9],
@@ -71,15 +62,23 @@ export const e1m0: Dungeon = defineDungeon({
       [2, 9, 'campaign.iceDragon.e1m0.notes.tutorial1'],
       [3, 9, 'campaign.iceDragon.e1m0.notes.tutorial2'],
     ],
+    lights: [
+      [2, 9, CellAlignment.CEILING, chandelier],
+      [8, 10, CellAlignment.BOTTOM_RIGHT, brazier],
+      [8, 7, CellAlignment.TOP_RIGHT, brazier],
+      [9, 1, CellAlignment.TOP_RIGHT, brazier],
+      [9, 3, CellAlignment.BOTTOM_RIGHT, brazier],
+      [6, 1, CellAlignment.TOP_LEFT, brazier],
+      [6, 3, CellAlignment.BOTTOM_LEFT, brazier],
+    ],
     decorators: [
-      [2, 8, CellAlignment.CENTER_TOP, bones],
-      [3, 8, CellAlignment.TOP_RIGHT, bones],
-      [9, 2, CellAlignment.TOP_RIGHT, bones],
-      [9, 3, CellAlignment.TOP_RIGHT, bones],
-      [6, 1, CellAlignment.TOP_RIGHT, bones],
-      [8, 7, CellAlignment.TOP_RIGHT, bones],
-      [7, 9, CellAlignment.TOP_RIGHT, bones],
+      [3, 8, CellAlignment.CENTER_TOP, barrelsStacked_S],
+      [8, 9, CellAlignment.CENTER_RIGHT, barrelsStacked_W],
+      [8, 1, CellAlignment.TOP_RIGHT, hay_N],
+      [6, 2, CellAlignment.CENTER_LEFT, sack_E],
+      [7, 8, CellAlignment.CENTER_LEFT, sack_E],
     ],
   },
   events: [1, 2, 3, 4, 5, 6],
 });
+export default e1m0;

@@ -8,10 +8,12 @@ import type {
   Position,
 } from '../types';
 import { CellAlignment } from '../types';
-import { bones } from '../dungeon/Decorators';
+import * as decoratorOptions from '../dungeon/Decorators';
 import {
+  parseLight,
   parseDecorator,
   type DeclarativeDecoratorOptions,
+  type DeclarativeLightOptions,
 } from '../dungeon/dungeonParser';
 import {
   brazier,
@@ -22,7 +24,6 @@ import {
   iceBrazier,
   torch,
 } from '../dungeon/LightSources';
-import type { DeclarativeLightOptions } from '../dungeon/dungeonParser';
 
 export const LIGHT_PRESETS = {
   brazier,
@@ -36,9 +37,10 @@ export const LIGHT_PRESETS = {
 
 export type LightPresetName = keyof typeof LIGHT_PRESETS;
 
-export const DECORATOR_OPTIONS = {
-  bones,
-} satisfies Record<string, DeclarativeDecoratorOptions>;
+export const DECORATOR_OPTIONS = decoratorOptions satisfies Record<
+  string,
+  DeclarativeDecoratorOptions
+>;
 
 export type DecoratorOptionName = keyof typeof DECORATOR_OPTIONS;
 
@@ -56,16 +58,6 @@ export type DungeonEditorSource = {
     grid: string[];
     lights?: LightSource[];
     decorators?: Decorator[];
-  };
-};
-
-export type DungeonEditorExport = {
-  campaignId: string;
-  dungeonName: string;
-  layout: {
-    grid: string[];
-    lights: LightSource[];
-    decorators: Decorator[];
   };
 };
 
@@ -219,17 +211,229 @@ export const removePlacement = (
   };
 };
 
-export const createDungeonEditorExport = (
+const normalizeForComparison = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(normalizeForComparison);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, entry]) => entry !== undefined)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entry]) => [key, normalizeForComparison(entry)]),
+    );
+  }
+  return value;
+};
+
+const placementsEqual = (left: unknown, right: unknown): boolean =>
+  JSON.stringify(normalizeForComparison(left)) ===
+  JSON.stringify(normalizeForComparison(right));
+
+const findLightPreset = (light: LightSource): LightPresetName | undefined => {
+  const { x, y } = light.position;
+  const alignment = light.alignment;
+
+  for (const [name, options] of Object.entries(LIGHT_PRESETS) as [
+    LightPresetName,
+    DeclarativeLightOptions,
+  ][]) {
+    const parsedCandidates = [
+      parseLight([x, y, options]),
+      parseLight([x, y, alignment ?? CellAlignment.CENTER, options]),
+      parseLight({
+        x,
+        y,
+        ...(alignment !== undefined ? { alignment } : {}),
+        ...options,
+      }),
+    ];
+    const editorPlacement: LightSource = {
+      ...options,
+      position: light.position,
+      ...(alignment !== undefined ? { alignment } : {}),
+    };
+
+    if (
+      [editorPlacement, ...parsedCandidates].some((candidate) =>
+        placementsEqual(light, candidate),
+      )
+    ) {
+      return name;
+    }
+  }
+
+  return undefined;
+};
+
+const findDecoratorOption = (
+  decorator: Decorator,
+): DecoratorOptionName | undefined => {
+  const { x, y } = decorator.position;
+  const alignment = decorator.alignment;
+
+  for (const [name, options] of Object.entries(DECORATOR_OPTIONS) as [
+    DecoratorOptionName,
+    DeclarativeDecoratorOptions,
+  ][]) {
+    const parsedCandidates = [
+      parseDecorator([x, y, alignment ?? CellAlignment.CENTER, options]),
+      parseDecorator([x, y, options]),
+      parseDecorator({
+        position: decorator.position,
+        ...(alignment !== undefined ? { alignment } : {}),
+        ...options,
+      }),
+    ];
+
+    if (
+      parsedCandidates.some((candidate) =>
+        placementsEqual(decorator, candidate),
+      )
+    ) {
+      return name;
+    }
+  }
+
+  return undefined;
+};
+
+const alignmentReference = (alignment: string): string | undefined => {
+  const entry = Object.entries(CellAlignment).find(
+    ([, value]) => value === alignment,
+  );
+  return entry ? `CellAlignment.${entry[0]}` : undefined;
+};
+
+const quoteSourceString = (value: string): string =>
+  `'${value
+    .replaceAll('\\', '\\\\')
+    .replaceAll("'", "\\'")
+    .replaceAll('\n', '\\n')
+    .replaceAll('\r', '\\r')
+    .replaceAll('\t', '\\t')
+    .replaceAll('\u2028', '\\u2028')
+    .replaceAll('\u2029', '\\u2029')}'`;
+
+const formatSourceValue = (
+  value: unknown,
+  indent: number,
+  propertyName?: string,
+): string => {
+  if (typeof value === 'string') {
+    return propertyName === 'alignment'
+      ? (alignmentReference(value) ?? quoteSourceString(value))
+      : quoteSourceString(value);
+  }
+  if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    value === null
+  ) {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    const childIndent = indent + 2;
+    return `[\n${value
+      .map(
+        (entry) =>
+          `${' '.repeat(childIndent)}${formatSourceValue(entry, childIndent)},`,
+      )
+      .join('\n')}\n${' '.repeat(indent)}]`;
+  }
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value).filter(
+      ([, entry]) => entry !== undefined,
+    );
+    if (entries.length === 0) return '{}';
+    const childIndent = indent + 2;
+    return `{\n${entries
+      .map(([key, entry]) => {
+        const sourceKey = /^[A-Za-z_$][\w$]*$/.test(key)
+          ? key
+          : quoteSourceString(key);
+        return `${' '.repeat(childIndent)}${sourceKey}: ${formatSourceValue(entry, childIndent, key)},`;
+      })
+      .join('\n')}\n${' '.repeat(indent)}}`;
+  }
+  return 'undefined';
+};
+
+const formatPlacement = (
+  kind: 'light' | 'decorator',
+  placement: LightSource | Decorator,
+  indent: number,
+): string => {
+  if (kind === 'light') {
+    const light = placement as LightSource;
+    const preset = findLightPreset(light);
+    if (preset) {
+      const { x, y } = light.position;
+      const alignment = light.alignment
+        ? `${alignmentReference(light.alignment) ?? quoteSourceString(light.alignment)}, `
+        : '';
+      return `[${x}, ${y}, ${alignment}${preset}]`;
+    }
+  } else {
+    const decorator = placement as Decorator;
+    const option = findDecoratorOption(decorator);
+    if (option) {
+      const { x, y } = decorator.position;
+      const alignment = decorator.alignment
+        ? `${alignmentReference(decorator.alignment) ?? quoteSourceString(decorator.alignment)}, `
+        : '';
+      return `[${x}, ${y}, ${alignment}${option}]`;
+    }
+  }
+
+  return formatSourceValue(placement, indent, undefined);
+};
+
+const formatPlacementArray = (
+  kind: 'light' | 'decorator',
+  placements: (LightSource | Decorator)[],
+  indent: number,
+): string => {
+  if (placements.length === 0) return '[]';
+  const childIndent = indent + 2;
+  return `[\n${placements
+    .map(
+      (placement) =>
+        `${' '.repeat(childIndent)}${formatPlacement(kind, placement, childIndent)},`,
+    )
+    .join('\n')}\n${' '.repeat(indent)}]`;
+};
+
+const formatPlacementProperties = (
   state: DungeonEditorState,
-): DungeonEditorExport => ({
-  campaignId: state.campaignId,
-  dungeonName: state.dungeonName,
-  layout: {
-    grid: state.grid,
-    lights: state.lights,
-    decorators: state.decorators,
-  },
-});
+  indent: number,
+): string => {
+  const prefix = ' '.repeat(indent);
+  return `${prefix}lights: ${formatPlacementArray('light', state.lights, indent)},\n${prefix}decorators: ${formatPlacementArray('decorator', state.decorators, indent)},`;
+};
+
+export const createDungeonEditorPlacementsSource = (
+  state: DungeonEditorState,
+): string => formatPlacementProperties(state, 0);
+
+export const createDungeonEditorExportSource = (
+  state: DungeonEditorState,
+): string =>
+  `export const dungeonEditorExport = {\n  campaignId: ${quoteSourceString(state.campaignId)},\n  dungeonName: ${quoteSourceString(state.dungeonName)},\n  layout: {\n    grid: ${formatSourceValue(state.grid, 4)},\n${formatPlacementProperties(state, 4)}\n  },\n};`;
+
+export const copyDungeonEditorPlacements = async (
+  state: DungeonEditorState,
+  writeText?: (text: string) => Promise<void>,
+): Promise<string | null> => {
+  const source = createDungeonEditorPlacementsSource(state);
+  if (!writeText) return source;
+
+  try {
+    await writeText(source);
+    return null;
+  } catch {
+    return source;
+  }
+};
 
 export const decoratorOptionNames = Object.keys(
   DECORATOR_OPTIONS,

@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { CellAlignment } from '../types';
+import * as declarativeDecorators from '../dungeon/Decorators';
+import { parseDecorator, parseLight } from '../dungeon/dungeonParser';
 import {
-  createDungeonEditorExport,
+  createDungeonEditorExportSource,
+  createDungeonEditorPlacementsSource,
   createDungeonEditorState,
+  copyDungeonEditorPlacements,
   DECORATOR_OPTIONS,
   decoratorOptionNames,
   isFloorCell,
+  LIGHT_PRESETS,
   placeDecorator,
   placeLight,
   removePlacement,
@@ -52,7 +57,32 @@ const source = {
 
 describe('dungeon editor', () => {
   it('exposes the available declarative decorator options', () => {
-    expect(decoratorOptionNames).toEqual(['bones']);
+    expect([...decoratorOptionNames].sort()).toEqual(
+      Object.keys(declarativeDecorators).sort(),
+    );
+  });
+
+  it('places and exports every decorator option with its projection sprites', () => {
+    for (const option of decoratorOptionNames) {
+      const initial = createDungeonEditorState('sample', {
+        name: 'options.dungeon',
+        layout: { grid: ['A'] },
+      });
+      const placed = placeDecorator(initial, option, { x: 0, y: 0 });
+      expect(placed.decorators).toHaveLength(1);
+      expect(placed.decorators[0].sprites).toEqual(
+        DECORATOR_OPTIONS[option].sprites,
+      );
+      expect(createDungeonEditorPlacementsSource(placed)).toContain(
+        `[0, 0, CellAlignment.CENTER, ${option}]`,
+      );
+      expect(
+        parseDecorator([0, 0, CellAlignment.CENTER, DECORATOR_OPTIONS[option]]),
+      ).toEqual(placed.decorators[0]);
+      expect(createDungeonEditorExportSource(placed)).toContain(
+        `[0, 0, CellAlignment.CENTER, ${option}]`,
+      );
+    }
   });
 
   it('keeps the original grid and clones existing placements and sprite options', () => {
@@ -121,6 +151,39 @@ describe('dungeon editor', () => {
     expect(initial.decorators).toHaveLength(1);
   });
 
+  it('recognizes parser-resolved option references from an existing dungeon', () => {
+    const parsedLight = parseLight([
+      3,
+      1,
+      CellAlignment.BOTTOM_RIGHT,
+      LIGHT_PRESETS.torch,
+    ]);
+    const parsedDecorator = parseDecorator([
+      1,
+      1,
+      CellAlignment.TOP_RIGHT,
+      DECORATOR_OPTIONS.bones,
+    ]);
+    const state = createDungeonEditorState('sample', {
+      name: 'parsed.dungeon',
+      layout: {
+        grid,
+        lights: [parsedLight],
+        decorators: [parsedDecorator],
+      },
+    });
+    const sourceText = createDungeonEditorPlacementsSource(state);
+
+    expect(sourceText).toContain('[3, 1, CellAlignment.BOTTOM_RIGHT, torch]');
+    expect(sourceText).toContain('[1, 1, CellAlignment.TOP_RIGHT, bones]');
+    expect(
+      parseLight([3, 1, CellAlignment.BOTTOM_RIGHT, LIGHT_PRESETS.torch]),
+    ).toEqual(state.lights[0]);
+    expect(
+      parseDecorator([1, 1, CellAlignment.TOP_RIGHT, DECORATOR_OPTIONS.bones]),
+    ).toEqual(state.decorators[0]);
+  });
+
   it('uses center alignment when placing a decorator without an alignment', () => {
     const initial = createDungeonEditorState('sample', source);
 
@@ -145,19 +208,91 @@ describe('dungeon editor', () => {
     expect(removePlacement(withTwoLights, 'decorator', 4)).toBe(withTwoLights);
   });
 
-  it('exports grid and resolved placements with identity and preserves empty arrays', () => {
+  it('exports grid and placement references with identity and empty arrays', () => {
     const state = createDungeonEditorState('sample', {
       name: 'empty.dungeon',
       layout: { grid },
     });
-    const exported = createDungeonEditorExport(state);
-    const roundTrip: unknown = JSON.parse(JSON.stringify(exported));
+    const exported = createDungeonEditorExportSource(state);
 
-    expect(exported.layout.grid).toBe(grid);
-    expect(roundTrip).toEqual({
-      campaignId: 'sample',
-      dungeonName: 'empty.dungeon',
-      layout: { grid, lights: [], decorators: [] },
+    expect(exported).toContain("campaignId: 'sample'");
+    expect(exported).toContain("dungeonName: 'empty.dungeon'");
+    expect(exported).toContain("grid: [\n      '#####'");
+    expect(exported).toContain('lights: []');
+    expect(exported).toContain('decorators: []');
+  });
+
+  it('copies references and custom placements as TypeScript', async () => {
+    const initial = createDungeonEditorState('sample', source);
+    const withLight = placeLight(
+      initial,
+      'torch',
+      { x: 3, y: 1 },
+      CellAlignment.BOTTOM_RIGHT,
+    );
+    const state = placeDecorator(
+      withLight,
+      'bones',
+      { x: 1, y: 1 },
+      CellAlignment.TOP_RIGHT,
+    );
+    let copiedText = '';
+
+    const fallback = await copyDungeonEditorPlacements(state, (text) => {
+      copiedText = text;
+      return Promise.resolve();
     });
+
+    expect(fallback).toBeNull();
+    expect(copiedText).toBe(createDungeonEditorPlacementsSource(state));
+    expect(copiedText).toContain('[3, 1, CellAlignment.BOTTOM_RIGHT, torch]');
+    expect(copiedText).toContain('[1, 1, CellAlignment.TOP_RIGHT, bones]');
+    expect(copiedText).toContain("image: 'decorators/Objects.png'");
+    expect(copiedText).toContain('sourceRect:');
+    expect(
+      parseLight([3, 1, CellAlignment.BOTTOM_RIGHT, LIGHT_PRESETS.torch]),
+    ).toMatchObject({
+      position: { x: 3, y: 1 },
+      alignment: CellAlignment.BOTTOM_RIGHT,
+      color: state.lights[1].color,
+      sprites: state.lights[1].sprites,
+    });
+  });
+
+  it('exports identity, grid, and the same concise placement references', () => {
+    const initial = createDungeonEditorState('sample', {
+      name: 'empty.dungeon',
+      layout: { grid },
+    });
+    const state = placeDecorator(initial, 'bones', { x: 1, y: 1 });
+    const sourceText = createDungeonEditorExportSource(state);
+
+    expect(sourceText).toContain("campaignId: 'sample'");
+    expect(sourceText).toContain("dungeonName: 'empty.dungeon'");
+    expect(sourceText).toContain("grid: [\n      '#####'");
+    expect(sourceText).toContain('[1, 1, CellAlignment.CENTER, bones]');
+    expect(sourceText).toContain('lights: []');
+    expect(sourceText).toContain('decorators: [');
+  });
+
+  it('preserves empty arrays and returns source when clipboard writing is unavailable', async () => {
+    const state = createDungeonEditorState('sample', {
+      name: 'empty.dungeon',
+      layout: { grid },
+    });
+
+    const failedWriteFallback = await copyDungeonEditorPlacements(state, () =>
+      Promise.reject(new Error('Clipboard unavailable')),
+    );
+    const unavailableFallback = await copyDungeonEditorPlacements(state);
+
+    expect(failedWriteFallback).toBe(
+      createDungeonEditorPlacementsSource(state),
+    );
+    expect(unavailableFallback).toBe(
+      createDungeonEditorPlacementsSource(state),
+    );
+    expect(unavailableFallback).toContain('lights: []');
+    expect(unavailableFallback).toContain('decorators: []');
   });
 });

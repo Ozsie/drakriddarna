@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Dungeon } from '../types';
 import type { SceneDungeonView } from '@hoard-engine/scene';
-import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
+import e1m0 from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 
 // The dungeon-plane contract is consumer-defined: the renderer declares
 // the plain shapes it reads and the game's Dungeon passes by structural

@@ -87,7 +87,7 @@
     }
   },
   "editor": {
-    "heading": "Dragonbane-redigerare",
+    "heading": "Drakriddarna-editor",
     "campaign": "Kampanj",
     "dungeon": "Grotta",
     "tools": "Verktyg",
@@ -95,6 +95,7 @@
     "light": "Ljus",
     "decorator": "Dekoration",
     "alignment": "Justering",
+    "copy": "Kopiera",
     "export": "Exportera",
     "nothingLoaded": "Inget har lästs in"
   },

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { loadTranslations } from '#lib/translations/index.js';
-import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
+import e1m0 from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { e1m5 } from '../campaigns/iceDragonTreasure/dungeons/e1m5';
 import { testingGrounds } from '../dungeon/testingGrounds';
 import {
