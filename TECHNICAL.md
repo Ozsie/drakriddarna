@@ -208,12 +208,16 @@ lights and terrain cells. Decorators take `ItemSprite` descriptors directly in
 objects. `sprites.topDown` and `sprites.isometric` select separate images or
 crops for each projection; the parser uses `sprite`, then top-down, then
 isometric as the runtime compatibility fallback. Decorator alignment positions
-the sprite bounds within its cell, and defaults to `CENTER`. Item definitions
-can also specify an `ItemSprite` descriptor to replace the drawn sprite of an
-item or random chest without changing its item behavior. When the decorator
-list is omitted or empty, it deterministically places up to six decorations
-from the shared `bones` options in unoccupied floor cells, preferring room
-corners and then wall-adjacent cells; explicit decorator lists take precedence.
+the sprite bounds within its cell, and defaults to `CENTER`. In isometric mode,
+decorator and light-sprite painters use the aligned world point before
+projection and depth sorting; sprite anchors are unchanged, and configured
+sprite offsets remain in effect for fallback sprites. `CENTER` and `CEILING`
+use the cell center. Item definitions can also specify an `ItemSprite`
+descriptor to replace the drawn sprite of an item or random chest without
+changing its item behavior. When the decorator list is omitted or empty, it
+deterministically places up to six decorations from the shared `bones` options
+in unoccupied floor cells, preferring room corners and then wall-adjacent
+cells; explicit decorator lists take precedence.
 
 ```ts
 export const e1m1: Dungeon = defineDungeon({

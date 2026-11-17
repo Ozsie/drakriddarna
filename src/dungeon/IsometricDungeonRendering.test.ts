@@ -61,6 +61,28 @@ describe('feetPosition', () => {
   });
 });
 
+const alignedCellPositions = [
+  { alignment: CellAlignment.TOP_LEFT, position: { x: 108, y: 156 } },
+  { alignment: CellAlignment.TOP_RIGHT, position: { x: 132, y: 156 } },
+  { alignment: CellAlignment.BOTTOM_LEFT, position: { x: 108, y: 180 } },
+  { alignment: CellAlignment.BOTTOM_RIGHT, position: { x: 132, y: 180 } },
+  { alignment: CellAlignment.CENTER, position: { x: 120, y: 168 } },
+  { alignment: CellAlignment.CENTER_LEFT, position: { x: 96, y: 168 } },
+  { alignment: CellAlignment.CENTER_RIGHT, position: { x: 144, y: 168 } },
+  { alignment: CellAlignment.CENTER_TOP, position: { x: 120, y: 144 } },
+  { alignment: CellAlignment.CENTER_BOTTOM, position: { x: 120, y: 192 } },
+  { alignment: CellAlignment.CEILING, position: { x: 120, y: 168 } },
+] satisfies { alignment: CellAlignment; position: { x: number; y: number } }[];
+
+const alignedProjection = { ax: 1.5, by: 0.75 };
+const alignedView = createIsoView(
+  { x: 0, y: 0 },
+  400,
+  400,
+  48,
+  alignedProjection,
+);
+
 describe('isometric actor indicators', () => {
   it('draws the hero floor marker before the sprite', () => {
     const calls: string[] = [];
@@ -4021,6 +4043,97 @@ describe('isometric found-secret chest painters', () => {
       expect(drawImage).toHaveBeenCalledWith(image, -24, -144, 96, 192);
     });
 
+    it.each(alignedCellPositions)(
+      'uses $alignment for catalog and fallback light sprite positions',
+      ({ alignment, position }) => {
+        const base = lightItem();
+        const item = {
+          ...base,
+          position: { x: 2, y: 3 },
+          spriteDraw: {
+            scale: 0.6,
+            alignment,
+            offset: { x: 2, y: -3 },
+          },
+        };
+        const projectedPosition = worldToScreen(
+          alignedView,
+          position.x,
+          position.y,
+        );
+        const image = {
+          naturalWidth: 256,
+          naturalHeight: 512,
+        } as HTMLImageElement;
+        const catalogPainters = buildIsometricLightPainters(
+          [item],
+          48,
+          alignedProjection,
+          lightGraphics,
+          (graphics, tileId) => {
+            const tile = tileId ? graphics.tiles[tileId] : undefined;
+            return tile ? { ...tile, image } : null;
+          },
+        );
+        const catalogDraw = vi.fn();
+        const catalogPainter = catalogPainters[0];
+
+        expect(catalogPainter?.position).toEqual(position);
+        catalogPainter?.draw(
+          { drawImage: catalogDraw } as unknown as CanvasRenderingContext2D,
+          projectedPosition,
+        );
+        expect(catalogDraw).toHaveBeenCalledWith(
+          image,
+          projectedPosition.x - 72,
+          projectedPosition.y + 36 - 288,
+          144,
+          288,
+        );
+
+        const fallbackPainters = buildIsometricLightPainters(
+          [item],
+          48,
+          alignedProjection,
+        );
+        const fallbackDraw = vi.fn();
+        const fallbackPainter = fallbackPainters[0];
+
+        expect(fallbackPainter?.position).toEqual(position);
+        fallbackPainter?.draw(
+          {
+            drawImage: fallbackDraw,
+            imageSmoothingEnabled: false,
+          } as unknown as CanvasRenderingContext2D,
+          projectedPosition,
+        );
+        const fallbackArgs = fallbackDraw.mock.calls[0];
+        expect(fallbackArgs?.slice(0, 5)).toEqual([
+          base.sprite?.image,
+          0,
+          0,
+          64,
+          64,
+        ]);
+        expect(fallbackArgs?.[5]).toBeCloseTo(projectedPosition.x - 21.6 + 3);
+        expect(fallbackArgs?.[6]).toBeCloseTo(projectedPosition.y - 21.6 - 4.5);
+        expect(fallbackArgs?.[7]).toBeCloseTo(43.2);
+        expect(fallbackArgs?.[8]).toBeCloseTo(43.2);
+      },
+    );
+
+    it('defaults an unaligned light sprite to the cell center', () => {
+      const item = {
+        ...lightItem(),
+        position: { x: 2, y: 3 },
+        spriteDraw: { scale: 0.6 },
+      };
+
+      expect(
+        buildIsometricLightPainters([item], 48, alignedProjection)[0]?.position,
+      ).toEqual({ x: 120, y: 168 });
+    });
+
     it('keeps the configured sprite visible while the catalog tile loads', () => {
       const item = lightItem();
       const painters = buildIsometricLightPainters(
@@ -4093,6 +4206,111 @@ describe('isometric found-secret chest painters', () => {
       expect(painters[0]?.position).toEqual({ x: 120, y: 168 });
       painters[0]?.draw(context, { x: 100, y: 100 });
       expect(drawImage).toHaveBeenCalledWith(image, 52, -92, 120, 240);
+    });
+
+    it.each(alignedCellPositions)(
+      'uses $alignment for catalog and fallback decorator sprite positions',
+      ({ alignment, position }) => {
+        const [base] = foundSecretItems();
+        if (!base) throw new Error('Expected a visible fixture view model');
+        const spriteImage = {
+          naturalWidth: 64,
+          naturalHeight: 64,
+        } as HTMLImageElement;
+        const item = {
+          ...base,
+          position: { x: 2, y: 3 },
+          sprite: {
+            image: spriteImage,
+            sx: 0,
+            sy: 0,
+            sw: 64,
+            sh: 64,
+          },
+          spriteDraw: {
+            scale: 0.75,
+            alignment,
+            offset: { x: 2, y: -3 },
+          },
+        };
+        const projectedPosition = worldToScreen(
+          alignedView,
+          position.x,
+          position.y,
+        );
+        const catalogImage = {
+          naturalWidth: 256,
+          naturalHeight: 512,
+        } as HTMLImageElement;
+        const graphics = decoratorGraphics();
+        const catalogPainters = buildIsometricDecoratorPainters(
+          [item],
+          48,
+          alignedProjection,
+          graphics,
+          (currentGraphics, tileId) => {
+            const tile = tileId ? currentGraphics.tiles[tileId] : undefined;
+            return tile ? { ...tile, image: catalogImage } : null;
+          },
+        );
+        const catalogDraw = vi.fn();
+        const catalogPainter = catalogPainters[0];
+
+        expect(catalogPainter?.position).toEqual(position);
+        catalogPainter?.draw(
+          { drawImage: catalogDraw } as unknown as CanvasRenderingContext2D,
+          projectedPosition,
+        );
+        expect(catalogDraw).toHaveBeenCalledWith(
+          catalogImage,
+          projectedPosition.x - 72,
+          projectedPosition.y + 36 - 324,
+          180,
+          360,
+        );
+
+        const fallbackPainters = buildIsometricDecoratorPainters(
+          [item],
+          48,
+          alignedProjection,
+        );
+        const fallbackDraw = vi.fn();
+        const fallbackPainter = fallbackPainters[0];
+
+        expect(fallbackPainter?.position).toEqual(position);
+        fallbackPainter?.draw(
+          {
+            drawImage: fallbackDraw,
+            imageSmoothingEnabled: false,
+          } as unknown as CanvasRenderingContext2D,
+          projectedPosition,
+        );
+        const fallbackArgs = fallbackDraw.mock.calls[0];
+        expect(fallbackArgs?.slice(0, 5)).toEqual([spriteImage, 0, 0, 64, 64]);
+        expect(fallbackArgs?.[5]).toBeCloseTo(projectedPosition.x - 27 + 3);
+        expect(fallbackArgs?.[6]).toBeCloseTo(projectedPosition.y - 27 - 4.5);
+        expect(fallbackArgs?.[7]).toBeCloseTo(54);
+        expect(fallbackArgs?.[8]).toBeCloseTo(54);
+      },
+    );
+
+    it('defaults an unaligned decorator sprite to the cell center', () => {
+      const [base] = foundSecretItems();
+      if (!base) throw new Error('Expected a visible fixture view model');
+
+      expect(
+        buildIsometricDecoratorPainters(
+          [
+            {
+              ...base,
+              position: { x: 2, y: 3 },
+              spriteDraw: { scale: 0.75 },
+            },
+          ],
+          48,
+          alignedProjection,
+        )[0]?.position,
+      ).toEqual({ x: 120, y: 168 });
     });
 
     it('keeps the generic fallback while indexed art is unavailable', () => {

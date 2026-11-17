@@ -25,6 +25,7 @@ import {
 } from '@hoard-engine/scene';
 import { CellAlignment, type Dungeon, type GameState } from '../types';
 import { isDiscovered } from '../core';
+import { lightCenter } from './LightRendering';
 import {
   buildCorpseViewModels,
   buildDecoratorViewModels,
@@ -1651,6 +1652,35 @@ const buildItemPainters = (
     ];
   });
 
+const alignedItemPosition = (item: GameItemView, cellSize: number) =>
+  lightCenter(
+    {
+      position: item.position,
+      alignment: item.spriteDraw?.alignment,
+    },
+    cellSize,
+  );
+
+const buildCellAlignedItemPainters = (
+  items: GameItemView[],
+  cellSize: number,
+  zoom: number,
+): SceneIsoPainterView[] =>
+  items.flatMap((item) => {
+    const fallbackItem = item.spriteDraw
+      ? {
+          ...item,
+          spriteDraw: {
+            ...item.spriteDraw,
+            alignment: CellAlignment.CENTER,
+          },
+        }
+      : item;
+    const [painter] = buildItemPainters([fallbackItem], cellSize, zoom);
+    if (!painter) return [];
+    return [{ ...painter, position: alignedItemPosition(item, cellSize) }];
+  });
+
 export const buildIsometricDecoratorPainters = (
   decorators: GameItemView[],
   cellSize: number,
@@ -1673,7 +1703,9 @@ export const buildIsometricDecoratorPainters = (
       graphics && !decorator.isometricSpriteOverride
         ? getDecoratorTileImage(graphics, tileId)
         : null;
-    if (!tile) return buildItemPainters([decorator], cellSize, projection.ax);
+    if (!tile) {
+      return buildCellAlignedItemPainters([decorator], cellSize, projection.ax);
+    }
 
     const { width, height } = getIsometricTileDimensions(
       cellSize,
@@ -1682,36 +1714,12 @@ export const buildIsometricDecoratorPainters = (
       tile.image.naturalWidth,
       tile.image.naturalHeight,
     );
-    const alignment = decorator.spriteDraw?.alignment;
-    const leftAligned =
-      alignment === CellAlignment.TOP_LEFT ||
-      alignment === CellAlignment.BOTTOM_LEFT ||
-      alignment === CellAlignment.CENTER_LEFT;
-    const rightAligned =
-      alignment === CellAlignment.TOP_RIGHT ||
-      alignment === CellAlignment.BOTTOM_RIGHT ||
-      alignment === CellAlignment.CENTER_RIGHT;
-    const topAligned =
-      alignment === CellAlignment.TOP_LEFT ||
-      alignment === CellAlignment.TOP_RIGHT ||
-      alignment === CellAlignment.CENTER_TOP;
-    const bottomAligned =
-      alignment === CellAlignment.BOTTOM_LEFT ||
-      alignment === CellAlignment.BOTTOM_RIGHT ||
-      alignment === CellAlignment.CENTER_BOTTOM;
-    const horizontalOffset =
-      ((leftAligned ? -1 : rightAligned ? 1 : 0) * cellSize * projection.ax) /
-      2;
-    const verticalOffset =
-      ((topAligned ? -1 : bottomAligned ? 1 : 0) * cellSize * projection.ax) /
-      2;
     const groundOffset = projection.by * cellSize;
 
     return [
       {
         position: {
-          x: (decorator.position.x + 0.5) * cellSize,
-          y: (decorator.position.y + 0.5) * cellSize,
+          ...alignedItemPosition(decorator, cellSize),
         },
         draw: (
           ctx: CanvasRenderingContext2D,
@@ -1719,8 +1727,8 @@ export const buildIsometricDecoratorPainters = (
         ) =>
           ctx.drawImage(
             tile.image,
-            center.x + horizontalOffset - width * tile.anchor.x,
-            center.y + groundOffset + verticalOffset - height * tile.anchor.y,
+            center.x - width * tile.anchor.x,
+            center.y + groundOffset - height * tile.anchor.y,
             width,
             height,
           ),
@@ -1739,7 +1747,9 @@ export const buildIsometricLightPainters = (
     const tile = graphics
       ? getLightTileImage(graphics, light.isometricTileId)
       : null;
-    if (!tile) return buildItemPainters([light], cellSize, projection.ax);
+    if (!tile) {
+      return buildCellAlignedItemPainters([light], cellSize, projection.ax);
+    }
 
     const { width, height } = getIsometricTileDimensions(
       cellSize,
@@ -1752,8 +1762,7 @@ export const buildIsometricLightPainters = (
     return [
       {
         position: {
-          x: (light.position.x + 0.5) * cellSize,
-          y: (light.position.y + 0.5) * cellSize,
+          ...alignedItemPosition(light, cellSize),
         },
         draw: (
           ctx: CanvasRenderingContext2D,
