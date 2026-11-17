@@ -269,6 +269,14 @@ export type Decorator = {
   position: Position;
   alignment?: CellAlignment;
   sprite: ItemSprite;
+  sprites?: DecoratorSprites;
+};
+
+export type DecoratorSpriteMode = 'topDown' | 'isometric';
+
+export type DecoratorSprites = {
+  topDown?: ItemSprite;
+  isometric?: ItemSprite;
 };
 
 // The facings a directional sprite pack carries, one sheet row each:

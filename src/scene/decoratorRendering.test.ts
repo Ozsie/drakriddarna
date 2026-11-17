@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderDecorators, renderLightSprites } from '../items/ItemRendering';
+import { buildDecoratorViewModels } from './adapters';
 import { CellAlignment, type GameState } from '../types';
 
 vi.mock('../core/ImageCache', () => ({
@@ -30,6 +31,52 @@ vi.mock('../core/ImageCache', () => ({
 }));
 
 describe('renderDecorators', () => {
+  it('selects the configured sprite for each camera projection', () => {
+    const state = {
+      dungeon: {
+        discoveredRooms: ['A'],
+        layout: {
+          grid: ['A'],
+          decorators: [
+            {
+              position: { x: 0, y: 0 },
+              sprite: { image: 'legacy.png', size: 32, index: 0 },
+              sprites: {
+                topDown: { image: 'top-down.png', size: 32, index: 1 },
+                isometric: { image: 'isometric.png', size: 48, index: 2 },
+              },
+            },
+          ],
+        },
+      },
+    } as GameState;
+    const groundSheet = {} as CanvasImageSource;
+
+    const topDown = buildDecoratorViewModels(
+      state,
+      groundSheet,
+      48,
+      false,
+      'topDown',
+    );
+    const isometric = buildDecoratorViewModels(
+      state,
+      groundSheet,
+      48,
+      true,
+      'isometric',
+    );
+
+    expect(topDown[0]?.sprite?.image).toEqual(
+      expect.objectContaining({ src: 'top-down.png' }),
+    );
+    expect(topDown[0]?.isometricSpriteOverride).toBeUndefined();
+    expect(isometric[0]?.sprite?.image).toEqual(
+      expect.objectContaining({ src: 'isometric.png' }),
+    );
+    expect(isometric[0]?.isometricSpriteOverride).toBe(true);
+  });
+
   it('draws decorator sprites in discovered rooms only', () => {
     const discoveredDecorator = {
       position: { x: 0, y: 0 },

@@ -137,7 +137,7 @@ runtime type. Positions may always be written as `[x, y]` tuples or
 | `grid`            | `string[]` (required)                        | The ASCII matrix (see above).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `doors`           | `DeclarativeDoor[]`                          | Doors on cell edges. Tuple: `[side, x, y, options?]`; options: `locked`, `hidden`, `open`, `reinforced`, `id`, `trapped`, and `level` — `trapped: true` gives one trap attack, a number gives that many; `level` (a `Level`) selects the rank-coloured dice a sprung trap rolls (`KNIGHT` = 4+, `LORD` = 3+; unset means the default apprentice/white dice at 5+). Object form: `{ side, x, y, locked?, hidden?, trapped?, open?, reinforced?, id?, level? }`. The door sits on the `side` edge of `(x, y)`, conventionally between two floor cells of different letters. Hidden doors are invisible until searched for; trapped doors attack the opener; locked doors need the right key/item to open.                                                         |
 | `monsters`        | `DeclarativeMonster[]`                       | Tuple: `[type, colour, x, y, inventory?, id?]` (what `createMonster` / `createMonsterWithInventory` in `src/dungeon/DungeonLogic.ts` produce). `type` is any registered monster type — the built-ins (`MonsterType.ORC`, `TROLL`, the four Dark Lords) or a campaign-registered type (see [Adding new monsters](../src/campaigns/README.md#adding-new-monsters-optional)).                                                                                                                                                                                                                                                                                                                                                                                      |
-| `decorators`      | `DeclarativeDecorator[]`                     | Positioned sprites may use `[x, y, presetName]` or `[x, y, alignment, presetName]` tuples; `alignment` is a `CellAlignment` and defaults to `CENTER`. Preset descriptors accept the same optional `alignment`, and a full `Decorator` object accepts `{ position, sprite, alignment? }`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `decorators`      | `DeclarativeDecorator[]`                     | Positioned sprites may use `[x, y, presetName, options?]` or `[x, y, alignment, presetName, options?]` tuples; `alignment` is a `CellAlignment` and defaults to `CENTER`. Preset descriptors accept the same optional `alignment`, plus optional `sprite` and `sprites` options; a full `Decorator` object accepts `{ position, sprite, sprites?, alignment? }`.                                                                                                                                                                                                                                                                                                                                                                                                |
 | `secrets`         | `DeclarativeSecret[]`                        | Tuple: `[SecretType, x, y, nameOrItem?, id?]` where `nameOrItem` is a name translation key or an `Item` the secret hides. Types (`SecretType`): `EQUIPMENT`, `MAGIC_ITEM`, `TRAP_DOOR`, `NOTE`. Secrets are found by hero search actions. The object form additionally accepts `revealedBy` (an item id): while unfound, the secret is revealed automatically when a hero carrying an item with that id shares its room, and a hero downed while carrying such an item drops it on the floor where they fell so the reveal cannot be softlocked by the carrier death.                                                                                                                                                                                           |
 | `notes`           | `DeclarativeNote[]`                          | Tuple: `[x, y, message, id?]` — flavour text read when a hero steps on the cell; `message` is a translation key.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `items`           | `DeclarativeItem[]`                          | Tuple: `[x, y, item?]` or `[x, y, item, { onlyIfNotCarried?: boolean, decorator?: DecoratorPresetName }]` — a specific `Item` on the floor, or with no item a random draw from the campaign's `itemDeck` / `magicItemDeck`. `onlyIfNotCarried` marks a fallback item: it is removed at dungeon start when any hero already carries an item with the same id (e.g. a win-condition item placed so a party that missed it cannot softlock, without duplicating it for a party that already has it). The object form accepts `onlyIfNotCarried` and `decorator` as fields alongside `x`/`y`/`item`. A decorator preset replaces the item's or random chest's drawn sprite; the item behavior and label are unchanged. Use any named decorator preset listed below. |
@@ -179,6 +179,16 @@ place the sprite against the top edge, all bottom values against the bottom
 edge, and `CENTER_LEFT` / `CENTER_RIGHT` against the corresponding side.
 `CENTER` and `CEILING` center the sprite within the cell.
 
+Decorator presets accept optional `sprite` and `sprites` options. Each sprite
+uses the `ItemSprite` shape (`{ image, size, index, sourceRect? }`), and
+`sprites.topDown` / `sprites.isometric` select separate images or crops for the
+two camera projections. The selected projection-specific sprite takes
+precedence over the preset's `sprite`; when no projection override is supplied,
+the preset sprite remains the compatibility fallback. An explicit isometric
+sprite takes precedence over the coordinate-selected decorator tile from the
+isometric graphics catalog. If that image is still loading, the existing
+decorator sprite or generic fallback remains visible until it is ready.
+
 `src/dungeon/Decorators.ts` provides named presets for the standalone images
 in `static/decorators/`: `bonesVariant1`, `bonesVariant2`, `bonesVariant3`,
 `bonesVariant15`, `bonesVariant16`, `bonesVariant18`, `plantVariant4`,
@@ -194,13 +204,27 @@ to a runtime `Decorator`:
 ```ts
 decorators: [
   [2, 3, 'plantVariant4'],
-  [2, 3, CellAlignment.BOTTOM_RIGHT, 'bonesVariant1'],
+  [
+    2,
+    3,
+    CellAlignment.BOTTOM_RIGHT,
+    'bonesVariant1',
+    {
+      sprites: {
+        topDown: { image: 'decorators/bones.png', size: 32, index: 0 },
+        isometric: { image: 'decorators/bones-iso.png', size: 48, index: 0 },
+      },
+    },
+  ],
   [5, 6, 'suppliesObject001'],
   {
     preset: 'suppliesObject',
     position: [4, 5],
     index: 12,
     alignment: CellAlignment.TOP_LEFT,
+    sprites: {
+      isometric: { image: 'decorators/supplies-iso.png', size: 48, index: 0 },
+    },
   },
 ];
 ```

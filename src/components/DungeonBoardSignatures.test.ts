@@ -73,6 +73,27 @@ describe('DungeonBoardSignatures', () => {
     expect(getStaticSignature(state, false, 48)).not.toBe(before);
   });
 
+  it('static signature changes when a projection-specific decorator sprite changes', () => {
+    const state = createState();
+    state.dungeon.layout.decorators = [
+      {
+        position: { x: 1, y: 0 },
+        sprite: { image: 'decorators/bones.png', size: 32, index: 0 },
+        sprites: {
+          isometric: { image: 'decorators/bones-iso.png', size: 48, index: 0 },
+        },
+      },
+    ];
+    const before = getStaticSignature(state, false, 48);
+    state.dungeon.layout.decorators[0].sprites!.isometric = {
+      image: 'decorators/bones-iso.png',
+      size: 48,
+      index: 1,
+    };
+
+    expect(getStaticSignature(state, false, 48)).not.toBe(before);
+  });
+
   it('static signature changes when an item decorator changes', () => {
     const state = createState();
     state.dungeon.layout.items = [

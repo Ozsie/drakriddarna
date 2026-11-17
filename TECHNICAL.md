@@ -205,11 +205,13 @@ TypeScript helpers. A layout is an ASCII string matrix (one character per
 cell) plus declarative lists of doors, monsters, decorators, items, secrets,
 lights and terrain cells. Decorators can refer to named image presets with
 `[x, y, presetName]` tuples or add a `CellAlignment` as `[x, y, alignment,
-presetName]`; descriptors also accept alignment. Decorator alignment positions
-the sprite bounds within its cell, and defaults to `CENTER`. The supplies-object
-atlas presets carry explicit pixel crop rectangles for their irregular sprite
-bounds, while indexed frames remain available through a descriptor. The parser
-resolves these forms to sprite data. Item definitions can also specify a
+presetName]`; both tuple forms and preset descriptors accept sprite options.
+`sprites.topDown` and `sprites.isometric` select separate `ItemSprite` images
+or crops, with the preset sprite retained as the fallback. Decorator alignment
+positions the sprite bounds within its cell, and defaults to `CENTER`. The
+supplies-object atlas presets carry explicit pixel crop rectangles for their
+irregular sprite bounds, while indexed frames remain available through a
+descriptor. The parser resolves these forms to sprite data. Item definitions can also specify a
 decorator preset to replace the drawn sprite of an item or random chest without
 changing its item behavior. When the decorator list is omitted or
 empty, it deterministically places up to six designated presets in unoccupied
@@ -427,8 +429,11 @@ the indexed four-facing `decoratorVariants` families, selected by a stable
 hash of their grid coordinates, and retain their original sprite or generic
 fallback while the indexed art loads. Their tile scale, anchor and cell
 alignment determine placement; the top-down renderer continues to use the
-original decorator sprites. Sprite selection is independent of painter order
-and gameplay randomness. Image dimensions follow the active projection and
+original decorator sprites unless a projection-specific sprite is configured.
+An explicit isometric sprite takes precedence over coordinate-selected catalog
+tiles; without one, the catalog and legacy sprite fallback are unchanged.
+Sprite selection is independent of painter order and gameplay randomness.
+Image dimensions follow the active projection and
 cell size, so a tile is drawn at its projected footprint instead of being
 reduced by the logical cell count. Floor images replace flat floor diamonds and draw
 in depth order before the outlines and upright scene objects, so neighboring

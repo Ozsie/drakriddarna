@@ -65,17 +65,9 @@ export const getStaticSignature = (
       (decorator: Decorator) =>
         `${String(decorator.position.x)},${String(
           decorator.position.y,
-        )},${String(decorator.alignment)},${decorator.sprite.image},${String(
-          decorator.sprite.size,
-        )},${String(decorator.sprite.index)},${
-          decorator.sprite.sourceRect
-            ? `${String(
-                decorator.sprite.sourceRect.x,
-              )},${String(decorator.sprite.sourceRect.y)},${String(
-                decorator.sprite.sourceRect.width,
-              )},${String(decorator.sprite.sourceRect.height)}`
-            : ''
-        }`,
+        )},${String(decorator.alignment)},${JSON.stringify(
+          decorator.sprite,
+        )},${JSON.stringify(decorator.sprites ?? '')}`,
     )
     .join(';')}|${String(String(String(d.layout?.pits?.length ?? 0)))}|${String(
     d.layout?.pits?.length ?? 0,

@@ -655,6 +655,36 @@ describe('dungeonParser', () => {
       ]);
     });
 
+    it('applies sprite options to tuple and object preset declarations', () => {
+      const sprite = { image: 'custom-decorator.png', size: 48, index: 1 };
+      const sprites = {
+        topDown: { image: 'top-down.png', size: 32, index: 0 },
+        isometric: { image: 'isometric.png', size: 48, index: 2 },
+      };
+      const layout = defineLayout({
+        grid: ['###', '#A#', '###'],
+        decorators: [
+          [1, 1, 'bonesVariant1', { sprite, sprites }],
+          {
+            preset: 'bonesVariant1',
+            position: [1, 1],
+            sprites,
+          },
+          [1, 1, CellAlignment.TOP_RIGHT, 'bonesVariant1', { sprites }],
+        ],
+      });
+
+      expect(layout.decorators?.[0]).toMatchObject({
+        sprite,
+        sprites,
+      });
+      expect(layout.decorators?.[1]).toMatchObject({ sprites });
+      expect(layout.decorators?.[2]).toMatchObject({
+        alignment: CellAlignment.TOP_RIGHT,
+        sprites,
+      });
+    });
+
     it('parses corridor cells declared as tuples or position objects', () => {
       const layout = defineLayout({
         grid: ['#####', '#AMM#', '#####'],

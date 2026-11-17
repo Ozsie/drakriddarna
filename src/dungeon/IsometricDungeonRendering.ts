@@ -1659,14 +1659,20 @@ export const buildIsometricDecoratorPainters = (
   getDecoratorTileImage: typeof getIsometricTileImage = getIsometricTileImage,
 ): SceneIsoPainterView[] =>
   decorators.flatMap((decorator) => {
-    const tileId = graphics
-      ? resolveIsometricDecoratorTileId(
-          graphics,
-          decorator.position.x,
-          decorator.position.y,
-        )
-      : undefined;
-    const tile = graphics ? getDecoratorTileImage(graphics, tileId) : null;
+    const tileId = decorator.isometricSpriteOverride
+      ? undefined
+      : (decorator.isometricTileId ??
+        (graphics
+          ? resolveIsometricDecoratorTileId(
+              graphics,
+              decorator.position.x,
+              decorator.position.y,
+            )
+          : undefined));
+    const tile =
+      graphics && !decorator.isometricSpriteOverride
+        ? getDecoratorTileImage(graphics, tileId)
+        : null;
     if (!tile) return buildItemPainters([decorator], cellSize, projection.ax);
 
     const { width, height } = getIsometricTileDimensions(
@@ -2044,6 +2050,7 @@ export const renderIsometricDungeonPrototype = (
     groundSheet,
     cellSize,
     true,
+    'isometric',
   ).filter((item) =>
     isDiscovered(state.dungeon, item.position.x, item.position.y),
   );

@@ -4112,5 +4112,51 @@ describe('isometric found-secret chest painters', () => {
       expect(drawImage).toHaveBeenCalled();
       expect(drawImage.mock.calls[0]?.[0]).toBe(item.fallbackTile?.sheet);
     });
+
+    it('prefers an explicit isometric sprite over the indexed decorator tile', () => {
+      const [item] = foundSecretItems();
+      expect(item).toBeDefined();
+      if (!item) return;
+      const spriteImage = {} as CanvasImageSource;
+      const getDecoratorTile = vi.fn(() => ({
+        image: {
+          naturalWidth: 256,
+          naturalHeight: 512,
+        } as HTMLImageElement,
+        scale: 1.25,
+        anchor: { x: 0.4, y: 0.9 },
+      }));
+      const painters = buildIsometricDecoratorPainters(
+        [
+          {
+            ...item,
+            sprite: {
+              image: spriteImage,
+              sx: 0,
+              sy: 0,
+              sw: 32,
+              sh: 32,
+            },
+            isometricSpriteOverride: true,
+          },
+        ],
+        48,
+        { ax: 1, by: 0.5 },
+        decoratorGraphics(),
+        getDecoratorTile,
+      );
+      const drawImage = vi.fn();
+
+      painters[0]?.draw(
+        {
+          drawImage,
+          imageSmoothingEnabled: false,
+        } as unknown as CanvasRenderingContext2D,
+        { x: 24, y: 24 },
+      );
+
+      expect(getDecoratorTile).not.toHaveBeenCalled();
+      expect(drawImage.mock.calls[0]?.[0]).toBe(spriteImage);
+    });
   });
 });

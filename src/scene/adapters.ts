@@ -9,6 +9,7 @@ import type {
   Actor,
   ActorSpriteFacing,
   Corpse,
+  DecoratorSpriteMode,
   Dungeon,
   GameState,
   Hero,
@@ -901,6 +902,7 @@ export const buildHeroOverlayViewModel = (
 // the game side (the scene package's item path always fills the cell).
 export type GameItemView = SceneItemView & {
   isometricTileId?: string;
+  isometricSpriteOverride?: boolean;
   spriteDraw?: {
     scale: number;
     alignment?: CellAlignment;
@@ -919,6 +921,7 @@ export const buildDecoratorViewModels = (
   groundSheet: CanvasImageSource,
   cellSize: number,
   retainFallbackWhileLoading = false,
+  mode: DecoratorSpriteMode = 'topDown',
 ): GameItemView[] =>
   (state.dungeon.layout.decorators ?? [])
     .filter((decorator) => {
@@ -927,12 +930,18 @@ export const buildDecoratorViewModels = (
       return Boolean(cell) && isRoomDiscovered(state.dungeon, cell);
     })
     .flatMap((decorator) => {
-      const sprite = getItemSpriteFrame(decorator.sprite);
+      const spriteDefinition = decorator.sprites?.[mode] ?? decorator.sprite;
+      const sprite = spriteDefinition
+        ? getItemSpriteFrame(spriteDefinition)
+        : null;
       if (!sprite && !retainFallbackWhileLoading) return [];
       return [
         {
           position: decorator.position,
           sprite,
+          ...(mode === 'isometric' && decorator.sprites?.isometric
+            ? { isometricSpriteOverride: true }
+            : {}),
           spriteDraw: {
             scale: ITEM_SPRITE_SCALE,
             alignment: decorator.alignment ?? CellAlignment.CENTER,

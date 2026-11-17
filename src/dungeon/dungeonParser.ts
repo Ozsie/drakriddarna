@@ -1,12 +1,14 @@
 import type {
   Corner,
   Decorator,
+  DecoratorSprites,
   Door,
   Dungeon,
   InteractableCell,
   Item,
   ItemLight,
   ItemLocation,
+  ItemSprite,
   Layout,
   LightEffect,
   LightSprites,
@@ -299,25 +301,36 @@ export type DeclarativeTerrain =
 export type DeclarativeRoomFog = string[] | Record<string, RoomFogOptions>;
 
 export type DeclarativeDecoratorPreset =
-  | {
+  | (DeclarativeDecoratorOptions & {
       preset: DecoratorPresetName;
       position: DeclarativePosition;
       alignment?: CellAlignment;
-    }
-  | {
+    })
+  | (DeclarativeDecoratorOptions & {
       preset: 'suppliesObject';
       position: DeclarativePosition;
       index: number;
       alignment?: CellAlignment;
-    };
+    });
+
+export type DeclarativeDecoratorOptions = {
+  sprite?: ItemSprite;
+  sprites?: DecoratorSprites;
+};
 
 export type DeclarativeDecoratorTuple =
-  | [x: number, y: number, preset: DecoratorPresetName]
+  | [
+      x: number,
+      y: number,
+      preset: DecoratorPresetName,
+      options?: DeclarativeDecoratorOptions,
+    ]
   | [
       x: number,
       y: number,
       alignment: CellAlignment,
       preset: DecoratorPresetName,
+      options?: DeclarativeDecoratorOptions,
     ];
 
 export type DeclarativeDecorator =
@@ -378,25 +391,35 @@ export const parsePosition = (pos: DeclarativePosition): Position => {
 export const parseDecorator = (
   decoratorDef: DeclarativeDecorator,
 ): Decorator => {
+  const withOptions = (
+    decorator: Decorator,
+    options?: DeclarativeDecoratorOptions,
+  ): Decorator => ({
+    ...decorator,
+    ...(options?.sprite ? { sprite: options.sprite } : {}),
+    ...(options?.sprites ? { sprites: options.sprites } : {}),
+  });
+
   if (Array.isArray(decoratorDef)) {
-    if (decoratorDef.length === 4) {
-      const [x, y, alignment, preset] = decoratorDef;
-      return createDecoratorPreset(preset, { x, y }, alignment);
+    const [x, y, third, fourth, fifth] = decoratorDef;
+    if (typeof fourth === 'string') {
+      return withOptions(createDecoratorPreset(fourth, { x, y }, third), fifth);
     }
-    const [x, y, preset] = decoratorDef;
-    return createDecoratorPreset(preset, { x, y });
+    return withOptions(createDecoratorPreset(third, { x, y }), fourth);
   }
 
   if (!('preset' in decoratorDef)) return decoratorDef;
 
   const position = parsePosition(decoratorDef.position);
-  return decoratorDef.preset === 'suppliesObject'
-    ? suppliesObject(position, decoratorDef.index, decoratorDef.alignment)
-    : createDecoratorPreset(
-        decoratorDef.preset,
-        position,
-        decoratorDef.alignment,
-      );
+  const decorator =
+    decoratorDef.preset === 'suppliesObject'
+      ? suppliesObject(position, decoratorDef.index, decoratorDef.alignment)
+      : createDecoratorPreset(
+          decoratorDef.preset,
+          position,
+          decoratorDef.alignment,
+        );
+  return withOptions(decorator, decoratorDef);
 };
 
 export const parseDoor = (doorDef: DeclarativeDoor): Door => {

@@ -67,8 +67,14 @@ src/campaigns/
      `[2, 3, 'plantVariant4']` or `[2, 3, CellAlignment.TOP_RIGHT, 'plantVariant4']`;
      alignment defaults to `CENTER` and positions the sprite bounds within
      the cell. The supplies atlas has numbered crop presets `suppliesObject001`
-     through `suppliesObject123`. The indexed supplies descriptor remains
-     available: `{ preset: 'suppliesObject', position: [3, 3], index: 12,
+     through `suppliesObject123`. Presets also accept sprite options, for
+     example `[2, 3, 'plantVariant4', { sprites: { isometric: { image:
+     'decorators/plant-iso.png', size: 48, index: 0 } } }]`; `sprites.topDown`
+     and `sprites.isometric` each use an `ItemSprite` descriptor. A projection
+     override takes precedence over the preset sprite, and an explicit
+     isometric sprite takes precedence over catalog decorator tiles. The
+     indexed supplies descriptor remains available:
+     `{ preset: 'suppliesObject', position: [3, 3], index: 12,
      alignment: CellAlignment.BOTTOM_LEFT }`), `notes`,
      `items` (placed via `ItemLocation`), `interactables` (placed
      via `defineLayout` or `parseTileMap`, see
