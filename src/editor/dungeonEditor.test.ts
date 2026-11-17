@@ -3,6 +3,8 @@ import { CellAlignment } from '../types';
 import {
   createDungeonEditorExport,
   createDungeonEditorState,
+  DECORATOR_OPTIONS,
+  decoratorOptionNames,
   isFloorCell,
   placeDecorator,
   placeLight,
@@ -49,6 +51,10 @@ const source = {
 };
 
 describe('dungeon editor', () => {
+  it('exposes the available declarative decorator options', () => {
+    expect(decoratorOptionNames).toEqual(['bones']);
+  });
+
   it('keeps the original grid and clones existing placements and sprite options', () => {
     const state = createDungeonEditorState('sample', source);
 
@@ -85,7 +91,7 @@ describe('dungeon editor', () => {
     );
     const withDecorator = placeDecorator(
       withLight,
-      'bonesVariant1',
+      'bones',
       { x: 1, y: 1 },
       CellAlignment.TOP_RIGHT,
     );
@@ -103,18 +109,31 @@ describe('dungeon editor', () => {
       position: { x: 1, y: 1 },
       alignment: CellAlignment.TOP_RIGHT,
       sprite: { image: 'decorators/Bones_shadow3_1.png' },
+      sprites: DECORATOR_OPTIONS.bones.sprites,
     });
+    expect(withDecorator.decorators[1].sprite).not.toBe(
+      DECORATOR_OPTIONS.bones.sprites?.topDown,
+    );
+    expect(withDecorator.decorators[1].sprites?.isometric).not.toBe(
+      DECORATOR_OPTIONS.bones.sprites?.isometric,
+    );
     expect(initial.lights).toHaveLength(1);
     expect(initial.decorators).toHaveLength(1);
+  });
+
+  it('uses center alignment when placing a decorator without an alignment', () => {
+    const initial = createDungeonEditorState('sample', source);
+
+    const placed = placeDecorator(initial, 'bones', { x: 1, y: 1 });
+
+    expect(placed.decorators[1].alignment).toBe(CellAlignment.CENTER);
   });
 
   it('does not place on walls or outside the grid', () => {
     const initial = createDungeonEditorState('sample', source);
 
     expect(placeLight(initial, 'torch', { x: 0, y: 0 })).toBe(initial);
-    expect(placeDecorator(initial, 'bonesVariant1', { x: 8, y: 8 })).toBe(
-      initial,
-    );
+    expect(placeDecorator(initial, 'bones', { x: 8, y: 8 })).toBe(initial);
   });
 
   it('removes one placement and leaves invalid indices untouched', () => {

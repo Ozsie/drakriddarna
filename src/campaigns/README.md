@@ -63,19 +63,18 @@ src/campaigns/
      room/corridor ASCII layout), `doors`, `monsters` (placed via
      `createMonster`, see
      [Adding new monsters](#adding-new-monsters-optional)), `secrets`,
-     `decorators` (reusable sprites can be placed with tuples such as
-     `[2, 3, 'plantVariant4']` or `[2, 3, CellAlignment.TOP_RIGHT, 'plantVariant4']`;
-     alignment defaults to `CENTER` and positions the sprite bounds within
-     the cell. The supplies atlas has numbered crop presets `suppliesObject001`
-     through `suppliesObject123`. Presets also accept sprite options, for
-     example `[2, 3, 'plantVariant4', { sprites: { isometric: { image:
-     'decorators/plant-iso.png', size: 48, index: 0 } } }]`; `sprites.topDown`
-     and `sprites.isometric` each use an `ItemSprite` descriptor. A projection
-     override takes precedence over the preset sprite, and an explicit
-     isometric sprite takes precedence over catalog decorator tiles. The
-     indexed supplies descriptor remains available:
-     `{ preset: 'suppliesObject', position: [3, 3], index: 12,
-     alignment: CellAlignment.BOTTOM_LEFT }`), `notes`,
+     `decorators` (provide sprite options in tuples such as
+     `[2, 3, { sprite: { image: 'decorators/bones.png', size: 32, index: 0 } }]`
+     or `[2, 3, CellAlignment.TOP_RIGHT, { sprites: { isometric: { image:
+     'decorators/bones-iso.png', size: 48, index: 0 } } }]`, or use a positioned
+     object such as `{ position: [3, 3], sprites: { isometric: { image:
+     'decorators/bones-iso.png', size: 48, index: 0 } } }`. `sprite`,
+     `sprites.topDown` and `sprites.isometric` each use an `ItemSprite`
+     descriptor; the parser uses them in that order as the compatibility
+     fallback. A projection-specific sprite takes precedence while rendering,
+     and an explicit isometric sprite takes precedence over catalog decorator
+     tiles. The shared `bones` options are exported from
+     `src/dungeon/Decorators.ts`), `notes`,
      `items` (placed via `ItemLocation`), `interactables` (placed
      via `defineLayout` or `parseTileMap`, see
      [Adding interactable cells](#adding-interactable-cells-optional)),

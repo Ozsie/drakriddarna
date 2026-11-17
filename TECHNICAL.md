@@ -203,20 +203,17 @@ deep-merged into i18n namespaces.
 Dungeons themselves are authored in a declarative DSL built on plain
 TypeScript helpers. A layout is an ASCII string matrix (one character per
 cell) plus declarative lists of doors, monsters, decorators, items, secrets,
-lights and terrain cells. Decorators can refer to named image presets with
-`[x, y, presetName]` tuples or add a `CellAlignment` as `[x, y, alignment,
-presetName]`; both tuple forms and preset descriptors accept sprite options.
-`sprites.topDown` and `sprites.isometric` select separate `ItemSprite` images
-or crops, with the preset sprite retained as the fallback. Decorator alignment
-positions the sprite bounds within its cell, and defaults to `CENTER`. The
-supplies-object atlas presets carry explicit pixel crop rectangles for their
-irregular sprite bounds, while indexed frames remain available through a
-descriptor. The parser resolves these forms to sprite data. Item definitions can also specify a
-decorator preset to replace the drawn sprite of an item or random chest without
-changing its item behavior. When the decorator list is omitted or
-empty, it deterministically places up to six designated presets in unoccupied
-floor cells, preferring room corners and then wall-adjacent cells; explicit
-decorator lists take precedence.
+lights and terrain cells. Decorators take `ItemSprite` descriptors directly in
+`[x, y, options]` or `[x, y, alignment, options]` tuples, or in positioned
+objects. `sprites.topDown` and `sprites.isometric` select separate images or
+crops for each projection; the parser uses `sprite`, then top-down, then
+isometric as the runtime compatibility fallback. Decorator alignment positions
+the sprite bounds within its cell, and defaults to `CENTER`. Item definitions
+can also specify an `ItemSprite` descriptor to replace the drawn sprite of an
+item or random chest without changing its item behavior. When the decorator
+list is omitted or empty, it deterministically places up to six decorations
+from the shared `bones` options in unoccupied floor cells, preferring room
+corners and then wall-adjacent cells; explicit decorator lists take precedence.
 
 ```ts
 export const e1m1: Dungeon = defineDungeon({
@@ -263,8 +260,8 @@ seed drives a rejection-sampling loop that grows organic room blobs on a
 jittered lattice, carves a spanning tree of doorways, and populates each floor
 from a depth table — monster XP budgets shaped to the hero level curve,
 progressively better loot, one light per room on floors that get strictly
-darker every level, environmental decorators from existing sprite presets,
-and thematic blockers placed so they never wall in a monster, item or hero.
+darker every level, environmental decorators using the shared `bones` sprite
+options, and thematic blockers placed so they never wall in a monster, item or hero.
 A checked-in fallback seed, verified by tests, means app start can never
 throw. Same auto-discovery, same validation — the generator is just another
 campaign folder whose dungeons happen to be built by code.
@@ -429,20 +426,18 @@ top-down actor/light/overlay passes remain unchanged in the default mode. The
 game-side isometric adapter lives in
 `src/dungeon/IsometricDungeonRendering.ts`; reusable projection, occlusion
 ordering and compositing are implemented in the sibling `../scene` package.
-Isometric floor, wall, pillar, chest and decorator art is resolved from the shared
+Isometric floor, wall, pillar and chest art is resolved from the shared
 `static/isometric/index.json`, with an optional per-dungeon `isometricGraphics`
 folder under `static/campaigns/<campaignId>/` overriding matching cell, tile,
-wall-shape, pillar-variant, chest-direction and decorator-variant keys.
+wall-shape, pillar-variant and chest-direction keys.
 Chests use the indexed open or closed variants and tile placement metadata;
 found-secret chests are open. Pillars use the optional `pillarVariants` list,
-falling back to the configured `cells.pillar` tile. Ordinary decorators use
-the indexed four-facing `decoratorVariants` families, selected by a stable
-hash of their grid coordinates, and retain their original sprite or generic
-fallback while the indexed art loads. Their tile scale, anchor and cell
-alignment determine placement; the top-down renderer continues to use the
-original decorator sprites unless a projection-specific sprite is configured.
-An explicit isometric sprite takes precedence over coordinate-selected catalog
-tiles; without one, the catalog and legacy sprite fallback are unchanged.
+falling back to the configured `cells.pillar` tile. Decorator sprites are
+selected per projection: isometric mode uses `sprites.isometric`, then
+`sprites.topDown`, then the legacy `sprite`; top-down mode uses
+`sprites.topDown`, then `sprite`. The configured sprite takes precedence over
+coordinate-selected catalog tiles in isometric mode. While the selected image
+loads, the generic fallback remains visible until it is ready.
 Sprite selection is independent of painter order and gameplay randomness.
 Image dimensions follow the active projection and
 cell size, so a tile is drawn at its projected footprint instead of being

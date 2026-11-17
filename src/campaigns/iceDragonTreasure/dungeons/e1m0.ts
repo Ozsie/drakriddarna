@@ -9,6 +9,7 @@ import {
 import { defineDungeon } from '../../../dungeon/dungeonParser';
 import { e1m1 } from './e1m1';
 import { brazier, chandelier } from '../../../dungeon/LightSources';
+import { bones } from '../../../dungeon/Decorators.ts';
 
 export const e1m0: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m0.name',
@@ -71,13 +72,13 @@ export const e1m0: Dungeon = defineDungeon({
       [3, 9, 'campaign.iceDragon.e1m0.notes.tutorial2'],
     ],
     decorators: [
-      [2, 8, CellAlignment.CENTER_TOP, 'suppliesObject072'],
-      [3, 8, CellAlignment.TOP_RIGHT, 'bonesVariant1'],
-      [9, 2, CellAlignment.TOP_RIGHT, 'bonesVariant3'],
-      [9, 3, CellAlignment.TOP_RIGHT, 'bonesVariant16'],
-      [6, 1, CellAlignment.TOP_RIGHT, 'bonesVariant18'],
-      [8, 7, CellAlignment.TOP_RIGHT, 'ruinVariant5'],
-      [7, 9, CellAlignment.TOP_RIGHT, 'rockVariant4'],
+      [2, 8, CellAlignment.CENTER_TOP, bones],
+      [3, 8, CellAlignment.TOP_RIGHT, bones],
+      [9, 2, CellAlignment.TOP_RIGHT, bones],
+      [9, 3, CellAlignment.TOP_RIGHT, bones],
+      [6, 1, CellAlignment.TOP_RIGHT, bones],
+      [8, 7, CellAlignment.TOP_RIGHT, bones],
+      [7, 9, CellAlignment.TOP_RIGHT, bones],
     ],
   },
   events: [1, 2, 3, 4, 5, 6],

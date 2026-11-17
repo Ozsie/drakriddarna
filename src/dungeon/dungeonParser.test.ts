@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   defineDungeon,
   defineLayout,
+  parseDecorator,
   parseDoor,
   parseItem,
   parseLight,
@@ -28,7 +29,7 @@ import {
 import { weapons } from '../items/weapons';
 import { magicItems } from '../items/magicItems';
 import { autoDetectCorners } from './cornerDetection';
-import { DECORATOR_PRESETS } from './Decorators';
+import { bones } from './Decorators';
 
 describe('dungeonParser', () => {
   describe('parsePosition', () => {
@@ -238,19 +239,22 @@ describe('dungeonParser', () => {
       expect(i3).toEqual({ position: { x: 2, y: 3 }, item: weapons[0] });
     });
 
-    it('resolves decorator presets for items and random chests', () => {
-      expect(parseItem({ x: 4, y: 5, decorator: 'suppliesObject085' })).toEqual(
-        {
-          position: { x: 4, y: 5 },
-          decorator: DECORATOR_PRESETS.suppliesObject085,
-        },
-      );
-      expect(
-        parseItem([2, 3, weapons[0], { decorator: 'bonesVariant1' }]),
-      ).toEqual({
+    it('preserves decorator sprite descriptors on items and random chests', () => {
+      const decorator = {
+        image: 'decorators/supplies_objects.png',
+        size: 31,
+        index: 0,
+        sourceRect: { x: 177, y: 426, width: 31, height: 31 },
+      };
+
+      expect(parseItem({ x: 4, y: 5, decorator })).toEqual({
+        position: { x: 4, y: 5 },
+        decorator,
+      });
+      expect(parseItem([2, 3, weapons[0], { decorator }])).toEqual({
         position: { x: 2, y: 3 },
         item: weapons[0],
-        decorator: DECORATOR_PRESETS.bonesVariant1,
+        decorator,
       });
     });
   });
@@ -543,22 +547,12 @@ describe('dungeonParser', () => {
       expect(positionKeys).toEqual(
         expect.arrayContaining(['1,1', '8,1', '1,4', '8,4']),
       );
-      expect(first.decorators?.map(({ sprite }) => sprite.image)).toEqual(
-        expect.arrayContaining([
-          'decorators/Ruin_shadow2_5.png',
-          'decorators/Rock_shadow2_4.png',
-          'decorators/Plant__shadow2_4.png',
-          'decorators/Bones_shadow3_3.png',
-          'decorators/Objects.png',
-        ]),
+      expect(first.decorators?.map(({ sprite }) => sprite)).toEqual(
+        Array.from({ length: 6 }, () => bones.sprites?.topDown),
       );
       expect(
-        first.decorators?.filter(
-          ({ sprite }) =>
-            sprite.image === 'decorators/Objects.png' &&
-            (sprite.sourceRect?.x === 368 || sprite.sourceRect?.x === 258),
-        ),
-      ).toHaveLength(2);
+        first.decorators?.every(({ sprites }) => sprites === bones.sprites),
+      ).toBe(true);
     });
 
     it('never places generated decorators on occupied cells', () => {
@@ -578,111 +572,56 @@ describe('dungeonParser', () => {
       ).toBe(false);
     });
 
-    it('resolves named decorator presets in the layout', () => {
-      const layout = defineLayout({
-        grid: ['###', '#A#', '###'],
-        decorators: [
-          [1, 1, 'bonesVariant1'],
-          { preset: 'bonesVariant1', position: [1, 1] },
-          { preset: 'suppliesObject', position: [1, 1], index: 12 },
-        ],
-      });
-
-      expect(layout.decorators).toEqual([
-        {
-          position: { x: 1, y: 1 },
-          alignment: CellAlignment.CENTER,
-          sprite: {
-            image: 'decorators/Bones_shadow3_1.png',
-            size: 32,
-            index: 0,
-          },
-        },
-        {
-          position: { x: 1, y: 1 },
-          alignment: CellAlignment.CENTER,
-          sprite: {
-            image: 'decorators/Bones_shadow3_1.png',
-            size: 32,
-            index: 0,
-          },
-        },
-        {
-          position: { x: 1, y: 1 },
-          alignment: CellAlignment.CENTER,
-          sprite: {
-            image: 'decorators/supplies_objects.png',
-            size: 16,
-            index: 12,
-          },
-        },
-      ]);
-    });
-
-    it('parses decorator alignment in tuples and preset descriptors', () => {
-      const layout = defineLayout({
-        grid: ['###', '#A#', '###'],
-        decorators: [
-          [1, 1, CellAlignment.TOP_RIGHT, 'bonesVariant1'],
-          {
-            preset: 'suppliesObject',
-            position: [1, 1],
-            index: 12,
-            alignment: CellAlignment.BOTTOM_LEFT,
-          },
-        ],
-      });
-
-      expect(layout.decorators).toEqual([
-        {
-          position: { x: 1, y: 1 },
-          alignment: CellAlignment.TOP_RIGHT,
-          sprite: {
-            image: 'decorators/Bones_shadow3_1.png',
-            size: 32,
-            index: 0,
-          },
-        },
-        {
-          position: { x: 1, y: 1 },
-          alignment: CellAlignment.BOTTOM_LEFT,
-          sprite: {
-            image: 'decorators/supplies_objects.png',
-            size: 16,
-            index: 12,
-          },
-        },
-      ]);
-    });
-
-    it('applies sprite options to tuple and object preset declarations', () => {
+    it('parses decorator sprite options in tuples and positioned objects', () => {
       const sprite = { image: 'custom-decorator.png', size: 48, index: 1 };
       const sprites = {
         topDown: { image: 'top-down.png', size: 32, index: 0 },
         isometric: { image: 'isometric.png', size: 48, index: 2 },
       };
+      const isometricOnly = {
+        isometric: { image: 'isometric-only.png', size: 48, index: 3 },
+      };
       const layout = defineLayout({
         grid: ['###', '#A#', '###'],
         decorators: [
-          [1, 1, 'bonesVariant1', { sprite, sprites }],
+          [1, 1, { sprite, sprites }],
+          [1, 1, CellAlignment.TOP_RIGHT, { sprites }],
           {
-            preset: 'bonesVariant1',
             position: [1, 1],
-            sprites,
+            alignment: CellAlignment.BOTTOM_LEFT,
+            sprites: isometricOnly,
           },
-          [1, 1, CellAlignment.TOP_RIGHT, 'bonesVariant1', { sprites }],
+          { position: [1, 1], sprite },
         ],
       });
 
-      expect(layout.decorators?.[0]).toMatchObject({
-        sprite,
-        sprites,
-      });
-      expect(layout.decorators?.[1]).toMatchObject({ sprites });
-      expect(layout.decorators?.[2]).toMatchObject({
-        alignment: CellAlignment.TOP_RIGHT,
-        sprites,
-      });
+      expect(layout.decorators).toEqual([
+        {
+          position: { x: 1, y: 1 },
+          alignment: CellAlignment.CENTER,
+          sprite,
+          sprites,
+        },
+        {
+          position: { x: 1, y: 1 },
+          alignment: CellAlignment.TOP_RIGHT,
+          sprite: sprites.topDown,
+          sprites,
+        },
+        {
+          position: { x: 1, y: 1 },
+          alignment: CellAlignment.BOTTOM_LEFT,
+          sprite: isometricOnly.isometric,
+          sprites: isometricOnly,
+        },
+        { position: { x: 1, y: 1 }, sprite },
+      ]);
+    });
+
+    it('rejects decorator options without a usable sprite', () => {
+      expect(() => parseDecorator({ position: [1, 1], sprites: {} })).toThrow(
+        'Decorator requires a sprite or projection-specific sprite',
+      );
     });
 
     it('parses corridor cells declared as tuples or position objects', () => {

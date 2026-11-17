@@ -2,11 +2,12 @@
   import { campaigns } from '../../campaigns';
   import { CellAlignment } from '../../types';
   import type { CellAlignment as CellAlignmentType } from '../../types';
-  import { DECORATOR_PRESETS } from '../../dungeon/Decorators';
   import { t } from '../../lib/translations';
   import {
     createDungeonEditorExport,
     createDungeonEditorState,
+    decoratorOptionNames,
+    type DecoratorOptionName,
     isFloorCell,
     LIGHT_PRESETS,
     placeDecorator,
@@ -17,22 +18,18 @@
     DungeonEditorState,
     LightPresetName,
   } from '../../editor/dungeonEditor';
-  import type { DecoratorPresetName } from '../../dungeon/Decorators';
 
   const campaignOptions = Object.values(campaigns).sort((a, b) =>
     a.id.localeCompare(b.id),
   );
   const lightPresetNames = Object.keys(LIGHT_PRESETS) as LightPresetName[];
-  const decoratorPresetNames = Object.keys(
-    DECORATOR_PRESETS,
-  ) as DecoratorPresetName[];
   const alignments = Object.values(CellAlignment);
 
   let campaignId = $state(campaignOptions[0]?.id ?? '');
   let dungeonIndex = $state(0);
   let selectedToolKind = $state<'light' | 'decorator'>('light');
   let selectedLightPreset = $state<LightPresetName>('brazier');
-  let selectedDecoratorPreset = $state<DecoratorPresetName>('bonesVariant1');
+  let selectedDecoratorOption = $state<DecoratorOptionName>('bones');
   let selectedAlignment = $state<CellAlignmentType>(CellAlignment.CENTER);
   let editor = $state<DungeonEditorState | null>(null);
 
@@ -60,7 +57,7 @@
         ? placeLight(editor, selectedLightPreset, position, selectedAlignment)
         : placeDecorator(
             editor,
-            selectedDecoratorPreset,
+            selectedDecoratorOption,
             position,
             selectedAlignment,
           );
@@ -142,9 +139,9 @@
         {:else}
           <label>
             {$t('content.editor.decorator')}
-            <select bind:value={selectedDecoratorPreset}>
-              {#each decoratorPresetNames as preset (preset)}
-                <option value={preset}>{preset}</option>
+            <select bind:value={selectedDecoratorOption}>
+              {#each decoratorOptionNames as option (option)}
+                <option value={option}>{option}</option>
               {/each}
             </select>
           </label>

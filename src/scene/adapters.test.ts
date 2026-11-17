@@ -552,9 +552,36 @@ describe('buildFoundSecretViewModels', () => {
     expect(views).toHaveLength(1);
     expect(views[0]).toMatchObject({
       position: { x: 1, y: 0 },
+      sprite: null,
       spriteDraw: { scale: 0.6 },
       label: null,
+      fallbackTile: {
+        sx: ITEM_TILES.ITEM_GENERIC.x,
+        sy: ITEM_TILES.ITEM_GENERIC.y,
+      },
     });
+  });
+
+  it('shows undiscovered found secrets in debug mode', () => {
+    const state = createState();
+    state.dungeon.layout.secrets = [
+      {
+        name: 'Undiscovered found note',
+        type: SecretType.NOTE,
+        position: { x: 1, y: 1 },
+        found: true,
+      },
+    ];
+
+    const views = buildFoundSecretViewModels(
+      state.dungeon,
+      {} as CanvasImageSource,
+      48,
+      true,
+    );
+
+    expect(views).toHaveLength(1);
+    expect(views[0]?.position).toEqual({ x: 1, y: 1 });
   });
 });
 

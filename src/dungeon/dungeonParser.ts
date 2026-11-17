@@ -25,7 +25,6 @@ import type {
   WallEdge,
   WinCondition,
 } from '../types';
-import type { DecoratorPresetName } from './Decorators';
 import {
   CellAlignment,
   Colour,
@@ -52,11 +51,7 @@ import {
 import { assertValidDungeon } from './dungeonValidator';
 import { findRoomCells } from '../core';
 import { autoDetectCorners } from './cornerDetection';
-import {
-  createDecoratorPreset,
-  DECORATOR_PRESETS,
-  suppliesObject,
-} from './Decorators';
+import { bones } from './Decorators';
 
 export type PositionTuple = [x: number, y: number];
 
@@ -176,7 +171,7 @@ export type DeclarativeNote =
 
 export type ItemLocationOptions = {
   onlyIfNotCarried?: boolean;
-  decorator?: DecoratorPresetName;
+  decorator?: ItemSprite;
 };
 
 export type DeclarativeItemObject = {
@@ -300,41 +295,27 @@ export type DeclarativeTerrain =
 // default styling, or keyed by letter with per-room options.
 export type DeclarativeRoomFog = string[] | Record<string, RoomFogOptions>;
 
-export type DeclarativeDecoratorPreset =
-  | (DeclarativeDecoratorOptions & {
-      preset: DecoratorPresetName;
-      position: DeclarativePosition;
-      alignment?: CellAlignment;
-    })
-  | (DeclarativeDecoratorOptions & {
-      preset: 'suppliesObject';
-      position: DeclarativePosition;
-      index: number;
-      alignment?: CellAlignment;
-    });
-
 export type DeclarativeDecoratorOptions = {
   sprite?: ItemSprite;
   sprites?: DecoratorSprites;
 };
 
+export type DeclarativeDecoratorObject = DeclarativeDecoratorOptions & {
+  position: DeclarativePosition;
+  alignment?: CellAlignment;
+};
+
 export type DeclarativeDecoratorTuple =
-  | [
-      x: number,
-      y: number,
-      preset: DecoratorPresetName,
-      options?: DeclarativeDecoratorOptions,
-    ]
+  | [x: number, y: number, options: DeclarativeDecoratorOptions]
   | [
       x: number,
       y: number,
       alignment: CellAlignment,
-      preset: DecoratorPresetName,
-      options?: DeclarativeDecoratorOptions,
+      options: DeclarativeDecoratorOptions,
     ];
 
 export type DeclarativeDecorator =
-  Decorator | DeclarativeDecoratorPreset | DeclarativeDecoratorTuple;
+  Decorator | DeclarativeDecoratorObject | DeclarativeDecoratorTuple;
 
 export type DeclarativeLayout = {
   grid: string[];
@@ -391,35 +372,40 @@ export const parsePosition = (pos: DeclarativePosition): Position => {
 export const parseDecorator = (
   decoratorDef: DeclarativeDecorator,
 ): Decorator => {
-  const withOptions = (
-    decorator: Decorator,
-    options?: DeclarativeDecoratorOptions,
-  ): Decorator => ({
-    ...decorator,
-    ...(options?.sprite ? { sprite: options.sprite } : {}),
-    ...(options?.sprites ? { sprites: options.sprites } : {}),
-  });
+  const createDecorator = (
+    position: Position,
+    options: DeclarativeDecoratorOptions,
+    alignment?: CellAlignment,
+  ): Decorator => {
+    const sprite =
+      options.sprite ?? options.sprites?.topDown ?? options.sprites?.isometric;
+    if (!sprite) {
+      throw new Error(
+        'Decorator requires a sprite or projection-specific sprite',
+      );
+    }
+    return {
+      position,
+      ...(alignment ? { alignment } : {}),
+      sprite,
+      ...(options.sprites ? { sprites: options.sprites } : {}),
+    };
+  };
 
   if (Array.isArray(decoratorDef)) {
-    const [x, y, third, fourth, fifth] = decoratorDef;
-    if (typeof fourth === 'string') {
-      return withOptions(createDecoratorPreset(fourth, { x, y }, third), fifth);
+    if (typeof decoratorDef[2] === 'string') {
+      const [x, y, alignment, options] = decoratorDef;
+      return createDecorator({ x, y }, options, alignment);
     }
-    return withOptions(createDecoratorPreset(third, { x, y }), fourth);
+    const [x, y, options] = decoratorDef;
+    return createDecorator({ x, y }, options, CellAlignment.CENTER);
   }
 
-  if (!('preset' in decoratorDef)) return decoratorDef;
-
-  const position = parsePosition(decoratorDef.position);
-  const decorator =
-    decoratorDef.preset === 'suppliesObject'
-      ? suppliesObject(position, decoratorDef.index, decoratorDef.alignment)
-      : createDecoratorPreset(
-          decoratorDef.preset,
-          position,
-          decoratorDef.alignment,
-        );
-  return withOptions(decorator, decoratorDef);
+  return createDecorator(
+    parsePosition(decoratorDef.position),
+    decoratorDef,
+    decoratorDef.alignment,
+  );
 };
 
 export const parseDoor = (doorDef: DeclarativeDoor): Door => {
@@ -643,9 +629,7 @@ export const parseItem = (itemDef: DeclarativeItem): ItemLocation => {
     const [x, y, item, options] = itemDef;
     const parsedOptions = {
       ...(options?.onlyIfNotCarried ? { onlyIfNotCarried: true } : {}),
-      ...(options?.decorator
-        ? { decorator: DECORATOR_PRESETS[options.decorator] }
-        : {}),
+      ...(options?.decorator ? { decorator: options.decorator } : {}),
     };
     return item
       ? createEquipment(x, y, item, parsedOptions)
@@ -654,9 +638,7 @@ export const parseItem = (itemDef: DeclarativeItem): ItemLocation => {
 
   const parsedOptions = {
     ...(itemDef.onlyIfNotCarried ? { onlyIfNotCarried: true } : {}),
-    ...(itemDef.decorator
-      ? { decorator: DECORATOR_PRESETS[itemDef.decorator] }
-      : {}),
+    ...(itemDef.decorator ? { decorator: itemDef.decorator } : {}),
   };
   return itemDef.item
     ? createEquipment(itemDef.x, itemDef.y, itemDef.item, parsedOptions)
@@ -911,14 +893,10 @@ export const parseRoomFog = (
   return { ...fogDef };
 };
 
-const DEFAULT_DECORATOR_PRESETS: readonly DecoratorPresetName[] = [
-  'ruinVariant5',
-  'rockVariant4',
-  'plantVariant4',
-  'bonesVariant3',
-  'objectsObject037',
-  'objectsObject016',
+const DEFAULT_DECORATOR_OPTIONS: readonly DeclarativeDecoratorOptions[] = [
+  bones,
 ];
+const DEFAULT_DECORATOR_COUNT = 6;
 
 const createGridRandom = (grid: string[]): (() => number) => {
   let state = 2166136261;
@@ -975,14 +953,12 @@ const generateDefaultDecorators = (
     }).filter((candidate) => candidate !== undefined),
   );
   const available = [...candidates];
-  const presets = [...DEFAULT_DECORATOR_PRESETS];
-  for (let index = presets.length - 1; index > 0; index--) {
-    const swapIndex = Math.floor(random() * (index + 1));
-    [presets[index], presets[swapIndex]] = [presets[swapIndex], presets[index]];
-  }
-
-  return presets.flatMap((preset) => {
-    if (available.length === 0) return [];
+  const decorators: Decorator[] = [];
+  for (
+    let index = 0;
+    index < DEFAULT_DECORATOR_COUNT && available.length > 0;
+    index++
+  ) {
     const cornerCells = available.filter((cell) => cell.corner);
     const wallCells = available.filter((cell) => cell.wallAdjacent);
     const placementPool =
@@ -993,14 +969,19 @@ const generateDefaultDecorators = (
           : available;
     const selected = placementPool[Math.floor(random() * placementPool.length)];
     available.splice(available.indexOf(selected), 1);
-    return [
-      createDecoratorPreset(
-        preset,
-        { x: selected.x, y: selected.y },
+    const options =
+      DEFAULT_DECORATOR_OPTIONS[index % DEFAULT_DECORATOR_OPTIONS.length];
+    decorators.push(
+      parseDecorator([
+        selected.x,
+        selected.y,
         selected.corner ?? CellAlignment.CENTER,
-      ),
-    ];
-  });
+        options,
+      ]),
+    );
+  }
+
+  return decorators;
 };
 
 export const defineLayout = (

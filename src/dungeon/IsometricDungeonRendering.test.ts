@@ -10,6 +10,7 @@ import {
 } from '@hoard-engine/scene';
 import { WALL } from '@hoard-engine/grid';
 import {
+  buildDecoratorViewModels,
   buildDungeonView,
   buildFoundSecretViewModels,
   type GameActorView,
@@ -19,7 +20,12 @@ import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
 import { e1m2 } from '../campaigns/iceDragonTreasure/dungeons/e1m2';
 import { e1m3 } from '../campaigns/iceDragonTreasure/dungeons/e1m3';
-import { CellAlignment, CornerType, SecretType } from '../types';
+import {
+  CellAlignment,
+  CornerType,
+  SecretType,
+  type GameState,
+} from '../types';
 import { autoDetectCorners } from './cornerDetection';
 import {
   parseIsometricGraphicsManifest,
@@ -4157,6 +4163,131 @@ describe('isometric found-secret chest painters', () => {
 
       expect(getDecoratorTile).not.toHaveBeenCalled();
       expect(drawImage.mock.calls[0]?.[0]).toBe(spriteImage);
+    });
+
+    it('draws the selected top-down fallback instead of indexed art', () => {
+      const state = {
+        dungeon: {
+          discoveredRooms: ['A'],
+          layout: {
+            grid: ['A'],
+            decorators: [
+              {
+                position: { x: 0, y: 0 },
+                sprite: { image: 'legacy.png', size: 32, index: 0 },
+                sprites: {
+                  topDown: { image: 'top-down.png', size: 32, index: 1 },
+                },
+              },
+            ],
+          },
+        },
+      } as GameState;
+      const [view] = buildDecoratorViewModels(
+        state,
+        {} as CanvasImageSource,
+        48,
+        true,
+        'isometric',
+      );
+      expect(view?.isometricSpriteOverride).toBe(true);
+      if (!view) return;
+      const spriteImage = {} as CanvasImageSource;
+      const selectedSprite = {
+        image: spriteImage,
+        sx: 0,
+        sy: 0,
+        sw: 32,
+        sh: 32,
+      };
+      const getDecoratorTile = vi.fn(() => ({
+        image: {
+          naturalWidth: 256,
+          naturalHeight: 512,
+        } as HTMLImageElement,
+        scale: 1.25,
+        anchor: { x: 0.4, y: 0.9 },
+      }));
+      const painters = buildIsometricDecoratorPainters(
+        [{ ...view, sprite: selectedSprite }],
+        48,
+        { ax: 1, by: 0.5 },
+        decoratorGraphics(),
+        getDecoratorTile,
+      );
+      const drawImage = vi.fn();
+
+      painters[0]?.draw(
+        {
+          drawImage,
+          imageSmoothingEnabled: false,
+        } as unknown as CanvasRenderingContext2D,
+        { x: 24, y: 24 },
+      );
+
+      expect(getDecoratorTile).not.toHaveBeenCalled();
+      expect(drawImage.mock.calls[0]?.[0]).toBe(spriteImage);
+    });
+
+    it('keeps the generic fallback while the selected sprite loads', () => {
+      const state = {
+        dungeon: {
+          discoveredRooms: ['A'],
+          layout: {
+            grid: ['A'],
+            decorators: [
+              {
+                position: { x: 0, y: 0 },
+                sprite: { image: 'legacy.png', size: 32, index: 0 },
+                sprites: {
+                  topDown: {
+                    image: 'not-loaded-top-down.png',
+                    size: 32,
+                    index: 1,
+                  },
+                },
+              },
+            ],
+          },
+        },
+      } as GameState;
+      const [view] = buildDecoratorViewModels(
+        state,
+        {} as CanvasImageSource,
+        48,
+        true,
+        'isometric',
+      );
+      expect(view?.sprite).toBeNull();
+      expect(view?.isometricSpriteOverride).toBe(true);
+      if (!view) return;
+      const getDecoratorTile = vi.fn(() => ({
+        image: {
+          naturalWidth: 256,
+          naturalHeight: 512,
+        } as HTMLImageElement,
+        scale: 1.25,
+        anchor: { x: 0.4, y: 0.9 },
+      }));
+      const painters = buildIsometricDecoratorPainters(
+        [view],
+        48,
+        { ax: 1, by: 0.5 },
+        decoratorGraphics(),
+        getDecoratorTile,
+      );
+      const drawImage = vi.fn();
+
+      painters[0]?.draw(
+        {
+          drawImage,
+          imageSmoothingEnabled: false,
+        } as unknown as CanvasRenderingContext2D,
+        { x: 24, y: 24 },
+      );
+
+      expect(getDecoratorTile).not.toHaveBeenCalled();
+      expect(drawImage.mock.calls[0]?.[0]).toBe(view.fallbackTile?.sheet);
     });
   });
 });

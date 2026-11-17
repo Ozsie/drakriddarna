@@ -48,7 +48,6 @@ import {
 } from '../hero/HeroLogic';
 import { getReadyImage } from '../core/ImageCache';
 import { ACTOR_SPRITE_ANIMATION_ORDER } from '../core';
-import { createDecoratorPreset } from '../dungeon/Decorators';
 import { ACTOR_TILES, ITEM_TILES, type TileRef } from '../dungeon/tiles';
 import {
   TERRAIN_OVERLAY,
@@ -914,6 +913,12 @@ export type GameItemView = SceneItemView & {
 // cells completely.
 export const ITEM_SPRITE_SCALE = 0.75;
 export const FOUND_SECRET_SPRITE_SCALE = 0.6;
+const FOUND_SECRET_SPRITE: ItemSprite = {
+  image: 'decorators/Objects.png',
+  size: 29,
+  index: 0,
+  sourceRect: { x: 163, y: 36, width: 29, height: 22 },
+};
 
 // Decorative sprites share the floor-item footprint and discovery behavior.
 export const buildDecoratorViewModels = (
@@ -930,7 +935,12 @@ export const buildDecoratorViewModels = (
       return Boolean(cell) && isRoomDiscovered(state.dungeon, cell);
     })
     .flatMap((decorator) => {
-      const spriteDefinition = decorator.sprites?.[mode] ?? decorator.sprite;
+      const spriteDefinition =
+        mode === 'isometric'
+          ? (decorator.sprites?.isometric ??
+            decorator.sprites?.topDown ??
+            decorator.sprite)
+          : (decorator.sprites?.topDown ?? decorator.sprite);
       const sprite = spriteDefinition
         ? getItemSpriteFrame(spriteDefinition)
         : null;
@@ -939,9 +949,7 @@ export const buildDecoratorViewModels = (
         {
           position: decorator.position,
           sprite,
-          ...(mode === 'isometric' && decorator.sprites?.isometric
-            ? { isometricSpriteOverride: true }
-            : {}),
+          ...(mode === 'isometric' ? { isometricSpriteOverride: true } : {}),
           spriteDraw: {
             scale: ITEM_SPRITE_SCALE,
             alignment: decorator.alignment ?? CellAlignment.CENTER,
@@ -962,9 +970,7 @@ export const buildFoundSecretViewModels = (
   cellSize: number,
   debugMode = false,
 ): GameItemView[] => {
-  const sprite = getItemSpriteFrame(
-    createDecoratorPreset('objectsObject021', { x: 0, y: 0 }).sprite,
-  );
+  const sprite = getItemSpriteFrame(FOUND_SECRET_SPRITE);
   return dungeon.layout.secrets
     .filter((secret) => {
       if (!secret.found || secret.type === SecretType.TRAP_DOOR) return false;

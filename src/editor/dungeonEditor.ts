@@ -8,11 +8,11 @@ import type {
   Position,
 } from '../types';
 import { CellAlignment } from '../types';
+import { bones } from '../dungeon/Decorators';
 import {
-  DECORATOR_PRESETS,
-  createDecoratorPreset,
-  type DecoratorPresetName,
-} from '../dungeon/Decorators';
+  parseDecorator,
+  type DeclarativeDecoratorOptions,
+} from '../dungeon/dungeonParser';
 import {
   brazier,
   chandelier,
@@ -35,6 +35,12 @@ export const LIGHT_PRESETS = {
 } satisfies Record<string, DeclarativeLightOptions>;
 
 export type LightPresetName = keyof typeof LIGHT_PRESETS;
+
+export const DECORATOR_OPTIONS = {
+  bones,
+} satisfies Record<string, DeclarativeDecoratorOptions>;
+
+export type DecoratorOptionName = keyof typeof DECORATOR_OPTIONS;
 
 export type DungeonEditorState = {
   campaignId: string;
@@ -169,7 +175,7 @@ export const placeLight = (
 
 export const placeDecorator = (
   state: DungeonEditorState,
-  preset: DecoratorPresetName,
+  option: DecoratorOptionName,
   position: Position,
   alignment: (typeof CellAlignment)[keyof typeof CellAlignment] = CellAlignment.CENTER,
 ): DungeonEditorState => {
@@ -179,7 +185,14 @@ export const placeDecorator = (
     ...state,
     decorators: [
       ...state.decorators,
-      cloneDecorator(createDecoratorPreset(preset, position, alignment)),
+      cloneDecorator(
+        parseDecorator([
+          position.x,
+          position.y,
+          alignment,
+          DECORATOR_OPTIONS[option],
+        ]),
+      ),
     ],
   };
 };
@@ -218,6 +231,6 @@ export const createDungeonEditorExport = (
   },
 });
 
-export const decoratorPresetNames = Object.keys(
-  DECORATOR_PRESETS,
-) as DecoratorPresetName[];
+export const decoratorOptionNames = Object.keys(
+  DECORATOR_OPTIONS,
+) as DecoratorOptionName[];

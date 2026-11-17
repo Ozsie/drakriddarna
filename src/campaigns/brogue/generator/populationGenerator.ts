@@ -1,7 +1,8 @@
-import type { Item } from '../../../types';
+import type { Decorator, Item } from '../../../types';
 import { CellAlignment, Colour, SecretType, Side } from '../../../types';
-import type { DecoratorPresetName } from '../../../dungeon/Decorators';
+import { bones } from '../../../dungeon/Decorators';
 import type {
+  DeclarativeDecoratorOptions,
   DeclarativeDoor,
   DeclarativeItem,
   DeclarativeLayout,
@@ -71,17 +72,7 @@ const ORTHOGONAL_OFFSETS = [
 const EQUIPMENT_SECRET_NAME = 'campaign.brogue.secrets.randomEquipment';
 const TRAP_DOOR_SECRET_NAME = 'campaign.brogue.secrets.trapDoor';
 const EQUIPMENT_SECRET_SHARE = 0.7;
-const BROGUE_DECORATOR_PRESETS: DecoratorPresetName[] = [
-  'bonesVariant1',
-  'bonesVariant2',
-  'bonesVariant3',
-  'bonesVariant15',
-  'bonesVariant16',
-  'bonesVariant18',
-  'plantVariant4',
-  'rockVariant4',
-  'ruinVariant5',
-];
+const BROGUE_DECORATORS: DeclarativeDecoratorOptions[] = [bones];
 
 const cellKey = (cell: Cell): string => `${cell.x},${cell.y}`;
 
@@ -635,7 +626,7 @@ export const populate = (
       return `${x},${y}`;
     }),
   );
-  const decorators: NonNullable<DeclarativeLayout['decorators']> = [];
+  const decorators: Decorator[] = [];
   for (const letter of letters) {
     const candidates = freeCellsIn(letter).filter((cell) => {
       const key = cellKey(cell);
@@ -650,7 +641,15 @@ export const populate = (
       wallCandidates.length > 0 ? wallCandidates : candidates;
     if (placementCandidates.length === 0) continue;
     const cell = rig.pick(placementCandidates);
-    decorators.push([cell.x, cell.y, rig.pick(BROGUE_DECORATOR_PRESETS)]);
+    const options = rig.pick(BROGUE_DECORATORS);
+    const sprite =
+      options.sprite ?? options.sprites?.topDown ?? options.sprites?.isometric;
+    if (!sprite) continue;
+    decorators.push({
+      position: cell,
+      sprite,
+      ...(options.sprites ? { sprites: options.sprites } : {}),
+    });
   }
 
   // --- Events -----------------------------------------------------------------
