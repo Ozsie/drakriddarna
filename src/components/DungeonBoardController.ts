@@ -1358,6 +1358,7 @@ export class DungeonBoardController {
       this.activeState,
       debugMode,
       currentTime,
+      renderMode,
     );
     const hasAnimatedLightSprites = lightSpriteSig !== '';
     // Animated terrain overlays (water shimmer, lava pulse) and room fog

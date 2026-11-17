@@ -867,6 +867,15 @@ or `CENTER_RIGHT` place it against that side. `CENTER` and `CEILING` center
 the sprite within the cell.
 `alignmentOffsets` optionally maps each `CellAlignment` to an `{ x, y }` pixel
 offset applied after alignment; omitted alignments use zero offsets.
+Use the optional `sprites` map to override the sprite by render mode:
+`sprites.topDown` accepts the same descriptor as `sprite`, while
+`sprites.isometric` also accepts `{ tileId }` to reference a tile in
+`static/isometric/index.json`. Catalog tiles use the indexed image, scale and
+anchor; while one is missing or loading, rendering falls back to `sprite` (or
+`sprites.topDown`). The legacy `sprite` remains the fallback when the active
+mode has no override, so existing light declarations keep their current
+appearance. The shared `brazier` preset in `src/dungeon/LightSources.ts` shows
+both modes using `candleStand_E` for the isometric view.
 
 For performance, lights are only rendered on discovered cells in rooms where
 a living hero currently stands (debug mode renders every enabled light), and
@@ -1028,6 +1037,8 @@ export const myDungeonLayout = defineLayout({
 | `rate` | `number` | `1` | How many times per second the effect loops. E.g. `0.5` = one loop every two seconds. |
 | `enabled` | `boolean` | `true` | Set to `false` to place a currently dark light (e.g. a brazier that could be lit later). |
 | `id` | `string` | `light_<x>_<y>` | Unique identifier for referencing the light. |
+| `sprite` | `LightSprite` | — | Legacy/default fixture sprite, used when the active render mode has no `sprites` override. |
+| `sprites` | `LightSprites` | — | Optional fixture descriptors: `topDown` uses the image/frame sprite shape; `isometric` uses that shape or `{ tileId }` to reference a tile in `static/isometric/index.json`. |
 
 Lights are validated like other layout entities: they must be inside the grid
 and placed on a floor cell, not on walls or empty cells, and ids must be unique.

@@ -118,6 +118,27 @@ describe('DungeonBoardSignatures', () => {
     expect(getDynamicSignature(state, false, 48)).not.toBe(before);
   });
 
+  it('dynamic signature changes when a mode-specific light sprite changes', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      {
+        position: { x: 1, y: 0 },
+        sprites: {
+          isometric: { image: 'iso-light.png', x: 0, y: 0, size: 48 },
+        },
+      },
+    ];
+    const before = getDynamicSignature(state, false, 48);
+    state.dungeon.layout.lights[0].sprites!.isometric = {
+      image: 'iso-light.png',
+      x: 48,
+      y: 0,
+      size: 48,
+    };
+
+    expect(getDynamicSignature(state, false, 48)).not.toBe(before);
+  });
+
   it('dynamic signature changes when a light sprite scale changes', () => {
     const state = createState();
     state.dungeon.layout.lights = [
@@ -181,6 +202,37 @@ describe('DungeonBoardSignatures', () => {
 
     expect(firstFrame).not.toBe('');
     expect(secondFrame).not.toBe(firstFrame);
+  });
+
+  it('uses the active mode sprite for the animated frame signature', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      {
+        position: { x: 1, y: 0 },
+        sprites: {
+          topDown: {
+            image: 'top-down.png',
+            x: 0,
+            y: 0,
+            size: 32,
+            frameCount: 8,
+            frameRate: 8,
+          },
+          isometric: {
+            image: 'isometric.png',
+            x: 0,
+            y: 0,
+            size: 48,
+            frameCount: 4,
+            frameRate: 4,
+          },
+        },
+      },
+    ];
+
+    expect(
+      getAnimatedLightSpriteSignature(state, false, 250, 'topDown'),
+    ).not.toBe(getAnimatedLightSpriteSignature(state, false, 250, 'isometric'));
   });
 
   it('static signature changes when a decorator crop changes', () => {

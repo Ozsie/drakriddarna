@@ -29,6 +29,7 @@ import {
 import {
   buildIsometricPillarPainters,
   buildIsometricDecoratorPainters,
+  buildIsometricLightPainters,
   buildHeroPainters,
   buildIsometricFloorLightPainter,
   buildIsometricFoundSecretPainters,
@@ -3945,6 +3946,96 @@ describe('isometric found-secret chest painters', () => {
     expect(drawImage.mock.calls[0]?.[0]).toBe(
       item.sprite?.image ?? item.fallbackTile?.sheet,
     );
+  });
+
+  describe('isometric light painters', () => {
+    const lightGraphics: ResolvedIsometricGraphics = {
+      cells: {},
+      wallShapes: {},
+      tiles: {
+        candleStand_E: {
+          imageUrl: 'isometric/lights/candleStand_E.png',
+          scale: 1,
+          anchor: { x: 0.5, y: 1 },
+        },
+      },
+    };
+
+    const lightItem = () => {
+      const [base] = foundSecretItems();
+      if (!base) throw new Error('Expected a visible fixture view model');
+      const fallbackImage = {
+        naturalWidth: 64,
+        naturalHeight: 64,
+      } as HTMLImageElement;
+      return {
+        ...base,
+        position: { x: 0, y: 0 },
+        sprite: {
+          image: fallbackImage,
+          sx: 0,
+          sy: 0,
+          sw: 64,
+          sh: 64,
+        },
+        spriteDraw: { scale: 0.6 },
+        isometricTileId: 'candleStand_E',
+      };
+    };
+
+    it('draws the catalog tile using its isometric scale and anchor', () => {
+      const item = lightItem();
+      const image = {
+        naturalWidth: 256,
+        naturalHeight: 512,
+      } as HTMLImageElement;
+      const getLightTile = (
+        graphics: ResolvedIsometricGraphics,
+        tileId: string | undefined,
+      ) => {
+        expect(tileId).toBe('candleStand_E');
+        const tile = tileId ? graphics.tiles[tileId] : undefined;
+        return tile ? { ...tile, image } : null;
+      };
+      const painters = buildIsometricLightPainters(
+        [item],
+        48,
+        { ax: 1, by: 0.5 },
+        lightGraphics,
+        getLightTile,
+      );
+      const drawImage = vi.fn();
+
+      painters[0]?.draw({ drawImage } as unknown as CanvasRenderingContext2D, {
+        x: 24,
+        y: 24,
+      });
+
+      expect(painters).toHaveLength(1);
+      expect(drawImage).toHaveBeenCalledWith(image, -24, -144, 96, 192);
+    });
+
+    it('keeps the configured sprite visible while the catalog tile loads', () => {
+      const item = lightItem();
+      const painters = buildIsometricLightPainters(
+        [item],
+        48,
+        { ax: 1, by: 0.5 },
+        lightGraphics,
+        () => null,
+      );
+      const drawImage = vi.fn();
+
+      painters[0]?.draw(
+        {
+          drawImage,
+          imageSmoothingEnabled: false,
+        } as unknown as CanvasRenderingContext2D,
+        { x: 24, y: 24 },
+      );
+
+      expect(drawImage.mock.calls[0]?.[0]).toBe(item.sprite?.image);
+    });
   });
 
   describe('isometric decorator painters', () => {

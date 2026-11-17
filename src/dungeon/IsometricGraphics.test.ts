@@ -639,6 +639,35 @@ describe('isometric graphics indexes', () => {
     }
   });
 
+  it('indexes every directional light fixture image', () => {
+    const manifest = parseIsometricGraphicsManifest(
+      JSON.parse(
+        readFileSync(
+          new URL('../../static/isometric/index.json', import.meta.url),
+          'utf8',
+        ),
+      ),
+    );
+
+    expect(manifest).not.toBeNull();
+    if (!manifest) return;
+    const graphics = resolveIsometricGraphics(manifest, 'isometric');
+    const imagePaths = readdirSync(
+      new URL('../../static/isometric/lights', import.meta.url),
+    ).map((file) => `lights/${file}`);
+
+    expect(imagePaths).toHaveLength(8);
+    for (const imagePath of imagePaths) {
+      const tileId = imagePath.slice('lights/'.length, -'.png'.length);
+      expect(manifest.tiles[tileId]).toEqual({
+        image: imagePath,
+        scale: 1,
+        anchor: { x: 0.5, y: 1 },
+      });
+      expect(graphics.tiles[tileId]?.imageUrl).toBe(`isometric/${imagePath}`);
+    }
+  });
+
   it('allows campaign chest graphics to override tile paths and placement', () => {
     const shared = parseIsometricGraphicsManifest(
       JSON.parse(
@@ -692,7 +721,7 @@ describe('isometric graphics indexes', () => {
       ),
     );
 
-    expect(manifest?.decoratorVariants).toHaveLength(55);
+    expect(manifest?.decoratorVariants).toHaveLength(53);
     if (!manifest?.decoratorVariants) return;
     const indexedPaths = manifest.decoratorVariants.flatMap((variant) =>
       (['N', 'E', 'S', 'W'] as const).map((direction) => {
@@ -708,8 +737,8 @@ describe('isometric graphics indexes', () => {
       new URL('../../static/isometric/decorators', import.meta.url),
     ).map((file) => `decorators/${file}`);
 
-    expect(indexedPaths).toHaveLength(220);
-    expect(new Set(indexedPaths).size).toBe(220);
+    expect(indexedPaths).toHaveLength(212);
+    expect(new Set(indexedPaths).size).toBe(212);
     expect(indexedPaths.sort()).toEqual(imagePaths.sort());
   });
 

@@ -509,6 +509,12 @@ center the sprite within the cell. Rectangular frame dimensions are supported
 for static images such as the brazier sprite, and a per-sprite scale controls
 its maximum size relative to the cell. Optional per-`CellAlignment` pixel
 offsets fine-tune each sprite's placement after its bounds are aligned.
+`LightSource.sprites` can provide independent fixture descriptors for `topDown`
+and `isometric` rendering; the active view-model adapter selects the matching
+entry, falling back to the existing `LightSource.sprite` for compatibility.
+An isometric descriptor may reference a catalog tile by ID; the renderer draws
+it using the catalog's scale and anchor, retaining the regular sprite painter
+while that image loads. The same index serves world tiles and fixture art.
 
 Terrain cells (water, lava, …) are declarative floor materials: each cell
 tints the floor, can carry a light (lava glows through the same lighting

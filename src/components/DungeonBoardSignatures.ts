@@ -7,11 +7,13 @@ import type {
   InteractableCell,
   ItemLocation,
   LightSource,
+  LightSpriteMode,
   Monster,
   Secret,
   TerrainCell,
 } from '../types';
 import { isDiscovered } from '../core';
+import { resolveLightSprite } from '../scene/adapters';
 
 // Signature helpers for the Dungeon board's layered render loop: each
 // layer only redraws when its signature changes, so the signature must
@@ -154,7 +156,7 @@ export const getDynamicSignature = (
                 l.sprite.frameCount ?? '',
               )},${String(l.sprite.frameRate ?? '')}`
             : ''
-        }`,
+        },${JSON.stringify(l.sprites ?? {})}`,
     )
     .join(';');
   const itemLights = [
@@ -219,10 +221,12 @@ export const getAnimatedLightSpriteSignature = (
   st: GameState,
   dbg: boolean,
   timeMs: number,
+  mode: LightSpriteMode = 'topDown',
 ): string =>
   (st?.dungeon?.layout?.lights ?? [])
     .map((light) => {
-      const { sprite, position } = light;
+      const { position } = light;
+      const sprite = resolveLightSprite(light, mode);
       if (
         !sprite?.image ||
         Math.floor(sprite.frameCount ?? 1) <= 1 ||

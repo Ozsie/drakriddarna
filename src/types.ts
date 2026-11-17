@@ -580,12 +580,25 @@ export const LightEffect = {
 export type LightEffect =
   (typeof LightEffect)[keyof typeof LightEffect] | (string & {});
 
+export type LightSpriteMode = 'topDown' | 'isometric';
+
+export type IsometricLightSprite = {
+  tileId: string;
+};
+
+export type LightSprites = {
+  topDown?: LightSprite;
+  isometric?: LightSprite | IsometricLightSprite;
+};
+
 export type LightSource = {
   id?: string;
   position: Position;
   alignment?: CellAlignment;
-  // Optional square crop from the built-in dungeon tilesheet, in source pixels.
+  // Legacy/default sprite, used when a projection has no sprite override.
   sprite?: LightSprite;
+  // Projection-specific sprites take precedence over the legacy sprite.
+  sprites?: LightSprites;
   // CSS color of the light glow.
   color?: string;
   // Reach of the light in grid cells (from its position).

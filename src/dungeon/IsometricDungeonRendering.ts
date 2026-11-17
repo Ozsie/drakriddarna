@@ -1722,6 +1722,48 @@ export const buildIsometricDecoratorPainters = (
     ];
   });
 
+export const buildIsometricLightPainters = (
+  lights: GameItemView[],
+  cellSize: number,
+  projection: { ax: number; by: number },
+  graphics?: ResolvedIsometricGraphics,
+  getLightTileImage: typeof getIsometricTileImage = getIsometricTileImage,
+): SceneIsoPainterView[] =>
+  lights.flatMap((light) => {
+    const tile = graphics
+      ? getLightTileImage(graphics, light.isometricTileId)
+      : null;
+    if (!tile) return buildItemPainters([light], cellSize, projection.ax);
+
+    const { width, height } = getIsometricTileDimensions(
+      cellSize,
+      projection,
+      tile.scale,
+      tile.image.naturalWidth,
+      tile.image.naturalHeight,
+    );
+    const groundOffset = projection.by * cellSize;
+    return [
+      {
+        position: {
+          x: (light.position.x + 0.5) * cellSize,
+          y: (light.position.y + 0.5) * cellSize,
+        },
+        draw: (
+          ctx: CanvasRenderingContext2D,
+          center: { x: number; y: number },
+        ) =>
+          ctx.drawImage(
+            tile.image,
+            center.x - width * tile.anchor.x,
+            center.y + groundOffset - height * tile.anchor.y,
+            width,
+            height,
+          ),
+      },
+    ];
+  });
+
 const ISOMETRIC_CHEST_DIRECTIONS = ['N', 'E', 'S', 'W'] as const;
 
 const getIsometricChestDirection = (x: number, y: number) => {
@@ -2027,6 +2069,7 @@ export const renderIsometricDungeonPrototype = (
     cellSize,
     debugMode,
     currentTime,
+    'isometric',
   ).filter((item) =>
     isDiscovered(state.dungeon, item.position.x, item.position.y),
   );
@@ -2093,7 +2136,12 @@ export const renderIsometricDungeonPrototype = (
         view.projection,
         graphics,
       ),
-      ...buildItemPainters(itemsAfterDecorators, cellSize, view.projection.ax),
+      ...buildIsometricLightPainters(
+        itemsAfterDecorators,
+        cellSize,
+        view.projection,
+        graphics,
+      ),
       ...buildDungeonObjectPainters(
         state.dungeon,
         dungeon,

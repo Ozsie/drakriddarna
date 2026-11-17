@@ -57,8 +57,6 @@
     "decorator_bookcaseWideBooks",
     "decorator_bookcaseWideEmptyLadder",
     "decorator_bookcaseWideEmpty",
-    "decorator_candleStandDouble",
-    "decorator_candleStand",
     "decorator_displayCaseBooks",
     "decorator_displayCaseOpen",
     "decorator_displayCaseSword",
@@ -377,6 +375,46 @@
       "scale": 1,
       "anchor": { "x": 0.5, "y": 1 }
     },
+    "candleStand_N": {
+      "image": "lights/candleStand_N.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "candleStand_E": {
+      "image": "lights/candleStand_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "candleStand_S": {
+      "image": "lights/candleStand_S.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "candleStand_W": {
+      "image": "lights/candleStand_W.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "candleStandDouble_N": {
+      "image": "lights/candleStandDouble_N.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "candleStandDouble_E": {
+      "image": "lights/candleStandDouble_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "candleStandDouble_S": {
+      "image": "lights/candleStandDouble_S.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "candleStandDouble_W": {
+      "image": "lights/candleStandDouble_W.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
     "decorator_barrel_N": { "image": "decorators/barrel_N.png" },
     "decorator_barrel_E": { "image": "decorators/barrel_E.png" },
     "decorator_barrel_S": { "image": "decorators/barrel_S.png" },
@@ -461,14 +499,6 @@
     "decorator_bookcaseWideEmpty_E": { "image": "decorators/bookcaseWideEmpty_E.png" },
     "decorator_bookcaseWideEmpty_S": { "image": "decorators/bookcaseWideEmpty_S.png" },
     "decorator_bookcaseWideEmpty_W": { "image": "decorators/bookcaseWideEmpty_W.png" },
-    "decorator_candleStandDouble_N": { "image": "decorators/candleStandDouble_N.png" },
-    "decorator_candleStandDouble_E": { "image": "decorators/candleStandDouble_E.png" },
-    "decorator_candleStandDouble_S": { "image": "decorators/candleStandDouble_S.png" },
-    "decorator_candleStandDouble_W": { "image": "decorators/candleStandDouble_W.png" },
-    "decorator_candleStand_N": { "image": "decorators/candleStand_N.png" },
-    "decorator_candleStand_E": { "image": "decorators/candleStand_E.png" },
-    "decorator_candleStand_S": { "image": "decorators/candleStand_S.png" },
-    "decorator_candleStand_W": { "image": "decorators/candleStand_W.png" },
     "decorator_displayCaseBooks_N": { "image": "decorators/displayCaseBooks_N.png" },
     "decorator_displayCaseBooks_E": { "image": "decorators/displayCaseBooks_E.png" },
     "decorator_displayCaseBooks_S": { "image": "decorators/displayCaseBooks_S.png" },

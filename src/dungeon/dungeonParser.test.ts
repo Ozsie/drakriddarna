@@ -313,6 +313,26 @@ describe('dungeonParser', () => {
       expect(light.sprite).toEqual(sprite);
     });
 
+    it('preserves mode-specific sprites from tuple options', () => {
+      const sprites = {
+        topDown: { image: 'top-down.png', x: 0, y: 0, size: 32 },
+        isometric: { tileId: 'candleStand_E' },
+      };
+      const light = parseLight([5, 6, { sprites }]);
+
+      expect(light.sprites).toEqual(sprites);
+    });
+
+    it('preserves mode-specific sprites from object declarations', () => {
+      const sprites = {
+        topDown: { image: 'top-down.png', x: 0, y: 0, size: 32 },
+        isometric: { tileId: 'candleStand_E' },
+      };
+      const light = parseLight({ x: 5, y: 6, sprites });
+
+      expect(light.sprites).toEqual(sprites);
+    });
+
     it('parses object format', () => {
       const light = parseLight({
         x: 2,

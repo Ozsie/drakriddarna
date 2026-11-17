@@ -9,6 +9,7 @@ import type {
   ItemLocation,
   Layout,
   LightEffect,
+  LightSprites,
   LightSprite,
   LightSource,
   Monster,
@@ -245,6 +246,7 @@ export type DeclarativeInteractable =
 
 export type DeclarativeLightOptions = {
   sprite?: LightSprite;
+  sprites?: LightSprites;
   color?: string;
   radius?: number;
   intensity?: number;
@@ -792,7 +794,17 @@ export const parseLight = (lightDef: DeclarativeLight): LightSource => {
       typeof alignmentOrOptions === 'string'
         ? options?.sprite
         : alignmentOrOptions?.sprite;
-    return sprite ? { ...light, sprite } : light;
+    const sprites =
+      typeof alignmentOrOptions === 'string'
+        ? options?.sprites
+        : alignmentOrOptions?.sprites;
+    return sprite || sprites
+      ? {
+          ...light,
+          ...(sprite ? { sprite } : {}),
+          ...(sprites ? { sprites } : {}),
+        }
+      : light;
   }
 
   const {
@@ -808,6 +820,7 @@ export const parseLight = (lightDef: DeclarativeLight): LightSource => {
     enabled,
     id,
     sprite,
+    sprites,
   } = lightDef;
   const light = createLight(x, y, alignment, {
     ...(color !== undefined ? { color } : {}),
@@ -819,7 +832,13 @@ export const parseLight = (lightDef: DeclarativeLight): LightSource => {
     ...(enabled !== undefined ? { enabled } : {}),
     ...(id !== undefined ? { id } : {}),
   });
-  return sprite ? { ...light, sprite } : light;
+  return sprite || sprites
+    ? {
+        ...light,
+        ...(sprite ? { sprite } : {}),
+        ...(sprites ? { sprites } : {}),
+      }
+    : light;
 };
 
 export const parseTerrain = (terrainDef: DeclarativeTerrain): TerrainCell => {

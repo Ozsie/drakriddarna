@@ -27,6 +27,8 @@ describe('light source sprites', () => {
         [CellAlignment.CENTER]: { x: 0, y: -8 },
       },
     });
+    expect(brazier.sprites?.topDown).toEqual(brazier.sprite);
+    expect(brazier.sprites?.isometric).toEqual({ tileId: 'candleStand_E' });
   });
 
   it('uses the animated torch sprite sheet', () => {

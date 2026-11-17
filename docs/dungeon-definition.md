@@ -155,18 +155,25 @@ runtime type. Positions may always be written as `[x, y]` tuples or
 A light's optional `sprite` is `{ x, y, size }`, a square crop in source
 pixels from the dungeon tilesheet. To use a separate image, add `image` as a
 static asset path (relative to `static/`) and set `x`, `y` and `size` to the
-first frame's source rectangle. Optional `frameWidth` and `frameHeight`
-override the square `size` for rectangular frames; each defaults to `size`.
+first frame's source rectangle. `sprites.topDown` accepts the same descriptor
+shape; `sprites.isometric` also accepts `{ tileId }`, referencing a tile in
+`static/isometric/index.json`. Catalog tiles use the index's image, scale and
+anchor; if a catalog tile is missing or loading, the legacy `sprite` (or
+`sprites.topDown`) is used until it is ready. The legacy `sprite` is also used
+when the active mode has no override. Optional
+`frameWidth` and `frameHeight` override the square `size` for rectangular
+frames; each defaults to `size`.
 `scale` sets the maximum drawn size as a fraction of the cell (default `1`); the
 shared torch uses `0.75`, and the brazier uses `0.6`.
 `alignmentOffsets` optionally maps each `CellAlignment` to an `{ x, y }` pixel
 offset applied after alignment; omitted alignments use zero offsets.
 `frameCount` (default `1`) plays row-major frames from that origin, and
 `frameRate` (default `8`) sets frames per second; the image dimensions
-determine the number of columns. The shared torch uses all eight 64-pixel
-frames in `decorators/Torch Animated.png`, while the brazier uses the full
-540-by-639 image in
-`decorators/nobg-1293999211a5-1791660715455_1791660715455_dw9f2h0x.png`.
+determine the number of columns. Mode-specific descriptors can use different
+assets or animation dimensions in each camera mode. The shared torch uses all eight 64-pixel
+frames in `decorators/Torch Animated.png`, while the brazier uses the six-frame
+`decorators/pixor-library-brazier-standing-selout-64px-8-sides.png` sheet
+top-down and `candleStand_E` from the isometric catalog.
 Light sprites align their bounds to the selected cell edge: all top values
 place the sprite against the top edge, all bottom values against the bottom
 edge, and `CENTER_LEFT` / `CENTER_RIGHT` against the corresponding side.
