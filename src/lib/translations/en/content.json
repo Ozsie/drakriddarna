@@ -86,6 +86,18 @@
       }
     }
   },
+  "editor": {
+    "heading": "Dragonbane Editor",
+    "campaign": "Campaign",
+    "dungeon": "Dungeon",
+    "tools": "Tools",
+    "toolType": "Tools",
+    "light": "Light",
+    "decorator": "Decorator",
+    "alignment": "Alignment",
+    "export": "Export",
+    "nothingLoaded": "Nothing loaded"
+  },
   "actions": {
     "next": "Next",
     "action": "Action"

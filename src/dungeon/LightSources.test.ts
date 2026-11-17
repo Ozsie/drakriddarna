@@ -28,11 +28,13 @@ describe('light source sprites', () => {
       },
     });
     expect(brazier.sprites?.topDown).toEqual(brazier.sprite);
-    expect(brazier.sprites?.isometric).toEqual({ tileId: 'candleStand_E' });
+    expect(brazier.sprites?.isometric).toEqual({
+      tileId: 'candleStandDouble_E',
+    });
   });
 
   it('uses the animated torch sprite sheet', () => {
-    expect(torch.sprite).toEqual({
+    expect(torch.sprites?.topDown).toEqual({
       image: 'decorators/Torch Animated.png',
       x: 0,
       y: 0,

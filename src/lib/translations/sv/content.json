@@ -86,6 +86,18 @@
       }
     }
   },
+  "editor": {
+    "heading": "Dragonbane-redigerare",
+    "campaign": "Kampanj",
+    "dungeon": "Grotta",
+    "tools": "Verktyg",
+    "toolType": "Verktyg",
+    "light": "Ljus",
+    "decorator": "Dekoration",
+    "alignment": "Justering",
+    "export": "Exportera",
+    "nothingLoaded": "Inget har lästs in"
+  },
   "actions": {
     "next": "Nästa",
     "action": "Handling"

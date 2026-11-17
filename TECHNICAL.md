@@ -249,7 +249,11 @@ There is no runtime loading of external data files: content is compiled into
 the bundle. Because authoring TypeScript modules by hand is a programmer-only
 activity, a separate visual Campaign Editor (a Kotlin Multiplatform desktop
 app specified in [docs/editor-spec/](./docs/editor-spec/)) is planned to
-_generate_ these modules; the game repo requires no changes to consume them.
+_generate_ complete campaign modules. The browser route at `/editor` is a
+smaller placement editor: it selects discovered campaign dungeons, edits
+resolved lights and decorators on floor cells, and exports the grid and
+placement arrays as JSON for manual integration. It does not generate or
+rewrite campaign TypeScript.
 
 One campaign breaks the "authored by hand" rule on purpose: `brogue` is
 _generated at load time_ by a deterministic, Brogue-inspired dungeon
@@ -264,6 +268,13 @@ and thematic blockers placed so they never wall in a monster, item or hero.
 A checked-in fallback seed, verified by tests, means app start can never
 throw. Same auto-discovery, same validation — the generator is just another
 campaign folder whose dungeons happen to be built by code.
+
+The placement editor operates on each campaign's resolved dungeon object, so
+it can inspect runtime-generated floors such as `brogue` without adding a
+campaign registration path. Its JSON export includes the exact grid and the
+resolved light/decorator objects; apply those arrays to the resolved layout,
+not an empty declarative decorator list, because an empty list asks the
+dungeon parser to generate default decorators.
 
 ## Determinism: a seeded RNG everywhere it matters
 
