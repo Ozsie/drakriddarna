@@ -132,6 +132,7 @@ export const getDynamicSignature = (
   st: GameState,
   dbg: boolean,
   size: number,
+  worldSignature = '',
 ) => {
   const heroes = (st?.heroes ?? [])
     .map(
@@ -250,7 +251,7 @@ export const getDynamicSignature = (
         : '',
     )
     .join(';');
-  return `${heroes}|${monsters}|${curActor}|${rooms}|${collapsed}|${lights}|${itemLights}|${itemAuras}|${eventLightFlags}|${eventLightsSig}|${interactableLights}|${String(size)}|${String(dbg)}`;
+  return `${heroes}|${monsters}|${curActor}|${rooms}|${collapsed}|${lights}|${itemLights}|${itemAuras}|${eventLightFlags}|${eventLightsSig}|${interactableLights}|${String(size)}|${String(dbg)}${worldSignature ? `|${worldSignature}` : ''}`;
 };
 
 export const getAnimatedLightSpriteSignature = (

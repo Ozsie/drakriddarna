@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameState, Hero } from '../types';
-import { CellAlignment, Side } from '../types';
+import { CellAlignment, SecretType, Side } from '../types';
 import {
   getAnimatedLightSpriteSignature,
   getDynamicSignature,
@@ -382,6 +382,36 @@ describe('DungeonBoardSignatures', () => {
     hero.position = { x: 2, y: 0 };
     const after = getDynamicSignature(state, false, 48);
     expect(after).not.toBe(before);
+  });
+
+  it('includes static world changes in the isometric dynamic signature', () => {
+    const state = createState();
+    state.dungeon.layout.secrets = [
+      {
+        name: 'Trap door',
+        type: SecretType.TRAP_DOOR,
+        position: { x: 1, y: 0 },
+        found: false,
+      },
+    ];
+    const topDownBefore = getDynamicSignature(state, false, 48);
+    const isometricBefore = getDynamicSignature(
+      state,
+      false,
+      48,
+      getStaticSignature(state, false, 48),
+    );
+    state.dungeon.layout.secrets[0].found = true;
+
+    expect(getDynamicSignature(state, false, 48)).toBe(topDownBefore);
+    expect(
+      getDynamicSignature(
+        state,
+        false,
+        48,
+        getStaticSignature(state, false, 48),
+      ),
+    ).not.toBe(isometricBefore);
   });
 
   it('dynamic signature changes when a corridor collapses', () => {

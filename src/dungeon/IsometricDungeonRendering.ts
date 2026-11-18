@@ -23,7 +23,12 @@ import {
   type SceneSpriteFrame,
   DUNGEON_TILES,
 } from '@hoard-engine/scene';
-import { CellAlignment, type Dungeon, type GameState } from '../types';
+import {
+  CellAlignment,
+  SecretType,
+  type Dungeon,
+  type GameState,
+} from '../types';
 import { isDiscovered } from '../core';
 import { lightCenter } from './LightRendering';
 import { drawAura } from '../scene/AuraRendering';
@@ -1184,6 +1189,11 @@ export const buildIsometricWorldView = (
       cell.color,
     ]),
   );
+  const foundTrapDoors = new Set(
+    (resolvedDungeon.layout.secrets ?? [])
+      .filter((secret) => secret.type === SecretType.TRAP_DOOR && secret.found)
+      .map(({ position }) => `${String(position.x)},${String(position.y)}`),
+  );
   const worldRows = rows.map((row, y) =>
     toArray(row)
       .map((cell, x) => {
@@ -1309,7 +1319,16 @@ export const buildIsometricWorldView = (
       if (cell === ISO_HIDDEN || cell === ISO_WALL || !graphics)
         return undefined;
       const sourceCell = toArray(resolvedDungeon.layout.grid[y] ?? '')[x];
-      const tileId = resolveIsometricCellTileId(graphics, 'floor', sourceCell);
+      const trapTileId =
+        cell === ISO_FLOOR && foundTrapDoors.has(`${String(x)},${String(y)}`)
+          ? resolveIsometricCellTileId(graphics, 'floor', 'trap')
+          : undefined;
+      const trapTile = trapTileId
+        ? getIsometricTileImage(graphics, trapTileId)
+        : null;
+      const tileId = trapTile
+        ? trapTileId
+        : resolveIsometricCellTileId(graphics, 'floor', sourceCell);
       return buildPainter(x, y, tileId ? [tileId] : []);
     }),
   );

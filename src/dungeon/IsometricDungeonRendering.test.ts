@@ -290,6 +290,167 @@ describe('isometric foreground wall transparency', () => {
 });
 
 describe('buildIsometricWorldView', () => {
+  it('uses the discovered trap cell tile and keeps secrets hidden', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 128;
+        naturalHeight = 64;
+        src = '';
+
+        addEventListener() {}
+      },
+    );
+    const fallbackManifest = parseIsometricGraphicsManifest({
+      version: 1,
+      cells: { floor: 'floorTile', trap: 'trapTile' },
+      tiles: {
+        floorTile: { image: 'floors/floor.png' },
+        trapTile: { image: 'floors/trap.png' },
+      },
+    });
+    const overrideManifest = parseIsometricGraphicsManifest({
+      version: 1,
+      cells: { trap: 'campaignTrapTile' },
+      tiles: { campaignTrapTile: { image: 'floors/campaign-trap.png' } },
+    });
+    expect(fallbackManifest).not.toBeNull();
+    expect(overrideManifest).not.toBeNull();
+    if (!fallbackManifest || !overrideManifest) return;
+    const graphics = resolveIsometricGraphics(
+      fallbackManifest,
+      'isometric',
+      overrideManifest,
+      'campaigns/test/dungeon',
+    );
+    const dungeon: SceneDungeonView = {
+      name: 'trap-floor-test',
+      discoveredRooms: ['A'],
+      layout: {
+        grid: ['AAA', 'BBB'],
+        doors: [],
+        secrets: [
+          {
+            type: SecretType.TRAP_DOOR,
+            position: { x: 0, y: 0 },
+            found: true,
+          },
+          {
+            type: SecretType.TRAP_DOOR,
+            position: { x: 1, y: 0 },
+            found: false,
+          },
+          {
+            type: SecretType.NOTE,
+            position: { x: 2, y: 0 },
+            found: true,
+          },
+          {
+            type: SecretType.TRAP_DOOR,
+            position: { x: 0, y: 1 },
+            found: true,
+          },
+        ],
+      },
+    };
+
+    const world = buildIsometricWorldView(dungeon, 48, false, graphics);
+    const getFloorImageSource = (x: number, y: number): string | undefined => {
+      const sources: string[] = [];
+      const context = {
+        drawImage: (image: { src: string }) => sources.push(image.src),
+      } as unknown as CanvasRenderingContext2D;
+      world.floorPainters?.[y]?.[x]?.draw(context, { x: 0, y: 0 });
+      return sources[0];
+    };
+
+    expect(getFloorImageSource(0, 0)).toBe(
+      'campaigns/test/dungeon/floors/campaign-trap.png',
+    );
+    expect(getFloorImageSource(1, 0)).toBe('isometric/floors/floor.png');
+    expect(getFloorImageSource(2, 0)).toBe('isometric/floors/floor.png');
+    expect(world.floorPainters?.[1]?.[0]).toBeUndefined();
+  });
+
+  it('keeps the normal floor image when trap art is missing or loading', () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 128;
+        naturalHeight = 64;
+        private imageSource = '';
+
+        get src() {
+          return this.imageSource;
+        }
+
+        set src(source: string) {
+          this.imageSource = source;
+          if (source.endsWith('loading-trap.png')) this.complete = false;
+        }
+
+        addEventListener() {}
+      },
+    );
+    const dungeon: SceneDungeonView = {
+      name: 'trap-floor-fallback-test',
+      discoveredRooms: ['A'],
+      layout: {
+        grid: ['A'],
+        doors: [],
+        secrets: [
+          {
+            type: SecretType.TRAP_DOOR,
+            position: { x: 0, y: 0 },
+            found: true,
+          },
+        ],
+      },
+    };
+    const fallbackSources: string[] = [];
+    const drawFloorImage = (
+      graphics: ResolvedIsometricGraphics,
+    ): string | undefined => {
+      const world = buildIsometricWorldView(dungeon, 48, false, graphics);
+      const context = {
+        drawImage: (image: { src: string }) => fallbackSources.push(image.src),
+      } as unknown as CanvasRenderingContext2D;
+      world.floorPainters?.[0]?.[0]?.draw(context, { x: 0, y: 0 });
+      return fallbackSources.pop();
+    };
+    const floorTile = {
+      imageUrl: 'isometric/floors/fallback-floor.png',
+      scale: 1,
+      anchor: { x: 0.5, y: 1 },
+    };
+    const missingTrapGraphics: ResolvedIsometricGraphics = {
+      cells: { floor: 'floorTile', trap: 'missingTrapTile' },
+      wallShapes: {},
+      tiles: { floorTile },
+    };
+    const loadingTrapGraphics: ResolvedIsometricGraphics = {
+      cells: { floor: 'floorTile', trap: 'loadingTrapTile' },
+      wallShapes: {},
+      tiles: {
+        floorTile,
+        loadingTrapTile: {
+          imageUrl: 'isometric/floors/loading-trap.png',
+          scale: 1,
+          anchor: { x: 0.5, y: 1 },
+        },
+      },
+    };
+
+    expect(drawFloorImage(missingTrapGraphics)).toBe(
+      'isometric/floors/fallback-floor.png',
+    );
+    expect(drawFloorImage(loadingTrapGraphics)).toBe(
+      'isometric/floors/fallback-floor.png',
+    );
+  });
+
   it('uses the rendered wall sprite height for wall-face light projection', () => {
     vi.stubGlobal(
       'Image',

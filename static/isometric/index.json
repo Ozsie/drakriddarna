@@ -23,7 +23,8 @@
     "chestClosed_W": "chestClosed_W",
     "pillar": "stoneColumn_E",
     "pitNorth": "pitStoneWall_N",
-    "pitWest": "pitStoneWall_W"
+    "pitWest": "pitStoneWall_W",
+    "trap": "trap"
   },
   "pillarVariants": [
     "stoneColumn_E",
@@ -626,6 +627,11 @@
     "decorator_woodenSupports_N": { "image": "decorators/woodenSupports_N.png" },
     "decorator_woodenSupports_E": { "image": "decorators/woodenSupports_E.png" },
     "decorator_woodenSupports_S": { "image": "decorators/woodenSupports_S.png" },
-    "decorator_woodenSupports_W": { "image": "decorators/woodenSupports_W.png" }
+    "decorator_woodenSupports_W": { "image": "decorators/woodenSupports_W.png" },
+    "trap": {
+      "image": "floors/planksBroken_W.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    }
   }
 }

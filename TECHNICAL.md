@@ -411,7 +411,11 @@ changing unrelated item lights.
 Found secrets use coordinate-oriented open chest sprites in isometric mode,
 resolved through the shared graphics index (and campaign overrides), with the
 existing decorator retained until the indexed chest image loads; hidden and
-trap-door secrets remain unpainted. The controller invalidates the relevant
+trap-door secrets remain unpainted as props. Once a trap door is found in a
+discovered room, its floor uses the indexed `cells.trap` tile, retaining the
+normal floor image until trap art is ready. Isometric repaint invalidation
+includes the static world signature so discovering a trap updates its tile
+without waiting for actor movement. The controller invalidates the relevant
 cached layers when the preference changes.
 
 Isometric input uses the inverse of the active scene projection for grid

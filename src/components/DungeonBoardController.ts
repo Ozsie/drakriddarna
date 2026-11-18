@@ -1411,6 +1411,13 @@ export class DungeonBoardController {
       this.activeState,
       this.debugMode ?? false,
       this.cellSize,
+      renderMode === 'isometric'
+        ? getStaticSignature(
+            this.activeState,
+            this.debugMode ?? false,
+            this.cellSize,
+          )
+        : '',
     )}|${renderMode}`;
     if (
       !force &&
