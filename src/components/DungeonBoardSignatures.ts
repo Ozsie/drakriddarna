@@ -16,6 +16,8 @@ import type {
 import { isDiscovered } from '../core';
 import { resolveLightSprite } from '../scene/adapters';
 import type { LightViewport } from '@hoard-engine/lighting';
+import { getItemAuraSeed } from '../items/ItemAura';
+import { buildItemAuraViews } from '../scene/ItemAuraViews';
 
 // Signature helpers for the Dungeon board's layered render loop: each
 // layer only redraws when its signature changes, so the signature must
@@ -37,6 +39,22 @@ export const getPortalAuraSignature = (
   )
     return '';
   return String(Math.floor(timeMs / 125) % 48);
+};
+
+export const getItemAuraSignature = (
+  state: GameState,
+  timeMs: number,
+  viewport?: LightViewport,
+): string => {
+  const views = buildItemAuraViews(state, timeMs, viewport);
+  if (views.length === 0) return '';
+  const frame = Math.floor(timeMs / 125) % 48;
+  return `${String(frame)}|${views
+    .map(
+      ({ seed, position }) =>
+        `${seed}@${String(position.x)},${String(position.y)}`,
+    )
+    .join(';')}`;
 };
 
 export const getStaticSignature = (
@@ -184,6 +202,20 @@ export const getDynamicSignature = (
         .join(','),
     )
     .join('|');
+  const itemAuras = [
+    ...(st?.heroes ?? []),
+    ...(st?.dungeon?.layout?.monsters ?? []),
+  ]
+    .map((actor: Actor) =>
+      (actor.inventory ?? [])
+        .map((item) => {
+          const seed = getItemAuraSeed(item);
+          return seed ? `${seed}:${item.disabled ? 1 : 0}` : '';
+        })
+        .filter(Boolean)
+        .join(','),
+    )
+    .join('|');
   // Event-driven lights: hero flags, disabled items, round-scoped event
   // lights and the hexagram portal.
   const eventLightFlags = (st?.heroes ?? [])
@@ -218,15 +250,7 @@ export const getDynamicSignature = (
         : '',
     )
     .join(';');
-  return `${String(String(String(heroes)))}|${String(
-    String(String(monsters)),
-  )}|${String(String(curActor))}|${String(String(rooms))}|${String(
-    String(String(collapsed)),
-  )}|${String(String(String(lights)))}|${String(String(itemLights))}|${String(
-    String(eventLightFlags),
-  )}|${String(String(String(eventLightsSig)))}|${String(
-    String(interactableLights),
-  )}|${String(String(size))}|${String(String(String(dbg)))}`;
+  return `${heroes}|${monsters}|${curActor}|${rooms}|${collapsed}|${lights}|${itemLights}|${itemAuras}|${eventLightFlags}|${eventLightsSig}|${interactableLights}|${String(size)}|${String(dbg)}`;
 };
 
 export const getAnimatedLightSpriteSignature = (

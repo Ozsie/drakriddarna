@@ -403,6 +403,11 @@ The hexagram portal uses its event ID to seed a procedural floor aura. Its
 animation loop is baked and cached for each projection, then drawn below actors
 at the portal position; the existing ambient repaint gate advances visible
 frames without consuming gameplay randomness.
+Four magic items use the same generated aura renderer, seeded by item ID and
+drawn beneath each living hero or monster carrying an enabled item. Aura views
+follow interpolated actor movement, respect room discovery and camera bounds,
+and replace the legacy item light definitions in existing saves without
+changing unrelated item lights.
 Found secrets use coordinate-oriented open chest sprites in isometric mode,
 resolved through the shared graphics index (and campaign overrides), with the
 existing decorator retained until the indexed chest image loads; hidden and

@@ -1,5 +1,5 @@
 import type { Item, Weapon } from '../types';
-import { CellAlignment, ItemType, LightEffect } from '../types';
+import { ItemType } from '../types';
 import {
   NEXT_DUNGEON,
   NEXT_TURN,
@@ -45,18 +45,9 @@ export const magicItems: Item[] = [
       DESCRIPTION: 'items.magicItems.boots.description',
       MOVEMENT_BONUS: 1,
     },
+    generatedAura: true,
     pickup: 'movementBonusOnPickup',
     drop: 'movementBonusOnDrop',
-    light: {
-      alignment: CellAlignment.CENTER,
-      color: '#87CEEB',
-      radius: 1,
-      intensity: 0.35,
-      softness: 0.3,
-      effect: LightEffect.AURA,
-      rate: 0.4,
-      enabled: true,
-    },
     sprite: {
       image: 'items/leather_boots.png',
       size: 32,
@@ -75,16 +66,7 @@ export const magicItems: Item[] = [
       BREAK_DOOR: true,
       ATTACK_BONUS: 1,
     },
-    light: {
-      alignment: CellAlignment.CENTER,
-      color: '#E67E22',
-      radius: 1,
-      intensity: 0.35,
-      softness: 0.3,
-      effect: LightEffect.AURA,
-      rate: 0.3,
-      enabled: true,
-    },
+    generatedAura: true,
     sprite: {
       image: 'items/gauntlets.png',
       size: 32,
@@ -105,16 +87,7 @@ export const magicItems: Item[] = [
       RESET_ON: [NEXT_TURN],
     },
     reset: 'ringOfPrecisionOnReset',
-    light: {
-      alignment: CellAlignment.CENTER,
-      color: '#FFD700',
-      radius: 1,
-      intensity: 0.3,
-      softness: 0.3,
-      effect: LightEffect.AURA,
-      rate: 0.5,
-      enabled: true,
-    },
+    generatedAura: true,
     sprite: {
       image: 'items/copper_ring.png',
       size: 32,
@@ -132,16 +105,7 @@ export const magicItems: Item[] = [
       DESCRIPTION: 'items.magicItems.crownOfWisdom.description',
       SEARCH_BONUS: 1,
     },
-    light: {
-      alignment: CellAlignment.CENTER,
-      color: '#9B59B6',
-      radius: 1,
-      intensity: 0.35,
-      softness: 0.3,
-      effect: LightEffect.AURA,
-      rate: 0.35,
-      enabled: true,
-    },
+    generatedAura: true,
     sprite: {
       image: 'items/gold_ring.png',
       size: 32,

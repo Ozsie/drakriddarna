@@ -10,6 +10,10 @@ const controller = readFileSync(
   join(process.cwd(), 'src/components/DungeonBoardController.ts'),
   'utf8',
 );
+const isometricRendering = readFileSync(
+  join(process.cwd(), 'src/dungeon/IsometricDungeonRendering.ts'),
+  'utf8',
+);
 
 describe('dungeon board render order', () => {
   it('stacks the dynamic actor canvas above the static dungeon canvas', () => {
@@ -92,5 +96,20 @@ describe('dungeon board render order', () => {
     expect(controller).toContain(
       'this.lastIsometricLightMaskHasLights = false',
     );
+  });
+
+  it('depth-sorts carried item auras below isometric actors', () => {
+    const auraPainter = isometricRendering.indexOf(
+      'for (const { seed, position } of buildItemAuraViews(',
+    );
+    const actors = isometricRendering.indexOf(
+      '...buildHeroPainters(liveActors, cellSize, view.projection.ax)',
+    );
+
+    expect(auraPainter).toBeGreaterThanOrEqual(0);
+    expect(isometricRendering.slice(auraPainter, actors)).toContain(
+      'drawAura(',
+    );
+    expect(actors).toBeGreaterThan(auraPainter);
   });
 });

@@ -137,6 +137,10 @@ import type { UiEnv } from '@hoard-engine/uikit';
 import { getCampaign } from '../campaigns';
 import { drawAura } from '../scene/AuraRendering';
 import {
+  buildItemAuraViews,
+  getIsometricAuraViewport,
+} from '../scene/ItemAuraViews';
+import {
   appSettingsStore,
   applyAppSettings,
   mirrorMusicSetting,
@@ -203,6 +207,7 @@ import { musicManager, soundEffectManager } from '../audio';
 import { selectMusicIntensity } from '../audio/MusicIntensity';
 import {
   getAnimatedLightSpriteSignature,
+  getItemAuraSignature,
   getPortalAuraSignature,
   getStaticSignature,
   getDynamicSignature,
@@ -1364,6 +1369,15 @@ export class DungeonBoardController {
       debugMode,
       isometricView ? undefined : lightViewport,
     );
+    const itemAuraViewport = isometricView
+      ? getIsometricAuraViewport(isometricView, this.cellSize)
+      : lightViewport;
+    const itemAuraSig = getItemAuraSignature(
+      this.activeState,
+      currentTime,
+      itemAuraViewport,
+    );
+    const hasItemAura = itemAuraSig !== '';
     const portalAuraSig = getPortalAuraSignature(
       this.activeState.dungeon,
       currentTime,
@@ -1385,12 +1399,13 @@ export class DungeonBoardController {
       hasLightEffects ||
       hasAnimatedLightSprites ||
       hasTerrainEffects ||
+      hasItemAura ||
       hasPortalAura
         ? `${lightSig}|${lightSpriteSig}|${
             hasTerrainEffects
               ? Math.floor(currentTime / TERRAIN_ANIMATION_STEP_MS)
               : ''
-          }|${portalAuraSig}|${surfaceSig}`
+          }|${itemAuraSig}|${portalAuraSig}|${surfaceSig}`
         : '';
     const sig = `${getDynamicSignature(
       this.activeState,
@@ -1403,6 +1418,7 @@ export class DungeonBoardController {
       !hasLightEffects &&
       !hasAnimatedLightSprites &&
       !hasTerrainEffects &&
+      !hasItemAura &&
       !hasPortalAura &&
       sig === this.lastDynamicSignature
     )
@@ -1417,6 +1433,7 @@ export class DungeonBoardController {
       (hasLightEffects ||
         hasAnimatedLightSprites ||
         hasTerrainEffects ||
+        hasItemAura ||
         hasPortalAura) &&
       ambientSig === this.lastAmbientSignature &&
       sig === this.lastDynamicSignature
@@ -1582,6 +1599,7 @@ export class DungeonBoardController {
         hasLightEffects ||
         hasAnimatedLightSprites ||
         hasTerrainEffects ||
+        hasItemAura ||
         hasPortalAura
       ) {
         this.scheduleDynamicFrame(hasActiveAnimations);
@@ -1604,6 +1622,24 @@ export class DungeonBoardController {
         this.cellSize * 0.8,
         currentTime / 1000,
       );
+    }
+    if (hasItemAura) {
+      for (const { seed, position } of buildItemAuraViews(
+        this.activeState,
+        currentTime,
+        lightViewport,
+      )) {
+        drawAura(
+          ctx,
+          seed,
+          'topdown',
+          (position.x + 0.5) * this.cellSize,
+          (position.y + 0.5) * this.cellSize,
+          this.cellSize * 0.8,
+          this.cellSize * 0.8,
+          currentTime / 1000,
+        );
+      }
     }
 
     // Draw the light fixtures first so their glow is composited over them.
@@ -1815,6 +1851,7 @@ export class DungeonBoardController {
       hasLightEffects ||
       hasAnimatedLightSprites ||
       hasTerrainEffects ||
+      hasItemAura ||
       hasPortalAura ||
       hasActiveActorAnimations(currentTime)
     ) {

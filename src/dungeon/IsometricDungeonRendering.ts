@@ -28,6 +28,10 @@ import { isDiscovered } from '../core';
 import { lightCenter } from './LightRendering';
 import { drawAura } from '../scene/AuraRendering';
 import {
+  buildItemAuraViews,
+  getIsometricAuraViewport,
+} from '../scene/ItemAuraViews';
+import {
   buildCorpseViewModels,
   buildDecoratorViewModels,
   buildDungeonView,
@@ -1930,6 +1934,7 @@ export const buildIsometricPillarPainters = (
 };
 
 const buildDungeonObjectPainters = (
+  state: GameState,
   dungeon: Dungeon,
   view: SceneDungeonView,
   groundSheet: CanvasImageSource,
@@ -1994,6 +1999,35 @@ const buildDungeonObjectPainters = (
         drawAura(
           ctx,
           'hexagram',
+          'isometric',
+          screenPosition.x,
+          screenPosition.y,
+          cellSize * 0.8 * zoom,
+          cellSize * 0.4 * zoom,
+          currentTime / 1000,
+        );
+      },
+    });
+  }
+  for (const { seed, position } of buildItemAuraViews(
+    state,
+    currentTime,
+    getIsometricAuraViewport(screenView, cellSize),
+  )) {
+    const center = {
+      x: (position.x + 0.5) * cellSize,
+      y: (position.y + 0.5) * cellSize,
+    };
+    painters.push({
+      position: {
+        x: center.x,
+        y: center.y - 2 * ISO_GROUND_PAINTER_DEPTH_BIAS,
+      },
+      draw: (ctx) => {
+        const screenPosition = worldToScreen(screenView, center.x, center.y);
+        drawAura(
+          ctx,
+          seed,
           'isometric',
           screenPosition.x,
           screenPosition.y,
@@ -2158,6 +2192,7 @@ export const renderIsometricDungeonPrototype = (
         graphics,
       ),
       ...buildDungeonObjectPainters(
+        state,
         state.dungeon,
         dungeon,
         groundSheet,

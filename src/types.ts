@@ -918,6 +918,7 @@ export type Item = {
   disabled?: boolean;
   useSound?: string;
   light?: ItemLight;
+  generatedAura?: boolean;
 };
 
 export type Weapon = Item & {

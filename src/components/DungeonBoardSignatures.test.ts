@@ -4,6 +4,7 @@ import { CellAlignment, Side } from '../types';
 import {
   getAnimatedLightSpriteSignature,
   getDynamicSignature,
+  getItemAuraSignature,
   getOverlaySignature,
   getPortalAuraSignature,
   getStaticSignature,
@@ -57,6 +58,41 @@ describe('DungeonBoardSignatures', () => {
     state.dungeon.portal = undefined;
     expect(getPortalAuraSignature(state.dungeon, 125)).toBe('');
   });
+
+  it('animates enabled carried auras only while discovered and in the viewport', () => {
+    const state = createState({
+      heroes: [
+        {
+          name: 'Fearik',
+          health: 6,
+          position: { x: 1, y: 0 },
+          inventory: [{ id: 'boots_of_speed' } as Hero['inventory'][number]],
+        } as Hero,
+      ],
+    });
+    const viewport = { x: 0, y: 0, width: 3, height: 1 };
+
+    expect(getItemAuraSignature(state, 0, viewport)).toContain(
+      'boots_of_speed',
+    );
+    expect(getItemAuraSignature(state, 124, viewport)).toBe(
+      getItemAuraSignature(state, 0, viewport),
+    );
+    expect(getItemAuraSignature(state, 125, viewport)).not.toBe(
+      getItemAuraSignature(state, 0, viewport),
+    );
+    expect(getItemAuraSignature(state, 125, { ...viewport, x: 10 })).toBe('');
+
+    const before = getDynamicSignature(state, false, 48);
+    state.heroes[0].inventory[0].disabled = true;
+    expect(getItemAuraSignature(state, 125, viewport)).toBe('');
+    expect(getDynamicSignature(state, false, 48)).not.toBe(before);
+
+    state.heroes[0].inventory[0].disabled = false;
+    state.dungeon.discoveredRooms = [];
+    expect(getItemAuraSignature(state, 125, viewport)).toBe('');
+  });
+
   it('static signature changes when a door opens', () => {
     const state = createState();
     const before = getStaticSignature(state, false, 48);

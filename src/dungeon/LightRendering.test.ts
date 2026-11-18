@@ -67,7 +67,7 @@ const createHeroAt = (x: number, y: number, health = 6): Hero => ({
 
 // An item carrying an aura light, shared by several test cases.
 const glowingItem = {
-  id: 'boots_of_speed',
+  id: 'test_glowing_item',
   name: 'items.magicItems.boots.name',
   amountInDeck: 1,
   type: ItemType.MAGIC,
@@ -1660,6 +1660,20 @@ describe('item light sources', () => {
     state.dungeon.layout.monsters = [monster];
     expect(activeLights(state).length).toBe(4);
     expect(activeLights(state)[2].position).toEqual({ x: 4, y: 2 });
+  });
+
+  it('suppresses legacy generated-aura lights but preserves unrelated item lights', () => {
+    const state = createState();
+    state.heroes[0].inventory = [
+      { ...glowingItem, id: 'boots_of_speed' },
+      { ...glowingItem, id: 'custom_lantern' },
+    ];
+
+    const lights = activeLights(state);
+    expect(
+      lights.filter((light) => light.effect === LightEffect.AURA),
+    ).toHaveLength(1);
+    expect(lights.some((light) => light.color === '#87CEEB')).toBe(true);
   });
 
   it('ignores items on the floor and items without lights', () => {

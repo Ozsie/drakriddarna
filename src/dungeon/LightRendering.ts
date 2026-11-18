@@ -21,6 +21,7 @@ export {
 };
 
 import { FLAME_EFFECT_DURATION_MS, PROJECTILE_DURATION_MS } from '../combat';
+import { getItemAuraSeed } from '../items/ItemAura';
 import {
   COLLAPSED,
   WALL,
@@ -550,7 +551,7 @@ export const activeLights = (
   ].filter((actor) => actor.health > 0);
   carriers.forEach((actor) => {
     (actor.inventory ?? []).forEach((item: Item) => {
-      if (item?.light && !item.disabled) {
+      if (item?.light && !item.disabled && !getItemAuraSeed(item)) {
         lights.push({ ...item.light, position: actor.position });
       }
     });
