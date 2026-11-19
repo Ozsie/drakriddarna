@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   init,
   endAction,
   loadState,
+  resetLevel,
   next,
   hasWon,
   restartDungeonAfterWipe,
@@ -90,6 +91,18 @@ describe('game orchestrator', () => {
     const loaded = loadState(state);
     expect(loaded.currentActor?.name).toBe(state.heroes[0].name);
     expect(loaded.actionLog[0].key).toBe('logs.gameLoaded');
+  });
+
+  it('resetLevel runs without browser globals', () => {
+    const state = init();
+    vi.stubGlobal('document', undefined);
+    vi.stubGlobal('localStorage', undefined);
+
+    try {
+      expect(resetLevel(state)).toBe(state);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   describe('dungeon timer', () => {

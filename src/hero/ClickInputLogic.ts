@@ -363,6 +363,13 @@ export interface CameraOffset {
   ) => Position;
 }
 
+export interface BoardPointer {
+  screenX: number;
+  screenY: number;
+  viewWidth: number;
+  viewHeight: number;
+}
+
 export const screenToWorldPosition = (
   screenX: number,
   screenY: number,
@@ -416,28 +423,19 @@ export const screenToGridPosition = (
 };
 
 export const doMouseLogic = (
-  event: MouseEvent,
+  pointer: BoardPointer,
   cellSize: number,
   state: GameState,
   camera?: CameraOffset,
 ) => {
-  const c =
-    typeof document !== 'undefined'
-      ? (document.getElementById('uiCanvas') ??
-        document.getElementById('gameBoard'))
-      : null;
-  if (!c) return;
-
-  const rect = c.getBoundingClientRect();
-  const screenX = event.clientX - rect.left;
-  const screenY = event.clientY - rect.top;
+  const { screenX, screenY } = pointer;
 
   let x: number;
   let y: number;
 
   if (camera) {
-    const viewWidth = camera.viewWidth ?? rect.width;
-    const viewHeight = camera.viewHeight ?? rect.height;
+    const viewWidth = camera.viewWidth ?? pointer.viewWidth;
+    const viewHeight = camera.viewHeight ?? pointer.viewHeight;
     const centerPosition =
       camera.centerPosition ?? state?.dungeon?.startingPositions?.[0];
     const pos = camera.screenToGrid

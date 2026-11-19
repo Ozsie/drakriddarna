@@ -33,7 +33,11 @@ import {
   findVisibleMonsters,
   type MonsterTurnOptions,
 } from '../monsters/MonsterLogic';
-import { doMouseLogic, type CameraOffset } from '../hero/ClickInputLogic';
+import {
+  doMouseLogic,
+  type BoardPointer,
+  type CameraOffset,
+} from '../hero/ClickInputLogic';
 import { testingGrounds } from '../dungeon/testingGrounds';
 import { getEventsForDungeon } from '../events/EventsLogic';
 import { saveReloadGuard, debouncedSaveReloadGuard } from '../core';
@@ -454,12 +458,12 @@ export const goToTestingGrounds = (): void => {
 };
 
 export const handleCanvasClick = (
-  event: MouseEvent,
+  pointer: BoardPointer,
   cellSize: number,
   camera?: CameraOffset,
 ): void => {
   withGameplayState((state) => {
-    doMouseLogic(event, cellSize, state, camera);
+    doMouseLogic(pointer, cellSize, state, camera);
     syncStore(state);
   });
 };

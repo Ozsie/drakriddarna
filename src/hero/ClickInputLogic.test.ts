@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   Colour,
   ConditionType,
@@ -221,103 +221,59 @@ describe('screenToGridPosition', () => {
 });
 
 describe('doMouseLogic with camera', () => {
-  it('handles clicks using camera offset and triggers hero interaction or movement', () => {
+  it('handles canvas-relative clicks using camera offset', () => {
     const state = createTestState();
     const hero = state.currentActor as Hero;
     expect(hero.position).toEqual({ x: 1, y: 1 });
 
-    const mockElement = {
-      getBoundingClientRect: () => ({
-        left: 0,
-        top: 0,
-        width: 800,
-        height: 600,
-        right: 800,
-        bottom: 600,
-      }),
-    };
-    const origDocument = globalThis.document;
-    globalThis.document = {
-      getElementById: (id: string) => {
-        if (id === 'gameBoard') return mockElement as unknown as HTMLElement;
-        return null;
-      },
-    } as unknown as Document;
+    // Starting position (1, 1) is centered at (400, 300); one tile right is (448, 300).
+    doMouseLogic(
+      { screenX: 400, screenY: 300, viewWidth: 800, viewHeight: 600 },
+      48,
+      state,
+      { panX: 0, panY: 0, viewWidth: 800, viewHeight: 600 },
+    );
 
-    try {
-      // With starting position (1, 1) centered at screen (400, 300) and pan (0,0), clicking center opens radial menu
-      const heroClickEvent = {
-        clientX: 400,
-        clientY: 300,
-      } as MouseEvent;
+    const menu = get(radialMenuStore);
+    expect(menu).not.toBeNull();
+    expect(menu?.x).toBe(1);
+    expect(menu?.y).toBe(1);
 
-      doMouseLogic(heroClickEvent, 48, state, {
-        panX: 0,
-        panY: 0,
-        viewWidth: 800,
-        viewHeight: 600,
-      });
+    doMouseLogic(
+      { screenX: 448, screenY: 300, viewWidth: 800, viewHeight: 600 },
+      48,
+      state,
+      { panX: 0, panY: 0, viewWidth: 800, viewHeight: 600 },
+    );
 
-      const menu = get(radialMenuStore);
-      expect(menu).not.toBeNull();
-      expect(menu?.x).toBe(1);
-      expect(menu?.y).toBe(1);
-
-      // Now click on cell (2, 1) -> one tile to the right of screen center = (400 + 48, 300) = (448, 300)
-      const moveClickEvent = {
-        clientX: 448,
-        clientY: 300,
-      } as MouseEvent;
-
-      doMouseLogic(moveClickEvent, 48, state, {
-        panX: 0,
-        panY: 0,
-        viewWidth: 800,
-        viewHeight: 600,
-      });
-
-      // Hero should have moved to (2, 1)
-      expect(hero.position).toEqual({ x: 2, y: 1 });
-    } finally {
-      globalThis.document = origDocument;
-    }
+    expect(hero.position).toEqual({ x: 2, y: 1 });
   });
 
-  it('uses the supplied screen-to-grid adapter when one is provided', () => {
+  it('uses the supplied screen-to-grid adapter without browser globals', () => {
     const state = createTestState();
-    const mockElement = {
-      getBoundingClientRect: () => ({
-        left: 0,
-        top: 0,
-        width: 800,
-        height: 600,
-        right: 800,
-        bottom: 600,
-      }),
-    };
-    const origDocument = globalThis.document;
-    globalThis.document = {
-      getElementById: (id: string) =>
-        id === 'gameBoard' ? (mockElement as unknown as HTMLElement) : null,
-    } as unknown as Document;
-
+    vi.stubGlobal('document', undefined);
     try {
-      doMouseLogic({ clientX: 100, clientY: 100 } as MouseEvent, 48, state, {
-        panX: 0,
-        panY: 0,
-        screenToGrid: (screenX, screenY, width, height) => {
-          expect([screenX, screenY, width, height]).toEqual([
-            100, 100, 800, 600,
-          ]);
-          return { x: 1, y: 1 };
+      doMouseLogic(
+        { screenX: 100, screenY: 100, viewWidth: 800, viewHeight: 600 },
+        48,
+        state,
+        {
+          panX: 0,
+          panY: 0,
+          screenToGrid: (screenX, screenY, width, height) => {
+            expect([screenX, screenY, width, height]).toEqual([
+              100, 100, 800, 600,
+            ]);
+            return { x: 1, y: 1 };
+          },
         },
-      });
+      );
 
       expect(get(radialMenuStore)?.x).toBe(1);
       expect(get(radialMenuStore)?.y).toBe(1);
     } finally {
       radialMenuStore.set(null);
-      globalThis.document = origDocument;
+      vi.unstubAllGlobals();
     }
   });
 
@@ -326,43 +282,14 @@ describe('doMouseLogic with camera', () => {
     const hero = state.currentActor as Hero;
     expect(hero.position).toEqual({ x: 1, y: 1 });
 
-    const mockElement = {
-      getBoundingClientRect: () => ({
-        left: 0,
-        top: 0,
-        width: 800,
-        height: 600,
-        right: 800,
-        bottom: 600,
-      }),
-    };
-    const origDocument = globalThis.document;
-    globalThis.document = {
-      getElementById: (id: string) => {
-        if (id === 'gameBoard') return mockElement as unknown as HTMLElement;
-        return null;
-      },
-    } as unknown as Document;
+    doMouseLogic(
+      { screenX: 50, screenY: 50, viewWidth: 800, viewHeight: 600 },
+      48,
+      state,
+      { panX: 0, panY: 0, viewWidth: 800, viewHeight: 600 },
+    );
 
-    try {
-      // Click way outside at negative screen coordinates
-      const outsideEvent = {
-        clientX: 50,
-        clientY: 50,
-      } as MouseEvent;
-
-      doMouseLogic(outsideEvent, 48, state, {
-        panX: 0,
-        panY: 0,
-        viewWidth: 800,
-        viewHeight: 600,
-      });
-
-      // Hero should not have moved
-      expect(hero.position).toEqual({ x: 1, y: 1 });
-    } finally {
-      globalThis.document = origDocument;
-    }
+    expect(hero.position).toEqual({ x: 1, y: 1 });
   });
 
   it('opens radial menu when clicking adjacent hero if current hero has a TARGET_ANY_HERO item', () => {
@@ -386,49 +313,21 @@ describe('doMouseLogic with camera', () => {
     };
     hero1.inventory = [healingHerbs];
 
-    const mockElement = {
-      getBoundingClientRect: () => ({
-        left: 0,
-        top: 0,
-        width: 800,
-        height: 600,
-        right: 800,
-        bottom: 600,
-      }),
-    };
-    const origDocument = globalThis.document;
-    globalThis.document = {
-      getElementById: (id: string) => {
-        if (id === 'gameBoard') return mockElement as unknown as HTMLElement;
-        return null;
-      },
-    } as unknown as Document;
+    doMouseLogic(
+      { screenX: 448, screenY: 300, viewWidth: 800, viewHeight: 600 },
+      48,
+      state,
+      { panX: 0, panY: 0, viewWidth: 800, viewHeight: 600 },
+    );
 
-    try {
-      // Click on cell (2, 1) where hero2 is located -> screen center (400, 300) is (1, 1), so (2, 1) is (448, 300)
-      const clickAdjacentHeroEvent = {
-        clientX: 448,
-        clientY: 300,
-      } as MouseEvent;
-
-      doMouseLogic(clickAdjacentHeroEvent, 48, state, {
-        panX: 0,
-        panY: 0,
-        viewWidth: 800,
-        viewHeight: 600,
-      });
-
-      const menu = get(radialMenuStore);
-      expect(menu).not.toBeNull();
-      expect(menu?.x).toBe(2);
-      expect(menu?.y).toBe(1);
-      expect(menu?.entries).toHaveLength(1);
-      expect(menu?.entries[0].action).toBe(RadialAction.USE_ITEM);
-      expect(menu?.entries[0].item).toEqual(healingHerbs);
-      expect(menu?.entries[0].targetHero).toEqual(hero2);
-    } finally {
-      globalThis.document = origDocument;
-    }
+    const menu = get(radialMenuStore);
+    expect(menu).not.toBeNull();
+    expect(menu?.x).toBe(2);
+    expect(menu?.y).toBe(1);
+    expect(menu?.entries).toHaveLength(1);
+    expect(menu?.entries[0].action).toBe(RadialAction.USE_ITEM);
+    expect(menu?.entries[0].item).toEqual(healingHerbs);
+    expect(menu?.entries[0].targetHero).toEqual(hero2);
   });
 
   it('opens radial menu when clicking adjacent hero with TARGET: "TARGET_ANY_HERO" even on corridor/undiscovered cell', () => {
@@ -453,48 +352,21 @@ describe('doMouseLogic with camera', () => {
     };
     hero1.inventory = [magicItemWithTargetAnyHero];
 
-    const mockElement = {
-      getBoundingClientRect: () => ({
-        left: 0,
-        top: 0,
-        width: 800,
-        height: 600,
-        right: 800,
-        bottom: 600,
-      }),
-    };
-    const origDocument = globalThis.document;
-    globalThis.document = {
-      getElementById: (id: string) => {
-        if (id === 'gameBoard') return mockElement as unknown as HTMLElement;
-        return null;
-      },
-    } as unknown as Document;
+    doMouseLogic(
+      { screenX: 448, screenY: 300, viewWidth: 800, viewHeight: 600 },
+      48,
+      state,
+      { panX: 0, panY: 0, viewWidth: 800, viewHeight: 600 },
+    );
 
-    try {
-      const clickAdjacentHeroEvent = {
-        clientX: 448,
-        clientY: 300,
-      } as MouseEvent;
-
-      doMouseLogic(clickAdjacentHeroEvent, 48, state, {
-        panX: 0,
-        panY: 0,
-        viewWidth: 800,
-        viewHeight: 600,
-      });
-
-      const menu = get(radialMenuStore);
-      expect(menu).not.toBeNull();
-      expect(menu?.x).toBe(2);
-      expect(menu?.y).toBe(1);
-      expect(menu?.entries).toHaveLength(1);
-      expect(menu?.entries[0].action).toBe(RadialAction.USE_ITEM);
-      expect(menu?.entries[0].item).toEqual(magicItemWithTargetAnyHero);
-      expect(menu?.entries[0].targetHero).toEqual(hero2);
-    } finally {
-      globalThis.document = origDocument;
-    }
+    const menu = get(radialMenuStore);
+    expect(menu).not.toBeNull();
+    expect(menu?.x).toBe(2);
+    expect(menu?.y).toBe(1);
+    expect(menu?.entries).toHaveLength(1);
+    expect(menu?.entries[0].action).toBe(RadialAction.USE_ITEM);
+    expect(menu?.entries[0].item).toEqual(magicItemWithTargetAnyHero);
+    expect(menu?.entries[0].targetHero).toEqual(hero2);
   });
 });
 

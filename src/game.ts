@@ -1,4 +1,4 @@
-import type { Dungeon, GameState, Hero, Position } from './types';
+import type { Dungeon, GameState, Hero } from './types';
 import { ConditionType, Level } from './types';
 import { onCheckFulfilled, applyFallbackItems } from './dungeon/DungeonLogic';
 import { CURRENT_SAVE_VERSION, migrateSaveState } from './saveMigration';
@@ -407,13 +407,6 @@ export const resetLevel = (currentState: GameState): GameState => {
       resetLiveHeroes(state);
       resetOnNextDungeon(state);
       resetOnNext(state);
-      scrollTo(
-        {
-          x: state.dungeon.startingPositions[0].x,
-          y: state.dungeon.startingPositions[0].y,
-        },
-        state.settings['cellSize'] as number,
-      );
       state.currentActor = state.heroes.find(
         (hero) => hero.name === state.currentActor?.name,
       ) as Hero | undefined;
@@ -527,20 +520,6 @@ const checkWinConditions = (state: GameState) => {
         name: i18n(state.dungeon.nextDungeon?.name),
       });
     }
-  }
-};
-
-const scrollTo = (pos: Position, cellSize: number) => {
-  if (typeof document === 'undefined') return;
-  const container = document.getElementById('gameBoardContainer');
-  const canvas = document.getElementById('gameBoard');
-  if (container && canvas) {
-    const x = pos.x * cellSize;
-    const y = pos.y * cellSize;
-    const xMax = canvas.offsetWidth;
-    const yMax = canvas.offsetHeight;
-    container.scrollLeft = Math.round(x / xMax);
-    container.scrollTop = Math.round(y / yMax);
   }
 };
 

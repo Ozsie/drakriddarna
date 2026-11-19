@@ -180,6 +180,11 @@ import { MAX_SAVE_NAME_LENGTH } from '../saves/SavesLogic';
 import { onChangeLanguage, onNewGame, onSaveGame } from '../menu/MenuLogic';
 import { DEFAULT_CAMPAIGN_ID } from '../campaigns';
 import {
+  isGameInputEnabled,
+  resolveKeyboardTarget,
+  type BoardModalState,
+} from './DungeonBoardModal';
+import {
   activateTouchHoldPan,
   beginTouchHoldPan,
   cancelTouchHoldPan,
@@ -2849,27 +2854,27 @@ export class DungeonBoardController {
     }
   };
   private onWindowKeyDown = (event: KeyboardEvent) => {
+    const keyboardTarget = resolveKeyboardTarget(this.boardModalState());
     // While the new-game dialog is open it captures every key: Escape
     // dismisses it, Enter begins the run, digits edit the seed input.
-    if (this.isNewGameDialogOpen) {
+    if (keyboardTarget === 'newGameDialog') {
       this.handleNewGameDialogKeyDown(event);
       return;
     }
     // While the save/load dialog is open it captures every key: the save
     // mode feeds the name input, both modes dismiss on Escape.
-    if (this.saveLoadDialogMode) {
+    if (keyboardTarget === 'saveLoadDialog') {
       this.handleSaveLoadDialogKeyDown(event);
       return;
     }
-    if (this.appPhase === 'welcome') {
+    if (keyboardTarget === 'heroRename') {
+      this.handleHeroRenameKeyDown(event);
+      return;
+    }
+    if (keyboardTarget === 'welcome') {
       // Escape acts as Back on the welcome sub views; on the main view
-      // there is nothing to dismiss. While a rename input is focused it
-      // only defocuses the input.
+      // there is nothing to dismiss.
       if (this.welcomeView === 'heroSelection') {
-        if (this.heroSelectionFocusedId) {
-          this.handleHeroRenameKeyDown(event);
-          return;
-        }
         if (event.key === 'Escape') {
           event.preventDefault();
           this.backFromHeroSelection();
@@ -2952,18 +2957,24 @@ export class DungeonBoardController {
    * them — enablement is driven explicitly here instead.
    */
   private syncGameInputEnabled(): void {
-    const hasOpenHeroStatus = Boolean(
-      this.activeState && heroWithOpenStatus(this.activeState),
-    );
-    inputManager.setEnabled(
-      this.appPhase !== 'welcome' &&
-        !this.isDebugMenuOpen &&
-        !this.saveLoadDialogMode &&
-        !this.isNewGameDialogOpen &&
-        !this.showDungeonIntro &&
-        !this.activeState?.betweenDungeons &&
-        !hasOpenHeroStatus,
-    );
+    inputManager.setEnabled(isGameInputEnabled(this.boardModalState()));
+  }
+
+  private boardModalState(): BoardModalState {
+    return {
+      isNewGameDialogOpen: this.isNewGameDialogOpen,
+      isSaveLoadDialogOpen: Boolean(this.saveLoadDialogMode),
+      isHeroRenameFocused: Boolean(
+        this.welcomeView === 'heroSelection' && this.heroSelectionFocusedId,
+      ),
+      isWelcomePhase: this.appPhase === 'welcome',
+      isDebugMenuOpen: this.isDebugMenuOpen,
+      isDungeonIntroOpen: this.showDungeonIntro,
+      isBetweenDungeonsOpen: Boolean(this.activeState?.betweenDungeons),
+      isHeroStatusOpen: Boolean(
+        this.activeState && heroWithOpenStatus(this.activeState),
+      ),
+    };
   }
 
   // Whether the debug printout shows a ticking dungeon timer (and the
@@ -4254,8 +4265,17 @@ export class DungeonBoardController {
       return;
     }
 
+    if (!this.uiCanvas) return;
+    const rect = this.uiCanvas.getBoundingClientRect();
+    const pointer = {
+      screenX: event.clientX - rect.left,
+      screenY: event.clientY - rect.top,
+      viewWidth: rect.width,
+      viewHeight: rect.height,
+    };
+
     if (this.externalState) {
-      doMouseLogic(event, this.cellSize, this.externalState, {
+      doMouseLogic(pointer, this.cellSize, this.externalState, {
         panX: this.panX,
         panY: this.panY,
         zoom: this.zoom,
@@ -4266,7 +4286,7 @@ export class DungeonBoardController {
       });
       gameStateStore.set(this.externalState);
     } else {
-      handleCanvasClick(event, this.cellSize, {
+      handleCanvasClick(pointer, this.cellSize, {
         panX: this.panX,
         panY: this.panY,
         zoom: this.zoom,
