@@ -1,4 +1,5 @@
 import { asset } from '$app/paths';
+import type { AssetPath } from '$app/types';
 import { getReadyImage } from '../core/ImageCache';
 
 export type IsometricGraphicsTile = {
@@ -327,7 +328,7 @@ const loadIndex = (
     return undefined;
 
   loadingIndexes.add(root);
-  void fetch(asset(`${root}/index.json`))
+  void fetch(asset(`${root}/index.json` as AssetPath))
     .then((response) => (response.ok ? response.json() : null))
     .then((value: unknown) => parseIsometricGraphicsManifest(value))
     .catch(() => null)

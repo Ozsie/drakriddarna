@@ -3,7 +3,7 @@ import { renderDecorators, renderLightSprites } from '../items/ItemRendering';
 import { buildDecoratorViewModels } from './adapters';
 import { CellAlignment, type GameState } from '../types';
 import { parseDecorator } from '../dungeon/dungeonParser';
-import e1m0 from '../campaigns/iceDragonTreasure/dungeons/e1m0';
+import { bones } from '../dungeon/Decorators';
 import { buildIsometricDecoratorPainters } from '../dungeon/IsometricDungeonRendering';
 
 vi.mock('../core/ImageCache', () => ({
@@ -36,8 +36,16 @@ vi.mock('../core/ImageCache', () => ({
 }));
 
 describe('renderDecorators', () => {
-  it('renders the e1m0 bones with their cropped isometric barrel sprite', () => {
-    const state = { dungeon: e1m0 } as GameState;
+  it('renders bones with their cropped isometric barrel sprite', () => {
+    const state = {
+      dungeon: {
+        discoveredRooms: ['A'],
+        layout: {
+          grid: ['A'],
+          decorators: [parseDecorator([0, 0, CellAlignment.CENTER_TOP, bones])],
+        },
+      },
+    } as GameState;
     const topDown = buildDecoratorViewModels(
       state,
       {} as CanvasImageSource,
@@ -92,7 +100,7 @@ describe('renderDecorators', () => {
       83,
     ]);
     expect(drawImage.mock.calls[0]?.[5]).toBeCloseTo(6.65);
-    expect(drawImage.mock.calls[0]?.[6]).toBe(0);
+    expect(drawImage.mock.calls[0]?.[6]).toBe(6);
     expect(drawImage.mock.calls[0]?.[7]).toBeCloseTo(34.7);
     expect(drawImage.mock.calls[0]?.[8]).toBe(36);
   });

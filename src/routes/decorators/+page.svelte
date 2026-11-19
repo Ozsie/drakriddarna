@@ -2,18 +2,23 @@
   import { onMount } from 'svelte';
   import { asset } from '$app/paths';
   import type { AssetPath } from '$app/types';
-  import type { ItemSprite } from '../../types';
-  import type { DecoratorPresetName } from '../../dungeon/Decorators';
-  import { DECORATOR_PRESETS } from '../../dungeon/Decorators';
+  import * as decoratorDefinitions from '../../dungeon/Decorators';
 
-  const decorators = (
-    Object.entries(DECORATOR_PRESETS) as [DecoratorPresetName, ItemSprite][]
-  ).map(([key, sprite]) => ({
-    key,
-    sprite,
-    width: sprite.sourceRect?.width ?? sprite.size,
-    height: sprite.sourceRect?.height ?? sprite.size,
-  }));
+  const decorators = Object.entries(decoratorDefinitions).flatMap(
+    ([key, decorator]) => {
+      const sprite = decorator.sprites?.isometric ?? decorator.sprites?.topDown;
+      if (!sprite) return [];
+
+      return [
+        {
+          key,
+          sprite,
+          width: sprite.sourceRect?.width ?? sprite.size,
+          height: sprite.sourceRect?.height ?? sprite.size,
+        },
+      ];
+    },
+  );
 
   let canvases: Record<string, HTMLCanvasElement> = $state({});
 
