@@ -144,19 +144,25 @@ const layoutHeroStatus = (
   const contentY = panelBounds.y + 34 + 16;
   const contentWidth = panelBounds.width - 32;
   const contentHeight = panelBounds.height - 34 - 32;
+  const compact = contentHeight < 320;
+  const statHeight = compact ? 16 : 36;
+  const statGap = compact ? 4 : 8;
   const rightColumnWidth = Math.floor(contentWidth * 0.38);
   const statsTotalHeight =
-    vm.stats.length * 36 + Math.max(0, vm.stats.length - 1) * 8;
+    vm.stats.length * statHeight + Math.max(0, vm.stats.length - 1) * statGap;
   const statsTop = contentY + contentHeight - statsTotalHeight;
   const gridTop = contentY + 22;
   const gridMaxHeight = Math.max(0, statsTop - gridTop - 8);
   const rows = Math.max(4, Math.ceil(vm.inventory.length / 4));
-  const cellWidth = Math.max(24, Math.floor((rightColumnWidth - 3 * 8) / 4));
-  const lineHeight = Math.floor((gridMaxHeight - (rows - 1) * 8) / rows);
-  const cellHeight = Math.min(
-    Math.max(24, cellWidth),
-    Math.max(24, lineHeight),
-  );
+  const gridGap = compact
+    ? Math.min(
+        8,
+        Math.max(0, Math.floor((gridMaxHeight - rows) / Math.max(1, rows - 1))),
+      )
+    : 8;
+  const cellWidth = Math.max(1, Math.floor((rightColumnWidth - 3 * 8) / 4));
+  const lineHeight = Math.floor((gridMaxHeight - (rows - 1) * gridGap) / rows);
+  const cellHeight = Math.min(cellWidth, Math.max(1, lineHeight));
   const slotColumnWidth = cellWidth;
   const middleColumnWidth = Math.max(
     0,
@@ -323,7 +329,7 @@ const layoutHeroStatus = (
       itemIndex: item?.itemIndex ?? null,
       bounds: {
         x: rightX + column * (cellWidth + 8),
-        y: gridTop + row * (cellHeight + 8),
+        y: gridTop + row * (cellHeight + gridGap),
         width: cellWidth,
         height: cellHeight,
       },
@@ -333,9 +339,9 @@ const layoutHeroStatus = (
     vm: stat,
     bounds: {
       x: rightX,
-      y: statsTop + index * 44,
+      y: statsTop + index * (statHeight + statGap),
       width: rightColumnWidth,
-      height: 36,
+      height: statHeight,
     },
   }));
   return {
@@ -640,12 +646,13 @@ const compositionFor = (
     }
     if (layout.detail.useButtonBounds) {
       const isUsable = detail.isUsable;
+      const isUsed = detail.isUsed;
       children.push(
         positioned(
           {
             type: 'button',
             actionId: isUsable ? 'use' : 'panel',
-            label: isUsable ? detail.useText : detail.usedText,
+            label: isUsed ? detail.usedText : detail.useText,
             themeStyle: {
               surface: isUsable
                 ? options?.isUseHovered
@@ -655,7 +662,7 @@ const compositionFor = (
               border: isUsable ? 'useButton' : 'useButtonDisabled',
               strokeWidth: 'thin',
               radius: 3,
-              text: isUsable ? 'bright' : 'inventoryUsed',
+              text: isUsed ? 'inventoryUsed' : isUsable ? 'bright' : 'body',
               fontSize: 'xxs',
               fontWeight: 'bold',
             },

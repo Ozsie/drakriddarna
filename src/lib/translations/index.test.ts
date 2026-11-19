@@ -138,7 +138,7 @@ describe('translations', () => {
         for (const item of [...equipment, ...magicItems]) {
           const nameKey = item.nameTranslationKey;
           expect(nameKey).toBeDefined();
-          expect(translate(nameKey!)).not.toBe(nameKey);
+          expect(translate(nameKey)).not.toBe(nameKey);
 
           const itemTranslationPrefix = nameKey!.slice(0, -'.name'.length);
           for (const field of ['description', 'thematicDescription']) {

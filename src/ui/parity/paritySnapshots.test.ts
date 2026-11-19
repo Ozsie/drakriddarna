@@ -67,7 +67,13 @@ const normalizeCanvasLog = (log: readonly string[]): string[] => {
       writes.push(log[index]);
       index += 1;
     }
-    normalized.push(...writes.sort());
+    normalized.push(
+      ...writes.sort((a, b) => {
+        const propertyA = a.slice(0, a.indexOf('='));
+        const propertyB = b.slice(0, b.indexOf('='));
+        return propertyA.localeCompare(propertyB);
+      }),
+    );
   }
   return normalized;
 };
@@ -90,6 +96,22 @@ describe('parity snapshots', () => {
         storage.clear();
       },
     });
+  });
+
+  it('preserves order for repeated canvas property writes', () => {
+    expect(
+      normalizeCanvasLog([
+        'fillStyle=red',
+        'strokeStyle=blue',
+        'fillStyle=green',
+        'lineWidth=1',
+      ]),
+    ).toEqual([
+      'fillStyle=red',
+      'fillStyle=green',
+      'lineWidth=1',
+      'strokeStyle=blue',
+    ]);
   });
 
   it('snapshots the top bar in regular and compact mode', () => {

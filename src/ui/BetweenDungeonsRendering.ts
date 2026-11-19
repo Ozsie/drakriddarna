@@ -28,7 +28,6 @@ import {
   PER_CHAR_WIDTH_FALLBACK,
   wrapTextMeasured,
 } from '@hoard-engine/primitives';
-import { actorColour } from './theme';
 import {
   hitTestComposition,
   layoutComposition,
@@ -83,7 +82,6 @@ interface CampaignCompleteGeometry {
   heroRows: {
     title: string;
     colourKey: ActorColourKey;
-    colour?: ReturnType<typeof actorColour>;
     levelText: string;
     xpText: string;
     hpText: string;
@@ -311,6 +309,8 @@ const kitLayoutFor = (
     const summaryY = scoreY + 24;
     const scenarioHeaderY = summaryY + 26;
     const scenarioRowHeight = 16;
+    const compactHeroSummary = panelWidth < 480;
+    const heroRowHeight = compactHeroSummary ? 32 : 20;
     const heroHeaderY =
       scenarioHeaderY + 18 + cc.scenarioRows.length * scenarioRowHeight + 14;
     campaignComplete = {
@@ -329,7 +329,7 @@ const kitLayoutFor = (
       heroHeaderY,
       heroRows: cc.heroRows.map((row, index) => ({
         ...row,
-        y: heroHeaderY + 18 + index * 20,
+        y: heroHeaderY + (compactHeroSummary ? 32 : 18) + index * heroRowHeight,
       })),
     };
   }
@@ -399,7 +399,7 @@ const kitLayoutFor = (
   if (!isCampaignComplete && !isPartyWipe && isLevelUp) {
     const cardGap = 8;
     const cardHeight = Math.max(
-      50,
+      1,
       Math.floor(
         (availableHeroHeight - (heroCount - 1) * cardGap) /
           Math.max(1, heroCount),
@@ -519,15 +519,7 @@ const toLegacyLayout = (
 
   return {
     ...layout,
-    campaignComplete: cc
-      ? {
-          ...cc,
-          heroRows: cc.heroRows.map((row) => ({
-            ...row,
-            colour: actorColour(row.colourKey),
-          })),
-        }
-      : null,
+    campaignComplete: cc,
     wipeButtons: kitLayout.wipeButtons?.map((button) => ({
       ...button,
       action: button.action as PartyWipeAction,
@@ -863,20 +855,79 @@ const betweenDungeonsComposition = (
       right - 120,
       right - 90,
     ];
-    heroHeaders.forEach((header, index) =>
+    const compactHeroSummary = p.width < 480;
+    if (compactHeroSummary) {
       addText(
-        header,
-        {
-          x: heroColX[index],
-          y: cc.heroHeaderY,
-          width: index === 0 ? 150 : 70,
-          height: 18,
-        },
+        cc.heroHeader.name,
+        { x, y: cc.heroHeaderY, width: colW, height: 16 },
         { text: 'strong', fontSize: 'sm', fontWeight: 'bold' },
-        index === 0 ? 'left' : 'right',
-      ),
-    );
+      );
+      const statHeaders = heroHeaders.slice(1);
+      const statWidth = colW / statHeaders.length;
+      statHeaders.forEach((header, index) =>
+        addText(
+          header,
+          {
+            x: x + index * statWidth,
+            y: cc.heroHeaderY + 16,
+            width: statWidth,
+            height: 16,
+          },
+          { text: 'strong', fontSize: 'xs', fontWeight: 'bold' },
+          'center',
+        ),
+      );
+    } else {
+      heroHeaders.forEach((header, index) =>
+        addText(
+          header,
+          {
+            x: heroColX[index],
+            y: cc.heroHeaderY,
+            width: index === 0 ? 150 : 70,
+            height: 18,
+          },
+          { text: 'strong', fontSize: 'sm', fontWeight: 'bold' },
+          index === 0 ? 'left' : 'right',
+        ),
+      );
+    }
     cc.heroRows.forEach((row) => {
+      const colour = env.theme.palette.actorDot[row.colourKey];
+      if (compactHeroSummary) {
+        const statValues = [
+          row.levelText,
+          row.xpText,
+          row.hpText,
+          row.killsText,
+          row.itemsText,
+        ];
+        const statWidth = colW / statValues.length;
+        addText(
+          '●',
+          { x, y: row.y, width: 16, height: 16 },
+          { textColor: colour, fontSize: 'xxs' },
+        );
+        addText(
+          row.title,
+          { x: x + 16, y: row.y, width: colW - 16, height: 16 },
+          { text: row.alive ? 'body' : 'dimmed', fontSize: 'sm' },
+        );
+        statValues.forEach((value, index) => {
+          addText(
+            value,
+            {
+              x: x + index * statWidth,
+              y: row.y + 16,
+              width: statWidth,
+              height: 16,
+            },
+            { text: row.alive ? 'body' : 'dimmed', fontSize: 'xs' },
+            'center',
+          );
+        });
+        return;
+      }
       const values = [
         row.title,
         row.levelText,
@@ -885,7 +936,6 @@ const betweenDungeonsComposition = (
         row.killsText,
         row.itemsText,
       ];
-      const colour = actorColour(row.colourKey);
       addText(
         '●',
         { x, y: row.y, width: 16, height: 16 },
@@ -911,76 +961,155 @@ const betweenDungeonsComposition = (
   } else if (layout.step === 'levelUp') {
     for (const hero of layout.heroes) {
       const b = hero.bounds;
-      const hovered = false;
       addFill(b, {
         surface: hero.isLeveledUp ? 'leveledRow' : 'row',
         border: hero.isLeveledUp ? 'rowSelected' : 'row',
         strokeWidth: hero.isLeveledUp ? 'medium' : 'thin',
       });
-      addText(
-        '●',
-        { x: b.x + 7, y: b.y + 9, width: 14, height: 14 },
-        {
-          textColor: env.theme.palette.actorDot[hero.hero.colourKey],
-          fontSize: 'xxs',
-        },
-        'center',
-        'middle',
-      );
-      addText(
-        hero.title,
-        {
-          x: b.x + 26,
-          y: b.y + 4,
-          width: Math.max(50, b.width - 156),
-          height: 24,
-        },
-        { text: 'strong', fontSize: 'xl', fontWeight: 'bold' },
-        'left',
-        'middle',
-      );
-      addText(
-        hero.xpText,
-        { x: b.x + 140, y: b.y + 4, width: 150, height: 24 },
-        { text: 'muted', fontSize: 'md' },
-        'left',
-        'middle',
-      );
-      const badge = {
-        x: b.x + b.width - 110,
-        y: b.y + 6,
-        width: 100,
-        height: 20,
-      };
-      addFill(
-        badge,
-        {
-          surface: hero.isLeveledUp ? 'checkboxSelected' : 'checkbox',
-          border: hero.isLeveledUp ? 'checkboxSelected' : 'input',
-          strokeWidth: 'thin',
-        },
-        4,
-      );
-      addText(
-        hero.levelBadge,
-        badge,
-        {
-          text: hero.isLeveledUp ? 'bright' : 'body',
-          fontSize: 'sm',
-          fontWeight: 'bold',
-        },
-        'center',
-        'middle',
-      );
-      addText(
-        hero.levelMeaningText,
-        { x: b.x + 26, y: b.y + 28, width: b.width - 40, height: 20 },
-        {
-          text: hero.isLeveledUp ? 'rowSelected' : 'secondary',
-          fontSize: 'md',
-        },
-      );
-      void hovered;
+      if (b.height < 50) {
+        const lineHeight = Math.max(1, Math.floor(b.height / 2));
+        const firstLineY = b.y + Math.floor((b.height - lineHeight * 2) / 2);
+        const secondLineY = firstLineY + lineHeight;
+        addText(
+          '●',
+          { x: b.x + 5, y: firstLineY, width: lineHeight, height: lineHeight },
+          {
+            textColor: env.theme.palette.actorDot[hero.hero.colourKey],
+            fontSize: 'xxs',
+          },
+          'center',
+          'middle',
+        );
+        addText(
+          hero.title,
+          {
+            x: b.x + 22,
+            y: firstLineY,
+            width: Math.max(1, b.width - 124),
+            height: lineHeight,
+          },
+          { text: 'strong', fontSize: 'sm', fontWeight: 'bold' },
+          'left',
+          'middle',
+        );
+        addText(
+          hero.xpText,
+          {
+            x: b.x + 22,
+            y: secondLineY,
+            width: 78,
+            height: lineHeight,
+          },
+          { text: 'muted', fontSize: 'xs' },
+          'left',
+          'middle',
+        );
+        addText(
+          hero.levelMeaningText,
+          {
+            x: b.x + 102,
+            y: secondLineY,
+            width: Math.max(1, b.width - 108),
+            height: lineHeight,
+          },
+          {
+            text: hero.isLeveledUp ? 'rowSelected' : 'secondary',
+            fontSize: 'xs',
+          },
+          'left',
+          'middle',
+        );
+        const badge = {
+          x: b.x + b.width - 96,
+          y: firstLineY,
+          width: 88,
+          height: lineHeight,
+        };
+        addFill(
+          badge,
+          {
+            surface: hero.isLeveledUp ? 'checkboxSelected' : 'checkbox',
+            border: hero.isLeveledUp ? 'checkboxSelected' : 'input',
+            strokeWidth: 'thin',
+          },
+          4,
+        );
+        addText(
+          hero.levelBadge,
+          badge,
+          {
+            text: hero.isLeveledUp ? 'bright' : 'body',
+            fontSize: 'xs',
+            fontWeight: 'bold',
+          },
+          'center',
+          'middle',
+        );
+      } else {
+        addText(
+          '●',
+          { x: b.x + 7, y: b.y + 9, width: 14, height: 14 },
+          {
+            textColor: env.theme.palette.actorDot[hero.hero.colourKey],
+            fontSize: 'xxs',
+          },
+          'center',
+          'middle',
+        );
+        addText(
+          hero.title,
+          {
+            x: b.x + 26,
+            y: b.y + 4,
+            width: Math.max(50, b.width - 156),
+            height: 24,
+          },
+          { text: 'strong', fontSize: 'xl', fontWeight: 'bold' },
+          'left',
+          'middle',
+        );
+        addText(
+          hero.xpText,
+          { x: b.x + 140, y: b.y + 4, width: 150, height: 24 },
+          { text: 'muted', fontSize: 'md' },
+          'left',
+          'middle',
+        );
+        const badge = {
+          x: b.x + b.width - 110,
+          y: b.y + 6,
+          width: 100,
+          height: 20,
+        };
+        addFill(
+          badge,
+          {
+            surface: hero.isLeveledUp ? 'checkboxSelected' : 'checkbox',
+            border: hero.isLeveledUp ? 'checkboxSelected' : 'input',
+            strokeWidth: 'thin',
+          },
+          4,
+        );
+        addText(
+          hero.levelBadge,
+          badge,
+          {
+            text: hero.isLeveledUp ? 'bright' : 'body',
+            fontSize: 'sm',
+            fontWeight: 'bold',
+          },
+          'center',
+          'middle',
+        );
+        addText(
+          hero.levelMeaningText,
+          { x: b.x + 26, y: b.y + 28, width: b.width - 40, height: 20 },
+          {
+            text: hero.isLeveledUp ? 'rowSelected' : 'secondary',
+            fontSize: 'md',
+          },
+        );
+      }
     }
   } else {
     for (const hero of layout.heroes) {

@@ -122,6 +122,7 @@ const layoutFor = (
   const panelWidth = Math.min(560, Math.max(340, viewWidth - marginX * 2));
   const contentWidth = panelWidth - 36;
   const maxPanelHeight = Math.min(600, Math.max(220, viewHeight - marginY * 2));
+  const rowGap = 4;
   const rowsHeight = vm.rows.length * 48 + (vm.rows.length - 1) * 8;
   const panelHeight = Math.max(
     220,
@@ -130,32 +131,41 @@ const layoutFor = (
   const panelX = Math.floor((viewWidth - panelWidth) / 2);
   const panelY = Math.floor((viewHeight - panelHeight) / 2);
   const buttonY = panelY + panelHeight - 16 - 36;
-  const visibleRowCount = Math.max(
+  const rowStartY = panelY + 16 + 48;
+  const availableRowsHeight = Math.max(0, buttonY - rowStartY - 12);
+  const rowHeight = Math.max(
     1,
     Math.min(
-      vm.rows.length,
-      Math.floor((panelHeight - 16 * 2 - 48 - 36 - 24 + 8) / (48 + 8)),
+      48,
+      Math.floor(
+        (availableRowsHeight - Math.max(0, vm.rows.length - 1) * rowGap) /
+          Math.max(1, vm.rows.length),
+      ),
     ),
   );
-  const rows = vm.rows.slice(0, visibleRowCount).map((hero, index) => {
-    const rowY = panelY + 16 + 48 + index * (48 + 8);
+  const rows = vm.rows.map((hero, index) => {
+    const rowY = rowStartY + index * (rowHeight + rowGap);
+    const controlSize = Math.max(1, Math.min(20, rowHeight - 4));
+    const swatchSize = Math.max(1, Math.min(14, rowHeight - 4));
+    const controlY = rowY + Math.floor((rowHeight - controlSize) / 2);
+    const swatchY = rowY + Math.floor((rowHeight - swatchSize) / 2);
     const checkboxBounds = {
       x: panelX + 18,
-      y: rowY + 14,
-      width: 20,
-      height: 20,
+      y: controlY,
+      width: controlSize,
+      height: controlSize,
     };
     const swatchBounds = {
       x: checkboxBounds.x + 30,
-      y: rowY + 17,
-      width: 14,
-      height: 14,
+      y: swatchY,
+      width: swatchSize,
+      height: swatchSize,
     };
     const nameInputBounds = {
       x: swatchBounds.x + 24,
-      y: rowY + 9,
+      y: rowY + Math.floor((rowHeight - Math.min(30, rowHeight)) / 2),
       width: panelX + panelWidth - 18 - (swatchBounds.x + 24),
-      height: 30,
+      height: Math.min(30, rowHeight),
     };
     const selected = selectedIds.includes(hero.id);
     const typed = names[hero.id];
@@ -170,7 +180,7 @@ const layoutFor = (
         x: panelX + 18,
         y: rowY,
         width: contentWidth,
-        height: 48,
+        height: rowHeight,
       },
       checkboxBounds,
       swatchBounds,

@@ -37,10 +37,9 @@ import type { DungeonIntroHitResult } from '../ui/DungeonIntroRendering';
 // The first UI element under a board position, in the fixed cascade order
 // the board dispatches UI input: new-game dialog and save/load dialog (the
 // topmost centered modals — the load dialog can be opened on top of the
-// between-dungeons/party-wipe overlay), the hero status screen (the
-// full-board inventory/status modal, above everything it dims),
-// between-dungeons overlay, dungeon intro, top bar, canvas debug menu,
-// hero cards, monster cards, diary and event card.
+// between-dungeons/party-wipe overlay), between-dungeons overlay, dungeon
+// intro, canvas debug menu, hero status screen, top bar, hero cards, monster
+// cards, diary and event card.
 export type UiHit =
   | { kind: 'betweenDungeons'; hit: BetweenDungeonsHitResult }
   | { kind: 'dungeonIntro'; hit: DungeonIntroHitResult }
@@ -144,20 +143,6 @@ export const findUiHit = (
       return { kind: 'saveLoadDialog', hit };
     }
   }
-  // The hero status screen is a full-board modal: while it is open it wins
-  // over every board and corner surface, including the top bar behind its
-  // scrim (only the centered dialogs stack above it).
-  const heroStatusHit = testers.heroStatus(
-    context.viewWidth,
-    context.viewHeight,
-    context.state,
-    context.heroStatusSelection,
-    context.x,
-    context.y,
-  );
-  if (heroStatusHit) {
-    return { kind: 'heroStatus', hit: heroStatusHit };
-  }
   if (context.state.betweenDungeons) {
     const hit = testers.betweenDungeons(
       context.viewWidth,
@@ -184,17 +169,6 @@ export const findUiHit = (
       return { kind: 'dungeonIntro', hit };
     }
   }
-  const topBarHit = testers.topBar(
-    context.viewWidth,
-    context.state,
-    context.x,
-    context.y,
-    context.ctx,
-    { isLogOpen: context.isLogOpen, debugMode: context.debugMode },
-  );
-  if (topBarHit) {
-    return { kind: 'topBar', hit: topBarHit };
-  }
   if (context.isDebugMenuOpen) {
     const hit = testers.debugMenu(
       context.viewWidth,
@@ -210,6 +184,30 @@ export const findUiHit = (
     if (hit) {
       return { kind: 'debugMenu', hit };
     }
+  }
+  // The status screen covers the board and top bar, but overlays drawn above
+  // it keep their own hit priority.
+  const heroStatusHit = testers.heroStatus(
+    context.viewWidth,
+    context.viewHeight,
+    context.state,
+    context.heroStatusSelection,
+    context.x,
+    context.y,
+  );
+  if (heroStatusHit) {
+    return { kind: 'heroStatus', hit: heroStatusHit };
+  }
+  const topBarHit = testers.topBar(
+    context.viewWidth,
+    context.state,
+    context.x,
+    context.y,
+    context.ctx,
+    { isLogOpen: context.isLogOpen, debugMode: context.debugMode },
+  );
+  if (topBarHit) {
+    return { kind: 'topBar', hit: topBarHit };
   }
   const heroHit = testers.heroCards(
     context.viewWidth,

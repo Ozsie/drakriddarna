@@ -373,6 +373,23 @@ describe('HeroStatusRendering', () => {
     expect(noUseHit).toMatchObject({ type: 'panel' });
   });
 
+  it('keeps the selected item Use control reachable on short viewports', () => {
+    const hero = createMockHero('Fearik', {
+      isInventoryOpen: true,
+      inventory: [potion],
+    });
+    const state = createMockState([hero]);
+    const selection = {
+      heroId: 'Fearik',
+      source: { kind: 'inventory', itemIndex: 0 },
+    } as const;
+    const useHit = Array.from({ length: 160 }, (_, index) =>
+      getHeroStatusHit(360, 320, state, selection, 146, 80 + index),
+    ).find((hit) => hit?.type === 'use');
+
+    expect(useHit).toMatchObject({ type: 'use', item: potion });
+  });
+
   it('returns null hits while the screen is closed', () => {
     const hero = createMockHero('Fearik');
     const state = createMockState([hero]);

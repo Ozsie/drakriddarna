@@ -248,6 +248,47 @@ describe('findUiHit cascade', () => {
     expect(testers.heroCards).not.toHaveBeenCalled();
   });
 
+  it('tests overlays drawn above hero status before the status screen', () => {
+    const statusHit: HeroStatusHitResult = {
+      type: 'close',
+      hero: { name: 'Fearik' } as never,
+    };
+    const overlayCases = [
+      {
+        context: createContext({ showDungeonIntro: true }),
+        kind: 'dungeonIntro' as const,
+        hit: introHit,
+        tester: 'dungeonIntro' as const,
+      },
+      {
+        context: createContext({
+          state: createState({ betweenDungeons: {} as never }),
+        }),
+        kind: 'betweenDungeons' as const,
+        hit: bdHit,
+        tester: 'betweenDungeons' as const,
+      },
+      {
+        context: createContext({ isDebugMenuOpen: true }),
+        kind: 'debugMenu' as const,
+        hit: debugMenuHit,
+        tester: 'debugMenu' as const,
+      },
+    ];
+
+    for (const overlay of overlayCases) {
+      const heroStatus = vi.fn(() => statusHit);
+      const hit = findUiHit(overlay.context, {
+        ...noHitTesters,
+        [overlay.tester]: () => overlay.hit,
+        heroStatus,
+      });
+
+      expect(hit).toEqual({ kind: overlay.kind, hit: overlay.hit });
+      expect(heroStatus).not.toHaveBeenCalled();
+    }
+  });
+
   it('orders hero cards before monster cards, diary and event card', () => {
     const testers: UiHitTesters = {
       ...noHitTesters,

@@ -164,11 +164,12 @@ const layoutFor = (
         height: inputHeight,
       }
     : undefined;
+  const savedItems = savedGameItems(state, options?.callbacks);
   const rows: SaveLoadDialogRowLayout[] = [];
   let rowY = contentTop;
   for (let index = 0; index < rowCount; index += 1) {
     rows.push({
-      item: savedGameItems(state, options?.callbacks)[index],
+      item: savedItems[index],
       bounds: {
         x: panelX + paddingX,
         y: rowY,

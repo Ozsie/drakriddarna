@@ -288,10 +288,20 @@ export const interactAction = (): void => {
   syncStore(state);
 };
 
-export const useHeroItem = (item: Item): void => {
+export const useHeroItem = (item: Item, hero?: Hero): void => {
   if (isExecutingTurn) return;
   const state = get(gameStateStore);
   if (!state) return;
+  const itemUser = hero ?? state.currentActor;
+  if (
+    state.currentActor !== itemUser ||
+    !state.heroes.some(
+      (stateHero) =>
+        stateHero === itemUser && stateHero.inventory.includes(item),
+    )
+  ) {
+    return;
+  }
   useItem(state, item);
   syncStore(state);
 };

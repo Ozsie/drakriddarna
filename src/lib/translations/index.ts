@@ -1,8 +1,4 @@
-import {
-  createI18n,
-  deepMerge,
-  type I18nConfig,
-} from '@hoard-engine/i18n';
+import { createI18n, deepMerge, type I18nConfig } from '@hoard-engine/i18n';
 import lang from './lang.json';
 
 export { deepMerge, isObject } from '@hoard-engine/i18n';
@@ -156,5 +152,10 @@ export const config: I18nConfig = {
   ],
 };
 
-export const { t, loading, locales, locale, loadTranslations, setLocale } =
-  createI18n(config);
+const i18n = createI18n(config);
+export const { t, loading, locales, locale } = i18n;
+export const loadTranslations = (
+  ...args: Parameters<typeof i18n.loadTranslations>
+) => i18n.loadTranslations(...args);
+export const setLocale = (...args: Parameters<typeof i18n.setLocale>) =>
+  i18n.setLocale(...args);

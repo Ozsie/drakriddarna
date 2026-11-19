@@ -445,9 +445,17 @@ describe('hero status view model', () => {
       value: 0,
       properties: { [ACTIVE]: true, [USED]: true },
     };
+    const disabledPotion: Item = {
+      name: 'Disabled Potion',
+      amountInDeck: 1,
+      type: ItemType.MAGIC,
+      value: 0,
+      disabled: true,
+      properties: { [ACTIVE]: true },
+    };
     const hero = createHero('Fearik', {
       isInventoryOpen: true,
-      inventory: [potion, spentScroll],
+      inventory: [potion, spentScroll, disabledPotion],
     });
     const state = createState([hero]);
 
@@ -478,6 +486,17 @@ describe('hero status view model', () => {
       usedText: 'content.inventory.used',
     });
 
+    const disabled = toHeroStatusViewModel(
+      state,
+      { heroId: 'Fearik', source: { kind: 'inventory', itemIndex: 2 } },
+      identityT,
+    );
+    expect(disabled?.detail).toMatchObject({
+      hasUse: true,
+      isUsable: false,
+      isUsed: false,
+    });
+
     // The selection highlights the picked cell and slot only.
     const selectedCell = toHeroStatusViewModel(
       state,
@@ -494,6 +513,34 @@ describe('hero status view model', () => {
       identityT,
     );
     expect(foreign?.detail).toBeNull();
+  });
+
+  it('does not present another hero’s item as usable on the current turn', () => {
+    const potion: Item = {
+      name: 'Health Potion',
+      amountInDeck: 1,
+      type: ItemType.MAGIC,
+      value: 10,
+      properties: { [ACTIVE]: true },
+    };
+    const currentActor = createHero('Fearik');
+    const statusHero = createHero('Helbran', {
+      isInventoryOpen: true,
+      inventory: [potion],
+    });
+    const state = createState([currentActor, statusHero]);
+
+    const vm = toHeroStatusViewModel(
+      state,
+      { heroId: 'Helbran', source: { kind: 'inventory', itemIndex: 0 } },
+      identityT,
+    );
+
+    expect(vm?.detail).toMatchObject({
+      hasUse: true,
+      isUsable: false,
+      isUsed: false,
+    });
   });
 
   it('clears the detail when an empty slot is selected', () => {

@@ -304,6 +304,7 @@ export const heroStatusEffects = (
 const detailVm = (
   item: Item,
   isActiveInventoryItem: boolean,
+  isCurrentActor: boolean,
   t: Translator,
 ): HeroStatusDetailVm => {
   const isActive = isActiveInventoryItem && Boolean(item.properties?.[ACTIVE]);
@@ -329,7 +330,7 @@ const detailVm = (
     descriptionText: translatedDescription || legacyDescription,
     thematicDescriptionText: translatedField('thematicDescription'),
     hasUse: isActive,
-    isUsable: isActive && !isUsed,
+    isUsable: isActive && isCurrentActor && !item.disabled && !isUsed,
     isUsed,
     useText: t('content.inventory.use'),
     usedText: t('content.inventory.used'),
@@ -401,7 +402,7 @@ export const toHeroStatusViewModel = (
     const item = heroStatusItemForSource(hero, selection.source);
     if (item) {
       const isInventoryItem = selection.source.kind === 'inventory';
-      detail = detailVm(item, isInventoryItem, t);
+      detail = detailVm(item, isInventoryItem, hero === state?.currentActor, t);
       if (!isInventoryItem) {
         detail = {
           ...detail,

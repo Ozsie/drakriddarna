@@ -250,9 +250,11 @@ const textNode = (
   text: string,
   bounds: Rect,
   style: NonNullable<CompositionNode['themeStyle']>,
-  options: Pick<
-    Extract<CompositionNode, { type: 'text' }>,
-    'align' | 'baseline' | 'lineHeight' | 'decoration'
+  options: Partial<
+    Pick<
+      Extract<CompositionNode, { type: 'text' }>,
+      'align' | 'baseline' | 'lineHeight' | 'decoration'
+    >
   > = {},
 ): CompositionNode =>
   positioned({ type: 'text', text, ...options, themeStyle: style }, bounds);

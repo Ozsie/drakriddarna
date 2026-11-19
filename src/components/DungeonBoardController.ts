@@ -2467,13 +2467,17 @@ export class DungeonBoardController {
    * them — enablement is driven explicitly here instead.
    */
   private syncGameInputEnabled(): void {
+    const hasOpenHeroStatus = Boolean(
+      this.activeState && heroWithOpenStatus(this.activeState),
+    );
     inputManager.setEnabled(
       this.appPhase !== 'welcome' &&
         !this.isDebugMenuOpen &&
         !this.saveLoadDialogMode &&
         !this.isNewGameDialogOpen &&
         !this.showDungeonIntro &&
-        !this.activeState?.betweenDungeons,
+        !this.activeState?.betweenDungeons &&
+        !hasOpenHeroStatus,
     );
   }
 
@@ -2757,6 +2761,7 @@ export class DungeonBoardController {
     } else {
       this.syncStore();
     }
+    this.syncGameInputEnabled();
     this.renderUiLayer(true);
   }
 
@@ -2798,7 +2803,7 @@ export class DungeonBoardController {
           useItem(this.externalState, hit.item);
           gameStateStore.set(this.externalState);
         } else {
-          useHeroItem(hit.item);
+          useHeroItem(hit.item, hit.hero);
         }
         this.renderCanvas(true);
         return;
@@ -3663,6 +3668,7 @@ export class DungeonBoardController {
             toggleHeroInventory(heroHit.hero);
             this.heroStatusSelection = null;
           }
+          this.syncGameInputEnabled();
           this.renderCanvas(true);
         }
         return;
