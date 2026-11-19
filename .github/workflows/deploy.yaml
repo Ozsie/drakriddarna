@@ -6,6 +6,12 @@ on:
       - main
     paths:
       - 'src/**'
+      - 'static/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - 'tsconfig.json'
+      - '.github/workflows/deploy.yaml'
   workflow_dispatch:
 
 permissions:

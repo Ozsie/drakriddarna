@@ -838,9 +838,11 @@ test that fails on any color or font not coming from a token.
 - PR checks (`.github/workflows/pr.yaml`): build, lint, type-check
   (`svelte-check`), and unit tests as separate CI jobs.
 - Deploys (`.github/workflows/deploy.yaml`): on push to `main` touching
-  `src/**`, stamp a `buildInfo.json` (date + commit hash, shown in-game),
-  build, and publish to GitHub Pages via `gh-pages`. Deploy to Pages is the
-  only side-effecting pipeline step.
+  source, static assets, dependency manifests, build configuration, or the
+  deployment workflow, stamp a `buildInfo.json` (date + commit hash, shown
+  in-game), build, and publish to GitHub Pages via `gh-pages`. Documentation
+  changes alone do not trigger deployment. Deploy to Pages is the only
+  side-effecting pipeline step.
 
 ## Tradeoffs and known limits
 
