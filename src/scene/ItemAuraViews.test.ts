@@ -9,36 +9,35 @@ const auraItem = (id: string, disabled = false): Item =>
 const carrier = (x: number, y: number, inventory: Item[], health = 5): Actor =>
   ({ health, position: { x, y }, inventory }) as Actor;
 
-const createState = (): GameState =>
-  ({
-    heroes: [],
-    dungeon: {
-      name: 'test-dungeon',
-      intro: '',
-      layout: {
-        grid: ['AA#'],
-        doors: [],
-        monsters: [],
-        secrets: [],
-        notes: [],
-        items: [],
-        corridors: [],
-        corners: [],
-      },
-      discoveredRooms: ['A'],
-      startingPositions: [{ x: 0, y: 0 }],
-      winConditions: [],
-      beaten: false,
-      killCount: 0,
+const createState = (): GameState => ({
+  heroes: [],
+  dungeon: {
+    name: 'test-dungeon',
+    intro: '',
+    layout: {
+      grid: ['AA#'],
+      doors: [],
+      monsters: [],
+      secrets: [],
+      notes: [],
+      items: [],
+      corridors: [],
+      corners: [],
     },
-    actionLog: [],
-    itemDeck: [],
-    magicItemDeck: [],
-    settings: {},
-    eventDeck: [],
-    reRender: false,
-    drawEvents: true,
-  }) as GameState;
+    discoveredRooms: ['A'],
+    startingPositions: [{ x: 0, y: 0 }],
+    winConditions: [],
+    beaten: false,
+    killCount: 0,
+  },
+  actionLog: [],
+  itemDeck: [],
+  magicItemDeck: [],
+  settings: {},
+  eventDeck: [],
+  reRender: false,
+  drawEvents: true,
+});
 
 describe('buildItemAuraViews', () => {
   afterEach(() => clearActorAnimations());

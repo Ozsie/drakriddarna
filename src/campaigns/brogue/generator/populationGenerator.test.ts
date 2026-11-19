@@ -42,9 +42,8 @@ const generatePopulated = (
     try {
       const generated = generateLayout(seed, depth);
       return { generated, populated: populate(generated, seed, depth, decks) };
-    } catch {
-
-    }
+      // eslint-disable-next-line no-empty
+    } catch {}
   }
   throw new Error(
     `no valid population for seedBase ${seedBase} depth ${depth}`,

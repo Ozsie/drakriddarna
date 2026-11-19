@@ -9,7 +9,12 @@ import {
 import { defineDungeon } from '../../../dungeon/dungeonParser';
 import { e1m1 } from './e1m1';
 import { brazier, chandelier } from '../../../dungeon/LightSources';
-import { barrelsStacked_E, barrelsStacked_N, barrelsStacked_S, barrelsStacked_W, bones, hay_N, sack_E, sack_W } from '../../../dungeon/Decorators.ts';
+import {
+  barrelsStacked_S,
+  barrelsStacked_W,
+  hay_N,
+  sack_E,
+} from '../../../dungeon/Decorators.ts';
 
 const e1m0: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m0.name',

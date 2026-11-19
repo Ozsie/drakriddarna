@@ -1,3 +1,5 @@
+import { asset } from '$app/paths';
+import type { AssetPath } from '$app/types';
 import { describe, expect, it } from 'vitest';
 import { CellAlignment } from '../types';
 import type { ResolvedIsometricGraphics } from '../dungeon/IsometricGraphics';
@@ -33,6 +35,15 @@ const graphics: ResolvedIsometricGraphics = {
 };
 
 describe('editor placement sprite previews', () => {
+  it('resolves default sprite assets through the SvelteKit asset path', () => {
+    const previews = getDecoratorSpritePreviews({
+      position: { x: 0, y: 0 },
+      sprite: { image: '/decorators/Objects.png', size: 32, index: 0 },
+    });
+
+    expect(previews.topDown?.imageUrl).toBe(asset('decorators/Objects.png'));
+  });
+
   it('uses the decorator projection sprites and supports top-down isometric fallback', () => {
     const decorator = {
       position: { x: 2, y: 3 },
@@ -303,6 +314,10 @@ describe('editor placement sprite previews', () => {
     );
 
     expect(requestedUrls).toHaveLength(2);
+    expect(requestedUrls).toEqual([
+      asset('isometric/index.json'),
+      asset('campaigns/sample/graphics/index.json' as AssetPath),
+    ]);
     expect(loaded?.tiles.sharedFloor?.imageUrl).toBe(
       'isometric/floors/stone.png',
     );

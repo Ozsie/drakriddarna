@@ -16,7 +16,13 @@ import {
   ember,
   torch,
 } from '../../../dungeon/LightSources';
-import { bookcaseGlass_S, displayCase_S, tableChairsBroken_N, woodenSupportBeams_E, woodenSupportBeams_N } from '../../../dungeon/Decorators.ts';
+import {
+  bookcaseGlass_S,
+  displayCase_S,
+  tableChairsBroken_N,
+  woodenSupportBeams_E,
+  woodenSupportBeams_N,
+} from '../../../dungeon/Decorators.ts';
 
 export const e1m2: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m2.name',
