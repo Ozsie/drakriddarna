@@ -31,7 +31,7 @@ import {
 } from '../types';
 import { isDiscovered } from '../core';
 import { lightCenter } from './LightRendering';
-import { drawAura } from '../scene/AuraRendering';
+import { AURA_FOOTPRINT_SCALE, drawAura } from '../scene/AuraRendering';
 import {
   buildItemAuraViews,
   getIsometricAuraViewport,
@@ -2021,8 +2021,8 @@ const buildDungeonObjectPainters = (
           'isometric',
           screenPosition.x,
           screenPosition.y,
-          cellSize * 0.8 * zoom,
-          cellSize * 0.4 * zoom,
+          cellSize * AURA_FOOTPRINT_SCALE * zoom,
+          cellSize * AURA_FOOTPRINT_SCALE * 0.5 * zoom,
           currentTime / 1000,
         );
       },
@@ -2050,8 +2050,8 @@ const buildDungeonObjectPainters = (
           'isometric',
           screenPosition.x,
           screenPosition.y,
-          cellSize * 0.8 * zoom,
-          cellSize * 0.4 * zoom,
+          cellSize * AURA_FOOTPRINT_SCALE * zoom,
+          cellSize * AURA_FOOTPRINT_SCALE * 0.5 * zoom,
           currentTime / 1000,
         );
       },

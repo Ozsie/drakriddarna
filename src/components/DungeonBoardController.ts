@@ -135,7 +135,7 @@ import {
 import { createUiEnv, defaultUiEnv, envIdentity } from '../ui/env';
 import type { UiEnv } from '@hoard-engine/uikit';
 import { getCampaign } from '../campaigns';
-import { drawAura } from '../scene/AuraRendering';
+import { AURA_FOOTPRINT_SCALE, drawAura } from '../scene/AuraRendering';
 import {
   buildItemAuraViews,
   getIsometricAuraViewport,
@@ -1625,8 +1625,8 @@ export class DungeonBoardController {
         'topdown',
         (portal.x + 0.5) * this.cellSize,
         (portal.y + 0.5) * this.cellSize,
-        this.cellSize * 0.8,
-        this.cellSize * 0.8,
+        this.cellSize * AURA_FOOTPRINT_SCALE,
+        this.cellSize * AURA_FOOTPRINT_SCALE,
         currentTime / 1000,
       );
     }
@@ -1642,8 +1642,8 @@ export class DungeonBoardController {
           'topdown',
           (position.x + 0.5) * this.cellSize,
           (position.y + 0.5) * this.cellSize,
-          this.cellSize * 0.8,
-          this.cellSize * 0.8,
+          this.cellSize * AURA_FOOTPRINT_SCALE,
+          this.cellSize * AURA_FOOTPRINT_SCALE,
           currentTime / 1000,
         );
       }

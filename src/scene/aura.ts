@@ -1,27 +1,26 @@
 /**
- * aura.ts — procedural, rotating, glowing aura (64x64), top-down or isometric.
+ * aura.ts — procedural, rotating, glowing aura (128x128), top-down or isometric.
  *
  *   const aura = createAura("Fire Mage", { mode: "isometric" });
- *   const rgba = aura.render(timeInSeconds);          // Uint8ClampedArray, 64*64*4, non-premultiplied
+ *   const rgba = aura.render(timeInSeconds);          // Uint8ClampedArray, 128*128*4, non-premultiplied
  *
  * Or drop it straight onto a canvas:
  *
  *   const stop = animateAura(canvas, "Fire Mage", { mode: "topdown" });
  *
- * - The input string deterministically seeds everything: hue, palette spread,
- *   symmetry order, number of rings, ray sharpness, spin direction, etc.
- * - The pattern has N-fold rotational symmetry with mirror folding
- *   (kaleidoscope style), so it is circularly symmetric about the centre.
- * - Every layer rotates by a whole number of symmetry sectors per loop, and
+ * - The input string deterministically seeds the motif family, hue, palette
+ *   spread, symmetry order, number of rings, ray sharpness, spin direction, etc.
+ * - Angular motifs use N-fold rotational symmetry with mirror folding
+ *   (kaleidoscope style); the ring and star motifs are rotationally symmetric.
+ * - Rotating motifs move by a whole number of symmetry sectors per loop, and
  *   the pulse uses integer frequencies, so the animation loops seamlessly
  *   every `loopSeconds`.
- * - Glow = additive light + 2-pass bloom + exponential tone-mapping, so hot
- *   areas bleed to white and fade to transparent.
+ * - Glow = additive light + 2-pass bloom + hue-preserving tone-mapping.
  * - Isometric mode projects the same disc onto the ground plane using the
- *   classic 2:1 pixel-art ellipse (64 wide x 32 tall, centred).
+ *   classic 2:1 pixel-art ellipse (128 wide x 64 tall, centred).
  */
 
-export const AURA_SIZE = 64;
+export const AURA_SIZE = 128;
 
 export type AuraMode = 'topdown' | 'isometric';
 
@@ -38,7 +37,7 @@ export interface Aura {
   readonly loopSeconds: number;
   /**
    * Render the frame at `time` (seconds). Returns non-premultiplied RGBA,
-   * length 64*64*4. Pass `out` to reuse a buffer and avoid allocation.
+   * length 128*128*4. Pass `out` to reuse a buffer and avoid allocation.
    */
   render(time: number, out?: Uint8ClampedArray): Uint8ClampedArray;
 }
@@ -71,13 +70,13 @@ function mulberry32(seed: number): () => number {
 interface RingParams {
   radius: number;
   width: number;
-  amp: number; // angular wobble amplitude (radial)
-  freq: number; // integer wobble frequency per sector
   gain: number;
-  rot: number; // integer: sectors rotated per loop
 }
 
+type AuraPattern = 'rings' | 'hexagram' | 'rays' | 'petals' | 'spiral';
+
 interface AuraParams {
+  pattern: AuraPattern;
   n: number; // rotational symmetry order
   hue: number;
   hueSpread: number;
@@ -105,23 +104,28 @@ function deriveParams(input: string): AuraParams {
   const pick = <T>(arr: T[]) => arr[Math.floor(rnd() * arr.length)];
 
   const ringCount = int(2, 4);
+  const pattern = pick<AuraPattern>([
+    'spiral',
+    'rings',
+    'rays',
+    'petals',
+    'hexagram',
+  ]);
   const rings: RingParams[] = [];
   for (let i = 0; i < ringCount; i++) {
     rings.push({
       radius: 0.22 + (0.6 * (i + 0.2 + 0.6 * rnd())) / ringCount,
       width: range(0.018, 0.04),
-      amp: range(0.02, 0.07),
-      freq: int(1, 3),
       gain: range(0.5, 1.0),
-      rot: pick([-2, -1, 1, 2]),
     });
   }
 
   return {
-    n: int(3, 10),
+    pattern,
+    n: pattern === 'hexagram' ? 6 : int(3, 10),
     hue: range(0, 360),
     hueSpread: (rnd() < 0.5 ? -1 : 1) * range(30, 110),
-    sat: range(0.7, 1.0),
+    sat: range(0.9, 1.0),
     rings,
     twist: range(-1.2, 1.2),
     dir: rnd() < 0.5 ? 1 : -1,
@@ -231,7 +235,7 @@ export function createAura(input: string, options: AuraOptions = {}): Aura {
   }
 
   // Per-pixel polar coordinates on the ground plane (precomputed once).
-  // Top-down: unit circle fills 64x64. Isometric: 2:1 ellipse, 64 wide x 32 tall.
+  // Top-down: unit circle fills the frame. Isometric: 2:1 ellipse.
   const R = new Float32Array(N * N);
   const TH = new Float32Array(N * N);
   const halfW = N / 2;
@@ -268,31 +272,54 @@ export function createAura(input: string, options: AuraOptions = {}): Aura {
       // Core glow
       I += p.coreGain * pulse * Math.exp(-(r * r) / (p.coreSize * p.coreSize));
 
-      // Rays
-      {
-        const u = fold(th + spin(p.rayRot), sector);
-        const c = 0.5 + 0.5 * Math.cos(Math.PI * u * p.rayFreq);
-        const env = smoothstep(0.06, 0.3, r) * Math.pow(1 - r, 0.9);
-        I += p.rayGain * pulse * Math.pow(c, p.rayPower) * env;
-      }
-
-      // Wobbling rings
-      for (const ring of p.rings) {
-        const u = fold(th + spin(ring.rot), sector);
-        const rr = ring.radius + ring.amp * Math.cos(Math.PI * u * ring.freq);
-        const d = (r - rr) / ring.width;
-        I +=
-          ring.gain * (Math.exp(-d * d) + 0.25 * Math.exp(-0.35 * Math.abs(d)));
-      }
-
-      // Petals (lotus-like outline with faint fill)
-      {
-        const u = fold(th + spin(p.petalRot), sector);
-        const rp =
-          p.petalRadius * (0.35 + 0.65 * (0.5 + 0.5 * Math.cos(Math.PI * u)));
-        const d = (r - rp) / 0.03;
-        I += p.petalGain * Math.exp(-d * d);
-        if (r < rp) I += 0.12 * (1 - r / rp);
+      switch (p.pattern) {
+        case 'rings': {
+          for (const ring of p.rings) {
+            const d = (r - ring.radius) / ring.width;
+            I +=
+              ring.gain *
+              (Math.exp(-d * d) + 0.2 * Math.exp(-0.35 * Math.abs(d)));
+          }
+          break;
+        }
+        case 'hexagram': {
+          const angle = th + spin(p.rayRot);
+          const starRadius = 0.53 + 0.17 * Math.cos(6 * angle);
+          const d = (r - starRadius) / 0.026;
+          I +=
+            p.petalGain *
+            (Math.exp(-d * d) + 0.16 * Math.exp(-0.35 * Math.abs(d)));
+          const innerD = (r - 0.27) / 0.018;
+          I += 0.55 * Math.exp(-innerD * innerD);
+          break;
+        }
+        case 'rays': {
+          const u = fold(th + spin(p.rayRot), sector);
+          const c = 0.5 + 0.5 * Math.cos(Math.PI * u * p.rayFreq);
+          const env = smoothstep(0.06, 0.3, r) * Math.pow(1 - r, 0.9);
+          I += p.rayGain * pulse * Math.pow(c, p.rayPower) * env;
+          break;
+        }
+        case 'petals': {
+          const u = fold(th + spin(p.petalRot), sector);
+          const petalRadius =
+            p.petalRadius * (0.36 + 0.64 * Math.cos((Math.PI * u) / 2));
+          const d = (r - petalRadius) / 0.028;
+          I +=
+            p.petalGain *
+            (Math.exp(-d * d) + 0.12 * Math.exp(-0.35 * Math.abs(d)));
+          if (r < petalRadius) I += 0.1 * (1 - r / petalRadius);
+          break;
+        }
+        case 'spiral': {
+          const u = fold(th + spin(p.petalRot), sector);
+          const spiralRadius = 0.14 + 0.62 * u;
+          const d = (r - spiralRadius) / 0.024;
+          I +=
+            p.petalGain *
+            (Math.exp(-d * d) + 0.14 * Math.exp(-0.35 * Math.abs(d)));
+          break;
+        }
       }
 
       I *= 1 - smoothstep(0.82, 1.0, r); // fade to nothing at the rim
@@ -308,35 +335,20 @@ export function createAura(input: string, options: AuraOptions = {}): Aura {
     blur(bloomA, bloomB, tmp, N);
 
     for (let i = 0; i < N * N; i++) {
-      const r =
-        1 -
-        Math.exp(
-          -1.2 * (light[i * 3] + 0.5 * bloomA[i * 3] + 0.9 * bloomB[i * 3]),
-        );
+      const r = light[i * 3] + 0.5 * bloomA[i * 3] + 0.9 * bloomB[i * 3];
       const g =
-        1 -
-        Math.exp(
-          -1.2 *
-            (light[i * 3 + 1] +
-              0.5 * bloomA[i * 3 + 1] +
-              0.9 * bloomB[i * 3 + 1]),
-        );
+        light[i * 3 + 1] + 0.5 * bloomA[i * 3 + 1] + 0.9 * bloomB[i * 3 + 1];
       const b =
-        1 -
-        Math.exp(
-          -1.2 *
-            (light[i * 3 + 2] +
-              0.5 * bloomA[i * 3 + 2] +
-              0.9 * bloomB[i * 3 + 2]),
-        );
-      const a = Math.max(r, g, b);
+        light[i * 3 + 2] + 0.5 * bloomA[i * 3 + 2] + 0.9 * bloomB[i * 3 + 2];
+      const peak = Math.max(r, g, b);
+      const a = 1 - Math.exp(-1.2 * peak);
       const o = i * 4;
       if (a < 1 / 512) {
         buf[o] = buf[o + 1] = buf[o + 2] = buf[o + 3] = 0;
       } else {
-        buf[o] = (r / a) * 255;
-        buf[o + 1] = (g / a) * 255;
-        buf[o + 2] = (b / a) * 255;
+        buf[o] = (r / peak) * 255;
+        buf[o + 1] = (g / peak) * 255;
+        buf[o + 2] = (b / peak) * 255;
         buf[o + 3] = a * 255;
       }
     }
@@ -351,7 +363,7 @@ export function createAura(input: string, options: AuraOptions = {}): Aura {
 /* ------------------------------------------------------------------ */
 
 /**
- * Animates the aura on a canvas (resized to 64x64). Returns a stop function.
+ * Animates the aura on a canvas (resized to 128x128). Returns a stop function.
  * Scale it up with CSS: `canvas { image-rendering: pixelated; width: 256px; }`
  */
 export function animateAura(
@@ -382,7 +394,7 @@ export function animateAura(
 /* ------------------------------------------------------------------ */
 
 export interface BakeOptions extends AuraOptions {
-  /** Frames per loop. More = smoother, but more memory (16 KB per frame). Default: 48. */
+  /** Frames per loop. More = smoother, but more memory (64 KB per frame). Default: 48. */
   frameCount?: number;
 }
 

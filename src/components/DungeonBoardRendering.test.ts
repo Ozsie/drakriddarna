@@ -112,4 +112,17 @@ describe('dungeon board render order', () => {
     );
     expect(actors).toBeGreaterThan(auraPainter);
   });
+
+  it('uses the same enlarged aura footprint for portals and items in both projections', () => {
+    expect(
+      controller.match(
+        /this\.cellSize \* AURA_FOOTPRINT_SCALE,\s*this\.cellSize \* AURA_FOOTPRINT_SCALE,/g,
+      ),
+    ).toHaveLength(2);
+    expect(
+      isometricRendering.match(
+        /cellSize \* AURA_FOOTPRINT_SCALE \* zoom,\s*cellSize \* AURA_FOOTPRINT_SCALE \* 0\.5 \* zoom,/g,
+      ),
+    ).toHaveLength(2);
+  });
 });

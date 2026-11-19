@@ -399,10 +399,14 @@ the grid-facing animation state and saved corpse facing remain unchanged. The
 adapter masks undiscovered cells and their terrain, fog overlays, and props;
 the scene compositor skips the hidden-cell token. Debug overlays do not bypass
 room discovery, and the isometric light pass excludes undiscovered rooms.
-The hexagram portal uses its event ID to seed a procedural floor aura. Its
-animation loop is baked and cached for each projection, then drawn below actors
-at the portal position; the existing ambient repaint gate advances visible
-frames without consuming gameplay randomness.
+The hexagram portal uses its event ID to seed a procedural floor aura. Seeded
+geometry selects one of five distinct motifs—concentric rings, a six-point
+star, radial spokes, lobed petals or a folded spiral—alongside its palette and
+animation parameters. Its animation loop is baked and cached for each
+projection as 128-pixel frames with hue-preserving glow, then drawn below actors
+at a one-tile footprint at the portal position; the existing
+ambient repaint gate advances visible frames without consuming gameplay
+randomness.
 Four magic items use the same generated aura renderer, seeded by item ID and
 drawn beneath each living hero or monster carrying an enabled item. Aura views
 follow interpolated actor movement, respect room discovery and camera bounds,

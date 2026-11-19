@@ -7,10 +7,12 @@ import {
 
 const sheets = new WeakMap<BakedAura, HTMLCanvasElement>();
 
+export const AURA_FOOTPRINT_SCALE = 1;
+
 /**
  * Draw an aura centered at (x, y), with the requested ground footprint width
  * and height in destination canvas units. In isometric mode the generator's
- * 64x32 footprint occupies the middle of its 64x64 image, so the whole image
+ * 128x64 footprint occupies the middle of its 128x128 image, so the whole image
  * is drawn at twice the footprint height to preserve its surrounding bloom.
  * `timeSeconds` wraps around the baked loop. The generator defaults to 48
  * frames over 6 seconds (8 fps), sampled at the start of each frame.
