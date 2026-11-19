@@ -17,6 +17,12 @@ import {
   ember,
   torch,
 } from '../../../dungeon/LightSources';
+import {
+  barrels_S,
+  barrelsStacked_S,
+  bookcaseBooksLadder_S,
+  bookStandEmpty_S,
+} from '../../../dungeon/Decorators.ts';
 
 export const e1m3: Dungeon = defineDungeon({
   name: 'campaign.iceDragon.e1m3.name',
@@ -130,6 +136,13 @@ export const e1m3: Dungeon = defineDungeon({
       [8, 3, 'campaign.iceDragon.e1m3.notes.hint2'],
       [8, 8, 'campaign.iceDragon.e1m3.notes.hint3'],
       [14, 10, 'campaign.iceDragon.e1m3.notes.hint4'],
+    ],
+    decorators: [
+      [15, 4, CellAlignment.CENTER_TOP, bookcaseBooksLadder_S],
+      [16, 4, CellAlignment.CENTER_TOP, bookStandEmpty_S],
+      [9, 8, CellAlignment.CENTER_TOP, barrels_S],
+      [12, 1, CellAlignment.CENTER_TOP, barrels_S],
+      [3, 4, CellAlignment.CENTER_TOP, barrelsStacked_S],
     ],
   },
 });

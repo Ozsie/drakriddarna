@@ -5,8 +5,10 @@ import {
   buildHeroViewModels,
   buildMonsterViewModels,
   buildHeroOverlayViewModel,
+  buildDecoratorViewModels,
   buildItemViewModels,
   buildFoundSecretViewModels,
+  buildLightSpriteViewModels,
   drawActorViewSprite,
   drawScaledHeroBar,
   renderActorViewWithSprite,
@@ -15,7 +17,7 @@ import {
 import { clearActorAnimations, playActorDeath } from '../core';
 import { weapons } from '../items/weapons';
 import { ACTOR_TILES, ITEM_TILES } from '../dungeon/tiles';
-import type { Corpse, GameState, Hero, Monster } from '../types';
+import type { Corpse, GameState, Hero, LightSource, Monster } from '../types';
 import {
   Colour,
   ItemType,
@@ -127,6 +129,73 @@ const createState = (overrides: Partial<GameState> = {}): GameState => ({
 });
 
 const now = 1_000_000;
+
+describe('light sprite projection', () => {
+  const buildLightViews = (
+    light: LightSource,
+    projection: 'topDown' | 'isometric',
+  ) => {
+    const state = createState();
+    state.dungeon.layout.lights = [light];
+    return buildLightSpriteViewModels(
+      state,
+      {} as CanvasImageSource,
+      48,
+      false,
+      0,
+      projection,
+    );
+  };
+
+  it('uses the sprite configured for the active projection', () => {
+    const light = {
+      position: { x: 0, y: 0 },
+      sprite: { x: 0, y: 0, size: 32 },
+      sprites: {
+        topDown: { x: 32, y: 0, size: 32 },
+        isometric: { x: 64, y: 0, size: 48 },
+      },
+    };
+
+    expect(buildLightViews(light, 'topDown')[0]?.sprite?.sx).toBe(32);
+    expect(buildLightViews(light, 'isometric')[0]?.sprite?.sx).toBe(64);
+  });
+
+  it('uses the legacy sprite when no sprite is configured for the projection', () => {
+    const light = {
+      position: { x: 0, y: 0 },
+      sprite: { x: 16, y: 0, size: 32 },
+      sprites: { isometric: { x: 64, y: 0, size: 48 } },
+    };
+
+    expect(buildLightViews(light, 'topDown')[0]?.sprite?.sx).toBe(16);
+    expect(buildLightViews(light, 'isometric')[0]?.sprite?.sx).toBe(64);
+  });
+
+  it('carries an isometric catalog tile and uses top-down art as its fallback', () => {
+    const light: LightSource = {
+      position: { x: 0, y: 0 },
+      sprite: { image: 'fallback.png', x: 0, y: 0, size: 32, scale: 0.6 },
+      sprites: { isometric: { tileId: 'candleStand_E' } },
+    };
+
+    const [view] = buildLightViews(light, 'isometric');
+
+    expect(view?.isometricTileId).toBe('candleStand_E');
+    expect(view?.spriteDraw?.scale).toBe(0.6);
+  });
+
+  it('keeps undiscovered mode-specific light sprites hidden', () => {
+    const light: LightSource = {
+      position: { x: 1, y: 1 },
+      sprites: {
+        isometric: { tileId: 'candleStand_E' },
+      },
+    };
+
+    expect(buildLightViews(light, 'isometric')).toEqual([]);
+  });
+});
 
 describe('buildHeroViewModels', () => {
   afterEach(() => {
@@ -445,7 +514,7 @@ describe('buildItemViewModels', () => {
 });
 
 describe('buildFoundSecretViewModels', () => {
-  it('creates item views for found non-trap secrets only', () => {
+  it('creates item views only for found non-trap secrets in discovered rooms', () => {
     const state = createState();
     state.dungeon.layout.secrets = [
       {
@@ -466,6 +535,12 @@ describe('buildFoundSecretViewModels', () => {
         position: { x: 1, y: 1 },
         found: false,
       },
+      {
+        name: 'Undiscovered found note',
+        type: SecretType.NOTE,
+        position: { x: 1, y: 1 },
+        found: true,
+      },
     ];
 
     const views = buildFoundSecretViewModels(
@@ -477,9 +552,36 @@ describe('buildFoundSecretViewModels', () => {
     expect(views).toHaveLength(1);
     expect(views[0]).toMatchObject({
       position: { x: 1, y: 0 },
+      sprite: null,
       spriteDraw: { scale: 0.6 },
       label: null,
+      fallbackTile: {
+        sx: ITEM_TILES.ITEM_GENERIC.x,
+        sy: ITEM_TILES.ITEM_GENERIC.y,
+      },
     });
+  });
+
+  it('shows undiscovered found secrets in debug mode', () => {
+    const state = createState();
+    state.dungeon.layout.secrets = [
+      {
+        name: 'Undiscovered found note',
+        type: SecretType.NOTE,
+        position: { x: 1, y: 1 },
+        found: true,
+      },
+    ];
+
+    const views = buildFoundSecretViewModels(
+      state.dungeon,
+      {} as CanvasImageSource,
+      48,
+      true,
+    );
+
+    expect(views).toHaveLength(1);
+    expect(views[0]?.position).toEqual({ x: 1, y: 1 });
   });
 });
 
@@ -821,5 +923,29 @@ describe('scaled hero bars', () => {
       5,
       5,
     ]);
+  });
+});
+
+describe('decorator view models', () => {
+  it('retains a discovered decorator fallback while its sprite loads in isometric mode', () => {
+    const state = createState();
+    state.dungeon.layout.decorators = [
+      {
+        position: { x: 0, y: 0 },
+        sprite: { image: 'decorators/not-loaded-test.png', size: 32, index: 0 },
+      },
+      {
+        position: { x: 1, y: 1 },
+        sprite: { image: 'decorators/hidden-test.png', size: 32, index: 0 },
+      },
+    ];
+    const groundSheet = {} as CanvasImageSource;
+
+    expect(buildDecoratorViewModels(state, groundSheet, 32)).toHaveLength(0);
+
+    const views = buildDecoratorViewModels(state, groundSheet, 32, true);
+    expect(views).toHaveLength(1);
+    expect(views[0]?.sprite).toBeNull();
+    expect(views[0]?.fallbackTile).toBeDefined();
   });
 });

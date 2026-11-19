@@ -17,6 +17,7 @@
       "musicVolume": "Musikvolym",
       "audioVolume": "Volym för ljudeffekter",
       "debug": "Debug",
+      "renderMode": "Kameraläge",
       "language": "-> English",
       "credits": "Eftertexter"
     },
@@ -84,6 +85,19 @@
         "back": "Tillbaka"
       }
     }
+  },
+  "editor": {
+    "heading": "Drakriddarna-editor",
+    "campaign": "Kampanj",
+    "dungeon": "Grotta",
+    "tools": "Verktyg",
+    "toolType": "Verktyg",
+    "light": "Ljus",
+    "decorator": "Dekoration",
+    "alignment": "Justering",
+    "copy": "Kopiera",
+    "export": "Exportera",
+    "nothingLoaded": "Inget har lästs in"
   },
   "actions": {
     "next": "Nästa",

@@ -3,19 +3,59 @@ import type {
   CollapsedCorridor,
   Decorator,
   Door,
+  Dungeon,
   GameState,
   InteractableCell,
   ItemLocation,
   LightSource,
+  LightSpriteMode,
   Monster,
   Secret,
   TerrainCell,
 } from '../types';
 import { isDiscovered } from '../core';
+import { resolveLightSprite } from '../scene/adapters';
+import type { LightViewport } from '@hoard-engine/lighting';
+import { getItemAuraSeed } from '../items/ItemAura';
+import { buildItemAuraViews } from '../scene/ItemAuraViews';
 
 // Signature helpers for the Dungeon board's layered render loop: each
 // layer only redraws when its signature changes, so the signature must
 // capture every piece of state the layer draws from.
+
+export const getPortalAuraSignature = (
+  dungeon: Dungeon,
+  timeMs: number,
+  viewport?: LightViewport,
+): string => {
+  const portal = dungeon.portal;
+  if (!portal || !isDiscovered(dungeon, portal.x, portal.y)) return '';
+  if (
+    viewport &&
+    (portal.x + 1 < viewport.x ||
+      portal.y + 1 < viewport.y ||
+      portal.x > viewport.x + viewport.width ||
+      portal.y > viewport.y + viewport.height)
+  )
+    return '';
+  return String(Math.floor(timeMs / 125) % 48);
+};
+
+export const getItemAuraSignature = (
+  state: GameState,
+  timeMs: number,
+  viewport?: LightViewport,
+): string => {
+  const views = buildItemAuraViews(state, timeMs, viewport);
+  if (views.length === 0) return '';
+  const frame = Math.floor(timeMs / 125) % 48;
+  return `${String(frame)}|${views
+    .map(
+      ({ seed, position }) =>
+        `${seed}@${String(position.x)},${String(position.y)}`,
+    )
+    .join(';')}`;
+};
 
 export const getStaticSignature = (
   st: GameState,
@@ -63,17 +103,9 @@ export const getStaticSignature = (
       (decorator: Decorator) =>
         `${String(decorator.position.x)},${String(
           decorator.position.y,
-        )},${String(decorator.alignment)},${decorator.sprite.image},${String(
-          decorator.sprite.size,
-        )},${String(decorator.sprite.index)},${
-          decorator.sprite.sourceRect
-            ? `${String(
-                decorator.sprite.sourceRect.x,
-              )},${String(decorator.sprite.sourceRect.y)},${String(
-                decorator.sprite.sourceRect.width,
-              )},${String(decorator.sprite.sourceRect.height)}`
-            : ''
-        }`,
+        )},${String(decorator.alignment)},${JSON.stringify(
+          decorator.sprite,
+        )},${JSON.stringify(decorator.sprites ?? '')}`,
     )
     .join(';')}|${String(String(String(d.layout?.pits?.length ?? 0)))}|${String(
     d.layout?.pits?.length ?? 0,
@@ -100,6 +132,7 @@ export const getDynamicSignature = (
   st: GameState,
   dbg: boolean,
   size: number,
+  worldSignature = '',
 ) => {
   const heroes = (st?.heroes ?? [])
     .map(
@@ -125,6 +158,7 @@ export const getDynamicSignature = (
   // Light shadows depend on fog of war and on the light sources themselves,
   // including the light sources of items in actor inventories.
   const rooms = (st?.dungeon?.discoveredRooms ?? []).join(',');
+  const roomFog = JSON.stringify(st?.dungeon?.layout?.roomFog ?? {});
   // Collapsed corridors block light like walls, so they reshape the light
   // polygons the dynamic layer composites.
   const collapsed = (st?.dungeon?.collapsedCorridors ?? [])
@@ -154,7 +188,7 @@ export const getDynamicSignature = (
                 l.sprite.frameCount ?? '',
               )},${String(l.sprite.frameRate ?? '')}`
             : ''
-        }`,
+        },${JSON.stringify(l.sprites ?? {})}`,
     )
     .join(';');
   const itemLights = [
@@ -166,6 +200,20 @@ export const getDynamicSignature = (
         .map((item) =>
           item?.light ? `${String(String(String(item.id ?? item.name)))}` : '',
         )
+        .filter(Boolean)
+        .join(','),
+    )
+    .join('|');
+  const itemAuras = [
+    ...(st?.heroes ?? []),
+    ...(st?.dungeon?.layout?.monsters ?? []),
+  ]
+    .map((actor: Actor) =>
+      (actor.inventory ?? [])
+        .map((item) => {
+          const seed = getItemAuraSeed(item);
+          return seed ? `${seed}:${item.disabled ? 1 : 0}` : '';
+        })
         .filter(Boolean)
         .join(','),
     )
@@ -204,25 +252,19 @@ export const getDynamicSignature = (
         : '',
     )
     .join(';');
-  return `${String(String(String(heroes)))}|${String(
-    String(String(monsters)),
-  )}|${String(String(curActor))}|${String(String(rooms))}|${String(
-    String(String(collapsed)),
-  )}|${String(String(String(lights)))}|${String(String(itemLights))}|${String(
-    String(eventLightFlags),
-  )}|${String(String(String(eventLightsSig)))}|${String(
-    String(interactableLights),
-  )}|${String(String(size))}|${String(String(String(dbg)))}`;
+  return `${heroes}|${monsters}|${curActor}|${rooms}|${roomFog}|${collapsed}|${lights}|${itemLights}|${itemAuras}|${eventLightFlags}|${eventLightsSig}|${interactableLights}|${String(size)}|${String(dbg)}${worldSignature ? `|${worldSignature}` : ''}`;
 };
 
 export const getAnimatedLightSpriteSignature = (
   st: GameState,
   dbg: boolean,
   timeMs: number,
+  mode: LightSpriteMode = 'topDown',
 ): string =>
   (st?.dungeon?.layout?.lights ?? [])
     .map((light) => {
-      const { sprite, position } = light;
+      const { position } = light;
+      const sprite = resolveLightSprite(light, mode);
       if (
         !sprite?.image ||
         Math.floor(sprite.frameCount ?? 1) <= 1 ||

@@ -355,6 +355,12 @@ export interface CameraOffset {
   viewWidth?: number;
   viewHeight?: number;
   centerPosition?: Position;
+  screenToGrid?: (
+    screenX: number,
+    screenY: number,
+    viewWidth: number,
+    viewHeight: number,
+  ) => Position;
 }
 
 export const screenToWorldPosition = (
@@ -434,17 +440,19 @@ export const doMouseLogic = (
     const viewHeight = camera.viewHeight ?? rect.height;
     const centerPosition =
       camera.centerPosition ?? state?.dungeon?.startingPositions?.[0];
-    const pos = screenToGridPosition(
-      screenX,
-      screenY,
-      viewWidth,
-      viewHeight,
-      camera.panX,
-      camera.panY,
-      cellSize,
-      centerPosition,
-      camera.zoom ?? ZOOM_DEFAULT,
-    );
+    const pos = camera.screenToGrid
+      ? camera.screenToGrid(screenX, screenY, viewWidth, viewHeight)
+      : screenToGridPosition(
+          screenX,
+          screenY,
+          viewWidth,
+          viewHeight,
+          camera.panX,
+          camera.panY,
+          cellSize,
+          centerPosition,
+          camera.zoom ?? ZOOM_DEFAULT,
+        );
     x = pos.x;
     y = pos.y;
   } else {

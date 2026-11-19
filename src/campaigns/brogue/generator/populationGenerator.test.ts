@@ -6,7 +6,7 @@ import {
   SecretType,
   Side,
 } from '../../../types';
-import type { Position } from '../../../types';
+import type { Decorator, Position } from '../../../types';
 import type { DeclarativeMonster } from '../../../dungeon/dungeonParser';
 import {
   chandelier,
@@ -19,8 +19,7 @@ import { weapons } from '../../../items/weapons';
 import { armour } from '../../../items/armours';
 import { shields } from '../../../items/shields';
 import { magicItems } from '../../../items/magicItems';
-import { DECORATOR_PRESETS } from '../../../dungeon/Decorators';
-import type { DecoratorPresetName } from '../../../dungeon/Decorators';
+import { bones } from '../../../dungeon/Decorators';
 import { hashSeed } from './rng';
 import { BOSS_FLOORS, BOSS_XP, MONSTER_POOL, getDepthConfig } from './config';
 import { generateLayout, type GeneratedLayout } from './layoutGenerator';
@@ -43,9 +42,8 @@ const generatePopulated = (
     try {
       const generated = generateLayout(seed, depth);
       return { generated, populated: populate(generated, seed, depth, decks) };
-    } catch {
-      continue;
-    }
+      // eslint-disable-next-line no-empty
+    } catch {}
   }
   throw new Error(
     `no valid population for seedBase ${seedBase} depth ${depth}`,
@@ -100,11 +98,7 @@ describe('populate', () => {
   it('places deterministic decorators on free room cells', () => {
     for (let depth = 1; depth <= 10; depth++) {
       const { generated, populated } = generatePopulated(565656, depth);
-      const decorators = (populated.layout.decorators ?? []) as [
-        number,
-        number,
-        DecoratorPresetName,
-      ][];
+      const decorators = (populated.layout.decorators ?? []) as Decorator[];
       const occupied = new Set([
         ...generated.startingPositions.map((cell) => `${cell.x},${cell.y}`),
         ...doorCellKeys(generated),
@@ -128,9 +122,13 @@ describe('populate', () => {
       const decoratorKeys = new Set<string>();
 
       expect(decorators.length).toBeGreaterThan(0);
-      for (const [x, y, preset] of decorators) {
+      for (const decorator of decorators) {
+        const { x, y } = decorator.position;
         const key = `${x},${y}`;
-        expect(DECORATOR_PRESETS[preset]).toBeDefined();
+        expect(decorator.sprite).toEqual(
+          bones.sprite ?? bones.sprites?.topDown ?? bones.sprites?.isometric,
+        );
+        expect(decorator.sprites).toEqual(bones.sprites);
         expect(generated.layout.grid[y][x]).not.toBe(' ');
         expect(generated.layout.grid[y][x]).not.toBe('#');
         expect(occupied.has(key)).toBe(false);

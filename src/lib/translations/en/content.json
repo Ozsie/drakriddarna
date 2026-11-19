@@ -17,6 +17,7 @@
       "musicVolume": "Music Volume",
       "audioVolume": "SFX Volume",
       "debug": "Debug",
+      "renderMode": "Camera Mode",
       "language": "-> Svenska",
       "credits": "Credits"
     },
@@ -84,6 +85,19 @@
         "back": "Back"
       }
     }
+  },
+  "editor": {
+    "heading": "Dragonfire Editor",
+    "campaign": "Campaign",
+    "dungeon": "Dungeon",
+    "tools": "Tools",
+    "toolType": "Tools",
+    "light": "Light",
+    "decorator": "Decorator",
+    "alignment": "Alignment",
+    "copy": "Copy",
+    "export": "Export",
+    "nothingLoaded": "Nothing loaded"
   },
   "actions": {
     "next": "Next",

@@ -53,7 +53,7 @@
 		"@hoard-engine/primitives": "^0.1.0",
 		"@hoard-engine/rng": "^0.1.0",
 		"@hoard-engine/saves": "^0.1.0",
-		"@hoard-engine/scene": "^0.3.0",
+		"@hoard-engine/scene": "^0.4.0",
 		"@hoard-engine/uikit": "^0.3.0"
 	},
 	"imports": {

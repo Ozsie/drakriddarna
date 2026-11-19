@@ -63,13 +63,19 @@ src/campaigns/
      room/corridor ASCII layout), `doors`, `monsters` (placed via
      `createMonster`, see
      [Adding new monsters](#adding-new-monsters-optional)), `secrets`,
-     `decorators` (reusable sprites can be placed with tuples such as
-     `[2, 3, 'plantVariant4']` or `[2, 3, CellAlignment.TOP_RIGHT, 'plantVariant4']`;
-     alignment defaults to `CENTER` and positions the sprite bounds within
-     the cell. The supplies atlas has numbered crop presets `suppliesObject001`
-     through `suppliesObject123`. The indexed supplies descriptor remains
-     available: `{ preset: 'suppliesObject', position: [3, 3], index: 12,
-     alignment: CellAlignment.BOTTOM_LEFT }`), `notes`,
+     `decorators` (provide sprite options in tuples such as
+     `[2, 3, { sprite: { image: 'decorators/bones.png', size: 32, index: 0 } }]`
+     or `[2, 3, CellAlignment.TOP_RIGHT, { sprites: { isometric: { image:
+     'decorators/bones-iso.png', size: 48, index: 0 } } }]`, or use a positioned
+     object such as `{ position: [3, 3], sprites: { isometric: { image:
+     'decorators/bones-iso.png', size: 48, index: 0 } } }`. `sprite`,
+     `sprites.topDown` and `sprites.isometric` each use an `ItemSprite`
+     descriptor; the parser uses them in that order as the compatibility
+     fallback. A projection-specific sprite takes precedence while rendering,
+     and an explicit isometric sprite takes precedence over catalog decorator
+     tiles. `bones` and a named option for every shared image in
+     `static/isometric/decorators/` (for example, `barrel_E`) are exported
+     from `src/dungeon/Decorators.ts`), `notes`,
      `items` (placed via `ItemLocation`), `interactables` (placed
      via `defineLayout` or `parseTileMap`, see
      [Adding interactable cells](#adding-interactable-cells-optional)),
@@ -96,6 +102,9 @@ src/campaigns/
      campaign's dungeon.
    - `tileset?: string` — overrides the tileset image used to render this
      dungeon (see [Tilesets](#tilesets-optional)).
+   - `isometricGraphics?: string` — campaign-relative folder under
+     `static/campaigns/<campaignId>/` containing this dungeon's isometric
+     graphics index and images (see [Isometric cell graphics](#isometric-cell-graphics-optional)).
 3. **Add heroes**: reuse the shared hero templates, or define
    campaign-specific ones if the campaign needs its own roster. The
    simplest way is `newHero(name, colour)` (exported from
@@ -219,6 +228,89 @@ const campaignMyNewCampaign: Campaign = {
   tileset: iceTiles, // Vite turns the import into a runtime URL
 };
 ```
+
+## Isometric cell graphics (optional)
+
+Isometric mode uses the shared `static/isometric/index.json` as its fallback
+graphics catalog. A dungeon can override selected graphics by setting
+`isometricGraphics` to a folder relative to
+`static/campaigns/<campaignId>/`:
+
+```ts
+export const e1m1: Dungeon = defineDungeon({
+  // ...
+  isometricGraphics: 'e1m1/graphics',
+  // ...
+});
+```
+
+For campaign `myNewCampaign`, the path above loads
+`static/campaigns/myNewCampaign/e1m1/graphics/index.json`. Paths in `image`
+are relative to that index's folder; use the same subfolder organization as
+`static/isometric` where practical. The version 1 index maps grid characters
+or fallback cell kinds `floor`, `wall`, and `door` to named tile definitions.
+`openDoor` can select an open-door fallback, while `doorClosed_E` and
+`doorOpen_E` (also `_N`, `_S`, and `_W`) select state- and side-specific door
+art. `wallShapes` maps the exposed wall sides of a wall cell to one or more
+tile IDs; direction letters use `n`, `e`, `s`, `w` order and name the wall
+side, not the neighboring wall. For example, a north wall is selected when a
+floor cell lies immediately south of it. When no adjacent floor is visible,
+the renderer falls back to the connected-wall shape; `none` means no adjacent
+walls. Multiple IDs are composited at the same cell anchor.
+
+```json
+{
+  "version": 1,
+  "cells": {
+    "floor": "stoneFloor",
+    "wall": "stoneWall",
+    "door": "stoneDoor",
+    "openDoor": "openStoneDoor",
+    "doorClosed_E": "closedEastDoor",
+    "doorOpen_E": "openEastDoor",
+    "A": "iceFloor"
+  },
+  "wallShapes": {
+    "ne": ["northEastCorner"],
+    "nesw": ["eastWallFace", "northWallFace"]
+  },
+  "tiles": {
+    "iceFloor": {
+      "image": "floors/ice_E.png",
+      "scale": 1,
+      "anchor": { "x": 0.5, "y": 1 }
+    },
+    "openStoneDoor": {
+      "image": "doors/stoneWallDoorOpen_E.png"
+    },
+    "closedEastDoor": {
+      "image": "doors/stoneWallDoorClosed_E.png"
+    },
+    "openEastDoor": {
+      "image": "doors/stoneWallDoorOpen_E.png"
+    },
+    "northEastCorner": {
+      "image": "walls/stoneWallCorner_E.png"
+    },
+    "eastWallFace": {
+      "image": "walls/stoneWall_E.png"
+    },
+    "northWallFace": {
+      "image": "walls/stoneWall_N.png"
+    }
+  }
+}
+```
+
+The original grid character mapping takes precedence over the cell-kind
+mapping. Campaign `cells`, `wallShapes`, and `tiles` entries override matching
+shared entries independently, so an index can supply only changed artwork;
+all unmentioned mappings and tiles continue to use `static/isometric`. Every
+four-way wall-side mask is supported, including straight runs, corners, tees,
+and crossings. `scale` is relative to the projected tile width and defaults to
+`1`; normalized `anchor` values default to bottom-center (`{ "x": 0.5,
+"y": 1 }`). Keep image paths relative and within the graphics folder. Missing
+or invalid campaign indexes fall back to the shared catalog.
 
 ## Actor sprites (optional)
 
@@ -781,6 +873,15 @@ or `CENTER_RIGHT` place it against that side. `CENTER` and `CEILING` center
 the sprite within the cell.
 `alignmentOffsets` optionally maps each `CellAlignment` to an `{ x, y }` pixel
 offset applied after alignment; omitted alignments use zero offsets.
+Use the optional `sprites` map to override the sprite by render mode:
+`sprites.topDown` accepts the same descriptor as `sprite`, while
+`sprites.isometric` also accepts `{ tileId }` to reference a tile in
+`static/isometric/index.json`. Catalog tiles use the indexed image, scale and
+anchor; while one is missing or loading, rendering falls back to `sprite` (or
+`sprites.topDown`). The legacy `sprite` remains the fallback when the active
+mode has no override, so existing light declarations keep their current
+appearance. The shared `brazier` preset in `src/dungeon/LightSources.ts` shows
+both modes using `candleStand_E` for the isometric view.
 
 For performance, lights are only rendered on discovered cells in rooms where
 a living hero currently stands (debug mode renders every enabled light), and
@@ -942,6 +1043,8 @@ export const myDungeonLayout = defineLayout({
 | `rate` | `number` | `1` | How many times per second the effect loops. E.g. `0.5` = one loop every two seconds. |
 | `enabled` | `boolean` | `true` | Set to `false` to place a currently dark light (e.g. a brazier that could be lit later). |
 | `id` | `string` | `light_<x>_<y>` | Unique identifier for referencing the light. |
+| `sprite` | `LightSprite` | — | Legacy/default fixture sprite, used when the active render mode has no `sprites` override. |
+| `sprites` | `LightSprites` | — | Optional fixture descriptors: `topDown` uses the image/frame sprite shape; `isometric` uses that shape or `{ tileId }` to reference a tile in `static/isometric/index.json`. |
 
 Lights are validated like other layout entities: they must be inside the grid
 and placed on a floor cell, not on walls or empty cells, and ids must be unique.

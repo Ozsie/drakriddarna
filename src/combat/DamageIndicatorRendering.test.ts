@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
+import { createIsoView } from '@hoard-engine/scene';
 import {
   renderDamageIndicators,
+  renderIsometricDamageIndicators,
   renderFloatingIndicators,
   DAMAGE_INDICATOR_DURATION_MS,
   EFFECT_TRANSFORMS,
@@ -95,6 +97,32 @@ describe('DamageIndicatorRendering', () => {
       expect.any(Number),
     );
     expect(ctx.restore).toHaveBeenCalled();
+  });
+
+  it('renders isometric indicators at the projected center of their cell', () => {
+    const ctx = createMockCtx();
+    const now = 1000000;
+    const state = createMockState([
+      {
+        id: 'iso-1',
+        text: '5',
+        effect: 'static',
+        position: { x: 1, y: 2 },
+        timestamp: now,
+      },
+    ]);
+    const view = createIsoView({ x: 0, y: 0 }, 300, 200, 48);
+
+    const hasActive = renderIsometricDamageIndicators(
+      ctx,
+      view,
+      48,
+      state,
+      now,
+    );
+
+    expect(hasActive).toBe(true);
+    expect(ctx.fillText).toHaveBeenCalledWith('5', 102, 196);
   });
 
   it('renders custom text, custom color, custom offset, and font scale', () => {

@@ -283,6 +283,44 @@ describe('doMouseLogic with camera', () => {
     }
   });
 
+  it('uses the supplied screen-to-grid adapter when one is provided', () => {
+    const state = createTestState();
+    const mockElement = {
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        width: 800,
+        height: 600,
+        right: 800,
+        bottom: 600,
+      }),
+    };
+    const origDocument = globalThis.document;
+    globalThis.document = {
+      getElementById: (id: string) =>
+        id === 'gameBoard' ? (mockElement as unknown as HTMLElement) : null,
+    } as unknown as Document;
+
+    try {
+      doMouseLogic({ clientX: 100, clientY: 100 } as MouseEvent, 48, state, {
+        panX: 0,
+        panY: 0,
+        screenToGrid: (screenX, screenY, width, height) => {
+          expect([screenX, screenY, width, height]).toEqual([
+            100, 100, 800, 600,
+          ]);
+          return { x: 1, y: 1 };
+        },
+      });
+
+      expect(get(radialMenuStore)?.x).toBe(1);
+      expect(get(radialMenuStore)?.y).toBe(1);
+    } finally {
+      radialMenuStore.set(null);
+      globalThis.document = origDocument;
+    }
+  });
+
   it('ignores clicks outside dungeon bounds', () => {
     const state = createTestState();
     const hero = state.currentActor as Hero;

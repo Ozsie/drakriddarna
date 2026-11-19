@@ -1,5 +1,9 @@
 import type { GameState } from '../types';
-import { renderFloatingTexts } from '@hoard-engine/scene';
+import {
+  renderFloatingTexts,
+  renderIsoFloatingTexts,
+  type SceneIsoView,
+} from '@hoard-engine/scene';
 
 // Facade over the view-model renderer: the historical entry point keeps
 // its GameState signature (callers and tests unchanged) and passes the
@@ -22,5 +26,20 @@ export const renderDamageIndicators = (
   currentTime: number = Date.now(),
 ): boolean =>
   renderFloatingTexts(ctx, cellSize, state.damageIndicators ?? [], currentTime);
+
+export const renderIsometricDamageIndicators = (
+  ctx: CanvasRenderingContext2D,
+  view: SceneIsoView,
+  cellSize: number,
+  state: GameState,
+  currentTime: number = Date.now(),
+): boolean =>
+  renderIsoFloatingTexts(
+    ctx,
+    view,
+    cellSize,
+    state.damageIndicators ?? [],
+    currentTime,
+  );
 
 export const renderFloatingIndicators = renderDamageIndicators;

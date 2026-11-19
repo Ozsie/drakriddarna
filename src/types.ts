@@ -269,6 +269,14 @@ export type Decorator = {
   position: Position;
   alignment?: CellAlignment;
   sprite: ItemSprite;
+  sprites?: DecoratorSprites;
+};
+
+export type DecoratorSpriteMode = 'topDown' | 'isometric';
+
+export type DecoratorSprites = {
+  topDown?: ItemSprite;
+  isometric?: ItemSprite;
 };
 
 // The facings a directional sprite pack carries, one sheet row each:
@@ -472,6 +480,9 @@ export type Dungeon = {
   // to the global default tension track when omitted.
   musicTension?: string;
   tileset?: string;
+  // Optional folder under static/campaigns/<campaignId>/ containing an
+  // isometric graphics index.json and its image files.
+  isometricGraphics?: string;
   // Base light level of the whole dungeon: 1 = fully lit (default), 0 =
   // pitch black. Light sources illuminate their surroundings.
   ambientLight?: number;
@@ -577,12 +588,25 @@ export const LightEffect = {
 export type LightEffect =
   (typeof LightEffect)[keyof typeof LightEffect] | (string & {});
 
+export type LightSpriteMode = 'topDown' | 'isometric';
+
+export type IsometricLightSprite = {
+  tileId: string;
+};
+
+export type LightSprites = {
+  topDown?: LightSprite;
+  isometric?: LightSprite | IsometricLightSprite;
+};
+
 export type LightSource = {
   id?: string;
   position: Position;
   alignment?: CellAlignment;
-  // Optional square crop from the built-in dungeon tilesheet, in source pixels.
+  // Legacy/default sprite, used when a projection has no sprite override.
   sprite?: LightSprite;
+  // Projection-specific sprites take precedence over the legacy sprite.
+  sprites?: LightSprites;
   // CSS color of the light glow.
   color?: string;
   // Reach of the light in grid cells (from its position).
@@ -894,6 +918,7 @@ export type Item = {
   disabled?: boolean;
   useSound?: string;
   light?: ItemLight;
+  generatedAura?: boolean;
 };
 
 export type Weapon = Item & {

@@ -118,6 +118,22 @@ describe('trap door pitfall', () => {
     expect(hero.health).toBe(10);
     expect(hero.incapacitated).toBe(false);
   });
+
+  it('marks a trap door found when a search discovers it', () => {
+    setRng(() => 5 / 6);
+    const hero = createHero();
+    const trap: Secret = {
+      name: '',
+      type: SecretType.TRAP_DOOR,
+      position: { x: 2, y: 1 },
+      found: false,
+    };
+    const state = createState(hero, [trap]);
+
+    searchForSecret(state);
+
+    expect(trap.found).toBe(true);
+  });
 });
 
 describe('searching for hidden doors', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest';
-import { e1m0 } from '../campaigns/iceDragonTreasure/dungeons/e1m0';
+import e1m0 from '../campaigns/iceDragonTreasure/dungeons/e1m0';
 import { e1m1 } from '../campaigns/iceDragonTreasure/dungeons/e1m1';
 import { campaigns } from '../campaigns';
 import { allDepthConfigs } from '../campaigns/brogue/generator/config';

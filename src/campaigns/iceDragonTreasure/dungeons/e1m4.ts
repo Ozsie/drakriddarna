@@ -143,6 +143,20 @@ export const e1m4: Dungeon = defineDungeon({
       [11, 8, 'campaign.iceDragon.e1m4.notes.liberVortex'],
       [13, 10, 'campaign.iceDragon.e1m4.notes.ironDoor'],
     ],
-    items: [[3, 8, undefined, { decorator: 'suppliesObject085' }]],
+    items: [
+      [
+        3,
+        8,
+        undefined,
+        {
+          decorator: {
+            image: 'decorators/supplies_objects.png',
+            size: 31,
+            index: 0,
+            sourceRect: { x: 177, y: 426, width: 31, height: 31 },
+          },
+        },
+      ],
+    ],
   },
 });

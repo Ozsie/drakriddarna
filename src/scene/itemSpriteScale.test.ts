@@ -197,7 +197,7 @@ describe('item sprite scale', () => {
     expect(ctx.imageSmoothingEnabled).toBe(true);
   });
 
-  it('uses the objectsObject021 atlas crop for discovered secrets', () => {
+  it('uses the objectsObject021 atlas sprite for discovered secrets', () => {
     const state = createState();
     state.dungeon.layout.secrets = [
       {
@@ -215,6 +215,9 @@ describe('item sprite scale', () => {
     );
 
     expect(view.sprite).toMatchObject({ sx: 163, sy: 36, sw: 29, sh: 22 });
+    expect((view.sprite?.image as HTMLImageElement).src).toBe(
+      'decorators/Objects.png',
+    );
   });
 
   it('draws no fallback tile duplicate behind the scaled sprite', () => {

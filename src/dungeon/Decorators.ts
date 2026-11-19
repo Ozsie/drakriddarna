@@ -1,310 +1,1315 @@
-import type { Decorator, ItemSprite, Position } from '../types';
-import { CellAlignment } from '../types';
+import type { DeclarativeDecoratorOptions } from './dungeonParser.ts';
 
-const decoratorSprites = {
-  bonesVariant1: {
-    image: 'decorators/Bones_shadow3_1.png',
-    size: 32,
-    index: 0,
-  },
-  bonesVariant2: {
-    image: 'decorators/Bones_shadow3_2.png',
-    size: 16,
-    index: 0,
-  },
-  bonesVariant3: {
-    image: 'decorators/Bones_shadow3_3.png',
-    size: 32,
-    index: 0,
-  },
-  bonesVariant15: {
-    image: 'decorators/Bones_shadow3_15.png',
-    size: 32,
-    index: 0,
-  },
-  bonesVariant16: {
-    image: 'decorators/Bones_shadow3_16.png',
-    size: 32,
-    index: 0,
-  },
-  bonesVariant18: {
-    image: 'decorators/Bones_shadow3_18.png',
-    size: 32,
-    index: 0,
-  },
-  plantVariant4: {
-    image: 'decorators/Plant__shadow2_4.png',
-    size: 32,
-    index: 0,
-  },
-  rockVariant4: {
-    image: 'decorators/Rock_shadow2_4.png',
-    size: 32,
-    index: 0,
-  },
-  ruinVariant5: {
-    image: 'decorators/Ruin_shadow2_5.png',
-    size: 32,
-    index: 0,
-  },
-} satisfies Record<string, ItemSprite>;
-
-// Each entry is an alpha-bounds crop in supplies_objects.png. Presets follow
-// the sheet's broad visual reading order; each rectangle gives exact pixels.
-const suppliesObjectFrames = {
-  suppliesObject001: { x: 146, y: 10, width: 29, height: 45 },
-  suppliesObject002: { x: 178, y: 11, width: 29, height: 44 },
-  suppliesObject003: { x: 2, y: 12, width: 45, height: 43 },
-  suppliesObject004: { x: 50, y: 12, width: 45, height: 43 },
-  suppliesObject005: { x: 98, y: 12, width: 45, height: 43 },
-  suppliesObject006: { x: 2, y: 76, width: 45, height: 43 },
-  suppliesObject007: { x: 50, y: 75, width: 45, height: 44 },
-  suppliesObject008: { x: 98, y: 74, width: 45, height: 45 },
-  suppliesObject009: { x: 146, y: 76, width: 29, height: 43 },
-  suppliesObject010: { x: 178, y: 76, width: 29, height: 43 },
-  suppliesObject011: { x: 0, y: 133, width: 16, height: 15 },
-  suppliesObject012: { x: 18, y: 134, width: 13, height: 14 },
-  suppliesObject013: { x: 34, y: 136, width: 10, height: 12 },
-  suppliesObject014: { x: 48, y: 133, width: 16, height: 15 },
-  suppliesObject015: { x: 66, y: 134, width: 13, height: 14 },
-  suppliesObject016: { x: 82, y: 136, width: 11, height: 12 },
-  suppliesObject017: { x: 96, y: 133, width: 16, height: 15 },
-  suppliesObject018: { x: 114, y: 135, width: 13, height: 13 },
-  suppliesObject019: { x: 130, y: 136, width: 10, height: 12 },
-  suppliesObject020: { x: 148, y: 138, width: 28, height: 36 },
-  suppliesObject021: { x: 182, y: 139, width: 26, height: 34 },
-  suppliesObject022: { x: 0, y: 165, width: 16, height: 18 },
-  suppliesObject023: { x: 18, y: 166, width: 13, height: 17 },
-  suppliesObject024: { x: 33, y: 168, width: 13, height: 16 },
-  suppliesObject025: { x: 48, y: 165, width: 16, height: 17 },
-  suppliesObject026: { x: 66, y: 166, width: 13, height: 16 },
-  suppliesObject027: { x: 82, y: 168, width: 11, height: 14 },
-  suppliesObject028: { x: 96, y: 165, width: 16, height: 20 },
-  suppliesObject029: { x: 113, y: 167, width: 15, height: 16 },
-  suppliesObject030: { x: 129, y: 168, width: 11, height: 15 },
-  suppliesObject031: { x: 148, y: 183, width: 28, height: 36 },
-  suppliesObject032: { x: 179, y: 188, width: 28, height: 34 },
-  suppliesObject033: { x: 0, y: 197, width: 16, height: 15 },
-  suppliesObject034: { x: 18, y: 198, width: 13, height: 14 },
-  suppliesObject035: { x: 34, y: 200, width: 10, height: 12 },
-  suppliesObject036: { x: 48, y: 197, width: 16, height: 15 },
-  suppliesObject037: { x: 66, y: 198, width: 13, height: 14 },
-  suppliesObject038: { x: 82, y: 200, width: 11, height: 12 },
-  suppliesObject039: { x: 96, y: 197, width: 16, height: 15 },
-  suppliesObject040: { x: 114, y: 199, width: 13, height: 13 },
-  suppliesObject041: { x: 130, y: 200, width: 10, height: 12 },
-  suppliesObject042: { x: 0, y: 229, width: 16, height: 18 },
-  suppliesObject043: { x: 18, y: 230, width: 13, height: 17 },
-  suppliesObject044: { x: 33, y: 232, width: 13, height: 16 },
-  suppliesObject045: { x: 48, y: 229, width: 16, height: 17 },
-  suppliesObject046: { x: 66, y: 230, width: 13, height: 16 },
-  suppliesObject047: { x: 82, y: 232, width: 11, height: 14 },
-  suppliesObject048: { x: 96, y: 229, width: 16, height: 20 },
-  suppliesObject049: { x: 113, y: 231, width: 15, height: 16 },
-  suppliesObject050: { x: 129, y: 232, width: 11, height: 15 },
-  suppliesObject051: { x: 177, y: 226, width: 27, height: 37 },
-  suppliesObject052: { x: 151, y: 238, width: 25, height: 33 },
-  suppliesObject053: { x: 0, y: 258, width: 16, height: 18 },
-  suppliesObject054: { x: 17, y: 261, width: 13, height: 15 },
-  suppliesObject055: { x: 34, y: 264, width: 12, height: 12 },
-  suppliesObject056: { x: 52, y: 266, width: 9, height: 9 },
-  suppliesObject057: { x: 64, y: 263, width: 16, height: 13 },
-  suppliesObject058: { x: 82, y: 264, width: 13, height: 12 },
-  suppliesObject059: { x: 98, y: 266, width: 10, height: 10 },
-  suppliesObject060: { x: 112, y: 258, width: 16, height: 18 },
-  suppliesObject061: { x: 129, y: 261, width: 13, height: 15 },
-  suppliesObject062: { x: 146, y: 275, width: 57, height: 43 },
-  suppliesObject063: { x: 0, y: 290, width: 32, height: 22 },
-  suppliesObject064: { x: 33, y: 296, width: 13, height: 15 },
-  suppliesObject065: { x: 51, y: 298, width: 10, height: 12 },
-  suppliesObject066: { x: 64, y: 295, width: 16, height: 13 },
-  suppliesObject067: { x: 82, y: 296, width: 13, height: 12 },
-  suppliesObject068: { x: 98, y: 298, width: 10, height: 10 },
-  suppliesObject069: { x: 114, y: 295, width: 12, height: 13 },
-  suppliesObject070: { x: 132, y: 298, width: 9, height: 9 },
-  suppliesObject071: { x: 7, y: 324, width: 33, height: 40 },
-  suppliesObject072: { x: 54, y: 329, width: 24, height: 31 },
-  suppliesObject073: { x: 82, y: 334, width: 29, height: 30 },
-  suppliesObject074: { x: 117, y: 337, width: 22, height: 21 },
-  suppliesObject075: { x: 148, y: 337, width: 23, height: 24 },
-  suppliesObject076: { x: 180, y: 338, width: 23, height: 22 },
-  suppliesObject077: { x: 1, y: 384, width: 47, height: 25 },
-  suppliesObject078: { x: 49, y: 368, width: 47, height: 45 },
-  suppliesObject079: { x: 97, y: 372, width: 47, height: 39 },
-  suppliesObject080: { x: 145, y: 378, width: 63, height: 36 },
-  suppliesObject081: { x: 1, y: 432, width: 47, height: 25 },
-  suppliesObject082: { x: 49, y: 416, width: 47, height: 46 },
-  suppliesObject083: { x: 96, y: 416, width: 48, height: 45 },
-  suppliesObject084: { x: 145, y: 420, width: 31, height: 39 },
-  suppliesObject085: { x: 177, y: 426, width: 31, height: 31 },
-  suppliesObject086: { x: 4, y: 472, width: 24, height: 33 },
-  suppliesObject087: { x: 36, y: 472, width: 24, height: 33 },
-  suppliesObject088: { x: 64, y: 472, width: 32, height: 33 },
-  suppliesObject089: { x: 98, y: 472, width: 30, height: 35 },
-  suppliesObject090: { x: 130, y: 472, width: 25, height: 33 },
-  suppliesObject091: { x: 160, y: 472, width: 32, height: 37 },
-  suppliesObject092: { x: 197, y: 491, width: 7, height: 20 },
-  suppliesObject093: { x: 35, y: 517, width: 10, height: 10 },
-  suppliesObject094: { x: 50, y: 514, width: 13, height: 13 },
-  suppliesObject095: { x: 64, y: 512, width: 15, height: 15 },
-  suppliesObject096: { x: 85, y: 514, width: 7, height: 13 },
-  suppliesObject097: { x: 102, y: 514, width: 5, height: 13 },
-  suppliesObject098: { x: 115, y: 517, width: 10, height: 10 },
-  suppliesObject099: { x: 131, y: 514, width: 11, height: 13 },
-  suppliesObject100: { x: 145, y: 513, width: 14, height: 14 },
-  suppliesObject101: { x: 165, y: 513, width: 7, height: 30 },
-  suppliesObject102: { x: 179, y: 513, width: 9, height: 30 },
-  suppliesObject103: { x: 5, y: 525, width: 7, height: 34 },
-  suppliesObject104: { x: 19, y: 525, width: 11, height: 34 },
-  suppliesObject105: { x: 36, y: 539, width: 9, height: 20 },
-  suppliesObject106: { x: 50, y: 541, width: 11, height: 18 },
-  suppliesObject107: { x: 66, y: 541, width: 11, height: 18 },
-  suppliesObject108: { x: 81, y: 541, width: 13, height: 18 },
-  suppliesObject109: { x: 97, y: 536, width: 10, height: 23 },
-  suppliesObject110: { x: 114, y: 535, width: 9, height: 24 },
-  suppliesObject111: { x: 130, y: 536, width: 11, height: 23 },
-  suppliesObject112: { x: 146, y: 529, width: 8, height: 30 },
-  suppliesObject113: { x: 195, y: 525, width: 9, height: 34 },
-  suppliesObject114: { x: 0, y: 560, width: 32, height: 25 },
-  suppliesObject115: { x: 33, y: 561, width: 13, height: 19 },
-  suppliesObject116: { x: 50, y: 566, width: 13, height: 19 },
-  suppliesObject117: { x: 65, y: 566, width: 15, height: 14 },
-  suppliesObject118: { x: 81, y: 561, width: 15, height: 14 },
-  suppliesObject119: { x: 96, y: 561, width: 32, height: 20 },
-  suppliesObject120: { x: 130, y: 565, width: 12, height: 11 },
-  suppliesObject121: { x: 146, y: 560, width: 12, height: 11 },
-  suppliesObject122: { x: 161, y: 555, width: 14, height: 20 },
-  suppliesObject123: { x: 179, y: 557, width: 11, height: 18 },
-} as const;
-
-const suppliesObjectSprites = Object.fromEntries(
-  Object.entries(suppliesObjectFrames).map(([name, sourceRect]) => [
-    name,
-    {
-      image: 'decorators/supplies_objects.png',
-      size: Math.max(sourceRect.width, sourceRect.height),
+export const bones: DeclarativeDecoratorOptions = {
+  sprites: {
+    isometric: {
+      image: 'isometric/decorators/barrel_E.png',
+      size: 256,
       index: 0,
-      sourceRect,
+      sourceRect: { x: 79, y: 378, width: 80, height: 83 },
     },
-  ]),
-) as Record<keyof typeof suppliesObjectFrames, ItemSprite>;
-
-// Each entry is an alpha-bounds crop in Objects.png, in visual reading order.
-const objectFrames = {
-  objectsObject001: { x: 0, y: 0, width: 16, height: 16 },
-  objectsObject002: { x: 14, y: 0, width: 32, height: 52 },
-  objectsObject003: { x: 50, y: 0, width: 12, height: 8 },
-  objectsObject004: { x: 59, y: 0, width: 35, height: 52 },
-  objectsObject005: { x: 98, y: 1, width: 12, height: 49 },
-  objectsObject006: { x: 135, y: 4, width: 19, height: 18 },
-  objectsObject007: { x: 66, y: 4, width: 12, height: 8 },
-  objectsObject008: { x: 167, y: 8, width: 19, height: 14 },
-  objectsObject009: { x: 199, y: 7, width: 19, height: 17 },
-  objectsObject010: { x: 224, y: 7, width: 16, height: 12 },
-  objectsObject011: { x: 241, y: 8, width: 14, height: 10 },
-  objectsObject012: { x: 258, y: 10, width: 25, height: 30 },
-  objectsObject013: { x: 290, y: 5, width: 28, height: 36 },
-  objectsObject014: { x: 328, y: 0, width: 19, height: 27 },
-  objectsObject015: { x: 353, y: 3, width: 14, height: 19 },
-  objectsObject016: { x: 368, y: 0, width: 16, height: 24 },
-  objectsObject017: { x: 114, y: 12, width: 12, height: 49 },
-  objectsObject018: { x: 320, y: 32, width: 29, height: 32 },
-  objectsObject019: { x: 359, y: 32, width: 21, height: 24 },
-  objectsObject020: { x: 133, y: 36, width: 21, height: 20 },
-  objectsObject021: { x: 163, y: 36, width: 29, height: 22 },
-  objectsObject022: { x: 197, y: 38, width: 22, height: 17 },
-  objectsObject023: { x: 225, y: 40, width: 15, height: 13 },
-  objectsObject024: { x: 243, y: 41, width: 10, height: 7 },
-  objectsObject025: { x: 292, y: 48, width: 27, height: 30 },
-  objectsObject026: { x: 256, y: 49, width: 16, height: 12 },
-  objectsObject027: { x: 273, y: 49, width: 15, height: 13 },
-  objectsObject028: { x: 80, y: 64, width: 32, height: 24 },
-  objectsObject029: { x: 160, y: 64, width: 32, height: 24 },
-  objectsObject030: { x: 193, y: 64, width: 14, height: 19 },
-  objectsObject031: { x: 241, y: 64, width: 14, height: 19 },
-  objectsObject032: { x: 325, y: 64, width: 22, height: 29 },
-  objectsObject033: { x: 353, y: 64, width: 30, height: 20 },
-  objectsObject034: { x: 66, y: 67, width: 13, height: 18 },
-  objectsObject035: { x: 146, y: 67, width: 13, height: 18 },
-  objectsObject036: { x: 210, y: 67, width: 11, height: 16 },
-  objectsObject037: { x: 258, y: 67, width: 11, height: 16 },
-  objectsObject038: { x: 4, y: 69, width: 24, height: 24 },
-  objectsObject039: { x: 39, y: 69, width: 19, height: 27 },
-  objectsObject040: { x: 119, y: 69, width: 19, height: 27 },
-  objectsObject041: { x: 228, y: 70, width: 9, height: 12 },
-  objectsObject042: { x: 276, y: 70, width: 9, height: 12 },
-  objectsObject043: { x: 368, y: 80, width: 13, height: 10 },
-  objectsObject044: { x: 289, y: 82, width: 14, height: 10 },
-  objectsObject045: { x: 307, y: 84, width: 10, height: 7 },
-} as const;
-
-const objectSprites = Object.fromEntries(
-  Object.entries(objectFrames).map(([name, sourceRect]) => [
-    name,
-    {
-      image: 'decorators/Objects.png',
-      size: Math.max(sourceRect.width, sourceRect.height),
+    topDown: {
+      image: 'decorators/Bones_shadow3_1.png',
+      size: 32,
       index: 0,
-      sourceRect,
     },
-  ]),
-) as Record<keyof typeof objectFrames, ItemSprite>;
+  },
+};
 
-export const DECORATOR_PRESETS = {
-  ...decoratorSprites,
-  ...suppliesObjectSprites,
-  ...objectSprites,
-} satisfies Record<string, ItemSprite>;
+const isometricDecorator = (
+  name: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): DeclarativeDecoratorOptions => ({
+  sprites: {
+    isometric: {
+      image: `isometric/decorators/${name}.png`,
+      size: 256,
+      index: 0,
+      sourceRect: { x, y, width, height },
+    },
+  },
+});
 
-export type DecoratorPresetName = keyof typeof DECORATOR_PRESETS;
-
-const makeDecorator =
-  (sprite: ItemSprite) =>
-  (
-    position: Position,
-    alignment: CellAlignment = CellAlignment.CENTER,
-  ): Decorator => ({ position, alignment, sprite });
-
-export const createDecoratorPreset = (
-  preset: DecoratorPresetName,
-  position: Position,
-  alignment: CellAlignment = CellAlignment.CENTER,
-): Decorator => makeDecorator(DECORATOR_PRESETS[preset])(position, alignment);
-
-export const bonesVariant1 = (position: Position): Decorator =>
-  createDecoratorPreset('bonesVariant1', position);
-
-export const bonesVariant2 = (position: Position): Decorator =>
-  createDecoratorPreset('bonesVariant2', position);
-
-export const bonesVariant3 = (position: Position): Decorator =>
-  createDecoratorPreset('bonesVariant3', position);
-
-export const bonesVariant15 = (position: Position): Decorator =>
-  createDecoratorPreset('bonesVariant15', position);
-
-export const bonesVariant16 = (position: Position): Decorator =>
-  createDecoratorPreset('bonesVariant16', position);
-
-export const bonesVariant18 = (position: Position): Decorator =>
-  createDecoratorPreset('bonesVariant18', position);
-
-export const plantVariant4 = (position: Position): Decorator =>
-  createDecoratorPreset('plantVariant4', position);
-
-export const rockVariant4 = (position: Position): Decorator =>
-  createDecoratorPreset('rockVariant4', position);
-
-export const ruinVariant5 = (position: Position): Decorator =>
-  createDecoratorPreset('ruinVariant5', position);
-
-export const suppliesObject = (
-  position: Position,
-  index: number,
-  alignment: CellAlignment = CellAlignment.CENTER,
-): Decorator =>
-  makeDecorator({
-    image: 'decorators/supplies_objects.png',
-    size: 16,
-    index,
-  })(position, alignment);
+export const barrel_E = isometricDecorator('barrel_E', 79, 378, 80, 83);
+export const barrel_N = isometricDecorator('barrel_N', 79, 378, 80, 84);
+export const barrel_S = isometricDecorator('barrel_S', 79, 378, 80, 84);
+export const barrel_W = isometricDecorator('barrel_W', 79, 378, 80, 84);
+export const barrelsStacked_E = isometricDecorator(
+  'barrelsStacked_E',
+  32,
+  336,
+  179,
+  146,
+);
+export const barrelsStacked_N = isometricDecorator(
+  'barrelsStacked_N',
+  33,
+  336,
+  177,
+  146,
+);
+export const barrelsStacked_S = isometricDecorator(
+  'barrelsStacked_S',
+  33,
+  336,
+  177,
+  146,
+);
+export const barrelsStacked_W = isometricDecorator(
+  'barrelsStacked_W',
+  33,
+  336,
+  177,
+  146,
+);
+export const barrels_E = isometricDecorator('barrels_E', 37, 363, 151, 109);
+export const barrels_N = isometricDecorator('barrels_N', 48, 368, 142, 115);
+export const barrels_S = isometricDecorator('barrels_S', 53, 357, 137, 117);
+export const barrels_W = isometricDecorator('barrels_W', 50, 374, 151, 102);
+export const bookStandEmpty_E = isometricDecorator(
+  'bookStandEmpty_E',
+  81,
+  373,
+  67,
+  83,
+);
+export const bookStandEmpty_N = isometricDecorator(
+  'bookStandEmpty_N',
+  82,
+  379,
+  67,
+  77,
+);
+export const bookStandEmpty_S = isometricDecorator(
+  'bookStandEmpty_S',
+  84,
+  373,
+  64,
+  83,
+);
+export const bookStandEmpty_W = isometricDecorator(
+  'bookStandEmpty_W',
+  85,
+  379,
+  64,
+  77,
+);
+export const bookStand_E = isometricDecorator('bookStand_E', 81, 373, 67, 83);
+export const bookStand_N = isometricDecorator('bookStand_N', 82, 379, 67, 77);
+export const bookStand_S = isometricDecorator('bookStand_S', 84, 373, 64, 83);
+export const bookStand_W = isometricDecorator('bookStand_W', 85, 379, 64, 77);
+export const bookcaseBooksLadder_E = isometricDecorator(
+  'bookcaseBooksLadder_E',
+  5,
+  277,
+  168,
+  198,
+);
+export const bookcaseBooksLadder_N = isometricDecorator(
+  'bookcaseBooksLadder_N',
+  5,
+  288,
+  179,
+  194,
+);
+export const bookcaseBooksLadder_S = isometricDecorator(
+  'bookcaseBooksLadder_S',
+  27,
+  277,
+  168,
+  194,
+);
+export const bookcaseBooksLadder_W = isometricDecorator(
+  'bookcaseBooksLadder_W',
+  27,
+  288,
+  168,
+  194,
+);
+export const bookcaseBooks_E = isometricDecorator(
+  'bookcaseBooks_E',
+  5,
+  277,
+  168,
+  194,
+);
+export const bookcaseBooks_N = isometricDecorator(
+  'bookcaseBooks_N',
+  5,
+  288,
+  168,
+  194,
+);
+export const bookcaseBooks_S = isometricDecorator(
+  'bookcaseBooks_S',
+  27,
+  277,
+  168,
+  194,
+);
+export const bookcaseBooks_W = isometricDecorator(
+  'bookcaseBooks_W',
+  27,
+  288,
+  168,
+  194,
+);
+export const bookcaseDestroyed_E = isometricDecorator(
+  'bookcaseDestroyed_E',
+  5,
+  277,
+  168,
+  194,
+);
+export const bookcaseDestroyed_N = isometricDecorator(
+  'bookcaseDestroyed_N',
+  5,
+  288,
+  168,
+  194,
+);
+export const bookcaseDestroyed_S = isometricDecorator(
+  'bookcaseDestroyed_S',
+  27,
+  277,
+  168,
+  194,
+);
+export const bookcaseDestroyed_W = isometricDecorator(
+  'bookcaseDestroyed_W',
+  27,
+  288,
+  168,
+  194,
+);
+export const bookcaseEmptyLadder_E = isometricDecorator(
+  'bookcaseEmptyLadder_E',
+  5,
+  277,
+  168,
+  198,
+);
+export const bookcaseEmptyLadder_N = isometricDecorator(
+  'bookcaseEmptyLadder_N',
+  5,
+  288,
+  179,
+  194,
+);
+export const bookcaseEmptyLadder_S = isometricDecorator(
+  'bookcaseEmptyLadder_S',
+  27,
+  277,
+  168,
+  194,
+);
+export const bookcaseEmptyLadder_W = isometricDecorator(
+  'bookcaseEmptyLadder_W',
+  27,
+  288,
+  168,
+  194,
+);
+export const bookcaseEmpty_E = isometricDecorator(
+  'bookcaseEmpty_E',
+  5,
+  277,
+  168,
+  194,
+);
+export const bookcaseEmpty_N = isometricDecorator(
+  'bookcaseEmpty_N',
+  5,
+  288,
+  168,
+  194,
+);
+export const bookcaseEmpty_S = isometricDecorator(
+  'bookcaseEmpty_S',
+  27,
+  277,
+  168,
+  194,
+);
+export const bookcaseEmpty_W = isometricDecorator(
+  'bookcaseEmpty_W',
+  27,
+  288,
+  168,
+  194,
+);
+export const bookcaseFallen_E = isometricDecorator(
+  'bookcaseFallen_E',
+  36,
+  365,
+  186,
+  116,
+);
+export const bookcaseFallen_N = isometricDecorator(
+  'bookcaseFallen_N',
+  34,
+  357,
+  161,
+  128,
+);
+export const bookcaseFallen_S = isometricDecorator(
+  'bookcaseFallen_S',
+  44,
+  366,
+  161,
+  129,
+);
+export const bookcaseFallen_W = isometricDecorator(
+  'bookcaseFallen_W',
+  17,
+  370,
+  186,
+  116,
+);
+export const bookcaseGlass_E = isometricDecorator(
+  'bookcaseGlass_E',
+  5,
+  277,
+  168,
+  194,
+);
+export const bookcaseGlass_N = isometricDecorator(
+  'bookcaseGlass_N',
+  5,
+  288,
+  168,
+  194,
+);
+export const bookcaseGlass_S = isometricDecorator(
+  'bookcaseGlass_S',
+  27,
+  277,
+  168,
+  194,
+);
+export const bookcaseGlass_W = isometricDecorator(
+  'bookcaseGlass_W',
+  27,
+  288,
+  168,
+  194,
+);
+export const bookcaseHalfBooks_E = isometricDecorator(
+  'bookcaseHalfBooks_E',
+  30,
+  337,
+  143,
+  134,
+);
+export const bookcaseHalfBooks_N = isometricDecorator(
+  'bookcaseHalfBooks_N',
+  30,
+  348,
+  143,
+  134,
+);
+export const bookcaseHalfBooks_S = isometricDecorator(
+  'bookcaseHalfBooks_S',
+  51,
+  337,
+  144,
+  134,
+);
+export const bookcaseHalfBooks_W = isometricDecorator(
+  'bookcaseHalfBooks_W',
+  51,
+  348,
+  144,
+  134,
+);
+export const bookcaseHalfEmpty_E = isometricDecorator(
+  'bookcaseHalfEmpty_E',
+  30,
+  337,
+  143,
+  134,
+);
+export const bookcaseHalfEmpty_N = isometricDecorator(
+  'bookcaseHalfEmpty_N',
+  30,
+  348,
+  143,
+  134,
+);
+export const bookcaseHalfEmpty_S = isometricDecorator(
+  'bookcaseHalfEmpty_S',
+  51,
+  337,
+  144,
+  134,
+);
+export const bookcaseHalfEmpty_W = isometricDecorator(
+  'bookcaseHalfEmpty_W',
+  51,
+  348,
+  144,
+  134,
+);
+export const bookcaseHalfWideBooks_E = isometricDecorator(
+  'bookcaseHalfWideBooks_E',
+  1,
+  323,
+  201,
+  162,
+);
+export const bookcaseHalfWideBooks_N = isometricDecorator(
+  'bookcaseHalfWideBooks_N',
+  1,
+  334,
+  201,
+  162,
+);
+export const bookcaseHalfWideBooks_S = isometricDecorator(
+  'bookcaseHalfWideBooks_S',
+  23,
+  323,
+  200,
+  162,
+);
+export const bookcaseHalfWideBooks_W = isometricDecorator(
+  'bookcaseHalfWideBooks_W',
+  23,
+  334,
+  200,
+  162,
+);
+export const bookcaseHalfWideEmpty_E = isometricDecorator(
+  'bookcaseHalfWideEmpty_E',
+  1,
+  323,
+  201,
+  162,
+);
+export const bookcaseHalfWideEmpty_N = isometricDecorator(
+  'bookcaseHalfWideEmpty_N',
+  1,
+  334,
+  201,
+  162,
+);
+export const bookcaseHalfWideEmpty_S = isometricDecorator(
+  'bookcaseHalfWideEmpty_S',
+  23,
+  323,
+  200,
+  162,
+);
+export const bookcaseHalfWideEmpty_W = isometricDecorator(
+  'bookcaseHalfWideEmpty_W',
+  23,
+  334,
+  200,
+  162,
+);
+export const bookcaseWideBooksDesk_E = isometricDecorator(
+  'bookcaseWideBooksDesk_E',
+  0,
+  263,
+  218,
+  229,
+);
+export const bookcaseWideBooksDesk_N = isometricDecorator(
+  'bookcaseWideBooksDesk_N',
+  0,
+  274,
+  218,
+  222,
+);
+export const bookcaseWideBooksDesk_S = isometricDecorator(
+  'bookcaseWideBooksDesk_S',
+  0,
+  263,
+  223,
+  229,
+);
+export const bookcaseWideBooksDesk_W = isometricDecorator(
+  'bookcaseWideBooksDesk_W',
+  0,
+  274,
+  223,
+  222,
+);
+export const bookcaseWideBooksLadder_E = isometricDecorator(
+  'bookcaseWideBooksLadder_E',
+  0,
+  263,
+  202,
+  222,
+);
+export const bookcaseWideBooksLadder_N = isometricDecorator(
+  'bookcaseWideBooksLadder_N',
+  0,
+  274,
+  202,
+  222,
+);
+export const bookcaseWideBooksLadder_S = isometricDecorator(
+  'bookcaseWideBooksLadder_S',
+  0,
+  263,
+  223,
+  222,
+);
+export const bookcaseWideBooksLadder_W = isometricDecorator(
+  'bookcaseWideBooksLadder_W',
+  0,
+  274,
+  223,
+  222,
+);
+export const bookcaseWideBooks_E = isometricDecorator(
+  'bookcaseWideBooks_E',
+  0,
+  263,
+  202,
+  222,
+);
+export const bookcaseWideBooks_N = isometricDecorator(
+  'bookcaseWideBooks_N',
+  0,
+  274,
+  202,
+  222,
+);
+export const bookcaseWideBooks_S = isometricDecorator(
+  'bookcaseWideBooks_S',
+  0,
+  263,
+  223,
+  222,
+);
+export const bookcaseWideBooks_W = isometricDecorator(
+  'bookcaseWideBooks_W',
+  0,
+  274,
+  223,
+  222,
+);
+export const bookcaseWideEmptyLadder_E = isometricDecorator(
+  'bookcaseWideEmptyLadder_E',
+  0,
+  263,
+  202,
+  222,
+);
+export const bookcaseWideEmptyLadder_N = isometricDecorator(
+  'bookcaseWideEmptyLadder_N',
+  0,
+  274,
+  202,
+  222,
+);
+export const bookcaseWideEmptyLadder_S = isometricDecorator(
+  'bookcaseWideEmptyLadder_S',
+  0,
+  263,
+  223,
+  222,
+);
+export const bookcaseWideEmptyLadder_W = isometricDecorator(
+  'bookcaseWideEmptyLadder_W',
+  0,
+  274,
+  223,
+  222,
+);
+export const bookcaseWideEmpty_E = isometricDecorator(
+  'bookcaseWideEmpty_E',
+  0,
+  263,
+  202,
+  222,
+);
+export const bookcaseWideEmpty_N = isometricDecorator(
+  'bookcaseWideEmpty_N',
+  0,
+  274,
+  202,
+  222,
+);
+export const bookcaseWideEmpty_S = isometricDecorator(
+  'bookcaseWideEmpty_S',
+  0,
+  263,
+  223,
+  222,
+);
+export const bookcaseWideEmpty_W = isometricDecorator(
+  'bookcaseWideEmpty_W',
+  0,
+  274,
+  223,
+  222,
+);
+export const displayCaseBooks_E = isometricDecorator(
+  'displayCaseBooks_E',
+  19,
+  331,
+  170,
+  147,
+);
+export const displayCaseBooks_N = isometricDecorator(
+  'displayCaseBooks_N',
+  19,
+  350,
+  170,
+  139,
+);
+export const displayCaseBooks_S = isometricDecorator(
+  'displayCaseBooks_S',
+  41,
+  331,
+  170,
+  147,
+);
+export const displayCaseBooks_W = isometricDecorator(
+  'displayCaseBooks_W',
+  41,
+  350,
+  170,
+  139,
+);
+export const displayCaseOpen_E = isometricDecorator(
+  'displayCaseOpen_E',
+  19,
+  342,
+  170,
+  136,
+);
+export const displayCaseOpen_N = isometricDecorator(
+  'displayCaseOpen_N',
+  19,
+  353,
+  170,
+  136,
+);
+export const displayCaseOpen_S = isometricDecorator(
+  'displayCaseOpen_S',
+  41,
+  342,
+  170,
+  136,
+);
+export const displayCaseOpen_W = isometricDecorator(
+  'displayCaseOpen_W',
+  41,
+  353,
+  170,
+  136,
+);
+export const displayCaseSword_E = isometricDecorator(
+  'displayCaseSword_E',
+  19,
+  331,
+  170,
+  147,
+);
+export const displayCaseSword_N = isometricDecorator(
+  'displayCaseSword_N',
+  19,
+  350,
+  170,
+  139,
+);
+export const displayCaseSword_S = isometricDecorator(
+  'displayCaseSword_S',
+  41,
+  331,
+  170,
+  147,
+);
+export const displayCaseSword_W = isometricDecorator(
+  'displayCaseSword_W',
+  41,
+  350,
+  170,
+  139,
+);
+export const displayCase_E = isometricDecorator(
+  'displayCase_E',
+  19,
+  331,
+  170,
+  147,
+);
+export const displayCase_N = isometricDecorator(
+  'displayCase_N',
+  19,
+  350,
+  170,
+  139,
+);
+export const displayCase_S = isometricDecorator(
+  'displayCase_S',
+  41,
+  331,
+  170,
+  147,
+);
+export const displayCase_W = isometricDecorator(
+  'displayCase_W',
+  41,
+  350,
+  170,
+  139,
+);
+export const floorCarpetEnd_E = isometricDecorator(
+  'floorCarpetEnd_E',
+  31,
+  430,
+  129,
+  65,
+);
+export const floorCarpetEnd_N = isometricDecorator(
+  'floorCarpetEnd_N',
+  96,
+  430,
+  129,
+  65,
+);
+export const floorCarpetEnd_S = isometricDecorator(
+  'floorCarpetEnd_S',
+  31,
+  397,
+  129,
+  66,
+);
+export const floorCarpetEnd_W = isometricDecorator(
+  'floorCarpetEnd_W',
+  96,
+  397,
+  129,
+  66,
+);
+export const floorCarpetSmall_E = isometricDecorator(
+  'floorCarpetSmall_E',
+  30,
+  397,
+  196,
+  98,
+);
+export const floorCarpetSmall_N = isometricDecorator(
+  'floorCarpetSmall_N',
+  30,
+  397,
+  196,
+  98,
+);
+export const floorCarpetSmall_S = isometricDecorator(
+  'floorCarpetSmall_S',
+  30,
+  397,
+  196,
+  98,
+);
+export const floorCarpetSmall_W = isometricDecorator(
+  'floorCarpetSmall_W',
+  30,
+  397,
+  196,
+  98,
+);
+export const floorCarpet_E = isometricDecorator(
+  'floorCarpet_E',
+  31,
+  397,
+  194,
+  98,
+);
+export const floorCarpet_N = isometricDecorator(
+  'floorCarpet_N',
+  31,
+  397,
+  194,
+  98,
+);
+export const floorCarpet_S = isometricDecorator(
+  'floorCarpet_S',
+  31,
+  397,
+  194,
+  98,
+);
+export const floorCarpet_W = isometricDecorator(
+  'floorCarpet_W',
+  31,
+  397,
+  194,
+  98,
+);
+export const hayBalesStacked_E = isometricDecorator(
+  'hayBalesStacked_E',
+  22,
+  346,
+  189,
+  143,
+);
+export const hayBalesStacked_N = isometricDecorator(
+  'hayBalesStacked_N',
+  15,
+  350,
+  196,
+  139,
+);
+export const hayBalesStacked_S = isometricDecorator(
+  'hayBalesStacked_S',
+  22,
+  349,
+  196,
+  141,
+);
+export const hayBalesStacked_W = isometricDecorator(
+  'hayBalesStacked_W',
+  25,
+  349,
+  187,
+  142,
+);
+export const hayBales_E = isometricDecorator('hayBales_E', 59, 372, 125, 102);
+export const hayBales_N = isometricDecorator('hayBales_N', 59, 376, 123, 100);
+export const hayBales_S = isometricDecorator('hayBales_S', 63, 376, 123, 99);
+export const hayBales_W = isometricDecorator('hayBales_W', 61, 374, 125, 102);
+export const hay_E = isometricDecorator('hay_E', 79, 401, 88, 66);
+export const hay_N = isometricDecorator('hay_N', 79, 401, 88, 66);
+export const hay_S = isometricDecorator('hay_S', 79, 401, 88, 66);
+export const hay_W = isometricDecorator('hay_W', 79, 401, 88, 66);
+export const libraryChair_E = isometricDecorator(
+  'libraryChair_E',
+  89,
+  388,
+  59,
+  70,
+);
+export const libraryChair_N = isometricDecorator(
+  'libraryChair_N',
+  89,
+  395,
+  58,
+  63,
+);
+export const libraryChair_S = isometricDecorator(
+  'libraryChair_S',
+  98,
+  388,
+  49,
+  70,
+);
+export const libraryChair_W = isometricDecorator(
+  'libraryChair_W',
+  97,
+  395,
+  50,
+  63,
+);
+export const longTableChairs_E = isometricDecorator(
+  'longTableChairs_E',
+  38,
+  365,
+  159,
+  118,
+);
+export const longTableChairs_N = isometricDecorator(
+  'longTableChairs_N',
+  43,
+  365,
+  158,
+  118,
+);
+export const longTableChairs_S = isometricDecorator(
+  'longTableChairs_S',
+  39,
+  362,
+  158,
+  118,
+);
+export const longTableChairs_W = isometricDecorator(
+  'longTableChairs_W',
+  43,
+  363,
+  158,
+  118,
+);
+export const longTableDecoratedChairsBooks_E = isometricDecorator(
+  'longTableDecoratedChairsBooks_E',
+  38,
+  362,
+  159,
+  121,
+);
+export const longTableDecoratedChairsBooks_N = isometricDecorator(
+  'longTableDecoratedChairsBooks_N',
+  39,
+  365,
+  162,
+  118,
+);
+export const longTableDecoratedChairsBooks_S = isometricDecorator(
+  'longTableDecoratedChairsBooks_S',
+  39,
+  362,
+  158,
+  118,
+);
+export const longTableDecoratedChairsBooks_W = isometricDecorator(
+  'longTableDecoratedChairsBooks_W',
+  43,
+  363,
+  158,
+  120,
+);
+export const longTableDecoratedChairs_E = isometricDecorator(
+  'longTableDecoratedChairs_E',
+  38,
+  365,
+  160,
+  118,
+);
+export const longTableDecoratedChairs_N = isometricDecorator(
+  'longTableDecoratedChairs_N',
+  43,
+  365,
+  158,
+  118,
+);
+export const longTableDecoratedChairs_S = isometricDecorator(
+  'longTableDecoratedChairs_S',
+  39,
+  362,
+  158,
+  118,
+);
+export const longTableDecoratedChairs_W = isometricDecorator(
+  'longTableDecoratedChairs_W',
+  43,
+  363,
+  158,
+  118,
+);
+export const longTableDecorated_E = isometricDecorator(
+  'longTableDecorated_E',
+  39,
+  374,
+  158,
+  105,
+);
+export const longTableDecorated_N = isometricDecorator(
+  'longTableDecorated_N',
+  43,
+  374,
+  158,
+  105,
+);
+export const longTableDecorated_S = isometricDecorator(
+  'longTableDecorated_S',
+  39,
+  372,
+  158,
+  105,
+);
+export const longTableDecorated_W = isometricDecorator(
+  'longTableDecorated_W',
+  43,
+  372,
+  158,
+  105,
+);
+export const longTableLarge_E = isometricDecorator(
+  'longTableLarge_E',
+  28,
+  360,
+  179,
+  128,
+);
+export const longTableLarge_N = isometricDecorator(
+  'longTableLarge_N',
+  33,
+  360,
+  178,
+  128,
+);
+export const longTableLarge_S = isometricDecorator(
+  'longTableLarge_S',
+  29,
+  357,
+  179,
+  128,
+);
+export const longTableLarge_W = isometricDecorator(
+  'longTableLarge_W',
+  33,
+  358,
+  178,
+  128,
+);
+export const longTable_E = isometricDecorator('longTable_E', 39, 374, 158, 105);
+export const longTable_N = isometricDecorator('longTable_N', 43, 374, 158, 105);
+export const longTable_S = isometricDecorator('longTable_S', 39, 372, 158, 105);
+export const longTable_W = isometricDecorator('longTable_W', 43, 372, 158, 105);
+export const sack_E = isometricDecorator('sack_E', 88, 402, 49, 54);
+export const sack_N = isometricDecorator('sack_N', 100, 407, 47, 51);
+export const sack_S = isometricDecorator('sack_S', 98, 395, 43, 55);
+export const sack_W = isometricDecorator('sack_W', 109, 400, 42, 52);
+export const sacksCrate_E = isometricDecorator('sacksCrate_E', 71, 401, 92, 68);
+export const sacksCrate_N = isometricDecorator(
+  'sacksCrate_N',
+  65,
+  395,
+  107,
+  74,
+);
+export const sacksCrate_S = isometricDecorator(
+  'sacksCrate_S',
+  70,
+  389,
+  116,
+  74,
+);
+export const sacksCrate_W = isometricDecorator('sacksCrate_W', 86, 387, 84, 87);
+export const tableChairsBroken_E = isometricDecorator(
+  'tableChairsBroken_E',
+  61,
+  379,
+  130,
+  100,
+);
+export const tableChairsBroken_N = isometricDecorator(
+  'tableChairsBroken_N',
+  62,
+  367,
+  129,
+  106,
+);
+export const tableChairsBroken_S = isometricDecorator(
+  'tableChairsBroken_S',
+  49,
+  391,
+  133,
+  88,
+);
+export const tableChairsBroken_W = isometricDecorator(
+  'tableChairsBroken_W',
+  50,
+  378,
+  136,
+  96,
+);
+export const tableRoundChairs_E = isometricDecorator(
+  'tableRoundChairs_E',
+  57,
+  368,
+  127,
+  107,
+);
+export const tableRoundChairs_N = isometricDecorator(
+  'tableRoundChairs_N',
+  55,
+  366,
+  125,
+  106,
+);
+export const tableRoundChairs_S = isometricDecorator(
+  'tableRoundChairs_S',
+  54,
+  370,
+  125,
+  106,
+);
+export const tableRoundChairs_W = isometricDecorator(
+  'tableRoundChairs_W',
+  50,
+  368,
+  126,
+  106,
+);
+export const tableRoundItemsChairs_E = isometricDecorator(
+  'tableRoundItemsChairs_E',
+  48,
+  368,
+  136,
+  106,
+);
+export const tableRoundItemsChairs_N = isometricDecorator(
+  'tableRoundItemsChairs_N',
+  54,
+  366,
+  125,
+  111,
+);
+export const tableRoundItemsChairs_S = isometricDecorator(
+  'tableRoundItemsChairs_S',
+  55,
+  365,
+  125,
+  111,
+);
+export const tableRoundItemsChairs_W = isometricDecorator(
+  'tableRoundItemsChairs_W',
+  51,
+  368,
+  135,
+  107,
+);
+export const tableRound_E = isometricDecorator('tableRound_E', 74, 388, 94, 76);
+export const tableRound_N = isometricDecorator('tableRound_N', 75, 387, 93, 77);
+export const tableRound_S = isometricDecorator('tableRound_S', 71, 388, 94, 77);
+export const tableRound_W = isometricDecorator('tableRound_W', 72, 386, 94, 78);
+export const tableShortChairs_E = isometricDecorator(
+  'tableShortChairs_E',
+  56,
+  369,
+  123,
+  104,
+);
+export const tableShortChairs_N = isometricDecorator(
+  'tableShortChairs_N',
+  56,
+  369,
+  121,
+  104,
+);
+export const tableShortChairs_S = isometricDecorator(
+  'tableShortChairs_S',
+  57,
+  369,
+  123,
+  105,
+);
+export const tableShortChairs_W = isometricDecorator(
+  'tableShortChairs_W',
+  57,
+  369,
+  121,
+  104,
+);
+export const tableShort_E = isometricDecorator(
+  'tableShort_E',
+  63,
+  380,
+  117,
+  88,
+);
+export const tableShort_N = isometricDecorator(
+  'tableShort_N',
+  60,
+  379,
+  118,
+  87,
+);
+export const tableShort_S = isometricDecorator(
+  'tableShort_S',
+  61,
+  381,
+  118,
+  89,
+);
+export const tableShort_W = isometricDecorator(
+  'tableShort_W',
+  59,
+  380,
+  117,
+  89,
+);
+export const woodenCrate_E = isometricDecorator(
+  'woodenCrate_E',
+  76,
+  388,
+  87,
+  78,
+);
+export const woodenCrate_N = isometricDecorator(
+  'woodenCrate_N',
+  76,
+  388,
+  87,
+  78,
+);
+export const woodenCrate_S = isometricDecorator(
+  'woodenCrate_S',
+  76,
+  388,
+  87,
+  78,
+);
+export const woodenCrate_W = isometricDecorator(
+  'woodenCrate_W',
+  76,
+  388,
+  87,
+  78,
+);
+export const woodenCrates_E = isometricDecorator(
+  'woodenCrates_E',
+  61,
+  372,
+  113,
+  94,
+);
+export const woodenCrates_N = isometricDecorator(
+  'woodenCrates_N',
+  75,
+  375,
+  90,
+  100,
+);
+export const woodenCrates_S = isometricDecorator(
+  'woodenCrates_S',
+  78,
+  374,
+  90,
+  97,
+);
+export const woodenCrates_W = isometricDecorator(
+  'woodenCrates_W',
+  70,
+  377,
+  112,
+  91,
+);
+export const woodenPile_E = isometricDecorator(
+  'woodenPile_E',
+  64,
+  370,
+  128,
+  104,
+);
+export const woodenPile_N = isometricDecorator(
+  'woodenPile_N',
+  34,
+  372,
+  152,
+  106,
+);
+export const woodenPile_S = isometricDecorator(
+  'woodenPile_S',
+  52,
+  378,
+  155,
+  103,
+);
+export const woodenPile_W = isometricDecorator(
+  'woodenPile_W',
+  54,
+  365,
+  138,
+  122,
+);
+export const woodenSupportBeams_E = isometricDecorator(
+  'woodenSupportBeams_E',
+  0,
+  230,
+  141,
+  225,
+);
+export const woodenSupportBeams_N = isometricDecorator(
+  'woodenSupportBeams_N',
+  0,
+  288,
+  141,
+  224,
+);
+export const woodenSupportBeams_S = isometricDecorator(
+  'woodenSupportBeams_S',
+  115,
+  230,
+  141,
+  225,
+);
+export const woodenSupportBeams_W = isometricDecorator(
+  'woodenSupportBeams_W',
+  115,
+  288,
+  141,
+  224,
+);
+export const woodenSupportsBeam_E = isometricDecorator(
+  'woodenSupportsBeam_E',
+  0,
+  230,
+  141,
+  225,
+);
+export const woodenSupportsBeam_N = isometricDecorator(
+  'woodenSupportsBeam_N',
+  0,
+  288,
+  141,
+  224,
+);
+export const woodenSupportsBeam_S = isometricDecorator(
+  'woodenSupportsBeam_S',
+  115,
+  230,
+  141,
+  225,
+);
+export const woodenSupportsBeam_W = isometricDecorator(
+  'woodenSupportsBeam_W',
+  115,
+  288,
+  141,
+  224,
+);
+export const woodenSupportsBlock_E = isometricDecorator(
+  'woodenSupportsBlock_E',
+  0,
+  230,
+  256,
+  282,
+);
+export const woodenSupportsBlock_N = isometricDecorator(
+  'woodenSupportsBlock_N',
+  0,
+  230,
+  256,
+  282,
+);
+export const woodenSupportsBlock_S = isometricDecorator(
+  'woodenSupportsBlock_S',
+  0,
+  230,
+  256,
+  282,
+);
+export const woodenSupportsBlock_W = isometricDecorator(
+  'woodenSupportsBlock_W',
+  0,
+  230,
+  256,
+  282,
+);
+export const woodenSupports_E = isometricDecorator(
+  'woodenSupports_E',
+  0,
+  230,
+  141,
+  225,
+);
+export const woodenSupports_N = isometricDecorator(
+  'woodenSupports_N',
+  0,
+  288,
+  141,
+  224,
+);
+export const woodenSupports_S = isometricDecorator(
+  'woodenSupports_S',
+  115,
+  230,
+  141,
+  225,
+);
+export const woodenSupports_W = isometricDecorator(
+  'woodenSupports_W',
+  115,
+  288,
+  141,
+  224,
+);

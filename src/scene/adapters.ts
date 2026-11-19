@@ -7,7 +7,9 @@
 
 import type {
   Actor,
+  ActorSpriteFacing,
   Corpse,
+  DecoratorSpriteMode,
   Dungeon,
   GameState,
   Hero,
@@ -15,6 +17,7 @@ import type {
   ItemSprite,
   LightSource,
   LightSprite,
+  LightSpriteMode,
   Monster,
   Position,
 } from '../types';
@@ -25,7 +28,6 @@ import {
   getActorFlashIntensity,
   getActorAnimationFrameIndex,
   getActorAnimationName,
-  getActorSpriteFacingRow,
   getActorVisualPosition,
   getDyingActors,
   hasLineOfSight,
@@ -46,7 +48,6 @@ import {
 } from '../hero/HeroLogic';
 import { getReadyImage } from '../core/ImageCache';
 import { ACTOR_SPRITE_ANIMATION_ORDER } from '../core';
-import { createDecoratorPreset } from '../dungeon/Decorators';
 import { ACTOR_TILES, ITEM_TILES, type TileRef } from '../dungeon/tiles';
 import {
   TERRAIN_OVERLAY,
@@ -70,6 +71,25 @@ import { autoDetectCorners, findCell } from '@hoard-engine/grid';
 import { COLLAPSED, EMPTY, SEALED_DOOR, WALL } from '@hoard-engine/grid';
 import { TERRAIN_DEFAULT_STYLING } from '../dungeon/TerrainLogic';
 import type { TerrainCell } from '../types';
+
+export type ActorFacingProjection = 'grid' | 'isometric';
+
+const ISOMETRIC_ACTOR_FACING: Record<ActorSpriteFacing, ActorSpriteFacing> = {
+  east: 'southEast',
+  southEast: 'south',
+  south: 'southWest',
+  southWest: 'west',
+  west: 'northWest',
+  northWest: 'north',
+  north: 'northEast',
+  northEast: 'east',
+};
+
+const projectActorFacing = (
+  facing: ActorSpriteFacing,
+  projection: ActorFacingProjection,
+): ActorSpriteFacing =>
+  projection === 'isometric' ? ISOMETRIC_ACTOR_FACING[facing] : facing;
 
 // --- Dungeon plane view ----------------------------------------------------
 
@@ -248,6 +268,7 @@ const actorTileFrame = (
 const getActorSpriteFrame = (
   actor: Actor,
   currentTime: number,
+  facingProjection: ActorFacingProjection,
 ): SceneSpriteFrame | null => {
   const sprite = actor.sprite;
   if (!sprite) return null;
@@ -273,10 +294,14 @@ const getActorSpriteFrame = (
       currentTime,
     );
     const frameX = frameIndex * sprite.frameWidth;
-    const frameY = getActorSpriteFacingRow(actor) * sprite.frameHeight;
+    const facing = projectActorFacing(getActorFacing(actor), facingProjection);
+    const frameY =
+      (sprite.facings?.length
+        ? spriteDirectionRow(sprite.facings, facing)
+        : 0) * sprite.frameHeight;
     // Packs whose figures occupy only part of each frame declare a
     // per-facing source window so the figure fills the cell.
-    const crop = sprite.frameCrops?.[animation]?.[getActorFacing(actor)];
+    const crop = sprite.frameCrops?.[animation]?.[facing];
     return {
       image,
       sx: frameX + (crop?.x ?? 0),
@@ -317,7 +342,10 @@ const getActorSpriteFrame = (
 // the death row of the shared sheet or the facing row it fell at (the
 // per-animation-pack model), with the same crop window a living actor
 // of that sprite would draw.
-const getCorpseSpriteFrame = (corpse: Corpse): SceneSpriteFrame | null => {
+const getCorpseSpriteFrame = (
+  corpse: Corpse,
+  facingProjection: ActorFacingProjection,
+): SceneSpriteFrame | null => {
   const sprite = corpse.sprite;
   const configured = sprite.animations?.death;
   const lastFrameIndex = (image: HTMLImageElement): number => {
@@ -334,7 +362,10 @@ const getCorpseSpriteFrame = (corpse: Corpse): SceneSpriteFrame | null => {
   if (animationImage) {
     const image = getReadyImage(animationImage);
     if (!image) return null;
-    const facing = corpse.facing ?? DEFAULT_ACTOR_SPRITE_FACING;
+    const facing = projectActorFacing(
+      corpse.facing ?? DEFAULT_ACTOR_SPRITE_FACING,
+      facingProjection,
+    );
     const crop = sprite.frameCrops?.death?.[facing];
     return {
       image,
@@ -471,6 +502,7 @@ const debugLabelFor = (
 // exactly one cell.
 export type GameActorView = SceneActorView & {
   spriteDraw?: { scale: number };
+  floorMarkerColor?: string;
 };
 
 const toActorView = (
@@ -479,9 +511,10 @@ const toActorView = (
   showDebugLabel: boolean,
   currentTime: number,
   bars: Pick<SceneActorView, 'colourBar' | 'healthBar'>,
+  facingProjection: ActorFacingProjection,
 ): GameActorView => ({
   position: getActorVisualPosition(actor, currentTime),
-  sprite: getActorSpriteFrame(actor, currentTime),
+  sprite: getActorSpriteFrame(actor, currentTime, facingProjection),
   ...(actor.sprite?.drawScale && actor.sprite.drawScale > 1
     ? { spriteDraw: { scale: actor.sprite.drawScale } }
     : {}),
@@ -569,6 +602,7 @@ export const buildHeroViewModels = (
   actorsSheet: CanvasImageSource,
   debugMode: boolean,
   currentTime: number = Date.now(),
+  facingProjection: ActorFacingProjection = 'grid',
 ): SceneActorView[] => {
   const heroes: Hero[] = [
     ...liveHeroes(state),
@@ -579,15 +613,17 @@ export const buildHeroViewModels = (
         isActorDeathAnimating(hero, currentTime),
     ),
   ];
-  return heroes.map((hero) =>
-    toActorView(
+  return heroes.map((hero) => ({
+    ...toActorView(
       hero,
       actorTileFrame(actorsSheet, ACTOR_TILES.HERO),
       debugMode,
       currentTime,
       { colourBar: '', healthBar: null },
+      facingProjection,
     ),
-  );
+    floorMarkerColor: String(hero.colour),
+  }));
 };
 
 // Monster views for the actor layer: discovered live monsters from the
@@ -598,6 +634,7 @@ export const buildMonsterViewModels = (
   actorsSheet: CanvasImageSource,
   debugMode: boolean,
   currentTime: number = Date.now(),
+  facingProjection: ActorFacingProjection = 'grid',
 ): SceneActorView[] => {
   const visible = state.dungeon.layout.monsters
     .filter((monster) => isMonsterVisible(state.dungeon, monster, currentTime))
@@ -611,6 +648,7 @@ export const buildMonsterViewModels = (
           colourBar: '',
           healthBar: { current: monster.health, max: monster.maxHealth },
         },
+        facingProjection,
       );
       if (debugMode) {
         const visualPos = getActorVisualPosition(monster, currentTime);
@@ -645,6 +683,7 @@ export const buildMonsterViewModels = (
           colourBar: '',
           healthBar: { current: monster.health, max: monster.maxHealth },
         },
+        facingProjection,
       );
       if (debugMode) {
         const visualPos = getActorVisualPosition(monster, currentTime);
@@ -671,6 +710,7 @@ export const buildMonsterViewModels = (
 export const buildCorpseViewModels = (
   state: GameState,
   currentTime: number = Date.now(),
+  facingProjection: ActorFacingProjection = 'grid',
 ): GameActorView[] => {
   const dying = getDyingActors(currentTime);
   return (state.dungeon.layout.corpses ?? [])
@@ -685,7 +725,7 @@ export const buildCorpseViewModels = (
     })
     .map((corpse) => ({
       position: { x: corpse.position.x, y: corpse.position.y },
-      sprite: getCorpseSpriteFrame(corpse),
+      sprite: getCorpseSpriteFrame(corpse, facingProjection),
       ...(corpse.sprite.drawScale && corpse.sprite.drawScale > 1
         ? { spriteDraw: { scale: corpse.sprite.drawScale } }
         : {}),
@@ -860,6 +900,8 @@ export const buildHeroOverlayViewModel = (
 // author art at the full cell footprint, so the cell draw shrink stays on
 // the game side (the scene package's item path always fills the cell).
 export type GameItemView = SceneItemView & {
+  isometricTileId?: string;
+  isometricSpriteOverride?: boolean;
   spriteDraw?: {
     scale: number;
     alignment?: CellAlignment;
@@ -871,12 +913,20 @@ export type GameItemView = SceneItemView & {
 // cells completely.
 export const ITEM_SPRITE_SCALE = 0.75;
 export const FOUND_SECRET_SPRITE_SCALE = 0.6;
+const FOUND_SECRET_SPRITE: ItemSprite = {
+  image: 'decorators/Objects.png',
+  size: 29,
+  index: 0,
+  sourceRect: { x: 163, y: 36, width: 29, height: 22 },
+};
 
 // Decorative sprites share the floor-item footprint and discovery behavior.
 export const buildDecoratorViewModels = (
   state: GameState,
   groundSheet: CanvasImageSource,
   cellSize: number,
+  retainFallbackWhileLoading = false,
+  mode: DecoratorSpriteMode = 'topDown',
 ): GameItemView[] =>
   (state.dungeon.layout.decorators ?? [])
     .filter((decorator) => {
@@ -885,12 +935,21 @@ export const buildDecoratorViewModels = (
       return Boolean(cell) && isRoomDiscovered(state.dungeon, cell);
     })
     .flatMap((decorator) => {
-      const sprite = getItemSpriteFrame(decorator.sprite);
-      if (!sprite) return [];
+      const spriteDefinition =
+        mode === 'isometric'
+          ? (decorator.sprites?.isometric ??
+            decorator.sprites?.topDown ??
+            decorator.sprite)
+          : (decorator.sprites?.topDown ?? decorator.sprite);
+      const sprite = spriteDefinition
+        ? getItemSpriteFrame(spriteDefinition)
+        : null;
+      if (!sprite && !retainFallbackWhileLoading) return [];
       return [
         {
           position: decorator.position,
           sprite,
+          ...(mode === 'isometric' ? { isometricSpriteOverride: true } : {}),
           spriteDraw: {
             scale: ITEM_SPRITE_SCALE,
             alignment: decorator.alignment ?? CellAlignment.CENTER,
@@ -909,12 +968,16 @@ export const buildFoundSecretViewModels = (
   dungeon: SceneDungeonView,
   groundSheet: CanvasImageSource,
   cellSize: number,
+  debugMode = false,
 ): GameItemView[] => {
-  const sprite = getItemSpriteFrame(
-    createDecoratorPreset('objectsObject021', { x: 0, y: 0 }).sprite,
-  );
+  const sprite = getItemSpriteFrame(FOUND_SECRET_SPRITE);
   return dungeon.layout.secrets
-    .filter((secret) => secret.found && secret.type !== SecretType.TRAP_DOOR)
+    .filter((secret) => {
+      if (!secret.found || secret.type === SecretType.TRAP_DOOR) return false;
+      const cell =
+        dungeon.layout.grid[secret.position.y]?.[secret.position.x] ?? '';
+      return debugMode || isDiscoveredRoom(dungeon, cell);
+    })
     .map((secret) => ({
       position: secret.position,
       sprite,
@@ -931,71 +994,94 @@ export const buildFoundSecretViewModels = (
     }));
 };
 
+export const resolveLightSprite = (
+  light: Pick<LightSource, 'sprite' | 'sprites'>,
+  mode: LightSpriteMode,
+): LightSprite | undefined => {
+  const modeSprite = light.sprites?.[mode];
+  if (modeSprite && 'tileId' in modeSprite) return undefined;
+  return modeSprite ?? light.sprite;
+};
+
 export const buildLightSpriteViewModels = (
   state: GameState,
   groundSheet: CanvasImageSource,
   cellSize: number,
   debugMode = false,
   timeMs = Date.now(),
-): GameItemView[] =>
-  (state.dungeon.layout.lights ?? [])
-    .filter(
-      (light): light is LightSource & { sprite: LightSprite } =>
-        Boolean(light.sprite) &&
-        (debugMode ||
-          isDiscovered(state.dungeon, light.position.x, light.position.y)),
-    )
-    .map((light) => {
-      const { sprite } = light;
-      const image = sprite.image ? getReadyImage(sprite.image) : null;
-      const sourceImage = image ?? groundSheet;
-      const frameWidth = sprite.frameWidth ?? sprite.size;
-      const frameHeight = sprite.frameHeight ?? sprite.size;
-      const columns = image
+  mode: LightSpriteMode = 'topDown',
+): GameItemView[] => {
+  const views: GameItemView[] = [];
+  for (const light of state.dungeon.layout.lights ?? []) {
+    const isoSprite = light.sprites?.isometric;
+    const isometricTileId =
+      mode === 'isometric' && isoSprite && 'tileId' in isoSprite
+        ? isoSprite.tileId
+        : undefined;
+    const sprite = isometricTileId
+      ? (light.sprite ?? light.sprites?.topDown)
+      : resolveLightSprite(light, mode);
+    if (
+      (!sprite && !isometricTileId) ||
+      (!debugMode &&
+        !isDiscovered(state.dungeon, light.position.x, light.position.y))
+    ) {
+      continue;
+    }
+    const image = sprite?.image ? getReadyImage(sprite.image) : null;
+    const sourceImage = image ?? groundSheet;
+    const frameWidth = sprite?.frameWidth ?? sprite?.size ?? 0;
+    const frameHeight = sprite?.frameHeight ?? sprite?.size ?? 0;
+    const columns =
+      image && sprite
         ? Math.max(1, Math.floor((image.naturalWidth - sprite.x) / frameWidth))
         : 1;
-      const availableFrames = image
+    const availableFrames =
+      image && sprite
         ? columns *
           Math.max(
             1,
             Math.floor((image.naturalHeight - sprite.y) / frameHeight),
           )
         : 1;
-      const frameCount = Math.min(
-        availableFrames,
-        Math.max(1, Math.floor(sprite.frameCount ?? 1)),
-      );
-      const frameRate = Math.max(0, sprite.frameRate ?? 8);
-      const frameIndex =
-        image && frameRate > 0
-          ? Math.floor((Math.max(0, timeMs) * frameRate) / 1000) % frameCount
-          : 0;
-      const alignment = light.alignment ?? CellAlignment.CENTER;
-      return {
-        position: light.position,
-        sprite:
-          image || !sprite.image
-            ? {
-                image: sourceImage,
-                sx: sprite.x + (frameIndex % columns) * frameWidth,
-                sy: sprite.y + Math.floor(frameIndex / columns) * frameHeight,
-                sw: frameWidth,
-                sh: frameHeight,
-              }
-            : null,
-        spriteDraw: {
-          scale: sprite.scale ?? 1,
-          alignment,
-          offset: sprite.alignmentOffsets?.[alignment] ?? { x: 0, y: 0 },
-        },
-        fallbackTile: actorTileFrame(
-          groundSheet,
-          ITEM_TILES.ITEM_GENERIC,
-          cellSize,
-        ),
-        label: null,
-      };
+    const frameCount = Math.min(
+      availableFrames,
+      Math.max(1, Math.floor(sprite?.frameCount ?? 1)),
+    );
+    const frameRate = Math.max(0, sprite?.frameRate ?? 8);
+    const frameIndex =
+      image && frameRate > 0
+        ? Math.floor((Math.max(0, timeMs) * frameRate) / 1000) % frameCount
+        : 0;
+    const alignment = light.alignment ?? CellAlignment.CENTER;
+    views.push({
+      position: light.position,
+      sprite:
+        sprite && (image || !sprite.image)
+          ? {
+              image: sourceImage,
+              sx: sprite.x + (frameIndex % columns) * frameWidth,
+              sy: sprite.y + Math.floor(frameIndex / columns) * frameHeight,
+              sw: frameWidth,
+              sh: frameHeight,
+            }
+          : null,
+      ...(isometricTileId ? { isometricTileId } : {}),
+      spriteDraw: {
+        scale: sprite?.scale ?? 1,
+        alignment,
+        offset: sprite?.alignmentOffsets?.[alignment] ?? { x: 0, y: 0 },
+      },
+      fallbackTile: actorTileFrame(
+        groundSheet,
+        ITEM_TILES.ITEM_GENERIC,
+        cellSize,
+      ),
+      label: null,
     });
+  }
+  return views;
+};
 
 // Item views for the item layer: discovered items only (all of them in
 // debug mode), each with its sheet frame (or the generic tile while the

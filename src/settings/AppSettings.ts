@@ -21,6 +21,8 @@ export interface AppSettings {
   sfxVolume: number;
   /** Debug mode on/off; mirrored into GameState.settings['debug']. */
   debugOn: boolean;
+  /** Presentation-only renderer preference; never mirrored into game saves. */
+  renderMode: 'topDown' | 'isometric';
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -29,6 +31,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   musicVolume: 0.5,
   sfxVolume: 0.8,
   debugOn: false,
+  renderMode: 'topDown',
 };
 
 const APP_SETTINGS_STORAGE_KEY = 'appSettings';
@@ -66,6 +69,10 @@ export const parseAppSettings = (json: string | null): AppSettings => {
         typeof parsed.debugOn === 'boolean'
           ? parsed.debugOn
           : DEFAULT_APP_SETTINGS.debugOn,
+      renderMode:
+        parsed.renderMode === 'isometric' || parsed.renderMode === 'topDown'
+          ? parsed.renderMode
+          : DEFAULT_APP_SETTINGS.renderMode,
     };
   } catch {
     return { ...DEFAULT_APP_SETTINGS };
@@ -142,6 +149,7 @@ export const updateAppSettings = (patch: Partial<AppSettings>): AppSettings => {
       current.sfxVolume,
     ),
     debugOn: patch.debugOn ?? current.debugOn,
+    renderMode: patch.renderMode ?? current.renderMode,
   };
   appSettingsStore.set(next);
   persistAppSettings(next);

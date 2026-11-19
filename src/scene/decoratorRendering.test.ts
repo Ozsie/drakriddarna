@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderDecorators, renderLightSprites } from '../items/ItemRendering';
+import { buildDecoratorViewModels } from './adapters';
 import { CellAlignment, type GameState } from '../types';
+import { parseDecorator } from '../dungeon/dungeonParser';
+import { bones } from '../dungeon/Decorators';
+import { buildIsometricDecoratorPainters } from '../dungeon/IsometricDungeonRendering';
 
 vi.mock('../core/ImageCache', () => ({
-  getReadyImage: (url: string): HTMLImageElement =>
-    ({
+  getReadyImage: (url: string): HTMLImageElement | null => {
+    if (url.includes('not-loaded')) return null;
+    return {
       naturalWidth: url.includes('Torch Animated')
         ? 256
         : url.includes('dw9f2h0x')
@@ -26,10 +31,235 @@ vi.mock('../core/ImageCache', () => ({
           ? 639
           : 32,
       src: url,
-    }) as HTMLImageElement,
+    } as HTMLImageElement;
+  },
 }));
 
 describe('renderDecorators', () => {
+  it('renders bones with their cropped isometric barrel sprite', () => {
+    const state = {
+      dungeon: {
+        discoveredRooms: ['A'],
+        layout: {
+          grid: ['A'],
+          decorators: [parseDecorator([0, 0, CellAlignment.CENTER_TOP, bones])],
+        },
+      },
+    } as GameState;
+    const topDown = buildDecoratorViewModels(
+      state,
+      {} as CanvasImageSource,
+      48,
+      true,
+      'topDown',
+    );
+    const isometric = buildDecoratorViewModels(
+      state,
+      {} as CanvasImageSource,
+      48,
+      true,
+      'isometric',
+    );
+
+    expect(topDown[0]?.sprite?.image).toEqual(
+      expect.objectContaining({ src: 'decorators/Bones_shadow3_1.png' }),
+    );
+    const decorator = isometric[0];
+    expect(decorator?.sprite?.image).toEqual(
+      expect.objectContaining({
+        src: 'isometric/decorators/barrel_E.png',
+      }),
+    );
+    expect(decorator?.sprite).toMatchObject({
+      sx: 79,
+      sy: 378,
+      sw: 80,
+      sh: 83,
+    });
+    expect(decorator?.isometricSpriteOverride).toBe(true);
+    if (!decorator) return;
+
+    const painter = buildIsometricDecoratorPainters([decorator], 48, {
+      ax: 1,
+      by: 0.5,
+    })[0];
+    const drawImage = vi.fn();
+    painter?.draw(
+      {
+        drawImage,
+        imageSmoothingEnabled: false,
+      } as unknown as CanvasRenderingContext2D,
+      { x: 24, y: 24 },
+    );
+
+    expect(drawImage.mock.calls[0]?.slice(0, 5)).toEqual([
+      decorator.sprite?.image,
+      79,
+      378,
+      80,
+      83,
+    ]);
+    expect(drawImage.mock.calls[0]?.[5]).toBeCloseTo(6.65);
+    expect(drawImage.mock.calls[0]?.[6]).toBe(6);
+    expect(drawImage.mock.calls[0]?.[7]).toBeCloseTo(34.7);
+    expect(drawImage.mock.calls[0]?.[8]).toBe(36);
+  });
+
+  it('selects the configured sprite for each camera projection', () => {
+    const state = {
+      dungeon: {
+        discoveredRooms: ['A'],
+        layout: {
+          grid: ['A'],
+          decorators: [
+            parseDecorator([
+              0,
+              0,
+              {
+                sprite: { image: 'legacy.png', size: 32, index: 0 },
+                sprites: {
+                  topDown: { image: 'top-down.png', size: 32, index: 1 },
+                  isometric: { image: 'isometric.png', size: 48, index: 2 },
+                },
+              },
+            ]),
+          ],
+        },
+      },
+    } as GameState;
+    const groundSheet = {} as CanvasImageSource;
+
+    const topDown = buildDecoratorViewModels(
+      state,
+      groundSheet,
+      48,
+      false,
+      'topDown',
+    );
+    const isometric = buildDecoratorViewModels(
+      state,
+      groundSheet,
+      48,
+      true,
+      'isometric',
+    );
+
+    expect(topDown[0]?.sprite?.image).toEqual(
+      expect.objectContaining({ src: 'top-down.png' }),
+    );
+    expect(topDown[0]?.isometricSpriteOverride).toBeUndefined();
+    expect(isometric[0]?.sprite?.image).toEqual(
+      expect.objectContaining({ src: 'isometric.png' }),
+    );
+    expect(isometric[0]?.isometricSpriteOverride).toBe(true);
+  });
+
+  it('uses the top-down sprite before the legacy sprite as isometric fallback', () => {
+    const state = {
+      dungeon: {
+        discoveredRooms: ['A'],
+        layout: {
+          grid: ['A'],
+          decorators: [
+            parseDecorator([
+              0,
+              0,
+              {
+                sprite: { image: 'legacy.png', size: 32, index: 0 },
+                sprites: {
+                  topDown: { image: 'top-down.png', size: 32, index: 1 },
+                },
+              },
+            ]),
+          ],
+        },
+      },
+    } as GameState;
+
+    const [isometric] = buildDecoratorViewModels(
+      state,
+      {} as CanvasImageSource,
+      48,
+      true,
+      'isometric',
+    );
+
+    expect(isometric?.sprite?.image).toEqual(
+      expect.objectContaining({ src: 'top-down.png' }),
+    );
+    expect(isometric?.isometricSpriteOverride).toBe(true);
+  });
+
+  it('uses the legacy sprite as isometric fallback when no projection sprites exist', () => {
+    const state = {
+      dungeon: {
+        discoveredRooms: ['A'],
+        layout: {
+          grid: ['A'],
+          decorators: [
+            parseDecorator([
+              0,
+              0,
+              { sprite: { image: 'legacy.png', size: 32, index: 0 } },
+            ]),
+          ],
+        },
+      },
+    } as GameState;
+
+    const [isometric] = buildDecoratorViewModels(
+      state,
+      {} as CanvasImageSource,
+      48,
+      true,
+      'isometric',
+    );
+
+    expect(isometric?.sprite?.image).toEqual(
+      expect.objectContaining({ src: 'legacy.png' }),
+    );
+    expect(isometric?.isometricSpriteOverride).toBe(true);
+  });
+
+  it('retains the selected isometric fallback while its image loads', () => {
+    const state = {
+      dungeon: {
+        discoveredRooms: ['A'],
+        layout: {
+          grid: ['A'],
+          decorators: [
+            parseDecorator([
+              0,
+              0,
+              {
+                sprite: { image: 'legacy.png', size: 32, index: 0 },
+                sprites: {
+                  topDown: {
+                    image: 'not-loaded-top-down.png',
+                    size: 32,
+                    index: 1,
+                  },
+                },
+              },
+            ]),
+          ],
+        },
+      },
+    } as GameState;
+
+    const [isometric] = buildDecoratorViewModels(
+      state,
+      {} as CanvasImageSource,
+      48,
+      true,
+      'isometric',
+    );
+
+    expect(isometric?.sprite).toBeNull();
+    expect(isometric?.isometricSpriteOverride).toBe(true);
+    expect(isometric?.fallbackTile).toBeDefined();
+  });
+
   it('draws decorator sprites in discovered rooms only', () => {
     const discoveredDecorator = {
       position: { x: 0, y: 0 },

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { GameState, Hero } from '../types';
-import { CellAlignment, Side } from '../types';
+import { CellAlignment, SecretType, Side } from '../types';
 import {
   getAnimatedLightSpriteSignature,
   getDynamicSignature,
+  getItemAuraSignature,
   getOverlaySignature,
+  getPortalAuraSignature,
   getStaticSignature,
 } from './DungeonBoardSignatures';
 
@@ -40,6 +42,57 @@ const createState = (overrides?: Partial<GameState>): GameState =>
   }) as GameState;
 
 describe('DungeonBoardSignatures', () => {
+  it('animates the portal only while it is discovered and in the viewport', () => {
+    const state = createState();
+    const viewport = { x: 0, y: 0, width: 3, height: 1 };
+    expect(getPortalAuraSignature(state.dungeon, 0, viewport)).toBe('');
+    state.dungeon.portal = { x: 1, y: 0 };
+    expect(getPortalAuraSignature(state.dungeon, 0, viewport)).toBe('0');
+    expect(getPortalAuraSignature(state.dungeon, 124, viewport)).toBe('0');
+    expect(getPortalAuraSignature(state.dungeon, 125, viewport)).toBe('1');
+    expect(
+      getPortalAuraSignature(state.dungeon, 125, { ...viewport, x: 10 }),
+    ).toBe('');
+    state.dungeon.discoveredRooms = [];
+    expect(getPortalAuraSignature(state.dungeon, 125, viewport)).toBe('');
+    state.dungeon.portal = undefined;
+    expect(getPortalAuraSignature(state.dungeon, 125)).toBe('');
+  });
+
+  it('animates enabled carried auras only while discovered and in the viewport', () => {
+    const state = createState({
+      heroes: [
+        {
+          name: 'Fearik',
+          health: 6,
+          position: { x: 1, y: 0 },
+          inventory: [{ id: 'boots_of_speed' } as Hero['inventory'][number]],
+        } as Hero,
+      ],
+    });
+    const viewport = { x: 0, y: 0, width: 3, height: 1 };
+
+    expect(getItemAuraSignature(state, 0, viewport)).toContain(
+      'boots_of_speed',
+    );
+    expect(getItemAuraSignature(state, 124, viewport)).toBe(
+      getItemAuraSignature(state, 0, viewport),
+    );
+    expect(getItemAuraSignature(state, 125, viewport)).not.toBe(
+      getItemAuraSignature(state, 0, viewport),
+    );
+    expect(getItemAuraSignature(state, 125, { ...viewport, x: 10 })).toBe('');
+
+    const before = getDynamicSignature(state, false, 48);
+    state.heroes[0].inventory[0].disabled = true;
+    expect(getItemAuraSignature(state, 125, viewport)).toBe('');
+    expect(getDynamicSignature(state, false, 48)).not.toBe(before);
+
+    state.heroes[0].inventory[0].disabled = false;
+    state.dungeon.discoveredRooms = [];
+    expect(getItemAuraSignature(state, 125, viewport)).toBe('');
+  });
+
   it('static signature changes when a door opens', () => {
     const state = createState();
     const before = getStaticSignature(state, false, 48);
@@ -69,6 +122,27 @@ describe('DungeonBoardSignatures', () => {
         sprite: { image: 'decorators/bones.png', size: 32, index: 0 },
       },
     ];
+
+    expect(getStaticSignature(state, false, 48)).not.toBe(before);
+  });
+
+  it('static signature changes when a projection-specific decorator sprite changes', () => {
+    const state = createState();
+    state.dungeon.layout.decorators = [
+      {
+        position: { x: 1, y: 0 },
+        sprite: { image: 'decorators/bones.png', size: 32, index: 0 },
+        sprites: {
+          isometric: { image: 'decorators/bones-iso.png', size: 48, index: 0 },
+        },
+      },
+    ];
+    const before = getStaticSignature(state, false, 48);
+    state.dungeon.layout.decorators[0].sprites!.isometric = {
+      image: 'decorators/bones-iso.png',
+      size: 48,
+      index: 1,
+    };
 
     expect(getStaticSignature(state, false, 48)).not.toBe(before);
   });
@@ -114,6 +188,36 @@ describe('DungeonBoardSignatures', () => {
     ];
     const before = getDynamicSignature(state, false, 48);
     state.dungeon.layout.lights[0].sprite = { x: 624, y: 96, size: 48 };
+
+    expect(getDynamicSignature(state, false, 48)).not.toBe(before);
+  });
+
+  it('dynamic signature changes when room fog absorption changes', () => {
+    const state = createState();
+    state.dungeon.layout.roomFog = { A: { density: 0.4 } };
+    const before = getDynamicSignature(state, false, 48);
+    state.dungeon.layout.roomFog.A.density = 0.7;
+
+    expect(getDynamicSignature(state, false, 48)).not.toBe(before);
+  });
+
+  it('dynamic signature changes when a mode-specific light sprite changes', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      {
+        position: { x: 1, y: 0 },
+        sprites: {
+          isometric: { image: 'iso-light.png', x: 0, y: 0, size: 48 },
+        },
+      },
+    ];
+    const before = getDynamicSignature(state, false, 48);
+    state.dungeon.layout.lights[0].sprites!.isometric = {
+      image: 'iso-light.png',
+      x: 48,
+      y: 0,
+      size: 48,
+    };
 
     expect(getDynamicSignature(state, false, 48)).not.toBe(before);
   });
@@ -181,6 +285,37 @@ describe('DungeonBoardSignatures', () => {
 
     expect(firstFrame).not.toBe('');
     expect(secondFrame).not.toBe(firstFrame);
+  });
+
+  it('uses the active mode sprite for the animated frame signature', () => {
+    const state = createState();
+    state.dungeon.layout.lights = [
+      {
+        position: { x: 1, y: 0 },
+        sprites: {
+          topDown: {
+            image: 'top-down.png',
+            x: 0,
+            y: 0,
+            size: 32,
+            frameCount: 8,
+            frameRate: 8,
+          },
+          isometric: {
+            image: 'isometric.png',
+            x: 0,
+            y: 0,
+            size: 48,
+            frameCount: 4,
+            frameRate: 4,
+          },
+        },
+      },
+    ];
+
+    expect(
+      getAnimatedLightSpriteSignature(state, false, 250, 'topDown'),
+    ).not.toBe(getAnimatedLightSpriteSignature(state, false, 250, 'isometric'));
   });
 
   it('static signature changes when a decorator crop changes', () => {
@@ -256,6 +391,36 @@ describe('DungeonBoardSignatures', () => {
     hero.position = { x: 2, y: 0 };
     const after = getDynamicSignature(state, false, 48);
     expect(after).not.toBe(before);
+  });
+
+  it('includes static world changes in the isometric dynamic signature', () => {
+    const state = createState();
+    state.dungeon.layout.secrets = [
+      {
+        name: 'Trap door',
+        type: SecretType.TRAP_DOOR,
+        position: { x: 1, y: 0 },
+        found: false,
+      },
+    ];
+    const topDownBefore = getDynamicSignature(state, false, 48);
+    const isometricBefore = getDynamicSignature(
+      state,
+      false,
+      48,
+      getStaticSignature(state, false, 48),
+    );
+    state.dungeon.layout.secrets[0].found = true;
+
+    expect(getDynamicSignature(state, false, 48)).toBe(topDownBefore);
+    expect(
+      getDynamicSignature(
+        state,
+        false,
+        48,
+        getStaticSignature(state, false, 48),
+      ),
+    ).not.toBe(isometricBefore);
   });
 
   it('dynamic signature changes when a corridor collapses', () => {
