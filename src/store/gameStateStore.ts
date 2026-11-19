@@ -173,16 +173,79 @@ export const musicModeStore = derived(
   ($state) => $state?.settings?.['music'] !== false,
 );
 
-export const isTurnInProgress = writable<boolean>(false);
-let isExecutingTurn = false;
+type TurnToken = { generation: number };
+
+type TurnOutcome<T> =
+  { acquired: false } | { acquired: true; cancelled: boolean; result: T };
+
+let generation = 0;
+let activeTurn: TurnToken | null = null;
+const turnProgressStore = writable<boolean>(false);
+export const isTurnInProgress = {
+  subscribe: turnProgressStore.subscribe,
+};
+
+const isTurnLocked = (): boolean => activeTurn !== null;
+
+const withState = <T>(action: (state: GameState) => T): T | undefined => {
+  const state = get(gameStateStore);
+  if (!state) return;
+  return action(state);
+};
+
+const withGameplayState = <T>(
+  action: (state: GameState) => T,
+): T | undefined => (isTurnLocked() ? undefined : withState(action));
+
+const beginLifecycle = (): void => {
+  generation++;
+  activeTurn = null;
+  turnProgressStore.set(false);
+};
+
+const runTurn = async <T>(
+  operation: (
+    publish: (state: GameState, syncImmediate?: boolean) => boolean,
+  ) => Promise<T>,
+): Promise<TurnOutcome<T>> => {
+  if (activeTurn) return { acquired: false };
+
+  const token: TurnToken = { generation };
+  activeTurn = token;
+  turnProgressStore.set(true);
+  const publish = (state: GameState, syncImmediate = false): boolean => {
+    if (activeTurn !== token || generation !== token.generation) return false;
+    syncStore(state, syncImmediate);
+    return true;
+  };
+
+  try {
+    const result = await operation(publish);
+    return {
+      acquired: true,
+      cancelled: generation !== token.generation,
+      result,
+    };
+  } finally {
+    if (activeTurn === token) {
+      activeTurn = null;
+      turnProgressStore.set(false);
+    }
+  }
+};
 
 // Encapsulated Action Dispatchers
+// During an asynchronous turn, gameplay mutations and difficulty changes are
+// blocked. Settings, save requests and transient visual cleanup remain allowed;
+// lifecycle transitions cancel the turn. The multi-action endHeroAction branch
+// remains unlocked because it does not advance monster actions.
 export const initGame = (
   campaignId?: string,
   gameMasterId?: string,
   speedrunSeed?: number,
   heroes?: Hero[],
 ): GameState => {
+  beginLifecycle();
   const state = init(campaignId, gameMasterId, speedrunSeed, heroes);
   syncStore(state, true);
   enterGamePhase();
@@ -190,6 +253,7 @@ export const initGame = (
 };
 
 export const loadGameState = (loadedState: GameState): GameState => {
+  beginLifecycle();
   const state = loadState(loadedState);
   syncStore(state, true);
   enterGamePhase();
@@ -197,209 +261,196 @@ export const loadGameState = (loadedState: GameState): GameState => {
 };
 
 export const saveGame = (name?: string): void => {
-  const state = get(gameStateStore);
-  if (!state) return;
-  save(state, name);
-  syncStore(state, true);
+  withState((state) => {
+    save(state, name);
+    syncStore(state, true);
+  });
 };
 
 export const nextTurn = async (
   options?: MonsterTurnOptions,
 ): Promise<GameState | null> => {
-  if (isExecutingTurn) {
-    return get(gameStateStore);
-  }
-  isExecutingTurn = true;
-  isTurnInProgress.set(true);
-  try {
+  const outcome = await runTurn(async (publish) => {
     const state = get(gameStateStore);
     if (!state) return null;
     const updated = await next(state, {
-      onActionCallback: (st) => syncStore(st),
       ...options,
+      onActionCallback: (st) => {
+        if (publish(st)) options?.onActionCallback?.(st);
+      },
     });
-    syncStore(updated, true);
+    publish(updated, true);
     return updated;
-  } finally {
-    isExecutingTurn = false;
-    isTurnInProgress.set(false);
-  }
+  });
+  if (!outcome.acquired || outcome.cancelled) return get(gameStateStore);
+  return outcome.result;
 };
 
 export const endHeroAction = async (
   options?: MonsterTurnOptions,
 ): Promise<void> => {
-  if (isExecutingTurn) {
-    return;
-  }
-  const state = get(gameStateStore);
+  if (isTurnLocked()) return;
+  const state = withState((currentState) => currentState);
   if (!state) return;
   const hero = state.currentActor;
   if (!hero) return;
 
-  if (hero.actions === 1) {
-    isExecutingTurn = true;
-    isTurnInProgress.set(true);
-    try {
+  if (hero.actions <= 1) {
+    await runTurn(async (publish) => {
       await endAction(state, {
-        onActionCallback: (st) => syncStore(st),
         ...options,
+        onActionCallback: (st) => {
+          if (publish(st)) options?.onActionCallback?.(st);
+        },
       });
-      syncStore(state, true);
-    } finally {
-      isExecutingTurn = false;
-      isTurnInProgress.set(false);
-    }
+      publish(state, true);
+    });
   } else {
+    const currentGeneration = generation;
     await endAction(state, options);
-    syncStore(state);
+    if (currentGeneration === generation) syncStore(state);
   }
 };
 
 export const moveHero = (direction: MoveDirection | (string & {})): void => {
-  if (isExecutingTurn) return;
-  const state = get(gameStateStore);
-  if (!state) return;
-  act(direction, state);
-  syncStore(state);
+  withGameplayState((state) => {
+    act(direction, state);
+    syncStore(state);
+  });
 };
 
 export const pickLockAction = (): void => {
-  if (isExecutingTurn) return;
-  const state = get(gameStateStore);
-  if (!state) return;
-  pickLock(state);
-  syncStore(state);
+  withGameplayState((state) => {
+    pickLock(state);
+    syncStore(state);
+  });
 };
 
 export const searchAction = (): void => {
-  if (isExecutingTurn) return;
-  const state = get(gameStateStore);
-  if (!state) return;
-  search(state);
-  syncStore(state);
+  withGameplayState((state) => {
+    search(state);
+    syncStore(state);
+  });
 };
 
 export const interactAction = (): void => {
-  if (isExecutingTurn) return;
-  const state = get(gameStateStore);
-  if (!state) return;
-  interact(state);
-  syncStore(state);
+  withGameplayState((state) => {
+    interact(state);
+    syncStore(state);
+  });
 };
 
 export const useHeroItem = (item: Item, hero?: Hero): void => {
-  if (isExecutingTurn) return;
-  const state = get(gameStateStore);
-  if (!state) return;
-  const itemUser = hero ?? state.currentActor;
-  if (
-    state.currentActor !== itemUser ||
-    !state.heroes.some(
-      (stateHero) =>
-        stateHero === itemUser && stateHero.inventory.includes(item),
-    )
-  ) {
-    return;
-  }
-  useItem(state, item);
-  syncStore(state);
+  withGameplayState((state) => {
+    const itemUser = hero ?? state.currentActor;
+    if (
+      state.currentActor !== itemUser ||
+      !state.heroes.some(
+        (stateHero) =>
+          stateHero === itemUser && stateHero.inventory.includes(item),
+      )
+    ) {
+      return;
+    }
+    useItem(state, item);
+    syncStore(state);
+  });
 };
 
 export const selectTargetHero = (target: Hero): void => {
-  if (isExecutingTurn) return;
-  const state = get(gameStateStore);
-  if (!state) return;
-  if (state.targetActor && state.targetActor === target) {
-    state.targetActor = undefined;
-  } else {
-    state.targetActor = target;
-  }
-  syncStore(state);
+  withGameplayState((state) => {
+    if (state.targetActor && state.targetActor === target) {
+      state.targetActor = undefined;
+    } else {
+      state.targetActor = target;
+    }
+    syncStore(state);
+  });
 };
 
 export const toggleHeroInventory = (hero: Hero): void => {
-  if (isExecutingTurn) return;
-  const state = get(gameStateStore);
-  if (!state) return;
-  const foundHero = state.heroes.find((h) => h.name === hero.name) as
-    Hero | undefined;
-  if (foundHero) {
-    // The hero status screen is a full-board modal: opening one hero's
-    // screen closes every other hero's.
-    const opening = !foundHero.isInventoryOpen;
-    (state.heroes as Hero[]).forEach((h) => {
-      h.isInventoryOpen = false;
-    });
-    foundHero.isInventoryOpen = opening;
-  } else {
-    hero.isInventoryOpen = !hero.isInventoryOpen;
-  }
-  syncStore(state);
+  withGameplayState((state) => {
+    const foundHero = state.heroes.find((h) => h.name === hero.name) as
+      Hero | undefined;
+    if (foundHero) {
+      // The hero status screen is a full-board modal: opening one hero's
+      // screen closes every other hero's.
+      const opening = !foundHero.isInventoryOpen;
+      (state.heroes as Hero[]).forEach((h) => {
+        h.isInventoryOpen = false;
+      });
+      foundHero.isInventoryOpen = opening;
+    } else {
+      hero.isInventoryOpen = !hero.isInventoryOpen;
+    }
+    syncStore(state);
+  });
 };
 
 export const setDebug = (debug: boolean): void => {
-  const state = get(gameStateStore);
-  if (!state) return;
-  state.settings['debug'] = debug;
-  syncStore(state);
+  withState((state) => {
+    state.settings['debug'] = debug;
+    syncStore(state);
+  });
 };
 
 export const setMusic = (music: boolean): void => {
-  const state = get(gameStateStore);
-  if (!state) return;
-  state.settings['music'] = music;
-  syncStore(state);
+  withState((state) => {
+    state.settings['music'] = music;
+    syncStore(state);
+  });
 };
 
 export const removeDamageIndicatorAction = (id: string): void => {
-  const state = get(gameStateStore);
-  if (!state) return;
-  removeDamageIndicator(state, id);
-  syncStore(state);
+  withState((state) => {
+    removeDamageIndicator(state, id);
+    syncStore(state);
+  });
 };
 
 export const setGameLocale = (loc: string): void => {
-  const state = get(gameStateStore);
-  if (!state) return;
-  state.settings['locale'] = loc;
-  syncStore(state);
+  withState((state) => {
+    state.settings['locale'] = loc;
+    syncStore(state);
+  });
 };
 
 export const setDifficulty = (difficulty: Difficulty): void => {
-  const state = get(gameStateStore);
-  if (!state) return;
-  state.gameMaster = difficulty;
-  syncStore(state);
+  withGameplayState((state) => {
+    state.gameMaster = difficulty;
+    syncStore(state);
+  });
 };
 
 export const setGameMaster = setDifficulty;
 
 export const winLevel = (): void => {
-  const state = get(gameStateStore);
-  if (!state) return;
-  hasWon(state);
-  syncStore(state, true);
+  beginLifecycle();
+  withState((state) => {
+    hasWon(state);
+    syncStore(state, true);
+  });
 };
 
 export const resetCurrentLevel = (): void => {
-  const state = get(gameStateStore);
-  if (!state) return;
-  const updated = resetLevel(state);
-  syncStore(updated, true);
+  beginLifecycle();
+  withState((state) => {
+    const updated = resetLevel(state);
+    syncStore(updated, true);
+  });
 };
 
 export const goToTestingGrounds = (): void => {
-  if (isExecutingTurn) return;
-  const state = get(gameStateStore);
-  if (!state) return;
-  state.dungeon = testingGrounds;
-  state.eventDeck = getEventsForDungeon(state.dungeon, [], state);
-  resetLiveHeroes(state);
-  // The testing grounds show an intro like any dungeon; its timer starts
-  // when that intro is closed.
-  beginDungeonTiming(state, true);
-  syncStore(state);
+  beginLifecycle();
+  withState((state) => {
+    state.dungeon = testingGrounds;
+    state.eventDeck = getEventsForDungeon(state.dungeon, [], state);
+    resetLiveHeroes(state);
+    // The testing grounds show an intro like any dungeon; its timer starts
+    // when that intro is closed.
+    beginDungeonTiming(state, true);
+    syncStore(state);
+  });
 };
 
 export const handleCanvasClick = (
@@ -407,11 +458,10 @@ export const handleCanvasClick = (
   cellSize: number,
   camera?: CameraOffset,
 ): void => {
-  if (isExecutingTurn) return;
-  const state = get(gameStateStore);
-  if (!state) return;
-  doMouseLogic(event, cellSize, state, camera);
-  syncStore(state);
+  withGameplayState((state) => {
+    doMouseLogic(event, cellSize, state, camera);
+    syncStore(state);
+  });
 };
 
 export const dispatchAction = (action: GameAction): void => {
@@ -432,11 +482,10 @@ export const dispatchAction = (action: GameAction): void => {
       if (action.target) {
         selectTargetHero(action.target);
       } else {
-        const state = get(gameStateStore);
-        if (state) {
+        withGameplayState((state) => {
           state.targetActor = undefined;
           syncStore(state);
-        }
+        });
       }
       break;
     case 'TOGGLE_INVENTORY':
@@ -481,8 +530,8 @@ export const dispatchAction = (action: GameAction): void => {
 };
 
 export const dispatch = (actionFn: (state: GameState) => void): void => {
-  const state = get(gameStateStore);
-  if (!state) return;
-  actionFn(state);
-  syncStore(state);
+  withGameplayState((state) => {
+    actionFn(state);
+    syncStore(state);
+  });
 };
