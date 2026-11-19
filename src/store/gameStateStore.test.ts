@@ -22,6 +22,7 @@ import {
   searchAction,
   selectTargetHero,
   toggleHeroInventory,
+  useHeroItem,
   setDebug,
   setGameLocale,
   goToTestingGrounds,
@@ -29,8 +30,10 @@ import {
   removeDamageIndicatorAction,
 } from './gameStateStore';
 import { debouncedSaveReloadGuard, saveReloadGuard } from '../core';
-import type { GameState, Hero } from '../types';
+import type { GameState, Hero, Item } from '../types';
 import { init } from '../game';
+import { magicItems } from '../items/magicItems';
+import { USED_ON } from '../items/ItemLogic';
 
 // The store may hold null (fresh visit boots into the welcome phase);
 // every test below starts a run first, so the state is present.
@@ -109,6 +112,34 @@ describe('gameStateStore and state management', () => {
     unsubscribe();
   });
 
+  it('does not use another hero’s item when the status screen passes its owner', () => {
+    const state = getState();
+    const heroes = state.heroes.filter(
+      (actor): actor is Hero => 'isInventoryOpen' in actor,
+    );
+    const currentActor = heroes[0];
+    const itemOwner = heroes[1];
+    const baseHerbs = magicItems.find((item) => item.id === 'healing_herbs');
+    expect(currentActor).toBeDefined();
+    expect(itemOwner).toBeDefined();
+    expect(baseHerbs).toBeDefined();
+    if (!currentActor || !itemOwner || !baseHerbs) return;
+
+    const herbs = JSON.parse(JSON.stringify(baseHerbs)) as Item;
+    itemOwner.inventory = [herbs];
+    const currentHealth = currentActor.health;
+    const ownerHealth = itemOwner.health;
+    const publishedState = get(gameStateStore);
+    expect(state.currentActor).toBe(currentActor);
+
+    useHeroItem(herbs, itemOwner);
+
+    expect(currentActor.health).toBe(currentHealth);
+    expect(itemOwner.health).toBe(ownerHealth);
+    expect(herbs.properties?.[USED_ON]).toEqual([]);
+    expect(get(gameStateStore)).toBe(publishedState);
+  });
+
   it('damageIndicatorsStore reflects damage indicators and removeDamageIndicatorAction removes them', () => {
     dispatch((s) => {
       s.damageIndicators = [
@@ -154,6 +185,20 @@ describe('gameStateStore and state management', () => {
 
     toggleHeroInventory(hero);
     expect((getState().heroes[0] as Hero).isInventoryOpen).toBe(initialOpen);
+  });
+
+  it('toggleHeroInventory closes every other hero status screen (modal)', () => {
+    const state = getState();
+    const first = state.heroes[0] as Hero;
+    const second = state.heroes[1] as Hero;
+    expect(second).toBeDefined();
+
+    first.isInventoryOpen = true;
+    toggleHeroInventory(second);
+
+    const after = getState();
+    expect((after.heroes[0] as Hero).isInventoryOpen).toBe(false);
+    expect((after.heroes[1] as Hero).isInventoryOpen).toBe(true);
   });
 
   it('actions like endHeroAction, moveHero, pickLockAction, searchAction modify state and notify store', async () => {

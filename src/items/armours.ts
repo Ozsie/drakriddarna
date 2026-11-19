@@ -4,8 +4,8 @@ import { ItemType } from '../types';
 export const armour: Armour[] = [
   {
     id: 'chain_mail',
-    name: 'items.armour.chainMail',
-    nameTranslationKey: 'items.armour.chainMail',
+    name: 'items.armour.chainMail.name',
+    nameTranslationKey: 'items.armour.chainMail.name',
     type: ItemType.ARMOUR,
     amountInDeck: 2,
     defense: 1,
@@ -20,8 +20,8 @@ export const armour: Armour[] = [
   },
   {
     id: 'plate_mail',
-    name: 'items.armour.plateMail',
-    nameTranslationKey: 'items.armour.plateMail',
+    name: 'items.armour.plateMail.name',
+    nameTranslationKey: 'items.armour.plateMail.name',
     type: ItemType.ARMOUR,
     amountInDeck: 1,
     defense: 2,
@@ -36,8 +36,8 @@ export const armour: Armour[] = [
   },
   {
     id: 'dragon_skin_mail',
-    name: 'items.armour.dragonSkinMail',
-    nameTranslationKey: 'items.armour.dragonSkinMail',
+    name: 'items.armour.dragonSkinMail.name',
+    nameTranslationKey: 'items.armour.dragonSkinMail.name',
     type: ItemType.ARMOUR,
     amountInDeck: 1,
     defense: 2,
@@ -55,8 +55,8 @@ export const armour: Armour[] = [
 export const monsterArmour: Armour[] = [
   {
     id: 'orc_mail',
-    name: 'items.armour.orchMail',
-    nameTranslationKey: 'items.armour.orchMail',
+    name: 'items.armour.orchMail.name',
+    nameTranslationKey: 'items.armour.orchMail.name',
     defense: 0,
     magicProtection: false,
     amountInDeck: 4,
@@ -66,8 +66,8 @@ export const monsterArmour: Armour[] = [
   },
   {
     id: 'troll_skin',
-    name: 'items.armour.trollSkin',
-    nameTranslationKey: 'items.armour.trollSkin',
+    name: 'items.armour.trollSkin.name',
+    nameTranslationKey: 'items.armour.trollSkin.name',
     defense: 1,
     magicProtection: false,
     amountInDeck: 4,
@@ -77,8 +77,8 @@ export const monsterArmour: Armour[] = [
   },
   {
     id: 'dark_lord_cape',
-    name: 'items.armour.darkLordCape',
-    nameTranslationKey: 'items.armour.darkLordCape',
+    name: 'items.armour.darkLordCape.name',
+    nameTranslationKey: 'items.armour.darkLordCape.name',
     defense: 2,
     magicProtection: false,
     amountInDeck: 4,

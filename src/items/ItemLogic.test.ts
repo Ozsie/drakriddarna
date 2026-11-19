@@ -121,6 +121,18 @@ describe('ItemLogic - Healing Herbs rework', () => {
     expect(hero1.actions).toBe(1);
   });
 
+  it('does not let the current actor use an item owned by another hero', () => {
+    state.currentActor = hero2;
+    state.targetActor = hero2;
+    const healthBefore = hero2.health;
+
+    useItem(state, herbs);
+
+    expect(hero2.health).toBe(healthBefore);
+    expect(herbs.properties?.[USED_ON]).toEqual([]);
+    expect(hero2.actions).toBe(2);
+  });
+
   it('allows healing each hero once and marks USED true when all heroes have been healed', () => {
     state.currentActor = hero1;
 

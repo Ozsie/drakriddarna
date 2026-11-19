@@ -5,11 +5,24 @@
 import { DifficultLevels } from '../../core';
 import { campaigns } from '../../campaigns';
 import type { Translator } from '@hoard-engine/uikit';
-import type {
-  NewGameDialogRowVm,
-  NewGameDialogViewModel,
-} from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
+
+export interface NewGameDialogRowVm {
+  id: string;
+  label: string;
+}
+
+export interface NewGameDialogViewModel {
+  titleText: string;
+  campaignHeaderText: string;
+  gameMasterHeaderText: string;
+  campaignRows: NewGameDialogRowVm[];
+  gameMasterRows: NewGameDialogRowVm[];
+  checkboxLabelText: string;
+  seedLabelText: string;
+  actionButtonLabel: string;
+  secondaryButtonLabel: string;
+}
 
 export const getCampaignRows = (
   t: Translator = i18nTranslator,

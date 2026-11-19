@@ -4,6 +4,7 @@ import type {
   DungeonIntroHitResult,
   EventCardHitResult,
   HeroCardsHitResult,
+  HeroStatusHitResult,
   DebugMenuHitResult,
   SaveLoadDialogHitResult,
   TopBarHitElement,
@@ -24,8 +25,10 @@ export interface BoardHoverState {
   isDungeonIntroCloseHovered: boolean;
   hoveredMenuItemId: string | null;
   hoveredInventoryHeroName: string | null;
-  hoveredCloseHeroName: string | null;
-  hoveredUseItem: { heroName: string; itemIndex: number } | null;
+  isStatusCloseHovered: boolean;
+  isStatusUseHovered: boolean;
+  /** Hover over a pointable status-screen element (a filled slot or an inventory cell). */
+  isStatusPointableHovered: boolean;
   isEventCardToggleHovered: boolean;
   isDiaryToggleHovered: boolean;
   isBdActionHovered: boolean;
@@ -50,8 +53,9 @@ export const createBoardHoverState = (): BoardHoverState => ({
   isDungeonIntroCloseHovered: false,
   hoveredMenuItemId: null,
   hoveredInventoryHeroName: null,
-  hoveredCloseHeroName: null,
-  hoveredUseItem: null,
+  isStatusCloseHovered: false,
+  isStatusUseHovered: false,
+  isStatusPointableHovered: false,
   isEventCardToggleHovered: false,
   isDiaryToggleHovered: false,
   isBdActionHovered: false,
@@ -90,18 +94,31 @@ const clearTopBarHovers = (hover: BoardHoverState): boolean => {
   return changed;
 };
 
+/** Clears the hero status screen's hover flags. */
+const clearStatusHovers = (hover: BoardHoverState): boolean => {
+  let changed = false;
+  if (hover.isStatusCloseHovered) {
+    hover.isStatusCloseHovered = false;
+    changed = true;
+  }
+  if (hover.isStatusUseHovered) {
+    hover.isStatusUseHovered = false;
+    changed = true;
+  }
+  if (hover.isStatusPointableHovered) {
+    hover.isStatusPointableHovered = false;
+    changed = true;
+  }
+  return changed;
+};
+
 const clearHeroCardHovers = (hover: BoardHoverState): boolean => {
   let changed = false;
   if (hover.hoveredInventoryHeroName !== null) {
     hover.hoveredInventoryHeroName = null;
     changed = true;
   }
-  if (hover.hoveredCloseHeroName !== null) {
-    hover.hoveredCloseHeroName = null;
-    changed = true;
-  }
-  if (hover.hoveredUseItem !== null) {
-    hover.hoveredUseItem = null;
+  if (clearStatusHovers(hover)) {
     changed = true;
   }
   return changed;
@@ -275,31 +292,54 @@ export const updateHeroCardsHover = (
   hover.hoveredRadialIndex = null;
   let changed = clearTopBarHovers(hover);
   const newInvHero = hit.type === 'inventoryButton' ? hit.hero.name : null;
-  const newCloseHero = hit.type === 'inventoryClose' ? hit.hero.name : null;
-  const newUseItem =
-    hit.type === 'inventoryUseItem'
-      ? { heroName: hit.hero.name, itemIndex: hit.itemIndex }
-      : null;
   if (hover.hoveredInventoryHeroName !== newInvHero) {
     hover.hoveredInventoryHeroName = newInvHero;
     changed = true;
   }
-  if (hover.hoveredCloseHeroName !== newCloseHero) {
-    hover.hoveredCloseHeroName = newCloseHero;
+  if (clearStatusHovers(hover)) {
     changed = true;
   }
-  if (
-    hover.hoveredUseItem?.heroName !== newUseItem?.heroName ||
-    hover.hoveredUseItem?.itemIndex !== newUseItem?.itemIndex
-  ) {
-    hover.hoveredUseItem = newUseItem;
-    changed = true;
-  }
-  const isButtonHover =
-    hit.type === 'inventoryButton' ||
-    hit.type === 'inventoryClose' ||
-    hit.type === 'inventoryUseItem';
+  const isButtonHover = hit.type === 'inventoryButton';
   return { cursor: isButtonHover ? 'pointer' : 'default', changed };
+};
+
+export const updateHeroStatusHover = (
+  hover: BoardHoverState,
+  hit: HeroStatusHitResult | null,
+): HoverResult => {
+  hover.hoveredRadialIndex = null;
+  let changed = clearTopBarHovers(hover);
+  if (hover.hoveredInventoryHeroName !== null) {
+    hover.hoveredInventoryHeroName = null;
+    changed = true;
+  }
+  if (hit?.type === 'close') {
+    if (!hover.isStatusCloseHovered) {
+      hover.isStatusCloseHovered = true;
+      changed = true;
+    }
+  } else if (hover.isStatusCloseHovered) {
+    hover.isStatusCloseHovered = false;
+    changed = true;
+  }
+  if (hit?.type === 'use') {
+    if (!hover.isStatusUseHovered) {
+      hover.isStatusUseHovered = true;
+      changed = true;
+    }
+  } else if (hover.isStatusUseHovered) {
+    hover.isStatusUseHovered = false;
+    changed = true;
+  }
+  const isPointable =
+    hit?.type === 'slot'
+      ? hit.item !== null
+      : hit?.type === 'item' || hit?.type === 'use' || hit?.type === 'close';
+  if (isPointable !== hover.isStatusPointableHovered) {
+    hover.isStatusPointableHovered = isPointable;
+    changed = true;
+  }
+  return { cursor: isPointable ? 'pointer' : 'default', changed };
 };
 
 const clearHoverCards = (
@@ -475,6 +515,8 @@ export const updateHoverForUiHit = (
       return updateTopBarHover(hover, hit.hit, isLogOpen);
     case 'debugMenu':
       return updateDebugMenuHover(hover, hit.hit);
+    case 'heroStatus':
+      return updateHeroStatusHover(hover, hit.hit);
     case 'heroCards':
       return updateHeroCardsHover(hover, hit.hit);
     case 'monsterCards':
@@ -526,12 +568,7 @@ export const clearBoardHovers = (
     hover.hoveredInventoryHeroName = null;
     changed = true;
   }
-  if (hover.hoveredCloseHeroName !== null) {
-    hover.hoveredCloseHeroName = null;
-    changed = true;
-  }
-  if (hover.hoveredUseItem !== null) {
-    hover.hoveredUseItem = null;
+  if (clearStatusHovers(hover)) {
     changed = true;
   }
   if (hover.hoveredMenuItemId !== null) {

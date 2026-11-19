@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { toHeroCardsViewModel } from './heroCards';
-import type { GameState, Hero, Item } from '../../types';
+import { itemSpriteRef, toHeroCardsViewModel } from './heroCards';
+import type { GameState, Hero } from '../../types';
 import { Colour, ItemType, Level } from '../../types';
-import { ACTIVE, DESCRIPTION, USED } from '../../items/ItemLogic';
 
 const identityT = (key: string) => key;
 
@@ -83,55 +82,9 @@ describe('hero cards view model', () => {
     expect(vm.cards.map((card) => card.heroId)).toEqual(['Helbran', 'Siedel']);
   });
 
-  it('builds the inventory popover with use-button state and labels', () => {
-    const potion: Item = {
-      name: 'Health Potion',
-      amountInDeck: 1,
-      type: ItemType.MAGIC,
-      value: 10,
-      properties: { [ACTIVE]: true, [DESCRIPTION]: 'Restores HP' },
-    };
-    const spentScroll: Item = {
-      name: 'Empty Scroll',
-      amountInDeck: 1,
-      type: ItemType.MAGIC,
-      value: 0,
-      properties: { [ACTIVE]: true, [USED]: true },
-    };
-    const passiveGem: Item = {
-      name: 'Gem',
-      amountInDeck: 1,
-      type: ItemType.MAGIC,
-      value: 5,
-      properties: {},
-    };
-    const state = createState([
-      createHero('Fearik', {
-        isInventoryOpen: true,
-        inventory: [potion, spentScroll, passiveGem],
-      }),
-    ]);
-
-    const vm = toHeroCardsViewModel(state, identityT, false);
-    const inventory = vm.cards[0].inventory;
-
-    expect(inventory).not.toBeNull();
-    expect(inventory?.heroId).toBe('Fearik');
-    expect(inventory?.titleText).toBe('content.inventory.label');
-    expect(inventory?.items.map((item) => item.itemIndex)).toEqual([0, 1, 2]);
-    const [usable, used, passive] = inventory?.items ?? [];
-    expect(usable.isUsable).toBe(true);
-    expect(usable.hasUseButton).toBe(true);
-    expect(usable.useText).toBe('content.inventory.use');
-    expect(used.isUsed).toBe(true);
-    expect(used.usedText).toBe('content.inventory.used');
-    expect(passive.hasUseButton).toBe(false);
-  });
-
   it('maps item sprites to asset ids', () => {
     const state = createState([
       createHero('Fearik', {
-        isInventoryOpen: true,
         inventory: [
           {
             name: 'Gem',
@@ -145,17 +98,12 @@ describe('hero cards view model', () => {
       }),
     ]);
 
-    const vm = toHeroCardsViewModel(state, identityT, false);
-    expect(vm.cards[0].inventory?.items[0].sprite).toEqual({
+    const gem = (state.heroes[0]?.inventory ?? [])[0];
+    expect(gem).toBeDefined();
+    expect(itemSpriteRef(gem)).toEqual({
       assetId: '/images/gems.png',
       index: 3,
       size: 32,
     });
-  });
-
-  it('keeps the inventory null while the popover is closed', () => {
-    const state = createState([createHero('Fearik', { inventory: [] })]);
-    const vm = toHeroCardsViewModel(state, identityT, false);
-    expect(vm.cards[0].inventory).toBeNull();
   });
 });

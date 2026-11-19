@@ -226,5 +226,17 @@
   },
   "fog": {
     "name": "dimman"
+  },
+  "status": {
+    "description": "Beskrivning",
+    "statusEffects": "Statuseffekter",
+    "inventory": "Packning",
+    "health": "Hälsa",
+    "experience": "Erfarenhet",
+    "steps": "Steg",
+    "weapon": "Vapen",
+    "armour": "Rustning",
+    "shield": "Sköld",
+    "incapacitated": "Handlingsförlamad"
   }
 }

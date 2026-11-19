@@ -9,11 +9,24 @@ import {
   getSavedGameMenuItems,
 } from '../../menu/MenuLogic';
 import type { Translator } from '@hoard-engine/uikit';
-import type {
-  SaveLoadDialogMode,
-  SaveLoadDialogViewModel,
-} from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
+
+export type SaveLoadDialogMode = 'save' | 'load';
+
+export interface SaveLoadDialogRowViewModel {
+  id: string;
+  label: string;
+  hint: string | undefined;
+}
+
+export interface SaveLoadDialogViewModel {
+  mode: SaveLoadDialogMode;
+  titleText: string;
+  subtitleText: string;
+  rows: SaveLoadDialogRowViewModel[];
+  actionButtonLabel: string;
+  secondaryButtonLabel: string | undefined;
+}
 
 export const toSaveLoadDialogViewModel = (
   state: GameState | null | undefined,

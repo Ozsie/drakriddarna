@@ -178,6 +178,31 @@ describe('HeroSelectionRendering', () => {
       ).toBeLessThanOrEqual(1);
     });
 
+    it('keeps every roster hero reachable on a short viewport', () => {
+      const layout = getHeroSelectionLayout(360, 320, 'iceDragonTreasure', {
+        selectedHeroIds: rosterIds,
+        names: {},
+      });
+
+      expect(layout.rows.map((row) => row.heroId)).toEqual(rosterIds);
+      const lastRow = layout.rows[layout.rows.length - 1];
+      expect(lastRow).toBeDefined();
+      if (!lastRow) return;
+      expect(
+        lastRow.rowBounds.y + lastRow.rowBounds.height,
+      ).toBeLessThanOrEqual(layout.startButtonBounds.y);
+      expect(
+        getHeroSelectionHit(
+          360,
+          320,
+          'iceDragonTreasure',
+          lastRow.rowBounds.x + 30,
+          lastRow.rowBounds.y + lastRow.rowBounds.height / 2,
+          { selectedHeroIds: rosterIds, names: {} },
+        ),
+      ).toEqual({ type: 'row', heroId: rosterIds[rosterIds.length - 1] });
+    });
+
     it('prefills labels with the roster names, raw once edited', () => {
       const prefilled = getHeroSelectionLayout(800, 600, 'iceDragonTreasure', {
         selectedHeroIds: rosterIds,
@@ -263,6 +288,15 @@ describe('HeroSelectionRendering', () => {
         { selectedHeroIds: rosterIds, names: {} },
       );
       expect(inputHit).toEqual({ type: 'nameInput', heroId: row.heroId });
+      const rowHit = getHeroSelectionHit(
+        800,
+        600,
+        'iceDragonTreasure',
+        row.rowBounds.x + 2,
+        row.rowBounds.y + 2,
+        { selectedHeroIds: rosterIds, names: {} },
+      );
+      expect(rowHit).toEqual({ type: 'row', heroId: row.heroId });
     });
 
     it('hits Start and Back in their corners', () => {

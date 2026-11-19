@@ -288,10 +288,20 @@ export const interactAction = (): void => {
   syncStore(state);
 };
 
-export const useHeroItem = (item: Item): void => {
+export const useHeroItem = (item: Item, hero?: Hero): void => {
   if (isExecutingTurn) return;
   const state = get(gameStateStore);
   if (!state) return;
+  const itemUser = hero ?? state.currentActor;
+  if (
+    state.currentActor !== itemUser ||
+    !state.heroes.some(
+      (stateHero) =>
+        stateHero === itemUser && stateHero.inventory.includes(item),
+    )
+  ) {
+    return;
+  }
   useItem(state, item);
   syncStore(state);
 };
@@ -315,7 +325,13 @@ export const toggleHeroInventory = (hero: Hero): void => {
   const foundHero = state.heroes.find((h) => h.name === hero.name) as
     Hero | undefined;
   if (foundHero) {
-    foundHero.isInventoryOpen = !foundHero.isInventoryOpen;
+    // The hero status screen is a full-board modal: opening one hero's
+    // screen closes every other hero's.
+    const opening = !foundHero.isInventoryOpen;
+    (state.heroes as Hero[]).forEach((h) => {
+      h.isInventoryOpen = false;
+    });
+    foundHero.isInventoryOpen = opening;
   } else {
     hero.isInventoryOpen = !hero.isInventoryOpen;
   }
