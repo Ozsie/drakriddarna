@@ -1,8 +1,4 @@
-import type { Dungeon, GameState, Hero } from '../types';
-import { toArray } from '../core';
-import { createSeededRng, resetRng, setRng } from '../core';
-import { init } from '../game';
-import { resetLiveHeroes } from '../hero/HeroLogic';
+import type { Dungeon, GameState } from '../types';
 import { renderItems } from '../items/ItemRendering';
 import {
   renderGrid,
@@ -20,8 +16,9 @@ import {
   renderAnimatedLights,
   type LightViewport,
 } from '../dungeon/LightRendering';
-import { DEFAULT_CAMPAIGN_ID } from '../campaigns';
-import { DEFAULT_GAME_MASTER_ID } from '../gameMasters';
+import { createExploredState } from './exploredState';
+
+export { createExploredState } from './exploredState';
 
 // A no-op 2D context that counts every method call by name. The render
 // functions run their full JS pass — path building, gradients, per-cell
@@ -75,37 +72,6 @@ const fakeImage = (): CanvasImageSource =>
     naturalWidth: 512,
     naturalHeight: 512,
   }) as unknown as CanvasImageSource;
-
-// A GameState for `dungeon` with everything explored: every room letter
-// in the grid revealed, every secret and note found. Heroes are placed
-// at their starting positions (matching what the benchmark game runner
-// does when overriding a dungeon).
-export const createExploredState = (dungeon: Dungeon): GameState => {
-  setRng(createSeededRng(42));
-  try {
-    const state = init(DEFAULT_CAMPAIGN_ID, DEFAULT_GAME_MASTER_ID);
-    state.dungeon = structuredClone(dungeon);
-    resetLiveHeroes(state);
-    state.currentActor = state.heroes[0] as Hero | undefined;
-
-    const rooms = new Set<string>();
-    state.dungeon.layout.grid.forEach((row) => {
-      toArray(row).forEach((cell) => {
-        if (cell) rooms.add(cell);
-      });
-    });
-    state.dungeon.discoveredRooms = [...rooms];
-    state.dungeon.layout.secrets?.forEach((secret) => {
-      secret.found = true;
-    });
-    state.dungeon.layout.notes?.forEach((note) => {
-      note.found = true;
-    });
-    return state;
-  } finally {
-    resetRng();
-  }
-};
 
 // The exact draw sequence of the controller's `renderStaticLayer`, minus
 // the canvas housekeeping: this is the per-repaint cost of the cached

@@ -14,6 +14,7 @@
 		"tests/**/*.js",
 		"tests/**/*.ts",
 		"tests/**/*.svelte",
-		"packages/*/src/**/*.ts"
+		"packages/*/src/**/*.ts",
+		"scripts/browser-benchmark.ts"
 	]
 }

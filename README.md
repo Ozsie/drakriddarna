@@ -84,6 +84,7 @@ npm run check           # type-check with svelte-check
 npm run lint            # lint TypeScript files with ESLint
 npm run prettier        # check formatting
 npm run benchmark       # run playability benchmarks (see below)
+npm run benchmark:browser # run real-browser rendering performance scenarios
 ```
 
 ## Benchmarks
@@ -103,6 +104,11 @@ What it does:
 - Also includes a metrics verification test that validates the simulation result tracking itself.
 
 A single simulation run can end in one of three statuses: `WON`, `LOST` or `TIMEOUT` (max turns exceeded).
+
+The real-browser rendering baseline uses Chrome/Chromium and complements the
+headless simulation and no-op canvas benchmarks. See
+[`docs/browser-performance.md`](./docs/browser-performance.md) for its
+scenarios, metrics, environment, and recorded budgets.
 
 ## Building
 

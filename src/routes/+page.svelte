@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import Dungeon from '../components/Dungeon.svelte';
   import { inputManager } from '../input/InputManager';
+  import { isBrowserPerfHarnessEnabled } from '../perf/browserBenchmarkGate';
 
   let dungeonContainer: HTMLElement | undefined = $state();
 
@@ -10,6 +11,20 @@
     if (dungeonContainer) {
       inputManager.attachGestures(dungeonContainer);
     }
+    let harnessEnabled = false;
+    try {
+      harnessEnabled = isBrowserPerfHarnessEnabled(
+        localStorage.getItem('perfHarness'),
+      );
+    } catch {
+      harnessEnabled = false;
+    }
+    if (harnessEnabled) {
+      void import('../benchmark/browserHarness').then(
+        ({ installBrowserBenchmarkHarness }) =>
+          installBrowserBenchmarkHarness(),
+      );
+    }
   });
 
   onDestroy(() => {
@@ -17,6 +32,14 @@
     inputManager.detachGestures();
   });
 </script>
+
+<div class="app-container">
+  <div class="main-section">
+    <main class="dungeon-view" bind:this={dungeonContainer}>
+      <Dungeon />
+    </main>
+  </div>
+</div>
 
 <style>
   .app-container {
@@ -49,11 +72,3 @@
     min-width: 0;
   }
 </style>
-
-<div class="app-container">
-  <div class="main-section">
-    <main class="dungeon-view" bind:this={dungeonContainer}>
-      <Dungeon />
-    </main>
-  </div>
-</div>

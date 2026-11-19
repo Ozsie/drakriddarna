@@ -795,7 +795,21 @@ Three layers of verification:
    enough to catch a tuning change that silently shifts difficulty. Run
    `npm run benchmark` for current numbers.
 
-3. **Balance analysis** (`npm run balanceAnalysis`) plus a tuning test that
+3. **Real-browser rendering benchmark** (`npm run benchmark:browser`). The
+   production build is served through the static preview and a temporary
+   Chrome/Chromium profile runs fixed scene, projection, DPR, pan, and zoom
+   scenarios. It records frame-time percentiles, browser trace costs for
+   rasterization, paint, compositing, image decoding and GC, plus heap, DOM,
+   and listener measurements during repeated scene changes. The opt-in app
+   harness is loaded only when the benchmark profile sets
+   `localStorage.perfHarness=1`; normal play does not load it. The environment,
+   recorded measurements, and regression-budget policy are documented in
+   `docs/browser-performance.md` and `docs/browser-performance-baseline.json`.
+   This browser benchmark complements rather than replaces the no-op canvas
+   benchmark, and supplies evidence before invalidation or derived-store
+   caching changes.
+
+4. **Balance analysis** (`npm run balanceAnalysis`) plus a tuning test that
    pins the BrutalOverlord's numbers. The harness also models mid-campaign
    parties: `runSingleGame({ heroExperience })` grants every hero the exact
    XP earlier floors would have yielded before levelling them, so the

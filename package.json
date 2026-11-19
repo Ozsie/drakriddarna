@@ -11,6 +11,7 @@
 		"test": "vitest",
 		"benchmark": "BENCHMARK=true vitest run src/benchmark/benchmark.test.ts",
 		"benchmark:rendering": "BENCHMARK=true vitest run src/benchmark/renderingBenchmark.test.ts",
+		"benchmark:browser": "npm run build && node --experimental-strip-types scripts/browser-benchmark.ts",
 		"balanceAnalysis": "BENCHMARK=true vitest run src/benchmark/balanceAnalysis.test.ts",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
