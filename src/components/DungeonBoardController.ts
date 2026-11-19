@@ -179,26 +179,26 @@ import { setImageLoadedListener } from '../core/ImageCache';
 import { MAX_SAVE_NAME_LENGTH } from '../saves/SavesLogic';
 import { onChangeLanguage, onNewGame, onSaveGame } from '../menu/MenuLogic';
 import { DEFAULT_CAMPAIGN_ID } from '../campaigns';
-import { getTouchCentroid } from '@hoard-engine/input';
 import {
+  activateTouchHoldPan,
+  beginTouchHoldPan,
+  cancelTouchHoldPan,
+  classifyWheelEvent,
   createPinchZoomState,
+  createTouchHoldPanState,
+  createWheelGestureState,
+  endTouchHoldPan,
+  getTouchCentroid,
   handlePinchZoomEnd,
   handlePinchZoomMove,
   handlePinchZoomStart,
-} from '../input/PinchZoomLogic';
-import {
-  activateTouchHoldPan,
-  cancelTouchHoldPan,
-  createTouchHoldPanState,
-  beginTouchHoldPan,
-  endTouchHoldPan,
   handleTouchHoldPanMove,
-  TOUCH_HOLD_PAN_DELAY_MS,
-} from '../input/TouchHoldPanLogic';
+} from '@hoard-engine/input';
 import {
-  classifyWheelEvent,
-  createWheelGestureState,
-} from '../input/WheelGestureLogic';
+  TOUCH_HOLD_PAN_CONFIG,
+  TOUCH_HOLD_PAN_DELAY_MS,
+  WHEEL_GESTURE_CONFIG,
+} from '../input/GestureTuning';
 import {
   screenToWorldZoomed,
   worldToScreenZoomed,
@@ -2744,7 +2744,11 @@ export class DungeonBoardController {
     // reports once the hold elapsed (activateTouchHoldPan scheduled from
     // the touchstart timer); earlier movement cancels the candidate and
     // the gesture stays a tap or swipe on release.
-    const pan = handleTouchHoldPanMove(event.touches, this.touchHoldPanState);
+    const pan = handleTouchHoldPanMove(
+      event.touches,
+      this.touchHoldPanState,
+      TOUCH_HOLD_PAN_CONFIG,
+    );
     if (pan) {
       this.panX = pan.panX;
       this.panY = pan.panY;
@@ -4430,6 +4434,7 @@ export class DungeonBoardController {
         ctrlKey: event.ctrlKey,
       },
       Date.now(),
+      WHEEL_GESTURE_CONFIG,
     );
     if (mode === 'pan') {
       const startPanX = this.panX;

@@ -77,8 +77,11 @@ is what makes two unusual things possible:
 The UI layer is deliberately thin. Only three `.svelte` components exist; the
 game view (`Dungeon.svelte`) is pure reactive glue — it derives state from the
 stores and forwards it to `DungeonBoardController`, a colocated plain-TS class
-that owns the canvases, the layered render loop, pan/drag/touch/zoom handling
-and all pointer/keyboard dispatch. The glue preserves a Svelte 4 contract: game
+that owns the canvases, the layered render loop, browser-side pan/drag/touch/zoom
+handling and pointer/keyboard dispatch. Pure gesture state machines come from
+`@hoard-engine/input`, while policy-free zoom transforms come from
+`@hoard-engine/camera`; game timing, thresholds, limits and event arbitration
+stay in the game. The glue preserves a Svelte 4 contract: game
 logic mutates the single `GameState` in place and re-publishes it, so the
 store wraps every publish in a fresh top-level envelope — Svelte 5 deriveds
 compare by reference, and an identical reference would leave the derived

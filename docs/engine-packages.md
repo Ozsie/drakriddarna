@@ -13,26 +13,19 @@ lighting, dice), pure I/O abstractions (audio, saves), and pure rendering
 this repository.
 
 The target architecture has now been reached: the nine original packages
-are published and consumed as dependencies; the in-repository input and
-camera extracts are consumed locally but are not yet published. What
-remains in `src/` is the game — the turn pipeline, the content and the
-adapters/facades that
-resolve game state into the packages' contracts. The remaining coupling
-is deliberate game knowledge: the shared `GameState` type, the
-`#lib/translations/index.js` i18n singleton, and the world-rendering
-adapters and facades — the
-audio inversion is done: logic modules emit sound-cue data that the game's
-adapter maps to samples, and no logic module imports the
-`soundEffectManager` facade. Each package section
-names the coupling its extraction removed. (The extractions are done:
-`@hoard-engine/rng`,
-`@hoard-engine/grid`, `@hoard-engine/primitives`,
-`@hoard-engine/audio`, `@hoard-engine/lighting`,
-`@hoard-engine/saves`, `@hoard-engine/directors`,
-`@hoard-engine/uikit` and `@hoard-engine/scene` are published on npm and
-consumed as dependencies; `@hoard-engine/input` and `@hoard-engine/camera`
-are extracted local packages, not yet published — see their sections
-below for the layout and tooling pattern.)
+are published and consumed as dependencies. `@hoard-engine/input` and
+`@hoard-engine/camera` v0.1.0 are also published; their v0.2.0 updates for
+gesture state machines and policy-free zoom math are prepared in the sibling
+package repositories and await release. The game manifests target v0.2.0,
+while the lockfile remains on the latest published versions until release.
+What remains in `src/` is the game — the turn pipeline, the content and the
+adapters/facades that resolve game state into the packages' contracts. The
+remaining coupling is deliberate game knowledge: the shared `GameState`
+type, the `#lib/translations/index.js` i18n singleton, and the
+world-rendering adapters and facades. The audio inversion is complete:
+logic modules emit sound-cue data that the game's adapter maps to samples,
+and no logic module imports the `soundEffectManager` facade. Each package
+section names the coupling its extraction removed.
 
 ## Package map
 
@@ -44,8 +37,8 @@ below for the layout and tooling pattern.)
 @hoard-engine/saves      versioned save framework + migration registry
 @hoard-engine/directors  hook/dispatch framework for game-master-style directors
 @hoard-engine/time       day/cycle/season calendar (future; see Future candidates)
-@hoard-engine/input      key bindings, action dispatch, touch gestures
-@hoard-engine/camera     follow smoothing + viewport coordinate transforms
+@hoard-engine/input      key bindings, action dispatch, touch gesture state machines
+@hoard-engine/camera     follow smoothing + viewport transforms and zoom math
 @hoard-engine/primitives text, geometry, clipping, theme tokens
 @hoard-engine/uikit      UI chrome: widgets, components       (source: src/uikit/)
 @hoard-engine/scene      world canvas: tiles, walls, light composite, sprites, VFX
@@ -657,27 +650,32 @@ step-9 gate ("view-model contracts in place") is being built under
   `@hoard-engine/scene` (v0.1.0), consumed as a dependency like every
   other engine package.
 
-### @hoard-engine/input — source: `../input` — EXTRACTED LOCALLY
+### @hoard-engine/input — source: `../input` — v0.2.0 PENDING RELEASE
 
 Generic key-binding, action-dispatch, held-action and touch-gesture
-mechanics extracted from both games. The package uses plain input data and
-consumer callbacks; action names, browser event wiring, default bindings,
-and screen-relative movement remain in the games.
+mechanics extracted from both games. The v0.2.0 update adds pinch zoom,
+one-finger hold-pan and wheel-burst state machines with consumer-provided
+thresholds; action names, timing/tuning policy, browser event wiring,
+default bindings and game-action arbitration remain in the games.
 
-**Current state:** standalone and consumed locally by both games, not yet
-published. Its boundary, public-surface and browser/i18n sentinel tests
-enforce the package rules; game-specific mechanics remain in the adapters.
+**Current state:** v0.1.0 is published and consumed by both games. The
+standalone v0.2.0 source and tests are prepared locally; release is pending.
+Its boundary, public-surface and browser/i18n sentinel tests enforce the
+package rules; game-specific mechanics remain in the adapters.
 
-### @hoard-engine/camera — source: `../camera` — EXTRACTED LOCALLY
+### @hoard-engine/camera — source: `../camera` — v0.2.0 PENDING RELEASE
 
 Exponential camera-follow smoothing and centered/panned world-to-screen
-and screen-to-world transforms. It accepts plain positions, viewport
-dimensions and offsets; projection, zoom, rendering, resize, board bounds
-and camera lifecycle remain consumer-owned.
+and screen-to-world transforms. The v0.2.0 update adds zoom-aware transforms,
+anchor-preserving zoom, step arithmetic and wheel-delta math over plain
+values. Zoom limits, keyboard step, input sensitivity, projection, rendering,
+resize, board bounds and camera lifecycle remain consumer-owned.
 
-**Current state:** standalone and consumed locally by both games, not yet
-published. Its boundary, public-surface and browser/i18n sentinel tests
-enforce the package rules; the package has no runtime dependencies.
+**Current state:** v0.1.0 is published and consumed by both games. The
+standalone v0.2.0 source and tests are prepared locally; release is pending.
+Its boundary, public-surface and browser/i18n sentinel tests enforce the
+package rules; the package has no runtime dependencies and does not depend
+on `@hoard-engine/scene`.
 
 ## Prerequisites (cross-cutting)
 
@@ -750,16 +748,17 @@ later:
    corner/sealed derivation, the light view builder) stays in the game.
 
 10. `@hoard-engine/input` — generic bindings, action dispatch, held-action
-    state and touch gestures, extracted from both games. **Done locally:**
-    the standalone `../input` package is consumed by both games; game action
-    names, DOM event wiring and screen-relative movement remain in consumers.
-    It is not yet published.
-11. `@hoard-engine/camera` — follow smoothing and centered/panned viewport
+    state and touch gesture mechanics, extracted from both games. **Done:**
+    v0.1.0 is published and consumed; the v0.2.0 gesture-state-machine
+    update is prepared locally with game tuning and browser wiring retained
+    in consumers, pending release.
+11. `@hoard-engine/camera` — follow smoothing, centered/panned viewport
     transforms, extracted from Metroidvania's camera and Drakriddarna's
-    coordinate conversion and canvas transform math. **Done locally:** the
-    standalone `../camera` package is consumed by both games; projection,
-    zoom, resize, canvas lifecycle and board bounds remain consumer-owned.
-    It is not yet published.
+    coordinate conversion and canvas transform math. **Done:**
+    v0.1.0 is published and consumed; the v0.2.0 policy-free zoom math
+    update is prepared locally. Projection, zoom limits/input sensitivity,
+    resize, canvas lifecycle and board bounds remain consumer-owned, pending
+    release of v0.2.0.
 
 ## What stays in the game
 
