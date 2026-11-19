@@ -1,0 +1,1 @@
+var e=new URL(`../assets/Dungeon_Character_3.Cqb_kmKn.png`,import.meta.url).href,t=(e,t)=>({sheet:`actors`,x:e,y:t,size:32}),n={HERO:t(0,64),MONSTER_DEFAULT:t(336,64),TROLL:t(336,128),ORCH:t(336,256)},r={ITEM_GENERIC:{sheet:`dungeon`,x:288,y:144,size:48}};export{r as n,e as r,n as t};
