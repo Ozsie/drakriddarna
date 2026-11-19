@@ -328,6 +328,7 @@ const loadIndex = (
     return undefined;
 
   loadingIndexes.add(root);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   void fetch(asset(`${root}/index.json` as AssetPath))
     .then((response) => (response.ok ? response.json() : null))
     .then((value: unknown) => parseIsometricGraphicsManifest(value))

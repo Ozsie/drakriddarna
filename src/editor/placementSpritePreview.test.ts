@@ -316,6 +316,7 @@ describe('editor placement sprite previews', () => {
     expect(requestedUrls).toHaveLength(2);
     expect(requestedUrls).toEqual([
       asset('isometric/index.json'),
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       asset('campaigns/sample/graphics/index.json' as AssetPath),
     ]);
     expect(loaded?.tiles.sharedFloor?.imageUrl).toBe(

@@ -34,6 +34,7 @@ export type PlacementSpritePreviews = {
 };
 
 const resolveStaticAsset = (path: string): string =>
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   asset(path.replace(/^\/+/, '') as AssetPath);
 
 const itemSpritePreview = (
@@ -199,6 +200,7 @@ const loadManifest = async (
   fetcher: typeof fetch,
 ): Promise<IsometricGraphicsManifest | null> => {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const response = await fetcher(asset(`${root}/index.json` as AssetPath));
     return response.ok
       ? parseIsometricGraphicsManifest(await response.json())
