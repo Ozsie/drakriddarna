@@ -32,6 +32,7 @@ import {
 } from '../HeroSelectionRendering';
 import { renderTopBar } from '../TopBarRendering';
 import { renderHeroCards } from '../HeroCardRendering';
+import { renderHeroStatus } from '../HeroStatusRendering';
 import { renderMonsterCards } from '../MonsterCardRendering';
 import { renderDiaryAndWinConditions } from '../DiaryAndWinConditionRendering';
 import { renderEventCard } from '../EventCardRendering';
@@ -42,7 +43,40 @@ import { renderRadialMenu } from '../RadialMenuRendering';
 import { renderSaveLoadDialog } from '../SaveLoadDialogRendering';
 import { renderNewGameDialog } from '../NewGameDialogRendering';
 import { renderSettings, renderCredits } from '../SettingsRendering';
-import { renderWelcome } from '../WelcomeRendering';
+import { getWelcomeLayout, renderWelcome } from '../WelcomeRendering';
+import { legacyUiContext } from '../env';
+import { renderWelcomeComposition } from '../WelcomeComposition';
+import { toWelcomeViewModel } from '../viewmodels/welcome';
+
+const normalizeCanvasLog = (log: readonly string[]): string[] => {
+  const normalized: string[] = [];
+  const isStyleWrite = (line: string): boolean =>
+    /^(fillStyle|strokeStyle|lineWidth|font|textAlign|textBaseline)=/.test(
+      line,
+    );
+
+  for (let index = 0; index < log.length;) {
+    if (!isStyleWrite(log[index])) {
+      normalized.push(log[index]);
+      index += 1;
+      continue;
+    }
+
+    const writes: string[] = [];
+    while (index < log.length && isStyleWrite(log[index])) {
+      writes.push(log[index]);
+      index += 1;
+    }
+    normalized.push(
+      ...writes.sort((a, b) => {
+        const propertyA = a.slice(0, a.indexOf('='));
+        const propertyB = b.slice(0, b.indexOf('='));
+        return propertyA.localeCompare(propertyB);
+      }),
+    );
+  }
+  return normalized;
+};
 
 describe('parity snapshots', () => {
   beforeAll(async () => {
@@ -64,6 +98,22 @@ describe('parity snapshots', () => {
     });
   });
 
+  it('preserves order for repeated canvas property writes', () => {
+    expect(
+      normalizeCanvasLog([
+        'fillStyle=red',
+        'strokeStyle=blue',
+        'fillStyle=green',
+        'lineWidth=1',
+      ]),
+    ).toEqual([
+      'fillStyle=red',
+      'fillStyle=green',
+      'lineWidth=1',
+      'strokeStyle=blue',
+    ]);
+  });
+
   it('snapshots the top bar in regular and compact mode', () => {
     const regular = createRecordingContext();
     renderTopBar(regular.ctx, REGULAR_WIDTH, midCampaignState());
@@ -74,17 +124,11 @@ describe('parity snapshots', () => {
     expect([...compact.log]).toMatchSnapshot('topbar-compact');
   });
 
-  it('snapshots the hero cards, including an open inventory popover', () => {
+  it('snapshots the hero cards in regular and compact mode', () => {
     const state = midCampaignState();
     const regular = createRecordingContext();
     renderHeroCards(regular.ctx, REGULAR_WIDTH, REGULAR_HEIGHT, state);
     expect([...regular.log]).toMatchSnapshot('herocards-regular');
-
-    const withInventory = midCampaignState();
-    (withInventory.heroes as Hero[])[0].isInventoryOpen = true;
-    const popover = createRecordingContext();
-    renderHeroCards(popover.ctx, REGULAR_WIDTH, REGULAR_HEIGHT, withInventory);
-    expect([...popover.log]).toMatchSnapshot('herocards-inventory-open');
 
     const compact = createRecordingContext();
     renderHeroCards(
@@ -94,6 +138,35 @@ describe('parity snapshots', () => {
       midCampaignState(),
     );
     expect([...compact.log]).toMatchSnapshot('herocards-compact');
+  });
+
+  it('snapshots the hero status screen for the open hero', async () => {
+    const state = midCampaignState();
+    const hero = (state.heroes as Hero[])[0];
+    hero.isInventoryOpen = true;
+    hero.blinded = true;
+    hero.ignoredByMonsters = true;
+    const selection = {
+      heroId: hero.name,
+      source: { kind: 'inventory' as const, itemIndex: 0 },
+    };
+
+    const screen = createRecordingContext();
+    renderHeroStatus(screen.ctx, REGULAR_WIDTH, REGULAR_HEIGHT, state, {
+      selection,
+    });
+    expect([...screen.log]).toMatchSnapshot('herostatus-open');
+
+    // The same screen under the Swedish locale: the labels translate.
+    await loadTranslations('sv');
+    const swedish = createRecordingContext();
+    renderHeroStatus(swedish.ctx, REGULAR_WIDTH, REGULAR_HEIGHT, state, {
+      selection,
+    });
+    expect([...swedish.log]).toMatchSnapshot('herostatus-swedish');
+
+    // Back to the default locale for the tests that follow.
+    await loadTranslations('en');
   });
 
   it('snapshots the monster cards for visible monsters', () => {
@@ -278,6 +351,43 @@ describe('parity snapshots', () => {
       hasOngoingRun: true,
     });
     expect([...ongoing.log]).toMatchSnapshot('welcome-ongoing');
+  });
+
+  it('renders the composition tree like the unchanged welcome renderer', () => {
+    const viewBounds = {
+      x: 0,
+      y: 0,
+      width: REGULAR_WIDTH,
+      height: REGULAR_HEIGHT,
+    };
+    const buildInfo = { date: '2026-10-31', hash: 'abc1234' };
+
+    for (const hasOngoingRun of [false, true]) {
+      const options = { buildInfo, hasOngoingRun, backgroundImage: null };
+      const viewModel = toWelcomeViewModel(undefined, buildInfo, {
+        hasOngoingRun,
+      });
+      const layout = getWelcomeLayout(REGULAR_WIDTH, REGULAR_HEIGHT, options);
+
+      const unchanged = createRecordingContext();
+      renderWelcome(unchanged.ctx, REGULAR_WIDTH, REGULAR_HEIGHT, options);
+
+      const composition = createRecordingContext();
+      renderWelcomeComposition(
+        viewModel,
+        layout,
+        viewBounds,
+        legacyUiContext(composition.ctx, undefined),
+        { backgroundImage: null },
+      );
+
+      // The legacy facade brackets its draw with save/restore; the composition
+      // renderer does not need that outer scope. Style writes are independent,
+      // so compare their runs in a stable order as well as every draw call.
+      expect(normalizeCanvasLog(unchanged.log.slice(1, -1))).toEqual(
+        normalizeCanvasLog(composition.log),
+      );
+    }
   });
 
   it('snapshots the top bar and hero cards under the Swedish locale', async () => {

@@ -56,6 +56,27 @@ describe('BetweenDungeonsRendering', () => {
     expect(layout.secondaryButtonBounds).toBeUndefined();
   });
 
+  it('keeps compact level-up cards above the action button on short screens', () => {
+    const state = init();
+    state.heroes.push(
+      ...state.heroes.map((hero, index) => ({
+        ...hero,
+        name: `${hero.name}-${String(index)}`,
+      })),
+    );
+    openBetweenDungeons(state);
+
+    const layout = getBetweenDungeonsLayout(360, 220, state);
+
+    expect(layout.heroes).toHaveLength(state.heroes.length);
+    expect(
+      layout.heroes.every(
+        (hero) =>
+          hero.bounds.y + hero.bounds.height <= layout.actionButtonBounds.y,
+      ),
+    ).toBe(true);
+  });
+
   it('includes the dungeon time in the level-up score section when the run was timed', () => {
     const state = init();
     state.dungeon.score = {
@@ -195,6 +216,16 @@ describe('BetweenDungeonsRendering', () => {
     expect(cc.heroRows.every((row) => row.alive)).toBe(true);
     expect(layout.heroes).toEqual([]);
     expect(layout.secondaryButtonBounds).toBeUndefined();
+
+    const compactLayout = getBetweenDungeonsLayout(360, 600, state);
+    const compactCampaignComplete = compactLayout.campaignComplete;
+    expect(compactCampaignComplete).toBeDefined();
+    if (!compactCampaignComplete) return;
+    expect(compactCampaignComplete.heroRows.map((row) => row.y)).toEqual(
+      compactCampaignComplete.heroRows.map(
+        (_, index) => compactCampaignComplete.heroHeaderY + 32 + index * 32,
+      ),
+    );
 
     // The finish button is hit-testable
     const actionHit = getBetweenDungeonsHit(

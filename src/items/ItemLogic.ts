@@ -440,13 +440,19 @@ export const onReset: {
   necklaceOfLightOnUse: necklaceOfLightReset,
 };
 export const useItem = (state: GameState, item: Item) => {
-  if (item && item.effect && state.currentActor) {
+  const user = state.currentActor;
+  if (
+    item &&
+    item.effect &&
+    user &&
+    state.heroes.some((hero) => hero === user && hero.inventory.includes(item))
+  ) {
     const use = onUse[item.effect];
     if (!use) {
       addLog(state, 'logs.item.cannotUse', { item: i18n(item.name) });
       return;
     }
-    use(state, item, state.currentActor, state.targetActor);
+    use(state, item, user, state.targetActor);
     emitSoundCue(state, { cue: 'itemUse', item });
     state.targetActor = undefined;
   }

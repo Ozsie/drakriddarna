@@ -4,8 +4,29 @@
 
 import type { GameState, TurnEvent } from '../../types';
 import type { Translator } from '@hoard-engine/uikit';
-import type { DrawnEventVm, EventCardViewModel } from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
+
+export interface DrawnEventVm {
+  number: number;
+  title: string;
+}
+
+export interface EventCardViewModel {
+  headerText: string;
+  deckSummary: {
+    remaining: number;
+    total: number;
+    drawn: number;
+  };
+  activeEvent: {
+    header: string;
+    title: string;
+    description: string;
+  } | null;
+  drawnEventsHeader: string;
+  drawnEvents: DrawnEventVm[];
+  emptyDrawnText: string;
+}
 
 export const formatEventTitle = (
   event: TurnEvent,

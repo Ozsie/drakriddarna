@@ -14,22 +14,116 @@ import type {
   Weapon,
 } from '../../types';
 import { ItemType } from '../../types';
+import type { UiTheme } from '@hoard-engine/primitives';
 import { SCORE_POINTS_PER_SECRET, formatDuration } from '../../core';
 import { MAX_HIGH_SCORES } from '../../saves/HighScoresLogic';
 import { getHeroTradableItems } from '../../dungeon/BetweenDungeonsLogic';
 import type { Translator } from '@hoard-engine/uikit';
-import type {
-  BetweenDungeonsViewModel,
-  CampaignCompleteHeroRowVm,
-  CampaignCompleteVm,
-  HeroSectionVm,
-  HighScoreRowVm,
-  ScoreSectionVm,
-  TradeItemVm,
-  WipeChoiceVm,
-} from '@hoard-engine/uikit';
 import { i18nTranslator } from '../i18nAdapter';
 import { actorColourKey } from '../theme';
+
+export type BetweenDungeonsStep =
+  'levelUp' | 'trade' | 'campaignComplete' | 'partyWipe';
+
+export type ActorColourKey = keyof UiTheme['palette']['actorDot'];
+
+export interface ScoreSectionVm {
+  readonly totalText: string;
+  readonly campaignText: string;
+  readonly breakdownTexts: string[];
+  readonly timeText?: string;
+}
+
+export interface CampaignCompleteScenarioRowVm {
+  readonly nameText: string;
+  readonly roundsText: string;
+  readonly killsText: string;
+  readonly scoreText: string;
+}
+
+export interface CampaignCompleteHeroRowVm {
+  readonly title: string;
+  readonly colourKey: ActorColourKey;
+  readonly levelText: string;
+  readonly xpText: string;
+  readonly hpText: string;
+  readonly killsText: string;
+  readonly itemsText: string;
+  readonly alive: boolean;
+}
+
+export interface CampaignCompleteVm {
+  readonly scoreText: string;
+  readonly timeText?: string;
+  readonly summaryText: string;
+  readonly scenarioHeader: {
+    name: string;
+    rounds: string;
+    kills: string;
+    score: string;
+  };
+  readonly scenarioRows: readonly CampaignCompleteScenarioRowVm[];
+  readonly heroHeader: {
+    name: string;
+    level: string;
+    xp: string;
+    health: string;
+    kills: string;
+    items: string;
+  };
+  readonly heroRows: readonly CampaignCompleteHeroRowVm[];
+}
+
+export interface WipeChoiceVm {
+  readonly action: string;
+  readonly labelText: string;
+  readonly descriptionText: string;
+}
+
+export interface HighScoreRowVm {
+  readonly score: number;
+  readonly isCurrent: boolean;
+}
+
+export interface WipeHighScoresVm {
+  readonly headerText: string;
+  readonly currentLabelText: string;
+  readonly rows: readonly HighScoreRowVm[];
+}
+
+export interface TradeItemVm {
+  readonly slot: number | string;
+  readonly itemIndex: number;
+  readonly nameText: string;
+  readonly isSelected: boolean;
+}
+
+export interface HeroSectionVm {
+  readonly heroIndex: number;
+  readonly title: string;
+  readonly colourKey: ActorColourKey;
+  readonly levelBadge: string;
+  readonly isLeveledUp: boolean;
+  readonly xpText: string;
+  readonly levelMeaningText: string;
+  readonly items: readonly TradeItemVm[];
+}
+
+export interface BetweenDungeonsViewModel {
+  readonly step: BetweenDungeonsStep;
+  readonly titleText: string;
+  readonly subtitleText: string;
+  readonly actionButtonLabel: string;
+  readonly secondaryButtonLabel?: string;
+  readonly scoreSection?: ScoreSectionVm | null;
+  readonly campaignComplete?: CampaignCompleteVm | null;
+  readonly wipeChoices?: readonly WipeChoiceVm[];
+  readonly wipeHighScores?: WipeHighScoresVm | null;
+  readonly heroes: readonly HeroSectionVm[];
+  readonly selectedTradeHeroIndex: number | null;
+  readonly giveItemText: string;
+  readonly noItemsText: string;
+}
 
 /**
  * The wipe screen's high-score list: the stored top 10 with the current
