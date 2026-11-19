@@ -42,6 +42,7 @@ import {
 import {
   renderIsometricActorOverlays,
   renderIsometricDungeonPrototype,
+  renderIsometricFogLightDim,
 } from '../dungeon/IsometricDungeonRendering';
 import { setIsometricGraphicsLoadedListener } from '../dungeon/IsometricGraphics';
 import { buildHeroOverlayViewModel } from '../scene/adapters';
@@ -1494,6 +1495,7 @@ export class DungeonBoardController {
           doors: this.activeState.dungeon.layout.doors,
           pits: this.activeState.dungeon.layout.pits,
           corners: this.activeState.dungeon.layout.corners,
+          roomFog: this.activeState.dungeon.layout.roomFog,
           isometricGraphics: this.activeState.dungeon.isometricGraphics,
           discoveredRooms: this.activeState.dungeon.discoveredRooms,
         },
@@ -1530,6 +1532,13 @@ export class DungeonBoardController {
         lightCtx.setTransform(this.canvasRatio, 0, 0, this.canvasRatio, 0, 0);
         drawIsoLights(lightCtx, isometricView, isometricLightViews);
         lightCtx.restore();
+        renderIsometricFogLightDim(
+          lightCtx,
+          this.cellSize,
+          this.activeState.dungeon,
+          isometricView,
+          this.canvasRatio,
+        );
       }
       if (
         lightMaskCanvas &&

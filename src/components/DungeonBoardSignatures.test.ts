@@ -192,6 +192,15 @@ describe('DungeonBoardSignatures', () => {
     expect(getDynamicSignature(state, false, 48)).not.toBe(before);
   });
 
+  it('dynamic signature changes when room fog absorption changes', () => {
+    const state = createState();
+    state.dungeon.layout.roomFog = { A: { density: 0.4 } };
+    const before = getDynamicSignature(state, false, 48);
+    state.dungeon.layout.roomFog.A.density = 0.7;
+
+    expect(getDynamicSignature(state, false, 48)).not.toBe(before);
+  });
+
   it('dynamic signature changes when a mode-specific light sprite changes', () => {
     const state = createState();
     state.dungeon.layout.lights = [

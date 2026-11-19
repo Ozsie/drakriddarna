@@ -12,6 +12,7 @@ import {
   drawIsoHeroOverlay,
   drawIsoWorldFrame,
   dungeonViewBackdrop,
+  renderFogLightDim,
   worldToScreen,
   type SceneActorView,
   type SceneDungeonView,
@@ -90,6 +91,29 @@ export const getIsometricTileDimensions = (
 ): { width: number; height: number } => {
   const width = cellSize * projection.ax * 2 * scale;
   return { width, height: width * (naturalHeight / naturalWidth) };
+};
+
+export const renderIsometricFogLightDim = (
+  ctx: CanvasRenderingContext2D,
+  cellSize: number,
+  dungeon: SceneDungeonView,
+  view: SceneIsoView,
+  pixelRatio: number,
+): void => {
+  if (pixelRatio <= 0) return;
+  const { ax, by } = view.projection;
+  const origin = worldToScreen(view, 0, 0);
+  ctx.save();
+  ctx.setTransform(
+    pixelRatio * ax,
+    pixelRatio * by,
+    -pixelRatio * ax,
+    pixelRatio * by,
+    pixelRatio * origin.x,
+    pixelRatio * origin.y,
+  );
+  renderFogLightDim(ctx, cellSize, dungeon, false);
+  ctx.restore();
 };
 
 export const getIsometricWallShape = (

@@ -75,9 +75,12 @@ mapping in `src/ui/SettingsRendering.ts` dispatches the toggle to
    hero turn feedback, and transient combat effects have isometric paths.
    Undiscovered cells and their terrain, overlays, pits, and room contents are
    masked until discovery, including while debug overlays are enabled; hidden
-   rooms do not contribute isometric lights. Visual parity and animation timing
-   still need manual review; the current room/terrain treatment is a projected
-   cell overlay rather than a full reproduction of every top-down animation.
+   rooms do not contribute isometric lights. Discovered room fog absorbs its
+   configured density from the projected light mask before it drives visible
+   glow and ambient darkness; fog that blocks light remains part of light
+   occlusion. Visual parity and animation timing still need manual review; the
+   current room/terrain treatment is a projected cell overlay rather than a
+   full reproduction of every top-down animation.
 5. **Release and visual verification — pending.** Verify image dimensions,
    anchors, visual consistency, and licensing before reusing any Rpg assets;
    no Rpg art has been added and no art was generated or altered. Test both

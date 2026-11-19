@@ -50,6 +50,7 @@ describe('dungeon board render order', () => {
     );
     const isoPasses = [
       'drawIsoLights(',
+      'renderIsometricFogLightDim(',
       'renderIsometricDungeonPrototype(',
       'renderAmbientDarkness(',
     ].map((pass) => isoRender.indexOf(pass));
@@ -66,6 +67,7 @@ describe('dungeon board render order', () => {
     expect(isoRender).toContain('frameLights,');
     expect(isoRender).toContain('isometricGraphics:');
     expect(isoRender).toContain('discoveredRooms:');
+    expect(isoRender).toContain('roomFog:');
     expect(isoRender).toContain('view: isometricView');
     expect(isoRender).toContain('maskCanvas:');
     expect(isoRender).not.toContain('state: sig,');

@@ -50,6 +50,7 @@ import {
   prepareDepthSortedIsometricFloorPainters,
   renderIsometricLightMask,
   renderIsometricActorOverlays,
+  renderIsometricFogLightDim,
 } from './IsometricDungeonRendering';
 
 describe('feetPosition', () => {
@@ -82,6 +83,52 @@ const alignedView = createIsoView(
   48,
   alignedProjection,
 );
+
+describe('isometric fog light absorption', () => {
+  it('projects only discovered fog into device-pixel light coordinates', () => {
+    const ctx = {
+      beginPath: vi.fn(),
+      closePath: vi.fn(),
+      drawImage: vi.fn(),
+      fill: vi.fn(),
+      lineTo: vi.fn(),
+      moveTo: vi.fn(),
+      rect: vi.fn(),
+      restore: vi.fn(),
+      save: vi.fn(),
+      setTransform: vi.fn(),
+      filter: 'none',
+      globalAlpha: 1,
+      globalCompositeOperation: 'source-over',
+    } as unknown as CanvasRenderingContext2D;
+    const dungeon: SceneDungeonView = {
+      name: 'fog-light-test',
+      discoveredRooms: ['A'],
+      layout: {
+        grid: ['AAB'],
+        roomFog: {
+          A: { density: 0.6, softness: 0 },
+          B: { density: 0.9, softness: 0 },
+        },
+        doors: [],
+        secrets: [],
+      },
+    };
+    const origin = worldToScreen(alignedView, 0, 0);
+
+    renderIsometricFogLightDim(ctx, 48, dungeon, alignedView, 2);
+
+    expect(ctx.setTransform).toHaveBeenCalledWith(
+      2 * alignedProjection.ax,
+      2 * alignedProjection.by,
+      -2 * alignedProjection.ax,
+      2 * alignedProjection.by,
+      2 * origin.x,
+      2 * origin.y,
+    );
+    expect(ctx.fill).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('isometric actor indicators', () => {
   it('draws the hero floor marker before the sprite', () => {

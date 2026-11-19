@@ -158,6 +158,7 @@ export const getDynamicSignature = (
   // Light shadows depend on fog of war and on the light sources themselves,
   // including the light sources of items in actor inventories.
   const rooms = (st?.dungeon?.discoveredRooms ?? []).join(',');
+  const roomFog = JSON.stringify(st?.dungeon?.layout?.roomFog ?? {});
   // Collapsed corridors block light like walls, so they reshape the light
   // polygons the dynamic layer composites.
   const collapsed = (st?.dungeon?.collapsedCorridors ?? [])
@@ -251,7 +252,7 @@ export const getDynamicSignature = (
         : '',
     )
     .join(';');
-  return `${heroes}|${monsters}|${curActor}|${rooms}|${collapsed}|${lights}|${itemLights}|${itemAuras}|${eventLightFlags}|${eventLightsSig}|${interactableLights}|${String(size)}|${String(dbg)}${worldSignature ? `|${worldSignature}` : ''}`;
+  return `${heroes}|${monsters}|${curActor}|${rooms}|${roomFog}|${collapsed}|${lights}|${itemLights}|${itemAuras}|${eventLightFlags}|${eventLightsSig}|${interactableLights}|${String(size)}|${String(dbg)}${worldSignature ? `|${worldSignature}` : ''}`;
 };
 
 export const getAnimatedLightSpriteSignature = (

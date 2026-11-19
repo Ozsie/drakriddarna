@@ -445,9 +445,13 @@ Unchanged light-mask inputs reuse the mask across dynamic frames; changes to
 lights, discovery/layout, camera projection, canvas surfaces or loaded art
 invalidate it. The same mask supplies the visible additive glow and the
 ambient-darkness cutout, preventing floor light from brightening hidden wall
-pixels. Ambient darkness is composited once over the completed world, rather
-than filtering each individual draw; ambient-only animation uses the quantized
-repaint gate and does not force full-rate world redraws. Turn
+pixels. Discovered room fog erases its configured density from the projected
+light mask before depth-aware compositing, so its visible glow and darkness
+cutout are absorbed together; `blocksLight` fog remains handled by light
+occlusion. Fog configuration participates in both repaint and mask-cache
+signatures. Ambient darkness is composited once over the completed world,
+rather than filtering each individual draw; ambient-only animation uses the
+quantized repaint gate and does not force full-rate world redraws. Turn
 overlays and transient combat
 effects use that same
 projection; floating damage and info text is placed at projected positions but
