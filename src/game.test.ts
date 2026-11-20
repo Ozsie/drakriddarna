@@ -13,11 +13,22 @@ import {
   openPartyWipe,
 } from './dungeon/BetweenDungeonsLogic';
 import { liveHeroes } from './hero/HeroLogic';
-import { getCampaign } from './campaigns';
+import { DEFAULT_CAMPAIGN_ID, getCampaign } from './campaigns';
 import { buildSelectedHeroes } from './ui/HeroSelectionRendering';
 import { eventEffects } from './events/EventsLogic';
 import { Level, TerrainType } from './types';
 import type { Dungeon, GameMaster, Hero, GameState } from './types';
+import { createSeededRng, nextRandom, setRng } from './core/dice';
+import { STORAGE_KEYS } from './core/persistence';
+
+const createTestStorage = () => {
+  const values = new Map<string, string>();
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => values.set(key, value),
+    removeItem: (key: string) => values.delete(key),
+  };
+};
 
 describe('game orchestrator', () => {
   it('init initializes campaign and hero state properly', () => {
@@ -103,6 +114,80 @@ describe('game orchestrator', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  describe('checkpoint restoration', () => {
+    it.each([
+      ['absent', undefined],
+      ['malformed JSON', '{broken'],
+      ['non-object JSON', '[]'],
+    ])('leaves the current state intact when the autosave is %s', (_, raw) => {
+      const storage = createTestStorage();
+      if (raw !== undefined) storage.setItem(STORAGE_KEYS.autosave, raw);
+      vi.stubGlobal('localStorage', storage);
+
+      try {
+        const state = init();
+        expect(resetLevel(state)).toBe(state);
+        expect(state.actionLog[0]?.key).toBe('logs.failedToReset');
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('falls back to the default campaign for a removed autosave campaign', () => {
+      const autosave = init();
+      autosave.campaignId = 'removed-campaign';
+      const storage = createTestStorage();
+      storage.setItem(STORAGE_KEYS.autosave, JSON.stringify(autosave));
+      vi.stubGlobal('localStorage', storage);
+
+      try {
+        const restored = resetLevel(init());
+        expect(restored.campaignId).toBe(DEFAULT_CAMPAIGN_ID);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('restores the saved rng seed and rebases the dungeon timer', () => {
+      const autosave = init('iceDragonTreasure', 'tactician', 42);
+      autosave.timer = {
+        runningFrom: 1_000,
+        dungeonElapsedMs: 5_000,
+        campaignElapsedMs: 8_000,
+      };
+      const storage = createTestStorage();
+      storage.setItem(STORAGE_KEYS.autosave, JSON.stringify(autosave));
+      vi.stubGlobal('localStorage', storage);
+
+      try {
+        setRng(createSeededRng(42));
+        const expectedRandom = nextRandom();
+        setRng(createSeededRng(7));
+        const restoreStartedAt = Date.now();
+
+        const restored = resetLevel(init());
+
+        expect(restored.speedrunSeed).toBe(42);
+        expect(nextRandom()).toBe(expectedRandom);
+        expect(restored.timer?.dungeonElapsedMs).toBe(5_000);
+        expect(restored.timer?.runningFrom).toBeGreaterThanOrEqual(
+          restoreStartedAt,
+        );
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+  });
+
+  it('falls back to the default campaign for a removed loaded-save campaign', () => {
+    const state = init();
+    state.campaignId = 'removed-campaign';
+
+    const loaded = loadState(state);
+
+    expect(loaded.campaignId).toBe(DEFAULT_CAMPAIGN_ID);
   });
 
   describe('dungeon timer', () => {

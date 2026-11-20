@@ -4,6 +4,7 @@ import {
   type SaveSlots,
 } from '@hoard-engine/saves';
 import { i18n } from '../core';
+import { getPersistentStorage, STORAGE_KEYS } from '../core/persistence';
 import type { GameState } from '../types';
 // Evaluation order matters: the campaign modules call `defineDungeon` through
 // the DungeonLogic re-export at module scope, so DungeonLogic must be
@@ -21,10 +22,6 @@ import { campaigns } from '../campaigns';
 // parses the full save blobs. The pre-multiple-saves single manual slot
 // (`state`) is imported into the list on first access.
 
-const SAVE_INDEX_KEY = 'saves';
-const SAVE_PREFIX = 'save_';
-const LEGACY_STATE_KEY = 'state';
-
 export const MAX_SAVE_NAME_LENGTH = 30;
 
 export interface SaveHints {
@@ -39,8 +36,6 @@ export interface SaveMetaData extends SaveHints {
   timestamp: number;
 }
 
-const hasLocalStorage = (): boolean => typeof localStorage !== 'undefined';
-
 const generateSaveId = (): string =>
   typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
@@ -51,9 +46,9 @@ const generateSaveId = (): string =>
 let slotStore: SaveSlots<SaveMetaData> | null = null;
 const getSlots = (): SaveSlots<SaveMetaData> => {
   slotStore ??= createSaveSlots<SaveMetaData>({
-    storage: hasLocalStorage() ? localStorage : null,
-    indexKey: SAVE_INDEX_KEY,
-    slotPrefix: SAVE_PREFIX,
+    storage: getPersistentStorage(),
+    indexKey: STORAGE_KEYS.saveIndex,
+    slotPrefix: STORAGE_KEYS.savePrefix,
   });
   return slotStore;
 };
@@ -86,14 +81,18 @@ export const getSaveHint = (hints: SaveHints): string => {
  * and the legacy key is removed; nothing else has written it since.
  */
 const importLegacyManualSave = (): void => {
-  getSlots().importLegacySlot(LEGACY_STATE_KEY, (state) =>
-    createSaveMetaData(
-      state as GameState,
-      i18n('content.menu.loadGame.buttons.manualSave'),
-      generateSaveId(),
-      Date.now(),
-    ),
-  );
+  try {
+    getSlots().importLegacySlot(STORAGE_KEYS.legacyManualSave, (state) =>
+      createSaveMetaData(
+        state as GameState,
+        i18n('content.menu.loadGame.buttons.manualSave'),
+        generateSaveId(),
+        Date.now(),
+      ),
+    );
+  } catch {
+    // Storage can become unavailable after the slot store is created.
+  }
 };
 
 export const createSaveMetaData = (
@@ -111,7 +110,11 @@ export const createSaveMetaData = (
 /** All named saves, newest first. Runs the legacy-slot import first. */
 export const listSaves = (): SaveMetaData[] => {
   importLegacyManualSave();
-  return getSlots().list();
+  try {
+    return getSlots().list();
+  } catch {
+    return [];
+  }
 };
 
 /**
@@ -133,8 +136,13 @@ export const writeSave = (
 };
 
 /** The raw saved `GameState` JSON for one save id, or null when missing. */
-export const readSaveStateString = (id: string): string | null =>
-  getSlots().readSlot(id);
+export const readSaveStateString = (id: string): string | null => {
+  try {
+    return getSlots().readSlot(id);
+  } catch {
+    return null;
+  }
+};
 
 /** Load-dialog hint for a raw saved state string (the autosave slot). */
 let lastHintSource: string | null = null;

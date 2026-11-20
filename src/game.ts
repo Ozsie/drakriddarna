@@ -26,7 +26,7 @@ import {
   resetEventEffects,
 } from './events/EventsLogic';
 import { browser } from '$app/env';
-import { addLog, doReRender, i18n } from './core';
+import { addLog, doReRender, i18n, readAutosave, writeAutosave } from './core';
 import { shuffle } from './core';
 import { awardScenarioScore, beginDungeonTiming } from './core';
 import { createSeededRng, resetRng, setRng } from './core';
@@ -54,37 +54,36 @@ export const save = (state: GameState, name?: string) => {
   addLog(state, 'logs.gameSaved');
 };
 
+type RestoreSource = 'loaded save' | 'autosave';
+
+const restoreRuntimeState = (state: GameState, source: RestoreSource): void => {
+  if (!state.campaignId || !isKnownCampaign(state.campaignId)) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `Unknown or missing campaignId "${
+        state.campaignId ?? ''
+      }" in ${source}, falling back to "${DEFAULT_CAMPAIGN_ID}".`,
+    );
+    state.campaignId = DEFAULT_CAMPAIGN_ID;
+  }
+  // Saved runs resume without counting the time between saving and restoring.
+  resumeDungeonTimer(state);
+  // Speedrun saves keep their fixed seed; ordinary runs return to true
+  // randomness (e.g. after a seeded run in the same session).
+  if (state.speedrunSeed !== undefined) {
+    setRng(createSeededRng(state.speedrunSeed));
+  } else {
+    resetRng();
+  }
+};
+
 export const loadState = (newState: GameState) => {
   clearActorAnimations();
   newState.currentActor = newState.heroes.find(
     (hero) => hero.name === newState.currentActor?.name,
   ) as Hero | undefined;
   migrateSaveState(newState);
-  // Resume the run's timer without counting the time between saving and
-  // loading (the accumulated time from the save is kept).
-  resumeDungeonTimer(newState);
-  // A speedrunner save keeps its fixed seed; a normal save returns the
-  // rng to true randomness (e.g. after a seeded run in the same
-  // session).
-  if (newState.speedrunSeed !== undefined) {
-    setRng(createSeededRng(newState.speedrunSeed));
-  } else {
-    resetRng();
-  }
-  // Older saves may not have a campaignId at all, and any save could in
-  // theory reference a campaign that no longer exists (e.g. removed
-  // during development). Fall back to the default campaign rather than
-  // letting later `getCampaign(state.campaignId)` calls (e.g. in
-  // `hasWon()`) throw for an unresolvable id.
-  if (!newState.campaignId || !isKnownCampaign(newState.campaignId)) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      `Unknown or missing campaignId "${
-        newState.campaignId ?? ''
-      }" in loaded save, falling back to "${DEFAULT_CAMPAIGN_ID}".`,
-    );
-    newState.campaignId = DEFAULT_CAMPAIGN_ID;
-  }
+  restoreRuntimeState(newState, 'loaded save');
   addLog(newState, 'logs.gameLoaded');
   doReRender(newState);
   return newState;
@@ -213,9 +212,7 @@ export const init = (
       state,
     );
   }
-  if (browser) {
-    localStorage.setItem('autosave', JSON.stringify(state));
-  }
+  if (browser) writeAutosave(state);
   return state;
 };
 
@@ -378,42 +375,21 @@ export const resetLevel = (currentState: GameState): GameState => {
   clearActorAnimations();
   const gm = getDifficulty(currentState);
   dispatchDirectorEvent(gm, 'onPartyDefeat', currentState);
-  if (typeof localStorage !== 'undefined') {
-    const loadedRawState = localStorage.getItem('autosave');
-    if (loadedRawState) {
-      const state: GameState = JSON.parse(loadedRawState) as GameState;
-      if (!state.campaignId || !isKnownCampaign(state.campaignId)) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          `Unknown or missing campaignId "${
-            state.campaignId ?? ''
-          }" in autosave, falling back to "${DEFAULT_CAMPAIGN_ID}".`,
-        );
-        state.campaignId = DEFAULT_CAMPAIGN_ID;
-      }
-      // Resuming a retry from the autosave: the timer continues from the
-      // saved elapsed time, without counting the time since the save.
-      resumeDungeonTimer(state);
-      // The retried run keeps its rng: seeded for a speedrunner save,
-      // random otherwise.
-      if (state.speedrunSeed !== undefined) {
-        setRng(createSeededRng(state.speedrunSeed));
-      } else {
-        resetRng();
-      }
-      doReRender(state);
+  const state = readAutosave();
+  if (state) {
+    restoreRuntimeState(state, 'autosave');
+    doReRender(state);
 
-      replaceDeadHeroes(state);
-      resetLiveHeroes(state);
-      resetOnNextDungeon(state);
-      resetOnNext(state);
-      state.currentActor = state.heroes.find(
-        (hero) => hero.name === state.currentActor?.name,
-      ) as Hero | undefined;
-      state.drawEvents = true;
-      addLog(state, 'logs.allHeroesDead');
-      return state;
-    }
+    replaceDeadHeroes(state);
+    resetLiveHeroes(state);
+    resetOnNextDungeon(state);
+    resetOnNext(state);
+    state.currentActor = state.heroes.find(
+      (hero) => hero.name === state.currentActor?.name,
+    ) as Hero | undefined;
+    state.drawEvents = true;
+    addLog(state, 'logs.allHeroesDead');
+    return state;
   }
   addLog(currentState, 'logs.failedToReset');
   return currentState;

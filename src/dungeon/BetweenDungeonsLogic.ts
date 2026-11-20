@@ -34,6 +34,7 @@ import {
   doReRender,
   emitSoundCue,
   i18n,
+  writeAutosave,
 } from '../core';
 import {
   addDungeonTimeToCampaign,
@@ -460,7 +461,5 @@ const startDungeon = (state: GameState, nextDungeon: Dungeon): void => {
     typeof nextDungeon.intro === 'string' && nextDungeon.intro.trim() !== '',
   );
 
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('autosave', JSON.stringify(state));
-  }
+  writeAutosave(state);
 };

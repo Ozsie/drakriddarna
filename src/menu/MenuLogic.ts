@@ -1,4 +1,5 @@
 import { DEFAULT_GAME_MASTER_ID, i18n } from '../core';
+import { getPersistentStorage, readAutosaveString } from '../core/persistence';
 import type { GameState, Hero, TurnEvent } from '../types';
 import {
   dispatch,
@@ -138,8 +139,8 @@ export const getSavedGameMenuItems = (
 ): CanvasMenuItem[] => {
   const items: CanvasMenuItem[] = [];
 
-  if (typeof localStorage !== 'undefined') {
-    const autoSave = localStorage.getItem('autosave');
+  if (getPersistentStorage()) {
+    const autoSave = readAutosaveString();
     if (autoSave) {
       items.push({
         id: 'load_autosave',

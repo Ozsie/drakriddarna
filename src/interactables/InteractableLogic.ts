@@ -19,6 +19,7 @@ import {
   i18n,
   isNeighbouring,
   isSamePosition,
+  writeAutosave,
 } from '../core';
 import {
   heroSpriteForIndex,
@@ -204,9 +205,7 @@ export const interactableEffects: Record<string, InteractableEffectHandler> = {
       resetOnNextDungeon(state);
       state.currentActor = liveHeroes(state)[0] ?? state.heroes[0];
 
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('autosave', JSON.stringify(state));
-      }
+      writeAutosave(state);
     }
 
     return true;

@@ -7,4 +7,5 @@ export * from './scoring';
 export * from './timer';
 export * from './ActorAnimation';
 export * from './facing';
+export * from './persistence';
 export * from './DifficultLevels';

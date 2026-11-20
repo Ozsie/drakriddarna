@@ -40,7 +40,11 @@ import {
 } from '../hero/ClickInputLogic';
 import { testingGrounds } from '../dungeon/testingGrounds';
 import { getEventsForDungeon } from '../events/EventsLogic';
-import { saveReloadGuard, debouncedSaveReloadGuard } from '../core';
+import {
+  saveReloadGuard,
+  debouncedSaveReloadGuard,
+  readReloadGuard,
+} from '../core';
 import { beginDungeonTiming } from '../core';
 import { drainSoundCues } from '../audio/SoundCueAdapter';
 import { appPhaseStore, enterGamePhase } from './appPhaseStore';
@@ -51,11 +55,10 @@ import { appPhaseStore, enterGamePhase } from './appPhaseStore';
 // before so the game surfaces keep a state to work against.
 const getInitialState = (): GameState | null => {
   if (browser) {
-    const reloadGuard = localStorage.getItem('reloadGuard');
+    const reloadGuard = readReloadGuard();
     if (reloadGuard) {
       try {
-        const parsed = JSON.parse(reloadGuard) as GameState;
-        const loaded = loadState(parsed);
+        const loaded = loadState(reloadGuard);
         if (loaded.settings?.['locale']) {
           void setLocale(loaded.settings['locale']);
         }

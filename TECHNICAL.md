@@ -718,9 +718,12 @@ next to the score.
 ## State, persistence and save migration
 
 The entire game lives in one `GameState` object, held in a Svelte `writable`
-store (`src/store/gameStateStore.ts`) that also owns input handling glue and
-persistence. While the welcome screen is up the store holds `null` — no game
-exists yet (see "The welcome screen and the app phase" above). Manual saves
+store (`src/store/gameStateStore.ts`) that wraps state publication and input
+handling glue. The game-side persistence adapter
+(`src/core/persistence.ts`) owns the browser storage boundary and the keys for
+autosaves, reload guards and named-save slots. While the welcome screen is up
+the store holds `null` — no game exists yet (see "The welcome screen and the
+app phase" above). Manual saves
 are user-named and unlimited: canvas-drawn centered modal dialogs open with a
 name input on save and a list of saves on load, and starting a new game uses
 a sibling dialog with selectable campaign and game-master columns plus the
@@ -728,15 +731,21 @@ speedrunner checkbox and its seed input. While any of these modal surfaces
 is open — the canvas debug menu, the save/load or new-game dialog, the dungeon
 intro, or the between-dungeons overlay (party wipe and campaign win
 included) — gameplay keyboard/touch input is suppressed through the input
-manager, so no keystroke reaches the heroes. The storage mechanics live in
-the `@hoard-engine/saves` engine package — a JSON index of save metadata
-under one `localStorage` key plus one full `GameState` blob per save, so
-listing saves never parses the blobs — while the game-side facade in
-`src/saves/SavesLogic.ts` supplies everything consumer-owned: the i18n
-labels, the campaign/dungeon hints shown in the load dialog, and the id
-and timestamp rules. Alongside the manual saves, an `autosave` key is
-refreshed on turn transitions and a separate "reload guard" key restores an
-in-progress game across page reloads.
+manager, so no keystroke reaches the heroes. The named-save storage mechanics
+live in the `@hoard-engine/saves` engine package — a JSON index of save
+metadata under one `localStorage` key plus one full `GameState` blob per save,
+so listing saves never parses the blobs — while the game-side facade in
+`src/saves/SavesLogic.ts` supplies everything consumer-owned: the i18n labels,
+the campaign/dungeon hints shown in the load dialog, and the id and timestamp
+rules. The persistence adapter uses the package's slot and save-blob
+mechanisms, centralizes those keys with the game's autosave and reload-guard
+keys, and treats unavailable storage or malformed blobs as absent state.
+The autosave is a dungeon-start checkpoint, written at run initialization and
+when a new dungeon starts; a separate reload-guard snapshot restores the
+in-progress game across page reloads and checkpoints the running timer before
+writing. Loading saved progress and retrying a dungeon share campaign fallback,
+seed restoration and timer rebasing, while save migration and retry-specific
+hero/item resets remain distinct.
 
 Save migration is treated as a real concern and is versioned: the state
 schema carries a `saveVersion`, and `loadState()` runs the ordered,

@@ -1,6 +1,7 @@
 import { t } from '#lib/translations/index.js';
 import type { GameState } from '../types';
 import { checkpointDungeonTimer } from './timer';
+import { getPersistentStorage, writeReloadGuardBlob } from './persistence';
 
 export const i18n = (
   key: string,
@@ -10,12 +11,14 @@ export const i18n = (
 let reloadGuardTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export const saveReloadGuard = (state: GameState): void => {
-  if (typeof localStorage === 'undefined') return;
+  if (!getPersistentStorage()) return;
   try {
     // Checkpoint the running timer segment into the accumulated time, so
     // a page reload resumes with the elapsed time intact.
     checkpointDungeonTimer(state);
-    localStorage.setItem('reloadGuard', JSON.stringify(state));
+    if (!writeReloadGuardBlob(JSON.stringify(state))) {
+      throw new Error('Storage write failed');
+    }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Failed to save reloadGuard:', err);
@@ -26,7 +29,7 @@ export const debouncedSaveReloadGuard = (
   state: GameState,
   delayMs = 150,
 ): void => {
-  if (typeof localStorage === 'undefined') return;
+  if (!getPersistentStorage()) return;
   if (reloadGuardTimeout) {
     clearTimeout(reloadGuardTimeout);
   }

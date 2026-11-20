@@ -49,12 +49,12 @@ Lifecycle cancellation invalidates the turn's lock and drops later store publica
 
 Relevant files: `src/game.ts`, `src/saves/SavesLogic.ts`, `src/store/gameStateStore.ts`.
 
-- [ ] Move direct autosave/checkpoint storage access behind a game-side persistence adapter and centralize storage keys.
+- [x] Move direct autosave/checkpoint storage access behind a game-side persistence adapter and centralize storage keys.
 - [x] Keep the dungeon-start checkpoint and reload guard distinct unless their intended semantics explicitly justify unification.
-- [ ] Share appropriate campaign fallback, seeded-random-state restoration and timer restoration steps between loading and resetting.
+- [x] Share appropriate campaign fallback, seeded-random-state restoration and timer restoration steps between loading and resetting.
 - [x] Preserve the differences between loading saved progress, restarting a dungeon and restarting after a party wipe, including reset failure behavior.
-- [ ] Test absent/malformed checkpoints, unavailable storage, missing campaigns and restoration of random state and timer behavior.
-- [ ] Reuse `@hoard-engine/saves` storage/slot mechanisms first; propose a package addition only if a genuinely reusable operation is missing.
+- [x] Test absent/malformed checkpoints, unavailable storage, missing campaigns and restoration of random state and timer behavior.
+- [x] Reuse `@hoard-engine/saves` storage/slot mechanisms first; propose a package addition only if a genuinely reusable operation is missing.
 - [x] Keep campaign fallback, checkpoint timing, timer restoration and game random-state policy in the game.
 
 ### Browser effects outside game logic — high priority
