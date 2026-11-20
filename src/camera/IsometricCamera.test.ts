@@ -60,4 +60,13 @@ describe('isometric camera mapping', () => {
     expect(projected.x).toBeCloseTo(anchor.x);
     expect(projected.y).toBeCloseTo(anchor.y);
   });
+
+  it('keeps the zoom and pan when the requested zoom is clamped away', () => {
+    const zoomed = { ...options, zoom: 1.5 };
+    expect(zoomIsometricCameraAtAnchor(zoomed, 9, { x: 230, y: 175 })).toEqual({
+      zoom: 1.5,
+      panX: zoomed.panX,
+      panY: zoomed.panY,
+    });
+  });
 });

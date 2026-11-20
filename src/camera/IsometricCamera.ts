@@ -1,13 +1,18 @@
+import { zoomAnchorPan } from '@hoard-engine/camera';
 import {
   createIsoProjection,
   createIsoView,
   isoPlaneToWorld,
   screenToWorld,
-  type SceneIsoView,
   worldToScreen,
+  type SceneIsoView,
 } from '@hoard-engine/scene';
 import { clampZoom } from './ZoomLogic';
 
+// Composition only: the isometric projection transforms live in `scene`,
+// the projection-independent anchoring mechanic in `camera`, and the zoom
+// limits in `ZoomLogic`. This module binds the game's camera state (screen
+// pan, zoom, follow center, cell size) to those pieces.
 export type IsometricCameraOptions = {
   width: number;
   height: number;
@@ -57,19 +62,21 @@ export const zoomIsometricCameraAtAnchor = (
   if (zoom === options.zoom) {
     return { zoom, panX: options.panX, panY: options.panY };
   }
-  const world = screenToIsometricWorldPosition(anchor.x, anchor.y, options);
+  const view = createIsometricCameraView(options);
   const unpannedView = createIsometricCameraView({
     ...options,
     panX: 0,
     panY: 0,
     zoom,
   });
-  const projected = worldToScreen(unpannedView, world.x, world.y);
-  return {
-    zoom,
-    panX: anchor.x - projected.x,
-    panY: anchor.y - projected.y,
-  };
+  const pan = zoomAnchorPan(
+    {
+      screenToWorld: ({ x, y }) => screenToWorld(view, x, y),
+      worldToScreenUnpanned: ({ x, y }) => worldToScreen(unpannedView, x, y),
+    },
+    anchor,
+  );
+  return { zoom, panX: pan.x, panY: pan.y };
 };
 
 export const screenToIsometricGridPosition = (

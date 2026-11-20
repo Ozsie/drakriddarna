@@ -13,12 +13,12 @@ lighting, dice), pure I/O abstractions (audio, saves), and pure rendering
 this repository.
 
 The target architecture has now been reached: the nine original packages
-are published and consumed as dependencies. `@hoard-engine/input` and
-`@hoard-engine/camera` v0.1.0 are also published; their v0.2.0 updates for
-gesture state machines and policy-free zoom math are prepared in the sibling
-package repositories and await release. The game manifests target v0.2.0,
-while the lockfile remains on the latest published versions until release.
-What remains in `src/` is the game — the turn pipeline, the content and the
+are published and consumed as dependencies. `@hoard-engine/input`
+(v0.2.0) and `@hoard-engine/camera` (v0.2.0, with the v0.3.0
+projection-independent anchor-preserving pan seam prepared in the sibling
+repository, release pending) are published and consumed the same way.
+What remains in `src/` is the game — the turn pipeline, the content and
+the
 adapters/facades that resolve game state into the packages' contracts. The
 remaining coupling is deliberate game knowledge: the shared `GameState`
 type, the `#lib/translations/index.js` i18n singleton, and the
@@ -668,16 +668,24 @@ games as npm dependencies. Its boundary, public-surface and browser/i18n
 sentinel tests enforce the package rules; game-specific mechanics remain
 in the adapters.
 
-### @hoard-engine/camera — source: `../camera` — v0.2.0 (published)
+### @hoard-engine/camera — source: `../camera` — v0.3.0 (release pending)
 
 Exponential camera-follow smoothing and centered/panned world-to-screen
 and screen-to-world transforms. The v0.2.0 update adds zoom-aware transforms,
 anchor-preserving zoom, step arithmetic and wheel-delta math over plain
-values. Zoom limits, keyboard step, input sensitivity, projection, rendering,
-resize, board bounds and camera lifecycle remain consumer-owned.
+values. The v0.3.0 update splits the anchor-preserving mechanic from the
+axis-aligned viewport: `zoomAnchorPan` takes the screen/world maps as an
+injected projection seam, so the isometric game composes its
+`@hoard-engine/scene` iso view with the same mechanic without a package
+edge. Zoom limits, keyboard step, input sensitivity, projection (kept
+with the renderer that owns it), rendering, resize, board bounds and
+camera lifecycle remain consumer-owned.
 
 **Current state:** v0.1.0 and v0.2.0 are published and consumed by both
-games as npm dependencies. Its boundary, public-surface and browser/i18n
+games as npm dependencies; the v0.3.0 seam update is prepared in the
+sibling repository pending release, with the game manifest already
+targeting `^0.3.0` and the lockfile following once it is published. Its
+boundary, public-surface and browser/i18n
 sentinel tests enforce the package rules; the package has no runtime
 dependencies and does not depend on `@hoard-engine/scene`.
 
@@ -753,16 +761,15 @@ later:
 
 10. `@hoard-engine/input` — generic bindings, action dispatch, held-action
     state and touch gesture mechanics, extracted from both games. **Done:**
-    v0.1.0 is published and consumed; the v0.2.0 gesture-state-machine
-    update is prepared locally with game tuning and browser wiring retained
-    in consumers, pending release.
+    v0.1.0 and v0.2.0 are published and consumed, with game tuning and
+    browser wiring retained in consumers.
 11. `@hoard-engine/camera` — follow smoothing, centered/panned viewport
     transforms, extracted from Metroidvania's camera and Drakriddarna's
-    coordinate conversion and canvas transform math. **Done:**
-    v0.1.0 is published and consumed; the v0.2.0 policy-free zoom math
-    update is prepared locally. Projection, zoom limits/input sensitivity,
-    resize, canvas lifecycle and board bounds remain consumer-owned, pending
-    release of v0.2.0.
+    coordinate conversion and canvas transform math. **Done:** published
+    and consumed; the v0.2.0 policy-free zoom math is released, and the
+    v0.3.0 projection-independent anchored-zoom seam is prepared pending
+    release. Projection, zoom limits/input sensitivity, resize, canvas
+    lifecycle and board bounds remain consumer-owned.
 
 ## What stays in the game
 
