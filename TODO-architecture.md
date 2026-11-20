@@ -91,11 +91,11 @@ Relevant file: `src/components/DungeonBoardController.ts`.
 
 - [x] Map ownership of layer scheduling, rendering, camera handling, dialogs, input dispatch, audio integration and state publication.
 - [x] Extract modal-state gating and keyboard-target priority into the pure `src/components/DungeonBoardModal.ts` collaborator; handlers and actions remain controller-owned.
-- [ ] Extract the remaining layer-scheduling and input-dispatch collaborators, leaving the controller responsible for orchestration.
+- [x] Extract the remaining layer-scheduling and input-dispatch collaborators, leaving the controller responsible for orchestration.
 - [x] Build on `DungeonBoardSignatures`, `DungeonBoardUiHit` and `DungeonBoardHover` rather than duplicating their responsibilities.
 - [x] Preserve listener/subscription cleanup and animation-frame lifecycle across mount, unmount and dungeon changes.
-- [ ] Add or retain regression coverage for modal priority, input arbitration, render invalidation and teardown.
-- [ ] Keep dialog selection, action effects and game-specific hit priority in the game; put reusable chrome/layout/render/hit mechanics in `uikit` only.
+- [x] Add or retain regression coverage for modal priority, input arbitration, render invalidation and teardown.
+- [x] Keep dialog selection, action effects and game-specific hit priority in the game; put reusable chrome/layout/render/hit mechanics in `uikit` only.
 
 ## Performance: establish evidence, then optimize
 

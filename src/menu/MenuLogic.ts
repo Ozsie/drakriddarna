@@ -1,5 +1,5 @@
 import { DEFAULT_GAME_MASTER_ID, i18n } from '../core';
-import { getPersistentStorage, readAutosaveString } from '../core/persistence';
+import { getPersistentStorage, readAutosaveString } from '../core';
 import type { GameState, Hero, TurnEvent } from '../types';
 import {
   dispatch,

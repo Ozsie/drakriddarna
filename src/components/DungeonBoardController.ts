@@ -185,6 +185,22 @@ import {
   type BoardModalState,
 } from './DungeonBoardModal';
 import {
+  resolveBoardKeyActions,
+  resolveClickRoute,
+  resolvePointerDownRoute,
+  resolveWheelRoute,
+} from './DungeonBoardInput';
+import {
+  BoardFrameHandles,
+  browserFrameHost,
+  createFpsTracker,
+  dynamicFrameDue,
+  msUntilNextSecond,
+  resolveOverlayRepaint,
+  trackFps,
+  UI_TIMER_REPAINT_MS,
+} from './DungeonBoardScheduler';
+import {
   activateTouchHoldPan,
   beginTouchHoldPan,
   cancelTouchHoldPan,
@@ -256,47 +272,7 @@ export interface DungeonBoardProps {
   onExternalStateChange: (next: GameState) => void;
 }
 
-// Rolling frames-per-second trackers for the continuously repainted
-// layers (dynamic actors/lights, overlay effects). Every layer render
-// counts as a frame, whatever triggered it; the snapshot is the frame
-// count in the trailing second, refreshed at most once a second. While
-// nothing animates the layer stops repainting, so the last shown value
-// freezes along with the canvas itself.
-interface FpsTracker {
-  frames: number[];
-  fps: number;
-  lastSnapshot: number;
-}
-
-// Repaint cadence for the speedrun timer chip, which ticks in hundredths
-// of a second: ~33 repaints per second is fast enough for the display to
-// look live without redrawing the UI layer every animation frame.
-const UI_TIMER_REPAINT_MS = 30;
-
-const createFpsTracker = (): FpsTracker => ({
-  frames: [],
-  fps: 0,
-  lastSnapshot: 0,
-});
-
-const trackFps = (tracker: FpsTracker, now: number): void => {
-  tracker.frames.push(now);
-  const cutoff = now - 1000;
-  while (tracker.frames.length > 0 && tracker.frames[0] < cutoff) {
-    tracker.frames.shift();
-  }
-  if (now - tracker.lastSnapshot >= 1000) {
-    tracker.fps = tracker.frames.length;
-    tracker.lastSnapshot = now;
-  }
-};
-
 export class DungeonBoardController {
-  // Ambient-only dynamic frames (light effects, terrain, fog) render at
-  // most this often; actor-driven frames render at most once per the
-  // frame-rate governor's locked target interval (30 or 60 fps).
-  static readonly AMBIENT_FRAME_MIN_MS = 1000 / 30;
-
   // --- props + derived -----------------------------------------------------
   private props: DungeonBoardProps = {
     state: undefined,
@@ -377,11 +353,7 @@ export class DungeonBoardController {
     }
     return this.uiEnv;
   };
-  private overlayAnimationId: number | null = null;
-  private overlayTimerId: ReturnType<typeof setTimeout> | null = null;
-  private dynamicAnimationId: number | null = null;
-  private shakeAnimationId: number | null = null;
-  private panRenderAnimationId: number | null = null;
+  private frameHandles = new BoardFrameHandles(browserFrameHost);
   private dynamicFpsTracker = createFpsTracker();
   private overlayFpsTracker = createFpsTracker();
   // Locks the dynamic loop's frame rate to 60 fps, dropping to 30 on
@@ -457,7 +429,6 @@ export class DungeonBoardController {
   private newGameGameMasterId: string | undefined = undefined;
   private newGameSpeedrunMode = false;
   private newGameSeedInput = String(DEFAULT_SPEEDRUN_SEED);
-  private uiTimerId: ReturnType<typeof setTimeout> | null = null;
   private isEventCardCollapsed = false;
   private isDungeonIntroDismissed = false;
   private showDungeonIntro = false;
@@ -881,31 +852,8 @@ export class DungeonBoardController {
       musicManager.stop();
       soundEffectManager.stop();
     }
-    if (this.overlayAnimationId) {
-      cancelAnimationFrame(this.overlayAnimationId);
-      this.overlayAnimationId = null;
-    }
-    if (this.overlayTimerId) {
-      clearTimeout(this.overlayTimerId);
-      this.overlayTimerId = null;
-    }
-    if (this.uiTimerId) {
-      clearTimeout(this.uiTimerId);
-      this.uiTimerId = null;
-    }
+    this.frameHandles.cancelAll();
     this.clearHoldPanTimer();
-    if (this.dynamicAnimationId) {
-      cancelAnimationFrame(this.dynamicAnimationId);
-      this.dynamicAnimationId = null;
-    }
-    if (this.shakeAnimationId) {
-      cancelAnimationFrame(this.shakeAnimationId);
-      this.shakeAnimationId = null;
-    }
-    if (this.panRenderAnimationId !== null) {
-      cancelAnimationFrame(this.panRenderAnimationId);
-      this.panRenderAnimationId = null;
-    }
     // The image-cache listener points at this board; drop it so a
     // teardown cannot repaint into detached canvases if a lazily loaded
     // sheet completes afterwards.
@@ -979,10 +927,7 @@ export class DungeonBoardController {
     if (!this.lowQualityPan) return;
     this.lowQualityPan = false;
     setLightBlurDisabled(false);
-    if (this.panRenderAnimationId !== null) {
-      cancelAnimationFrame(this.panRenderAnimationId);
-      this.panRenderAnimationId = null;
-    }
+    this.frameHandles.cancel('panRender');
     this.reinitCanvases();
     this.renderCanvas(true);
   };
@@ -991,10 +936,10 @@ export class DungeonBoardController {
   // handlers only update panX/panY and coalesce the repaint into a single
   // requestAnimationFrame; the browser shows one frame either way.
   private schedulePanRender = () => {
-    if (this.panRenderAnimationId !== null) return;
+    if (this.frameHandles.has('panRender')) return;
     this.enterLowQualityPan();
-    this.panRenderAnimationId = requestAnimationFrame(() => {
-      this.panRenderAnimationId = null;
+    this.frameHandles.request('panRender', () => {
+      this.frameHandles.cancel('panRender');
       this.updateAllCanvasTransforms();
       this.renderStaticLayer(true);
       this.renderDynamicLayer(true);
@@ -1459,9 +1404,6 @@ export class DungeonBoardController {
       ambientSig === this.lastAmbientSignature &&
       sig === this.lastDynamicSignature
     ) {
-      if (this.dynamicAnimationId) {
-        cancelAnimationFrame(this.dynamicAnimationId);
-      }
       this.scheduleDynamicFrame(false);
       return;
     }
@@ -1480,10 +1422,7 @@ export class DungeonBoardController {
 
     if (renderMode === 'isometric') {
       this.lastStaticLightKey = '';
-      if (this.dynamicAnimationId) {
-        cancelAnimationFrame(this.dynamicAnimationId);
-        this.dynamicAnimationId = null;
-      }
+      this.frameHandles.cancel('dynamic');
       if (!isometricView) return;
       const lightCanvas = this.lightCanvas;
       const lightCtx = lightCanvas?.getContext('2d');
@@ -1859,10 +1798,7 @@ export class DungeonBoardController {
     // darkness veil, so it stays fully visible even on unlit cells.
     renderHeroOverlays(ctx, this.cellSize, this.activeState, currentTime);
 
-    if (this.dynamicAnimationId) {
-      cancelAnimationFrame(this.dynamicAnimationId);
-      this.dynamicAnimationId = null;
-    }
+    this.frameHandles.cancel('dynamic');
 
     // The layer actually painted, so this frame's wall-clock cost is
     // real: feed it to the frame-rate governor, which locks the loop at
@@ -1903,12 +1839,16 @@ export class DungeonBoardController {
   // full-canvas composites) never runs above the locked frame rate,
   // while a high-refresh display simply skips renders.
   private scheduleDynamicFrame = (fullRate: boolean): void => {
-    this.dynamicAnimationId = requestAnimationFrame(() => {
+    this.frameHandles.request('dynamic', () => {
       const now = performance.now();
-      const minFrameIntervalMs = fullRate
-        ? 1000 / this.frameRateGovernor.targetFps
-        : DungeonBoardController.AMBIENT_FRAME_MIN_MS;
-      if (now - this.lastDynamicFrameTs < minFrameIntervalMs) {
+      if (
+        !dynamicFrameDue(
+          now,
+          this.lastDynamicFrameTs,
+          fullRate,
+          this.frameRateGovernor.targetFps,
+        )
+      ) {
         this.scheduleDynamicFrame(fullRate);
         return;
       }
@@ -2079,32 +2019,28 @@ export class DungeonBoardController {
       ctx.restore();
     }
 
-    if (this.overlayAnimationId) {
-      cancelAnimationFrame(this.overlayAnimationId);
-      this.overlayAnimationId = null;
-    }
-    if (this.overlayTimerId) {
-      clearTimeout(this.overlayTimerId);
-      this.overlayTimerId = null;
-    }
-
-    if (hasActiveEffects) {
-      this.overlayAnimationId = requestAnimationFrame(() => {
+    this.frameHandles.cancel('overlay');
+    this.frameHandles.cancel('overlayTimer');
+    const overlayRepaint = resolveOverlayRepaint(
+      hasActiveEffects,
+      this.debugTimerRunning(),
+    );
+    if (overlayRepaint === 'animationFrame') {
+      this.frameHandles.request('overlay', () => {
         this.renderOverlayLayer(true);
       });
-    } else if (this.debugTimerRunning()) {
+    } else if (overlayRepaint === 'nextSecond') {
       // The debug printout shows the live dungeon timer, which ticks
       // once per second: repaint the overlay on the next whole-second
       // boundary instead of looping every frame.
-      if (this.overlayTimerId === null) {
-        this.overlayTimerId = setTimeout(
-          () => {
-            this.overlayTimerId = null;
-            this.renderOverlayLayer(true);
-          },
-          1001 - (Date.now() % 1000),
-        );
-      }
+      this.frameHandles.setTimeout(
+        'overlayTimer',
+        () => {
+          this.frameHandles.cancel('overlayTimer');
+          this.renderOverlayLayer(true);
+        },
+        msUntilNextSecond(Date.now()),
+      );
     } else {
       let stateChanged = false;
       if (hasDamageIndicators) {
@@ -2567,13 +2503,10 @@ export class DungeonBoardController {
       worldCanvases.forEach(
         (canvas) => canvas && (canvas.style.transform = transform),
       );
-      if (this.shakeAnimationId) {
-        cancelAnimationFrame(this.shakeAnimationId);
-      }
-      this.shakeAnimationId = requestAnimationFrame(() => this.updateShake());
+      this.frameHandles.request('shake', () => this.updateShake());
     } else {
-      if (this.shakeAnimationId) {
-        this.shakeAnimationId = null;
+      if (this.frameHandles.has('shake')) {
+        this.frameHandles.cancel('shake');
         worldCanvases.forEach(
           (canvas) => canvas && (canvas.style.transform = ''),
         );
@@ -2890,12 +2823,13 @@ export class DungeonBoardController {
       }
       return;
     }
-    if (event.key === 'Escape' && get(radialMenuStore)) {
+    const boardKeyActions = resolveBoardKeyActions(event.key);
+    if (boardKeyActions.includes('closeRadialMenu') && get(radialMenuStore)) {
       radialMenuStore.set(null);
       this.hover.hoveredRadialIndex = null;
       this.renderUiLayer(true);
     }
-    if (event.key === 'Escape') {
+    if (boardKeyActions.includes('closeHeroStatus')) {
       const statusHero = this.activeState
         ? heroWithOpenStatus(this.activeState)
         : null;
@@ -2907,10 +2841,10 @@ export class DungeonBoardController {
     // (or '_') zooms out, anchored at the view centre. The dialogs and
     // welcome views above capture their keys first, so the board owns
     // these keys here.
-    if (event.key === '+' || event.key === '=') {
+    if (boardKeyActions.includes('zoomIn')) {
       event.preventDefault();
       this.zoomByKeyboard(1);
-    } else if (event.key === '-' || event.key === '_') {
+    } else if (boardKeyActions.includes('zoomOut')) {
       event.preventDefault();
       this.zoomByKeyboard(-1);
     }
@@ -3181,17 +3115,18 @@ export class DungeonBoardController {
 
   private scheduleUiTimerRepaint(): void {
     if (!this.speedrunTimerRunning()) {
-      if (this.uiTimerId) {
-        clearTimeout(this.uiTimerId);
-        this.uiTimerId = null;
-      }
+      this.frameHandles.cancel('uiTimer');
       return;
     }
-    if (this.uiTimerId === null) {
-      this.uiTimerId = setTimeout(() => {
-        this.uiTimerId = null;
-        this.renderUiLayer(true);
-      }, UI_TIMER_REPAINT_MS);
+    if (!this.frameHandles.has('uiTimer')) {
+      this.frameHandles.setTimeout(
+        'uiTimer',
+        () => {
+          this.frameHandles.cancel('uiTimer');
+          this.renderUiLayer(true);
+        },
+        UI_TIMER_REPAINT_MS,
+      );
     }
   }
 
@@ -3935,10 +3870,47 @@ export class DungeonBoardController {
   }
 
   public onMouseDown = (event: MouseEvent) => {
+    const isWelcomePhase = this.appPhase === 'welcome';
+    const canInspectUi = Boolean(
+      this.uiCanvas &&
+      this.activeState &&
+      this.containerWidth > 0 &&
+      this.containerHeight > 0,
+    );
+    let uiHit: 'log' | 'other' | null = null;
+    if (
+      !isWelcomePhase &&
+      event.button === 0 &&
+      canInspectUi &&
+      this.uiCanvas
+    ) {
+      const rect = this.uiCanvas.getBoundingClientRect();
+      const screenX = event.clientX - rect.left;
+      const screenY = event.clientY - rect.top;
+      const hit = this.uiHitAt(
+        screenX,
+        screenY,
+        this.uiCanvas.getContext('2d'),
+      );
+      if (
+        hit?.kind === 'topBar' &&
+        (hit.hit === 'log' || hit.hit === 'logDropdown')
+      ) {
+        uiHit = 'log';
+      } else if (hit) {
+        uiHit = 'other';
+      }
+    }
+    const route = resolvePointerDownRoute({
+      isWelcomePhase,
+      button: event.button,
+      canInspectUi,
+      uiHit,
+    });
     // The welcome phase has no board to pan and no gameplay UI, but a
     // volume-slider press starts its drag immediately: the value is set
     // at press and tracks the pointer until release.
-    if (this.appPhase === 'welcome') {
+    if (route === 'welcome') {
       if (event.button === 0) {
         const point = this.screenPointFromEvent(event);
         if (point) {
@@ -3947,34 +3919,13 @@ export class DungeonBoardController {
       }
       return;
     }
-    if (
-      event.button === 0 &&
-      this.uiCanvas &&
-      this.activeState &&
-      this.containerWidth > 0 &&
-      this.containerHeight > 0
-    ) {
-      const rect = this.uiCanvas.getBoundingClientRect();
-      const screenX = event.clientX - rect.left;
-      const screenY = event.clientY - rect.top;
-      const ctx = this.uiCanvas.getContext('2d');
-      const hit = this.uiHitAt(screenX, screenY, ctx);
-      if (
-        hit?.kind === 'topBar' &&
-        (hit.hit === 'log' || hit.hit === 'logDropdown')
-      ) {
-        this.isLogHeld = true;
-        this.isLogOpen = true;
-        this.renderUiLayer(true);
-        return;
-      }
-      // Any other UI element under the pointer swallows the press.
-      if (hit) {
-        return;
-      }
+    if (route === 'openLog') {
+      this.isLogHeld = true;
+      this.isLogOpen = true;
+      this.renderUiLayer(true);
+      return;
     }
-
-    if (event.button === 2 || event.button === 1) {
+    if (route === 'pan') {
       this.isDragging = true;
       this.dragStartX = event.clientX;
       this.dragStartY = event.clientY;
@@ -3986,12 +3937,19 @@ export class DungeonBoardController {
   };
 
   public onClick = (event: MouseEvent) => {
-    if (this.hasMovedDuringDrag) {
+    const initialRoute = resolveClickRoute({
+      hasMovedDuringDrag: this.hasMovedDuringDrag,
+      button: event.button,
+      isWelcomePhase: this.appPhase === 'welcome',
+      hasUiHit: false,
+      hasRadialMenu: false,
+      hasUiCanvas: Boolean(this.uiCanvas),
+    });
+    if (initialRoute === 'ignore') {
       this.hasMovedDuringDrag = false;
       return;
     }
-    if (event.button !== 0) return;
-    if (this.appPhase === 'welcome') {
+    if (initialRoute === 'welcome') {
       this.handleWelcomeClick(event);
       return;
     }
@@ -4007,213 +3965,231 @@ export class DungeonBoardController {
       const screenY = event.clientY - rect.top;
       const ctx = this.uiCanvas.getContext('2d');
       const hit = this.uiHitAt(screenX, screenY, ctx);
+      const clickRoute = resolveClickRoute({
+        hasMovedDuringDrag: false,
+        button: event.button,
+        isWelcomePhase: false,
+        hasUiHit: Boolean(hit),
+        hasRadialMenu: false,
+        hasUiCanvas: true,
+      });
       const activeState = this.activeState;
 
-      if (hit?.kind === 'betweenDungeons' && activeState.betweenDungeons) {
-        const bdHit = hit.hit;
-        if (bdHit.type === 'wipeButton') {
-          soundEffectManager.playButtonClick();
-          if (bdHit.action === 'restartCampaign') {
-            onNewGame(
-              activeState.campaignId ?? DEFAULT_CAMPAIGN_ID,
-              activeState.gameMaster?.id ?? DEFAULT_GAME_MASTER_ID,
-              activeState,
-              this.props.onExternalStateChange,
-            );
-            this.renderCanvas(true);
-          } else if (bdHit.action === 'restartDungeon') {
-            const updated = restartDungeonAfterWipe(activeState);
-            this.props.onExternalStateChange(updated);
-            if (activeState.dungeon?.startingPositions?.[0]) {
-              this.panX = 0;
-              this.panY = 0;
-              this.zoom = ZOOM_DEFAULT;
-              this.updateAllCanvasTransforms();
+      if (clickRoute === 'ui') {
+        if (hit?.kind === 'betweenDungeons' && activeState.betweenDungeons) {
+          const bdHit = hit.hit;
+          if (bdHit.type === 'wipeButton') {
+            soundEffectManager.playButtonClick();
+            if (bdHit.action === 'restartCampaign') {
+              onNewGame(
+                activeState.campaignId ?? DEFAULT_CAMPAIGN_ID,
+                activeState.gameMaster?.id ?? DEFAULT_GAME_MASTER_ID,
+                activeState,
+                this.props.onExternalStateChange,
+              );
+              this.renderCanvas(true);
+            } else if (bdHit.action === 'restartDungeon') {
+              const updated = restartDungeonAfterWipe(activeState);
+              this.props.onExternalStateChange(updated);
+              if (activeState.dungeon?.startingPositions?.[0]) {
+                this.panX = 0;
+                this.panY = 0;
+                this.zoom = ZOOM_DEFAULT;
+                this.updateAllCanvasTransforms();
+              }
+              this.renderCanvas(true);
+            } else {
+              // The load dialog opens on top of the wipe overlay; cancelling
+              // it returns to the wipe screen.
+              this.openSaveLoadDialog('load');
+              this.renderUiLayer(true);
             }
+            return;
+          }
+          if (bdHit.type === 'actionButton') {
+            soundEffectManager.playButtonClick();
+            if (activeState.betweenDungeons.step === 'campaignComplete') {
+              // Final screen dismissed: the campaign is over, so the player
+              // returns to the welcome screen (the former main menu).
+              activeState.betweenDungeons = undefined;
+              this.openWelcomeScreen();
+            } else if (activeState.betweenDungeons.step === 'levelUp') {
+              setBetweenDungeonsStep(activeState, 'trade');
+            } else {
+              completeBetweenDungeonsAndStartNext(activeState);
+              if (activeState.dungeon?.startingPositions?.[0]) {
+                this.panX = 0;
+                this.panY = 0;
+                this.zoom = ZOOM_DEFAULT;
+                this.updateAllCanvasTransforms();
+              }
+            }
+            this.syncStore();
             this.renderCanvas(true);
-          } else {
-            // The load dialog opens on top of the wipe overlay; cancelling
-            // it returns to the wipe screen.
-            this.openSaveLoadDialog('load');
+          } else if (bdHit.type === 'secondaryButton') {
+            soundEffectManager.playButtonClick();
+            setBetweenDungeonsStep(activeState, 'levelUp');
+            this.syncStore();
             this.renderUiLayer(true);
-          }
-          return;
-        }
-        if (bdHit.type === 'actionButton') {
-          soundEffectManager.playButtonClick();
-          if (activeState.betweenDungeons.step === 'campaignComplete') {
-            // Final screen dismissed: the campaign is over, so the player
-            // returns to the welcome screen (the former main menu).
-            activeState.betweenDungeons = undefined;
-            this.openWelcomeScreen();
-          } else if (activeState.betweenDungeons.step === 'levelUp') {
-            setBetweenDungeonsStep(activeState, 'trade');
-          } else {
-            completeBetweenDungeonsAndStartNext(activeState);
-            if (activeState.dungeon?.startingPositions?.[0]) {
-              this.panX = 0;
-              this.panY = 0;
-              this.zoom = ZOOM_DEFAULT;
-              this.updateAllCanvasTransforms();
-            }
-          }
-          this.syncStore();
-          this.renderCanvas(true);
-        } else if (bdHit.type === 'secondaryButton') {
-          soundEffectManager.playButtonClick();
-          setBetweenDungeonsStep(activeState, 'levelUp');
-          this.syncStore();
-          this.renderUiLayer(true);
-        } else if (bdHit.type === 'item') {
-          soundEffectManager.playButtonClick();
-          selectTradeItem(
-            activeState,
-            bdHit.heroIndex,
-            bdHit.slot ?? bdHit.itemIndex,
-          );
-          this.syncStore();
-          this.renderUiLayer(true);
-        } else if (bdHit.type === 'giveItem') {
-          if (activeState.betweenDungeons.selectedTradeItem) {
-            tradeItem(
+          } else if (bdHit.type === 'item') {
+            soundEffectManager.playButtonClick();
+            selectTradeItem(
               activeState,
-              activeState.betweenDungeons.selectedTradeItem.heroIndex,
-              bdHit.targetHeroIndex,
-              activeState.betweenDungeons.selectedTradeItem.slot ??
-                activeState.betweenDungeons.selectedTradeItem.itemIndex,
+              bdHit.heroIndex,
+              bdHit.slot ?? bdHit.itemIndex,
             );
             this.syncStore();
             this.renderUiLayer(true);
+          } else if (bdHit.type === 'giveItem') {
+            if (activeState.betweenDungeons.selectedTradeItem) {
+              tradeItem(
+                activeState,
+                activeState.betweenDungeons.selectedTradeItem.heroIndex,
+                bdHit.targetHeroIndex,
+                activeState.betweenDungeons.selectedTradeItem.slot ??
+                  activeState.betweenDungeons.selectedTradeItem.itemIndex,
+              );
+              this.syncStore();
+              this.renderUiLayer(true);
+            }
           }
-        }
-        return;
-      }
-
-      if (hit?.kind === 'dungeonIntro') {
-        const introHit = hit.hit;
-        if (introHit.type === 'close' || introHit.type === 'backdrop') {
-          dismissDungeonIntro(activeState);
-          this.isDungeonIntroDismissed = true;
-          this.hover.isDungeonIntroCloseHovered = false;
-          this.syncStore();
-          this.renderUiLayer(true);
-        }
-        return;
-      }
-
-      if (hit?.kind === 'newGameDialog') {
-        this.handleNewGameDialogHit(hit.hit);
-        return;
-      }
-
-      if (hit?.kind === 'saveLoadDialog') {
-        this.handleSaveLoadDialogHit(hit.hit);
-        return;
-      }
-
-      if (hit?.kind === 'topBar') {
-        const topBarHit = hit.hit;
-        if (topBarHit === 'menu') {
-          soundEffectManager.playButtonClick();
-          // The menu button opens the welcome screen — the main menu
-          // folded into it. The run stays in the store; its Continue
-          // button returns to the game.
-          this.openWelcomeScreen();
           return;
         }
-        if (topBarHit === 'debug') {
-          soundEffectManager.playButtonClick();
-          if (this.isDebugMenuOpen) {
+
+        if (hit?.kind === 'dungeonIntro') {
+          const introHit = hit.hit;
+          if (introHit.type === 'close' || introHit.type === 'backdrop') {
+            dismissDungeonIntro(activeState);
+            this.isDungeonIntroDismissed = true;
+            this.hover.isDungeonIntroCloseHovered = false;
+            this.syncStore();
+            this.renderUiLayer(true);
+          }
+          return;
+        }
+
+        if (hit?.kind === 'newGameDialog') {
+          this.handleNewGameDialogHit(hit.hit);
+          return;
+        }
+
+        if (hit?.kind === 'saveLoadDialog') {
+          this.handleSaveLoadDialogHit(hit.hit);
+          return;
+        }
+
+        if (hit?.kind === 'topBar') {
+          const topBarHit = hit.hit;
+          if (topBarHit === 'menu') {
+            soundEffectManager.playButtonClick();
+            // The menu button opens the welcome screen — the main menu
+            // folded into it. The run stays in the store; its Continue
+            // button returns to the game.
+            this.openWelcomeScreen();
+            return;
+          }
+          if (topBarHit === 'debug') {
+            soundEffectManager.playButtonClick();
+            if (this.isDebugMenuOpen) {
+              this.isDebugMenuOpen = false;
+            } else {
+              this.isDebugMenuOpen = true;
+              this.currentDebugMenuView = 'debug';
+            }
+            this.hover.hoveredMenuItemId = null;
+            this.syncGameInputEnabled();
+            this.renderUiLayer(true);
+            return;
+          }
+          return;
+        }
+
+        if (hit?.kind === 'debugMenu') {
+          const debugMenuHit = hit.hit;
+          if (debugMenuHit.type === 'item' && debugMenuHit.item) {
+            soundEffectManager.playButtonClick();
+            debugMenuHit.item.onClick(activeState);
+            this.renderCanvas(true);
+          } else if (debugMenuHit.type === 'backdrop') {
             this.isDebugMenuOpen = false;
-          } else {
-            this.isDebugMenuOpen = true;
             this.currentDebugMenuView = 'debug';
+            this.hover.hoveredMenuItemId = null;
+            this.syncGameInputEnabled();
+            this.renderUiLayer(true);
           }
-          this.hover.hoveredMenuItemId = null;
-          this.syncGameInputEnabled();
-          this.renderUiLayer(true);
           return;
         }
-        return;
-      }
 
-      if (hit?.kind === 'debugMenu') {
-        const debugMenuHit = hit.hit;
-        if (debugMenuHit.type === 'item' && debugMenuHit.item) {
-          soundEffectManager.playButtonClick();
-          debugMenuHit.item.onClick(activeState);
-          this.renderCanvas(true);
-        } else if (debugMenuHit.type === 'backdrop') {
-          this.isDebugMenuOpen = false;
-          this.currentDebugMenuView = 'debug';
-          this.hover.hoveredMenuItemId = null;
-          this.syncGameInputEnabled();
-          this.renderUiLayer(true);
+        if (hit?.kind === 'heroStatus') {
+          this.handleHeroStatusHit(hit.hit);
+          return;
         }
-        return;
-      }
 
-      if (hit?.kind === 'heroStatus') {
-        this.handleHeroStatusHit(hit.hit);
-        return;
-      }
-
-      if (hit?.kind === 'heroCards') {
-        const heroHit = hit.hit;
-        if (heroHit.type === 'inventoryButton') {
-          soundEffectManager.playButtonClick();
-          if (this.externalState) {
-            // The status screen is modal: opening one closes every other.
-            (this.externalState.heroes as Hero[]).forEach((hero) => {
-              hero.isInventoryOpen = false;
-            });
-            heroHit.hero.isInventoryOpen = true;
-            this.heroStatusSelection = null;
-            gameStateStore.set(this.externalState);
-          } else {
-            toggleHeroInventory(heroHit.hero);
-            this.heroStatusSelection = null;
+        if (hit?.kind === 'heroCards') {
+          const heroHit = hit.hit;
+          if (heroHit.type === 'inventoryButton') {
+            soundEffectManager.playButtonClick();
+            if (this.externalState) {
+              // The status screen is modal: opening one closes every other.
+              (this.externalState.heroes as Hero[]).forEach((hero) => {
+                hero.isInventoryOpen = false;
+              });
+              heroHit.hero.isInventoryOpen = true;
+              this.heroStatusSelection = null;
+              gameStateStore.set(this.externalState);
+            } else {
+              toggleHeroInventory(heroHit.hero);
+              this.heroStatusSelection = null;
+            }
+            this.syncGameInputEnabled();
+            this.renderCanvas(true);
           }
-          this.syncGameInputEnabled();
-          this.renderCanvas(true);
+          return;
         }
-        return;
-      }
 
-      if (hit?.kind === 'eventCard') {
-        const eventHit = hit.hit;
-        if (eventHit.type === 'toggle') {
-          soundEffectManager.playButtonClick();
-          if (this.isCompactUiActive) {
-            this.mobileEventsOpen = !this.mobileEventsOpen;
-          } else {
-            this.isEventCardCollapsed = !this.isEventCardCollapsed;
+        if (hit?.kind === 'eventCard') {
+          const eventHit = hit.hit;
+          if (eventHit.type === 'toggle') {
+            soundEffectManager.playButtonClick();
+            if (this.isCompactUiActive) {
+              this.mobileEventsOpen = !this.mobileEventsOpen;
+            } else {
+              this.isEventCardCollapsed = !this.isEventCardCollapsed;
+            }
+            this.renderUiLayer(true);
           }
-          this.renderUiLayer(true);
+          return;
         }
-        return;
-      }
 
-      if (hit?.kind === 'diary') {
-        // The diary only dispatches in compact mode, where its corner
-        // square (or the panel's close button) toggles it open/closed.
-        if (hit.hit.type === 'toggle') {
-          soundEffectManager.playButtonClick();
-          this.mobileDiaryOpen = !this.mobileDiaryOpen;
-          this.renderUiLayer(true);
+        if (hit?.kind === 'diary') {
+          // The diary only dispatches in compact mode, where its corner
+          // square (or the panel's close button) toggles it open/closed.
+          if (hit.hit.type === 'toggle') {
+            soundEffectManager.playButtonClick();
+            this.mobileDiaryOpen = !this.mobileDiaryOpen;
+            this.renderUiLayer(true);
+          }
+          return;
         }
-        return;
-      }
 
-      // Monster cards and the open diary consume the click without
-      // dispatching.
-      if (hit) {
-        return;
+        // Monster cards and the open diary consume the click without
+        // dispatching.
+        if (hit) {
+          return;
+        }
       }
     }
 
     const menu = get(radialMenuStore);
-    if (menu && this.uiCanvas) {
+    const radialRoute = resolveClickRoute({
+      hasMovedDuringDrag: false,
+      button: event.button,
+      isWelcomePhase: false,
+      hasUiHit: false,
+      hasRadialMenu: Boolean(menu),
+      hasUiCanvas: Boolean(this.uiCanvas),
+    });
+    if (radialRoute === 'radial' && menu && this.uiCanvas) {
       const rect = this.uiCanvas.getBoundingClientRect();
       const screenX = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
@@ -4433,7 +4409,7 @@ export class DungeonBoardController {
   public onWheel = (event: WheelEvent) => {
     // Nothing to zoom or pan on the welcome screen; still swallow the
     // scroll.
-    if (this.appPhase === 'welcome') {
+    if (resolveWheelRoute(this.appPhase === 'welcome') === 'welcome') {
       event.preventDefault();
       return;
     }

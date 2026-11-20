@@ -4,7 +4,7 @@ import {
   type SaveSlots,
 } from '@hoard-engine/saves';
 import { i18n } from '../core';
-import { getPersistentStorage, STORAGE_KEYS } from '../core/persistence';
+import { getPersistentStorage, STORAGE_KEYS } from '../core';
 import type { GameState } from '../types';
 // Evaluation order matters: the campaign modules call `defineDungeon` through
 // the DungeonLogic re-export at module scope, so DungeonLogic must be

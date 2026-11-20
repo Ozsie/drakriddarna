@@ -19,7 +19,7 @@ import { eventEffects } from './events/EventsLogic';
 import { Level, TerrainType } from './types';
 import type { Dungeon, GameMaster, Hero, GameState } from './types';
 import { createSeededRng, nextRandom, setRng } from './core/dice';
-import { STORAGE_KEYS } from './core/persistence';
+import { STORAGE_KEYS } from './core';
 
 const createTestStorage = () => {
   const values = new Map<string, string>();

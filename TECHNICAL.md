@@ -77,22 +77,27 @@ is what makes two unusual things possible:
 The UI layer is deliberately thin. Only three `.svelte` components exist; the
 game view (`Dungeon.svelte`) is pure reactive glue — it derives state from the
 stores and forwards it to `DungeonBoardController`, a colocated plain-TS class
-that owns the canvases, the layered render loop, browser-side pan/drag/touch/zoom
-handling and pointer/keyboard dispatch. It converts pointer events into
-canvas-relative coordinates before calling game logic, while the pure
-`DungeonBoardModal.ts` collaborator resolves modal input gating and keyboard
-targets; game logic does not query the document for canvas hit-testing. Pure
-gesture state machines come from `@hoard-engine/input`, while policy-free zoom
-transforms come from `@hoard-engine/camera`; game timing, thresholds, limits
-and event arbitration stay in the game. The glue preserves a Svelte 4 contract:
+that owns the canvases and orchestrates the layered render loop, browser-side
+pan/drag/touch/zoom handling and pointer/keyboard dispatch. It converts pointer
+events into canvas-relative coordinates before calling game logic. Pure
+collaborators keep its decisions and scheduling mechanics testable:
+`DungeonBoardInput.ts` resolves pointer/click/wheel/key priority,
+`DungeonBoardScheduler.ts` owns layer cadence decisions and named frame/timeout
+handles cancelled together during teardown, and `DungeonBoardModal.ts` resolves
+modal input gating and keyboard targets. The controller retains dialog handling,
+game actions, camera effects and event arbitration; game logic does not query
+the document for canvas hit-testing. Pure gesture state machines come from
+`@hoard-engine/input`, while policy-free zoom transforms come from
+`@hoard-engine/camera`; game timing, thresholds and limits stay in the game.
+The glue preserves a Svelte 4 contract:
 game logic mutates the single `GameState` in place and re-publishes it, so the
 store wraps every publish in a fresh top-level envelope — Svelte 5 deriveds
 compare by reference, and an identical reference would leave the derived
 chain (and every canvas repaint it schedules) stale. Nested objects stay
 shared with the source state, so in-place mutations remain visible to
-references already held. The controller's pure decision parts are
-extracted into colocated modules with their own tests
-(`DungeonBoardSignatures.ts` — dirty-check keys gating each render layer,
+references already held. The controller's pure decision parts are extracted
+into colocated modules with their own tests (`DungeonBoardSignatures.ts` —
+dirty-check keys gating each render layer,
 `DungeonBoardUiHit.ts` — the ordered "which UI element is under the pointer"
 cascade with injectable hit-testers, `DungeonBoardHover.ts` — the hover state
 machine as pure reducers). All actual drawing lives in plain `.ts` modules
