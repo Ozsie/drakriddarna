@@ -648,7 +648,12 @@ step-9 gate ("view-model contracts in place") is being built under
   boundary/completeness tooling and its own AGENTS/README; the game
   keeps the facades and the adapters. **Done:** published as
   `@hoard-engine/scene` (v0.1.0), consumed as a dependency like every
-  other engine package.
+  other engine package. The published v0.5.0 update adds generic isometric
+  screen-to-world mapping, projected tile sizing and fog-light
+  projection, plus a pure measured-frame-cost governor. Discovery and
+  asset adaptation stay in the game; the caller retains frame timing
+  and scheduling. Aura generation and its sprite cache remain game-owned
+  visual content rather than part of the shared renderer surface.
 
 ### @hoard-engine/input — source: `../input` — v0.2.0 PENDING RELEASE
 

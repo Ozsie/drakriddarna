@@ -2,6 +2,7 @@ import {
   createIsoProjection,
   createIsoView,
   isoPlaneToWorld,
+  screenToWorld,
   type SceneIsoView,
   worldToScreen,
 } from '@hoard-engine/scene';
@@ -44,15 +45,7 @@ export const screenToIsometricWorldPosition = (
   options: IsometricCameraOptions,
 ): { x: number; y: number } => {
   const view = createIsometricCameraView(options);
-  const offset = isoPlaneToWorld(
-    view.projection,
-    screenX - options.width / 2,
-    screenY - options.height / 2,
-  );
-  return {
-    x: view.camera.x + offset.x,
-    y: view.camera.y + offset.y,
-  };
+  return screenToWorld(view, screenX, screenY);
 };
 
 export const zoomIsometricCameraAtAnchor = (

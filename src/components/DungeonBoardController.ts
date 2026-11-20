@@ -228,7 +228,7 @@ import {
   createFrameRateGovernor,
   trackFrameCost,
   type FrameRateGovernor,
-} from './DungeonBoardFrameRate';
+} from '@hoard-engine/scene';
 import {
   clearBoardHovers,
   createBoardHoverState,

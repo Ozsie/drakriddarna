@@ -467,6 +467,11 @@ top-down actor/light/overlay passes remain unchanged in the default mode. The
 game-side isometric adapter lives in
 `src/dungeon/IsometricDungeonRendering.ts`; reusable projection, occlusion
 ordering and compositing are implemented in the sibling `../scene` package.
+Scene also provides the generic isometric inverse screen transform, projected
+tile sizing and fog-light transform, plus a pure frame-rate governor that
+consumes caller-measured frame costs. `DungeonBoardController` retains the
+clock, animation-frame scheduling and render policy through the
+`DungeonBoardFrameRate.ts` facade.
 Isometric floor, wall, pillar and chest art is resolved from the shared
 `static/isometric/index.json`, with an optional per-dungeon `isometricGraphics`
 folder under `static/campaigns/<campaignId>/` overriding matching cell, tile,
