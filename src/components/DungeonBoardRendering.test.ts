@@ -10,6 +10,10 @@ const controller = readFileSync(
   join(process.cwd(), 'src/components/DungeonBoardController.ts'),
   'utf8',
 );
+const signatures = readFileSync(
+  join(process.cwd(), 'src/components/DungeonBoardSignatures.ts'),
+  'utf8',
+);
 const isometricRendering = readFileSync(
   join(process.cwd(), 'src/dungeon/IsometricDungeonRendering.ts'),
   'utf8',
@@ -60,16 +64,22 @@ describe('dungeon board render order', () => {
       'const lightMaskCanvas = this.staticLightCanvas',
     );
     expect(isoRender).toContain(
-      'const isometricLightMaskSignature = JSON.stringify({',
+      'const isometricLightMaskSignature = getIsometricLightMaskSignature(',
     );
-    expect(isoRender).toContain('debugMode,');
-    expect(isoRender).toContain('lightSig,');
-    expect(isoRender).toContain('frameLights,');
-    expect(isoRender).toContain('isometricGraphics:');
-    expect(isoRender).toContain('discoveredRooms:');
-    expect(isoRender).toContain('roomFog:');
-    expect(isoRender).toContain('view: isometricView');
-    expect(isoRender).toContain('maskCanvas:');
+    expect(signatures).toContain('debugMode,');
+    expect(signatures).toContain('lightSig,');
+    expect(signatures).toContain('frameLights,');
+    expect(signatures).toContain('grid: st.dungeon.layout.grid');
+    expect(signatures).toContain('doors: st.dungeon.layout.doors');
+    expect(signatures).toContain('pits: st.dungeon.layout.pits');
+    expect(signatures).toContain('corners: st.dungeon.layout.corners');
+    expect(signatures).toContain('roomFog: st.dungeon.layout.roomFog');
+    expect(signatures).toContain(
+      'isometricGraphics: st.dungeon.isometricGraphics',
+    );
+    expect(signatures).toContain('discoveredRooms: st.dungeon.discoveredRooms');
+    expect(signatures).toContain('view,');
+    expect(signatures).toContain('maskCanvas: maskCanvasSize');
     expect(isoRender).not.toContain('state: sig,');
     expect(isoRender).toContain('const reuseIsometricLightMask =');
     expect(isoRender).toContain('!reuseIsometricLightMask');

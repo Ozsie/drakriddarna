@@ -827,6 +827,10 @@ Three layers of verification:
    This browser benchmark complements rather than replaces the no-op canvas
    benchmark, and supplies evidence before invalidation or derived-store
    caching changes.
+   `npm run benchmark:signatures` profiles the per-frame value-signature work
+   separately on explored authored dungeons; its measurements, invalidation
+   dependencies, and revision-counter decision are recorded in
+   `docs/render-invalidation.md`.
 
 4. **Balance analysis** (`npm run balanceAnalysis`) plus a tuning test that
    pins the BrutalOverlord's numbers. The harness also models mid-campaign

@@ -112,11 +112,11 @@ Relevant file: `src/components/DungeonBoardController.ts`.
 
 Relevant file: `src/components/DungeonBoardSignatures.ts`.
 
-- [ ] Measure string construction, serialization and allocation costs even on frames where signatures report no change.
-- [ ] Inventory which mutations invalidate geometry, discovery, actors, items and lighting.
-- [ ] If measurements justify it, introduce explicit revision counters incrementally at controlled mutation points.
+- [x] Measure string construction, serialization and allocation costs even on frames where signatures report no change; the unchanged isometric signature workload measured 46–95 µs per frame including the mask key, with the key itself at 22–49 µs.
+- [x] Inventory which mutations invalidate geometry, discovery, actors, items and lighting; record signature dependencies and mutation owners in `docs/render-invalidation.md`.
+- [x] Evaluate explicit revision counters against the measurements; do not add them because the largest measured workload is under 0.6% of a 16.7 ms frame and mutation points are distributed across roughly ten modules.
 - [x] Retain game-specific dependency knowledge in game adapters; do not move field-level signatures into an engine package.
-- [ ] Test all invalidation paths, including in-place nested mutations, and compare rendering behavior and measured costs before/after.
+- [x] Test in-place nested invalidation paths and confirm reverted mutations restore the original signatures; record the measured baseline without claiming an optimization gain.
 - [x] Do not substitute reference-only caching: nested state is intentionally mutated in place.
 
 ### Derived-store recomputation — investigate

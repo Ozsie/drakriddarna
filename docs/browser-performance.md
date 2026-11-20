@@ -5,6 +5,10 @@ observe. It was established before changing render invalidation or derived-store
 caching; it records current behavior and does not apply either optimization.
 The existing JavaScript/draw-call benchmark in
 `src/benchmark/renderingBenchmark.ts` remains useful and complementary.
+The focused `npm run benchmark:signatures` profile measures signature-string
+construction and heap growth on unchanged state; its method, results and
+invalidation inventory are recorded in
+[`render-invalidation.md`](./render-invalidation.md).
 
 ## Run
 

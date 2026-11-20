@@ -233,6 +233,7 @@ import { musicManager, soundEffectManager } from '../audio';
 import { selectMusicIntensity } from '../audio/MusicIntensity';
 import {
   getAnimatedLightSpriteSignature,
+  getIsometricLightMaskSignature,
   getItemAuraSignature,
   getPortalAuraSignature,
   getStaticSignature,
@@ -1438,24 +1439,16 @@ export class DungeonBoardController {
         lightMaskCanvas.width > 0 &&
         lightMaskCanvas.height > 0,
       );
-      const isometricLightMaskSignature = JSON.stringify({
+      const isometricLightMaskSignature = getIsometricLightMaskSignature(
+        this.activeState,
         debugMode,
         lightSig,
         frameLights,
-        dungeon: {
-          grid: this.activeState.dungeon.layout.grid,
-          doors: this.activeState.dungeon.layout.doors,
-          pits: this.activeState.dungeon.layout.pits,
-          corners: this.activeState.dungeon.layout.corners,
-          roomFog: this.activeState.dungeon.layout.roomFog,
-          isometricGraphics: this.activeState.dungeon.isometricGraphics,
-          discoveredRooms: this.activeState.dungeon.discoveredRooms,
-        },
-        view: isometricView,
-        pixelRatio: this.canvasRatio,
-        lightCanvas: [lightCanvas?.width ?? 0, lightCanvas?.height ?? 0],
-        maskCanvas: [lightMaskCanvas?.width ?? 0, lightMaskCanvas?.height ?? 0],
-      });
+        isometricView,
+        this.canvasRatio,
+        [lightCanvas?.width ?? 0, lightCanvas?.height ?? 0],
+        [lightMaskCanvas?.width ?? 0, lightMaskCanvas?.height ?? 0],
+      );
       const reuseIsometricLightMask =
         hasIsometricLightMask &&
         this.lastIsometricLightMaskSignature === isometricLightMaskSignature;

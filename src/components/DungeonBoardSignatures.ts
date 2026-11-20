@@ -128,6 +128,35 @@ export const getStaticSignature = (
   )}|${String(String(size))}|${String(String(dbg))}`;
 };
 
+export const getIsometricLightMaskSignature = (
+  st: GameState,
+  debugMode: boolean,
+  lightSig: string,
+  frameLights: LightSource[],
+  view: unknown,
+  pixelRatio: number,
+  lightCanvasSize: readonly [number, number],
+  maskCanvasSize: readonly [number, number],
+): string =>
+  JSON.stringify({
+    debugMode,
+    lightSig,
+    frameLights,
+    dungeon: {
+      grid: st.dungeon.layout.grid,
+      doors: st.dungeon.layout.doors,
+      pits: st.dungeon.layout.pits,
+      corners: st.dungeon.layout.corners,
+      roomFog: st.dungeon.layout.roomFog,
+      isometricGraphics: st.dungeon.isometricGraphics,
+      discoveredRooms: st.dungeon.discoveredRooms,
+    },
+    view,
+    pixelRatio,
+    lightCanvas: lightCanvasSize,
+    maskCanvas: maskCanvasSize,
+  });
+
 export const getDynamicSignature = (
   st: GameState,
   dbg: boolean,

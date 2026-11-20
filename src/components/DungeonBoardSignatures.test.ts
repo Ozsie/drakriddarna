@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import type { GameState, Hero } from '../types';
-import { CellAlignment, SecretType, Side } from '../types';
+import type { GameState, Hero, Item, Monster } from '../types';
+import {
+  CellAlignment,
+  Colour,
+  CornerType,
+  ItemType,
+  Level,
+  SecretType,
+  Side,
+} from '../types';
 import {
   getAnimatedLightSpriteSignature,
   getDynamicSignature,
+  getIsometricLightMaskSignature,
   getItemAuraSignature,
   getOverlaySignature,
   getPortalAuraSignature,
@@ -40,6 +49,15 @@ const createState = (overrides?: Partial<GameState>): GameState =>
     drawEvents: true,
     ...overrides,
   }) as GameState;
+
+const expectSignatureChange = (
+  signature: () => string,
+  mutate: () => void,
+): void => {
+  const before = signature();
+  mutate();
+  expect(signature()).not.toBe(before);
+};
 
 describe('DungeonBoardSignatures', () => {
   it('animates the portal only while it is discovered and in the viewport', () => {
@@ -454,6 +472,357 @@ describe('DungeonBoardSignatures', () => {
     ];
     const after = getOverlaySignature(state, false, 48);
     expect(after).not.toBe(before);
+  });
+
+  it('static signatures observe in-place world and discovery mutations', () => {
+    const state = createState();
+    const signature = () => getStaticSignature(state, false, 48);
+    const door = {
+      locked: false,
+      open: false,
+      trapped: false,
+      hidden: false,
+      x: 1,
+      y: 0,
+      side: Side.RIGHT,
+      trapAttacks: 0,
+      reinforced: false,
+    };
+    state.dungeon.layout.doors.push(door);
+    expectSignatureChange(signature, () => {
+      door.open = true;
+    });
+    expectSignatureChange(signature, () => {
+      door.locked = true;
+    });
+    expectSignatureChange(signature, () => {
+      door.hidden = true;
+    });
+
+    const secret = {
+      name: 'Hidden passage',
+      type: SecretType.TRAP_DOOR,
+      position: { x: 1, y: 0 },
+      found: false,
+    };
+    state.dungeon.layout.secrets.push(secret);
+    expectSignatureChange(signature, () => {
+      secret.found = true;
+    });
+
+    const interactable = {
+      position: { x: 1, y: 0 },
+      effect: 'toggleLight',
+      interacted: false,
+    };
+    state.dungeon.layout.interactables = [interactable];
+    expectSignatureChange(signature, () => {
+      interactable.interacted = true;
+    });
+
+    const firstItem = { position: { x: 1, y: 0 } };
+    const secondItem = { position: { x: 2, y: 0 } };
+    expectSignatureChange(signature, () => {
+      state.dungeon.layout.items.push(firstItem);
+    });
+    expectSignatureChange(signature, () => {
+      state.dungeon.layout.items.push(secondItem);
+    });
+    expectSignatureChange(signature, () => {
+      state.dungeon.layout.items.splice(0, 1);
+    });
+
+    const decorator = {
+      position: { x: 1, y: 0 },
+      sprite: { image: 'decorator.png', size: 32, index: 0 },
+    };
+    state.dungeon.layout.decorators = [decorator];
+    expectSignatureChange(signature, () => {
+      decorator.sprite.index = 1;
+    });
+
+    state.dungeon.layout.terrain = [];
+    expectSignatureChange(signature, () => {
+      state.dungeon.layout.terrain!.push({
+        type: 'water',
+        position: { x: 1, y: 0 },
+      });
+    });
+    expectSignatureChange(signature, () => {
+      state.dungeon.discoveredRooms.push('B');
+    });
+    state.dungeon.collapsedCorridors = [];
+    expectSignatureChange(signature, () => {
+      state.dungeon.collapsedCorridors!.push({
+        letter: 'B',
+        cells: [{ x: 2, y: 0 }],
+      });
+    });
+  });
+
+  it('dynamic signatures observe in-place actor, item, monster, and light mutations', () => {
+    const state = createState();
+    const hero: Hero = {
+      name: 'Fearik',
+      position: { x: 1, y: 0 },
+      actions: 2,
+      movement: 3,
+      maxMovement: 3,
+      defense: 0,
+      health: 7,
+      maxHealth: 7,
+      colour: Colour.Red,
+      experience: 0,
+      level: Level.HERO,
+      weapon: {
+        name: 'Sword',
+        amountInDeck: 1,
+        type: ItemType.WEAPON,
+        value: 0,
+        dice: 1,
+        range: 1,
+        twoHanded: false,
+        useHearHeroes: false,
+        ignoresShield: false,
+        ignoresArmour: false,
+      },
+      inventory: [],
+      isInventoryOpen: false,
+    };
+    state.heroes.push(hero);
+    const signature = () => getDynamicSignature(state, false, 48);
+
+    expectSignatureChange(signature, () => {
+      hero.health -= 1;
+    });
+    expectSignatureChange(signature, () => {
+      hero.actions -= 1;
+    });
+    expectSignatureChange(signature, () => {
+      hero.position.x += 1;
+    });
+
+    const lightItem: Item = {
+      id: 'lantern',
+      name: 'Lantern',
+      amountInDeck: 1,
+      type: ItemType.MAGIC,
+      value: 0,
+      light: { radius: 2 },
+    };
+    expectSignatureChange(signature, () => {
+      hero.inventory.push(lightItem);
+    });
+    expectSignatureChange(signature, () => {
+      lightItem.disabled = true;
+    });
+    expectSignatureChange(signature, () => {
+      hero.blinded = true;
+    });
+    expectSignatureChange(signature, () => {
+      hero.weapon.elemental = true;
+    });
+
+    const monster = {
+      name: 'Orc',
+      position: { x: 2, y: 0 },
+      health: 4,
+    } as Monster;
+    state.dungeon.layout.monsters.push(monster);
+    expectSignatureChange(signature, () => {
+      state.dungeon.layout.monsters.splice(0, 1);
+    });
+
+    const light = { position: { x: 1, y: 0 }, enabled: true };
+    state.dungeon.layout.lights = [light];
+    expectSignatureChange(signature, () => {
+      light.enabled = false;
+    });
+
+    const interactable = {
+      position: { x: 1, y: 0 },
+      effect: 'toggleLight',
+      light: { enabled: true },
+    };
+    state.dungeon.layout.interactables = [interactable];
+    expectSignatureChange(signature, () => {
+      interactable.light.enabled = false;
+    });
+    state.eventLights = [];
+    expectSignatureChange(signature, () => {
+      state.eventLights!.push({
+        id: 'event-light',
+        position: { x: 2, y: 0 },
+      });
+    });
+    state.dungeon.collapsedCorridors = [];
+    expectSignatureChange(signature, () => {
+      state.dungeon.collapsedCorridors!.push({
+        letter: 'B',
+        cells: [{ x: 2, y: 0 }],
+      });
+    });
+  });
+
+  it('isometric light-mask key observes nested geometry and renderer inputs', () => {
+    const state = createState();
+    const frameLights = [{ position: { x: 1, y: 0 }, radius: 2 }];
+    let debugMode = false;
+    let lightSig = 'light-signature';
+    const view = { zoom: 1 };
+    let pixelRatio = 1;
+    let lightCanvasSize: [number, number] = [1440, 960];
+    let maskCanvasSize: [number, number] = [1440, 960];
+    const signature = () =>
+      getIsometricLightMaskSignature(
+        state,
+        debugMode,
+        lightSig,
+        frameLights,
+        view,
+        pixelRatio,
+        lightCanvasSize,
+        maskCanvasSize,
+      );
+
+    expectSignatureChange(signature, () => {
+      state.dungeon.layout.grid[0] = '#AB#';
+    });
+    const door = {
+      locked: false,
+      open: false,
+      trapped: false,
+      hidden: false,
+      x: 1,
+      y: 0,
+      side: Side.RIGHT,
+      trapAttacks: 0,
+      reinforced: false,
+    };
+    state.dungeon.layout.doors.push(door);
+    expectSignatureChange(signature, () => {
+      door.open = true;
+    });
+    state.dungeon.layout.pits = [];
+    expectSignatureChange(signature, () => {
+      state.dungeon.layout.pits!.push({ x: 1, y: 0 });
+    });
+    expectSignatureChange(signature, () => {
+      state.dungeon.layout.corners.push({
+        position: { x: 1, y: 0 },
+        type: CornerType.INNER_TOP_LEFT,
+      });
+    });
+    state.dungeon.layout.roomFog = { A: { density: 0.3 } };
+    expectSignatureChange(signature, () => {
+      state.dungeon.layout.roomFog!.A.density = 0.6;
+    });
+    expectSignatureChange(signature, () => {
+      state.dungeon.discoveredRooms.push('B');
+    });
+    expectSignatureChange(signature, () => {
+      state.dungeon.isometricGraphics = 'test-graphics';
+    });
+    expectSignatureChange(signature, () => {
+      frameLights[0].radius = 3;
+    });
+    expectSignatureChange(signature, () => {
+      debugMode = true;
+    });
+    expectSignatureChange(signature, () => {
+      lightSig = 'updated-light-signature';
+    });
+    expectSignatureChange(signature, () => {
+      view.zoom = 2;
+    });
+    expectSignatureChange(signature, () => {
+      pixelRatio = 2;
+    });
+    expectSignatureChange(signature, () => {
+      lightCanvasSize = [2880, 1920];
+    });
+    expectSignatureChange(signature, () => {
+      maskCanvasSize = [2880, 1920];
+    });
+  });
+
+  it('overlay signature observes pushes to each transient effect list', () => {
+    const state = createState();
+    const signature = () => getOverlaySignature(state, false, 48);
+
+    expectSignatureChange(signature, () => {
+      state.bloodSplatters = [
+        {
+          id: 'blood',
+          position: { x: 1, y: 0 },
+          particles: [],
+        },
+      ];
+    });
+    expectSignatureChange(signature, () => {
+      state.projectiles = [
+        {
+          id: 'projectile',
+          from: { x: 0, y: 0 },
+          to: { x: 1, y: 0 },
+        },
+      ];
+    });
+    expectSignatureChange(signature, () => {
+      state.flameEffects = [
+        {
+          id: 'flame',
+          position: { x: 1, y: 0 },
+          sprite: 'fireAoE',
+        },
+      ];
+    });
+  });
+
+  it('returns to equal signatures after in-place mutations are reverted', () => {
+    const state = createState();
+    const door = {
+      locked: false,
+      open: false,
+      trapped: false,
+      hidden: false,
+      x: 1,
+      y: 0,
+      side: Side.RIGHT,
+      trapAttacks: 0,
+      reinforced: false,
+    };
+    state.dungeon.layout.doors.push(door);
+    const hero = {
+      name: 'Fearik',
+      position: { x: 1, y: 0 },
+      health: 7,
+      actions: 2,
+      movement: 3,
+      incapacitated: false,
+    } as Hero;
+    state.heroes.push(hero);
+    const before = {
+      static: getStaticSignature(state, false, 48),
+      dynamic: getDynamicSignature(state, false, 48),
+      overlay: getOverlaySignature(state, false, 48),
+    };
+
+    door.open = true;
+    hero.health -= 1;
+    state.damageIndicators = [
+      { id: 'damage', position: { x: 1, y: 0 }, timestamp: 0 },
+    ];
+    expect(getStaticSignature(state, false, 48)).not.toBe(before.static);
+    expect(getDynamicSignature(state, false, 48)).not.toBe(before.dynamic);
+    expect(getOverlaySignature(state, false, 48)).not.toBe(before.overlay);
+
+    door.open = false;
+    hero.health += 1;
+    state.damageIndicators.pop();
+    expect(getStaticSignature(state, false, 48)).toBe(before.static);
+    expect(getDynamicSignature(state, false, 48)).toBe(before.dynamic);
+    expect(getOverlaySignature(state, false, 48)).toBe(before.overlay);
   });
 
   it('signatures are stable for unchanged state', () => {
