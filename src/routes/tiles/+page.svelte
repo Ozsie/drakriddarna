@@ -55,49 +55,51 @@
     const source = overridden ? dungeonSource : sheetSources[tile.sheet];
     return {
       source,
-      x: tile.x / tile.size * size,
-      y: tile.y / tile.size * size,
-      size
+      x: (tile.x / tile.size) * size,
+      y: (tile.y / tile.size) * size,
+      size,
     };
   };
 
   // Active query parameters, echoed back as data (no authored copy).
   let queryInfo = $state('');
 
-  let canvases: Record<string, HTMLCanvasElement> = $state({});
+  const canvases: Record<string, HTMLCanvasElement> = $state({});
 
   onMount(() => {
     const params = new URLSearchParams(window.location.search);
     const tilesetParam = params.get('tileset');
     const sizeParam = Number(params.get('size'));
-    const customSize = Number.isFinite(sizeParam) && sizeParam > 0 ? sizeParam : null;
+    const customSize =
+      Number.isFinite(sizeParam) && sizeParam > 0 ? sizeParam : null;
 
     const dungeonSource = tilesetParam
-      ? libImages[tilesetParam] ??
-        asset(tilesetParam.replace(/^\/+/, '') as AssetPath)
+      ? (libImages[tilesetParam] ??
+        asset(tilesetParam.replace(/^\/+/, '') as AssetPath))
       : sheetSources.dungeon;
 
-    queryInfo = `${tilesetParam ? `tileset=${tilesetParam} ` : ''}${customSize ? `size=${customSize}` : ''}`.trim();
+    queryInfo =
+      `${tilesetParam ? `tileset=${tilesetParam} ` : ''}${customSize ? `size=${customSize}` : ''}`.trim();
 
     const loadImage = (src: string) =>
       new Promise<HTMLImageElement | null>((resolve) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = () => resolve(null);
-      image.src = src;
-    });
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => resolve(null);
+        image.src = src;
+      });
 
     const uniqueSources = [
       ...new Set(
         groups.flatMap(({ tiles }) =>
-          Object.values(tiles).map((tile) =>
-            effectiveTile(tile, dungeonSource, customSize).source,
+          Object.values(tiles).map(
+            (tile) => effectiveTile(tile, dungeonSource, customSize).source,
           ),
         ),
       ),
     ];
 
-    Promise.all(
+    void Promise.all(
       uniqueSources.map(async (src) => [src, await loadImage(src)] as const),
     ).then((loaded) => {
       const images = new Map(loaded);
@@ -138,7 +140,9 @@
 
             <div>
               <div class="key">{key}</div>
-              <div class="slot">{tile.sheet} · {tile.x},{tile.y} · {tile.size}</div>
+              <div class="slot">
+                {tile.sheet} · {tile.x},{tile.y} · {tile.size}
+              </div>
             </div>
           </div>
         {/each}

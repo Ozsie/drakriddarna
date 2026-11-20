@@ -20,7 +20,7 @@
     },
   );
 
-  let canvases: Record<string, HTMLCanvasElement> = $state({});
+  const canvases: Record<string, HTMLCanvasElement> = $state({});
 
   onMount(() => {
     const loadImage = (src: string) =>
@@ -33,7 +33,7 @@
 
     const sources = [...new Set(decorators.map(({ sprite }) => sprite.image))];
 
-    Promise.all(
+    void Promise.all(
       sources.map(
         async (source) =>
           [source, await loadImage(asset(source as AssetPath))] as const,

@@ -11,7 +11,7 @@
     if (dungeonContainer) {
       inputManager.attachGestures(dungeonContainer);
     }
-    let harnessEnabled = false;
+    let harnessEnabled: boolean;
     try {
       harnessEnabled = isBrowserPerfHarnessEnabled(
         localStorage.getItem('perfHarness'),

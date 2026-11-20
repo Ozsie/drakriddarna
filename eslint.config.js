@@ -1,14 +1,15 @@
 import js from '@eslint/js';
+import svelte from 'eslint-plugin-svelte';
 import tseslint from 'typescript-eslint';
 import prettierRecommended from 'eslint-plugin-prettier/recommended';
 import svelteParser from 'svelte-eslint-parser';
 import globals from 'globals';
 
 // Flat-config replacement for the old .eslintrc.cjs (ESLint 10,
-// typescript-eslint 8). Behavior is carried over rule for rule:
-// type-aware linting over .ts files with prettier enforced, plus the
-// engine-package and reverse-boundary import restrictions (the UI kit
-// now ships its own kit-side rules inside @hoard-engine/uikit).
+// typescript-eslint 8). Type-aware rules cover .ts files and Svelte scripts,
+// with Svelte's recommended rules and prettier enforced, plus the engine-
+// package and reverse-boundary import restrictions (the UI kit now ships
+// its own kit-side rules inside @hoard-engine/uikit).
 export default tseslint.config(
   {
     ignores: [
@@ -37,6 +38,34 @@ export default tseslint.config(
         extraFileExtensions: ['.svelte'],
       },
     },
+  },
+  {
+    files: ['**/*.svelte'],
+    extends: [
+      js.configs.recommended,
+      ...tseslint.configs.recommendedTypeChecked,
+      ...svelte.configs['flat/recommended'],
+      ...svelte.configs['flat/prettier'],
+      prettierRecommended,
+    ],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.es2021,
+      },
+      parser: svelteParser,
+      parserOptions: {
+        parser: tseslint.parser,
+        projectService: true,
+        // Explicit so the in-repo engine-package tsconfig under
+        // packages/ cannot become a second TSConfigRootDir candidate.
+        tsconfigRootDir: import.meta.dirname,
+        extraFileExtensions: ['.svelte'],
+      },
+    },
+  },
+  {
+    files: ['**/*.ts', '**/*.svelte'],
     rules: {
       '@typescript-eslint/no-var-requires': 'error',
       '@typescript-eslint/explicit-function-return-type': 'off',
@@ -65,14 +94,14 @@ export default tseslint.config(
   },
   {
     files: ['**/*.svelte'],
-    languageOptions: {
-      parser: svelteParser,
-      parserOptions: {
-        parser: tseslint.parser,
-        // Explicit so the in-repo engine-package tsconfig under
-        // packages/ cannot become a second TSConfigRootDir candidate.
-        tsconfigRootDir: import.meta.dirname,
-      },
+    rules: {
+      'prettier/prettier': [
+        'error',
+        {
+          parser: 'svelte',
+          plugins: ['prettier-plugin-svelte'],
+        },
+      ],
     },
   },
   // Canvas-mock test objects are `as unknown as CanvasRenderingContext2D`,

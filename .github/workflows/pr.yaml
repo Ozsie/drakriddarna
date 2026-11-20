@@ -11,55 +11,60 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js 22.19
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v5
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v5
         with:
-          node-version: 22.19
+          node-version-file: .nvmrc
+          cache: npm
       - run: npm ci
       - run: npm run build
 
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js 22.19
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v5
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v5
         with:
-          node-version: 22.19
+          node-version-file: .nvmrc
+          cache: npm
       - run: npm ci
       - run: npm run lint
 
   prettier:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js 22.19
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v5
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v5
         with:
-          node-version: 22.19
+          node-version-file: .nvmrc
+          cache: npm
       - run: npm ci
       - run: npm run prettier
 
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js 22.19
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v5
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v5
         with:
-          node-version: 22.19
+          node-version-file: .nvmrc
+          cache: npm
       - run: npm ci
       - run: npm run check
 
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js 22.19
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v5
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v5
         with:
-          node-version: 22.19
+          node-version-file: .nvmrc
+          cache: npm
       - run: npm ci
       - run: npm test
 
@@ -69,11 +74,12 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js 22.19
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v5
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v5
         with:
-          node-version: 22.19
+          node-version-file: .nvmrc
+          cache: npm
       - run: npm ci
       - name: Run difficulty benchmark
         run: npm run benchmark
@@ -132,11 +138,12 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js 22.19
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v5
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v5
         with:
-          node-version: 22.19
+          node-version-file: .nvmrc
+          cache: npm
       - run: npm ci
       - name: Run rendering benchmark
         run: npm run benchmark:rendering

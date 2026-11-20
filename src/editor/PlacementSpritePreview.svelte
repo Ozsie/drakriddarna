@@ -4,7 +4,7 @@
     type SpritePreview,
   } from './placementSpritePreview';
 
-  let { sprite }: { sprite: SpritePreview | null } = $props();
+  const { sprite }: { sprite: SpritePreview | null } = $props();
   let imageWidth = $state(0);
   let imageHeight = $state(0);
 

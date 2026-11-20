@@ -220,9 +220,9 @@
         {$t('content.editor.dungeon')}
         <select bind:value={dungeonIndex}>
           {#each selectedCampaign.dungeons as dungeon, index (index)}
-            <option value={index}
-              >{$t(dungeon.nameTranslationKey ?? dungeon.name)}</option
-            >
+            <option value={index}>
+              {$t(dungeon.nameTranslationKey ?? dungeon.name)}
+            </option>
           {/each}
         </select>
       </label>
@@ -315,13 +315,13 @@
                 >
                   <span class="cell-code">{floor ? cell : ''}</span>
                   <span class="markers">
-                    {#each lights as light}
+                    {#each lights as light (light)}
                       <span
                         class="light-marker"
                         style={`--marker-color: ${light.color ?? '#f5dfc2'}`}
                       ></span>
                     {/each}
-                    {#each decorators as _decorator}
+                    {#each decorators as decorator (decorator)}
                       <span class="decorator-marker"></span>
                     {/each}
                   </span>

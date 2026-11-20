@@ -3,10 +3,7 @@
   import groundSprites from '#lib/DungeonTiles.png';
   import type { GameState } from '../types';
   import { gameStateStore, debugModeStore } from '../store/gameStateStore';
-  import {
-    appPhaseStore,
-    welcomeViewStore,
-  } from '../store/appPhaseStore';
+  import { appPhaseStore, welcomeViewStore } from '../store/appPhaseStore';
   import { radialMenuStore } from '../store/radialMenuStore';
   import { locale } from '#lib/translations/index.js';
   import { getCampaign } from '../campaigns';
@@ -19,7 +16,9 @@
     debugMode?: boolean | undefined;
   }
 
-  let { gameState = undefined, debugMode = undefined }: Props = $props();
+  const props: Props = $props();
+  let gameState = $derived(props.gameState);
+  const debugMode = $derived(props.debugMode);
 
   const board = new DungeonBoardController();
 
@@ -35,20 +34,18 @@
   let containerWidth = $state(0);
   let containerHeight = $state(0);
 
-  const activeState = $derived(
-    gameState ?? ($gameStateStore as GameState | null) ?? undefined
-  );
+  const activeState = $derived(gameState ?? $gameStateStore ?? undefined);
   // Debug mode (overlays included) exists only in dev builds; a
   // production deploy never activates it, whatever a save carries.
   const activeDebugMode = $derived(
     isDebugModeAvailable() &&
       (debugMode !== undefined
         ? debugMode
-        : Boolean(activeState?.settings?.['debug'] ?? $debugModeStore))
+        : Boolean(activeState?.settings?.['debug'] ?? $debugModeStore)),
   );
   const dungeon = $derived(activeState?.dungeon);
   const campaign = $derived(
-    activeState?.campaignId ? getCampaign(activeState.campaignId) : undefined
+    activeState?.campaignId ? getCampaign(activeState.campaignId) : undefined,
   );
   const tileset = $derived(resolveTileset(dungeon, campaign, groundSprites));
   const startPosition = $derived(dungeon?.startingPositions?.[0]);
@@ -94,20 +91,11 @@
   bind:clientHeight={containerHeight}
 >
   <div class="canvasContainer">
-    <canvas
-      id="staticCanvas"
-      class="canvasLayer"
-      bind:this={board.staticCanvas}
+    <canvas id="staticCanvas" class="canvasLayer" bind:this={board.staticCanvas}
     ></canvas>
-    <canvas
-      id="actorCanvas"
-      class="canvasLayer"
-      bind:this={board.actorCanvas}
+    <canvas id="actorCanvas" class="canvasLayer" bind:this={board.actorCanvas}
     ></canvas>
-    <canvas
-      id="gameBoard"
-      class="canvasLayer"
-      bind:this={board.overlayCanvas}
+    <canvas id="gameBoard" class="canvasLayer" bind:this={board.overlayCanvas}
     ></canvas>
     <canvas
       id="uiCanvas"
