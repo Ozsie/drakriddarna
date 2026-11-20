@@ -221,6 +221,132 @@ const killAllMonstersAchieved = (state: GameState) =>
     .filter((wc) => wc.type === ConditionType.KILL_ALL)
     .some((wc) => wc.fulfilled);
 
+const endHeroTurn = (state: GameState, actor: Hero): number => {
+  // Capture the index before turn-end effects: the toll can down this hero.
+  const currentIndex = liveHeroes(state).indexOf(actor);
+  applyTerrainTurnEndEffects(state, actor);
+  applyRoomFogTurnEndEffects(state, actor);
+  addLog(state, 'logs.endedTurn', {
+    name: i18n(actor.name),
+  });
+  actor.actions = 0;
+  actor.movement = 0;
+  return currentIndex === -1
+    ? 0
+    : actor.health > 0
+      ? currentIndex + 1
+      : currentIndex;
+};
+
+const endRound = async (
+  state: GameState,
+  monsterOptions?: MonsterTurnOptions,
+): Promise<Hero[]> => {
+  state.currentActor = undefined;
+  const gm = getDifficulty(state);
+  dispatchDirectorEvent(gm, 'onHeroPhaseEnd', state);
+  await monsterActions(state, monsterOptions);
+  dispatchDirectorEvent(gm, 'onMonsterPhaseEnd', state);
+  resetOnNext(state);
+  return liveHeroes(state);
+};
+
+const selectNextHero = async (
+  state: GameState,
+  index: number,
+  monsterOptions?: MonsterTurnOptions,
+): Promise<{ hero: Hero | undefined; roundEnded: boolean }> => {
+  let heroes = liveHeroes(state);
+  let nextIndex = index;
+  let roundEnded = false;
+  if (nextIndex >= heroes.length) {
+    heroes = await endRound(state, monsterOptions);
+    nextIndex = 0;
+    roundEnded = true;
+  }
+  if (heroes.length === 0) {
+    state.currentActor = undefined;
+    openPartyWipe(state);
+    return { hero: undefined, roundEnded };
+  }
+
+  let guard = 0;
+  while (
+    heroes[nextIndex] &&
+    heroes[nextIndex].incapacitated &&
+    guard < heroes.length * 2
+  ) {
+    const hero = heroes[nextIndex];
+    addLog(state, 'logs.noLongerIncapacitated', {
+      name: i18n(hero.name),
+    });
+    hero.incapacitated = false;
+    hero.actions = 0;
+    hero.movement = 0;
+    nextIndex++;
+    if (nextIndex >= heroes.length) {
+      heroes = await endRound(state, monsterOptions);
+      nextIndex = 0;
+      roundEnded = true;
+    }
+    guard++;
+  }
+  if (heroes.length === 0 || !heroes[nextIndex]) {
+    state.currentActor = undefined;
+    openPartyWipe(state);
+    return { hero: undefined, roundEnded };
+  }
+  return { hero: heroes[nextIndex], roundEnded };
+};
+
+const drawRoundEvent = (state: GameState): void => {
+  resetEventEffects(state);
+  if (state.drawEvents) {
+    state.previousEvent = state.currentEvent;
+    const event = drawNextEvent(state);
+    state.currentEvent = event;
+    emitSoundCue(state, { cue: 'eventSound', event });
+    const effect = eventEffects[event.effect];
+    if (effect) {
+      effect(state, event);
+    } else {
+      // eslint-disable-next-line no-console
+      console.warn(`Unknown event effect: ${event.effect}`);
+    }
+  } else {
+    state.previousEvent = state.currentEvent;
+    state.currentEvent = undefined;
+  }
+};
+
+const startHeroTurn = (
+  state: GameState,
+  hero: Hero,
+  roundEnded: boolean,
+): void => {
+  state.currentActor = hero;
+  hero.actions = 2;
+  hero.movement = getEffectiveMaxMovement(
+    hero,
+    getDifficulty(state).modifiers.movement,
+  );
+  if (roundEnded) {
+    state.turnCount = (state.turnCount ?? 0) + 1;
+    const gm = getDifficulty(state);
+    dispatchDirectorEvent(gm, 'onRoundStart', state.turnCount, state);
+  }
+  const hasKilledAll = killAllMonstersAchieved(state);
+  if (roundEnded && !hasKilledAll) {
+    drawRoundEvent(state);
+  } else if (state.roundActionsDelta) {
+    hero.actions = Math.max(1, hero.actions + state.roundActionsDelta);
+  }
+  const gm = getDifficulty(state);
+  dispatchDirectorEvent(gm, 'onHeroTurnStart', hero, state);
+  addLog(state, 'logs.startedTurn', { name: i18n(hero.name) });
+  doReRender(state);
+};
+
 export const next = async (
   state: GameState,
   monsterOptions?: MonsterTurnOptions,
@@ -234,119 +360,16 @@ export const next = async (
     if (state.betweenDungeons) return state;
   }
   if (state.currentActor === undefined) return state;
-  else {
-    // Terrain the hero ends its turn on (e.g. standing in lava) or fog
-    // of the room it stands in (e.g. poison gas) takes its toll before
-    // the turn passes on. The toll can down the acting hero, so the
-    // live-heroes index is captured while they are still alive: a
-    // survivor advances by one, a downed hero keeps the captured index —
-    // which then points at the next live hero, and still triggers the
-    // normal round-end processing when they were last in the round.
-    const turnEndActor = state.currentActor;
-    const currentIndex = liveHeroes(state).indexOf(turnEndActor);
-    applyTerrainTurnEndEffects(state, turnEndActor);
-    applyRoomFogTurnEndEffects(state, turnEndActor);
-    addLog(state, 'logs.endedTurn', {
-      name: i18n(turnEndActor.name),
-    });
-    turnEndActor.actions = 0;
-    turnEndActor.movement = 0;
-    let nextIndex =
-      currentIndex === -1
-        ? 0
-        : turnEndActor.health > 0
-          ? currentIndex + 1
-          : currentIndex;
-    // Whether the round wrapped around — distinct from `nextIndex`
-    // being 0, which also happens when the first hero of the round was
-    // downed by their turn-end toll: only a wrap starts a new round.
-    let roundEnded = false;
-    if (nextIndex >= liveHeroes(state).length) {
-      state.currentActor = undefined;
-      const gm = getDifficulty(state);
-      dispatchDirectorEvent(gm, 'onHeroPhaseEnd', state);
-      await monsterActions(state, monsterOptions);
-      dispatchDirectorEvent(gm, 'onMonsterPhaseEnd', state);
-      nextIndex = 0;
-      roundEnded = true;
-      resetOnNext(state);
-    }
-    if (liveHeroes(state).length === 0) {
-      state.currentActor = undefined;
-      openPartyWipe(state);
-      return state;
-    }
-    let guard = 0;
-    while (
-      liveHeroes(state)[nextIndex] &&
-      liveHeroes(state)[nextIndex].incapacitated &&
-      guard < liveHeroes(state).length * 2
-    ) {
-      addLog(state, 'logs.noLongerIncapacitated', {
-        name: i18n(liveHeroes(state)[nextIndex].name),
-      });
-      liveHeroes(state)[nextIndex].incapacitated = false;
-      liveHeroes(state)[nextIndex].actions = 0;
-      liveHeroes(state)[nextIndex].movement = 0;
-      nextIndex++;
-      if (nextIndex >= liveHeroes(state).length) {
-        state.currentActor = undefined;
-        const gm = getDifficulty(state);
-        dispatchDirectorEvent(gm, 'onHeroPhaseEnd', state);
-        await monsterActions(state, monsterOptions);
-        dispatchDirectorEvent(gm, 'onMonsterPhaseEnd', state);
-        nextIndex = 0;
-        roundEnded = true;
-        resetOnNext(state);
-      }
-      guard++;
-    }
-    if (liveHeroes(state).length === 0 || !liveHeroes(state)[nextIndex]) {
-      state.currentActor = undefined;
-      openPartyWipe(state);
-      return state;
-    }
-    state.currentActor = liveHeroes(state)[nextIndex];
-    state.currentActor.actions = 2;
-    state.currentActor.movement = getEffectiveMaxMovement(
-      state.currentActor,
-      getDifficulty(state).modifiers.movement,
-    );
-    if (roundEnded) {
-      state.turnCount = (state.turnCount ?? 0) + 1;
-      const gm = getDifficulty(state);
-      dispatchDirectorEvent(gm, 'onRoundStart', state.turnCount, state);
-    }
-    const hasKilledAll = killAllMonstersAchieved(state);
-    if (roundEnded && !hasKilledAll) {
-      resetEventEffects(state);
-      if (state.drawEvents) {
-        state.previousEvent = state.currentEvent;
-        const event = drawNextEvent(state);
-        state.currentEvent = event;
-        emitSoundCue(state, { cue: 'eventSound', event });
-        const effect = eventEffects[event.effect];
-        if (effect) {
-          effect(state, event);
-        } else {
-          // eslint-disable-next-line no-console
-          console.warn(`Unknown event effect: ${event.effect}`);
-        }
-      } else {
-        state.previousEvent = state.currentEvent;
-        state.currentEvent = undefined;
-      }
-    } else if (state.roundActionsDelta) {
-      state.currentActor.actions = Math.max(
-        1,
-        state.currentActor.actions + state.roundActionsDelta,
-      );
-    }
-    const gm = getDifficulty(state);
-    dispatchDirectorEvent(gm, 'onHeroTurnStart', state.currentActor, state);
-    addLog(state, 'logs.startedTurn', { name: i18n(state.currentActor.name) });
-    doReRender(state);
-  }
+  const turnEndActor = state.currentActor;
+  // Preserve the index captured before turn-end tolls can down the actor.
+  const nextIndex = endHeroTurn(state, turnEndActor);
+  const { hero, roundEnded } = await selectNextHero(
+    state,
+    nextIndex,
+    monsterOptions,
+  );
+  if (!hero) return state;
+  startHeroTurn(state, hero, roundEnded);
   return state;
 };
 

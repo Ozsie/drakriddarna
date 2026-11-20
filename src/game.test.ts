@@ -387,6 +387,84 @@ describe('game orchestrator', () => {
     expect(state.turnCount ?? 0).toBe(turnCountBefore);
   });
 
+  it('ends the round before starting the first hero turn of the next round', async () => {
+    const state = init();
+    const lastHero = state.heroes[state.heroes.length - 1] as Hero;
+    const firstHero = state.heroes[0] as Hero;
+    const hookOrder: string[] = [];
+    const turnCountBefore = state.turnCount ?? 0;
+    const gameMaster = state.gameMaster;
+    expect(gameMaster).toBeDefined();
+    if (!gameMaster) return;
+
+    state.gameMaster = {
+      ...gameMaster,
+      onHeroPhaseEnd: () => hookOrder.push('heroPhaseEnd'),
+      onMonsterPhaseEnd: () => hookOrder.push('monsterPhaseEnd'),
+      onRoundStart: (round) => hookOrder.push(`roundStart:${round}`),
+      onHeroTurnStart: (hero) => hookOrder.push(`heroTurnStart:${hero.name}`),
+    };
+    state.currentActor = lastHero;
+    state.dungeon.layout.monsters.forEach((monster) => {
+      monster.exhausted = true;
+    });
+
+    await next(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    expect(hookOrder).toEqual([
+      'heroPhaseEnd',
+      'monsterPhaseEnd',
+      `roundStart:${turnCountBefore + 1}`,
+      `heroTurnStart:${firstHero.name}`,
+    ]);
+    expect(state.currentActor?.name).toBe(firstHero.name);
+    expect(state.turnCount).toBe(turnCountBefore + 1);
+  });
+
+  it('opens the party-wipe screen when turn-end lava downs the last live hero', async () => {
+    const state = init();
+    const lastHero = state.heroes[state.heroes.length - 1] as Hero;
+    state.heroes.forEach((hero) => {
+      hero.health = 0;
+    });
+    lastHero.health = 1;
+    state.currentActor = lastHero;
+    state.dungeon.layout.monsters.forEach((monster) => {
+      monster.exhausted = true;
+    });
+    state.dungeon.layout.terrain = [
+      ...(state.dungeon.layout.terrain ?? []),
+      {
+        position: { x: lastHero.position.x, y: lastHero.position.y },
+        type: TerrainType.LAVA,
+        damageOnEnter: 1,
+        damageOnTurnEnd: 1,
+      },
+    ];
+    const onRoundStart = vi.fn();
+    const gameMaster = state.gameMaster;
+    expect(gameMaster).toBeDefined();
+    if (!gameMaster) return;
+    state.gameMaster = { ...gameMaster, onRoundStart };
+
+    await next(state, {
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    expect(lastHero.health).toBeLessThanOrEqual(0);
+    expect(state.currentActor).toBeUndefined();
+    expect(state.betweenDungeons?.step).toBe('partyWipe');
+    expect(onRoundStart).not.toHaveBeenCalled();
+  });
+
   it('endAction decrements actions and clears movement when actions hit 0', async () => {
     const state = init();
     const hero0 = state.heroes[0] as Hero;

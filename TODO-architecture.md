@@ -66,12 +66,12 @@ Relevant files: `src/game.ts`, `src/saves/SavesLogic.ts`, `src/store/gameStateSt
 
 ### Turn orchestration — medium priority
 
-- [ ] Refactor `next()` in `src/game.ts` into explicit turn-end, hero-selection, round-end, event-draw and turn-start operations.
-- [ ] Replace duplicated round-end sequences with one operation while preserving hook and reset ordering.
-- [ ] Review repeated `liveHeroes()` evaluation and the bounded guard loop; cache only within intervals where the hero set cannot change.
-- [ ] Preserve captured-index semantics when a hero is downed and test round rollover and no-eligible-hero cases.
+- [x] Refactor `next()` in `src/game.ts` into explicit turn-end, hero-selection, round-end, event-draw and turn-start operations.
+- [x] Replace duplicated round-end sequences with one operation while preserving hook and reset ordering.
+- [x] Review repeated `liveHeroes()` evaluation and the bounded guard loop; cache only within intervals where the hero set cannot change.
+- [x] Preserve captured-index semantics when a hero is downed and test round rollover and no-eligible-hero cases.
 - [x] Check regression expectations against [RULES.md](RULES.md); ask for clarification if implementation and rules disagree.
-- [ ] Preserve Game Master lifecycle ordering and update the game-master specification/how-to if documented behavior changes.
+- [x] Preserve Game Master lifecycle ordering and update the game-master specification/how-to if documented behavior changes.
 
 ### Smaller implementation follow-ups
 
