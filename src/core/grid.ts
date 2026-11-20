@@ -160,23 +160,31 @@ const isBlockingCell = (state: GameState, position: Position): boolean => {
     isSamePosition(monster.position, position),
   );
   return Boolean(
-    pit || pillar || monster || cell === WALL || cell === COLLAPSED,
+    pit ||
+    pillar ||
+    monster ||
+    cell === EMPTY ||
+    cell === WALL ||
+    cell === COLLAPSED,
   );
 };
 
 // The game knowledge the package's line walker consumes, injected per
 // line: which cells block a walking line or a ray at a corner pinch (pits
-// never cut a sight ray there), which cells terminate the line before the
-// target, and which edges are closed.
+// and voids never cut a sight ray there), which cells terminate the line
+// before the target, and which edges are closed.
 const lineOfSightEnv = (
   state: GameState,
   source: Position,
 ): LineOfSightEnv => ({
   isBlockedCell: (position) => isBlockingCell(state, position),
-  isFlankPassable: (position) =>
-    Boolean(
-      state.dungeon.layout.pits?.some((pit) => isSamePosition(pit, position)),
-    ),
+  isFlankPassable: (position) => {
+    const layout = state.dungeon.layout;
+    return Boolean(
+      layout.pits?.some((pit) => isSamePosition(pit, position)) ||
+      findCell(layout.grid, position.x, position.y) === EMPTY,
+    );
+  },
   stopsLine: (position, walking) => {
     const layout = state.dungeon.layout;
     const cell = findCell(layout.grid, position.x, position.y);

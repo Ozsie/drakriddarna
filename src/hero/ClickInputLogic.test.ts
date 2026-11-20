@@ -539,6 +539,53 @@ describe('reach weapon line of sight', () => {
 
     expect(getCursorType(state, { x: 3, y: 1 })).toBe('sword');
   });
+
+  it('does not walk across a void even when the destination is within movement range', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    state.dungeon.layout.grid[1] = '#AA AA#';
+    const target = { x: 4, y: 1 };
+
+    onTargetCell(state, target);
+
+    expect(hero.position).toEqual({ x: 1, y: 1 });
+    expect(hero.movement).toBe(5);
+    expect(getCursorType(state, target)).toBe('default');
+  });
+
+  it('does not walk diagonally through a corner formed by void cells', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    state.dungeon.layout.grid = ['#####', '#A  #', '# A #', '#####'];
+    const target = { x: 2, y: 2 };
+
+    onTargetCell(state, target);
+
+    expect(hero.position).toEqual({ x: 1, y: 1 });
+    expect(hero.movement).toBe(5);
+    expect(getCursorType(state, target)).toBe('default');
+  });
+
+  it('allows a reach attack across a void', () => {
+    const state = createTestState();
+    const hero = state.currentActor as Hero;
+    hero.weapon = { ...defaultWeapon, range: 3 };
+    state.dungeon.layout.grid[1] = '#AA AA#';
+    const monster = createTestMonster({ position: { x: 4, y: 1 } });
+    state.dungeon.layout.monsters = [monster];
+
+    expect(getCursorType(state, monster.position)).toBe('sword');
+
+    setRng(() => 5 / 6);
+    try {
+      onTargetCell(state, monster.position);
+    } finally {
+      resetRng();
+    }
+
+    expect(monster.health).toBe(1);
+    expect(hero.actions).toBe(1);
+  });
 });
 
 describe('moving through other heroes', () => {
