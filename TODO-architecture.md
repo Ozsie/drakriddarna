@@ -148,7 +148,9 @@ Extraction improves ownership and reuse; performance benefits must be demonstrat
 - [x] Carry their colocated tests over and expose the supported contracts through the package entry point.
 - [x] Preserve pinch anchoring, touch-hold transitions/cancellation and wheel-burst classification behavior.
 - [x] Keep browser listeners, game-action arbitration and camera updates in game-side adapters/facades.
-- [ ] Update game imports/dependencies and verify mouse, trackpad and touch integration.
+- [x] Update game imports/dependencies and verify mouse, trackpad and touch integration: the game consumes published `@hoard-engine/input` v0.2.0 through `package.json`/lockfile with the tuning thresholds in `src/input/GestureTuning.ts`; behavior parity against the removed local modules was confirmed by diff (only comment removal and the constants-to-config refactor, no functional changes).
+
+Verification record: the published package source matches the removed game modules except for the config-injection API, all tuning values (hold-pan delay 250 ms, move slop 10 px, wheel burst reset 120 ms, discrete notch threshold 50 px) are preserved in `GestureTuning.ts`, and the package's tests pass (57/57). Real-Chrome checks against the production build covered both projections: trackpad-fractional wheel streams pan (exact expected camera vector), discrete mouse-wheel notches and ctrl+wheel streams zoom, touch hold-then-drag pans after the delay without moving during the hold, two-finger pinch zooms with release-synthesized clicks suppressed, quick taps fall through to a synthesized click, and one-finger swipes reach the move action. Remaining limitations: Firefox line-mode wheel deltas, real trackpad momentum and real hardware touch synthesis are not drivable through CDP input dispatch; those paths remain covered by the package unit tests only.
 
 ### `@hoard-engine/camera` — high priority, deliberate API expansion
 

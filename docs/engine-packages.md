@@ -655,7 +655,7 @@ step-9 gate ("view-model contracts in place") is being built under
   and scheduling. Aura generation and its sprite cache remain game-owned
   visual content rather than part of the shared renderer surface.
 
-### @hoard-engine/input — source: `../input` — v0.2.0 PENDING RELEASE
+### @hoard-engine/input — source: `../input` — v0.2.0 (published)
 
 Generic key-binding, action-dispatch, held-action and touch-gesture
 mechanics extracted from both games. The v0.2.0 update adds pinch zoom,
@@ -663,12 +663,12 @@ one-finger hold-pan and wheel-burst state machines with consumer-provided
 thresholds; action names, timing/tuning policy, browser event wiring,
 default bindings and game-action arbitration remain in the games.
 
-**Current state:** v0.1.0 is published and consumed by both games. The
-standalone v0.2.0 source and tests are prepared locally; release is pending.
-Its boundary, public-surface and browser/i18n sentinel tests enforce the
-package rules; game-specific mechanics remain in the adapters.
+**Current state:** v0.1.0 and v0.2.0 are published and consumed by both
+games as npm dependencies. Its boundary, public-surface and browser/i18n
+sentinel tests enforce the package rules; game-specific mechanics remain
+in the adapters.
 
-### @hoard-engine/camera — source: `../camera` — v0.2.0 PENDING RELEASE
+### @hoard-engine/camera — source: `../camera` — v0.2.0 (published)
 
 Exponential camera-follow smoothing and centered/panned world-to-screen
 and screen-to-world transforms. The v0.2.0 update adds zoom-aware transforms,
@@ -676,11 +676,10 @@ anchor-preserving zoom, step arithmetic and wheel-delta math over plain
 values. Zoom limits, keyboard step, input sensitivity, projection, rendering,
 resize, board bounds and camera lifecycle remain consumer-owned.
 
-**Current state:** v0.1.0 is published and consumed by both games. The
-standalone v0.2.0 source and tests are prepared locally; release is pending.
-Its boundary, public-surface and browser/i18n sentinel tests enforce the
-package rules; the package has no runtime dependencies and does not depend
-on `@hoard-engine/scene`.
+**Current state:** v0.1.0 and v0.2.0 are published and consumed by both
+games as npm dependencies. Its boundary, public-surface and browser/i18n
+sentinel tests enforce the package rules; the package has no runtime
+dependencies and does not depend on `@hoard-engine/scene`.
 
 ## Prerequisites (cross-cutting)
 
@@ -791,7 +790,8 @@ policy; the packages contain no game content by construction.
 
 A November 2026 review pass compared this spec with what remains in
 `src/`. The published packages and their facades match the spec above;
-input and camera have since been extracted as local, unpublished packages.
+input and camera have since been extracted and published as npm packages
+(v0.2.0), consumed like every other engine package.
 The open-item ledger includes the sound-cue inversion (logic
 emits cue data; only the adapter, the UI shell and `AppSettings` import
 the `soundEffectManager` facade) and the scene extraction (step 9) is
