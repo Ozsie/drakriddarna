@@ -152,8 +152,13 @@ export const isDungeonBeaten = derived(gameStateStore, ($state) =>
   Boolean($state?.dungeon.beaten),
 );
 
-export const isGameOver = derived(gameStateStore, ($state) =>
-  $state ? liveHeroes($state).length === 0 : false,
+// Derived from the live-hero result rather than recomputing liveHeroes():
+// both fire on the same publication, so the second filter/map is duplicate
+// work. The gameStateStore guard keeps the no-active-run value false;
+// liveHeroesStore alone cannot distinguish "no live heroes" from "no game".
+export const isGameOver = derived(
+  [gameStateStore, liveHeroesStore],
+  ([$state, $liveHeroes]) => ($state ? $liveHeroes.length === 0 : false),
 );
 
 export const currentEventStore = derived(

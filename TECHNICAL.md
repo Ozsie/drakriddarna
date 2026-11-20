@@ -831,6 +831,10 @@ Three layers of verification:
    separately on explored authored dungeons; its measurements, invalidation
    dependencies, and revision-counter decision are recorded in
    `docs/render-invalidation.md`.
+   `npm run benchmark:derived-stores` profiles the store-side counterpart,
+   the derived-store recomputation and subscriber notification during
+   repeated publication; its measurements, subscriber inventory, and
+   caching decision are recorded in `docs/derived-store-recomputation.md`.
 
 4. **Balance analysis** (`npm run balanceAnalysis`) plus a tuning test that
    pins the BrutalOverlord's numbers. The harness also models mid-campaign

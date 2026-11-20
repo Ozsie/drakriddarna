@@ -121,13 +121,13 @@ Relevant file: `src/components/DungeonBoardSignatures.ts`.
 
 ### Derived-store recomputation — investigate
 
-Relevant file: `src/store/gameStateStore.ts`.
+Relevant file: `src/store/gameStateStore.ts`. The measured baseline is recorded in [docs/derived-store-recomputation.md](docs/derived-store-recomputation.md) (run with `npm run benchmark:derived-stores`).
 
-- [ ] Measure recomputation/subscriber costs for visibility, live heroes and other array/object derived values during repeated state publication.
-- [x] Check actual subscribers and existing subscription laziness before adding caching.
-- [ ] Consider deriving game-over state from the existing live-hero result rather than computing it twice.
-- [ ] If worthwhile, cache expensive derivations against complete explicit dependencies/revisions, not object identity or turn count alone.
-- [ ] Preserve the state-envelope publication behavior needed for in-place mutations; test visibility changes within a turn and subscriber updates.
+- [x] Measure recomputation/subscriber costs for visibility, live heroes and other array/object derived values during repeated state publication: the array derivations cost 0.06–0.77 µs per call, publishing to every subscribed derived at most 2.29 µs on the largest authored map — about 0.014% of a 16.7 ms frame.
+- [x] Check actual subscribers and existing subscription laziness before adding caching: no production component subscribes to the derived stores (the board reads `gameStateStore` directly); the only always-on subscription is the sound-cue drain, and deriveds are lazy, so unsubscribed deriveds never recompute.
+- [x] Consider deriving game-over state from the existing live-hero result rather than computing it twice: `isGameOver` now derives from `liveHeroesStore`'s result plus the raw-store guard that keeps the no-active-run value false.
+- [x] If worthwhile, cache expensive derivations against complete explicit dependencies/revisions, not object identity or turn count alone: not worthwhile — the all-subscribed worst case is three orders of magnitude below the frame budget and only tests/benchmarks subscribe, and revision instrumentation would spread across the same distributed mutation owners the render-invalidation review declined to instrument.
+- [x] Preserve the state-envelope publication behavior needed for in-place mutations; test visibility changes within a turn and subscriber updates: covered by the recomputation tests in `src/store/gameStateStore.test.ts` (derived laziness, in-place room-discovery reveals, hero deaths/revivals, mid-turn publications from an asynchronous turn, null-state welcome phase).
 
 ### Translation loading — small concrete improvement
 

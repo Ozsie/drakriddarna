@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { get } from 'svelte/store';
+import { derived, get } from 'svelte/store';
 import {
   gameStateStore,
   currentHero,
@@ -29,7 +29,7 @@ import {
   dispatch,
   removeDamageIndicatorAction,
 } from './gameStateStore';
-import { debouncedSaveReloadGuard, saveReloadGuard } from '../core';
+import { debouncedSaveReloadGuard, findCell, saveReloadGuard } from '../core';
 import type { GameState, Hero, Item } from '../types';
 import { init } from '../game';
 import { magicItems } from '../items/magicItems';
@@ -252,5 +252,144 @@ describe('gameStateStore and state management', () => {
     debouncedSaveReloadGuard(state, 100);
     vi.runAllTimers();
     vi.useRealTimers();
+  });
+});
+
+describe('derived store recomputation', () => {
+  beforeEach(() => {
+    initGame();
+  });
+
+  it('deriveds recompute only while subscribed (laziness)', () => {
+    let computes = 0;
+    const probe = derived(gameStateStore, ($state) => {
+      computes += 1;
+      return $state?.turnCount ?? 0;
+    });
+    const state = getState();
+
+    // Publications without subscribers do not run derived predicates.
+    for (let i = 0; i < 5; i += 1) gameStateStore.set(state);
+    expect(computes).toBe(0);
+
+    const unsub = probe.subscribe(() => {});
+    expect(computes).toBe(1);
+
+    gameStateStore.set(state);
+    expect(computes).toBe(2);
+
+    unsub();
+    gameStateStore.set(state);
+    expect(computes).toBe(2);
+  });
+
+  it('publishes an in-place visibility change to derived subscribers', () => {
+    const state = getState();
+    const hidden = state.dungeon.layout.monsters.find((monster) => {
+      const cell = findCell(
+        state.dungeon.layout.grid,
+        monster.position.x,
+        monster.position.y,
+      );
+      return cell && !state.dungeon.discoveredRooms.includes(cell);
+    });
+    expect(hidden).toBeDefined();
+    if (!hidden) return;
+
+    const seen: number[] = [];
+    const unsub = visibleMonsters.subscribe((monsters) => {
+      seen.push(monsters.length);
+    });
+
+    gameStateStore.set(state);
+    const before = seen[seen.length - 1];
+    expect(get(visibleMonsters).some((monster) => monster === hidden)).toBe(
+      false,
+    );
+
+    // In-place discovery of the monster's room, published through the
+    // usual envelope: subscribers must see the reveal without any
+    // deduplication on the shared nested objects.
+    const cell = findCell(
+      state.dungeon.layout.grid,
+      hidden.position.x,
+      hidden.position.y,
+    );
+    if (cell) state.dungeon.discoveredRooms.push(cell);
+    gameStateStore.set(state);
+
+    expect(seen.length).toBeGreaterThan(1);
+    expect(seen[seen.length - 1]).toBe(before + 1);
+    expect(get(visibleMonsters).some((monster) => monster === hidden)).toBe(
+      true,
+    );
+
+    unsub();
+  });
+
+  it('publishes in-place hero deaths to liveHeroesStore and isGameOver', () => {
+    const state = getState();
+    const liveSeen: number[] = [];
+    const overSeen: boolean[] = [];
+    const unsubLive = liveHeroesStore.subscribe((heroes) => {
+      liveSeen.push(heroes.length);
+    });
+    const unsubOver = isGameOver.subscribe((over) => {
+      overSeen.push(over);
+    });
+
+    gameStateStore.set(state);
+    expect(liveSeen[liveSeen.length - 1]).toBe(state.heroes.length);
+    expect(overSeen[overSeen.length - 1]).toBe(false);
+
+    state.heroes.forEach((hero) => {
+      hero.health = 0;
+    });
+    gameStateStore.set(state);
+
+    expect(liveSeen[liveSeen.length - 1]).toBe(0);
+    expect(overSeen[overSeen.length - 1]).toBe(true);
+
+    // Reviving in place publishes again: the game-over result must
+    // re-derive from the then-current live-hero result.
+    state.heroes.forEach((hero) => {
+      hero.health = 3;
+    });
+    gameStateStore.set(state);
+
+    expect(liveSeen[liveSeen.length - 1]).toBe(state.heroes.length);
+    expect(overSeen[overSeen.length - 1]).toBe(false);
+
+    unsubLive();
+    unsubOver();
+  });
+
+  it('forwards mid-turn publications from an asynchronous turn', async () => {
+    const liveSeen: number[] = [];
+    const unsubLive = liveHeroesStore.subscribe((heroes) => {
+      liveSeen.push(heroes.length);
+    });
+
+    await nextTurn({
+      delayBetweenMonsters: 0,
+      delayBetweenActions: 0,
+      delayAfterAttack: 0,
+      waitForMovement: false,
+    });
+
+    // At least the final publication of the turn reached subscribers, on
+    // top of the subscription's initial notification.
+    expect(liveSeen.length).toBeGreaterThan(1);
+    expect(liveSeen[liveSeen.length - 1]).toBe(get(liveHeroesStore).length);
+
+    unsubLive();
+  });
+
+  it('keeps the welcome-phase game-over result false while the store holds null', () => {
+    gameStateStore.set(null);
+
+    expect(get(gameStateStore)).toBeNull();
+    expect(get(liveHeroesStore)).toEqual([]);
+    expect(get(isGameOver)).toBe(false);
   });
 });

@@ -12,6 +12,7 @@
 		"benchmark": "BENCHMARK=true vitest run src/benchmark/benchmark.test.ts",
 		"benchmark:rendering": "BENCHMARK=true vitest run src/benchmark/renderingBenchmark.test.ts",
 		"benchmark:signatures": "BENCHMARK=true NODE_OPTIONS=--expose-gc vitest run src/benchmark/signatureBenchmark.test.ts --pool=forks",
+		"benchmark:derived-stores": "BENCHMARK=true NODE_OPTIONS=--expose-gc vitest run src/benchmark/derivedStoreBenchmark.test.ts --pool=forks",
 		"benchmark:browser": "npm run build && node --experimental-strip-types scripts/browser-benchmark.ts",
 		"balanceAnalysis": "BENCHMARK=true vitest run src/benchmark/balanceAnalysis.test.ts",
 		"lint": "eslint .",
