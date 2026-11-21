@@ -16,7 +16,10 @@ The target architecture has now been reached: the nine original packages
 are published and consumed as dependencies. `@hoard-engine/input`
 (v0.2.0) and `@hoard-engine/camera` (v0.2.0, with the v0.3.0
 projection-independent anchor-preserving pan seam prepared in the sibling
-repository, release pending) are published and consumed the same way.
+repository, release pending) are published and consumed the same way, and the
+published `@hoard-engine/i18n` package (v0.1.0) supplies the
+framework-independent translations with Svelte-compatible stores behind the
+game's `#lib/translations/index.js` singleton.
 What remains in `src/` is the game — the turn pipeline, the content and
 the
 adapters/facades that resolve game state into the packages' contracts. The
@@ -36,6 +39,7 @@ section names the coupling its extraction removed.
 @hoard-engine/audio      sample playback + intensity-driven crossfade
 @hoard-engine/saves      versioned save framework + migration registry
 @hoard-engine/directors  hook/dispatch framework for game-master-style directors
+@hoard-engine/i18n       translations with Svelte-compatible stores
 @hoard-engine/time       day/cycle/season calendar (future; see Future candidates)
 @hoard-engine/input      key bindings, action dispatch, touch gesture state machines
 @hoard-engine/camera     follow smoothing + viewport transforms and zoom math
@@ -45,7 +49,7 @@ section names the coupling its extraction removed.
 game              logic + content + adapters             (this repo)
 ```
 
-Dependency graph — twelve leaves (eleven present, one proposed), one composition root:
+Dependency graph — thirteen leaves (twelve present, one proposed), one composition root:
 
 ```
 @hoard-engine/rng        (deps: none)
@@ -54,6 +58,7 @@ Dependency graph — twelve leaves (eleven present, one proposed), one compositi
 @hoard-engine/audio      (deps: none)
 @hoard-engine/saves      (deps: none; game registers migrators)
 @hoard-engine/directors  (deps: none)
+@hoard-engine/i18n       (deps: none)
 @hoard-engine/time       (deps: none; proposed)
 @hoard-engine/input      (deps: none)
 @hoard-engine/camera     (deps: none)

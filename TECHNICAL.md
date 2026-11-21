@@ -22,24 +22,25 @@ works through a chain of scenarios ("dungeons") forming a campaign.
 
 ## Tech stack at a glance
 
-| Layer         | Technology                           | Notes                                                 |
-| ------------- | ------------------------------------ | ----------------------------------------------------- |
-| App framework | SvelteKit + Svelte (static adapter)  | Renders to static files; no server at runtime         |
-| Language      | TypeScript (strict mode)             | No `any`, no console, enforced by ESLint              |
-| Rendering     | Custom Canvas 2D over HOARD scene    | No Phaser/Three.js or DOM-based tiles                 |
-| State         | Svelte stores + `localStorage`       | Single serializable `GameState`                       |
-| i18n          | sveltekit-i18n (English/Swedish)     | Translation files auto-discovered at build time       |
-| Content       | TypeScript-as-data                   | Dungeons, campaigns and AI opponents are code modules |
-| Testing       | Vitest, colocated tests              | Plus headless game benchmarks and balance analysis    |
-| Tooling       | Vite, ESLint, Prettier, svelte-check |                                                       |
-| CI/CD         | GitHub Actions → GitHub Pages        | Deploy on push to `main`                              |
+| Layer         | Technology                             | Notes                                                 |
+| ------------- | -------------------------------------- | ----------------------------------------------------- |
+| App framework | SvelteKit + Svelte (static adapter)    | Renders to static files; no server at runtime         |
+| Language      | TypeScript (strict mode)               | No `any`, no console, enforced by ESLint              |
+| Rendering     | Custom Canvas 2D over HOARD scene      | No Phaser/Three.js or DOM-based tiles                 |
+| State         | Svelte stores + `localStorage`         | Single serializable `GameState`                       |
+| i18n          | `@hoard-engine/i18n` (English/Swedish) | Translation files auto-discovered at build time       |
+| Content       | TypeScript-as-data                     | Dungeons, campaigns and AI opponents are code modules |
+| Testing       | Vitest, colocated tests                | Plus headless game benchmarks and balance analysis    |
+| Tooling       | Vite, ESLint, Prettier, svelte-check   |                                                       |
+| CI/CD         | GitHub Actions → GitHub Pages          | Deploy on push to `main`                              |
 
-Runtime dependencies are the i18n stack (`sveltekit-i18n` with its
-`@sveltekit-i18n/extension-stores` store surface) and the standalone HOARD
-engine packages (`@hoard-engine/rng`, `@hoard-engine/grid`,
-`@hoard-engine/primitives`, `@hoard-engine/audio`,
-`@hoard-engine/lighting`, `@hoard-engine/saves`, `@hoard-engine/directors` and
-`@hoard-engine/scene`). Everything else is dev tooling.
+Runtime dependencies are the standalone HOARD engine packages (`@hoard-engine/rng`,
+`@hoard-engine/grid`, `@hoard-engine/primitives`, `@hoard-engine/audio`,
+`@hoard-engine/lighting`, `@hoard-engine/saves`, `@hoard-engine/directors`,
+`@hoard-engine/scene`, `@hoard-engine/input`, `@hoard-engine/camera`,
+`@hoard-engine/uikit`, and the framework-independent
+`@hoard-engine/i18n`, which provides translations with Svelte-compatible
+stores). Everything else is dev tooling.
 
 ## Architecture: logic engine behind a thin UI
 
@@ -61,6 +62,8 @@ engine-agnostic TypeScript; the UI is a thin layer on top.**
 ├── src/settings/      app-level audio and renderer preferences
 ├── src/ui/            pure functions that draw UI panels onto canvases
 ├── src/components/    Dungeon.svelte (thin shell) + DungeonBoardController
+├── src/editor/        placement-editor and sprite-preview logic for the /editor route
+├── src/routes/        thin SvelteKit routes: the game page, and the editor/sprite-catalog pages
 └── src/audio/         game audio facades: sound-cue table, fallback tracks, intensity heuristic (over @hoard-engine/audio)
 ```
 
@@ -74,7 +77,12 @@ is what makes two unusual things possible:
    them, testing rules (dice odds, line of sight, monster targeting)
    directly, the way you would test any other business logic.
 
-The UI layer is deliberately thin. Only three `.svelte` components exist; the
+The UI layer is deliberately thin. Svelte's role is confined to a handful of
+shell components: the game page mounts the game view and attaches the global
+input manager, and separate lightweight routes serve authoring and debug
+needs — the placement editor at `/editor` (with its sprite-preview component)
+and the sprite-catalog pages at `/tiles` and `/decorators`, which draw every
+named tile or decorator definition from its sheet with no authored copy. The
 game view (`Dungeon.svelte`) is pure reactive glue — it derives state from the
 stores and forwards it to `DungeonBoardController`, a colocated plain-TS class
 that owns the canvases and orchestrates the layered render loop, browser-side
@@ -767,7 +775,10 @@ maintained in code rather than by an export/import cycle.
 ## Internationalization
 
 All user-facing strings — including every log line the game emits — go
-through sveltekit-i18n with both English and Swedish. Shared strings live in
+through the `@hoard-engine/i18n` package (framework-independent translations
+with Svelte-compatible stores; `src/lib/translations/index.ts` builds the
+game's `t`/`locale` surface from it) with both English and Swedish. Shared
+strings live in
 `src/lib/translations/{en,sv}/`; campaign- and Game-Master-specific strings
 live next to their content and are globbed in automatically. Hardcoding
 user-visible text is a lint-enforced no. Campaigns can even append their own

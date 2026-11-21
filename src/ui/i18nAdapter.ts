@@ -1,6 +1,6 @@
-// The translator port: sveltekit-i18n (via the core re-export) behind the
-// kit's `Translator` shape. Renderers receive this through `UiEnv.t` and
-// never import i18n themselves (M3).
+// The translator port: the @hoard-engine/i18n-backed `t` store (via the core
+// re-export) behind the kit's `Translator` shape. Renderers receive this
+// through `UiEnv.t` and never import i18n themselves (M3).
 
 import { i18n } from '../core';
 import type { Translator } from '@hoard-engine/uikit';
