@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   MonsterType,
-  ItemType,
   SecretType,
   Colour,
   Level,
@@ -9,7 +8,6 @@ import {
   type GameAction,
   type GameSettings,
   type ItemProperties,
-  type Item,
 } from './types';
 import { magicItems } from './items/magicItems';
 import { weapons, monsterWeapons } from './items/weapons';
@@ -20,7 +18,6 @@ import {
   createMonster,
   createSecret,
   createSecretWithItem,
-  onCheckFulfilled,
 } from './dungeon/DungeonLogic';
 import {
   removeFoundItemFromDeck,
@@ -126,29 +123,6 @@ describe('Type Safety & Domain Modeling', () => {
       );
       expect(itemSecret.id).toBe(`secret_${magicItems[0].id ?? ''}_3_4`);
       expect(itemSecret.item?.id).toBe(magicItems[0].id);
-    });
-
-    it('hasNecklaceOfLight checks item semantic id', () => {
-      const state = init();
-      const condition = {
-        type: 0,
-        fulfilled: true,
-      };
-
-      // When hero does not have necklace
-      expect(onCheckFulfilled.hasNecklaceOfLight(state, condition)).toBe(false);
-
-      // When hero has necklace by id
-      const necklaceItem: Item = {
-        id: 'necklace_of_light',
-        name: 'Custom Translation Key or Renamed UI String',
-        type: ItemType.MAGIC,
-        value: 0,
-        amountInDeck: 1,
-      };
-      state.heroes[0].inventory.push(necklaceItem);
-
-      expect(onCheckFulfilled.hasNecklaceOfLight(state, condition)).toBe(true);
     });
 
     it('deck removal functions use item.id', () => {

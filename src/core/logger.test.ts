@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { addLog, doReRender, i18n } from './logger';
+import { describe, it, expect, vi } from 'vitest';
+import { addLog, doReRender, i18n, warn } from './logger';
 import type { Dungeon, GameState } from '../types';
 import enContent from '../lib/translations/en/content.json';
 import svContent from '../lib/translations/sv/content.json';
@@ -46,6 +46,16 @@ describe('logger module', () => {
 
     doReRender(state);
     expect(state.reRender).toBe(true);
+  });
+
+  it('warn passes the diagnostic message to console.warn', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      warn('diagnostic message');
+      expect(warnSpy).toHaveBeenCalledWith('diagnostic message');
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('addLog prepends log entries with current turn count', () => {

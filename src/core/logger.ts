@@ -8,6 +8,13 @@ export const i18n = (
   properties?: Record<string, string>,
 ): string => t.get()(key, properties) || key;
 
+// Developer-facing diagnostic, unlike the player-facing action log: it
+// surfaces on the console so game code needs no direct console access.
+export const warn = (message: string): void => {
+  // eslint-disable-next-line no-console
+  console.warn(message);
+};
+
 let reloadGuardTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export const saveReloadGuard = (state: GameState): void => {

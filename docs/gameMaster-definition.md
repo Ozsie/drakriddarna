@@ -84,13 +84,13 @@ per-monster and shift each monster's behavior-weight sets.
 
 ### `events` — turn events and spawn safeguards
 
-| Field                            | Description                                                                                              |
-| :------------------------------- | :------------------------------------------------------------------------------------------------------- |
-| `minMonsterSpawnDistance`        | Minimum tile distance from living heroes where event-spawned monsters may appear.                        |
-| `earliestMonsterRound`           | Monster-spawning events are skipped before this round number.                                            |
-| `skipHungryTrollBelowHalfHealth` | When `true`, skip "The Hungry Troll" if the party's total HP is below 50%.                               |
-| `modifyEventDeck(deck, state)`   | Transform the full `TurnEvent[]` deck at initialization (filter, reorder, add). Return the new deck.     |
-| `onEventDrawn(event, state)`     | Intercept an event before resolution; return `null` to discard and skip it, or a (modified) `TurnEvent`. |
+| Field                            | Description                                                                                                                                          |
+| :------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `minMonsterSpawnDistance`        | Minimum tile distance from living heroes where event-spawned monsters may appear.                                                                    |
+| `earliestMonsterRound`           | Monster-spawning events are skipped before this round number.                                                                                        |
+| `skipHungryTrollBelowHalfHealth` | When `true`, skip "The Hungry Troll" if the party's total HP is below 50%.                                                                           |
+| `modifyEventDeck(deck, state)`   | Transform the full `TurnEvent[]` deck at initialization (filter, reorder, add); `state` is the freshly initialized `GameState`. Return the new deck. |
+| `onEventDrawn(event, state)`     | Intercept an event before resolution; return `null` to discard and skip it, or a (modified) `TurnEvent`.                                             |
 
 Consumed in `src/events/EventsLogic.ts`.
 

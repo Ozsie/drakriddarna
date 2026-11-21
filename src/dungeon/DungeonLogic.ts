@@ -7,14 +7,12 @@ import type {
   ItemSprite,
   Monster,
   Secret,
-  WinCondition,
 } from '../types';
 import { Colour, Level, MonsterType, SecretType, Side } from '../types';
 import { monsterWeapons } from '../items/weapons';
 import { monsterArmour } from '../items/armours';
 import { monsterShields } from '../items/shields';
-import { liveHeroes } from '../hero/HeroLogic';
-import { addLog, nextRandom } from '../core';
+import { nextRandom } from '../core';
 import { COLLAPSED, EMPTY, WALL } from '../core';
 import {
   getMonsterTemplate,
@@ -92,28 +90,8 @@ registerMonsterTemplate(MonsterType.RED_DARK_LORD, {
 export { COLLAPSED, EMPTY, WALL };
 export * from './dungeonParser';
 export * from './dungeonValidator';
+export * from './WinConditionChecks';
 export * from '../interactables/InteractableLogic';
-
-export const onCheckFulfilled: {
-  [index: string]: (state: GameState, self: WinCondition) => boolean;
-} = {
-  hasNecklaceOfLight: (state: GameState, self: WinCondition): boolean => {
-    const hasNecklaceOfLight = liveHeroes(state).some((hero) =>
-      hero.inventory.some(
-        (item) =>
-          item &&
-          (item.id === 'necklace_of_light' ||
-            item.name === 'items.magicItems.necklaceOfLight.name'),
-      ),
-    );
-    if (state.settings['debug']) {
-      addLog(state, 'logs.debug.hasNecklaceOfLight', {
-        hasNecklaceOfLight: hasNecklaceOfLight ? 'Y' : 'N',
-      });
-    }
-    return self.fulfilled && hasNecklaceOfLight;
-  },
-};
 
 export const createEquipment = (
   x: number,

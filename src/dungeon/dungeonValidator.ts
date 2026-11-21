@@ -17,6 +17,7 @@ import type {
 } from '../types';
 import { ConditionType, Side } from '../types';
 import { EMPTY, findCell, WALL } from '../core';
+import { onCheckFulfilled } from './WinConditionChecks';
 
 export interface ValidationError {
   type:
@@ -469,6 +470,13 @@ export const validateLayout = (
             position: cond.targetCell,
           });
         }
+      }
+      if (cond.checkFulfilled && !(cond.checkFulfilled in onCheckFulfilled)) {
+        const knownChecks = Object.keys(onCheckFulfilled).join(', ');
+        errors.push({
+          type: 'condition',
+          message: `Win condition references unknown checkFulfilled check '${cond.checkFulfilled}' (known checks: ${knownChecks}).`,
+        });
       }
     });
   }

@@ -1,6 +1,12 @@
 import type { Dungeon, GameState, Hero } from './types';
 import { ConditionType, Level } from './types';
-import { onCheckFulfilled, applyFallbackItems } from './dungeon/DungeonLogic';
+import { applyFallbackItems } from './dungeon/DungeonLogic';
+import { onCheckFulfilled } from './dungeon/WinConditionChecks';
+import {
+  openBetweenDungeons,
+  openCampaignComplete,
+  openPartyWipe,
+} from './dungeon/BetweenDungeonsLogic';
 import { CURRENT_SAVE_VERSION, migrateSaveState } from './saveMigration';
 import { writeSave } from './saves/SavesLogic';
 import { getCampaign, isKnownCampaign, DEFAULT_CAMPAIGN_ID } from './campaigns';
@@ -26,19 +32,28 @@ import {
   resetEventEffects,
 } from './events/EventsLogic';
 import { browser } from '$app/env';
-import { addLog, doReRender, i18n, readAutosave, writeAutosave } from './core';
-import { shuffle } from './core';
-import { awardScenarioScore, beginDungeonTiming } from './core';
-import { createSeededRng, resetRng, setRng } from './core';
-import { checkpointDungeonTimer, resumeDungeonTimer } from './core';
 import {
-  getEffectiveMaxMovement,
-  getDifficulty,
-  getGameMaster,
+  addLog,
+  awardScenarioScore,
+  beginDungeonTiming,
+  checkpointDungeonTimer,
+  clearActorAnimations,
+  createSeededRng,
   DEFAULT_GAME_MASTER_ID,
+  doReRender,
+  emitSoundCue,
+  getDifficulty,
+  getEffectiveMaxMovement,
+  getGameMaster,
+  i18n,
+  readAutosave,
+  resetRng,
+  resumeDungeonTimer,
+  setRng,
+  shuffle,
+  warn,
+  writeAutosave,
 } from './core';
-import { clearActorAnimations } from './core';
-import { emitSoundCue } from './core';
 import { setNextDungeonTransitionProvider } from './interactables/InteractableLogic';
 import { dispatchDirectorEvent } from '@hoard-engine/directors';
 
@@ -58,8 +73,7 @@ type RestoreSource = 'loaded save' | 'autosave';
 
 const restoreRuntimeState = (state: GameState, source: RestoreSource): void => {
   if (!state.campaignId || !isKnownCampaign(state.campaignId)) {
-    // eslint-disable-next-line no-console
-    console.warn(
+    warn(
       `Unknown or missing campaignId "${
         state.campaignId ?? ''
       }" in ${source}, falling back to "${DEFAULT_CAMPAIGN_ID}".`,
@@ -124,26 +138,12 @@ export const init = (
   assignHeroSprites(campaign.heroes as Hero[]);
   const selectedGameMaster = getGameMaster(gameMasterId);
 
-  let dungeonEvents = getEventsForDungeon(
+  // Built before the deck shuffles below so the seeded rng consumption
+  // order is unchanged.
+  const dungeonEvents = getEventsForDungeon(
     campaign.dungeons[0],
     campaign.eventDeck,
   );
-  if (selectedGameMaster?.events?.modifyEventDeck) {
-    // Temp partial state for modifier hook if needed
-    const partialState = {
-      campaignId: campaign.id,
-      gameMaster: selectedGameMaster,
-      heroes: campaign.heroes,
-      dungeon: campaign.dungeons[0],
-    } as GameState;
-    dungeonEvents =
-      dispatchDirectorEvent(
-        selectedGameMaster.events,
-        'modifyEventDeck',
-        dungeonEvents,
-        partialState,
-      ) ?? dungeonEvents;
-  }
 
   const state: GameState = {
     campaignId: campaign.id,
@@ -190,6 +190,18 @@ export const init = (
     drawEvents: true,
     speedrunSeed,
   };
+  // The game master's deck hook runs on the fully initialized state, so
+  // it sees a valid GameState instead of a partial stand-in.
+  const gmEvents = selectedGameMaster?.events;
+  if (gmEvents?.modifyEventDeck) {
+    state.eventDeck =
+      dispatchDirectorEvent(
+        gmEvents,
+        'modifyEventDeck',
+        state.eventDeck,
+        state,
+      ) ?? state.eventDeck;
+  }
   if (selectedGameMaster?.initialState) {
     state.gameMasterState = selectedGameMaster.initialState();
   }
@@ -310,8 +322,7 @@ const drawRoundEvent = (state: GameState): void => {
     if (effect) {
       effect(state, event);
     } else {
-      // eslint-disable-next-line no-console
-      console.warn(`Unknown event effect: ${event.effect}`);
+      warn(`Unknown event effect: ${event.effect}`);
     }
   } else {
     state.previousEvent = state.currentEvent;
@@ -444,7 +455,10 @@ export const restartDungeonAfterWipe = (currentState: GameState): GameState => {
   return state;
 };
 
-const checkWinConditions = (state: GameState) => {
+// Evaluates every win condition's built-in check, then any overriding
+// custom check from the onCheckFulfilled registry. Writes only
+// condition.fulfilled on the state.
+const evaluateWinConditions = (state: GameState) => {
   state.dungeon.winConditions.forEach((condition) => {
     switch (condition.type) {
       case ConditionType.KILL_ALL: {
@@ -492,41 +506,50 @@ const checkWinConditions = (state: GameState) => {
       }
     }
     if (condition.checkFulfilled) {
-      condition.fulfilled = onCheckFulfilled[condition.checkFulfilled](
-        state,
-        condition,
-      );
+      const customCheck = onCheckFulfilled[condition.checkFulfilled];
+      if (customCheck) {
+        condition.fulfilled = customCheck(state, condition);
+      } else {
+        warn(
+          `Unknown onCheckFulfilled check "${condition.checkFulfilled}", keeping the built-in result.`,
+        );
+      }
     }
   });
-  const previouslyBeaten = state.dungeon.beaten;
-  state.dungeon.beaten = state.dungeon.winConditions
-    .map((condition) => condition.fulfilled)
-    .reduce((partial, fulfilled) => partial && fulfilled, true);
-  if (state.dungeon.beaten) {
-    if (!previouslyBeaten) {
-      const gm = getDifficulty(state);
-      dispatchDirectorEvent(gm, 'onDungeonComplete', state);
-      const score = awardScenarioScore(state);
-      addLog(state, 'logs.scenarioScore', {
-        score: String(score.total),
-        total: String(state.score ?? 0),
-      });
-    }
-    addLog(state, 'logs.allConditionsFulfilled');
-    addLog(state, 'logs.clearedDungeon', { name: i18n(state.dungeon.name) });
-    if (state.dungeon.nextDungeon?.name) {
-      addLog(state, 'logs.moveToNext', {
-        name: i18n(state.dungeon.nextDungeon?.name),
-      });
-    }
+};
+
+// Completion side effects of the beaten flag: the Game Master hook and
+// score are granted on the transition into a beaten state, the logs on
+// every check while the dungeon stays beaten.
+const completeDungeon = (state: GameState, firstCompletion: boolean) => {
+  if (firstCompletion) {
+    const gm = getDifficulty(state);
+    dispatchDirectorEvent(gm, 'onDungeonComplete', state);
+    const score = awardScenarioScore(state);
+    addLog(state, 'logs.scenarioScore', {
+      score: String(score.total),
+      total: String(state.score ?? 0),
+    });
+  }
+  addLog(state, 'logs.allConditionsFulfilled');
+  addLog(state, 'logs.clearedDungeon', { name: i18n(state.dungeon.name) });
+  if (state.dungeon.nextDungeon?.name) {
+    addLog(state, 'logs.moveToNext', {
+      name: i18n(state.dungeon.nextDungeon?.name),
+    });
   }
 };
 
-import {
-  openBetweenDungeons,
-  openCampaignComplete,
-  openPartyWipe,
-} from './dungeon/BetweenDungeonsLogic';
+const checkWinConditions = (state: GameState) => {
+  evaluateWinConditions(state);
+  const previouslyBeaten = state.dungeon.beaten;
+  state.dungeon.beaten = state.dungeon.winConditions.every(
+    (condition) => condition.fulfilled,
+  );
+  if (state.dungeon.beaten) {
+    completeDungeon(state, !previouslyBeaten);
+  }
+};
 
 export const hasWon = (state: GameState) => {
   if (state.dungeon.beaten && state.dungeon.nextDungeon) {

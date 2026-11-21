@@ -393,4 +393,66 @@ describe('dungeonValidator', () => {
       1,
     );
   });
+
+  it('accepts a checkFulfilled key registered in onCheckFulfilled', () => {
+    const dungeon = defineDungeon({
+      name: 'custom-check.dungeon',
+      intro: 'test-dungeon',
+      winConditions: [
+        {
+          type: ConditionType.KILL_ALL,
+          fulfilled: false,
+          checkFulfilled: 'hasNecklaceOfLight',
+        },
+      ],
+      startingPositions: [[1, 1]],
+      discoveredRooms: ['A'],
+      layout: {
+        grid: ['###', '#A#', '###'],
+        monsters: [],
+        secrets: [],
+        doors: [],
+      },
+    });
+
+    const result = validateDungeon(dungeon);
+    expect(result.valid).toBe(true);
+  });
+
+  it('detects an unknown checkFulfilled key as a condition error', () => {
+    const dungeon = defineDungeon(
+      {
+        name: 'unknown-check.dungeon',
+        intro: 'test-dungeon',
+        winConditions: [
+          {
+            type: ConditionType.KILL_ALL,
+            fulfilled: false,
+            checkFulfilled: 'notARegisteredCheck',
+          },
+        ],
+        startingPositions: [[1, 1]],
+        discoveredRooms: ['A'],
+        layout: {
+          grid: ['###', '#A#', '###'],
+          monsters: [],
+          secrets: [],
+          doors: [],
+        },
+      },
+      { validate: false },
+    );
+
+    const result = validateDungeon(dungeon);
+    expect(result.valid).toBe(false);
+    expect(
+      result.errors.some(
+        (e) =>
+          e.type === 'condition' &&
+          e.message.includes(
+            "unknown checkFulfilled check 'notARegisteredCheck'",
+          ),
+      ),
+    ).toBe(true);
+  });
 });

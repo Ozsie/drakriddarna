@@ -77,11 +77,13 @@ Relevant files: `src/game.ts`, `src/saves/SavesLogic.ts`, `src/store/gameStateSt
 
 These observations need targeted validation before implementation.
 
-- [ ] Replace remaining diagnostic `console.warn` bypasses in game/store code with the existing logger where its contract is appropriate.
-- [ ] Review the partial `GameState` assertion used for the event-deck modification hook; provide a valid state or a deliberately narrower hook contract rather than exposing missing fields.
-- [ ] Review unknown `onCheckFulfilled` registry keys and choose explicit validation/error behavior consistent with content validation.
-- [ ] Consider separating win-condition checking from scoring/logging if it improves clarity without changing evaluation order or side effects.
-- [ ] Consolidate repeated imports and move mid-file imports when touching the affected module; avoid a separate broad formatting refactor.
+- [x] Replace remaining diagnostic `console.warn` bypasses in game/store code with the existing logger where its contract is appropriate.
+- [x] Review the partial `GameState` assertion used for the event-deck modification hook; provide a valid state or a deliberately narrower hook contract rather than exposing missing fields.
+- [x] Review unknown `onCheckFulfilled` registry keys and choose explicit validation/error behavior consistent with content validation.
+- [x] Consider separating win-condition checking from scoring/logging if it improves clarity without changing evaluation order or side effects.
+- [x] Consolidate repeated imports and move mid-file imports when touching the affected module; avoid a separate broad formatting refactor.
+
+Verification record: the logger grew a `warn` diagnostic (`src/core/logger.ts`, the module that already owns the console-access exception) and the two `console.warn` bypasses in `src/game.ts` route through it, so the action-log contract stays player-facing. The `modifyEventDeck` hook now receives the freshly initialized `GameState` instead of a four-field `as GameState` partial — the hook runs right after the state literal is built, before any deck consumer; `game.test.ts` pins that the identity is the initialized state and that the returned deck replaces `state.eventDeck`. Building the event deck before the item/magic-item shuffles was kept so the seeded rng consumption order is unchanged (the parity snapshots caught the reorder when the deck construction moved into the state literal). The `onCheckFulfilled` registry moved to the leaf module `src/dungeon/WinConditionChecks.ts` (re-exported through `DungeonLogic`, so game and editor imports are unchanged), because the registry lives beside `applyFallbackItems` while `dungeonValidator` needs its keys — `dungeonValidator` now reports unknown `checkFulfilled` keys as `condition` errors consistent with the other content-validation rules, and the runtime call site in `evaluateWinConditions` keeps the built-in result plus a `warn` diagnostic for hand-built or `validate: false` states instead of a `TypeError`. Win-condition checking split into `evaluateWinConditions` (writes `condition.fulfilled` only) and `completeDungeon` (the once-per-dungeon Game Master hook, score, plus the per-check logs) behind the unchanged `checkWinConditions` entry, preserving hook, score and log ordering; `hasNecklaceOfLight`'s test moved to a colocated `WinConditionChecks.test.ts`. The repeated `./core` imports in `src/game.ts` were consolidated into one statement and the mid-file `BetweenDungeonsLogic` import moved to the import block (no import cycle: `BetweenDungeonsLogic` imports `DungeonLogic`, not `game`); the debug-only `console.log` in `next()` is an intentional print, not a diagnostic warn, and stays.
 
 ## Board controller and rendering boundaries
 

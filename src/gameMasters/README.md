@@ -263,7 +263,7 @@ Controls how turn events spawn monsters and manipulate the event deck:
 - `minMonsterSpawnDistance` (`number`): Minimum tile distance from living heroes where event-spawned monsters can appear.
 - `earliestMonsterRound` (`number`): Monster-spawning events are skipped during early rounds prior to this round number.
 - `skipHungryTrollBelowHalfHealth` (`boolean`): If `true`, the `The Hungry Troll` event is skipped if the party's total HP is under 50%.
-- `modifyEventDeck(deck, state)`: Intercepts and transforms the full `TurnEvent[]` deck at initialization.
+- `modifyEventDeck(deck, state)`: Intercepts and transforms the full `TurnEvent[]` deck at initialization; `state` is the freshly initialized `GameState`.
 - `onEventDrawn(event, state)`: Intercepts an event before resolution; return `null` to discard and skip, or return a modified `TurnEvent`.
 
 ### 5. `initialState` & Custom State Management (optional)

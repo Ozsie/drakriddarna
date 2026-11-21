@@ -285,8 +285,8 @@ with `fulfilled: false` — the engine sets the flag during play.
 Additional fields on `WinCondition`:
 
 - `checkFulfilled?: string` — key of a custom check in the `onCheckFulfilled`
-  registry (`src/dungeon/DungeonLogic.ts`), overriding the built-in check
-  (built-in: `'hasNecklaceOfLight'`).
+  registry (`src/dungeon/WinConditionChecks.ts`), overriding the built-in check
+  (built-in: `'hasNecklaceOfLight'`). Unknown keys are a validation error.
 - `additionalDescription?: string` — translation key shown next to the
   primary objective, e.g. for secondary goals.
 
@@ -309,3 +309,5 @@ invalid dungeon throws at module load with the full error list. The rules:
   grid; `corridorCells` sit on room cells not already fully declared as
   corridors, without duplicates.
 - Win-condition target cells are inside the grid.
+- A win condition's `checkFulfilled` key, when set, is registered in the
+  `onCheckFulfilled` registry.

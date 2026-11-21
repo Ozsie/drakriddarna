@@ -16,10 +16,11 @@ import { liveHeroes } from './hero/HeroLogic';
 import { DEFAULT_CAMPAIGN_ID, getCampaign } from './campaigns';
 import { buildSelectedHeroes } from './ui/HeroSelectionRendering';
 import { eventEffects } from './events/EventsLogic';
-import { Level, TerrainType } from './types';
-import type { Dungeon, GameMaster, Hero, GameState } from './types';
+import { Level, TerrainType, ConditionType } from './types';
+import type { Dungeon, GameMaster, Hero, GameState, TurnEvent } from './types';
 import { createSeededRng, nextRandom, setRng } from './core/dice';
 import { STORAGE_KEYS } from './core';
+import { getGameMaster } from './gameMasters';
 
 const createTestStorage = () => {
   const values = new Map<string, string>();
@@ -72,6 +73,66 @@ describe('game orchestrator', () => {
     state.heroes.forEach((hero) => {
       expect(hero.shield).toBeUndefined();
     });
+  });
+
+  it('init passes the freshly initialized state to the modifyEventDeck hook', () => {
+    const gameMaster = getGameMaster('tactician');
+    const originalEvents = gameMaster.events;
+    let hookState: GameState | undefined;
+    let hookDeck: TurnEvent[] | undefined;
+    gameMaster.events = {
+      ...originalEvents,
+      modifyEventDeck: (deck, state) => {
+        hookState = state;
+        hookDeck = deck;
+        return [...deck].reverse();
+      },
+    };
+
+    try {
+      const state = init();
+
+      // The hook sees the actual initialized state, not a partial stand-in.
+      expect(hookState).toBe(state);
+      expect(hookState?.settings).toBeDefined();
+      expect(hookState?.actionLog.length).toBeGreaterThan(0);
+
+      // Its returned deck replaces the event deck.
+      expect(hookDeck).toBeDefined();
+      if (!hookDeck) return;
+      expect(state.eventDeck).toEqual([...hookDeck].reverse());
+    } finally {
+      gameMaster.events = originalEvents;
+    }
+  });
+
+  it('warns and keeps the built-in check for an unknown checkFulfilled key', async () => {
+    const state = init();
+    state.dungeon.winConditions = [
+      {
+        type: ConditionType.KILL_ALL,
+        fulfilled: false,
+        checkFulfilled: 'notARegisteredCheck',
+      },
+    ];
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      await next(state, {
+        delayBetweenMonsters: 0,
+        delayBetweenActions: 0,
+        delayAfterAttack: 0,
+        waitForMovement: false,
+      });
+
+      // The built-in KILL_ALL result stands: monsters remain, so not beaten.
+      expect(state.dungeon.beaten).toBe(false);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('notARegisteredCheck'),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('endAction decrements actor actions and triggers next when actions reach 0', async () => {
