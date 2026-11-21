@@ -14,9 +14,9 @@ this repository.
 
 The target architecture has now been reached: the nine original packages
 are published and consumed as dependencies. `@hoard-engine/input`
-(v0.2.0) and `@hoard-engine/camera` (v0.2.0, with the v0.3.0
-projection-independent anchor-preserving pan seam prepared in the sibling
-repository, release pending) are published and consumed the same way, and the
+(v0.2.0) and `@hoard-engine/camera` (v0.3.0, the projection-independent
+anchor-preserving pan seam over an injected `AnchorProjection`) are published
+and consumed the same way, and the
 published `@hoard-engine/i18n` package (v0.1.0) supplies the
 framework-independent translations with Svelte-compatible stores behind the
 game's `#lib/translations/index.js` singleton.
@@ -681,7 +681,7 @@ games as npm dependencies. Its boundary, public-surface and browser/i18n
 sentinel tests enforce the package rules; game-specific mechanics remain
 in the adapters.
 
-### @hoard-engine/camera — source: `../camera` — v0.3.0 (release pending)
+### @hoard-engine/camera — source: `../camera` — v0.3.0 (published)
 
 Exponential camera-follow smoothing and centered/panned world-to-screen
 and screen-to-world transforms. The v0.2.0 update adds zoom-aware transforms,
@@ -694,10 +694,9 @@ edge. Zoom limits, keyboard step, input sensitivity, projection (kept
 with the renderer that owns it), rendering, resize, board bounds and
 camera lifecycle remain consumer-owned.
 
-**Current state:** v0.1.0 and v0.2.0 are published and consumed by both
-games as npm dependencies; the v0.3.0 seam update is prepared in the
-sibling repository pending release, with the game manifest already
-targeting `^0.3.0` and the lockfile following once it is published. Its
+**Current state:** v0.1.0–v0.3.0 are published and consumed by both
+games as npm dependencies; the game's lockfile resolves the `^0.3.0`
+manifest from the registry. Its
 boundary, public-surface and browser/i18n
 sentinel tests enforce the package rules; the package has no runtime
 dependencies and does not depend on `@hoard-engine/scene`.
@@ -780,8 +779,9 @@ later:
     transforms, extracted from Metroidvania's camera and Drakriddarna's
     coordinate conversion and canvas transform math. **Done:** published
     and consumed; the v0.2.0 policy-free zoom math is released, and the
-    v0.3.0 projection-independent anchored-zoom seam is prepared pending
-    release. Projection, zoom limits/input sensitivity, resize, canvas
+    v0.3.0 projection-independent anchored-zoom seam is released and
+    resolved from the registry by both games. Projection, zoom limits/input
+    sensitivity, resize, canvas
     lifecycle and board bounds remain consumer-owned.
 
 ## What stays in the game
