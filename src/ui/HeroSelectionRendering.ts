@@ -239,7 +239,7 @@ const compositionFor = (
   viewWidth: number,
   viewHeight: number,
   options?: HeroSelectionOptions,
-): { root: CompositionStack; start: CompositionNode } => {
+): CompositionStack => {
   const children: CompositionNode[] = [
     positioned(
       { type: 'hitTarget', actionId: 'backdrop' },
@@ -355,6 +355,10 @@ const compositionFor = (
       actionId: 'start',
       label: layout.startButtonLabel,
       variant: 'primary',
+      // Dimmed through the node's own opacity, so the render pass and
+      // the hit test share one tree — and therefore one layout — for
+      // the button.
+      ...(layout.startEnabled ? {} : { opacity: 'dimmed' as const }),
       themeStyle: {
         surface: options?.hoveredAction
           ? 'buttonPrimaryHover'
@@ -370,10 +374,7 @@ const compositionFor = (
     layout.startButtonBounds,
   );
   children.push(start);
-  return {
-    root: { type: 'stack', width: viewWidth, height: viewHeight, children },
-    start,
-  };
+  return { type: 'stack', width: viewWidth, height: viewHeight, children };
 };
 
 const kitLayoutFor = (
@@ -406,12 +407,7 @@ export const getHeroSelectionHit = (
   const layout = kitLayoutFor(viewWidth, viewHeight, campaignId, options);
   if (!layout.hasContent) return null;
   const env = legacyUiEnv(options?.env);
-  const composition = compositionFor(
-    layout,
-    viewWidth,
-    viewHeight,
-    options,
-  ).root;
+  const composition = compositionFor(layout, viewWidth, viewHeight, options);
   const hit = hitTestComposition(
     layoutComposition(
       composition,
@@ -457,19 +453,10 @@ export const renderHeroSelection = (
   };
   const viewBounds = { x: 0, y: 0, width: viewWidth, height: viewHeight };
   const composition = compositionFor(layout, viewWidth, viewHeight, options);
-  const baseComposition = {
-    ...composition.root,
-    children: composition.root.children.filter(
-      (node) => node !== composition.start,
-    ),
-  };
-  const baseLayout = layoutComposition(baseComposition, viewBounds, env);
-  const startLayout = layoutComposition(composition.start, viewBounds, env);
-
+  // One tree, one layout: the start button is a child of the root stack
+  // (exactly as in the hit test above) and dims via its own opacity, so
+  // it can never be rendered somewhere the hit test does not reach.
   ctx.save();
-  renderComposition(baseLayout, ui);
-  ctx.globalAlpha = layout.startEnabled ? 1 : env.theme.alpha.dimmed;
-  renderComposition(startLayout, ui);
-  ctx.globalAlpha = 1;
+  renderComposition(layoutComposition(composition, viewBounds, env), ui);
   ctx.restore();
 };

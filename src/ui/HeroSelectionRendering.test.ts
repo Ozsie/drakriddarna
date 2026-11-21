@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { createRecordingContext } from '@hoard-engine/uikit/testing';
 import {
   applyHeroRenameKey,
   buildSelectedHeroes,
@@ -10,6 +11,7 @@ import {
   getHeroSelectionLayout,
   getMaxHeroes,
   isHeroSelectionStartEnabled,
+  renderHeroSelection,
   toggleHeroSelection,
   MAX_HERO_NAME_LENGTH,
   MIN_PARTY_SIZE,
@@ -330,6 +332,41 @@ describe('HeroSelectionRendering', () => {
         names: {},
       });
       expect(hit).toEqual({ type: 'backdrop' });
+    });
+  });
+
+  describe('render', () => {
+    // Regression: the start button used to be laid out standalone and
+    // centered within the full view, landing off-canvas while the hit
+    // test still found it — invisible but clickable.
+    it('draws the start button inside its own hit bounds', () => {
+      const layout = getHeroSelectionLayout(800, 600, 'iceDragonTreasure', {
+        selectedHeroIds: rosterIds,
+        names: {},
+      });
+      for (const selectedHeroIds of [rosterIds, []]) {
+        const rec = createRecordingContext();
+        renderHeroSelection(rec.ctx, 800, 600, 'iceDragonTreasure', {
+          selectedHeroIds,
+          names: {},
+        });
+        const labelLine = rec.log.find((line) =>
+          line.startsWith(`fillText("${layout.startButtonLabel}"`),
+        );
+        expect(labelLine).toBeDefined();
+        const coords = /fillText\("[^"]*",\s*([\d.-]+),\s*([\d.-]+)\)/.exec(
+          labelLine ?? '',
+        );
+        expect(coords).not.toBeNull();
+        const [, xRaw, yRaw] = coords ?? [];
+        const x = Number(xRaw);
+        const y = Number(yRaw);
+        const b = layout.startButtonBounds;
+        expect(x).toBeGreaterThanOrEqual(b.x);
+        expect(x).toBeLessThanOrEqual(b.x + b.width);
+        expect(y).toBeGreaterThanOrEqual(b.y);
+        expect(y).toBeLessThanOrEqual(b.y + b.height);
+      }
     });
   });
 });
