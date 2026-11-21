@@ -3518,6 +3518,17 @@ describe('buildIsometricWorldView', () => {
     });
   });
 
+  it('outlines walls without any walkable neighbour from the connected wall mass', () => {
+    const rows = ['WWW', 'WWW'];
+
+    expect(getIsometricWallShape(rows, 1, 1)).toEqual({
+      north: true,
+      east: true,
+      south: false,
+      west: true,
+    });
+  });
+
   it('attaches doors to the wall strip on either side of all four doorway directions', () => {
     vi.stubGlobal(
       'Image',

@@ -171,10 +171,12 @@ Verification record: the isometric projection transforms were already owned by `
 
 ### Wall topology: `grid` versus `scene` — conditional
 
-- [ ] Inspect `getIsometricWallShape` and separate neighbor topology from visible-face selection and sprite rendering.
-- [ ] If a reusable topology operation is justified, place it in `grid` with caller-provided predicates instead of game-specific wall/floor/door tokens.
-- [ ] Keep face presentation, sprite orientation and drawing in `scene`; keep fog-of-war policy in the game.
-- [ ] Choose one owner for each concern rather than implementing overlapping geometry in both packages.
+- [x] Inspect `getIsometricWallShape` and separate neighbor topology from visible-face selection and sprite rendering.
+- [x] If a reusable topology operation is justified, place it in `grid` with caller-provided predicates instead of game-specific wall/floor/door tokens.
+- [x] Keep face presentation, sprite orientation and drawing in `scene`; keep fog-of-war policy in the game.
+- [x] Choose one owner for each concern rather than implementing overlapping geometry in both packages.
+
+Verification record: the neighbour lookup moved into `@hoard-engine/grid` v0.2.0 as `matchNeighbourSides` — which orthogonal sides of a cell hold a neighbour satisfying a caller-provided predicate (out-of-grid cells read as `''` to it), with no wall/floor/door tokens in the package; every tile semantic, the two-phase face-selection rule (openings first, wall-mass fallback), the door-counts-as-opening policy and the fog-sealed `worldRows` stay in the game. Face presentation, sprite orientation and drawing were already owned by `scene` (it performs no neighbour classification); the face-key/tile-id resolution stays game-side in `IsometricGraphics.ts`. Consumers of the op are the wall-shape and wall-corner-shape face selections, which now share one viewer-direction mapping (`openingFaces`); source-grid corner topology remains `grid`'s `detectCornerType`, so no concern is implemented in both packages. Package tests (50/50 pass with check/lint/prettier clean; the only prettier warning is the pre-existing untracked `TODO.md`) cover per-side flags, out-of-grid/beyond-row behaviour as `''` and caller-owned predicates; the game suite passes unchanged (1812 tests, svelte-check clean, prettier clean, the six pre-existing lint warnings unchanged) plus a new regression test pinning the wall-mass fallback inversion, and the rewritten `getIsometricWallShape` preserves both phase mappings exactly (floor-phase `n←S, e←W, s←N, w←E`; mass-phase `n←N, e←E, s←S, w←W`). Pending release: `npm publish` of grid 0.2.0 is blocked on the account's npm 2FA, as with the camera 0.3.0 release; the game's manifest already targets `^0.2.0` and local runs resolve the package through a `node_modules` symlink — after both packages publish, run `npm install` to move the lockfiles before the next push (CI installs with `npm ci`). No browser check was run for the game change: it is a behaviour-preserving refactor pinned by unit parity, not a rendering-behaviour change.
 
 ### `@hoard-engine/scene`: aura rendering — medium priority
 

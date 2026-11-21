@@ -49,7 +49,7 @@
 		"@hoard-engine/audio": "^0.1.0",
 		"@hoard-engine/camera": "^0.3.0",
 		"@hoard-engine/directors": "^0.1.0",
-		"@hoard-engine/grid": "^0.1.0",
+		"@hoard-engine/grid": "^0.2.0",
 		"@hoard-engine/i18n": "^0.1.0",
 		"@hoard-engine/input": "^0.2.0",
 		"@hoard-engine/lighting": "^0.1.0",

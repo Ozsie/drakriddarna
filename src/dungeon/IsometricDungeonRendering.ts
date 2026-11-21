@@ -4,7 +4,9 @@ import {
   EMPTY,
   SEALED_DOOR,
   WALL,
+  matchNeighbourSides,
   toArray,
+  type NeighbourSides,
 } from '@hoard-engine/grid';
 import {
   DEFAULT_WALL_COLOUR,
@@ -102,28 +104,48 @@ export const renderIsometricFogLightDim = (
   drawIsoFogLightDim(ctx, cellSize, dungeon, view, pixelRatio);
 };
 
+// A walkable opening fronting a wall: a floor, or the doorway that leaves
+// a hole in the wall strip.
+const isFloorOpening = (cell: string): boolean =>
+  cell === ISO_FLOOR || cell === ISO_DOOR;
+
+// Face names are viewer directions: the north face is the one seen from
+// the world-south neighbour, and likewise around the cell.
+const openingFaces = (
+  sides: NeighbourSides,
+): { north: boolean; east: boolean; south: boolean; west: boolean } => ({
+  north: sides.down,
+  east: sides.left,
+  south: sides.up,
+  west: sides.right,
+});
+
 export const getIsometricWallShape = (
   worldRows: string[],
   x: number,
   y: number,
 ): { north: boolean; east: boolean; south: boolean; west: boolean } => {
-  const isCell = (cellX: number, cellY: number, cell: string): boolean => {
-    const neighbor = toArray(worldRows[cellY] ?? '')[cellX];
-    return neighbor === cell || (cell === ISO_FLOOR && neighbor === ISO_DOOR);
-  };
-  const wallFaces = {
-    north: isCell(x, y + 1, ISO_FLOOR),
-    east: isCell(x - 1, y, ISO_FLOOR),
-    south: isCell(x, y - 1, ISO_FLOOR),
-    west: isCell(x + 1, y, ISO_FLOOR),
-  };
-  if (Object.values(wallFaces).some(Boolean)) return wallFaces;
+  // Faces show where walkable openings adjoin the wall; the topology is
+  // the grid package's neighbour lookup, the selection policy is ours.
+  const faces = openingFaces(
+    matchNeighbourSides(worldRows, x, y, isFloorOpening),
+  );
+  if (faces.north || faces.east || faces.south || faces.west) return faces;
 
+  // A wall recessed behind others shows no opening: outline it from the
+  // connected wall mass instead, naming faces by the direction the mass
+  // lies in.
+  const mass = matchNeighbourSides(
+    worldRows,
+    x,
+    y,
+    (cell) => cell === ISO_WALL,
+  );
   return {
-    north: isCell(x, y - 1, ISO_WALL),
-    east: isCell(x + 1, y, ISO_WALL),
-    south: isCell(x, y + 1, ISO_WALL),
-    west: isCell(x - 1, y, ISO_WALL),
+    north: mass.up,
+    east: mass.right,
+    south: mass.down,
+    west: mass.left,
   };
 };
 
@@ -166,16 +188,13 @@ const getIsometricWallCornerShape = (
     .map(([type]) => type);
   if (corners.length === 0) return undefined;
 
-  const faces = (
-    [
-      ['n', 0, 1],
-      ['e', -1, 0],
-      ['s', 0, -1],
-      ['w', 1, 0],
-    ] as const
-  )
-    .filter(([, offsetX, offsetY]) => isFloor(x + offsetX, y + offsetY))
-    .map(([side]) => side)
+  // The face letters reuse the wall-shape opening mapping.
+  const opening = openingFaces(
+    matchNeighbourSides(worldRows, x, y, isFloorOpening),
+  );
+  const faces = (['north', 'east', 'south', 'west'] as const)
+    .filter((direction) => opening[direction])
+    .map((direction) => direction.slice(0, 1))
     .join('');
   return [faces, ...corners].filter(Boolean).join('+');
 };

@@ -31,7 +31,7 @@ section names the coupling its extraction removed.
 
 ```
 @hoard-engine/rng        seedable RNG + dice
-@hoard-engine/grid       cells, line of sight, doors, pathfinding (callback-driven)
+@hoard-engine/grid       cells, neighbour topology, line of sight, doors, pathfinding (callback-driven)
 @hoard-engine/lighting   light sources, propagation, light maps
 @hoard-engine/audio      sample playback + intensity-driven crossfade
 @hoard-engine/saves      versioned save framework + migration registry
@@ -311,6 +311,12 @@ the game, as planned):
   — the game's `Side` enum and `Door`/`WallEdge` types are structurally
   compatible, and `isDoorEdge`/`isWallEdge` are generic so consumers keep
   their own element types.
+- Neighbour-side topology (`matchNeighbourSides`, v0.2.0) is
+  caller-driven: it reports which orthogonal sides of a cell hold a
+  neighbour satisfying an injected predicate, with out-of-grid cells
+  reading as `''` — the game's isometric wall rendering uses it for
+  visible-wall-face selection while keeping every wall/floor/door token,
+  the face-selection policy and the fog sealing.
 - Line of sight walks rays with an injected `LineOfSightEnv`: which cells
   block a line or a corner pinch (with the sight-ray exception for
   pits), which cells stop the line (a hero stops sight, a pit stops
@@ -339,7 +345,11 @@ layout — self-contained folder with build, publishing, testing, lint and
 prettier scripts, its own `AGENTS.md` and `README.md`, boundary and
 public-surface tests plus colocated unit tests on synthetic grids
 (campaign-layout corner tests stay in the game: campaign content is game
-content).
+content). The `matchNeighbourSides` addition (v0.2.0) is committed in the
+grid repository and pending `npm publish` (account 2FA); the game's
+manifest already targets `^0.2.0` and local runs resolve the package
+through a `node_modules` symlink — run `npm install` after publishing to
+move the lockfile from 0.1.0 before the next push.
 
 ### @hoard-engine/lighting — source: `src/dungeon/LightSources.ts` + the computation
 
