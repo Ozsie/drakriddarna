@@ -56,8 +56,9 @@ Per the [AI Policy in README.md](./README.md):
 
 - [TECHNICAL.md](./TECHNICAL.md) is the technical overview of the project for developers outside the gaming industry (architecture, techniques, technologies, testing, deployment).
 - Keep it accurate when you change anything it describes: the architecture/layering, core modules (`src/core/`, `src/game.ts`), state and persistence model, monster AI and Game Masters, rendering/lighting approach, i18n, auto-discovery (`import.meta.glob`), benchmarks, tooling, or the build/CI/deploy pipeline.
-- The write-up describes components and techniques, not line numbers or exact counts — update it in the same change as the code; do not let it drift.
-- New features at the level of the existing sections (e.g. a new rendering technique, a changed save format, a new benchmark capability) get a matching paragraph or section update.
+- The write-up describes components and techniques, not line numbers or exact counts — update it in the same change as the code; do not let it drift. When a change adds implementation detail (exact counts, percentages, pixel values, frame sizes, key formats, ordering rules), that detail belongs in the `docs/` plan or spec that owns the feature (e.g. [docs/isometric-dungeon-plan.md](./docs/isometric-dungeon-plan.md), [docs/render-invalidation.md](./docs/render-invalidation.md)) or in the code itself — TECHNICAL.md stays at overview level and links to it.
+- New features at the level of the existing sections (e.g. a new rendering technique, a changed save format, a new benchmark capability) get a matching paragraph or section update — a paragraph or two, not a running changelog of mechanics. If a change's description needs more than that, the detail belongs in `docs/`, not here.
+- Keep one home per topic: never describe the same mechanism in two sections of the write-up — state it once and link. Keep sections proportionate; if one section grows to many screens, move its detail out to the owning doc.
 
 ## Engine packages
 

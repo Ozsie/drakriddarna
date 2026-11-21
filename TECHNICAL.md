@@ -229,14 +229,13 @@ crops for each projection; the parser uses `sprite`, then top-down, then
 isometric as the runtime compatibility fallback. Decorator alignment positions
 the sprite bounds within its cell, and defaults to `CENTER`. In isometric mode,
 decorator and light-sprite painters use the aligned world point before
-projection and depth sorting; sprite anchors are unchanged, and configured
-sprite offsets remain in effect for fallback sprites. `CENTER` and `CEILING`
+projection and depth sorting. `CENTER` and `CEILING`
 use the cell center. Item definitions can also specify an `ItemSprite`
 descriptor to replace the drawn sprite of an item or random chest without
 changing its item behavior. When the decorator list is omitted or empty, it
-deterministically places up to six decorations from the shared `bones` options
-in unoccupied floor cells, preferring room corners and then wall-adjacent
-cells; explicit decorator lists take precedence.
+deterministically places a handful of decorations from the shared `bones`
+options in unoccupied floor cells, preferring room corners and then
+wall-adjacent cells; explicit decorator lists take precedence.
 
 ```ts
 export const e1m1: Dungeon = defineDungeon({
@@ -291,7 +290,7 @@ generator (`src/campaigns/brogue/generator/`, specified in
 seed drives a rejection-sampling loop that grows organic room blobs on a
 jittered lattice, carves a spanning tree of doorways, and populates each floor
 from a depth table — monster XP budgets shaped to the hero level curve,
-progressively better loot, one light per room on floors that get strictly
+progressively better loot, lit rooms on floors that get strictly
 darker every level, environmental decorators using the shared `bones` sprite
 options, and thematic blockers placed so they never wall in a monster, item or hero.
 A checked-in fallback seed, verified by tests, means app start can never
@@ -299,12 +298,9 @@ throw. Same auto-discovery, same validation — the generator is just another
 campaign folder whose dungeons happen to be built by code.
 
 The placement editor operates on each campaign's resolved dungeon object, so
-it can inspect runtime-generated floors such as `brogue` without adding a
-campaign registration path. Its TypeScript export includes the exact grid and
-placement definitions with references where a known option matches; custom
-placements are emitted inline. Apply the placement properties to the resolved
-layout, not an empty declarative decorator list, because an empty list asks the
-dungeon parser to generate default decorators.
+it can inspect runtime-generated floors such as `brogue`. Apply the exported
+placements to the resolved layout, not an empty declarative decorator list —
+an empty list asks the dungeon parser to generate default decorators.
 
 ## Determinism: a seeded RNG everywhere it matters
 
@@ -407,157 +403,24 @@ the dungeon layout, resolved through the same image-frame path as floor items:
 
 The app-level `Camera Mode` preference (`src/settings/AppSettings.ts`) keeps
 the top-down renderer as its default and can select an optional isometric
-presentation. Both modes use the same logical grid, game state, fog discovery,
-and saves. The isometric path builds its world from the same sealed dungeon
-view, then sends floor cells, terrain colours, room overlays, pits, extruded
-walls, doors, actors, items, decorators and other visible props through
-`@hoard-engine/scene`'s projected frame and depth-sorted painter queue. The
-isometric adapter projects directional actor sprite facings through the camera
-axes for heroes, monsters and frozen corpses; this is presentation-only, so
-the grid-facing animation state and saved corpse facing remain unchanged. The
-adapter masks undiscovered cells and their terrain, fog overlays, and props;
-the scene compositor skips the hidden-cell token. Debug overlays do not bypass
-room discovery, and the isometric light pass excludes undiscovered rooms.
-The hexagram portal uses its event ID to seed a procedural floor aura. Seeded
-geometry selects one of five distinct motifs—concentric rings, a six-point
-star, radial spokes, lobed petals or a folded spiral—alongside its palette and
-animation parameters. Its animation loop is baked and cached for each
-projection as 128-pixel frames with hue-preserving glow, then drawn below actors
-at a one-tile footprint at the portal position; the existing
-ambient repaint gate advances visible frames without consuming gameplay
-randomness.
-Four magic items use the same generated aura renderer, seeded by item ID and
-drawn beneath each living hero or monster carrying an enabled item. Aura views
-follow interpolated actor movement, respect room discovery and camera bounds,
-and replace the legacy item light definitions in existing saves without
-changing unrelated item lights.
-Found secrets use coordinate-oriented open chest sprites in isometric mode,
-resolved through the shared graphics index (and campaign overrides), with the
-existing decorator retained until the indexed chest image loads; hidden and
-trap-door secrets remain unpainted as props. Once a trap door is found in a
-discovered room, its floor uses the indexed `cells.trap` tile, retaining the
-normal floor image until trap art is ready. Isometric repaint invalidation
-includes the static world signature so discovering a trap updates its tile
-without waiting for actor movement. The controller invalidates the relevant
-cached layers when the preference changes.
-
-Isometric input uses the inverse of the active scene projection for grid
-picking and screen-to-world mapping; pan, zoom and pointer-anchored zoom share
-the same camera transform. The radial menu keeps its logical grid anchor but
-adapts only its display copy for the projected position. Light visibility
-polygons use the existing lighting system and are projected into the isometric
-light mask. The isometric path builds a separate depth-aware mask: projected
-glow is clipped to discovered floor and door diamonds, then removed by visible
-wall silhouettes before light from adjacent floor cells is mapped onto exposed
-wall faces. In depth order, each wall sprite receives exposed-face light from
-its own cell and orthogonally adjacent wall cells. The face projections use
-replacement compositing in reusable tile-sized scratch canvases before they
-are clipped to the sprite alpha, so overlapping faces do not stack brightness
-or light transparent image padding. Direct wall-face painting and walls
-without loaded sprites retain additive compositing; the latter use the
-projected geometric fallback. Wall-face light follows the wall painter depth,
-so nearer walls continue to occlude it. Adjacent same-height exposed wall faces
-overlap by one device pixel at shared edges, with padded source and scratch
-crops preventing raster gaps; isolated ends, hidden neighbors and pits do not
-receive this edge extension.
-Unchanged light-mask inputs reuse the mask across dynamic frames; changes to
-lights, discovery/layout, camera projection, canvas surfaces or loaded art
-invalidate it. The same mask supplies the visible additive glow and the
-ambient-darkness cutout, preventing floor light from brightening hidden wall
-pixels. Discovered room fog erases its configured density from the projected
-light mask before depth-aware compositing, so its visible glow and darkness
-cutout are absorbed together; `blocksLight` fog remains handled by light
-occlusion. Fog configuration participates in both repaint and mask-cache
-signatures. Ambient darkness is composited once over the completed world,
-rather than filtering each individual draw; ambient-only animation uses the
-quantized repaint gate and does not force full-rate world redraws. Turn
-overlays and transient combat
-effects use that same
-projection; floating damage and info text is placed at projected positions but
-drawn upright in screen space. Actor health bars are positioned above sprite
-tops, and hero colour strips are replaced by ground markers at their feet. The
-top-down actor/light/overlay passes remain unchanged in the default mode. The
-game-side isometric adapter lives in
-`src/dungeon/IsometricDungeonRendering.ts`; reusable projection, occlusion
-ordering and compositing are implemented in the sibling `../scene` package.
-Scene also provides the generic isometric inverse screen transform, projected
-tile sizing and fog-light transform, plus a pure frame-rate governor that
-consumes caller-measured frame costs. `DungeonBoardController` retains the
-clock, animation-frame scheduling and render policy through the
-`DungeonBoardFrameRate.ts` facade.
-Isometric floor, wall, pillar and chest art is resolved from the shared
-`static/isometric/index.json`, with an optional per-dungeon `isometricGraphics`
-folder under `static/campaigns/<campaignId>/` overriding matching cell, tile,
-wall-shape, pillar-variant and chest-direction keys.
-Chests use the indexed open or closed variants and tile placement metadata;
-found-secret chests are open. Pillars use the optional `pillarVariants` list,
-falling back to the configured `cells.pillar` tile. Decorator sprites are
-selected per projection: isometric mode uses `sprites.isometric`, then
-`sprites.topDown`, then the legacy `sprite`; top-down mode uses
-`sprites.topDown`, then `sprite`. The configured sprite takes precedence over
-coordinate-selected catalog tiles in isometric mode. While the selected image
-loads, the generic fallback remains visible until it is ready.
-Sprite selection is independent of painter order and gameplay randomness.
-Image dimensions follow the active projection and
-cell size, so a tile is drawn at its projected footprint instead of being
-reduced by the logical cell count. Floor images replace flat floor diamonds and draw
-in depth order before the outlines and upright scene objects, so neighboring
-sprites can overlap naturally without covering grid lines. Visible
-floor and door cells receive a rounded diamond outline after the cell's floor
-image or fallback fill; a slight depth bias places it before same-depth wall
-and door painters.
-Wall images use the visible geometry of the sealed, discovery-aware grid: inner
-room corners use oriented column posts, while outer turns use L-shaped wall
-art facing the adjoining floors. Wall cells bordering multiple inner corners
-or a mix of full faces and inner corners select compound wall-shape keys:
-the optional room-facing mask followed by corner codes in `ITL`, `ITR`,
-`IBL`, `IBR` order, joined by `+` (for example `n+IBL` or `ITR+IBR`). Only
-visible floor and door cells contribute; hidden neighbours cannot confirm a
-corner. Missing compound mappings fall back to the original corner
-classification. Artwork suffixes describe sprite rotations, not exposed grid
-sides; convex turns use the opposite rotation to the corresponding inner
-posts. Wall ends combine their three exposed faces. Unclassified cells use the
-four-way room-facing wall-side mask (a north wall has floor
-immediately south of it), with connected-wall masks as a fallback for cells
-without an adjacent visible floor. Multi-image composites draw rear faces
-on the north/west grid edges before front faces on the south/east edges,
-covering every exposed side rather than substituting isolated posts. Closed
-doors use their framed sprite without separate column overlays. The adapter
-places each door on the adjacent side with more physical flanking walls and
-reverses its side-specific image; ties keep the authored side and position.
-This check uses the original grid rather than discovery-sealing markers. Wall
-shape selection likewise retains a visible door's original wall or collapsed-
-wall footprint in a separate geometry grid. Relocated door frames on floor
-cells also count as wall boundaries when classifying adjacent corner
-composites, while remaining floor-facing for wall-side masks; doors authored
-on wall cells retain their existing wall footprint. The corresponding
-face-and-post composites keep corner jambs joined. Wall and open/closed,
-side-specific door images join the depth-sorted scene queue
-so actors can pass in front of or behind their geometry; missing images
-retain the scene palette fallback. Open door frames sort just behind the
-front-corner depth of their cell, without shifting their image, so foreground
-walls at that tied depth occlude the frame; actors inside the opening appear
-behind it and actors beyond it appear in front. Their single sprite cannot
-interleave its individual jambs with an actor. Closed doors keep the scene's
-cell-center depth. Door-opening floor sprites share the
-depth-sorted floor batch with neighboring floor tiles, before the queued wall
-and door geometry. Ground decorators and corpses receive a small backward
-sort-depth bias without changing their screen position, so walls can occlude
-them and live actors render over them; live actors follow the other depth-
-sorted objects on equal-depth ties.
-Foreground walls within two cells of a hero draw at 35% opacity when their
-cell-center depth is in front of the hero's interpolated position. This also
-applies to the geometric wall fallback when isometric artwork is unavailable;
-door rendering and the opaque wall silhouettes used by the light mask are
-unchanged.
-Discovered pits render as lowered openings: connected pit cells share one
-aperture clip, shaded bottoms and textured north/west inner faces omit shared
-edges, and each texture is clipped to its own lowered face inside the opening.
-The existing north/west masonry sprites use mirrored anchors at their measured
-rim midpoints and are scaled from the projected edge, so camera and projection
-changes preserve alignment. Separate pit groups remain independently clipped;
-the pit pass draws under standing walls and actors, with recessed palette faces
-as the missing-image fallback.
+presentation. Both modes share the same logical grid, game state, fog
+discovery and saves — isometric is purely a different projection of the same
+sealed dungeon view. The isometric path sends floor cells, walls, doors,
+actors, items, decorators and other visible props through
+`@hoard-engine/scene`'s projected frame and depth-sorted painter queue, so
+actors pass in front of or behind the geometry correctly; undiscovered cells
+and their props are masked out exactly as in the top-down mode. Lighting
+reuses the same visibility system, projected into an isometric light mask with
+depth-aware wall-face lighting, and pointer input maps screen coordinates back
+through the inverse of the active projection for grid picking. Foreground
+walls near a hero fade to translucent so they never hide the party. The
+game-side adapter lives in `src/dungeon/IsometricDungeonRendering.ts`; the
+reusable projection, occlusion ordering and compositing live in the
+`@hoard-engine/scene` package. The detailed mechanics of the isometric path —
+wall-shape classification, door placement, pit rendering, the light-mask
+cache, procedural auras — are specified in
+[docs/isometric-dungeon-plan.md](./docs/isometric-dungeon-plan.md) and
+[docs/render-invalidation.md](./docs/render-invalidation.md).
 
 Top-down tall props fake height by splitting across layers: a pillar's base
 tile is static, while its shaft tile is drawn on the actor layer after
@@ -569,22 +432,12 @@ the split base-and-shaft tiles remain the fallback while that sprite is
 missing or loading.
 
 Wall-mounted light sprites are drawn on the dynamic layer above the static
-dungeon tiles. They follow the light glow and animated-terrain passes but
-precede actors; pillar shafts, room fog and the ambient darkness veil still
-overlay them. Light sprites can use a separate image and animate row-major
-frames; the built-in torch uses the eight-frame `Torch Animated.png` sheet and
-shares the dynamic layer's time-based repaint loop. Light sprites align their
-bounds to the cell edge selected by `CellAlignment`; `CENTER` and `CEILING`
-center the sprite within the cell. Rectangular frame dimensions are supported
-for static images such as the brazier sprite, and a per-sprite scale controls
-its maximum size relative to the cell. Optional per-`CellAlignment` pixel
-offsets fine-tune each sprite's placement after its bounds are aligned.
-`LightSource.sprites` can provide independent fixture descriptors for `topDown`
-and `isometric` rendering; the active view-model adapter selects the matching
-entry, falling back to the existing `LightSource.sprite` for compatibility.
-An isometric descriptor may reference a catalog tile by ID; the renderer draws
-it using the catalog's scale and anchor, retaining the regular sprite painter
-while that image loads. The same index serves world tiles and fixture art.
+dungeon tiles, ahead of the actors (pillar shafts, room fog and the darkness
+veil still overlay them). They can use their own image and animate frames from
+a sprite sheet, align their bounds to the cell edge selected by
+`CellAlignment`, and carry a per-sprite scale with fine-tuning offsets.
+`LightSource.sprites` can declare separate `topDown` and `isometric` fixture
+descriptors, falling back to the single `LightSource.sprite`.
 
 Terrain cells (water, lava, …) are declarative floor materials: each cell
 tints the floor, can carry a light (lava glows through the same lighting
@@ -623,12 +476,12 @@ changes — a flickering brazier repaints only a handful of times per second.
 The whole dynamic
 loop is frame-rate locked by a small governor
 (`src/components/DungeonBoardFrameRate.ts`): actor-driven frames
-(movement, projectiles) render at most 60 times per second regardless of
-display refresh, and when a machine's average painted frame stops
-fitting the 60 fps budget the lock drops to 30 fps until frames fit it
-again — with hysteresis so a borderline machine cannot flap between
-rates. Ambient-only frames (light effects, terrain, fog) run at half
-rate, halving the continuous CPU cost of an animated dungeon.
+(movement, projectiles) render at most at the display refresh rate, and when a
+machine's average painted frame stops fitting that budget the lock drops to
+half rate until frames fit it again — with hysteresis so a borderline machine
+cannot flap between rates. Ambient-only frames (light effects, terrain, fog)
+always run at half rate, halving the continuous CPU cost of an animated
+dungeon.
 
 The lighting (`src/dungeon/LightRendering.ts`, with the ray-fan visibility
 computation, the occlusion maps, the animation effects and the sparkles in
@@ -660,8 +513,8 @@ as a depth-sorted ground object from the frozen last frame of the actor's
 death animation, after the dying animation itself finishes. Its small backward
 sort bias keeps it beneath live actors without shifting its sprite. Orc arrows
 and dark lord fireballs
-use numbered image sequences from `static/vfx`; fireball impact draws one
-three-cell-wide area effect centered on the target and starts at projectile
+use numbered image sequences from `static/vfx`; fireball impact draws a
+small area effect centered on the target and starts at projectile
 arrival. Screen shakes
 (`shakeEffects`, `src/combat/CombatEffects.ts`) are transient state effects,
 but render differently: the board controller jitters the world canvases with a
@@ -714,8 +567,8 @@ and the player picks between restarting the campaign from scratch, retrying
 the dungeon — which rewinds to the last autosave and zeroes the whole party's
 XP and levels, per the official defeat rules — or loading a save. The wipe
 screen also shows the campaign's **high score list**
-(`src/saves/HighScoresLogic.ts`): a per-campaign top 10 persisted under its
-own `localStorage` key, recorded whenever a campaign is completed.
+(`src/saves/HighScoresLogic.ts`): a per-campaign high-score list persisted
+under its own `localStorage` key, recorded whenever a campaign is completed.
 
 Next to the score sits a wall-clock **campaign timer**
 (`src/core/timer.ts`, kept in `state.timer`): each dungeon's timer starts when
@@ -796,7 +649,7 @@ migration on load.
 
 ## Testing, benchmarks and balance analysis
 
-Three layers of verification:
+Four layers of verification:
 
 1. **Colocated unit tests** (Vitest). `*.test.ts` files next to the code they
    cover — dice distributions, LOS edge cases, combat resolution, target
