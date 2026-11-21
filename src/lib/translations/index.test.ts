@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { deepMerge, isObject, loadTranslations, t } from './index';
+import {
+  deepMerge,
+  isObject,
+  loadCampaignTranslations,
+  loadContentWithGameMasters,
+  loadLogsWithCampaigns,
+  loadTranslations,
+  t,
+} from './index';
 import { DifficultLevels } from '../../core';
 import { armour, monsterArmour } from '../../items/armours';
 import { magicItems } from '../../items/magicItems';
@@ -14,6 +22,18 @@ const equipment = [
   ...weapons,
   ...monsterWeapons,
 ];
+
+const delay = (ms: number): Promise<void> =>
+  new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
+
+type TranslationModule = () => Promise<{ default: Record<string, unknown> }>;
+
+const moduleOf =
+  (value: Record<string, unknown>, delayMs = 0): TranslationModule =>
+  async () => {
+    if (delayMs > 0) await delay(delayMs);
+    return { default: value };
+  };
 
 const effectTranslationKeys = [
   'items.armour.plateMail.effect',
@@ -81,6 +101,128 @@ describe('translations', () => {
           tactician: { name: 'Tactician' },
           brutalOverlord: { name: 'Brutal Overlord' },
         },
+      });
+    });
+  });
+
+  describe('discovered translation loading', () => {
+    it('starts every discovered module load before waiting on any of them', async () => {
+      const total = 4;
+      const started: number[] = [];
+      let release: () => void;
+      const gate = new Promise<void>((resolvePromise) => {
+        release = resolvePromise;
+      });
+      const modules: Record<string, TranslationModule> = {};
+      for (let index = 0; index < total; index++) {
+        modules[`module${index}`] = async () => {
+          started.push(index);
+          // The gate only opens once every loader has started; a sequential
+          // implementation awaits this loader before ever calling the rest and
+          // never reaches it.
+          if (started.length === total) release();
+          await gate;
+          return { default: { index } };
+        };
+      }
+
+      const merged = await loadCampaignTranslations(modules);
+
+      expect(started.length).toBe(total);
+      expect(merged).toEqual({ index: total - 1 });
+    });
+
+    it('merges resolved modules in their original order regardless of completion order', async () => {
+      const modules: Record<string, TranslationModule> = {
+        slowFirst: moduleOf({ title: 'slow-first', own: 'slow-first' }, 25),
+        quickSecond: moduleOf({ title: 'quick-second' }),
+      };
+
+      const merged = await loadCampaignTranslations(modules);
+
+      expect(merged).toEqual({
+        title: 'quick-second',
+        own: 'slow-first',
+      });
+    });
+
+    it('deep-merges overlapping nested keys with the later module winning conflicts', async () => {
+      const modules: Record<string, TranslationModule> = {
+        first: moduleOf({ shared: { keep: 'keep', leaf: 'first' } }, 20),
+        second: moduleOf({ shared: { leaf: 'second' } }),
+      };
+
+      const merged = await loadCampaignTranslations(modules);
+
+      expect(merged).toEqual({ shared: { keep: 'keep', leaf: 'second' } });
+    });
+
+    it('rejects when a discovered module fails to load', async () => {
+      const modules: Record<string, TranslationModule> = {
+        fine: moduleOf({ title: 'fine' }),
+        broken: () => Promise.reject(new Error('load failed')),
+      };
+
+      await expect(loadCampaignTranslations(modules)).rejects.toThrow(
+        'load failed',
+      );
+    });
+
+    it('rejects when a module fails after an earlier one resolved successfully', async () => {
+      const modules: Record<string, TranslationModule> = {
+        fine: moduleOf({ title: 'fine' }),
+        slowBroken: async () => {
+          await delay(10);
+          throw new Error('late failure');
+        },
+      };
+
+      await expect(loadCampaignTranslations(modules)).rejects.toThrow(
+        'late failure',
+      );
+    });
+
+    it('keeps game-master translations overriding base content regardless of resolution order', async () => {
+      const baseLoader = (delayMs: number) => async () => {
+        await delay(delayMs);
+        return { content: { shared: 'base', baseOnly: 'base' } };
+      };
+      const gmModules: Record<string, TranslationModule> = {
+        gm: moduleOf({ content: { shared: 'gm' } }, 10),
+      };
+
+      const [baseResolvesFirst, gmResolvesFirst] = await Promise.all([
+        loadContentWithGameMasters(baseLoader(0), gmModules),
+        loadContentWithGameMasters(baseLoader(25), gmModules),
+      ]);
+
+      expect(baseResolvesFirst).toEqual({
+        content: { shared: 'gm', baseOnly: 'base' },
+      });
+      expect(gmResolvesFirst).toEqual({
+        content: { shared: 'gm', baseOnly: 'base' },
+      });
+    });
+
+    it('keeps campaign log translations overriding base logs regardless of resolution order', async () => {
+      const baseLoader = (delayMs: number) => async () => {
+        await delay(delayMs);
+        return { logs: { shared: 'base', baseOnly: 'base' } };
+      };
+      const campaignModules: Record<string, TranslationModule> = {
+        campaign: moduleOf({ logs: { shared: 'campaign' } }, 10),
+      };
+
+      const [baseResolvesFirst, campaignResolvesFirst] = await Promise.all([
+        loadLogsWithCampaigns(baseLoader(0), campaignModules),
+        loadLogsWithCampaigns(baseLoader(25), campaignModules),
+      ]);
+
+      expect(baseResolvesFirst).toEqual({
+        logs: { shared: 'campaign', baseOnly: 'base' },
+      });
+      expect(campaignResolvesFirst).toEqual({
+        logs: { shared: 'campaign', baseOnly: 'base' },
       });
     });
   });

@@ -135,10 +135,12 @@ Relevant file: `src/store/gameStateStore.ts`. The measured baseline is recorded 
 
 Relevant file: `src/lib/translations/index.ts`.
 
-- [ ] Load independent discovered translation modules concurrently.
-- [ ] Merge resolved modules in their original order to preserve override semantics regardless of completion order.
-- [ ] Test ordering, overlapping keys and load failures; compare cold-cache loading traces before/after.
-- [ ] Do not rewrite or add source in-game text as part of this implementation change.
+- [x] Load independent discovered translation modules concurrently.
+- [x] Merge resolved modules in their original order to preserve override semantics regardless of completion order.
+- [x] Test ordering, overlapping keys and load failures; compare cold-cache loading traces before/after.
+- [x] Do not rewrite or add source in-game text as part of this implementation change.
+
+Verification record: `loadCampaignTranslations` and the two composed base loaders (`loadContentWithGameMasters`, `loadLogsWithCampaigns`) now start every discovered module load up front (`Promise.all`) and merge the resolved modules afterwards with the original glob-key order (a reduce over `deepMerge`), so override semantics are preserved regardless of completion order and the base-then-discovered override direction is unchanged; a module whose load rejects still fails the whole namespace load exactly as the sequential loop did. The helpers are exported so colocated tests can drive synthetic module records: `src/lib/translations/index.test.ts` covers concurrent start (a release-only-when-all-started gate that deadlocks under the sequential implementation — verified by temporarily restoring the old loop and watching the test time out), order preservation under reversed completion order, deep-merged overlapping keys, rejection on module failure (including failures after earlier modules resolved), and base-plus-discovered override order in both composite loaders under both resolution orders. Cold-cache loading traces were compared on the production build in real headless Chrome over CDP (5 navigations each, cache cleared and disabled per navigation; traces in `/tmp/translation-trace-{before,after}.json`): on the initial Swedish cold load the six discovered sv chunks' request starts previously chained behind their base chunks (start spread 6.8–11 ms plus ~95 ms scheduler stalls for the chain tail in 2 of 5 runs; game-master chunks serialized behind the content base chunk), while after the change all six start within 0.2–0.3 ms of their base chunks and all complete within 8–11 ms with no late-wave outliers; the eleven translation-chunk request count is identical before and after. No in-game text was added or rewritten; the `@hoard-engine/i18n` package was untouched (it already loads the per-locale namespaces concurrently and merges them in loader-array order).
 
 ## Existing HOARD package candidates
 
