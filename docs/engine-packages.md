@@ -338,18 +338,16 @@ predicates, `findNeighbouringHeroes`), `src/dungeon/cornerDetection.ts`
 (`createPassableGrid` from state, hero-target `findPath`, scored target
 selection).
 
-**Current state:** published on npm as `@hoard-engine/grid` (v0.1.0) and
-consumed by the game as a dependency; its source folder has left this
-repo. It was developed in-repo as `packages/grid/` following the rng
-layout — self-contained folder with build, publishing, testing, lint and
-prettier scripts, its own `AGENTS.md` and `README.md`, boundary and
-public-surface tests plus colocated unit tests on synthetic grids
-(campaign-layout corner tests stay in the game: campaign content is game
-content). The `matchNeighbourSides` addition (v0.2.0) is committed in the
-grid repository and pending `npm publish` (account 2FA); the game's
-manifest already targets `^0.2.0` and local runs resolve the package
-through a `node_modules` symlink — run `npm install` after publishing to
-move the lockfile from 0.1.0 before the next push.
+**Current state:** published on npm as `@hoard-engine/grid`
+(v0.1.0–v0.2.0) and consumed by the game as a dependency; its source
+folder has left this repo. It was developed in-repo as `packages/grid/`
+following the rng layout — self-contained folder with build, publishing,
+testing, lint and prettier scripts, its own `AGENTS.md` and `README.md`,
+boundary and public-surface tests plus colocated unit tests on synthetic
+grids (campaign-layout corner tests stay in the game: campaign content is
+game content). v0.2.0, the predicate-driven `matchNeighbourSides`
+neighbour-side topology, is published and the game's manifest and lockfile
+track it.
 
 ### @hoard-engine/lighting — source: `src/dungeon/LightSources.ts` + the computation
 
