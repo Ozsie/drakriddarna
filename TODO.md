@@ -1,5 +1,7 @@
 # Todo
 
+Lighting realism implementation roadmap: [TODO-lighting.md](TODO-lighting.md).
+
 # Features
 
 - [ ] Multiple music intensity levels, based on monster count, health, monster type etc

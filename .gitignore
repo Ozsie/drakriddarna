@@ -16,3 +16,4 @@ packages/*/dist
 /voices/en_GB-alba-medium.onnx.json
 /voices/sv_SE-alma-medium.onnx
 /voices/sv_SE-alma-medium.onnx.json
+/.junie/
