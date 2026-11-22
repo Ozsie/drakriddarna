@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { asset } from '$app/paths';
-  import type { AssetPath } from '$app/types';
+  import { assetUrl } from '#lib/assets.js';
   import groundSprites from '#lib/DungeonTiles.png';
   import characterSprites from '#lib/Dungeon_Character.png';
   import character2Sprites from '#lib/Dungeon_Character_2.png';
@@ -74,8 +73,7 @@
       Number.isFinite(sizeParam) && sizeParam > 0 ? sizeParam : null;
 
     const dungeonSource = tilesetParam
-      ? (libImages[tilesetParam] ??
-        asset(tilesetParam.replace(/^\/+/, '') as AssetPath))
+      ? (libImages[tilesetParam] ?? assetUrl(tilesetParam.replace(/^\/+/, '')))
       : sheetSources.dungeon;
 
     queryInfo =

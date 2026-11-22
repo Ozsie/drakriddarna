@@ -3,7 +3,7 @@
 // injects the asset-resolved fallback tracks, replacing the direct
 // `$app/paths` import the engine package must not have.
 
-import { asset } from '$app/paths';
+import { assetUrl } from '#lib/assets.js';
 import {
   CROSSFADE_MS,
   CROSSFADE_TICK_MS,
@@ -15,8 +15,8 @@ export { CROSSFADE_MS, CROSSFADE_TICK_MS };
 export class MusicManager extends EngineMusicManager {
   constructor() {
     super({
-      defaultExploreTrack: asset('music/explore.mp3'),
-      defaultTensionTrack: asset('music/tension.mp3'),
+      defaultExploreTrack: assetUrl('music/explore.mp3'),
+      defaultTensionTrack: assetUrl('music/tension.mp3'),
     });
   }
 }

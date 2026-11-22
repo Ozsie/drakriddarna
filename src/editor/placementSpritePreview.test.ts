@@ -1,5 +1,4 @@
-import { asset } from '$app/paths';
-import type { AssetPath } from '$app/types';
+import { assetUrl } from '#lib/assets.js';
 import { describe, expect, it } from 'vitest';
 import { CellAlignment } from '../types';
 import type { ResolvedIsometricGraphics } from '../dungeon/IsometricGraphics';
@@ -41,7 +40,7 @@ describe('editor placement sprite previews', () => {
       sprite: { image: '/decorators/Objects.png', size: 32, index: 0 },
     });
 
-    expect(previews.topDown?.imageUrl).toBe(asset('decorators/Objects.png'));
+    expect(previews.topDown?.imageUrl).toBe(assetUrl('decorators/Objects.png'));
   });
 
   it('uses the decorator projection sprites and supports top-down isometric fallback', () => {
@@ -315,9 +314,8 @@ describe('editor placement sprite previews', () => {
 
     expect(requestedUrls).toHaveLength(2);
     expect(requestedUrls).toEqual([
-      asset('isometric/index.json'),
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      asset('campaigns/sample/graphics/index.json' as AssetPath),
+      assetUrl('isometric/index.json'),
+      assetUrl('campaigns/sample/graphics/index.json'),
     ]);
     expect(loaded?.tiles.sharedFloor?.imageUrl).toBe(
       'isometric/floors/stone.png',

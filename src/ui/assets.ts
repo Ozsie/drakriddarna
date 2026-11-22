@@ -2,17 +2,15 @@
 // images are addressed. Renderers reference images by AssetId; this module
 // owns the URL construction (and, in M5, the $lib sprite imports).
 
-import { asset } from '$app/paths';
+import { assetUrl } from '#lib/assets.js';
 import { getReadyImage, setImageUrlResolver } from '../core/ImageCache';
 import type { AssetProvider } from '@hoard-engine/uikit';
-import type { AssetPath } from '$app/types';
 
 // Content sprite sheets (actor sprites like the knight pack, item sheets)
 // reference their images by bare asset paths; wire the shared image
 // cache to resolve those against the deployment's base path. Rooted and
 // protocol URLs pass through the cache untouched.
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-setImageUrlResolver((path) => asset(path as AssetPath));
+setImageUrlResolver((path) => assetUrl(path));
 
 export const AssetId = {
   /** The welcome screen background art. */
@@ -22,8 +20,7 @@ export const AssetId = {
 export type AssetId = (typeof AssetId)[keyof typeof AssetId];
 
 const ASSET_URLS: Record<AssetId, string> = {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-  [AssetId.welcomeBackground]: asset('images/welcome.png' as AssetPath),
+  [AssetId.welcomeBackground]: assetUrl('images/welcome.png'),
 };
 
 /** Resolves an asset id to its URL, for the shared image cache. */

@@ -1,5 +1,4 @@
-import { asset } from '$app/paths';
-import type { AssetPath } from '$app/types';
+import { assetUrl } from '#lib/assets.js';
 import { getReadyImage } from '../core/ImageCache';
 
 export type IsometricGraphicsTile = {
@@ -328,8 +327,7 @@ const loadIndex = (
     return undefined;
 
   loadingIndexes.add(root);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-  void fetch(asset(`${root}/index.json` as AssetPath))
+  void fetch(assetUrl(`${root}/index.json`))
     .then((response) => (response.ok ? response.json() : null))
     .then((value: unknown) => parseIsometricGraphicsManifest(value))
     .catch(() => null)

@@ -1,5 +1,4 @@
-import { asset } from '$app/paths';
-import type { AssetPath } from '$app/types';
+import { assetUrl } from '#lib/assets.js';
 import type { Decorator, ItemSprite, LightSource, LightSprite } from '../types';
 import {
   parseIsometricGraphicsManifest,
@@ -34,8 +33,7 @@ export type PlacementSpritePreviews = {
 };
 
 const resolveStaticAsset = (path: string): string =>
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-  asset(path.replace(/^\/+/, '') as AssetPath);
+  assetUrl(path.replace(/^\/+/, ''));
 
 const itemSpritePreview = (
   sprite: ItemSprite | undefined,
@@ -200,8 +198,7 @@ const loadManifest = async (
   fetcher: typeof fetch,
 ): Promise<IsometricGraphicsManifest | null> => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    const response = await fetcher(asset(`${root}/index.json` as AssetPath));
+    const response = await fetcher(assetUrl(`${root}/index.json`));
     return response.ok
       ? parseIsometricGraphicsManifest(await response.json())
       : null;

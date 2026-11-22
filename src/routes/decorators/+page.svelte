@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { asset } from '$app/paths';
-  import type { AssetPath } from '$app/types';
+  import { assetUrl } from '#lib/assets.js';
   import * as decoratorDefinitions from '../../dungeon/Decorators';
 
   const decorators = Object.entries(decoratorDefinitions).flatMap(
@@ -35,8 +34,7 @@
 
     void Promise.all(
       sources.map(
-        async (source) =>
-          [source, await loadImage(asset(source as AssetPath))] as const,
+        async (source) => [source, await loadImage(assetUrl(source))] as const,
       ),
     ).then((loaded) => {
       const images = new Map(loaded);
