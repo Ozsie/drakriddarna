@@ -64,3 +64,68 @@ export const getReadyImage = (url: string): HTMLImageElement | null => {
   if (!image || !isImageReady(image)) return null;
   return image;
 };
+
+// The opaque bounding box of an image, in natural pixels: the part of the
+// image that actually paints, ignoring transparent headroom. Read once per
+// image and cached; null when the pixels cannot be read (headless
+// environments, unreadable canvases) — callers then fall back to the full
+// image rect.
+export type ImagePaintedBounds = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
+
+const paintedBoundsCache = new WeakMap<
+  HTMLImageElement,
+  ImagePaintedBounds | null
+>();
+
+const readPaintedBounds = (
+  image: HTMLImageElement,
+): ImagePaintedBounds | null => {
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
+  if (width <= 0 || height <= 0 || typeof document === 'undefined') {
+    return null;
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.drawImage(image, 0, 0);
+  let pixels: Uint8ClampedArray;
+  try {
+    pixels = ctx.getImageData(0, 0, width, height).data;
+  } catch {
+    return null;
+  }
+  let left = width;
+  let top = height;
+  let right = -1;
+  let bottom = -1;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (pixels[(y * width + x) * 4 + 3] > 0) {
+        if (x < left) left = x;
+        if (x > right) right = x;
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+      }
+    }
+  }
+  if (right < 0) return null;
+  return { left, top, right, bottom };
+};
+
+export const getImagePaintedBounds = (
+  image: HTMLImageElement,
+): ImagePaintedBounds | null => {
+  const cached = paintedBoundsCache.get(image);
+  if (cached !== undefined) return cached;
+  const bounds = readPaintedBounds(image);
+  paintedBoundsCache.set(image, bounds);
+  return bounds;
+};

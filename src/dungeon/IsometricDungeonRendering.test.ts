@@ -49,6 +49,7 @@ import {
   prepareDepthSortedIsometricDoorPainters,
   prepareDepthSortedIsometricFloorPainters,
   renderIsometricLightMask,
+  type IsometricWorldView,
   renderIsometricActorOverlays,
   renderIsometricFogLightDim,
 } from './IsometricDungeonRendering';
@@ -220,8 +221,9 @@ describe('isometric actor indicators', () => {
 describe('isometric foreground wall transparency', () => {
   const cellSize = 48;
   const view = createIsoView({ x: 192, y: 24 }, 600, 300, cellSize);
-  const heroPainter = (x: number, y = 0) => ({
+  const heroPainter = (x: number, y = 0, spriteSizePx?: number) => ({
     position: { x: (x + 0.5) * cellSize, y: (y + 0.5) * cellSize },
+    spriteSizePx,
     draw: () => {},
   });
   const world: SceneIsoWorldView = {
@@ -239,27 +241,142 @@ describe('isometric foreground wall transparency', () => {
       wallEast: '#222',
     },
   };
+  const roomWorld: SceneIsoWorldView = {
+    ...world,
+    rows: ['WWWWWWW', 'W.....W', 'W.....W', 'W.....W', 'WWWWWWW'],
+  };
+  // The input worlds carry no wallPainters, so every painter in the prepared
+  // world is a faded (wrapped) wall.
+  const fadedWallCells = (
+    prepared: SceneIsoWorldView,
+  ): { x: number; y: number }[] =>
+    (prepared.wallPainters ?? []).flatMap((row, y) =>
+      row.flatMap((painter, x) => (painter ? [{ x, y }] : [])),
+    );
 
-  it('fades only nearby foreground walls for any hero and tracks their movement', () => {
+  it('fades only walls whose screen silhouette actually covers a hero sprite', () => {
+    // A hero against the east and south walls: only those two overlap the
+    // sprite on screen — not the diagonal south-east wall (too short to
+    // reach the hero's feet) and not the wall beside the hero (same depth,
+    // drawn behind the hero).
     const prepared = prepareIsometricForegroundWallPainters(
-      world,
-      [heroPainter(2), heroPainter(5)],
+      roomWorld,
+      [heroPainter(5, 3)],
       view,
     );
+    expect(fadedWallCells(prepared)).toEqual([
+      { x: 6, y: 3 },
+      { x: 5, y: 4 },
+    ]);
 
-    expect(
-      prepared.wallPainters?.[0]?.flatMap((painter, x) => (painter ? [x] : [])),
-    ).toEqual([3, 4, 6, 7]);
-
+    // Moving one cell up shifts the occluded wall with the hero.
     const moved = prepareIsometricForegroundWallPainters(
-      world,
-      [heroPainter(3)],
+      roomWorld,
+      [heroPainter(5, 2)],
       view,
     );
-    expect(
-      moved.wallPainters?.[0]?.flatMap((painter, x) => (painter ? [x] : [])),
-    ).toEqual([4, 5]);
-    expect(prepareIsometricForegroundWallPainters(world, [], view)).toBe(world);
+    expect(fadedWallCells(moved)).toEqual([{ x: 6, y: 2 }]);
+
+    // A hero in the opposite corner occludes nothing on its own; combined,
+    // each hero fades only its own occluding walls.
+    const twoHeroes = prepareIsometricForegroundWallPainters(
+      roomWorld,
+      [heroPainter(5, 3), heroPainter(1, 1)],
+      view,
+    );
+    expect(fadedWallCells(twoHeroes)).toEqual([
+      { x: 6, y: 3 },
+      { x: 5, y: 4 },
+    ]);
+    expect(prepareIsometricForegroundWallPainters(roomWorld, [], view)).toBe(
+      roomWorld,
+    );
+  });
+
+  it('fades farther walls only when their art is tall enough to reach the hero', () => {
+    const tallWorld: IsometricWorldView = {
+      ...roomWorld,
+      wallFaceHeightsPx: roomWorld.rows.map((row) =>
+        [...row].map(() => cellSize * 2),
+      ),
+    };
+    // With twice-as-tall wall art, the diagonal south-east wall rises high
+    // enough on screen to cover part of the hero.
+    const prepared = prepareIsometricForegroundWallPainters(
+      tallWorld,
+      [heroPainter(5, 3)],
+      view,
+    );
+    expect(fadedWallCells(prepared)).toEqual([
+      { x: 6, y: 3 },
+      { x: 5, y: 4 },
+      { x: 6, y: 4 },
+    ]);
+  });
+
+  it('widens the occlusion test with the hero sprite size', () => {
+    const tallWorld: IsometricWorldView = {
+      ...roomWorld,
+      wallFaceHeightsPx: roomWorld.rows.map((row) =>
+        [...row].map(() => cellSize * 2),
+      ),
+    };
+    const narrow = prepareIsometricForegroundWallPainters(
+      tallWorld,
+      [heroPainter(3, 3)],
+      view,
+    );
+    expect(fadedWallCells(narrow)).toEqual([
+      { x: 3, y: 4 },
+      { x: 4, y: 4 },
+      { x: 5, y: 4 },
+    ]);
+
+    // A five-times-cell sprite covers more wall silhouettes, including the
+    // east wall three cells away in screen space.
+    const wide = prepareIsometricForegroundWallPainters(
+      tallWorld,
+      [heroPainter(3, 3, cellSize * 5)],
+      view,
+    );
+    expect(fadedWallCells(wide)).toEqual([
+      { x: 6, y: 3 },
+      { x: 3, y: 4 },
+      { x: 4, y: 4 },
+      { x: 5, y: 4 },
+      { x: 6, y: 4 },
+    ]);
+  });
+
+  it('tests occlusion against the painted wall art, not the full tile bbox', () => {
+    // A single wall whose prism bbox reaches the hero, but whose opaque art
+    // (wallPaintedRects, offsets from the cell center on screen) does not.
+    const paintedWorld: IsometricWorldView = {
+      ...world,
+      rows: ['W'],
+      // The wall art only paints a small patch at the cell's south corner:
+      // screen origin of cell (0,0) is (132, 66), so this rect is
+      // [122, 36]-[142, 66], clear of the hero sprite at [156, -6]-[204, 42].
+      wallPaintedRects: [[{ left: -10, top: -30, right: 10, bottom: 0 }]],
+    };
+    const shortArt = prepareIsometricForegroundWallPainters(
+      paintedWorld,
+      [heroPainter(0, -1)],
+      view,
+    );
+    expect(shortArt).toBe(paintedWorld);
+
+    // The same wall with art that does reach the hero sprite fades.
+    const tallArtWorld: IsometricWorldView = {
+      ...paintedWorld,
+      wallPaintedRects: [[{ left: -48, top: -192, right: 48, bottom: 24 }]],
+    };
+    const tallArt = prepareIsometricForegroundWallPainters(
+      tallArtWorld,
+      [heroPainter(0, -1)],
+      view,
+    );
+    expect(fadedWallCells(tallArt)).toEqual([{ x: 0, y: 0 }]);
   });
 
   it('preserves the caller alpha while fading wall art and fallback geometry', () => {

@@ -412,8 +412,11 @@ actors pass in front of or behind the geometry correctly; undiscovered cells
 and their props are masked out exactly as in the top-down mode. Lighting
 reuses the same visibility system, projected into an isometric light mask with
 depth-aware wall-face lighting, and pointer input maps screen coordinates back
-through the inverse of the active projection for grid picking. Foreground
-walls near a hero fade to translucent so they never hide the party. The
+through the inverse of the active projection for grid picking. A wall fades
+to translucent only when it actually occludes a hero: it must draw in front
+of the hero in the depth-sorted queue and the screen rect its wall art
+actually paints (the opaque pixels of its tiles, not the full tile image)
+must overlap the hero's sprite. The
 game-side adapter lives in `src/dungeon/IsometricDungeonRendering.ts`; the
 reusable projection, occlusion ordering and compositing live in the
 `@hoard-engine/scene` package. The detailed mechanics of the isometric path —

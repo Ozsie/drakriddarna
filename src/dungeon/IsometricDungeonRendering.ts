@@ -34,6 +34,7 @@ import {
   type GameState,
 } from '../types';
 import { isDiscovered } from '../core';
+import { getImagePaintedBounds } from '../core/ImageCache';
 import { lightCenter } from './LightRendering';
 import { AURA_FOOTPRINT_SCALE, drawAura } from '../scene/AuraRendering';
 import {
@@ -75,9 +76,24 @@ const ISO_OPEN_DOOR_DEPTH_BIAS = 0.001;
 const ISOMETRIC_WALL_LIGHT_SEAM_DEVICE_PX = 1;
 const ISO_FOREGROUND_WALL_OPACITY = 0.35;
 type IsometricDoorSide = 'Left' | 'Right' | 'Up' | 'Down';
-type IsometricWorldView = SceneIsoWorldView & {
+// Screen-pixel rect of the opaque art a wall painter actually draws, as
+// offsets from the painter's screen position (its cell center). Null when
+// the pixels could not be read; the wall then falls back to its prism bbox.
+export type IsometricPaintedRect = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
+export type IsometricWorldView = SceneIsoWorldView & {
   wallFaceHeightsPx?: (number | undefined)[][];
+  wallPaintedRects?: (IsometricPaintedRect | null | undefined)[][];
   openDoorCells?: { x: number; y: number }[];
+};
+// A hero painter plus the screen size of its sprite square, so wall
+// occlusion can be tested against the pixels the hero actually occupies.
+export type IsometricHeroPainterView = SceneIsoPainterView & {
+  spriteSizePx?: number;
 };
 
 const PIT_WALL_SOURCE_RIM = {
@@ -507,12 +523,100 @@ const drawIsometricWallFallback = (
   ctx.fill();
 };
 
-export const prepareIsometricForegroundWallPainters = (
-  world: SceneIsoWorldView,
-  heroes: SceneIsoPainterView[],
+type ScreenRect = {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+};
+
+const screenRectsOverlap = (a: ScreenRect, b: ScreenRect): boolean =>
+  a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+
+// The wall prism's screen silhouette: the cell diamond lifted by its face
+// height — the same footprint the viewport culling and the light-mask wall
+// erasure use.
+const isometricWallScreenRect = (
+  world: IsometricWorldView,
   view: SceneIsoView,
-): SceneIsoWorldView => {
+  x: number,
+  y: number,
+): ScreenRect => {
+  const cellSize = world.cellSize;
+  const corners = [
+    worldToScreen(view, x * cellSize, y * cellSize),
+    worldToScreen(view, (x + 1) * cellSize, y * cellSize),
+    worldToScreen(view, (x + 1) * cellSize, (y + 1) * cellSize),
+    worldToScreen(view, x * cellSize, (y + 1) * cellSize),
+  ];
+  const wallHeight =
+    world.wallFaceHeightsPx?.[y]?.[x] ??
+    world.wallHeightPx * view.projection.by;
+  return {
+    left: Math.min(...corners.map(({ x: cornerX }) => cornerX)),
+    right: Math.max(...corners.map(({ x: cornerX }) => cornerX)),
+    top: Math.min(...corners.map(({ y: cornerY }) => cornerY)) - wallHeight,
+    bottom: Math.max(...corners.map(({ y: cornerY }) => cornerY)),
+  };
+};
+
+// The hero sprite draws as a square with its bottom-center at the feet
+// position; without an explicit sprite size it defaults to one cell at the
+// view zoom.
+const heroScreenRect = (
+  hero: IsometricHeroPainterView,
+  world: SceneIsoWorldView,
+  view: SceneIsoView,
+): ScreenRect => {
+  const feet = worldToScreen(view, hero.position.x, hero.position.y);
+  const size = hero.spriteSizePx ?? world.cellSize * view.projection.ax;
+  return {
+    left: feet.x - size / 2,
+    right: feet.x + size / 2,
+    top: feet.y - size,
+    bottom: feet.y,
+  };
+};
+
+// The wall's occlusion footprint on screen: where its opaque art actually
+// paints (the tile images carry transparent headroom the wall does not
+// reach), falling back to the full prism silhouette when the pixels could
+// not be read.
+const isometricWallOcclusionRect = (
+  world: IsometricWorldView,
+  view: SceneIsoView,
+  x: number,
+  y: number,
+): ScreenRect => {
+  const painted = world.wallPaintedRects?.[y]?.[x];
+  if (painted) {
+    const painter = world.wallPainters?.[y]?.[x];
+    const origin = worldToScreen(
+      view,
+      painter?.position.x ?? (x + 0.5) * world.cellSize,
+      painter?.position.y ?? (y + 0.5) * world.cellSize,
+    );
+    return {
+      left: origin.x + painted.left,
+      right: origin.x + painted.right,
+      top: origin.y + painted.top,
+      bottom: origin.y + painted.bottom,
+    };
+  }
+  return isometricWallScreenRect(world, view, x, y);
+};
+
+export const prepareIsometricForegroundWallPainters = (
+  world: IsometricWorldView,
+  heroes: IsometricHeroPainterView[],
+  view: SceneIsoView,
+): IsometricWorldView => {
   if (heroes.length === 0) return world;
+
+  const heroOccluders = heroes.map((hero) => ({
+    depth: hero.position.x + hero.position.y,
+    rect: heroScreenRect(hero, world, view),
+  }));
 
   let hasForegroundWall = false;
   const wallPainters = world.rows.map((row, y) =>
@@ -523,16 +627,15 @@ export const prepareIsometricForegroundWallPainters = (
         x: (x + 0.5) * world.cellSize,
         y: (y + 0.5) * world.cellSize,
       };
-      const inFrontOfNearbyHero = heroes.some((hero) => {
-        const dx = Math.abs(position.x - hero.position.x);
-        const dy = Math.abs(position.y - hero.position.y);
-        return (
-          dx <= world.cellSize * 2 &&
-          dy <= world.cellSize * 2 &&
-          position.x + position.y > hero.position.x + hero.position.y
-        );
-      });
-      if (!inFrontOfNearbyHero) return world.wallPainters?.[y]?.[x];
+      // A wall only hides a hero when it draws in front of them (greater
+      // depth sum in the painter queue) and the pixels it actually paints
+      // cover part of the hero's sprite.
+      const wallRect = isometricWallOcclusionRect(world, view, x, y);
+      const occludesHero = heroOccluders.some(
+        ({ depth, rect }) =>
+          position.x + position.y > depth && screenRectsOverlap(wallRect, rect),
+      );
+      if (!occludesHero) return world.wallPainters?.[y]?.[x];
 
       hasForegroundWall = true;
       const painter = world.wallPainters?.[y]?.[x];
@@ -1256,7 +1359,12 @@ export const buildIsometricWorldView = (
     x: number,
     y: number,
     tileIds: string[],
-  ): (SceneIsoPainterView & { wallFaceHeightPx: number }) | undefined => {
+  ):
+    | (SceneIsoPainterView & {
+        wallFaceHeightPx: number;
+        paintedRect: IsometricPaintedRect | null;
+      })
+    | undefined => {
     if (!graphics) return undefined;
     const tiles = tileIds
       .map((tileId) => getIsometricTileImage(graphics, tileId))
@@ -1264,6 +1372,45 @@ export const buildIsometricWorldView = (
     if (tiles.length === 0) return undefined;
     const projection = view?.projection ?? { ax: 1, by: 0.5 };
     const groundOffset = projection.by * cellSize;
+    // Where the tiles' opaque pixels land relative to the painter's screen
+    // position: the tile images carry transparent headroom above the wall,
+    // which must not count when testing what the wall actually covers.
+    let paintedRect: IsometricPaintedRect | null = null;
+    for (const tile of tiles) {
+      const bounds = getImagePaintedBounds(tile.image);
+      if (!bounds) continue;
+      const { width, height } = getIsometricTileDimensions(
+        cellSize,
+        projection,
+        tile.scale,
+        tile.image.naturalWidth,
+        tile.image.naturalHeight,
+      );
+      const rect = {
+        left:
+          -width * tile.anchor.x +
+          (bounds.left / tile.image.naturalWidth) * width,
+        right:
+          -width * tile.anchor.x +
+          ((bounds.right + 1) / tile.image.naturalWidth) * width,
+        top:
+          groundOffset -
+          height * tile.anchor.y +
+          (bounds.top / tile.image.naturalHeight) * height,
+        bottom:
+          groundOffset -
+          height * tile.anchor.y +
+          ((bounds.bottom + 1) / tile.image.naturalHeight) * height,
+      };
+      paintedRect = paintedRect
+        ? {
+            left: Math.min(paintedRect.left, rect.left),
+            right: Math.max(paintedRect.right, rect.right),
+            top: Math.min(paintedRect.top, rect.top),
+            bottom: Math.max(paintedRect.bottom, rect.bottom),
+          }
+        : rect;
+    }
     return {
       position: { x: (x + 0.5) * cellSize, y: (y + 0.5) * cellSize },
       wallFaceHeightPx: Math.max(
@@ -1279,6 +1426,7 @@ export const buildIsometricWorldView = (
           return height * tile.anchor.y;
         }),
       ),
+      paintedRect,
       draw: (ctx, center) => {
         for (const tile of tiles) {
           const { width, height } = getIsometricTileDimensions(
@@ -1386,6 +1534,9 @@ export const buildIsometricWorldView = (
   const wallFaceHeightsPx = wallPainters.map((row) =>
     row.map((painter) => painter?.wallFaceHeightPx),
   );
+  const wallPaintedRects = wallPainters.map((row) =>
+    row.map((painter) => painter?.paintedRect ?? null),
+  );
   const doorPainters = worldRows.map((row, y) =>
     toArray(row).map((cell, x) => {
       if (cell !== ISO_DOOR || !graphics) return undefined;
@@ -1421,6 +1572,7 @@ export const buildIsometricWorldView = (
       ),
     ),
     wallFaceHeightsPx,
+    wallPaintedRects,
     floorColors: rows.map((row, y) =>
       toArray(row).map((cell, x) =>
         isVisibleCell(x, y, cell)
@@ -1484,7 +1636,7 @@ export const buildHeroPainters = (
   actors: SceneActorView[],
   cellSize: number,
   zoom: number,
-): SceneIsoPainterView[] =>
+): IsometricHeroPainterView[] =>
   actors.flatMap((actor) => {
     const frame = actorFrame(actor);
     if (!frame) return [];
@@ -1493,6 +1645,7 @@ export const buildHeroPainters = (
     return [
       {
         position: feetPosition(actor, cellSize),
+        spriteSizePx: size,
         draw: (
           ctx: CanvasRenderingContext2D,
           feet: { x: number; y: number },
