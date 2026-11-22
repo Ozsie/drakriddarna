@@ -1,0 +1,1 @@
+import{t as e}from"../chunks/DK3Fl9T5.js";import{t}from"../chunks/DO8E8mms.js";import{C as n,G as r,O as i,k as a,nt as o}from"../chunks/CYZsj0fv.js";var s=e({load:()=>c,prerender:()=>!0}),c=async()=>(await t(`sv`),{});function l(e,t){var s=a(),c=r(s);n(c,()=>t.children??o),i(e,s)}export{l as component,s as universal};
